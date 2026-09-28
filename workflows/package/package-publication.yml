@@ -55,28 +55,18 @@ jobs:
     steps:
       - name: Verify workflow identity
         id: workflow-identity
-        shell: bash
-        env:
-          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
-          CALLER_WORKFLOW_SHA: ${{ github.workflow_sha }}
-          CALLED_WORKFLOW_REPOSITORY: ${{ job.workflow_repository }}
-          CALLED_WORKFLOW_FILE_PATH: ${{ job.workflow_file_path }}
-          CALLED_WORKFLOW_REF: ${{ job.workflow_ref }}
-          CALLED_WORKFLOW_SHA: ${{ job.workflow_sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          EXPECTED_CALLER_WORKFLOW_PATH: .github/workflows/package-publication-caller.yml
-          EXPECTED_CALLED_WORKFLOW_PATH: .github/workflows/package-publication.yml
-        run: |
-          set -euo pipefail
-          expected_caller="${GITHUB_REPOSITORY}/${EXPECTED_CALLER_WORKFLOW_PATH}@refs/heads/${DEFAULT_BRANCH}"
-          expected_called="${GITHUB_REPOSITORY}/${EXPECTED_CALLED_WORKFLOW_PATH}@refs/heads/${DEFAULT_BRANCH}"
-          test "$CALLER_WORKFLOW_REF" = "$expected_caller"
-          test "$CALLED_WORKFLOW_REPOSITORY" = "$GITHUB_REPOSITORY"
-          test "$CALLED_WORKFLOW_FILE_PATH" = "$EXPECTED_CALLED_WORKFLOW_PATH"
-          test "$CALLED_WORKFLOW_REF" = "$expected_called"
-          [[ "$CALLER_WORKFLOW_SHA" =~ ^[0-9a-f]{40}$ && "$CALLED_WORKFLOW_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
-          test "$CALLER_WORKFLOW_SHA" = "$CALLED_WORKFLOW_SHA"
-          echo "sha=$CALLED_WORKFLOW_SHA" >> "$GITHUB_OUTPUT"
+        uses: a3-suite/a3-ci-github/actions/ci-workflow-identity@9b659081c5a7a5712825993542d5b21bbd97a553
+        with:
+          repository: ${{ github.repository }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          expected-caller-workflow-path: .github/workflows/package-publication-caller.yml
+          expected-called-workflow-path: .github/workflows/package-publication.yml
+          caller-workflow-ref: ${{ github.workflow_ref }}
+          caller-workflow-sha: ${{ github.workflow_sha }}
+          called-workflow-repository: ${{ job.workflow_repository }}
+          called-workflow-file-path: ${{ job.workflow_file_path }}
+          called-workflow-ref: ${{ job.workflow_ref }}
+          called-workflow-sha: ${{ job.workflow_sha }}
       # This checkout uses the verified workflow snapshot, not the package source.
       - uses: actions/checkout@<commit-sha>
         with:
@@ -85,15 +75,15 @@ jobs:
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
       - name: Provision fixed jq
-        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-actions/actions/ci-gh-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -106,7 +96,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-actions/actions/ci-handoff-integrity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -131,7 +121,7 @@ jobs:
       PUBLISH_RESULT: ${{ needs.publish.result }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           summary-json: >-
-            {"jobs":[{"unit":"publish","execution":"registry remote readback","result":"${{ needs.publish.result == 'success' && 'success' || needs.publish.result == 'failure' && 'failed' || (needs.publish.result == 'cancelled' || needs.publish.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.publish.result == 'success' || needs.publish.result == 'failure') && '完了' || needs.publish.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"publish job result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish job result: ${{ needs.publish.result }}"}]}

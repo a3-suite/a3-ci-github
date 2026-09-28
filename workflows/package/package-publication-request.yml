@@ -32,7 +32,7 @@ jobs:
     permissions: {}
     steps:
       - name: Validate and write request handoff
-        uses: a3-suite/a3-actions/actions/ci-package-publication-request@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           operation: create
           source-sha: ${{ inputs.source_sha }}
@@ -57,7 +57,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           summary-json: >-
-            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","result":"${{ needs.request.result == 'success' && 'success' || needs.request.result == 'failure' && 'failed' || (needs.request.result == 'cancelled' || needs.request.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.request.result == 'success' || needs.request.result == 'failure') && '完了' || needs.request.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"request job result: ${{ needs.request.result }}"}]}
+            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}

@@ -74,9 +74,9 @@
 
 ### privileged workflow の trusted CI control
 - 本契約は `github.workflow_ref` / `github.workflow_sha` と `job.workflow_repository` / `job.workflow_file_path` / `job.workflow_ref` / `job.workflow_sha` を提供する GitHub.com を対象とする。GHES では同等の identity 契約を確認できない限り導入を停止する。
-- reusable workflow の各 privileged job は、最初の step で caller と called workflow が default branch の同一 SHA であることを検証する。repository、workflow path、ref、40桁 SHA の全要素を fail closed で照合し、検証前に他の Action や project-local code を実行しない。検証には registry に登録された固定 SHA の `ci-workflow-identity` Action を使う。cutover前のcanonical workflowに限り、同じ検証契約を持つ旧 `ci-release-workflow-identity` 固定SHAを維持する。
+- reusable workflow の各 privileged job は、最初の step で caller と called workflow が default branch の同一 SHA であることを検証する。repository、workflow path、ref、40桁 SHA の全要素を fail closed で照合し、検証前に他の Action や project-local code を実行しない。検証には registry に登録された固定 SHA の `ci-workflow-identity` Action を使う。
 - identity gate が出力した SHA を trusted CI control の checkout ref とし、checkout 直後に `git rev-parse HEAD` がその SHA と一致することを確認する。別入力の control SHA や mutable ref へ fallback しない。
-- identity gate は workflow orchestration 自身を検証する最小の独立 step とし、job isolation のため各 privileged job で同じ境界を検証する。provider registry で available binding と exact commit SHA を固定し、read-only の `ci-workflow-identity` だけを gate として実行する。Action は workflow 自身を checkout・実行せず、検証済み SHA を返す。検証より前に他の Action、checkout、project-local code を実行しない。
+- identity gate は workflow orchestration 自身を検証する最小の独立 step とし、job isolation のため各 privileged job で同じ境界を検証する。provider registry で exact commit SHA の binding を固定し、read-only の `ci-workflow-identity` だけを gate として実行する。Action は workflow 自身を checkout・実行せず、検証済み SHA を返す。検証より前に他の Action、checkout、project-local code を実行しない。
 - `workflow_dispatch` などの手動起動権限や tag push は、選択された ref やその ref 内の CI assets の信頼根拠として扱わない。
 - publish、deploy などの権限付き処理では、workflow orchestration 自体も trusted CI control に含める。event ref 上の workflow に publish 権限を与えず、権限を持たない request workflow と、default branch 上の `workflow_run` で起動する privileged workflow を分離する。
 - project-local trusted CI control を実行する job だけが、その control を監査済み commit SHA の snapshot から checkout する。checkout したファイルを実行または参照しない job へ trust marker として追加しない。
@@ -91,7 +91,7 @@
 - 手動 workflow では manual invocation authority と source trust を分離し、選択sourceを権限付きjobで実行しない。
 
 ### Action の実行境界
-- `a3-suite/a3-actions` の Action は、registry の `available` bindingを40桁の exact commit SHAで参照する。release aliasやbranch refを実行時の信頼根拠にしない。
+- `a3-suite/a3-ci-github` の Action は、registry の `available` bindingを40桁の exact commit SHAで参照する。release aliasやbranch refを実行時の信頼根拠にしない。
 - registry の availability gate を満たす `available` の Action だけを consumer workflow へ接続する。Hosted 証拠は接続可否とは別の運用記録として扱う。
 - trusted CI control という分類だけで Action 化を禁止しない。候補適格条件と移管しない責務は registry の `actionization` を正本とし、Action 化によって本章の trust boundary を変更しない。
 - Action の `trust: read-only` は、その Action 自体が provider への write 副作用を持たないことを表し、write 権限を持つ job での実行許可を表さない。既定では、`contents: read` など必要最小限の権限を持つ非特権 job で実行する。

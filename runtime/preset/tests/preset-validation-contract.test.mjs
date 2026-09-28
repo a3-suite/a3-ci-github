@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { loadRegistry } from '../ci-preset-assets.ts';
 import { validateCiPreset, writeCiAssetLock } from '../validate-ci-preset.ts';
 import {
   loadReleaseRequestFixtureModel,
@@ -121,3 +122,36 @@ test('asset lock generation rejects a noncanonical source revision', () => withF
   );
   assert.equal(existsSync(path.join(root, '.ci/ci-assets.lock.json')), false);
 }));
+
+// integration_id: preset-assurance-contract
+test('registry binds every canonical workflow Action use to a declared target', () => {
+  // Arrange
+  const report = { missingSettings: [], mismatches: [] };
+  const registry = loadRegistry(report);
+  const actionUse = /uses: (a3-suite\/[^@\s]+)@([0-9a-f]{40})/g;
+  // Act
+  const coverage = registry.presets.map((preset) => {
+    const installed = new Set(preset.workflowAssets.map((asset) => asset.id));
+    const declared = new Set(registry.actionTargets
+      .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
+      .map((target) => target.id));
+    const observed = new Set();
+    for (const asset of preset.workflowAssets) {
+      const workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
+      for (const [, action, sha] of workflow.matchAll(actionUse)) {
+        assert.equal(sha, registry.actionExactRef, `unexpected ref in ${asset.source}`);
+        const target = registry.actionTargets
+          .find((candidate) => `${registry.actionRepository}/${candidate.actionPath}` === action);
+        assert.ok(target, `unregistered a3 Action in ${asset.source}: ${action}`);
+        observed.add(target.id);
+      }
+    }
+    return { preset: preset.id, declared: [...declared].sort(), observed: [...observed].sort() };
+  });
+  // Assert
+  assert.deepEqual(report.mismatches, []);
+  for (const entry of coverage) {
+    assert.deepEqual(entry.observed, entry.declared, `registry coverage mismatch: ${entry.preset}`);
+  }
+  assert.ok(coverage.length > 0);
+});

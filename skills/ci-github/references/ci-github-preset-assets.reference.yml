@@ -85,12 +85,12 @@ providerAssets: []
 actionization:
   implementationSource:
     contract: action.yml
-    repository: a3-suite/a3-actions
-    releaseTag: v0.5.1
-    exactRef: "3b705bcbb0286a9da0f3bdb73f39d58043ca5605"
+    repository: a3-suite/a3-ci-github
+    releaseTag: v0.1.0
+    exactRef: "9b659081c5a7a5712825993542d5b21bbd97a553"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
-    status: available
+    status: release-pending
     requires: [candidate-eligibility, implementation, tests, distribution, exact-release-tag, release-tag-mapping, exact-ref, workflow-mapping, static-contract]
   candidateEligibility:
     requires: [cross-project-reusable, provider-write-free, bounded-input-output-contract, fail-closed]
@@ -103,7 +103,7 @@ actionization:
   exactRefFormat: "^[0-9a-f]{40}$"
   targets:
     - id: ci-jq-provisioner
-      status: available
+      status: release-pending
       actionPath: actions/ci-jq-provisioner
       workflows: [quality-gate, release-request-tag, release-publication, package-publication]
       trust: read-only
@@ -111,7 +111,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-jq-provisioning
     - id: ci-gh-provisioner
-      status: available
+      status: release-pending
       actionPath: actions/ci-gh-provisioner
       workflows: [release-request-tag, release-publication, package-publication]
       trust: read-only
@@ -119,7 +119,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-gh-provisioning
     - id: ci-github-toolchain-verifier
-      status: available
+      status: release-pending
       actionPath: actions/ci-github-toolchain-verifier
       workflows: [quality-gate, release-request-tag, release-publication, package-publication]
       trust: read-only
@@ -127,7 +127,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-tool-version-verification
     - id: ci-rust-source-gate
-      status: available
+      status: release-pending
       actionPath: actions/ci-rust-source-gate
       workflows: [release-publication]
       trust: read-only
@@ -135,7 +135,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-source-identity-scripts
       providerMapping: release-source-identity
     - id: ci-rust-release-build
-      status: available
+      status: release-pending
       actionPath: actions/ci-rust-release-build
       workflows: [release-publication]
       trust: read-only
@@ -143,23 +143,23 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-build-scripts
       providerMapping: release-artifact-build
     - id: ci-quality-summary
-      status: available
+      status: release-pending
       actionPath: actions/ci-quality-summary
       workflows: [quality-gate, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts.output
       providerMapping: workflow-summary
-    - id: ci-release-workflow-identity
-      status: available
-      actionPath: actions/ci-release-workflow-identity
-      workflows: [release-publication]
+    - id: ci-workflow-identity
+      status: release-pending
+      actionPath: actions/ci-workflow-identity
+      workflows: [release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish]
+      privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: release-workflow-identity
     - id: ci-config-snapshot
-      status: available
+      status: release-pending
       actionPath: actions/ci-config-snapshot
       workflows: [release-publication]
       trust: read-only
@@ -167,7 +167,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: configuration-snapshot
     - id: ci-change-scope
-      status: available
+      status: release-pending
       actionPath: actions/ci-change-scope
       workflows: [quality-gate, quality-gate-platforms]
       trust: read-only
@@ -175,7 +175,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: changed-path-scope
     - id: ci-handoff-integrity
-      status: available
+      status: release-pending
       actionPath: actions/ci-handoff-integrity
       workflows: [release-publication, package-publication]
       trust: read-only
@@ -183,7 +183,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.handoff-integrity-scripts
       providerMapping: artifact-handoff-verification
     - id: ci-release-notes-binding
-      status: available
+      status: release-pending
       actionPath: actions/ci-release-notes-binding
       workflows: [release-publication]
       trust: read-only
@@ -191,7 +191,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: approved-release-notes
     - id: ci-publish-version
-      status: available
+      status: release-pending
       actionPath: actions/ci-publish-version
       workflows: [package-preparation]
       trust: read-only
@@ -199,7 +199,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.version-plan-scripts
       providerMapping: approved-version-plan
     - id: ci-annotated-tag-resolver
-      status: available
+      status: release-pending
       actionPath: actions/ci-annotated-tag-resolver
       workflows: [release-request-tag]
       trust: read-only
@@ -207,7 +207,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.request-handoff-scripts
       providerMapping: annotated-tag-identity
     - id: ci-release-request-handoff
-      status: available
+      status: release-pending
       actionPath: actions/ci-release-request-handoff
       workflows: [release-request-tag]
       trust: read-only
@@ -215,7 +215,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.request-handoff-scripts
       providerMapping: release-request-artifact
     - id: ci-release-notes-input-resolution
-      status: available
+      status: release-pending
       actionPath: actions/ci-release-notes-input-resolution
       workflows: [release-publication]
       trust: read-only
@@ -223,7 +223,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-notes-input-resolution-scripts
       providerMapping: release-notes-handoff-resolution
     - id: ci-platform-matrix
-      status: available
+      status: release-pending
       actionPath: actions/ci-platform-matrix
       workflows: [release-publication]
       trust: read-only
@@ -231,7 +231,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: platform-build-matrix
     - id: ci-quality-adapter
-      status: available
+      status: release-pending
       actionPath: actions/ci-quality-adapter
       workflows: [quality-gate, quality-gate-platforms, release-publication]
       trust: read-only
@@ -239,7 +239,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.quality-scripts
       providerMapping: quality-adapter-execution
     - id: ci-release-publication-control
-      status: available
+      status: release-pending
       actionPath: actions/ci-release-publication-control
       workflows: [release-publication-request, release-publication-caller, release-publication]
       trust: read-only
@@ -247,7 +247,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-publication-request-and-provenance-control
     - id: ci-package-publication-request
-      status: available
+      status: release-pending
       actionPath: actions/ci-package-publication-request
       workflows: [package-publication-request, package-publication-caller]
       trust: read-only

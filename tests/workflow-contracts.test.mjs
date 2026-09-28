@@ -57,7 +57,7 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
   ]);
   includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
     /^        id: quality-adapter$/m,
-    /^        uses: a3-suite\/a3-actions\/actions\/ci-quality-adapter@3b705bcbb0286a9da0f3bdb73f39d58043ca5605$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
     /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
   ]);
   const untrusted = jobBlock(workflow, 'untrusted-pr');
@@ -70,10 +70,10 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
     /^          path: \.ci-base$/m,
   ]);
   includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-    /^        uses: a3-suite\/a3-actions\/actions\/ci-quality-adapter@3b705bcbb0286a9da0f3bdb73f39d58043ca5605$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
     /^          bundle-path: \.ci-base\/\$\{\{ env\.CI_ADAPTER_DESCRIPTOR \}\}$/m,
   ]);
-  includesAll(jobBlock(workflow, 'summary'), [/needs: \[trusted, untrusted-pr\]/, /if: always\(\)/, /uses: a3-suite\/a3-actions\/actions\/ci-quality-summary@/]);
+  includesAll(jobBlock(workflow, 'summary'), [/needs: \[trusted, untrusted-pr\]/, /if: always\(\)/, /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-summary@/]);
 });
 
 // integration_id: quality-workflow-contract
@@ -90,20 +90,26 @@ test('optional platform quality workflow preserves trusted assets matrix executi
     /needs: resolve-platforms/,
     /matrix: .*needs\.resolve-platforms\.outputs\.matrix/,
     /trusted-project-root: .*trusted_root/,
-    /uses: a3-suite\/a3-actions\/actions\/ci-quality-adapter@/,
+    /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@/,
   ]);
   includesAll(jobBlock(workflow, 'platform-summary'), [
     /needs: \[resolve-platforms, platform\]/,
     /if: always\(\)/,
     /EXPECTED_PLATFORMS/,
-    /uses: a3-suite\/a3-actions\/actions\/ci-quality-summary@/,
+    /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-summary@/,
   ]);
 });
 
 // integration_id: quality-workflow-contract
 test('quality workflow keeps failed or missing checks visible', () => {
   const summary = jobBlock(read('workflows/quality/quality-gate.yml'), 'summary');
-  includesAll(summary, [/if: always\(\)/, /needs\..*\.result/, /判定不能/, /未実施/]);
+  includesAll(summary, [
+    /if: always\(\)/,
+    /"rawResult":"\$\{\{ needs\.trusted\.result \}\}"/,
+    /"applicable":\$\{\{ needs\.trusted\.result != 'skipped' \}\}/,
+    /"rawResult":"\$\{\{ needs\.untrusted-pr\.result \}\}"/,
+    /"applicable":\$\{\{ needs\.trusted\.result == 'skipped' \}\}/,
+  ]);
 });
 
 // integration_id: release-request-workflow-contract
@@ -118,7 +124,7 @@ test('release request workflow binds annotated tags without release publication 
 // integration_id: release-request-workflow-contract
 test('release request workflow reports handoff failure in its summary', () => {
   const summary = jobBlock(read('workflows/release/release-request-tag.yml'), 'summary');
-  includesAll(summary, [/if: always\(\)/, /ci-quality-summary@/, /request job result:/, /failed/]);
+  includesAll(summary, [/if: always\(\)/, /ci-quality-summary@/, /request job result:/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]);
 });
 
 // integration_id: release-publication-workflow-contract
@@ -142,8 +148,8 @@ test('release publication workflows separate request validation from privileged 
 
 // integration_id: release-publication-workflow-contract
 test('release publication workflows preserve failed and unknown outcomes', () => {
-  includesAll(jobBlock(read('workflows/release/release-publication-request.yml'), 'summary'), [/if: always\(\)/, /failed/, /判定不能/]);
-  includesAll(jobBlock(read('workflows/release/release-publication-caller.yml'), 'summary'), [/if: always\(\)/, /failed/, /判定不能/]);
+  includesAll(jobBlock(read('workflows/release/release-publication-request.yml'), 'summary'), [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]);
+  includesAll(jobBlock(read('workflows/release/release-publication-caller.yml'), 'summary'), [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.publish\.result \}\}"/]);
 });
 
 // integration_id: package-publication-workflow-contract
@@ -163,14 +169,20 @@ test('package workflows separate preparation request validation and publication'
   assert.match(preparation, /workflow_call:/);
   assert.match(jobBlock(preparation, 'build'), /needs: version-plan/);
   assert.match(publication, /workflow_call:/);
-  includesAll(jobBlock(publication, 'publish'), [/packages: write/]);
+  includesAll(jobBlock(publication, 'publish'), [
+    /packages: write/,
+    /^      - name: Verify workflow identity$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-workflow-identity@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
+    /expected-called-workflow-path: .github\/workflows\/package-publication\.yml/,
+  ]);
+  assert.doesNotMatch(publication, /expected_caller=/);
   includesAll(jobBlock(publication, 'summary'), [/needs: publish/, /if: always\(\)/, /ci-quality-summary@/]);
 });
 
 // integration_id: package-publication-workflow-contract
 test('package workflows preserve failed and unknown outcomes', () => {
-  includesAll(jobBlock(read('workflows/package/package-publication-request.yml'), 'summary'), [/if: always\(\)/, /failed/, /判定不能/]);
-  includesAll(jobBlock(read('workflows/package/package-publication-caller.yml'), 'summary'), [/if: always\(\)/, /failed/, /判定不能/]);
+  includesAll(jobBlock(read('workflows/package/package-publication-request.yml'), 'summary'), [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]);
+  includesAll(jobBlock(read('workflows/package/package-publication-caller.yml'), 'summary'), [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.publish\.result \}\}"/]);
 });
 
 // integration_id: repository-quality-delivery-regression
@@ -227,12 +239,10 @@ test('managed workflows expose correlated secret-safe failure evidence without h
     for (const sourceJob of summaryNeeds(summary)) {
       const record = unitRecord(summary, sourceJob);
       const escapedJob = sourceJob.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      assert.match(record, new RegExp(`needs\\.${escapedJob}\\.result == 'success' && 'success'`));
-      assert.match(record, new RegExp(`needs\\.${escapedJob}\\.result == 'failure' && 'failed'`));
-      assert.match(record, new RegExp(
-        `needs\\.${escapedJob}\\.result == 'cancelled' \\|\\| needs\\.${escapedJob}\\.result == 'skipped'\\) && '未実施'`,
-      ));
-      assert.match(record, /\|\| '判定不能'/);
+      // The row passes the raw GitHub job result and caller-owned applicability;
+      // failed and missing states are normalized by the ci-quality-summary contract.
+      assert.match(record, new RegExp(`"rawResult":"\\$\\{\\{ needs\\.${escapedJob}\\.result \\}\\}"`));
+      assert.match(record, /"applicable":/);
       assert.match(record, /"evidence":"\$\{\{ env\.WORKFLOW_RUN_URL \}\}"/);
       assert.match(record, new RegExp(`"reason":"[^"]*needs\\.${escapedJob}\\.result`));
     }
