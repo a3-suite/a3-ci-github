@@ -254,6 +254,8 @@ jobs:
           VERSION_STATUS: ${{ steps.version.outputs.status }}
           PUBLISH_VERSION: ${{ steps.version.outputs['publish-version'] }}
           SUMMARY_STATUS: ${{ steps.summary.outputs.status }}
+          SUMMARY_DIGEST: ${{ steps.summary.outputs.digest }}
+          SUMMARY_EVIDENCE: ${{ steps.summary.outputs['evidence-path'] }}
         shell: bash
         run: |
           set -euo pipefail
@@ -265,6 +267,9 @@ jobs:
           test "$VERSION_STATUS" = success
           test "$PUBLISH_VERSION" = '1.2.3-dev.42'
           test "$SUMMARY_STATUS" = success
+          # summary結果の証跡が出力digestと一致することを検証する。
+          test -f "$SUMMARY_EVIDENCE"
+          test "$SUMMARY_DIGEST" = "sha256:$(sha256sum "$SUMMARY_EVIDENCE" | cut -d' ' -f1)"
 
       - name: Prepare invalid version plan fixture
         shell: bash
@@ -323,11 +328,16 @@ jobs:
         env:
           UNRESOLVED_STATUS: ${{ steps.unresolved.outputs.status }}
           UNRESOLVED_EXIT_CODE: ${{ steps.unresolved.outputs['exit-code'] }}
+          UNRESOLVED_DIGEST: ${{ steps.unresolved.outputs.digest }}
+          UNRESOLVED_EVIDENCE: ${{ steps.unresolved.outputs['evidence-path'] }}
         shell: bash
         run: |
           set -euo pipefail
           test "$UNRESOLVED_STATUS" = unresolved
           test "$UNRESOLVED_EXIT_CODE" -ne 0
+          # unresolved結果でも証跡が出力digestと一致することを検証する。
+          test -f "$UNRESOLVED_EVIDENCE"
+          test "$UNRESOLVED_DIGEST" = "sha256:$(sha256sum "$UNRESOLVED_EVIDENCE" | cut -d' ' -f1)"
 
       - name: Verify invalid input stops the Action
         id: invalid

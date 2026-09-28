@@ -27,6 +27,13 @@ verifications:
         checks:
           - id: check-quality-summary-failure-status
             guarantee_ref: quality-summary-failure-propagated
+      - id: unresolved-quality-evidence-rejected
+        intent_id: quality-summary-rejected
+        input:
+          summary-json: '{"tests":[{"unit":"unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"missing evidence"}]}'
+        checks:
+          - id: check-quality-summary-unresolved-failure
+            guarantee_ref: quality-summary-failure-propagated
       - id: excluded-rows-ignored-in-aggregation
         intent_id: quality-summary-output-set
         input:

@@ -24,6 +24,13 @@ test_maps:
         check_refs:
           - check-quality-summary-failure-status
   - verification_id: verification.ci-quality-summary.outputs
+    case_id: unresolved-quality-evidence-rejected
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails unresolved and invalid path relationships
+        check_refs:
+          - check-quality-summary-unresolved-failure
+  - verification_id: verification.ci-quality-summary.outputs
     case_id: excluded-rows-ignored-in-aggregation
     tests:
       - path: actions/ci-quality-summary/tests/summary.test.ts
