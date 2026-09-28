@@ -269,12 +269,15 @@ jobs:
           set -euo pipefail
           printf '%s' '{"strategy":"ciGenerated","template":"{baseVersion}","components":{}}' > .ci/invalid-version-plan.json
 
+      # 期待失敗の診断を注釈へ出さないため、runner同等のINPUT_*環境で
+      # bundled entrypointを実行し、出力をlogへ逃がしてexit codeで検証する。
       - name: Verify invalid version plan stops the Action
         id: invalid-version
         continue-on-error: true
-        uses: ./actions/ci-publish-version
-        with:
-          version-plan-json: .ci/invalid-version-plan.json
+        shell: bash
+        env:
+          INPUT_VERSION-PLAN-JSON: .ci/invalid-version-plan.json
+        run: node actions/ci-publish-version/dist/index.js > .ci/invalid-version.log 2>&1
 
       - name: Verify invalid version plan mapping
         env:
@@ -289,10 +292,12 @@ jobs:
       - name: Verify unresolved summary stops the Action
         id: unresolved
         continue-on-error: true
-        uses: ./actions/ci-quality-summary
-        with:
-          summary-json: >-
+        shell: bash
+        env:
+          INPUT_SUMMARY-JSON: >-
             {"tests":[{"unit":"hosted-unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"hosted contract fixture"}]}
+          INPUT_EVIDENCE-PATH: .ci/ci-quality-summary.evidence.md
+        run: node actions/ci-quality-summary/dist/index.js > .ci/unresolved-summary.log 2>&1
 
       - name: Verify unresolved mapping
         env:
@@ -307,9 +312,11 @@ jobs:
       - name: Verify invalid input stops the Action
         id: invalid
         continue-on-error: true
-        uses: ./actions/ci-quality-summary
-        with:
-          summary-json: '{}'
+        shell: bash
+        env:
+          INPUT_SUMMARY-JSON: '{}'
+          INPUT_EVIDENCE-PATH: .ci/ci-quality-summary.evidence.md
+        run: node actions/ci-quality-summary/dist/index.js > .ci/invalid-input.log 2>&1
 
       - name: Verify invalid input mapping
         env:
