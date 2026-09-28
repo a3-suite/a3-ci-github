@@ -240,6 +240,9 @@ jobs:
         with:
           summary-json: >-
             {"tests":[{"unit":"hosted-contract","execution":"local Action","rawResult":"success","applicable":true,"evidence":"steps"}]}
+          # 検証fixtureの描画をrun要約へ出さず、証跡ファイルとして隔離する。
+          summary-path: .ci/hosted-summary.md
+          evidence-path: .ci/hosted-summary.evidence.md
 
       - name: Verify successful outputs
         env:
@@ -303,7 +306,8 @@ jobs:
         env:
           INPUT_SUMMARY-JSON: >-
             {"tests":[{"unit":"hosted-unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"hosted contract fixture"}]}
-          INPUT_EVIDENCE-PATH: .ci/ci-quality-summary.evidence.md
+          INPUT_SUMMARY-PATH: .ci/unresolved-summary.md
+          INPUT_EVIDENCE-PATH: .ci/unresolved-summary.evidence.md
         run: |
           set -euo pipefail
           exit_code=0

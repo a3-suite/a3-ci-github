@@ -216,6 +216,29 @@ test('repository workflow provider actions use registry-approved pins', () => {
   }
 });
 
+// integration_id: repository-quality-delivery-regression
+test('canonical workflow summaries cover exactly their needs jobs', () => {
+  const workflows = [
+    ['workflows/quality/quality-gate.yml', 'summary'],
+    ['workflows/release/release-request-tag.yml', 'summary'],
+    ['workflows/release/release-publication-request.yml', 'summary'],
+    ['workflows/release/release-publication-caller.yml', 'summary'],
+    ['workflows/release/release-publication.yml', 'summary'],
+    ['workflows/package/package-publication-request.yml', 'summary'],
+    ['workflows/package/package-publication-caller.yml', 'summary'],
+    ['workflows/package/package-preparation.yml', 'summary'],
+    ['workflows/package/package-publication.yml', 'summary'],
+  ];
+  for (const [relative, summaryId] of workflows) {
+    const summary = jobBlock(read(relative), summaryId);
+    const needs = summaryNeeds(summary);
+    const rows = [...summary.matchAll(/"rawResult":"\$\{\{ needs\.([a-zA-Z0-9_-]+)\.result \}\}"/g)]
+      .map(([, job]) => job);
+    assert.deepEqual([...rows].sort(), [...needs].sort(), `${relative} summary rows must match needs`);
+    assert.equal(new Set(rows).size, rows.length, `${relative} summary rows must be unique`);
+  }
+});
+
 // integration_id: failure-diagnostics-contract
 test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
   const workflows = [
