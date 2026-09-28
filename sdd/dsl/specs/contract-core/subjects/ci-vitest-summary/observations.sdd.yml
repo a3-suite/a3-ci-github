@@ -13,3 +13,12 @@ observations:
         - {selector: collection, kind: observation_field, meaning: Collection completeness.}
         - {selector: summary-path, kind: observation_field, meaning: Rendered summary destination.}
         - {selector: digest, kind: observation_field, meaning: Summary digest.}
+  - id: observation.ci.vitest-summary.cli-result
+    summary: The shared CLI exposes the same classification as the Action to its caller.
+    boundary: {ref: boundary.cli-result}
+    value:
+      root: cli.result
+      kind: object
+      fields:
+        - {selector: status, kind: observation_field, meaning: Canonical classification, rendered as 成功, 失敗, or 判定不能 in the CLI summary.}
+        - {selector: collection, kind: observation_field, meaning: Canonical collection state, rendered as 完了, 一部取得, or 取得不可.}

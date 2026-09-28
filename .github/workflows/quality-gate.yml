@@ -80,6 +80,23 @@ jobs:
         shell: bash
         run: node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 
+      - name: Test shared path identity core
+        shell: bash
+        run: node --test runtime/path/tests/same-file-core.test.mjs
+
+      - name: Test shared Vitest summary core
+        shell: bash
+        run: node --test runtime/vitest/tests/vitest-summary-core.test.mjs
+
+      - name: Test Vitest summary CLI and conformance
+        shell: bash
+        env:
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
+        run: |
+          node --test \
+            runtime/adapter/tests/vitest-test-summary.test.mjs \
+            runtime/adapter/tests/vitest-summary-conformance.test.mjs
+
       - name: Test GitHub toolchain verifier Action contract
         shell: bash
         run: node --test actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
@@ -388,8 +405,3 @@ jobs:
           set -euo pipefail
           test "$STATUS" = passed
           test "$COLLECTION" = complete
-
-      - name: Stop artifact API fixture
-        if: always()
-        shell: bash
-        run: kill "$(cat "$RUNNER_TEMP/artifact-api-pid")" 2>/dev/null || true

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as core from '@actions/core';
-import { pathsReferToSameFile } from './snapshot-path.js';
+import { pathsReferToSameFile } from '../../../runtime/path/same-file-core.mjs';
 import { resolveConfigSnapshot } from './snapshot.js';
 
 const validatePath = (value: string, error: string): string => {
@@ -21,7 +21,9 @@ export const run = (): void => {
     for (const candidate of [explicitOutputPath, commandOutputPath]) {
       if (!candidate) continue;
       validatePath(candidate, 'config-snapshot-output-path-invalid');
-      if (pathsReferToSameFile(snapshotPath, candidate)) throw new Error('config-snapshot-paths-must-differ');
+      if (pathsReferToSameFile(snapshotPath, candidate, 'config-snapshot-path-invalid')) {
+        throw new Error('config-snapshot-paths-must-differ');
+      }
     }
     const snapshot = resolveConfigSnapshot(input);
     fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });

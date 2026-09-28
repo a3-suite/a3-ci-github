@@ -1126,6 +1126,18 @@
           }
         },
         {
+          "id": "unit-core",
+          "level": "unit",
+          "cwd": "runtime/vitest",
+          "tests": [
+            "tests/vitest-summary-core.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The shared classification core is a plain ESM module verified without product source coverage attribution."
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-vitest-summary",
@@ -1143,6 +1155,19 @@
             "exclude": [
               "src/**"
             ]
+          }
+        },
+        {
+          "id": "integration-adapter",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/adapter/tests/vitest-test-summary.test.mjs",
+            "runtime/adapter/tests/vitest-summary-conformance.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The CLI and conformance matrix observe public process boundaries and the shared core classification rather than attributing Action source coverage."
           }
         },
         {
