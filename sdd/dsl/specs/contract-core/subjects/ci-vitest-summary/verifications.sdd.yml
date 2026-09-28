@@ -1,0 +1,21 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.vitest-summary
+verifications:
+  - id: verification.ci.vitest-summary.outputs
+    contract_id: contract.ci.vitest-summary.outputs
+    cases:
+      - id: complete-vitest-report
+        intent_id: vitest-summary-output-set
+        input:
+          report-json: .ci/vitest.json
+          label: unit
+          summary-path: .ci/summary.md
+        checks:
+          - {id: check-vitest-summary-output, guarantee_ref: vitest-summary-output-produced}
+      - id: malformed-report-unresolved
+        intent_id: vitest-summary-unresolved-output-set
+        input:
+          report-json: malformed-report.json
+        checks:
+          - {id: check-vitest-summary-unresolved-output, guarantee_ref: vitest-summary-unresolved-output-produced}

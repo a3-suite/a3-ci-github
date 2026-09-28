@@ -1,0 +1,25 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: gh-release-provisioning
+    type: functional
+    summary: GitHub CI が指定した exact version の GitHub CLI を runner の既定値に依存せず供給できる
+    rationale:
+      why: runner image の gh version が変動しても provider 処理の実行前検証を成立させるため
+    subject:
+      namespace: skills
+      key: ci-github
+    priority: must
+    fit_criteria:
+      - 対応 runner と architecture の公式 GitHub CLI Release asset を選択する
+      - 同じ Release の gh_<version>_checksums.txt で取得物を検証してから PATH へ追加する
+      - checksum 照合前にアーカイブを展開しない
+      - 取得、checksum、抽出、配置の失敗時は gh-provision-failed として停止する
+      - 供給後の exact version 検証は既存 verifier に委譲する
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: github-tool-exact-version-provisioning
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: gh-release-provisioning-safe

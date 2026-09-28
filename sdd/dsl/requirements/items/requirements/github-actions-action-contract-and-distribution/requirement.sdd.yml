@@ -1,0 +1,40 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: github-actions-action-contract-and-distribution
+    type: functional
+    summary: GitHub Action を利用者が action.yml の公開契約だけで安全に実行でき、実装と配布物の同一性を保てる
+    rationale:
+      why: >-
+        Action の実装、workflow、provider 固有の接続を分離し、利用者がソースの build や内部依存を用意せずに
+        再利用できる状態を共通要件として保証するため
+    subject:
+      namespace: skills
+      key: github-actions
+    priority: must
+    fit_criteria:
+      - action.yml が Action の name、description、実行方式、entrypoint、全 input、全 output を公開契約として宣言する
+      - input は必須性、既定値、文字列入力としての型・値制約、正規化、secret の扱いを実装で検証し、不正入力を成功扱いにしない
+      - output は生成条件と値形式を定義し、成功時に必要な値を設定し、失敗時に未保証の値を成功の代替として扱わない
+      - 失敗は Action の終了状態へ反映し、診断情報を出力する。ただし secret、token、credential、機密入力をログや output に出力しない
+      - JavaScript / TypeScript Action は固定依存とビルド設定から再生成した dist 配布物を同じ実装 ref に含め、利用者側の build と node_modules を要求しない
+      - Composite Action は参照する step と script を同じ実装 ref に含め、Docker Action は action.yml、Dockerfile、依存定義を同じ実装 ref に含める
+      - 複数の adapter から再利用する定型処理は設計で指定された共有 runtime 境界を単一の実装正本とし、引数、環境変数、終了状態、診断メッセージを単独で検証できる
+      - Composite Action は input と output を script の実行契約へ写像する薄い adapter とし、script の処理本体を複製しない
+      - 契約テスト、実装テスト、配布物検証を分離して実行でき、必須・不正・境界・正常入力と成功 output、失敗終了状態を確認できる
+      - Action は CI preset、stage、workflow trigger、job、runner、matrix、caller permissions、artifact handoff、publish 判断を実装責務として持たない
+      - workflow から Action への input mapping、secret 注入、provider 権限、runner、信頼境界は選択した provider の契約へ委譲できる
+      - version 変更時は実装方式に対応する配布物を更新し、exact release tag はその配布物と同一 commit を指し、tag version は対象commitのrepository VERSIONと一致し、alias は検証済み exact release だけを指す
+      - Action の追加・削除時はコミットゲートが Action ディレクトリを列挙し、README.md の Action 一覧と用途の同期を検証する
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: github-actions-action-contract-and-distribution
+        - use_case_ref:
+            use_case_id: ci-quality-gate-execution
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: github-actions-action-contract-and-distribution-safe
+      constraints:
+        - constraint_ref:
+            constraint_id: github-actions-action-boundary-and-distribution

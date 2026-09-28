@@ -1,0 +1,16 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.vitest-summary
+test_maps:
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: complete-vitest-report
+    tests:
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint writes a Vitest summary
+        check_refs: [check-vitest-summary-output]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: malformed-report-unresolved
+    tests:
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint keeps malformed report shapes unresolved
+        check_refs: [check-vitest-summary-unresolved-output]

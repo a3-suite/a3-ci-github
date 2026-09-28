@@ -1,0 +1,26 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.gh-provisioner
+observations:
+  - id: observation.ci-gh-provisioner.path
+    summary: The provisioned GitHub CLI command is visible to later steps.
+    boundary:
+      ref: boundary.runner-path
+    value:
+      root: runner.path
+      kind: object
+      fields:
+        - selector: gh
+          kind: observation_field
+          meaning: Checked GitHub CLI executable on the job command search path.
+  - id: observation.ci-gh-provisioner.result
+    summary: Provisioning success or failure is visible to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success after checksum verification, extraction, and PATH handoff, or failure before handoff.

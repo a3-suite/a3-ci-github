@@ -1,0 +1,46 @@
+name: ci-package-publication-request
+description: Create or verify an immutable package publication request handoff.
+inputs:
+  operation:
+    required: true
+    description: Operation, create or verify.
+  request-path:
+    required: false
+    default: package-publication-request/request.json
+    description: Path to the request JSON.
+  source-sha:
+    required: false
+    description: Source commit SHA for create.
+  version:
+    required: false
+    description: Package version for create.
+  target-identity:
+    required: false
+    description: Package target identity for create.
+  language-profile:
+    required: false
+    description: Language profile for create.
+  toolchain:
+    required: false
+    description: Fixed toolchain for create.
+  expected-source-sha:
+    required: false
+    description: workflow_run head SHA expected by verify.
+outputs:
+  status:
+    description: success or failed.
+  request-path:
+    description: Path to the request JSON.
+  source-sha:
+    description: Verified source commit SHA.
+  version:
+    description: Verified package version.
+  target-identity:
+    description: Verified package target identity.
+  language-profile:
+    description: Verified language profile.
+  toolchain:
+    description: Verified fixed toolchain.
+runs:
+  using: node24
+  main: dist/index.js

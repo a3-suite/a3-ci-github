@@ -1,0 +1,86 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.gh-provisioner
+verifications:
+  - id: verification.ci-gh-provisioner.provision
+    contract_id: contract.ci-gh-provisioner.provision
+    cases:
+      - id: supported-runner-assets
+        intent_id: checked-gh-provisioned
+        input:
+          runner-os-arch: supported-matrix
+        checks:
+          - id: check-supported-runner-assets
+            guarantee_ref: checked-gh-available
+      - id: checked-release-asset
+        intent_id: checked-gh-provisioned
+        input:
+          gh-version: 2.80.0
+          runner-os: Linux
+          runner-arch: X64
+        checks:
+          - id: check-gh-on-path
+            guarantee_ref: checked-gh-available
+      - id: mismatched-release-asset
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          checksum: mismatch
+        checks:
+          - id: check-gh-provisioning-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: invalid-version
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: not-exact
+        checks:
+          - id: check-invalid-version-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: unsupported-runner
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          runner-os: Windows
+          runner-arch: X64
+        checks:
+          - id: check-unsupported-runner-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: unavailable-release-asset
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          asset: unavailable
+        checks:
+          - id: check-download-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: invalid-checksum-manifest
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          checksum-entry: missing-or-duplicate
+        checks:
+          - id: check-checksum-entry-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: extraction-failure
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          archive-extraction: failed
+        checks:
+          - id: check-extraction-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: installation-failure
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          installation: failed
+        checks:
+          - id: check-installation-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: path-update-failure
+        intent_id: failed-gh-provisioning-rejected
+        input:
+          gh-version: 2.80.0
+          path-update: failed
+        checks:
+          - id: check-path-update-failure
+            guarantee_ref: failed-provisioning-stops

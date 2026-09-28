@@ -1,0 +1,46 @@
+version: 1
+name: cli-command
+command:
+  id: validate-ci-preset
+  path:
+    - node
+    - runtime/preset/run-validate-ci-preset.mjs
+  summary: Validate applied CI preset assets with an isolated fixed runtime
+  usage_targets:
+    - id: read-only
+      summary: Inspect one consumer project without creating remediation output
+      option_bindings:
+        - option_id: audit-mode
+          presence: required
+        - option_id: repo-root
+          presence: required
+        - option_id: skill-collection-root
+          presence: required
+        - option_id: preset
+          presence: optional
+    - id: remediation
+      summary: Inspect one consumer project and optionally write remediation output
+      option_bindings:
+        - option_id: audit-mode
+          presence: required
+        - option_id: repo-root
+          presence: required
+        - option_id: skill-collection-root
+          presence: required
+        - option_id: preset
+          presence: optional
+        - option_id: output
+          presence: optional
+  option_groups:
+    - id: inputs
+      title: Validation inputs
+      options:
+        - audit-mode
+        - repo-root
+        - skill-collection-root
+        - preset
+        - output
+  help:
+    usage_lines:
+      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode read-only --repo-root <PATH> --skill-collection-root <PATH> [--preset <ID>]
+      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode remediation --repo-root <PATH> --skill-collection-root <PATH> [--preset <ID>] [--output <PATH>]

@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.repository.action-distribution
+  summary: Maintaining Action distribution inputs and the repository Action catalog consistently.

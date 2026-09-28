@@ -1,0 +1,32 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.quality-summary
+observations:
+  - id: observation.ci-quality-summary.outputs
+    summary: The Action exposes aggregate status, digest, and evidence path outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Aggregate quality status.
+        - selector: digest
+          kind: observation_field
+          meaning: SHA-256 digest of rendered summary evidence.
+        - selector: evidence-path
+          kind: observation_field
+          meaning: Path written for rendered summary evidence.
+  - id: observation.ci-quality-summary.result
+    summary: The Action exposes its failed step outcome when summary input is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected quality summary step.

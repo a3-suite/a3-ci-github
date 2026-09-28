@@ -1,0 +1,32 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.config-snapshot
+observations:
+  - id: observation.ci-config-snapshot.outputs
+    summary: The Action exposes snapshot status, path, and digest outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Whether configuration resolution and snapshot writing succeeded.
+        - selector: snapshot-path
+          kind: observation_field
+          meaning: Path of the written configuration snapshot.
+        - selector: digest
+          kind: observation_field
+          meaning: SHA-256 digest of resolved snapshot values and sources.
+  - id: observation.ci-config-snapshot.result
+    summary: The Action exposes its failed step outcome when snapshot input is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected snapshot operation.

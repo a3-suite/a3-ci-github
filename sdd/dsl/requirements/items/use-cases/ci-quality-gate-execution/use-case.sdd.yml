@@ -1,0 +1,50 @@
+version: 1
+name: use-case
+use_case_id: ci-quality-gate-execution
+summary: CI workflow が変更内容に応じた品質チェックを実行し、結果を集約して合否の判定材料を得る
+actors:
+  - actor_id: developer
+    kind: human
+    role: primary
+    summary: 変更を提出し、品質ゲートの結果を受け取る主体
+  - actor_id: github-repository-event
+    kind: external-system
+    role: supporting
+    summary: pull requestまたはpushの固定event metadataをworkflowへ通知するGitHub
+goal: 変更に応じた品質チェックを再現可能な設定で実行し、構造化された結果を判定材料として得る
+preconditions:
+  - trusted descriptor と platform manifest が repository 内で管理されている
+  - 品質チェックの対象 source が固定 commit で checkout されている
+trigger: pull request または push で品質ゲートが起動する
+main_success_scenario:
+  - summary: 差分を分類し、不要なチェックの実行要否を決める
+  - summary: 複数の設定源を解決し、後続処理へ同じ設定 snapshot を渡す
+  - summary: platform manifest を検証し、strategy へ渡す matrix を生成する
+  - summary: trusted descriptor の read-only command を fixed source に対して実行する
+  - summary: テストや監査の結果を集約し、status と evidence を summary へ出力する
+success_outcomes:
+  - 実行対象の品質チェックと結果が再現可能な形で記録される
+  - 未実行、実行不可、失敗を成功として扱わない
+failure_outcomes:
+  - 入力や descriptor が不正な場合は対象コマンドを実行せず失敗する
+  - workflow の権限、runner、job 境界、publish は Action が決定せず provider 側へ委譲する
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-common-processing-action-reuse
+  - requirement_ref:
+      requirement_id: github-actions-action-contract-and-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-quality-workflow.execution
+  - contract_ref:
+      contract_id: contract.ci-change-scope.outputs
+  - contract_ref:
+      contract_id: contract.ci-config-snapshot.outputs
+  - contract_ref:
+      contract_id: contract.ci-platform-matrix.outputs
+  - contract_ref:
+      contract_id: contract.ci-quality-adapter.outputs
+  - contract_ref:
+      contract_id: contract.ci-quality-summary.outputs
+  - contract_ref:
+      contract_id: contract.ci.vitest-summary.outputs

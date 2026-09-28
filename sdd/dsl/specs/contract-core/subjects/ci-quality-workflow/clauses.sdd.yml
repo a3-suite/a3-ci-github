@@ -1,0 +1,63 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.quality-workflow
+contracts:
+  - id: contract.ci-quality-workflow.execution
+    summary: The canonical quality workflow declares its trusted execution chain and an aggregate failure-visible summary.
+    conditions:
+      - id: ci-quality-workflow-canonical-source-available
+        input_predicate:
+          kind: input
+          term: input.canonical-source
+          op: present
+      - id: ci-quality-workflow-failure-route-required
+        input_predicate:
+          kind: input
+          term: input.failure-route
+          op: present
+      - id: ci-quality-workflow-platform-source-selected
+        input_predicate:
+          kind: input
+          term: input.optional-platform-canonical-source
+          op: present
+    guarantees:
+      - id: ci-quality-workflow-success-observed
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: execution-chain
+      - id: ci-quality-workflow-failure-observed
+        when: ci-quality-workflow-failure-route-required
+        observation_ref: observation.ci-quality-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: failure-summary
+      - id: ci-quality-workflow-platform-chain-observed
+        when: ci-quality-workflow-platform-source-selected
+        observation_ref: observation.ci-quality-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: optional-platform-chain
+    verification_intents:
+      - id: ci-quality-workflow-success-intent
+        goal: Verify the canonical source declares the trusted capability boundary.
+        guarantee_refs:
+          - ci-quality-workflow-success-observed
+      - id: ci-quality-workflow-failure-intent
+        goal: Verify the canonical source declares a failure-visible summary route.
+        guarantee_refs:
+          - ci-quality-workflow-failure-observed
+      - id: ci-quality-workflow-platform-intent
+        goal: Verify the optional platform source preserves trusted asset resolution, selected matrix execution, and aggregate platform evidence.
+        guarantee_refs:
+          - ci-quality-workflow-platform-chain-observed

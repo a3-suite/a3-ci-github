@@ -1,0 +1,25 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.quality-adapter
+test_maps:
+  - verification_id: verification.ci-quality-adapter.outputs
+    case_id: read-only-adapter-execution
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: bundled entrypoint emits status and result path
+        check_refs:
+          - check-quality-adapter-status
+  - verification_id: verification.ci-quality-adapter.outputs
+    case_id: writable-adapter-rejected
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects a non-read-only descriptor
+        check_refs:
+          - check-quality-adapter-failure-status
+  - verification_id: verification.ci-quality-adapter.outputs
+    case_id: toolchain-version-report-rejected
+    tests:
+      - path: actions/ci-quality-adapter/tests/adapter.test.ts
+        symbol: rejects a missing or mismatched toolchain version token with the stable diagnostic
+        check_refs:
+          - check-quality-adapter-toolchain-version-diagnostic

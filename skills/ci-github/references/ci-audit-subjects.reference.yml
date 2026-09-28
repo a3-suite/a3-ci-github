@@ -1,0 +1,286 @@
+schemaVersion: "1"
+kind: ci-audit-subjects
+id: ci.audit-subjects
+title: CI audit semantic subjects
+summary: >-
+  CI 監査で横断確認する意味監査 subject の発見、適用判定、owner 委譲、
+  CI 側の接続確認、報告項目を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - semantic audit subject discovery and applicability
+    - semantic audit subject owner delegation
+    - CI-side integration and reporting requirements for delegated subjects
+  excludes:
+    - audit mode, phase, status, aggregation, completion, and conformance semantics
+    - delegated owner contract semantics
+    - repository release-shape and installer-adoption decision criteria
+integration:
+  auditContract: ci.audit-contract
+  phaseConstraint: semantic-audit-layer-only
+  statusClassification: ci.audit-contract.statusClassification
+  aggregation: ci.audit-contract.statusAggregation
+usage:
+  whenToRead:
+    - CI 監査の意味監査 subject を発見して適用判定するとき
+    - owner スキルへ監査を委譲するとき
+    - 委譲結果を CI 実行経路と照合して報告するとき
+  consumers: [human, agent, validator]
+subjects:
+  - id: repository-root-readme
+    requirement: required
+    phase: use-case-simulation
+    discovery: project-root-readme
+    ownerSkill: root-docs
+    delegation:
+      trigger: プロジェクトルートのドキュメントを監査したい
+      ciInputs:
+        - ci-authorities-and-execution-evidence
+      resultHandling:
+        - preserve-root-docs-audit-result
+        - classify-delegation-result-through-status-classification
+  - id: repository-ci-documentation
+    requirement: conditional
+    appliesWhen: >-
+      監査対象 repository 内の追跡対象文書が、CI の trigger、branch、check、
+      quality、runtime、toolchain、権限、trust、artifact、release、package、
+      deploy、publish、rerun、recovery、または停止条件を定義または制約している。
+    phase: use-case-simulation
+    discovery:
+      source: repository-documentation-entrypoints-and-tracked-documents
+      classification: authority-and-ci-impact-semantic-review
+      rules:
+        - do-not-classify-by-filename-or-keyword-only
+        - preserve-non-authoritative-document-status
+      handledSeparately:
+        project-root-readme: repository-root-readme
+        provider-ci-readme: provider-audit-guide
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns:
+        - candidate-applicability
+        - document-and-execution-path-comparison
+        - subject-status-aggregation
+    evidenceRoles:
+      documentManagement:
+        provides: placement-scope-classification-references-and-ssot-precedence
+        excludes: domain-content-correctness-and-domain-owner-resolution
+      repositoryAudit:
+        appliesWhen: release-shape-install-distribution-publish-or-deploy-is-relevant
+        provides: repository-wide-supporting-evidence
+        constraints:
+          - not-a-per-document-owner
+          - no-detailed-ci-audit-reentry
+      domainOwner:
+        provides: project-ssot-and-existing-owner-evidence
+        delegation: only-through-an-applicable-public-audit-or-review-entrypoint
+    reviewRequirements:
+      - review-every-applicable-ci-document
+      - compare-document-and-ci-execution-path-bidirectionally
+      - report-contradictions-omissions-and-obsolete-instructions
+    reportingFields:
+      - document-identity
+      - authority
+      - applicability-and-reason
+      - owner-and-ssot-evidence
+      - supporting-audit-evidence
+      - contradictions-and-omissions
+      - status
+    inapplicable:
+      handling: excluded-from-aggregation
+      discoveryScope: required
+      reason: required
+  - id: project-owned-ci-adapter
+    requirement: conditional
+    appliesWhen: selected-preset-requires-project-owned-adapter
+    phase: contract-evidence
+    discovery:
+      sources:
+        - selected-preset-required-extensions
+        - reachable-project-owned-adapter-entrypoints
+      rules:
+        - preflight-success-does-not-prove-adapter-contract-conformance
+        - inactive-or-unreachable-adapters-are-not-applicable
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns:
+        - subject-applicability
+        - workflow-to-adapter-connection-review
+        - subject-status-aggregation
+      excludes: [project-adapter-contract-semantics]
+    evidenceRequirements:
+      - adapter-entrypoint-identity
+      - applicable-ci-script-contract-identity-and-version
+      - project-contract-test-result-bound-to-audit-target
+      - phase-input-output-and-stop-condition-evidence
+    reviewRequirements:
+      - compare-workflow-invocation-with-adapter-contract
+      - preserve-missing-stale-or-failed-evidence-as-non-success
+    reportingFields:
+      - applicability-and-reason
+      - adapter-entrypoint-and-owner
+      - workflow-connection
+      - contract-test-evidence
+      - status
+    inapplicable:
+      handling: excluded-from-aggregation
+      discoveryScope: required
+      reason: required
+  - id: ci-workflow-sequence
+    requirement: conditional
+    appliesWhen: 配置済み workflow が、選択した preset 契約で順序、状態遷移、または停止条件を定義された stage を実行している。
+    phase: contract-evidence
+    discovery:
+      sources:
+        - selected-preset-contract-sequences
+        - installed-provider-workflow-execution-paths
+        - reachable-executable-checks
+      rules:
+        - contract-sequence-is-the-judgement-basis
+        - reasoning-and-review-notes-are-not-verification-evidence
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns:
+        - subject-applicability
+        - sequence-to-evidence-mapping
+        - subject-status-aggregation
+      excludes: [contract-sequence-definition, project-owned-adapter-internal-verification]
+    evidenceRequirements:
+      - contract-sequence-to-executable-check-mapping
+      - executable-check-identity-and-latest-result
+      - test-gap-or-contract-gap-classification
+    reviewRequirements:
+      - map-every-contract-sequence-to-an-executable-check
+      - execute-the-identified-checks-or-preserve-their-latest-result-identity
+      - do-not-substitute-reasoning-for-execution-results
+      - preserve-missing-unrun-or-failed-evidence-as-non-success
+    reportingFields:
+      - applicability-and-reason
+      - contract-sequence-and-execution-path
+      - executable-check-identity-and-result
+      - gap-classification
+      - status
+    inapplicable:
+      handling: excluded-from-aggregation
+      discoveryScope: required
+      reason: required
+  - id: installer-distribution
+    requirement: conditional
+    adoptionAssessment:
+      owner: repository-audit
+      source: repository-audit-installer-adoption-result
+      decisions: [required, recommended, optional, not-recommended, undecidable]
+      handling:
+        required: installer-distribution-applicable
+        recommended: report-non-blocking-remediation-candidate
+        optional: report-reason
+        not-recommended: report-reason
+        undecidable: preserve-undecidable
+      rules:
+        - current-installer-absence-is-not-an-adoption-decision
+        - recommendation-does-not-activate-installer-compliance-audit
+        - project-ssot-selection-activates-installer-compliance-audit
+    appliesWhen:
+      anyOf:
+        - repository-audit-primary-release-shape-is-release-asset-installer
+        - repository-audit-installer-adoption-result-is-required
+        - project-ssot-explicitly-classifies-publish-target-as-installer-artifact
+        - project-ssot-explicitly-applies-installer-owner-contract-to-publish-target
+    phase: use-case-simulation
+    discovery:
+      sources:
+        - repository-audit-release-shape-result
+        - project-ssot-and-owner-contract-evidence
+      rules:
+        - release-asset-presence-alone-is-insufficient
+        - filename-or-generic-install-distribution-wording-alone-is-insufficient
+        - unresolved-applicability-is-not-inapplicable
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns:
+        - subject-applicability
+        - ci-publication-path-comparison
+        - subject-remediation-priority
+        - subject-status-aggregation
+      excludes:
+        - release-shape-classification
+        - installer-contract-compliance-judgment
+        - concrete-installer-remediation
+    ownerSkill: installer
+    delegation:
+      trigger: インストーラを監査したい
+      ciInputs:
+        - installer-applicability-evidence
+        - installer-asset-identity-and-owner-contract-evidence
+        - resolved-publication-path
+        - ci-authorities-and-execution-evidence
+      resultHandling:
+        - preserve-installer-audit-result
+        - classify-delegation-result-through-status-classification
+    remediationPriority:
+      inputMappings:
+        installerAuditAction:
+          source: installer-audit-result.audit-action
+          routes:
+            fix-now:
+              handling: prioritized-remediation
+              ownerSource: ownerSkill
+            stop:
+              handling: preserve-stop
+            handoff:
+              handling: preserve-handoff
+            observe:
+              handling: no-required-remediation
+        publicationPathStatus:
+          source: ci-publication-path-comparison.status
+          routes:
+            failed:
+              handling: prioritized-remediation
+              ownerSource: resolved-publication-path.owner-contract
+            blocked:
+              handling: preserve-stop
+            判定不能:
+              handling: preserve-status
+            success:
+              handling: no-required-remediation
+      order:
+        - preserve-stop
+        - preserve-handoff
+        - preserve-status
+        - prioritized-remediation
+        - remaining-ci-remediation-candidates
+      modeHandling:
+        read-only:
+          action: report-routing-result-without-mutation
+          mutation: prohibited
+        remediation:
+          action: apply-prioritized-remediation-through-route-owner-within-authorized-scope
+      unresolvedPriority:
+        classificationCondition: observed-target-contract-violation
+    publicationPathCheck:
+      releaseAssets:
+        appliesWhen: installer-owner-contract-selects-release-assets
+        requirement: release-publication-path-is-connected
+      otherResolvedPath:
+        requirement: owner-selected-publication-path-is-connected
+        excludes: release-publication-path-requirement
+    reportingFields:
+      - installer-adoption-result-and-reason
+      - installer-adoption-project-ssot-decision
+      - applicability-and-reason
+      - installer-applicability-evidence
+      - installer-asset-identity
+      - installer-owner-contract
+      - resolved-publication-path
+      - installer-audit-result
+      - ci-publication-path-comparison
+      - remediation-routing-result
+      - status
+    inapplicable:
+      handling: excluded-from-aggregation
+      discoveryScope: required
+      reason: required
+      preserve:
+        - installer-adoption-result-and-reason
+        - non-blocking-remediation-candidate

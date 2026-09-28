@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.handoff-integrity
+contracts:
+  - id: contract.ci-handoff-integrity.outputs
+    summary: A matching handoff descriptor and manifest produce a handoff status output.
+    conditions:
+      - id: handoff-input-present
+        input_predicate:
+          kind: input
+          term: input.handoff-root
+          op: present
+      - id: handoff-validation-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: handoff-status-produced
+        when: handoff-input-present
+        observation_ref: observation.ci-handoff-integrity.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
+      - id: handoff-failure-propagated
+        when: handoff-validation-rejected
+        observation_ref: observation.ci-handoff-integrity.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: handoff-output-set
+        goal: A valid handoff produces its status output.
+        guarantee_refs:
+          - handoff-status-produced
+      - id: handoff-validation-rejected
+        goal: A mismatching or unsafe handoff fails the Action without validated outputs.
+        guarantee_refs:
+          - handoff-failure-propagated

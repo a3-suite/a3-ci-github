@@ -1,0 +1,37 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.github-toolchain-verifier
+observations:
+  - id: observation.ci-github-toolchain-verifier.script-result
+    summary: The shared script exposes whether exact toolchain verification succeeded or failed.
+    boundary:
+      ref: boundary.script-result
+    value:
+      root: script.result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success only when every CLI selected by the mode exists and exactly matches the requested version; failure otherwise.
+  - id: observation.ci-github-toolchain-verifier.outputs
+    summary: The Composite Action exposes successful toolchain verification to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: verified
+          kind: observation_field
+          meaning: Whether every command selected by mode matched its exact expected version.
+  - id: observation.ci-github-toolchain-verifier.result
+    summary: The Composite Action exposes its step outcome to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: The success or failure outcome of the verification step.

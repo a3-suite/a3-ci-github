@@ -1,0 +1,1 @@
+{"name":"ci-release-notes-input-resolution","inputs":{"input-handoff-directory":{"required":true,"description":"Directory containing externally approved release-notes handoff files."},"output-directory":{"required":true,"description":"Directory containing the normalized release-notes files."}},"outputs":["status","release-notes-path","approval-path"],"runtime":"node24"}

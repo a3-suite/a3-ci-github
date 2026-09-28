@@ -1,0 +1,24 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-common-processing-action-reuse-safe
+summary: 共通 CI 処理を固定 SHA の Action から fail-closed に再利用し、workflow と owner の境界を維持する
+quality_attribute: reliability
+stimulus: CI workflow が共通 CI 処理の Action を呼び出し、正常または不正な入力を渡す
+environment: workflow が job 境界、permissions、credential 注入を保持し、owner が policy と credential route を保持する
+response: Action は境界内で入力を検証し、契約出力を返すか診断付きで失敗し、provider write を行わない
+response_measure:
+  - 正常入力では該当する公開契約の出力が得られる
+  - 必須入力の欠落、不正値、不整合は成功扱いにならない
+  - Action は provider write、credential の選択または保存を行わない
+  - 利用 project に同じ処理の script または runtime を要求しない
+  - Release publication control、package publication request、quality adapter の各契約を独立して検証できる
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-common-processing-action-reuse
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-release-publication-control.outputs
+  - contract_ref:
+      contract_id: contract.ci-package-publication-request.outputs
+  - contract_ref:
+      contract_id: contract.ci-quality-adapter.outputs

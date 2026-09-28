@@ -1,0 +1,65 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.platform-matrix
+contracts:
+  - id: contract.ci-platform-matrix.outputs
+    summary: A valid platform manifest produces a deterministic matrix output.
+    conditions:
+      - id: platform-manifest-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.platform-manifest-valid
+          op: available
+      - id: platform-manifest-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.platform-manifest-invalid
+          op: available
+    guarantees:
+      - id: platform-matrix-produced
+        when: platform-manifest-valid
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: matrix
+      - id: invalid-platform-manifest-fails
+        when: platform-manifest-invalid
+        observation_ref: observation.ci-platform-matrix.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: invalid-platform-manifest-has-no-output
+        when: platform-manifest-invalid
+        observation_ref: observation.ci-platform-matrix.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: matrix-output-state
+            right:
+              kind: value_set
+              values:
+                - absent
+    verification_intents:
+      - id: platform-matrix-output-set
+        goal: A valid manifest produces its validated include matrix.
+        guarantee_refs:
+          - platform-matrix-produced
+      - id: invalid-platform-manifest-rejected
+        goal: An invalid, unsupported, or oversized manifest fails without a matrix output.
+        guarantee_refs:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output

@@ -1,0 +1,26 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: rust-release-asset-integrity-safe
+summary: Rust release asset の生成根拠と内容を検証し、不一致や競合時は fail-closed にする
+quality_attribute: reliability
+stimulus: release authority と platform manifest に基づいて Rust release asset を生成または検証する
+environment: checked-out source、固定 toolchain、platform manifest、package metadata が利用可能な release build 環境
+response: authority と一致する asset だけを検証済みとして生成し、不一致、改変、既存出力、処理失敗時は失敗する
+response_measure:
+  - source SHA、toolchain version、platform ID、platform target、package version が authority と一致し、binary は release version を独立トークンとして報告する
+  - version を観測できない場合は binary-version-mismatch と expected / received を観測可能にする
+  - archive、checksum、asset manifest の対応が一致する
+  - 同一 platform ID の重複、可変 toolchain、改変済み manifest または asset を拒否する
+  - 既存または競合する出力先を上書きせず、失敗時に未検証の最終出力を残さない
+related_requirements:
+  - requirement_ref:
+      requirement_id: rust-release-asset-integrity
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-rust-source-gate.processing
+  - contract_ref:
+      contract_id: contract.ci-rust-source-gate.outputs
+  - contract_ref:
+      contract_id: contract.ci-rust-release-build.processing
+  - contract_ref:
+      contract_id: contract.ci-rust-release-build.outputs

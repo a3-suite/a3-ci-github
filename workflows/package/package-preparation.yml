@@ -1,0 +1,95 @@
+name: package-preparation
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      target_identity:
+        required: true
+        type: string
+      language_profile:
+        required: true
+        type: string
+      toolchain:
+        required: true
+        type: string
+    outputs:
+      handoff_run_id:
+        value: ${{ jobs.build.outputs.handoff_run_id }}
+      artifact_id:
+        value: ${{ jobs.build.outputs.artifact_id }}
+      publish_version:
+        value: ${{ jobs.version-plan.outputs.version }}
+
+permissions: {}
+
+jobs:
+  version-plan:
+    runs-on: ubuntu-24.04
+    permissions: {}
+    outputs:
+      version: ${{ steps.version.outputs['publish-version'] }}
+    steps:
+      - name: Write owner-approved version plan
+        shell: bash
+        env:
+          PUBLISH_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "$PUBLISH_VERSION"
+          printf '{"strategy":"exact","publishVersion":"%s"}\n' "$PUBLISH_VERSION" > version-plan.json
+      - id: version
+        uses: a3-suite/a3-actions/actions/ci-publish-version@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          version-plan-json: version-plan.json
+
+  build:
+    needs: version-plan
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      handoff_run_id: ${{ github.run_id }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ inputs.source_sha }}
+      - id: build
+        shell: bash
+        env:
+          CI_SOURCE_SHA: ${{ inputs.source_sha }}
+          CI_VERSION: ${{ needs.version-plan.outputs.version }}
+          CI_TARGET_IDENTITY: ${{ inputs.target_identity }}
+          CI_LANGUAGE_PROFILE: ${{ inputs.language_profile }}
+          CI_TOOLCHAIN: ${{ inputs.toolchain }}
+        run: |
+          set -euo pipefail
+          test -n "$CI_SOURCE_SHA"; test -n "$CI_VERSION"; test -n "$CI_TARGET_IDENTITY"
+          .ci/scripts/ci-package-build.sh "$CI_LANGUAGE_PROFILE" "$CI_TOOLCHAIN" "$CI_SOURCE_SHA" "$CI_VERSION" "$CI_TARGET_IDENTITY" package-handoff
+      - id: upload
+        uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: package-handoff
+          path: package-handoff
+          if-no-files-found: error
+
+  summary:
+    needs: [version-plan, build]
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","result":"${{ needs.version-plan.result == 'success' && 'success' || needs.version-plan.result == 'failure' && 'failed' || (needs.version-plan.result == 'cancelled' || needs.version-plan.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.version-plan.result == 'success' || needs.version-plan.result == 'failure') && '完了' || needs.version-plan.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","result":"${{ needs.build.result == 'success' && 'success' || needs.build.result == 'failure' && 'failed' || (needs.build.result == 'cancelled' || needs.build.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.build.result == 'success' || needs.build.result == 'failure') && '完了' || needs.build.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"build job result: ${{ needs.build.result }}"}]}

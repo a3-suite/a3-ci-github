@@ -1,0 +1,33 @@
+version: 1
+name: contract-core-validator-profile
+profile_id: default-contract-core-validator-profile
+claim_profile:
+  - kind: observable-result
+    allowed_ops:
+      - present
+    target_compatibility:
+      - target_kind: observation_field
+        allowed_ops:
+          - present
+  - kind: diagnostic-present
+    allowed_ops:
+      - contains
+    target_compatibility:
+      - target_kind: diagnostic_code
+        allowed_ops:
+          - contains
+  - kind: observable-value
+    allowed_ops:
+      - in
+    relation_compatibility:
+      - left_kind: observation_field
+        right_kind: value_set
+        allowed_ops:
+          - in
+predicate_profile:
+  - kind: input
+    allowed_ops:
+      - present
+  - kind: environment-ref
+    allowed_ops:
+      - available

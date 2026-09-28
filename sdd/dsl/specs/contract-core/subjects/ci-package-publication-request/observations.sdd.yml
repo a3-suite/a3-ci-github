@@ -1,0 +1,44 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.package-publication-request
+observations:
+  - id: observation.ci-package-publication-request.outputs
+    summary: The Action exposes the operation status and verified package publication request fields.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Package publication request operation status.
+        - selector: request-path
+          kind: observation_field
+          meaning: Package publication request path.
+        - selector: source-sha
+          kind: observation_field
+          meaning: Verified source commit SHA.
+        - selector: version
+          kind: observation_field
+          meaning: Verified package version.
+        - selector: target-identity
+          kind: observation_field
+          meaning: Verified package target identity.
+        - selector: language-profile
+          kind: observation_field
+          meaning: Verified language profile.
+        - selector: toolchain
+          kind: observation_field
+          meaning: Verified fixed toolchain.
+  - id: observation.ci-package-publication-request.result
+    summary: The Action exposes its failed step outcome when a package publication request is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected package publication request step.

@@ -1,0 +1,34 @@
+name: ci-quality-adapter
+description: Execute a validated read-only quality adapter against a fixed source checkout.
+inputs:
+  bundle-path:
+    required: true
+    description: Trusted quality adapter descriptor YAML.
+  source-root:
+    required: true
+    description: Fixed source checkout used as the command working directory.
+  result-path:
+    required: false
+    default: quality-adapter-result.json
+    description: JSON result output path.
+  language-profile:
+    required: false
+    description: Expected language profile.
+  toolchain-version:
+    required: true
+    description: Fixed toolchain version used by descriptor verification.
+  require-trusted-project-scripts:
+    required: false
+    default: 'false'
+    description: Require declared package scripts to match the trusted project checkout.
+  trusted-project-root:
+    required: false
+    description: Trusted project checkout used for script binding.
+outputs:
+  status:
+    description: success, failed, or 判定不能.
+  result-path:
+    description: Path to the JSON result.
+runs:
+  using: node24
+  main: dist/index.js

@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.preset-materialization
+contracts:
+  - id: contract.ci-preset-materialization.application
+    summary: Materialize selected repository and external-skill adapter assets without overwriting conflicting project files.
+    conditions:
+      - id: ci-preset-materialization-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-materialization-valid
+          op: available
+      - id: ci-preset-materialization-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-materialization-conflict
+          op: available
+    guarantees:
+      - id: ci-preset-materialization-success-observed
+        when: ci-preset-materialization-valid
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: schema
+            right:
+              kind: value_set
+              values:
+                - ci.adapter-materializer.v1
+      - id: ci-preset-materialization-failure-observed
+        when: ci-preset-materialization-invalid
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+    verification_intents:
+      - id: ci-preset-materialization-success-intent
+        goal: A successful materialization exposes the selected bundle and every copied or reused file.
+        guarantee_refs:
+          - ci-preset-materialization-success-observed
+      - id: ci-preset-materialization-failure-intent
+        goal: A conflicting destination is rejected without overwriting the existing file.
+        guarantee_refs:
+          - ci-preset-materialization-failure-observed

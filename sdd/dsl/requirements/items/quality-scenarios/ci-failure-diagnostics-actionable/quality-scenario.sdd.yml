@@ -1,0 +1,21 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-failure-diagnostics-actionable
+summary: CI失敗時に既存の実行画面と証跡から原因と次の対処を判断できる
+quality_attribute: operability
+stimulus: CIのstep、job、Action、runtimeまたは外部依存との通信が失敗する
+environment: GitHub Actions上で通常の品質検証、build、packageまたはrelease処理を実行している
+response: 元の失敗状態を保ったまま、失敗箇所、原因分類、必要な実行文脈、次の確認事項を安全に記録する
+response_measure:
+  - 失敗したcomponent、stageまたはoperationと、入力、設定、toolchain、外部依存、内部処理のどこに属する失敗かを判別できる
+  - GitHub Actionsのrun、job、matrixおよびsource revisionと失敗証跡を対応付けられる
+  - 保守者が最初に確認すべき理由と次の確認事項をlog、annotationまたはjob summaryから判断できる
+  - 詳細な調査資料が必要な場合だけartifactを生成し、通常の失敗診断で追加の外部サービスを必要としない
+  - secret、token、credential、保護対象の入力値を含まず、同じ診断情報を複数の出力面へ無目的に複製しない
+  - 証跡生成に失敗しても元の終了状態と主要な診断情報が保持される
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-failure-diagnostics
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-failure-diagnostics.actionable

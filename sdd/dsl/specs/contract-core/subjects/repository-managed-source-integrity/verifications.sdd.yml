@@ -1,0 +1,31 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.repository.managed-source-integrity
+verifications:
+  - id: verification.repository-managed-source-integrity.integrity
+    contract_id: contract.repository-managed-source-integrity.integrity
+    cases:
+      - id: repository-managed-source-integrity-success
+        intent_id: repository-managed-source-integrity-success-intent
+        input:
+          scenario: valid
+        checks:
+          - id: check-repository-managed-source-integrity-success
+            guarantee_ref: repository-managed-source-integrity-success-observed
+      - id: repository-managed-source-integrity-failure
+        intent_id: repository-managed-source-integrity-failure-intent
+        input:
+          scenario: rejected
+        checks:
+          - id: check-repository-managed-source-integrity-failure
+            guarantee_ref: repository-managed-source-integrity-failure-observed
+  - id: verification.repository-managed-source-integrity.execution-mapping
+    contract_id: contract.repository-managed-source-integrity.execution-mapping
+    cases:
+      - id: repository-contract-execution-mapped
+        intent_id: repository-contract-execution-mapped-intent
+        input:
+          scenario: maintained-contract-package
+        checks:
+          - id: check-repository-contract-execution-mapped
+            guarantee_ref: repository-contract-execution-mapped

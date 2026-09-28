@@ -1,0 +1,29 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-failure-diagnostics
+    type: quality
+    summary: CI失敗時に必要十分な診断情報と証跡が残り、保守者が速やかに障害対処できる
+    rationale:
+      why: >-
+        失敗終了だけでは原因箇所、入力、環境差異、再実行条件を特定できず、調査のための再実行や
+        一時的なデバッグ変更が増えて復旧が遅れるため
+    subject:
+      namespace: ci
+      key: failure-diagnostics
+    priority: must
+    fit_criteria:
+      - 失敗したcomponent、stageまたはoperationと、原因分類、失敗理由、対処に必要な次の確認事項を識別できるメッセージを出力する
+      - run、job、matrix、source revision、対象platform、artifactなど、事象を一意に対応付けるために必要な識別情報を既存のCIコンテキストから確認できる
+      - 入力検証結果、実行した検証段階、終了状態、失敗前に確定した主要結果を、障害原因の切り分けに必要な範囲で証跡として残す
+      - secret、token、credential、保護対象の入力値をメッセージ、summary、outputまたはartifactへ記録しない
+      - 同じ情報の重複、大量の無関係な出力、文脈のないstack traceを避け、最初に確認すべき失敗情報を判別できる
+      - 診断情報はGitHub Actionsのlog、annotation、job summary、outputおよび必要時のartifactで提供し、診断だけを目的とする常設基盤を追加しない
+      - 証跡生成の失敗が元の失敗理由や終了状態を上書きせず、元の障害を追跡できる
+    derived_artifacts:
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: ci-failure-diagnostics-actionable
+      constraints:
+        - constraint_ref:
+            constraint_id: ci-diagnostics-environment-simplicity

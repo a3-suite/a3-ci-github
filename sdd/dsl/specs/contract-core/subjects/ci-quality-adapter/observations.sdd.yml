@@ -1,0 +1,29 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.quality-adapter
+observations:
+  - id: observation.ci-quality-adapter.outputs
+    summary: The Action exposes the aggregate adapter execution status.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Aggregate quality adapter status.
+        - selector: result-path
+          kind: observation_field
+          meaning: Path to the quality adapter result JSON.
+  - id: observation.ci-quality-adapter.result
+    summary: The Action exposes its failed step outcome when an adapter contract is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected quality adapter step.

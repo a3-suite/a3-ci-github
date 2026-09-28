@@ -1,0 +1,116 @@
+schemaVersion: "1"
+kind: ci-script-use-cases
+id: ci.script-use-cases
+title: CI script use cases
+summary: >-
+  workflow の内部段階を支える script ユースケース、対応 workflow、owner 境界を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - script use case classification
+    - workflow and processing contract mapping
+    - reusable and owner adapter boundary
+usage:
+  whenToRead:
+    - workflow の script 処理単位を選ぶとき
+    - 処理契約の構成と owner 委譲を確認するとき
+  consumers: [human, agent, validator]
+definition:
+  rule: shell step や個別ファイルではなく、workflow 内で一つの判定または handoff を成立させる処理単位を script use case とする。
+  composition: 複数の script を一つの処理契約に束ね、同じ処理契約を複数 workflow から利用できる。
+useCases:
+  - id: change-scope
+    purpose: 変更範囲を分類し、不要な quality 処理を抑制する。
+    workflows: [quality-gate]
+    contract: quality-scripts
+    owner: reusable-asset-and-project-config
+  - id: quality-execution
+    purpose: language profile の format、lint、test、security、structure を実行する。
+    workflows: [quality-gate, release-publication]
+    contract: quality-scripts
+    owner: language-and-project-adapter
+  - id: quality-summary
+    purpose: 実施、結果、未実施、判定不能を共通 summary へ集約する。
+    workflows: [quality-gate, release-publication]
+    contract: quality-scripts
+    owner: reusable-asset-and-provider-adapter
+  - id: request-handoff
+    purpose: event、ref、source、承認済み入力を immutable handoff に固定する。
+    workflows: [release-request]
+    contract: request-handoff-scripts
+    owner: reusable-asset-and-provider-adapter
+  - id: release-notes-binding
+    purpose: release notes 本文、release identity、承認 digest を結合して公開入力を検証する。
+    workflows: [release-publication]
+    contract: release-publication-scripts
+    owner: reusable-asset
+  - id: release-notes-input-resolution
+    purpose: event と request handoff に応じて公開に使う release notes 入力を選択し、handoff 配置へ正規化する。
+    workflows: [release-publication]
+    contract: release-notes-input-resolution-scripts
+    owner: provider-adapter
+  - id: release-authority-validation
+    purpose: request、owner 契約、設定 snapshot、source identity を結合する。
+    workflows: [release-publication]
+    contract: release-authority-scripts
+    owner: trusted-control
+  - id: release-source-identity
+    purpose: authority の固定 source SHA と checkout identity の一致だけを検証する。
+    workflows: [release-publication]
+    contract: release-source-identity-scripts
+    owner: language-or-project-adapter
+  - id: version-plan-materialization
+    purpose: owner-approved plan から publish_version を決定し、上流で確定した source / artifact binding と組み合わせられる値を返す。
+    workflows: [release-publication, package-owner-preceding-workflow]
+    contract: version-plan-scripts
+    owner: trusted-control-or-package-owner-control
+  - id: release-artifact-build
+    purpose: 固定 source と language profile から build artifact を生成する。
+    workflows: [release-publication]
+    contract: release-build-scripts
+    owner: language-and-project-adapter
+  - id: release-supplemental-asset-build
+    purpose: owner が選択した補助 Release asset を固定 source から生成し、検証済み handoff にする。
+    workflows: [release-publication]
+    contract: release-supplemental-asset-build-scripts
+    owner: project-owner-adapter
+  - id: package-artifact-build
+    purpose: 具体化済み version と ecosystem 固有形式から package handoff を生成する。
+    workflows: [package-owner-preceding-workflow]
+    contract: package-build-scripts
+    owner: package-owner-adapter
+  - id: handoff-integrity
+    purpose: descriptor、manifest、checksum、digest、identity binding を検証する。
+    workflows: [release-publication, package-publication]
+    contract: handoff-integrity-scripts
+    owner: reusable-asset-and-project-adapter
+  - id: release-assembly
+    purpose: 完成した platform artifact 集合と、owner が選択した場合の検証済み補助 asset を release handoff にまとめる。
+    workflows: [release-publication]
+    contract: release-assembly-scripts
+    owner: trusted-control
+  - id: package-availability
+    purpose: publish 前の target identity、metadata、既存状態を観測する。
+    workflows: [package-publication]
+    contract: package-publication-scripts
+    owner: package-owner-adapter
+  - id: release-remote-publish-readback
+    purpose: 検証済み Release handoff を登録し、同じ identity、version、digest を再観測する。
+    workflows: [release-publication]
+    contract: release-publication-scripts
+    owner: provider-and-project-adapter
+  - id: package-remote-publish-readback
+    purpose: 検証済み package handoff を登録し、同じ identity、version、digest を再観測する。
+    workflows: [package-publication]
+    contract: package-publication-scripts
+    owner: provider-and-project-adapter
+  - id: package-recovery-state
+    purpose: package publication の状態を再実行判断へ写像する。
+    workflows: [package-publication]
+    contract: package-publication-scripts
+    owner: package-owner-adapter
+ownershipBoundary:
+  providerApiMetadataCredentialAndPublishCommand: adapter
+  versionTemplateComponentSourceAndPublicationDecision: owner-contract
+  providerSyntax: provider-skill

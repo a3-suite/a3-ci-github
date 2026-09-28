@@ -1,0 +1,21 @@
+version: 1
+name: contract-observations
+subject_ref: subject.repository.managed-source-integrity
+observations:
+  - id: observation.repository-managed-source-integrity.result
+    summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
+    boundary:
+      ref: boundary.repository-gate-result
+    value:
+      root: repository.gate
+      kind: object
+      fields:
+        - selector: canonical-assets
+          kind: observation_field
+          meaning: Existence checks for every repository-owned canonical asset family and registered source.
+        - selector: stale-locations
+          kind: observation_field
+          meaning: Absence checks for legacy source locations that must not become a second authority.
+        - selector: contract-execution
+          kind: observation_field
+          meaning: Every packaged contract subject is mapped to explicit active or excluded execution segments and repository-contained test paths.

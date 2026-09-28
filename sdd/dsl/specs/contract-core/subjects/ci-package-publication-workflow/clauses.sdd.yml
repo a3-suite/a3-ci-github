@@ -1,0 +1,45 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.package-publication-workflow
+contracts:
+  - id: contract.ci-package-publication-workflow.publication
+    summary: The canonical package workflows separate preparation, request validation, and privileged registry publication.
+    conditions:
+      - id: ci-package-publication-workflow-canonical-source-available
+        input_predicate:
+          kind: input
+          term: input.canonical-source
+          op: present
+      - id: ci-package-publication-workflow-failure-route-required
+        input_predicate:
+          kind: input
+          term: input.failure-route
+          op: present
+    guarantees:
+      - id: ci-package-publication-workflow-success-observed
+        when: ci-package-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-package-publication-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: publication-boundary
+      - id: ci-package-publication-workflow-failure-observed
+        when: ci-package-publication-workflow-failure-route-required
+        observation_ref: observation.ci-package-publication-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: failure-summary
+    verification_intents:
+      - id: ci-package-publication-workflow-success-intent
+        goal: Verify the canonical source declares the trusted capability boundary.
+        guarantee_refs:
+          - ci-package-publication-workflow-success-observed
+      - id: ci-package-publication-workflow-failure-intent
+        goal: Verify the canonical source declares a failure-visible summary route.
+        guarantee_refs:
+          - ci-package-publication-workflow-failure-observed

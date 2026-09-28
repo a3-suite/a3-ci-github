@@ -1,0 +1,18 @@
+name: ci-platform-matrix
+description: Validate a CI platform manifest and output a deterministic GitHub matrix.
+inputs:
+  manifest-path:
+    required: true
+    description: >-
+      Path to a regular YAML file no larger than 64 KiB whose only root key is a non-empty
+      platforms list. Every entry must contain only id, runner, and target. id must match
+      [a-z0-9][a-z0-9-]*, target must match [A-Za-z0-9][A-Za-z0-9._+-]*, runner must be
+      ubuntu-24.04, macos-14, or windows-2022, and id and target values must each be unique.
+outputs:
+  matrix:
+    description: >-
+      Compact JSON object containing the validated include matrix. Set only after every entry
+      passes validation; failures do not produce this output.
+runs:
+  using: node24
+  main: dist/index.js

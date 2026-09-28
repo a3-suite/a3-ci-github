@@ -1,0 +1,32 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.vitest-summary
+contracts:
+  - id: contract.ci.vitest-summary.outputs
+    summary: A Vitest report produces deterministic summary status and digest.
+    conditions:
+      - id: report-input-present
+        input_predicate: {kind: input, term: input.report-json, op: present}
+      - id: vitest-summary-unresolved
+        environment_predicate: {kind: environment-ref, target_ref: runtime-context.action-input-insufficient, op: available}
+    guarantees:
+      - id: vitest-summary-output-produced
+        when: report-input-present
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim: {kind: observable-result, op: present, target: {kind: observation_field, value: digest}}
+      - id: vitest-summary-unresolved-output-produced
+        when: vitest-summary-unresolved
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [unresolved]}
+    verification_intents:
+      - id: vitest-summary-output-set
+        goal: A complete Vitest report exposes passed status and a summary digest.
+        guarantee_refs: [vitest-summary-output-produced]
+      - id: vitest-summary-unresolved-output-set
+        goal: A malformed Vitest report produces an unresolved summary instead of a false success.
+        guarantee_refs: [vitest-summary-unresolved-output-produced]

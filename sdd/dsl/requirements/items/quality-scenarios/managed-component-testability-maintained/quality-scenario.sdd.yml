@@ -1,0 +1,27 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: managed-component-testability-maintained
+summary: 管理対象コンポーネントの本番責務を変えずに振る舞いを独立検証できる
+quality_attribute: maintainability
+stimulus: 保守者が管理対象コンポーネントの正常系、失敗系、境界条件または依存先の応答差異を検証する
+environment: ローカルまたはCIで、本番と同じ実装を使用し、明示された依存境界だけを制御する
+response: コンポーネントは責務分割と注入可能な依存境界を通じて決定的に実行され、結果を契約境界から観測できる
+response_measure:
+  - テストのためだけに本番コードへ追加した実装、実行モード、条件分岐または公開入口を使用しない
+  - 外部依存と非決定要因をコンポーネント境界から供給または制御でき、内部実装の差し替えや非公開状態の直接操作を必要としない
+  - 判断ロジックは実サービス、実ネットワークまたは無関係なコンポーネントの内部実装を起動せずに検証できる
+  - 正常結果、診断付き失敗、終了状態、状態遷移または生成物を責務に応じた契約境界から検証できる
+  - コンポーネント間の結合が必要な検証は明示された契約境界に限定し、単一コンポーネントの検証と分離できる
+  - 契約対象別実行定義の網羅性は検証対象のinventoryとして扱い、個々のbehavior保証や依存制御の代替としない
+related_requirements:
+  - requirement_ref:
+      requirement_id: managed-component-testability
+related_contracts:
+  - contract_ref:
+      contract_id: contract.repository-managed-source-integrity.execution-mapping
+  - contract_ref:
+      contract_id: contract.ci-preset-assurance.verification
+  - contract_ref:
+      contract_id: contract.ci-preset-materialization.application
+  - contract_ref:
+      contract_id: contract.repository-action-distribution.integrity

@@ -1,0 +1,25 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.quality-workflow
+test_maps:
+  - verification_id: verification.ci-quality-workflow.execution
+    case_id: ci-quality-workflow-success
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: quality workflow declares trusted execution and aggregate summary
+        check_refs:
+          - check-ci-quality-workflow-success
+  - verification_id: verification.ci-quality-workflow.execution
+    case_id: ci-quality-workflow-failure
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: quality workflow keeps failed or missing checks visible
+        check_refs:
+          - check-ci-quality-workflow-failure
+  - verification_id: verification.ci-quality-workflow.execution
+    case_id: ci-quality-workflow-platform
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: optional platform quality workflow preserves trusted assets matrix execution and summary
+        check_refs:
+          - check-ci-quality-workflow-platform

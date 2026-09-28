@@ -1,0 +1,59 @@
+name: ci-rust-release-build
+description: Build, package, and verify a Rust CLI release asset
+inputs:
+  language-profile:
+    description: Language profile recorded in the release authority
+    required: true
+  platform-manifest:
+    description: Path to the platform manifest bound by the release authority
+    required: true
+  toolchain-version:
+    description: Exact Rust toolchain version bound by the release authority
+    required: true
+  platform-id:
+    description: Stable platform identifier used in the release asset name
+    required: true
+  platform-target:
+    description: Rust compilation target for the selected platform
+    required: true
+  authority-path:
+    description: Path to the release authority JSON
+    required: true
+  output-directory:
+    description: New directory where the archive, checksum, and manifest are written
+    required: true
+  cargo-manifest-path:
+    description: Path to the Cargo.toml that owns the release binary
+    required: true
+  release-binary-name:
+    description: Cargo binary target and archive entry name
+    required: true
+  release-asset-prefix:
+    description: Prefix used for the release archive name
+    required: true
+outputs:
+  completed:
+    description: true when build, package, and artifact verification all succeed
+    value: ${{ steps.build.outputs.completed }}
+runs:
+  using: composite
+  steps:
+    - id: build
+      name: Build and verify Rust release asset
+      shell: bash
+      env:
+        LANGUAGE_PROFILE: ${{ inputs.language-profile }}
+        PLATFORM_MANIFEST: ${{ inputs.platform-manifest }}
+        TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+        PLATFORM_ID: ${{ inputs.platform-id }}
+        PLATFORM_TARGET: ${{ inputs.platform-target }}
+        AUTHORITY_PATH: ${{ inputs.authority-path }}
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+        CI_CARGO_MANIFEST_PATH: ${{ inputs.cargo-manifest-path }}
+        CI_RELEASE_BINARY_NAME: ${{ inputs.release-binary-name }}
+        CI_RELEASE_ASSET_PREFIX: ${{ inputs.release-asset-prefix }}
+      run: |
+        "${GITHUB_ACTION_PATH}/../../runtime/rust-release/ci-release-build.sh" \
+          "$LANGUAGE_PROFILE" "$PLATFORM_MANIFEST" "$TOOLCHAIN_VERSION" \
+          "$PLATFORM_ID" "$PLATFORM_TARGET" "$AUTHORITY_PATH" "$OUTPUT_DIRECTORY"
+        echo 'completed=true' >> "$GITHUB_OUTPUT"

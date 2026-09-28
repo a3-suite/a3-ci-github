@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.annotated-tag-resolver
+contracts:
+  - id: contract.ci-annotated-tag-resolver.outputs
+    summary: A valid annotated tag produces tag object and source commit outputs.
+    conditions:
+      - id: tag-input-present
+        input_predicate:
+          kind: input
+          term: input.tag
+          op: present
+      - id: tag-resolution-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: tag-resolution-outputs-produced
+        when: tag-input-present
+        observation_ref: observation.ci-annotated-tag-resolver.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: source-sha
+      - id: tag-resolution-failure-propagated
+        when: tag-resolution-rejected
+        observation_ref: observation.ci-annotated-tag-resolver.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: tag-resolution-output-set
+        goal: A valid annotated tag produces the resolution outputs.
+        guarantee_refs:
+          - tag-resolution-outputs-produced
+      - id: tag-resolution-rejected
+        goal: Rejected tag resolution input fails the Action without successful resolution outputs.
+        guarantee_refs:
+          - tag-resolution-failure-propagated

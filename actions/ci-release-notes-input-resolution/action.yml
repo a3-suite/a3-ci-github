@@ -1,0 +1,19 @@
+name: ci-release-notes-input-resolution
+description: Validate and materialize an approved release-notes handoff.
+inputs:
+  input-handoff-directory:
+    required: true
+    description: Directory containing externally approved release-notes handoff files.
+  output-directory:
+    required: true
+    description: Directory containing the normalized release-notes files.
+outputs:
+  status:
+    description: success or failed.
+  release-notes-path:
+    description: Normalized release-notes JSON path.
+  approval-path:
+    description: Normalized release-notes approval JSON path.
+runs:
+  using: node24
+  main: dist/index.js

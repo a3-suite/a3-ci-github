@@ -1,0 +1,35 @@
+version: 1
+name: use-case
+use_case_id: rust-cli-release-asset-preparation
+summary: Release workflowが固定sourceと承認済みidentityから検証済みRust CLI asset handoffを得る
+actors:
+  - actor_id: release-workflow
+    kind: external-system
+    role: primary
+    summary: 検証済みRust CLI assetを要求し、後続のassembleまたはpublicationへhandoffするworkflow
+  - actor_id: release-maintainer
+    kind: human
+    role: supporting
+    summary: release対象version、authority、toolchainおよびplatform定義を承認する主体
+goal: 固定source、toolchain、platform、versionに拘束されたRust CLI assetを公開処理から独立して生成・検証する
+preconditions:
+  - release authorityとplatform manifestが確定している
+  - 対象sourceが固定commitでcheckoutされている
+trigger: 検証済みrelease workflowがRust CLI assetの準備を要求する
+main_success_scenario:
+  - summary: release authorityのlanguage profileとsource SHAをchecked-out sourceへ照合する
+  - summary: authorityに拘束されたtoolchainとtargetでrelease binaryをbuildし、報告versionを検証する
+  - summary: archive、checksum、asset manifestを新しい出力先へ生成する
+  - summary: asset、source、version、platform identityおよびchecksumを相互に検証する
+  - summary: 検証済みassetとidentityを後続処理が再検証できるhandoffとして返す
+success_outcomes:
+  - asset、version、source、toolchain、platformおよびchecksumが同じ検証結果で一致する
+  - 後続のRelease workflowは未検証のassetを公開入力として受け取らない
+failure_outcomes:
+  - source、toolchain、platform、version、build、packageまたはchecksumの不一致時はasset handoffを成功状態にしない
+  - 既存または競合して作成された出力先を上書きしない
+related_requirements:
+  - requirement_ref:
+      requirement_id: rust-release-asset-integrity
+  - requirement_ref:
+      requirement_id: ci-common-processing-action-reuse

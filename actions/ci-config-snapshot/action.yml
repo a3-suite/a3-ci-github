@@ -1,0 +1,23 @@
+name: ci-config-snapshot
+description: Resolve CI configuration precedence and write a deterministic snapshot.
+inputs:
+  sources-json:
+    required: true
+    description: JSON object containing runtime, workflow, and preset string maps.
+  snapshot-path:
+    required: true
+    description: Path to the snapshot JSON file.
+  output-path:
+    required: false
+    default: ''
+    description: Optional GitHub output file. Empty uses GITHUB_OUTPUT.
+outputs:
+  status:
+    description: success or failed.
+  snapshot-path:
+    description: Path written for the configuration snapshot.
+  digest:
+    description: SHA-256 digest of the resolved snapshot values and sources.
+runs:
+  using: node24
+  main: dist/index.js

@@ -1,0 +1,68 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.repository.managed-source-integrity
+contracts:
+  - id: contract.repository-managed-source-integrity.integrity
+    summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
+    conditions:
+      - id: repository-managed-source-integrity-source-available
+        input_predicate:
+          kind: input
+          term: input.repository-source
+          op: present
+      - id: repository-managed-source-integrity-legacy-check-required
+        input_predicate:
+          kind: input
+          term: input.legacy-location-policy
+          op: present
+    guarantees:
+      - id: repository-managed-source-integrity-success-observed
+        when: repository-managed-source-integrity-source-available
+        observation_ref: observation.repository-managed-source-integrity.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: canonical-assets
+      - id: repository-managed-source-integrity-failure-observed
+        when: repository-managed-source-integrity-legacy-check-required
+        observation_ref: observation.repository-managed-source-integrity.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: stale-locations
+    verification_intents:
+      - id: repository-managed-source-integrity-success-intent
+        goal: Resolve every registered repository-owned canonical asset from its owner root.
+        guarantee_refs:
+          - repository-managed-source-integrity-success-observed
+      - id: repository-managed-source-integrity-failure-intent
+        goal: Verify stale legacy locations are absent and cannot act as a second source authority.
+        guarantee_refs:
+          - repository-managed-source-integrity-failure-observed
+  - id: contract.repository-managed-source-integrity.execution-mapping
+    summary: Repository contract subjects have explicit active or excluded execution mappings whose test paths remain inside the repository.
+    conditions:
+      - id: repository-contract-execution-definition-available
+        input_predicate:
+          kind: input
+          term: input.contract-execution-definition
+          op: present
+    guarantees:
+      - id: repository-contract-execution-mapped
+        when: repository-contract-execution-definition-available
+        observation_ref: observation.repository-managed-source-integrity.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: contract-execution
+    verification_intents:
+      - id: repository-contract-execution-mapped-intent
+        goal: Every packaged subject has an explicit active or excluded execution segment whose test paths stay inside the repository.
+        guarantee_refs:
+          - repository-contract-execution-mapped

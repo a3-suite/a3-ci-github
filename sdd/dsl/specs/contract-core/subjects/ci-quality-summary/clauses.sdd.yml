@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.quality-summary
+contracts:
+  - id: contract.ci-quality-summary.outputs
+    summary: A quality result containing normalized rows or raw GitHub job results produces an aggregate status output; caller-declared non-applicable rows become 対象外, are excluded from aggregation, and a result where every row is 対象外 is invalid input.
+    conditions:
+      - id: summary-input-present
+        input_predicate:
+          kind: input
+          term: input.summary-json
+          op: present
+      - id: quality-summary-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: quality-summary-status-produced
+        when: summary-input-present
+        observation_ref: observation.ci-quality-summary.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
+      - id: quality-summary-failure-propagated
+        when: quality-summary-rejected
+        observation_ref: observation.ci-quality-summary.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: quality-summary-output-set
+        goal: A normalized quality result or raw GitHub job result produces its aggregate status output while the caller owns applicability.
+        guarantee_refs:
+          - quality-summary-status-produced
+      - id: quality-summary-rejected
+        goal: Missing or unresolved quality evidence fails summary publication.
+        guarantee_refs:
+          - quality-summary-failure-propagated

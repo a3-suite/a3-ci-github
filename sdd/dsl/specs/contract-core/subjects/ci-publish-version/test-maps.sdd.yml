@@ -1,0 +1,18 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.publish-version
+test_maps:
+  - verification_id: verification.ci-publish-version.outputs
+    case_id: valid-version-plan
+    tests:
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: bundled entrypoint publishes an exact version
+        check_refs:
+          - check-publish-version-output
+  - verification_id: verification.ci-publish-version.outputs
+    case_id: invalid-plan-rejected
+    tests:
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails invalid plan input
+        check_refs:
+          - check-publish-version-failure

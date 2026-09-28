@@ -1,0 +1,369 @@
+schemaVersion: "1"
+kind: ci-github-preset-assets
+id: ci.github-preset-assets
+title: GitHub Actions CI asset registry
+summary: >-
+  ci-github スキルの CI プリセットを、コピー先が確定した GitHub Actions workflow と
+  実行に必要な repository-owned asset へ写像する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - preset ごとの GitHub workflow asset
+    - GitHub 固有の実行 asset と Action mapping
+    - 配置済み workflow を調べる preflight entrypoint
+    - provider 静的検証の設定 path の認識（内容は project-owned）
+  excludes:
+    - provider-neutral preset semantics
+    - language または project 固有の処理
+    - Action 自体の公開 API
+usage:
+  whenToRead:
+    - GitHub Actions 用の CI asset を選ぶとき
+    - コピー先と必要 asset を確定するとき
+    - 配置済み workflow を preflight するとき
+  consumers: [human, agent, validator]
+provider:
+  id: github-actions
+  workflowRoot: workflows
+  preflightEntrypoint: runtime/preset/run-validate-ci-preset.mjs
+  integrityLockEntrypoint: runtime/preset/generate-ci-asset-lock.ts
+  platformManifest:
+    path: .ci/platform-manifest.yml
+    schema: platforms[].{id,runner,target}
+    runnerMappingOwner: ci-github
+  qualityPlatformSelection:
+    path: .ci/quality-platforms.yml
+    schema: platforms[].{id}
+    referenceAuthority: platform-manifest id
+  staticValidation:
+    - tool: actionlint
+      ownership: project-content
+      purpose: >-
+        provider 静的検証ツールの project 固有設定（診断抑止など）。
+        内容の正本化・固定はせず、配置と owner だけを定義する。
+      configPaths:
+        - .github/actionlint.yaml
+distribution:
+  destinationContainsSkillTree: false
+  sourceResolution: registry-selection-only
+  integrityLock:
+    path: .ci/ci-assets.lock.json
+    schemaVersion: "1"
+    kind: ci-github-asset-lock
+    sourceRevisionFormat: full-commit-sha
+    generatedAtRole: observation-time-minute
+    contents: [canonical-sha256, applied-sha256]
+    excludes: [preset-selection, project-settings]
+  runtimeRule: >-
+    配布元 repository の source は導入・検証時だけ使う。コピー後は destination、
+    project の .ci、Secrets、workflow input だけを参照する。
+conformance:
+  comparison: canonical-yaml-structure
+  configurableValues: canonical-placeholders
+  emptyAllowedPlaceholders: [uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix]
+  listPlaceholderRule: placeholder だけで構成する list は一つ以上の非空 project 値へ置換できる。
+  workflowTriggerExtensions:
+    quality-gate:
+      merge_group: empty-map
+      schedule: cron-list
+  externalVariability:
+    triggerSelection: registry.presets[].workflowAssets
+    triggerExtension: conformance.workflowTriggerExtensions
+    policyData: project-owned asset content
+    extensionImplementation: registry.presets[].assets.requiredExtensions and conditionalExtensions
+    optionalWorkflowSelection: registry.presets[].optionalWorkflowAssets with companionPaths
+  rule: >-
+    workflow 内は placeholder と登録済み trigger extension 以外の構造差を canonical drift として
+    preflight で失敗させる。policy data、requiredExtensions、conditionalExtensions の実装差は
+    workflow 外境界で扱う。optionalWorkflowAssets は companionPaths が揃った場合だけ
+    canonical 比較と lock の対象にし、companion のみの先行配置は許容する。
+  lintBoundary: >-
+    a3-lint は単一 workflow の一般規則を検査し、canonical asset との比較は preflight が行う。
+
+providerAssets: []
+actionization:
+  implementationSource:
+    contract: action.yml
+    repository: a3-suite/a3-actions
+    releaseTag: v0.5.1
+    exactRef: "3b705bcbb0286a9da0f3bdb73f39d58043ca5605"
+    runtimeDependencyInCopiedProject: false
+  availabilityGate:
+    status: available
+    requires: [candidate-eligibility, implementation, tests, distribution, exact-release-tag, release-tag-mapping, exact-ref, workflow-mapping, static-contract]
+  candidateEligibility:
+    requires: [cross-project-reusable, provider-write-free, bounded-input-output-contract, fail-closed]
+    credentialUse:
+      allowed: [read-only-provider-access]
+      requiredBoundary: workflow-injected
+      forbidden: [credential-selection, credential-storage, provider-write]
+    retainedByWorkflow: [job-boundary, permissions, credential-injection]
+    retainedByOwner: [owner-policy, credential-route]
+  exactRefFormat: "^[0-9a-f]{40}$"
+  targets:
+    - id: ci-jq-provisioner
+      status: available
+      actionPath: actions/ci-jq-provisioner
+      workflows: [quality-gate, release-request-tag, release-publication, package-publication]
+      trust: read-only
+      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: exact-jq-provisioning
+    - id: ci-gh-provisioner
+      status: available
+      actionPath: actions/ci-gh-provisioner
+      workflows: [release-request-tag, release-publication, package-publication]
+      trust: read-only
+      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: exact-gh-provisioning
+    - id: ci-github-toolchain-verifier
+      status: available
+      actionPath: actions/ci-github-toolchain-verifier
+      workflows: [quality-gate, release-request-tag, release-publication, package-publication]
+      trust: read-only
+      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: exact-tool-version-verification
+    - id: ci-rust-source-gate
+      status: available
+      actionPath: actions/ci-rust-source-gate
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-source-identity-scripts
+      providerMapping: release-source-identity
+    - id: ci-rust-release-build
+      status: available
+      actionPath: actions/ci-rust-release-build
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-build-scripts
+      providerMapping: release-artifact-build
+    - id: ci-quality-summary
+      status: available
+      actionPath: actions/ci-quality-summary
+      workflows: [quality-gate, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.quality-scripts.output
+      providerMapping: workflow-summary
+    - id: ci-release-workflow-identity
+      status: available
+      actionPath: actions/ci-release-workflow-identity
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: [release-publication/publish]
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: release-workflow-identity
+    - id: ci-config-snapshot
+      status: available
+      actionPath: actions/ci-config-snapshot
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: configuration-snapshot
+    - id: ci-change-scope
+      status: available
+      actionPath: actions/ci-change-scope
+      workflows: [quality-gate, quality-gate-platforms]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: changed-path-scope
+    - id: ci-handoff-integrity
+      status: available
+      actionPath: actions/ci-handoff-integrity
+      workflows: [release-publication, package-publication]
+      trust: read-only
+      privilegedJobs: [release-publication/publish, package-publication/publish]
+      ciContract: ci.script-contracts#contracts.handoff-integrity-scripts
+      providerMapping: artifact-handoff-verification
+    - id: ci-release-notes-binding
+      status: available
+      actionPath: actions/ci-release-notes-binding
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-publication-scripts
+      providerMapping: approved-release-notes
+    - id: ci-publish-version
+      status: available
+      actionPath: actions/ci-publish-version
+      workflows: [package-preparation]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.version-plan-scripts
+      providerMapping: approved-version-plan
+    - id: ci-annotated-tag-resolver
+      status: available
+      actionPath: actions/ci-annotated-tag-resolver
+      workflows: [release-request-tag]
+      trust: read-only
+      privilegedJobs: [release-request-tag/request]
+      ciContract: ci.script-contracts#contracts.request-handoff-scripts
+      providerMapping: annotated-tag-identity
+    - id: ci-release-request-handoff
+      status: available
+      actionPath: actions/ci-release-request-handoff
+      workflows: [release-request-tag]
+      trust: read-only
+      privilegedJobs: [release-request-tag/request]
+      ciContract: ci.script-contracts#contracts.request-handoff-scripts
+      providerMapping: release-request-artifact
+    - id: ci-release-notes-input-resolution
+      status: available
+      actionPath: actions/ci-release-notes-input-resolution
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-notes-input-resolution-scripts
+      providerMapping: release-notes-handoff-resolution
+    - id: ci-platform-matrix
+      status: available
+      actionPath: actions/ci-platform-matrix
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: platform-build-matrix
+    - id: ci-quality-adapter
+      status: available
+      actionPath: actions/ci-quality-adapter
+      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.quality-scripts
+      providerMapping: quality-adapter-execution
+    - id: ci-release-publication-control
+      status: available
+      actionPath: actions/ci-release-publication-control
+      workflows: [release-publication-request, release-publication-caller, release-publication]
+      trust: read-only
+      privilegedJobs: [release-publication/publish]
+      ciContract: ci.script-contracts#contracts.release-publication-scripts
+      providerMapping: release-publication-request-and-provenance-control
+    - id: ci-package-publication-request
+      status: available
+      actionPath: actions/ci-package-publication-request
+      workflows: [package-publication-request, package-publication-caller]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#commonContract
+      providerMapping: package-publication-request-handoff
+  standardImplementations:
+    - id: rust-cli-release
+      languageProfiles: [rust]
+      fulfillsExtensions:
+        release-source-gate-adapter: ci-rust-source-gate
+        release-build-adapter: ci-rust-release-build
+      projectSettingsEnv:
+        - CI_CARGO_MANIFEST_PATH
+        - CI_CARGO_LOCK_PATH
+        - CI_RELEASE_BINARY_NAME
+        - CI_RELEASE_ASSET_PREFIX
+      dependencies:
+        - {kind: adapter-bundle, id: rust-cargo-quality}
+
+providerActions:
+  selectionOrder: [a3-available, github-official, vendor-official, approved-community, project-owned]
+  refRule: references/workflow-version-policy.reference.md#対象別の指定
+  approvedRuntimes: [node24, composite]
+  pinCompanion:
+    path: .ci/provider-action-pins.yml
+    format: mapping<action, {pinnedVersion, commitSha, runtime, runtimeBasis}>
+    source: entries
+    fields: [pinnedVersion, commitSha, runtime, runtimeBasis]
+    appliedComparison: required
+  entries:
+    - {id: github-actions-checkout, origin: github-official, action: actions/checkout, category: source, purpose: source checkout, pinnedVersion: v7.0.1, commitSha: 3d3c42e5aac5ba805825da76410c181273ba90b1, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-setup-node, origin: github-official, action: actions/setup-node, category: language-runtime, purpose: Node.js setup, pinnedVersion: v7.0.0, commitSha: 820762786026740c76f36085b0efc47a31fe5020, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-setup-python, origin: github-official, action: actions/setup-python, category: language-runtime, purpose: Python setup, pinnedVersion: v7.0.0, commitSha: 5fda3b95a4ea91299a34e894583c3862153e4b97, runtime: node24, runtimeBasis: action.yml}
+    - {id: astral-setup-uv, origin: vendor-official, action: astral-sh/setup-uv, category: package-manager, purpose: uv setup, pinnedVersion: v10.2.0, commitSha: c18668ad3cf93ea998bef934396af7bb5c839dc7, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-setup-go, origin: github-official, action: actions/setup-go, category: language-runtime, purpose: Go setup, pinnedVersion: v7.0.0, commitSha: b7ad1dad31e06c5925ef5d2fc7ad053ef454303e, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-setup-java, origin: github-official, action: actions/setup-java, category: language-runtime, purpose: Java setup, pinnedVersion: v6.0.1, commitSha: de7274f081f381c8f8158605e0321c36c376e2e6, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-cache, origin: github-official, action: actions/cache, category: cache, purpose: dependency and build cache, pinnedVersion: v6.1.0, commitSha: 55cc8345863c7cc4c66a329aec7e433d2d1c52a9, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-upload-artifact, origin: github-official, action: actions/upload-artifact, category: artifact, purpose: artifact upload, pinnedVersion: v7.0.1, commitSha: 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-actions-download-artifact, origin: github-official, action: actions/download-artifact, category: artifact, purpose: artifact download, pinnedVersion: v8.0.1, commitSha: 3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c, runtime: node24, runtimeBasis: action.yml}
+    - {id: github-codeql-action, origin: github-official, action: github/codeql-action, category: security, purpose: code security analysis, pinnedVersion: codeql-bundle-v2.27.1, commitSha: 416ff0dea110f80f0f56f0046500dbf7420e4bb0, runtime: composite, runtimeBasis: action.yml}
+    - {id: github-dependency-review-action, origin: github-official, action: actions/dependency-review-action, category: security, purpose: dependency review, pinnedVersion: v5.0.0, commitSha: a1d282b36b6f3519aa1f3fc636f609c47dddb294, runtime: node24, runtimeBasis: action.yml}
+    - {id: docker-setup-buildx-action, origin: vendor-official, action: docker/setup-buildx-action, category: container, purpose: Buildx setup, pinnedVersion: v4.4.1, commitSha: f87e5991a6d7451dcb8d9637bfbc97413f497069, runtime: node24, runtimeBasis: action.yml}
+    - {id: docker-login-action, origin: vendor-official, action: docker/login-action, category: container, purpose: registry login, credentialRequirement: registry-secret, pinnedVersion: v4.6.0, commitSha: dbcb813823bdd20940b903addbd779551569679f, runtime: node24, runtimeBasis: action.yml}
+
+registry:
+  presets:
+    - id: quality-gate
+      workflowAssets:
+        - id: quality-gate
+          source: workflows/quality/quality-gate.yml
+          destination: .github/workflows/quality-gate.yml
+      optionalWorkflowAssets:
+        - id: quality-gate-platforms
+          source: workflows/quality/quality-gate-platforms.yml
+          destination: .github/workflows/quality-gate-platforms.yml
+          companionPaths:
+            - .ci/quality-platforms.yml
+      assets:
+        copyable: []
+        requiredExtensions: []
+      qualityAdapter:
+        source: ci.adapter-bundles
+        selection: standard-or-owner
+    - id: release-request
+      workflowAssets:
+        - id: release-request-tag
+          source: workflows/release/release-request-tag.yml
+          destination: .github/workflows/release-request-tag.yml
+      assets:
+        copyable: []
+        requiredExtensions: []
+    - id: release-publication
+      workflowAssets:
+        - id: release-publication-request
+          source: workflows/release/release-publication-request.yml
+          destination: .github/workflows/release-publication-request.yml
+        - id: release-publication-caller
+          source: workflows/release/release-publication-caller.yml
+          destination: .github/workflows/release-publication-caller.yml
+        - id: release-publication
+          source: workflows/release/release-publication.yml
+          destination: .github/workflows/release-publication.yml
+      assets:
+        copyable: []
+        requiredExtensions:
+          - release-authority-control
+          - release-source-gate-adapter
+          - release-build-adapter
+          - release-assembly-control
+          - release-publication-adapter
+        conditionalExtensions:
+          - id: release-supplemental-asset-adapter
+            workflowAsset: release-publication-caller
+            selectorPath: jobs.publish.with.supplemental_release_asset_enabled
+      standardImplementation:
+        source: actionization.standardImplementations
+        selectionEnv: CI_RELEASE_IMPLEMENTATION
+        requiredBindings: [release-source-gate-adapter, release-build-adapter]
+      qualityAdapter:
+        source: ci.adapter-bundles
+        selection: standard-or-owner
+    - id: package-publication
+      workflowAssets:
+        - id: package-publication
+          source: workflows/package/package-publication.yml
+          destination: .github/workflows/package-publication.yml
+        - id: package-preparation
+          source: workflows/package/package-preparation.yml
+          destination: .github/workflows/package-preparation.yml
+        - id: package-publication-request
+          source: workflows/package/package-publication-request.yml
+          destination: .github/workflows/package-publication-request.yml
+        - id: package-publication-caller
+          source: workflows/package/package-publication-caller.yml
+          destination: .github/workflows/package-publication-caller.yml
+      assets:
+        copyable: []
+        requiredExtensions: [package-build-adapter, package-publication-adapter]

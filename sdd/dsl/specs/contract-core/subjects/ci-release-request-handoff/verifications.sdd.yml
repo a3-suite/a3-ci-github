@@ -1,0 +1,28 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-request-handoff
+verifications:
+  - id: verification.ci-release-request-handoff.outputs
+    contract_id: contract.ci-release-request-handoff.outputs
+    cases:
+      - id: tag-request-handoff
+        intent_id: request-handoff-output-set
+        input:
+          output-directory: release-request
+          tag-source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          tag-object-sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          github-ref: refs/tags/v1.2.3
+          github-ref-name: v1.2.3
+          request-run-id: "42"
+          request-actor: release-operator
+        checks:
+          - id: check-request-handoff-output
+            guarantee_ref: request-handoff-output-produced
+      - id: tag-ref-mismatch-rejected
+        intent_id: request-handoff-rejected
+        input:
+          tag: v1.2.3
+          ref: refs/tags/v1.2.4
+        checks:
+          - id: check-request-handoff-failure
+            guarantee_ref: request-handoff-failure-propagated

@@ -1,0 +1,51 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-common-processing-action-reuse
+    type: functional
+    summary: 再利用可能な共通 CI 処理を、project-local な複製ではなく固定 SHA の GitHub Action として提供する
+    rationale:
+      why: >-
+        共通処理の実装正本を Action 提供側へ集約し、利用 project ごとの実装複製と runtime 依存の重複を避けながら、
+        workflow と owner が持つ信頼、権限、policy の境界を維持するため
+    subject:
+      namespace: ci
+      key: common-processing-action-reuse
+    priority: must
+    fit_criteria:
+      - Action 化する処理は cross-project reusable、provider-write-free、bounded I/O、fail-closed の全条件を満たす
+      - 対象処理は固定 SHA の Action から実行でき、利用 project に同じ実装 script または runtime を複製しない
+      - workflow は job 境界、permissions、credential 注入を保持し、owner は policy と credential route を保持する
+      - Release publication の request、provenance、approval を provider-write-free に検証できる
+      - package publication request の作成と検証を provider-write-free に実行できる
+      - validated read-only quality descriptor を固定 source checkout に対して実行し、実行状態を取得できる
+      - Action へ移した旧実装を project-local fallback として残さない
+      - quality descriptor の toolchain version は command 出力の独立トークンとして検証し、失敗時は診断コードと expected / received を観測可能にする
+    depends_on:
+      - requirement_ref:
+          requirement_id: github-actions-action-contract-and-distribution
+    external_document_refs:
+      - document_id: a3-prompts-ci-github
+      - document_id: a3-prompts-ci-github-preset-assets
+        locator: actionization
+      - document_id: a3-prompts-ci-script-contracts
+        locator: commonContract
+      - document_id: a3-prompts-ci-adapter-bundles
+        locator: contract.toolchain
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: rust-cli-release-asset-preparation
+        - use_case_ref:
+            use_case_id: ci-quality-gate-execution
+        - use_case_ref:
+            use_case_id: github-tool-exact-version-provisioning
+        - use_case_ref:
+            use_case_id: github-release-request-preparation
+        - use_case_ref:
+            use_case_id: github-release-publication
+        - use_case_ref:
+            use_case_id: github-package-publication
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: ci-common-processing-action-reuse-safe

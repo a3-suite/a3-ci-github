@@ -1,0 +1,75 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.failure-diagnostics
+contracts:
+  - id: contract.ci-failure-diagnostics.actionable
+    summary: Managed workflows declare correlated secret-safe diagnostics that preserve source results, and public runtime bootstrap failures emit a stable diagnostic envelope.
+    conditions:
+      - id: ci-failure-diagnostics-workflow-source-available
+        input_predicate:
+          kind: input
+          term: input.canonical-workflow
+          op: present
+      - id: ci-failure-diagnostics-bootstrap-fails
+        input_predicate:
+          kind: input
+          term: input.invalid-bootstrap-invocation
+          op: present
+    guarantees:
+      - id: ci-failure-diagnostics-workflow-evidence-declared
+        when: ci-failure-diagnostics-workflow-source-available
+        observation_ref: observation.ci-failure-diagnostics.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: workflow-evidence
+      - id: ci-failure-diagnostics-workflow-correlation-declared
+        when: ci-failure-diagnostics-workflow-source-available
+        observation_ref: observation.ci-failure-diagnostics.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: workflow-classification-correlation
+      - id: ci-failure-diagnostics-workflow-summary-secret-safe
+        when: ci-failure-diagnostics-workflow-source-available
+        observation_ref: observation.ci-failure-diagnostics.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: workflow-secret-safe-summary
+      - id: ci-failure-diagnostics-workflow-source-state-preserved
+        when: ci-failure-diagnostics-workflow-source-available
+        observation_ref: observation.ci-failure-diagnostics.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: workflow-source-state-preserved
+      - id: ci-failure-diagnostics-bootstrap-envelope-emitted
+        when: ci-failure-diagnostics-bootstrap-fails
+        observation_ref: observation.ci-failure-diagnostics.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: bootstrap-diagnostic
+    verification_intents:
+      - id: ci-failure-diagnostics-workflow-evidence-intent
+        goal: Every managed workflow declares an aggregate summary with job classification, run correlation, evidence and reason, no secret-context interpolation, and original source-result preservation.
+        guarantee_refs:
+          - ci-failure-diagnostics-workflow-evidence-declared
+          - ci-failure-diagnostics-workflow-correlation-declared
+          - ci-failure-diagnostics-workflow-summary-secret-safe
+          - ci-failure-diagnostics-workflow-source-state-preserved
+      - id: ci-failure-diagnostics-bootstrap-intent
+        goal: A bootstrap failure emits a stable outcome, reason, and actionable message.
+        guarantee_refs:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted

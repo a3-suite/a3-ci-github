@@ -1,0 +1,169 @@
+schemaVersion: "1"
+kind: ci-preset-contracts
+id: ci.preset-contracts
+title: CI preset contracts
+summary: >-
+  CI の標準 preset ごとの入力、出力、停止条件、provider へ渡す handoff 境界を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - CI preset input and output contracts
+    - CI preset stop and completion conditions
+    - provider handoff boundary
+  excludes:
+    - audit status classification and aggregation
+usage:
+  whenToRead:
+    - CIプリセットの入出力と停止条件を確定するとき
+    - provider workflow へ handoff を写像するとき
+  consumers: [human, agent, validator]
+configurationResolution:
+  order: [runtime-config-source, workflow-initial-input, preset-default]
+  rule: 解決後の値は実行開始時に固定し、後続 job が再選択しない。
+applicationConvergence:
+  selectionRule: >-
+    provider、preset、公開方式、branch 運用、品質要件、language profile が同じ場合は、
+    同じ標準構成と既定値 profile を選択する。
+  allowedDifferences:
+    - canonical asset が明示する project 設定値
+    - provider registry から選択した canonical trigger workflow または trigger extension
+    - project policy が所有する data
+    - provider registry が明示する extension 接続
+  forbiddenDifferences:
+    - job、step、permissions、trust 境界、共通 Action、summary 経路の独自変更
+    - 変更理由を owner 契約から解決できない標準構成または既定値 profile の変更
+  verificationRule: >-
+    provider 固有 preflight は、許可された設定値を除く配置済み asset の構造を
+    canonical asset と照合し、許可外差分を失敗にする。
+commonInput:
+  - id: preset
+    required: true
+    meaning: 選択した標準 preset 名。
+  - id: execution-context
+    required: true
+    meaning: event、ref、source identity、request identity、trust mode。
+  - id: language-profile
+    requiredWhen: quality-or-build
+    meaning: 許可された言語 profile。
+  - id: toolchain
+    requiredWhen: quality-or-build
+    meaning: version 固定済み runtime / toolchain。
+  - id: adapter
+    requiredWhen: quality-gate
+    meaning: quality-gate が実行する adapter bundle の識別子。
+  - id: config-snapshot
+    requiredWhen: release-publication
+    meaning: 解決済み設定、解決元、digest。
+commonOutput:
+  - id: status
+    domain: workflow-runtime
+    values: [success, failed, 判定不能, 未実施, 対象外]
+    meaning: workflow runtime の実施結果。監査 status の分類と集約は所有しない。対象外は設計または owner 契約により実行しない単位を表す。
+  - id: evidence
+    meaning: 実施内容、toolchain、adapter、log または artifact の参照。
+  - id: identity-bindings
+    meaning: source、request、artifact、remote resource の結合。
+  - id: config-snapshot
+    providedWhen: [release-publication]
+    meaning: 入力と同じ解決済み設定の保存値。
+globalStopConditions:
+  - 未設定、型不一致、許可されない値、未結合の identity は既定値で補完しない。
+  - 操作対象 source、source dependency、source 由来 script を write job で checkout または実行しない。trusted control と許可された provider adapter の実行はこの禁止対象に含めない。
+presets:
+  - id: quality-gate
+    input:
+      - execution_context の change、integration、scheduled mode
+      - source identity と変更範囲
+      - language_profile、toolchain、quality adapter
+      - trust mode と許可された権限
+      - platform 品質検証の選択（project が宣言済み platform 集合の id 部分集合。runner 値と provider 構文は含めない。未選択時は従来の単一 platform 検証）
+    output:
+      - format、lint、test、security、structure の結果
+      - profile、toolchain、変更範囲、trust mode の evidence
+      - log、summary、必要な検証 artifact
+      - platform 品質検証の結果 record（platform id、execution-context、adapter、解決済み設定 digest、commonOutput.status、evidence を結合する。実行前に期待 platform record 集合を確定する）
+    stopConditions:
+      - source identity、profile、toolchain、adapter が解決できない。
+      - untrusted source に secret、write 権限、信頼済み runner を渡そうとする。
+      - required check が skip / cancel され、未実施を成功として扱おうとする。
+      - 選択した platform id が project 宣言の platform 集合に無い、または重複している。
+      - 期待 record が欠落したまま、または platform 選択が空のまま aggregate が success になる。
+      - 対象外または未実施が、適用条件と理由を欠いたまま期待 record 集合から除外され、または成功として扱われる。
+      - platform 非対応コマンドを宣言なしに省略し、その platform の検証結果を省略する。
+      - platform 検証を含む required check の workflow 自体が起動していない事実を成功として扱う。
+  - id: release-request
+    tag:
+      versionResolution: authority
+    input:
+      - event、ref、source SHA、request actor / run identity
+      - tag、version（manual は request 入力、tag は authority で owner 契約から解決してよい）
+      - execution_mode（manual または tag）
+      - 承認済み release body、approval identity、expiry（manual の場合）
+      - request adapter と handoff schema
+    output:
+      - immutable request handoff
+      - request artifact の digest
+      - event、ref、source SHA、request identity の binding
+    invariants:
+      - tag event は承認済み本文を生成しない。
+      - 本文の結合は release-publication の入力条件であり、request 生成条件とは分ける。
+    stopConditions:
+      - event、ref、source SHA、tag の欠落または不一致。
+      - manual の version、approval、expiry、承認済み本文、handoff digest を証明できない。
+      - "tag の handoff digest、event identity、version_resolution: authority を証明できない。具体的な version 解決は後段の authority へ委譲する。"
+      - request workflow が対象 source を checkout または実行する。
+  - id: release-publication
+    supplementalAssetContract: ci.release-asset-publication-contract#supplementalAsset
+    input:
+      - 検証済み request handoff
+      - trusted control の識別・版と config_snapshot
+      - language_profile、toolchain、platform_manifest、quality adapter descriptor
+      - 承認済み release body の handoff と digest
+      - Release target identity と非上書き policy
+      - 公開 source の provider 適合判定に用いる credential route
+    optionalInput:
+      - 解決済み補助 Release asset 選択、owner 契約 ID と build adapter
+    internalStages: [authority-context, source-gate, quality, build, assemble]
+    optionalInternalStages: [supplemental-asset-build]
+    output:
+      - authority context（source、version、承認、profile、platform、toolchain、補助 asset 選択、owner 契約 ID、config の固定 snapshot）
+      - draft と final Release の remote identity
+      - Release tag、source SHA、version、platform asset、選択済み補助 asset、checksum の結合
+      - publish 前後の readback evidence と保存済み release body
+      - provider 公開適合の観測結果（source 確定後・write 直前）
+    stopConditions:
+      - authority context と source handoff を別入力として検証できない。
+      - publish job が操作対象 source、source dependency、source 由来 script を実行する。
+      - tag、source、version、platform、asset、checksum、本文、remote 状態が一致しない。
+      - 補助 asset が未選択なのに handoff が渡される、または選択済みなのに adapter、handoff、owner 証跡が欠落・不一致となる。
+      - 既存 Release / asset の上書き、状態不明、承認期限切れが発生する。
+      - provider 公開適合を証明できない、または write 直前の再観測で不適合・判定不能となる。
+  - id: package-publication
+    input:
+      - owner が解決した registry、channel、version plan、credential route
+      - trusted control が具体化した publish_version と artifact handoff の version binding
+      - package artifact handoff、metadata、checksum、target identity
+      - trusted publish control と package publication adapter
+      - publish 前の availability 状態
+    precedingStages: [version-plan, package-artifact-build]
+    output:
+      - registry resource identity、version、channel、digest
+      - publish 前後の availability / success state
+      - credential を含まない publish receipt
+    completionConditions:
+      - complete-same（target identity、version、artifact digest が一致）は idempotent な完了とし、2 回目の publish を行わない。
+    targetPolicy:
+      supportedBackends: [npm, crates-io, pypi]
+      supportedFormats: [npm-tarball, crate, wheel, sdist]
+      unsupportedBackendHandling: extension-required
+      rule: backend と format は導入時に一つへ固定し、未対応 backend は標準 preset の完了条件へ含めない。
+    stopConditions:
+      - owner 契約、version plan、registry、channel、credential route が未確定。
+      - write job が操作対象 source、source dependency、source 由来 script を checkout / 実行する。
+      - partial、different、unknown-permission-denied、availability 不明は fail closed とし owner recovery へ委譲する。
+      - metadata / checksum 不一致、version binding 不一致、上書き要求がある。
+providerBoundary:
+  providerNeutral: true
+  forbidden: [provider-specific trigger/job/uses/permissions syntax]
+  mappingOwner: selected-provider-skill

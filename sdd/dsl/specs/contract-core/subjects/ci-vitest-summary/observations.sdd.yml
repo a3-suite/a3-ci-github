@@ -1,0 +1,15 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.vitest-summary
+observations:
+  - id: observation.ci.vitest-summary.outputs
+    summary: The Action exposes summary status, collection, destination, and digest.
+    boundary: {ref: boundary.action-output}
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - {selector: status, kind: observation_field, meaning: Vitest summary status.}
+        - {selector: collection, kind: observation_field, meaning: Collection completeness.}
+        - {selector: summary-path, kind: observation_field, meaning: Rendered summary destination.}
+        - {selector: digest, kind: observation_field, meaning: Summary digest.}

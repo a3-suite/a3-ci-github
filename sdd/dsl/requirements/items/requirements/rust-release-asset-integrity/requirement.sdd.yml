@@ -1,0 +1,30 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: rust-release-asset-integrity
+    type: functional
+    summary: Rust release asset を承認済みの source、toolchain、platform 定義に結び付け、改変や上書きを許さず検証できる
+    rationale:
+      why: >-
+        release asset の生成根拠と内容が分離すると、異なる source や toolchain から生成された成果物を
+        正規の release として扱う危険があるため
+    subject:
+      namespace: skills
+      key: rust-release
+    priority: must
+    fit_criteria:
+      - release authority の language profile と source SHA が checked-out source と一致する
+      - toolchain version は完全一致する固定 version とし、可変 channel を受け入れない
+      - platform manifest は platform ID を一意に解決し、要求 target と一致する
+      - package version と生成 binary が報告する version が release authority の version と一致し、binary の --version 出力は version を独立トークン（{version} / v{version} / V{version} の完全一致）として報告する
+      - version を観測できない場合は binary-version-mismatch と expected / received を観測可能にする
+      - archive、checksum、asset manifest、source SHA、platform identity を相互に検証する
+      - 既存の出力先または競合して作成された出力先を上書きしない
+      - 入力不一致、build、package、または検証の失敗時は成功状態や未検証 asset を公開しない
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: rust-cli-release-asset-preparation
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: rust-release-asset-integrity-safe

@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.gh-provisioner
+contracts:
+  - id: contract.ci-gh-provisioner.provision
+    summary: A checked official GitHub CLI Release asset enters the job PATH; failed provisioning exposes no executable.
+    conditions:
+      - id: gh-release-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.gh-release-asset-valid
+          op: available
+      - id: gh-release-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.gh-release-asset-invalid
+          op: available
+    guarantees:
+      - id: checked-gh-available
+        when: gh-release-valid
+        observation_ref: observation.ci-gh-provisioner.path
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: gh
+      - id: failed-provisioning-stops
+        when: gh-release-invalid
+        observation_ref: observation.ci-gh-provisioner.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: checked-gh-provisioned
+        goal: A checksum-matched Release asset is available to later job steps.
+        guarantee_refs:
+          - checked-gh-available
+      - id: failed-gh-provisioning-rejected
+        goal: Missing or invalid Release assets stop provisioning before PATH handoff.
+        guarantee_refs:
+          - failed-provisioning-stops

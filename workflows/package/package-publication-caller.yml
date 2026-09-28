@@ -1,0 +1,106 @@
+name: package-publication-caller
+
+on:
+  workflow_run:
+    workflows:
+      - package-publication-request
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+    outputs:
+      source_sha: ${{ steps.request.outputs['source-sha'] }}
+      version: ${{ steps.request.outputs.version }}
+      target_identity: ${{ steps.request.outputs['target-identity'] }}
+      language_profile: ${{ steps.request.outputs['language-profile'] }}
+      toolchain: ${{ steps.request.outputs.toolchain }}
+    steps:
+      - name: Require successful request
+        shell: bash
+        env:
+          REQUEST_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          REQUEST_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
+          REQUEST_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          REQUEST_WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
+          REQUEST_EVENT: ${{ github.event.workflow_run.event }}
+          REQUEST_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REQUEST_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          test "$REQUEST_CONCLUSION" = success
+          test "$REQUEST_REPOSITORY" = "$GITHUB_REPOSITORY"
+          test "$REQUEST_WORKFLOW_NAME" = package-publication-request
+          test "$REQUEST_EVENT" = workflow_dispatch
+          test -n "$DEFAULT_BRANCH"
+          test "$REQUEST_HEAD_BRANCH" = "$DEFAULT_BRANCH"
+          case "$REQUEST_WORKFLOW_PATH" in
+            .github/workflows/package-publication-request.yml|.github/workflows/package-publication-request.yml@"$DEFAULT_BRANCH") ;;
+            *) exit 1 ;;
+          esac
+          [[ "$REQUEST_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: package-publication-request
+          path: package-publication-request
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - id: request
+        name: Validate request identity
+        uses: a3-suite/a3-actions/actions/ci-package-publication-request@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          operation: verify
+          expected-source-sha: ${{ github.event.workflow_run.head_sha }}
+
+  prepare:
+    needs: validate-request
+    permissions:
+      contents: read
+    uses: ./.github/workflows/package-preparation.yml
+    with:
+      source_sha: ${{ needs.validate-request.outputs.source_sha }}
+      version: ${{ needs.validate-request.outputs.version }}
+      target_identity: ${{ needs.validate-request.outputs.target_identity }}
+      language_profile: ${{ needs.validate-request.outputs.language_profile }}
+      toolchain: ${{ needs.validate-request.outputs.toolchain }}
+
+  publish:
+    needs: [validate-request, prepare]
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    uses: ./.github/workflows/package-publication.yml
+    with:
+      package_handoff_run_id: ${{ needs.prepare.outputs.handoff_run_id }}
+      source_sha: ${{ needs.validate-request.outputs.source_sha }}
+      version: ${{ needs.prepare.outputs.publish_version }}
+      target_identity: ${{ needs.validate-request.outputs.target_identity }}
+      package_artifact_id: ${{ needs.prepare.outputs.artifact_id }}
+    secrets:
+      PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_REGISTRY_TOKEN }}
+
+  summary:
+    needs: [validate-request, prepare, publish]
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"validate-request","execution":"trusted package publication request validation","result":"${{ needs.validate-request.result == 'success' && 'success' || needs.validate-request.result == 'failure' && 'failed' || (needs.validate-request.result == 'cancelled' || needs.validate-request.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.validate-request.result == 'success' || needs.validate-request.result == 'failure') && '完了' || needs.validate-request.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"prepare","execution":"trusted package preparation","result":"${{ needs.prepare.result == 'success' && 'success' || needs.prepare.result == 'failure' && 'failed' || (needs.prepare.result == 'cancelled' || needs.prepare.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.prepare.result == 'success' || needs.prepare.result == 'failure') && '完了' || needs.prepare.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"prepare result: ${{ needs.prepare.result }}"},{"unit":"publish","execution":"trusted package publication","result":"${{ needs.publish.result == 'success' && 'success' || needs.publish.result == 'failure' && 'failed' || (needs.publish.result == 'cancelled' || needs.publish.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.publish.result == 'success' || needs.publish.result == 'failure') && '完了' || needs.publish.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"publish result: ${{ needs.publish.result }}"}]}

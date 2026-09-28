@@ -1,0 +1,106 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.github-toolchain-verifier
+contracts:
+  - id: contract.ci-github-toolchain-verifier.processing
+    summary: The shared script accepts only supported modes whose selected CLI versions exactly match the request.
+    conditions:
+      - id: selected-toolchain-matches-request
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.github-toolchain-matches-request
+          op: available
+      - id: selected-toolchain-does-not-match-request
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.github-toolchain-does-not-match-request
+          op: available
+    guarantees:
+      - id: exact-toolchain-processing-succeeds
+        when: selected-toolchain-matches-request
+        observation_ref: observation.ci-github-toolchain-verifier.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - success
+      - id: invalid-toolchain-processing-fails
+        when: selected-toolchain-does-not-match-request
+        observation_ref: observation.ci-github-toolchain-verifier.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: exact-toolchain-processing-verified
+        goal: The shared script succeeds for every supported mode only when all selected versions match exactly.
+        guarantee_refs:
+          - exact-toolchain-processing-succeeds
+      - id: invalid-toolchain-processing-rejected
+        goal: The shared script fails for unsupported modes, unavailable commands, and version mismatches.
+        guarantee_refs:
+          - invalid-toolchain-processing-fails
+  - id: contract.ci-github-toolchain-verifier.outputs
+    summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    conditions:
+      - id: toolchain-script-succeeded
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.github-toolchain-script-succeeded
+          op: available
+      - id: toolchain-script-failed
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.github-toolchain-script-failed
+          op: available
+    guarantees:
+      - id: verified-output-produced
+        when: toolchain-script-succeeded
+        observation_ref: observation.ci-github-toolchain-verifier.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: verified
+            right:
+              kind: value_set
+              values:
+                - "true"
+      - id: verification-failure-propagated
+        when: toolchain-script-failed
+        observation_ref: observation.ci-github-toolchain-verifier.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: exact-toolchain-verified
+        goal: Shared script success exposes verified=true.
+        guarantee_refs:
+          - verified-output-produced
+      - id: invalid-toolchain-rejected
+        goal: Shared script failure fails the verification step without verified output.
+        guarantee_refs:
+          - verification-failure-propagated

@@ -1,0 +1,18 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-publication-workflow
+test_maps:
+  - verification_id: verification.ci-release-publication-workflow.publication
+    case_id: ci-release-publication-workflow-success
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: release publication workflows separate request validation from privileged publication
+        check_refs:
+          - check-ci-release-publication-workflow-success
+  - verification_id: verification.ci-release-publication-workflow.publication
+    case_id: ci-release-publication-workflow-failure
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: release publication workflows preserve failed and unknown outcomes
+        check_refs:
+          - check-ci-release-publication-workflow-failure

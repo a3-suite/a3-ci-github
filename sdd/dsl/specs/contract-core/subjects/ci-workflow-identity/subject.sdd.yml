@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.workflow-identity
+  summary: Verifying that a reusable workflow runs from the default-branch snapshot.

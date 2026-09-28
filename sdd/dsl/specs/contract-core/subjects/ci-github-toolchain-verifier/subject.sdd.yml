@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.github-toolchain-verifier
+  summary: Verifying exact GitHub CI tool versions through a shared script.

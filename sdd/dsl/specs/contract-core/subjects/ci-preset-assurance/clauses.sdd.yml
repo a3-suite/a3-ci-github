@@ -1,0 +1,156 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.preset-assurance
+contracts:
+  - id: contract.ci-preset-assurance.verification
+    summary: Preset assurance validates applied canonical assets without modifying the consumer project and rejects invalid invocation boundaries.
+    conditions:
+      - id: ci-preset-assurance-roots-missing
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-assurance-roots-missing
+          op: available
+      - id: ci-preset-assurance-read-only-output-requested
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-assurance-read-only-output-requested
+          op: available
+      - id: ci-preset-assurance-applied-preset-valid
+        input_predicate:
+          kind: input
+          term: input.applied-preset
+          op: present
+      - id: ci-preset-assurance-applied-preset-drifted
+        input_predicate:
+          kind: input
+          term: input.applied-preset-drift
+          op: present
+    guarantees:
+      - id: ci-preset-assurance-explicit-roots-required
+        when: ci-preset-assurance-roots-missing
+        observation_ref: observation.ci-preset-assurance.bootstrap-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: reason
+      - id: ci-preset-assurance-read-only-output-rejected
+        when: ci-preset-assurance-read-only-output-requested
+        observation_ref: observation.ci-preset-assurance.bootstrap-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: reason
+      - id: ci-preset-assurance-valid-preset-succeeds
+        when: ci-preset-assurance-applied-preset-valid
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values: [success]
+      - id: ci-preset-assurance-valid-evidence-exposed
+        when: ci-preset-assurance-applied-preset-valid
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: evidence
+      - id: ci-preset-assurance-semantic-review-state-exposed
+        when: ci-preset-assurance-applied-preset-valid
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: semanticReviewRequired
+      - id: ci-preset-assurance-drift-fails
+        when: ci-preset-assurance-applied-preset-drifted
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values: [failed]
+    verification_intents:
+      - id: ci-preset-assurance-explicit-roots-intent
+        goal: Missing explicit roots produce a stable invalid-input diagnostic before validation starts.
+        guarantee_refs: [ci-preset-assurance-explicit-roots-required]
+      - id: ci-preset-assurance-read-only-output-intent
+        goal: Read-only audit rejects remediation output with a stable invalid-input diagnostic.
+        guarantee_refs: [ci-preset-assurance-read-only-output-rejected]
+      - id: ci-preset-assurance-valid-intent
+        goal: A canonical applied preset produces a successful read-only preflight report without modifying the project.
+        guarantee_refs:
+          - ci-preset-assurance-valid-preset-succeeds
+          - ci-preset-assurance-valid-evidence-exposed
+          - ci-preset-assurance-semantic-review-state-exposed
+      - id: ci-preset-assurance-drift-intent
+        goal: Canonical or distribution identity drift produces a failed report and remains observable without remediation.
+        guarantee_refs: [ci-preset-assurance-drift-fails]
+  - id: contract.ci-preset-assurance.asset-lock
+    summary: Asset lock generation binds validated applied assets to one full distribution revision and rejects invalid revision identity.
+    conditions:
+      - id: ci-preset-assurance-lock-input-valid
+        input_predicate:
+          kind: input
+          term: input.full-source-revision
+          op: present
+      - id: ci-preset-assurance-lock-input-invalid
+        input_predicate:
+          kind: input
+          term: input.invalid-source-revision
+          op: present
+    guarantees:
+      - id: ci-preset-assurance-lock-source-bound
+        when: ci-preset-assurance-lock-input-valid
+        observation_ref: observation.ci-preset-assurance.asset-lock
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: sourceRevision
+      - id: ci-preset-assurance-lock-assets-recorded
+        when: ci-preset-assurance-lock-input-valid
+        observation_ref: observation.ci-preset-assurance.asset-lock
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: assets
+      - id: ci-preset-assurance-invalid-revision-rejected
+        when: ci-preset-assurance-lock-input-invalid
+        observation_ref: observation.ci-preset-assurance.asset-lock-failure
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+    verification_intents:
+      - id: ci-preset-assurance-lock-generation-intent
+        goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests.
+        guarantee_refs:
+          - ci-preset-assurance-lock-source-bound
+          - ci-preset-assurance-lock-assets-recorded
+      - id: ci-preset-assurance-lock-rejection-intent
+        goal: A noncanonical source revision is rejected before an asset lock is written.
+        guarantee_refs: [ci-preset-assurance-invalid-revision-rejected]

@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-request-handoff
+contracts:
+  - id: contract.ci-release-request-handoff.outputs
+    summary: Valid request inputs produce a request handoff and digest path.
+    conditions:
+      - id: tag-ref-present
+        input_predicate:
+          kind: input
+          term: input.github-ref-name
+          op: present
+      - id: request-handoff-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: request-handoff-output-produced
+        when: tag-ref-present
+        observation_ref: observation.ci-release-request-handoff.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: request-path
+      - id: request-handoff-failure-propagated
+        when: request-handoff-rejected
+        observation_ref: observation.ci-release-request-handoff.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: request-handoff-output-set
+        goal: Valid request inputs produce a request handoff and digest.
+        guarantee_refs:
+          - request-handoff-output-produced
+      - id: request-handoff-rejected
+        goal: A tag request whose ref does not match its tag identity fails without a handoff.
+        guarantee_refs:
+          - request-handoff-failure-propagated

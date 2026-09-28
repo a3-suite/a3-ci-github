@@ -1,0 +1,41 @@
+version: 1
+name: use-case
+use_case_id: github-release-request-preparation
+summary: Release管理者がannotated tagから公開準備用のimmutableなrequest handoffを得る
+actors:
+  - actor_id: release-maintainer
+    kind: human
+    role: primary
+    summary: source、version、tagおよび後続のRelease公開判断を管理する主体
+  - actor_id: github-tag-event
+    kind: external-system
+    role: supporting
+    summary: annotated tagのpushを固定event metadataとしてworkflowへ通知するGitHub
+goal: 公開権限を使用せず、annotated tagとsource identityを後続の承認・公開から独立したrequestへ固定する
+preconditions:
+  - release対象のannotated tagが承認済みsource commitを指している
+  - tag request workflowと使用するActionが固定SHAで配置されている
+trigger: release対象のannotated tagがpushされる
+main_success_scenario:
+  - summary: event metadataからtag refとrepository identityを取得する
+  - summary: annotated tag objectとsource commitを解決し、lightweight tagや不一致を拒否する
+  - summary: tag、source、version解決の委譲先およびrun provenanceをimmutableなrequest handoffへ記録する
+  - summary: 後続のnotes確認とpublication requestが参照できる証跡としてhandoffを公開する
+success_outcomes:
+  - tag event、annotated tag object、source commitおよびrequest handoffを一意に対応付けられる
+  - request生成時点ではRelease作成や公開writeを実行しない
+failure_outcomes:
+  - lightweight tag、tag解決失敗、source不一致またはhandoff生成失敗時はrequestを確定しない
+  - 失敗したrequestを別経路で自動補完して公開へ進めない
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-release-workflow
+  - requirement_ref:
+      requirement_id: ci-common-processing-action-reuse
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-release-request-workflow.handoff
+  - contract_ref:
+      contract_id: contract.ci-annotated-tag-resolver.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-request-handoff.outputs

@@ -1,0 +1,29 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.publish-version
+observations:
+  - id: observation.ci-publish-version.outputs
+    summary: The Action exposes deterministic publish-version outputs to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Whether the version plan was materialized successfully.
+        - selector: publish-version
+          kind: observation_field
+          meaning: The materialized publish version.
+  - id: observation.ci-publish-version.result
+    summary: The Action exposes its failed step outcome when a publish version plan is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected publish version step.

@@ -1,0 +1,24 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.package-publication-request
+verifications:
+  - id: verification.ci-package-publication-request.outputs
+    contract_id: contract.ci-package-publication-request.outputs
+    cases:
+      - id: package-request-round-trip
+        intent_id: package-request-source-binding
+        input:
+          operation: verify
+        checks:
+          - id: check-package-request-status
+            guarantee_ref: package-request-status-produced
+          - id: check-package-request-source
+            guarantee_ref: package-request-source-produced
+      - id: source-sha-mismatch-rejected
+        intent_id: package-request-rejected
+        input:
+          operation: verify
+          source-sha: mismatched-source
+        checks:
+          - id: check-package-request-failure-status
+            guarantee_ref: package-request-failure-propagated

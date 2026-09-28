@@ -1,0 +1,39 @@
+name: ci-workflow-identity
+description: Verify the trusted default-branch snapshot used by a reusable workflow.
+inputs:
+  repository:
+    required: true
+    description: Expected repository full name.
+  default-branch:
+    required: true
+    description: Expected default branch name.
+  expected-caller-workflow-path:
+    required: true
+    description: Expected caller workflow path.
+  expected-called-workflow-path:
+    required: true
+    description: Expected reusable workflow path.
+  caller-workflow-ref:
+    required: true
+    description: Caller workflow ref context.
+  caller-workflow-sha:
+    required: true
+    description: Caller workflow commit SHA.
+  called-workflow-repository:
+    required: true
+    description: Called workflow repository.
+  called-workflow-file-path:
+    required: true
+    description: Called workflow file path from the job context.
+  called-workflow-ref:
+    required: true
+    description: Called workflow ref context.
+  called-workflow-sha:
+    required: true
+    description: Called workflow commit SHA.
+outputs:
+  sha:
+    description: Verified workflow snapshot commit SHA.
+runs:
+  using: node24
+  main: dist/index.js

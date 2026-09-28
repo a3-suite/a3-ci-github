@@ -1,0 +1,235 @@
+version: 2
+name: contract-route
+routes:
+  - route_id: repository-action-distribution-integrity
+    contract_ref:
+      subject_ref: subject.repository.action-distribution
+      contract_id: contract.repository-action-distribution.integrity
+    hops:
+      - component_id: contract-verification
+      - component_id: hosted-delivery
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-github-toolchain-verifier
+    contract_ref:
+      subject_ref: subject.ci.github-toolchain-verifier
+      contract_id: contract.ci-github-toolchain-verifier.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-jq-provisioner
+    contract_ref:
+      subject_ref: subject.ci.jq-provisioner
+      contract_id: contract.ci-jq-provisioner.provision
+    hops:
+      - component_id: action-contracts
+      - component_id: hosted-delivery
+  - route_id: action-contracts-gh-provisioner
+    contract_ref:
+      subject_ref: subject.ci.gh-provisioner
+      contract_id: contract.ci-gh-provisioner.provision
+    hops:
+      - component_id: action-contracts
+      - component_id: hosted-delivery
+  - route_id: script-processing-github-toolchain-verifier
+    contract_ref:
+      subject_ref: subject.ci.github-toolchain-verifier
+      contract_id: contract.ci-github-toolchain-verifier.processing
+    hops:
+      - component_id: runtime-implementations
+      - component_id: action-contracts
+  - route_id: action-contracts-rust-source-gate
+    contract_ref:
+      subject_ref: subject.ci.rust-source-gate
+      contract_id: contract.ci-rust-source-gate.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: script-processing-rust-source-gate
+    contract_ref:
+      subject_ref: subject.ci.rust-source-gate
+      contract_id: contract.ci-rust-source-gate.processing
+    hops:
+      - component_id: runtime-implementations
+      - component_id: action-contracts
+  - route_id: action-contracts-rust-release-build
+    contract_ref:
+      subject_ref: subject.ci.rust-release-build
+      contract_id: contract.ci-rust-release-build.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: script-processing-rust-release-build
+    contract_ref:
+      subject_ref: subject.ci.rust-release-build
+      contract_id: contract.ci-rust-release-build.processing
+    hops:
+      - component_id: runtime-implementations
+      - component_id: action-contracts
+  - route_id: action-contracts-change-scope
+    contract_ref:
+      subject_ref: subject.ci.change-scope
+      contract_id: contract.ci-change-scope.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-annotated-tag-resolver
+    contract_ref:
+      subject_ref: subject.ci.annotated-tag-resolver
+      contract_id: contract.ci-annotated-tag-resolver.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-config-snapshot
+    contract_ref:
+      subject_ref: subject.ci.config-snapshot
+      contract_id: contract.ci-config-snapshot.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-platform-matrix
+    contract_ref:
+      subject_ref: subject.ci.platform-matrix
+      contract_id: contract.ci-platform-matrix.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-handoff-integrity
+    contract_ref:
+      subject_ref: subject.ci.handoff-integrity
+      contract_id: contract.ci-handoff-integrity.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-publish-version
+    contract_ref:
+      subject_ref: subject.ci.publish-version
+      contract_id: contract.ci-publish-version.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-quality-summary
+    contract_ref:
+      subject_ref: subject.ci.quality-summary
+      contract_id: contract.ci-quality-summary.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-release-notes-binding
+    contract_ref:
+      subject_ref: subject.ci.release-notes-binding
+      contract_id: contract.ci-release-notes-binding.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-release-notes-input-resolution
+    contract_ref:
+      subject_ref: subject.ci.release-notes-input-resolution
+      contract_id: contract.ci-release-notes-input-resolution.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-release-request-handoff
+    contract_ref:
+      subject_ref: subject.ci.release-request-handoff
+      contract_id: contract.ci-release-request-handoff.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-release-publication-control
+    contract_ref:
+      subject_ref: subject.ci.release-publication-control
+      contract_id: contract.ci-release-publication-control.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-package-publication-request
+    contract_ref:
+      subject_ref: subject.ci.package-publication-request
+      contract_id: contract.ci-package-publication-request.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-quality-adapter
+    contract_ref:
+      subject_ref: subject.ci.quality-adapter
+      contract_id: contract.ci-quality-adapter.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-workflow-identity
+    contract_ref:
+      subject_ref: subject.ci.workflow-identity
+      contract_id: contract.ci-workflow-identity.verify
+    hops:
+      - component_id: action-contracts
+  - route_id: action-contracts-vitest-summary
+    contract_ref:
+      subject_ref: subject.ci.vitest-summary
+      contract_id: contract.ci.vitest-summary.outputs
+    hops:
+      - component_id: action-contracts
+  - route_id: workflow-quality-execution
+    contract_ref:
+      subject_ref: subject.ci.quality-workflow
+      contract_id: contract.ci-quality-workflow.execution
+    hops:
+      - component_id: workflow-sources
+      - component_id: contract-verification
+  - route_id: workflow-release-request-handoff
+    contract_ref:
+      subject_ref: subject.ci.release-request-workflow
+      contract_id: contract.ci-release-request-workflow.handoff
+    hops:
+      - component_id: workflow-sources
+      - component_id: contract-verification
+  - route_id: workflow-release-publication
+    contract_ref:
+      subject_ref: subject.ci.release-publication-workflow
+      contract_id: contract.ci-release-publication-workflow.publication
+    hops:
+      - component_id: workflow-sources
+      - component_id: contract-verification
+  - route_id: workflow-package-publication
+    contract_ref:
+      subject_ref: subject.ci.package-publication-workflow
+      contract_id: contract.ci-package-publication-workflow.publication
+    hops:
+      - component_id: workflow-sources
+      - component_id: contract-verification
+  - route_id: runtime-preset-materialization
+    contract_ref:
+      subject_ref: subject.ci.preset-materialization
+      contract_id: contract.ci-preset-materialization.application
+    hops:
+      - component_id: agent-guidance
+      - component_id: runtime-implementations
+      - component_id: contract-verification
+  - route_id: runtime-preset-assurance
+    contract_ref:
+      subject_ref: subject.ci.preset-assurance
+      contract_id: contract.ci-preset-assurance.verification
+    hops:
+      - component_id: runtime-implementations
+      - component_id: contract-verification
+  - route_id: runtime-preset-asset-lock
+    contract_ref:
+      subject_ref: subject.ci.preset-assurance
+      contract_id: contract.ci-preset-assurance.asset-lock
+    hops:
+      - component_id: runtime-implementations
+      - component_id: contract-verification
+  - route_id: repository-managed-source-integrity
+    contract_ref:
+      subject_ref: subject.repository.managed-source-integrity
+      contract_id: contract.repository-managed-source-integrity.integrity
+    hops:
+      - component_id: sdd-specifications
+      - component_id: workflow-sources
+      - component_id: runtime-implementations
+      - component_id: provider-static-validation
+      - component_id: agent-guidance
+      - component_id: repository-documentation
+      - component_id: contract-verification
+  - route_id: repository-contract-execution-mapping
+    contract_ref:
+      subject_ref: subject.repository.managed-source-integrity
+      contract_id: contract.repository-managed-source-integrity.execution-mapping
+    hops:
+      - component_id: sdd-specifications
+      - component_id: contract-verification
+  - route_id: ci-failure-diagnostics
+    contract_ref:
+      subject_ref: subject.ci.failure-diagnostics
+      contract_id: contract.ci-failure-diagnostics.actionable
+    hops:
+      - component_id: workflow-sources
+      - component_id: runtime-implementations
+      - component_id: contract-verification
