@@ -6,13 +6,13 @@ test_maps:
     case_id: case.ci-preset-assurance.explicit-roots-required
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: preset assurance bootstrap requires explicit roots
+        symbol: preset assurance rejects a request without explicit roots
         check_refs: [check.ci-preset-assurance.explicit-roots-required]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.read-only-output-rejected
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: preset assurance bootstrap keeps read-only audit separate from remediation output
+        symbol: preset assurance rejects remediation output in read-only mode
         check_refs: [check.ci-preset-assurance.read-only-output-rejected]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.valid-preset-succeeds
