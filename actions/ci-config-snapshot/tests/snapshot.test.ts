@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathsReferToSameFile } from '../src/index.js';
+import { pathsReferToSameFile } from '../src/snapshot-path.js';
 // integration_id: ci-config-snapshot-source
 test('detects command-file collisions before writing a snapshot', () => {
   // Arrange
