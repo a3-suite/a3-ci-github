@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "path": "actions/*/dist/index.js",
+      "rule_ids": ["secret.generic-assignment"],
+      "reason": "ncc が同梱する依存コードの固定実装とライセンス表記。source と dist の同期ゲートを別途適用する。"
+    }
+  ]
+}

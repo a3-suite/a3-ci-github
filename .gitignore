@@ -1,0 +1,22 @@
+# JavaScript / TypeScript のローカル依存と増分ビルド状態
+**/node_modules/
+**/*.tsbuildinfo
+
+# OS が生成するローカルメタデータ
+.DS_Store
+
+# a3 ツールとローカルissueの作業状態
+.a3-lint/
+.a3-sdd/
+.a3-skills/
+
+# ローカル環境設定（共有可能な例だけは追跡可能）
+.env
+.env.*
+!.env.example
+
+# テストとローカル検証が生成する一時・coverage出力
+/tmp/
+**/tests/tmp/
+**/coverage/
+**/.nyc_output/
