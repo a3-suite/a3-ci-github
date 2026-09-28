@@ -54,61 +54,61 @@ const collections = { complete: '完了', partial: '一部取得', unavailable: 
 
 const cases = [
   {
-    name: 'complete-pass',
+    title: 'Action and CLI agree on complete-pass',
     report: { numTotalTests: 2, numPassedTests: 2, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true },
     status: 'passed',
     collection: 'complete',
   },
   {
-    name: 'explicit-failure',
+    title: 'Action and CLI agree on explicit-failure',
     report: { numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, numTodoTests: 0, success: false },
     status: 'failed',
     collection: 'complete',
   },
   {
-    name: 'assertion-malformation',
+    title: 'Action and CLI agree on assertion-malformation',
     report: { numTotalTests: 2, numPassedTests: 2, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true, testResults: [{ assertionResults: [null] }] },
     status: 'unresolved',
     collection: 'partial',
   },
   {
-    name: 'unknown-status',
+    title: 'Action and CLI agree on unknown-status',
     report: { numTotalTests: 1, numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true, testResults: [{ assertionResults: [{ status: 'mystery' }] }] },
     status: 'unresolved',
     collection: 'partial',
   },
   {
-    name: 'zero-tests',
+    title: 'Action and CLI agree on zero-tests',
     report: { numTotalTests: 0, numPassedTests: 0, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true },
     status: 'unresolved',
     collection: 'unavailable',
   },
   {
-    name: 'derived-counts',
+    title: 'Action and CLI agree on derived-counts',
     report: { testResults: [{ assertionResults: [{ status: 'passed' }, { status: 'passed' }] }] },
     status: 'passed',
     collection: 'complete',
   },
   {
-    name: 'malformed-elements',
+    title: 'Action and CLI agree on malformed-elements',
     report: { testResults: [null, 'invalid'] },
     status: 'unresolved',
     collection: 'partial',
   },
   {
-    name: 'failure-with-malformation',
+    title: 'Action and CLI agree on failure-with-malformation',
     report: { numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, numTodoTests: 0, success: false, testResults: [{ assertionResults: [null] }] },
     status: 'failed',
     collection: 'partial',
   },
   {
-    name: 'summary-detail-contradiction',
+    title: 'Action and CLI agree on summary-detail-contradiction',
     report: { numTotalTests: 1, numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true, testResults: [{ assertionResults: [{ status: 'failed' }] }] },
     status: 'unresolved',
     collection: 'partial',
   },
   {
-    name: 'partial-counts',
+    title: 'Action and CLI agree on partial-counts',
     report: { numTotalTests: 2 },
     status: 'unresolved',
     collection: 'partial',
@@ -116,7 +116,7 @@ const cases = [
 ];
 
 for (const testCase of cases) {
-  test(`Action and CLI agree on ${testCase.name}`, () => {
+  test(testCase.title, () => {
     const reportPath = path.join(temporaryRoot, `${testCase.name}.json`);
     writeFileSync(reportPath, JSON.stringify(testCase.report));
     const action = runAction(reportPath);
