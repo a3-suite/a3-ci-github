@@ -29,6 +29,10 @@ test_maps:
           - check.ci-preset-assurance.valid-preset-succeeds
           - check.ci-preset-assurance.valid-evidence-exposed
           - check.ci-preset-assurance.semantic-review-state-exposed
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: registry binds every canonical workflow Action use to a declared target
+        check_refs:
+          - check.ci-preset-assurance.valid-preset-succeeds
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.drift-fails
     tests:

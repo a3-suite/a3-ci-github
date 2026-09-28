@@ -2,7 +2,7 @@
 
 GitHub Actions 向けの CI 契約、canonical workflow、再利用可能な Action、配置・検証 runtime を一元管理するプロジェクトです。
 
-現在は `a3-actions` と `a3-prompts` の追跡済み資産を移行 baseline として取り込み、SDD を正本として契約と実装の再構築を進めています。新しい Release が確定するまで、canonical workflow が参照する `a3-suite/a3-actions` の固定 SHA は既存の公開契約として維持します。
+`a3-actions` と `a3-prompts` の追跡済み資産を移行 baseline として取り込み、SDD を正本として契約と実装を再構築しました。canonical workflow と Action registry の Action binding は、source cutover により `a3-suite/a3-ci-github` の固定 SHA を参照します。旧 `a3-suite/a3-actions` の公開資産は既存 consumer 向けに維持し、削除または archive は別途承認まで行いません。
 
 ## 公開面
 

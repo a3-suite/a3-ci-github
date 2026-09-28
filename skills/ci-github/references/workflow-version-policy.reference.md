@@ -47,7 +47,7 @@
 - Action は許可された発行元から選び、commit SHA が実在する upstream commit であることを確認する。
 - release tag や version をコメントへ残してよいが、コメントを実行参照や SHA の代替にしない。コメントと SHA が一致しない場合は SHA を受理せず、更新を停止する。
 - local Action は workflow と同じ commit に含まれる資材として扱い、外部 Action の tag pin へ置き換えない。
-- `a3-suite/a3-actions` の Action は a3 管理 Action として扱う。consumer 接続前に `actionization.implementationSource.releaseTag` の exact release tag が公開済みであり、その peeled target が `exactRef` と一致することを確認する。`uses` は `exactRef` の40桁 SHAを実行参照とし、tag を実行参照へ使わない。
+- `a3-suite/a3-ci-github` の Action は a3 管理 Action として扱う。consumer 接続前に `actionization.implementationSource.releaseTag` の exact release tag が公開済みであり、その peeled target が `exactRef` と一致することを確認する。`uses` は `exactRef` の40桁 SHAを実行参照とし、tag を実行参照へ使わない。
 - GitHub 公式、vendor、community の third-party Action は upstream owner の release policy を上書きしない。consumer は full commit SHA を実行参照とし、採用時に upstream の exact release tag、その target commit、実行参照の SHA が一致することを確認する。
 - provider Action の実行参照は registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。

@@ -13,19 +13,17 @@
 
 ## Authority
 
-- cutover完了までは、公開済みActionとその固定SHAについて `a3-actions` をauthorityとします。
-- cutover完了までは、既存CIスキルとcanonical workflowについて `a3-prompts` をauthorityとします。
-- このリポジトリへ取り込んだ資産は、契約再構築と受入検証の対象です。
-- 同じ変更をコピー元とコピー先で独立に実装しません。移行中に必要な修正はauthority側で確定し、baseline更新として取り込みます。
+- canonical workflow と Action registry の Action binding は、source cutover により `a3-suite/a3-ci-github` の固定SHAをauthorityとします。
+- 本リポジトリのskill文書、canonical workflow、Action、runtimeは、このリポジトリを正本として管理します。
+- `a3-suite/a3-actions` と `izumilufty/a3-prompts` の公開資産は既存consumer向けに維持し、削除またはarchiveは別途承認まで行いません。
+- 同じ契約を本リポジトリとコピー元で独立に更新しません。コピー元の変更が必要な場合は、本リポジトリへ取り込む形で反映します。
 
-## Cutover条件
+## Cutover状態
 
-- SDD上の要求、契約、設計、実装写像がcurrentとして検証される。
-- Action、workflow、runtime、skillの責務境界が重複なく定義される。
-- Action配布物、canonical workflow、materialize、preflightの回帰が成功する。
-- 新しいrepository、Action path、固定SHA、Release tagの公開契約が確定する。
-- 利用側で新しい固定SHAを使った代表フローが成功する。
-- コピー元からの削除またはarchive方針が別途承認される。
+- source cutover: 完了。canonical workflow と Action registry は `a3-suite/a3-ci-github` の固定SHAを参照します。
+- Release gate: 未完了。`implementationSource.releaseTag` の `v0.1.0` は未公開であるため、`exact-release-tag` と `release-tag-mapping` は未充足です。registry は `availabilityGate.status: release-pending` とし、初回Releaseで peeled target と `exactRef` の一致を確認した後に `available` へ更新します。
+- 旧repositoryからの削除またはarchive: 未実施。別途承認まで行いません。
+- 利用側の新しい固定SHAへの接続: `release-pending` により未実施。初回Releaseとavailability gateの確認までconsumer接続を行いません。
 
 ## 終了条件
 

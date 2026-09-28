@@ -56,7 +56,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate publication request identity
-        uses: a3-suite/a3-actions/actions/ci-release-publication-control@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           operation: verify-publication-request
           request-workflow-run-id: ${{ github.event.workflow_run.id }}
@@ -84,7 +84,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           summary-json: >-
-            {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","result":"${{ needs.validate-request.result == 'success' && 'success' || needs.validate-request.result == 'failure' && 'failed' || (needs.validate-request.result == 'cancelled' || needs.validate-request.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.validate-request.result == 'success' || needs.validate-request.result == 'failure') && '完了' || needs.validate-request.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","result":"${{ needs.publish.result == 'success' && 'success' || needs.publish.result == 'failure' && 'failed' || (needs.publish.result == 'cancelled' || needs.publish.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.publish.result == 'success' || needs.publish.result == 'failure') && '完了' || needs.publish.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"publish result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}

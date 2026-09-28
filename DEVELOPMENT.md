@@ -40,6 +40,6 @@ node runtime/contract-subject-coverage.mjs --check
 
 各 JavaScript / TypeScript Action の依存復元、test、lint、dist 同一性は対象 Action の `package.json` と `runtime/repository/check-action-dist.mjs` に従います。統合、ローカルE2E、Hosted E2Eの境界と追加コマンドは[テスト戦略](docs/maintenance/test-strategy.md)を参照してください。
 
-## 移行中の制約
+## 移行の制約
 
-`docs/maintenance/migration-baseline.md` に示す cutover 条件を満たすまで、旧リポジトリを公開済み資産の authority とします。移行期間中に同じ契約を両方のリポジトリで独立更新しません。
+canonical workflow と Action registry の Action binding は、source cutover により本リポジトリの固定 SHA を参照します。旧リポジトリの公開資産は既存 consumer 向けに維持し、同じ契約を本リポジトリと旧リポジトリで独立更新しません。残る切替状態は `docs/maintenance/migration-baseline.md` を参照してください。

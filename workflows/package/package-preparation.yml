@@ -44,7 +44,7 @@ jobs:
           test -n "$PUBLISH_VERSION"
           printf '{"strategy":"exact","publishVersion":"%s"}\n' "$PUBLISH_VERSION" > version-plan.json
       - id: version
-        uses: a3-suite/a3-actions/actions/ci-publish-version@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-publish-version@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           version-plan-json: version-plan.json
 
@@ -89,7 +89,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
         with:
           summary-json: >-
-            {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","result":"${{ needs.version-plan.result == 'success' && 'success' || needs.version-plan.result == 'failure' && 'failed' || (needs.version-plan.result == 'cancelled' || needs.version-plan.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.version-plan.result == 'success' || needs.version-plan.result == 'failure') && '完了' || needs.version-plan.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","result":"${{ needs.build.result == 'success' && 'success' || needs.build.result == 'failure' && 'failed' || (needs.build.result == 'cancelled' || needs.build.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.build.result == 'success' || needs.build.result == 'failure') && '完了' || needs.build.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"build job result: ${{ needs.build.result }}"}]}
+            {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","rawResult":"${{ needs.version-plan.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build job result: ${{ needs.build.result }}"}]}

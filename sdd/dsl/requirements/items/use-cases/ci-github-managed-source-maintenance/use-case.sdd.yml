@@ -16,13 +16,13 @@ main_success_scenario:
   - summary: canonical sourceを一つのownerで更新し、skill文書や配布先へ実装を重複させない
   - summary: 影響する契約テスト、実装テスト、配布物検証、静的検証およびSDD検証を実行する
   - summary: Action catalog、workflow registry、lock生成・preflight経路および公開文書の参照整合を確認する
-  - summary: migration authorityとcutover条件に従い、公開可能な単一revisionとして変更結果を記録する
+  - summary: migration authorityとcutover状態に従い、公開可能な単一revisionとして変更結果を記録する
 success_outcomes:
   - 要求、契約、管理資産、配布物および検証結果を同じ変更集合から追跡できる
   - skill、workflow、Action、runtime、lint rule、SDDのownerが一意に保たれる
 failure_outcomes:
   - owner不明、契約不一致、配布物差分、検証失敗またはauthority違反があれば公開可能状態にしない
-  - コピー元と移行先で同じ契約を独立更新せず、cutover前のauthorityを維持する
+  - コピー元と移行先で同じ契約を独立更新しない
 related_requirements:
   - requirement_ref:
       requirement_id: github-ci-source-consolidation
