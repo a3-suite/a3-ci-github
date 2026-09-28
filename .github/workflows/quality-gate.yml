@@ -80,6 +80,10 @@ jobs:
         shell: bash
         run: node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 
+      - name: Test shared path identity core
+        shell: bash
+        run: node --test runtime/path/tests/same-file-core.test.mjs
+
       - name: Test GitHub toolchain verifier Action contract
         shell: bash
         run: node --test actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
@@ -388,8 +392,3 @@ jobs:
           set -euo pipefail
           test "$STATUS" = passed
           test "$COLLECTION" = complete
-
-      - name: Stop artifact API fixture
-        if: always()
-        shell: bash
-        run: kill "$(cat "$RUNNER_TEMP/artifact-api-pid")" 2>/dev/null || true

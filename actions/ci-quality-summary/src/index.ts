@@ -1,39 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as core from '@actions/core';
+import { pathsReferToSameFile } from '../../../runtime/path/same-file-core.mjs';
 import { renderQualitySummary } from './summary.js';
-
-const canonicalPath = (value: string): string => {
-  const absolute = path.resolve(value);
-  const suffix: string[] = [];
-  let current = absolute;
-  while (true) {
-    try {
-      const resolved = fs.realpathSync.native(current);
-      return path.join(resolved, ...suffix);
-    } catch (error) {
-      if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') {
-        throw new Error('ci-summary-path-invalid');
-      }
-      const parent = path.dirname(current);
-      if (parent === current) throw new Error('ci-summary-path-invalid');
-      suffix.unshift(path.basename(current));
-      current = parent;
-    }
-  }
-};
-
-const sameFile = (left: string, right: string): boolean => {
-  if (canonicalPath(left) === canonicalPath(right)) return true;
-  try {
-    const leftStat = fs.statSync(left);
-    const rightStat = fs.statSync(right);
-    return leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino;
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return false;
-    throw new Error('ci-summary-path-invalid');
-  }
-};
 
 export const run = (): void => {
   try {
@@ -48,7 +17,7 @@ export const run = (): void => {
     const outputPath = core.getInput('summary-path') || process.env.GITHUB_STEP_SUMMARY;
     if (!outputPath) throw new Error('ci-summary-path-missing');
     const evidencePath = core.getInput('evidence-path') || '.ci/ci-quality-summary.evidence.md';
-    if (sameFile(outputPath, evidencePath)) {
+    if (pathsReferToSameFile(outputPath, evidencePath, 'ci-summary-path-invalid')) {
       throw new Error('ci-summary-paths-must-differ');
     }
     fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
