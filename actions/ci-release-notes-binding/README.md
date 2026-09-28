@@ -7,7 +7,7 @@
 approval JSON と `release-identity` は caller が trusted control / 承認済み handoff から取得して渡してください。この Action は指定された2つの JSON の整合だけを検証し、承認者や発行元の信頼性を独自には保証しません。untrusted な入力だけで承認を成立させないでください。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-release-notes-binding@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-release-notes-binding@<40-char-commit-sha>
   with:
     handoff-json: .ci/release-notes.json
     approval-json: .ci/release-notes-approval.json

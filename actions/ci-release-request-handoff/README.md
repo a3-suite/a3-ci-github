@@ -4,7 +4,7 @@ annotated tag から解決済みの source identity を、version 解決を auth
 `ci.release-request.v1` handoff へ書き出します。Action は承認や公開可否を判断しません。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-release-request-handoff@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-release-request-handoff@<40-char-commit-sha>
   with:
     output-directory: release-request
     tag-source-sha: ${{ steps.tag.outputs.source-sha }}

@@ -3,7 +3,7 @@
 Annotated tag を GitHub API で解決し、tag object と source commit の SHA を出力します。tag が lightweight tag の場合は失敗します。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-annotated-tag-resolver@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-annotated-tag-resolver@<40-char-commit-sha>
   id: tag
   with:
     repository: ${{ github.repository }}

@@ -5,7 +5,7 @@
 入力は `handoff-root`、`descriptor`、`source-sha`、`version`、`target-identity`。出力は `status`、正規化した `descriptor` / `manifest`、`manifest-digest`、`entries` です。失敗は Action failure として返します。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-handoff-integrity@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@<40-char-commit-sha>
   with:
     handoff-root: .ci/handoff
     descriptor: handoff.json

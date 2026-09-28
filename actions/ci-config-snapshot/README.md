@@ -12,7 +12,7 @@
 不正な key、空値、改行・NUL を含む値、JSON、path は失敗として扱います。実行時に `skills/` は要求しません。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-config-snapshot@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@<40-char-commit-sha>
   with:
     sources-json: '{"preset":{"MODE":"release"},"runtime":{"MODE":"dry-run"}}'
     snapshot-path: .ci/config-snapshot.json
