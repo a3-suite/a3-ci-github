@@ -1,0 +1,21 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.package-publication-workflow
+verifications:
+  - id: verification.ci-package-publication-workflow.publication
+    contract_id: contract.ci-package-publication-workflow.publication
+    cases:
+      - id: ci-package-publication-workflow-success
+        intent_id: ci-package-publication-workflow-success-intent
+        input:
+          scenario: valid
+        checks:
+          - id: check-ci-package-publication-workflow-success
+            guarantee_ref: ci-package-publication-workflow-success-observed
+      - id: ci-package-publication-workflow-failure
+        intent_id: ci-package-publication-workflow-failure-intent
+        input:
+          scenario: rejected
+        checks:
+          - id: check-ci-package-publication-workflow-failure
+            guarantee_ref: ci-package-publication-workflow-failure-observed

@@ -1,0 +1,74 @@
+version: 1
+name: physical-structure
+structure_id: a3-ci-github-repository-layout
+elements:
+  - element_id: repository-version
+    element_kind: file
+    path: VERSION
+    primary_area_kind: specification
+    area_kinds: [specification]
+    source_control: managed
+    placement_purpose: repository release tagと照合するSemVer release versionの正本を所有する
+  - element_id: actions-root
+    element_kind: directory
+    path: actions
+    primary_area_kind: action
+    area_kinds: [action]
+    source_control: managed
+    placement_purpose: 独立した GitHub Action の公開契約・実装・配布物・局所テストを所有する
+  - element_id: workflows-root
+    element_kind: directory
+    path: workflows
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: 適用先へ配布する用途別 canonical workflow source を所有する
+  - element_id: runtime-root
+    element_kind: directory
+    path: runtime
+    primary_area_kind: implementation
+    area_kinds: [implementation, verification]
+    source_control: managed
+    placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: lint-rules-root
+    element_kind: directory
+    path: lint-rules
+    primary_area_kind: verification
+    area_kinds: [verification]
+    source_control: managed
+    placement_purpose: GitHub Actions 資産に対する provider 固有の静的検証ルールを所有し、実 runtime 回帰は tests から検証する
+  - element_id: skills-root
+    element_kind: directory
+    path: skills/ci-github
+    primary_area_kind: documentation
+    area_kinds: [documentation]
+    source_control: managed
+    placement_purpose: AIエージェント向けの起動条件と公開操作導線を所有する
+  - element_id: sdd-root
+    element_kind: directory
+    path: sdd
+    primary_area_kind: specification
+    area_kinds: [specification]
+    source_control: managed
+    placement_purpose: 要求・仕様・設計を接続する SDD 正本を所有する
+  - element_id: tests-root
+    element_kind: directory
+    path: tests
+    primary_area_kind: verification
+    area_kinds: [verification]
+    source_control: managed
+    placement_purpose: リポジトリ横断の統合テスト、公開 CLI E2E、契約対象別実行定義、配布検証資産を所有する
+  - element_id: docs-root
+    element_kind: directory
+    path: docs
+    primary_area_kind: documentation
+    area_kinds: [documentation]
+    source_control: managed
+    placement_purpose: リポジトリ横断の利用・保守・運用文書を所有する
+  - element_id: github-root
+    element_kind: directory
+    path: .github
+    primary_area_kind: delivery
+    area_kinds: [delivery]
+    source_control: managed
+    placement_purpose: このリポジトリ自身の検証・公開 workflow を所有する

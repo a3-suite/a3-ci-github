@@ -1,0 +1,15 @@
+{
+  "name": "@a3-suite/ci-quality-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "description": "GitHub Action for read-only quality adapter execution",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts --minify",
+    "lint": "tsc --noEmit",
+    "test:contract": "npm run build && tsx --test tests/action-contract.test.ts tests/entrypoint.test.ts",
+    "test": "npm run build && tsx --test tests/*.test.ts"
+  },
+  "dependencies": { "@actions/core": "1.11.1", "yaml": "2.7.0" },
+  "devDependencies": { "@types/node": "22.20.2", "@vercel/ncc": "0.38.4", "tsx": "4.23.13", "typescript": "5.9.3" }
+}

@@ -1,0 +1,18 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.annotated-tag-resolver
+test_maps:
+  - verification_id: verification.ci-annotated-tag-resolver.outputs
+    case_id: annotated-tag-resolution
+    tests:
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: bundled entrypoint resolves an annotated tag to its commit
+        check_refs:
+          - check-tag-resolution-output
+  - verification_id: verification.ci-annotated-tag-resolver.outputs
+    case_id: missing-token-rejected
+    tests:
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails when the token is missing
+        check_refs:
+          - check-tag-resolution-failure

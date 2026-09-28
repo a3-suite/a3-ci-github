@@ -1,0 +1,37 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.rust-source-gate
+observations:
+  - id: observation.ci-rust-source-gate.script-result
+    summary: The shared script exposes whether the checked-out Rust source matches the release authority.
+    boundary:
+      ref: boundary.script-result
+    value:
+      root: script.result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
+  - id: observation.ci-rust-source-gate.outputs
+    summary: The Composite Action exposes successful Rust source identity verification to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: verified
+          kind: observation_field
+          meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
+  - id: observation.ci-rust-source-gate.result
+    summary: The Composite Action exposes its step outcome to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: The success or failure outcome of the source verification step.

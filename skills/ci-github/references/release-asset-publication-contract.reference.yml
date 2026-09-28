@@ -1,0 +1,133 @@
+schemaVersion: "1"
+kind: ci-release-asset-publication-contract
+id: ci.release-asset-publication-contract
+title: Release asset publication contract
+summary: >-
+  Release assets 公開時の tag identity、承認済み release notes、inventory、
+  補助 asset 選択、resource identity、成功状態を定義する公開参照 DSL。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - release tag identity contract
+    - approved release notes input contract
+    - release inventory contract
+    - supplemental Release asset set selection and publication contract
+    - release resource identity contract
+    - release publication success state
+    - provider publication suitability and failure attribution contract
+usage:
+  whenToRead:
+    - Release tag と承認済み release notes の入力境界を確認するとき
+    - 補助 Release asset の選択と公開境界を確認するとき
+    - Release assets の公開経路を設計または監査するとき
+    - Release object の一意性と操作対象 identity を確認するとき
+    - Release assets 公開の成功状態を判定するとき
+    - 公開 source の provider 適合と失敗診断の境界を確認するとき
+  consumers:
+    - human
+    - agent
+    - validator
+tagIdentity:
+  releaseInputContract: git.release-flow
+  releaseInputBinding:
+    tagRef: git.release-flow.tag
+    sourceSha: git.release-flow.target-commit
+    releaseVersion: git.release-flow.version
+  tagRef: required
+  tagObjectSha: required
+  tagRefResolvesToObjectSha: tag_object_sha
+  tagObjectType: tag
+  sourceSha: required
+  releaseVersion: required
+  dereferencedCommitSha: source_sha
+  branchPolicyEvaluation: forbidden
+  unknownResult: fail-closed
+releaseNotesInput:
+  sourceContract: git.release-flow
+  sourceField: body
+  approval: required
+  handoff:
+    required: true
+    digest: required
+    identityBinding: required
+  publicationInput:
+    source: handoff
+    content: exact
+  postCreateReadback: exact
+  generatedNotes: forbidden
+  unknownResult: fail-closed
+supplementalAsset:
+  selection:
+    source: verified-default-branch-caller
+    enabledSnapshotKey: CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED
+    contractSnapshotKey: CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT
+    contractIdentity: ci.release-asset-publication-contract#supplementalAsset
+    ownerContractSnapshotKey: CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT
+    ownerContractRequiredWhen: enabled
+    ownerContractIdFormat: dot-separated-lower-kebab
+    adapterSnapshotKey: CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER
+    adapterEntrypoint: .ci/scripts/ci-release-supplemental-asset.sh
+    identityBinding: [source-sha, owner-contract, adapter-entrypoint]
+    inferenceSourcesForbidden: [repository-variable, secret, file-existence]
+  publication:
+    assetSet:
+      declaredBy: owner-contract
+      minimumCount: 1
+      maximumCount: owner-contract-defined
+    requiredEvidence: [identity, checksum, provenance, verification, owner-contract-evidence-record, owner-contract-evidence-record-digest]
+    evidenceScope: per-asset
+    nameCollision: forbidden
+  disabledHandoff: forbidden
+  unknownResult: fail-closed
+inventory:
+  scope: related-releases-and-assets
+  visibility: public-and-non-public
+  pagination: complete
+  cardinality:
+    - zero
+    - one
+    - multiple
+  unknownResult: fail-closed
+resourceIdentity:
+  source: create-result
+  type: immutable-release-object-id
+  requiredFor:
+    - asset-operation
+    - post-create-observation
+  tagLookupAsIdentity: forbidden
+observation:
+  phases:
+    pre-create:
+      absenceEvidence: complete-inventory
+      includesDrafts: true
+      retry: limited-with-diagnostics
+    post-create:
+      identityRule: resourceIdentity
+      uniquenessRecheck: limited-retry
+  timestamps:
+    releaseCreatedAt: forbidden-for-creation-order
+    releaseCreatedAtForIdempotency: forbidden
+  tagEndpoint:
+    visibility: published-only
+    draftAbsenceEvidence: forbidden
+providerPublicationSuitability:
+  subject: resolved-source-and-credential-route
+  observation:
+    source: provider-remote-state
+    earlyCheck: after-source-resolution
+    preWriteRecheck: required
+    earlyCheckIsPermanentEvidence: false
+  credentialRoute:
+    capabilityDeclaration: required
+    declarationAloneIsSufficient: false
+    automaticFallback: forbidden
+  failureAttribution:
+    scope: per-provider-operation
+    required: [operation, method, sanitized-endpoint, http-status, request-id, sanitized-reason]
+    forbidden: [credential-material, authorization-header, signed-url, response-body-bulk]
+  unknownResult: fail-closed
+successState:
+  releaseObjectCardinality: exactly-one
+  draft: false
+  unknownResult: fail-closed

@@ -1,0 +1,32 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.annotated-tag-resolver
+observations:
+  - id: observation.ci-annotated-tag-resolver.outputs
+    summary: The Action exposes the annotated tag object and source commit identities.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: tag-object-sha
+          kind: observation_field
+          meaning: SHA of the annotated tag object.
+        - selector: tag-object-type
+          kind: observation_field
+          meaning: Git object type.
+        - selector: source-sha
+          kind: observation_field
+          meaning: SHA of the commit referenced by the tag.
+  - id: observation.ci-annotated-tag-resolver.result
+    summary: The Action exposes its failed step outcome when tag resolution input is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected tag resolution step.

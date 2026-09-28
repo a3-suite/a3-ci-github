@@ -1,0 +1,32 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.rust-source-gate
+test_maps:
+  - verification_id: verification.ci-rust-source-gate.processing
+    case_id: matching-rust-source-processing
+    tests:
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: source gate accepts the bound checkout and rejects a different source SHA
+        check_refs:
+          - check-rust-source-processing-success
+  - verification_id: verification.ci-rust-source-gate.processing
+    case_id: mismatching-rust-source-processing
+    tests:
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: source gate accepts the bound checkout and rejects a different source SHA
+        check_refs:
+          - check-rust-source-processing-failure
+  - verification_id: verification.ci-rust-source-gate.outputs
+    case_id: matching-rust-source-authority
+    tests:
+      - path: actions/ci-rust-source-gate/tests/action-contract.test.mjs
+        symbol: composite source gate exposes verified only after script success
+        check_refs:
+          - check-verified-output
+  - verification_id: verification.ci-rust-source-gate.outputs
+    case_id: mismatching-rust-source-authority
+    tests:
+      - path: actions/ci-rust-source-gate/tests/action-contract.test.mjs
+        symbol: composite source gate exposes verified only after script success
+        check_refs:
+          - check-source-verification-failure

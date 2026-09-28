@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-notes-binding
+contracts:
+  - id: contract.ci-release-notes-binding.outputs
+    summary: Matching release notes and approval inputs produce a release-notes status output.
+    conditions:
+      - id: notes-input-present
+        input_predicate:
+          kind: input
+          term: input.handoff-json
+          op: present
+      - id: release-notes-binding-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: release-notes-binding-status-produced
+        when: notes-input-present
+        observation_ref: observation.ci-release-notes-binding.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
+      - id: release-notes-binding-failure-propagated
+        when: release-notes-binding-rejected
+        observation_ref: observation.ci-release-notes-binding.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: release-notes-binding-output-set
+        goal: Matching notes and approval inputs produce their status output.
+        guarantee_refs:
+          - release-notes-binding-status-produced
+      - id: release-notes-binding-rejected
+        goal: Release notes that do not match the approved identity or digest fail binding.
+        guarantee_refs:
+          - release-notes-binding-failure-propagated

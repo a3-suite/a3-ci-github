@@ -1,0 +1,26 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.jq-provisioner
+observations:
+  - id: observation.ci-jq-provisioner.path
+    summary: The provisioned jq command is visible to later steps.
+    boundary:
+      ref: boundary.runner-path
+    value:
+      root: runner.path
+      kind: object
+      fields:
+        - selector: jq
+          kind: observation_field
+          meaning: Checked jq executable on the job command search path.
+  - id: observation.ci-jq-provisioner.result
+    summary: Provisioning success or failure is visible to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success after checksum verification and PATH handoff, or failure before handoff.

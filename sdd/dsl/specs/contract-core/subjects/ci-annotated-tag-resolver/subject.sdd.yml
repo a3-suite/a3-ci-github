@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.annotated-tag-resolver
+  summary: Resolve an annotated Git tag to its tag object and source commit.

@@ -1,0 +1,19 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-publication-control
+test_maps:
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: publication-request-round-trip
+    tests:
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: bundled entrypoint creates and verifies a publication request
+        check_refs:
+          - check-publication-control-status
+          - check-publication-request-run-id
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: changed-approval-rejected
+    tests:
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects a changed approval ID
+        check_refs:
+          - check-publication-control-failure-status

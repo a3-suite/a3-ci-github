@@ -1,0 +1,27 @@
+version: 1
+name: contract-observations
+subject_ref: subject.repository.action-distribution
+observations:
+  - id: observation.repository-action-distribution.gate-result
+    summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
+    boundary:
+      ref: boundary.repository-gate-result
+    value:
+      root: repository.gate-result
+      kind: object
+      fields:
+        - selector: distribution
+          kind: observation_field
+          meaning: A distribution plan is produced for tracked Action and script bundles, while inconsistent or untracked distribution state is rejected.
+        - selector: catalog
+          kind: observation_field
+          meaning: The maintained Action catalog projection reflects discovered Action directories while preserving curated usage text.
+        - selector: contract-coverage
+          kind: observation_field
+          meaning: Every discovered Action has a packaged contract subject whose observations include every public Action output.
+        - selector: source-verification
+          kind: observation_field
+          meaning: Every discovered bundled Action contributes typecheck and no-rebuild test steps, and shared Action runtime cores contribute focused tests, after the distribution build has prepared package dependencies.
+        - selector: release-version
+          kind: observation_field
+          meaning: An annotated exact release tag is accepted only when its version matches VERSION in the tagged main-integrated commit.

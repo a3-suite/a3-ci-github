@@ -1,0 +1,121 @@
+version: 1
+name: contract-environment
+environment_id: a3-ci-github-github-environment
+boundaries:
+  - id: boundary.action-caller
+    summary: Workflow or caller invoking an Action.
+    kind: workflow
+    direction: input
+    externality: caller-owned
+  - id: boundary.action-output
+    summary: GitHub Actions outputs and step result exposed by an Action.
+    kind: action-output
+    direction: output
+    externality: caller-owned
+  - id: boundary.runner-path
+    summary: Command search path inherited by later steps in the same job.
+    kind: data-store
+    direction: output
+    externality: caller-owned
+  - id: boundary.workspace-files
+    summary: Files read or written in the checked-out workspace.
+    kind: data-store
+    direction: internal-state
+    externality: caller-owned
+  - id: boundary.script-result
+    summary: Exit status and generated state exposed by a shared script to its caller.
+    kind: process-output
+    direction: output
+    externality: caller-owned
+  - id: boundary.repository-gate-result
+    summary: Repository consistency result exposed by a maintenance gate.
+    kind: process-output
+    direction: output
+    externality: maintainer-owned
+  - id: boundary.workflow-definition
+    summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
+    kind: data-store
+    direction: output
+    externality: maintainer-owned
+  - id: boundary.project-ci-assets
+    summary: Canonical and project-owned CI assets materialized into a consumer project.
+    kind: data-store
+    direction: output
+    externality: caller-owned
+  - id: boundary.cli-result
+    summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
+    kind: process-output
+    direction: output
+    externality: caller-owned
+  - id: boundary.diagnostic-result
+    summary: Failure status, classified reason, correlation identity, and evidence reference exposed by CI processing.
+    kind: process-output
+    direction: output
+    externality: caller-owned
+runtime_contexts:
+  - id: runtime-context.platform-manifest-valid
+    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract.
+  - id: runtime-context.platform-manifest-invalid
+    summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
+  - id: runtime-context.github-toolchain-matches-request
+    summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
+  - id: runtime-context.jq-release-asset-valid
+    summary: The requested jq release and runner asset are available with a matching checksum.
+  - id: runtime-context.jq-release-asset-invalid
+    summary: The requested jq release is invalid or unavailable, the runner is unsupported, or the checksum or installation fails.
+  - id: runtime-context.gh-release-asset-valid
+    summary: The requested GitHub CLI release and Linux runner asset are available with a matching checksum.
+  - id: runtime-context.gh-release-asset-invalid
+    summary: The requested GitHub CLI release is invalid or unavailable, the runner is unsupported, or the checksum, extraction, or installation fails.
+  - id: runtime-context.github-toolchain-does-not-match-request
+    summary: The selected mode is unsupported, a required CLI is unavailable, or an installed version differs from the requested version.
+  - id: runtime-context.github-toolchain-script-succeeded
+    summary: The shared GitHub toolchain verification script completed successfully.
+  - id: runtime-context.github-toolchain-script-failed
+    summary: The shared GitHub toolchain verification script failed.
+  - id: runtime-context.rust-source-matches-authority
+    summary: The release authority selects Rust, contains a canonical source SHA, and matches the checked-out HEAD.
+  - id: runtime-context.rust-source-does-not-match-authority
+    summary: The release authority does not select Rust, has an invalid source SHA, or differs from the checked-out HEAD.
+  - id: runtime-context.rust-source-script-succeeded
+    summary: The shared Rust source verification script completed successfully.
+  - id: runtime-context.rust-source-script-failed
+    summary: The shared Rust source verification script failed.
+  - id: runtime-context.rust-release-build-inputs-match-authority
+    summary: The Rust build request has valid authority, source identity, exact toolchain, unique platform selection, package metadata, a binary that reports the authority version as an independent token, and an unclaimed output destination.
+  - id: runtime-context.rust-release-build-rejected
+    summary: A Rust build input is invalid, does not match the release authority, selects an ambiguous platform, uses a mutable toolchain, targets an existing output destination, or the binary does not report the authority version as an independent token.
+  - id: runtime-context.rust-release-version-report-rejected
+    summary: The built binary does not report the authority version as an independent token, or the version command fails.
+  - id: runtime-context.rust-release-build-script-succeeded
+    summary: The shared Rust release build script completed build, package, checksum, manifest, and artifact verification successfully.
+  - id: runtime-context.rust-release-build-script-failed
+    summary: The shared Rust release build script failed input validation, build, package, or artifact verification.
+  - id: runtime-context.repository-action-distribution-inputs-available
+    summary: Action definitions, build metadata, tracked distribution paths, and Composite Action script references are available to the distribution gate.
+  - id: runtime-context.repository-action-distribution-inconsistent
+    summary: An untracked distribution file exists or a Composite Action references an untracked script.
+  - id: runtime-context.repository-action-catalog-inputs-available
+    summary: Action definitions and the maintained README Action catalog are available to the catalog projection gate.
+  - id: runtime-context.release-publication-request-verified
+    summary: The publication request has been verified against the invoking workflow evidence and exposes the bound release request run ID.
+  - id: runtime-context.package-publication-request-succeeded
+    summary: The package publication request has been created or verified successfully and exposes its bound source identity.
+  - id: runtime-context.quality-adapter-toolchain-version-report-rejected
+    summary: A quality adapter toolchain version command does not report the requested version as an independent token, or the command exits non-zero.
+  - id: runtime-context.action-input-invalid
+    summary: An Action invocation contains invalid, unsafe, or authority-mismatching input.
+  - id: runtime-context.action-input-insufficient
+    summary: An Action input is insufficient to resolve a trustworthy result.
+  - id: runtime-context.workflow-identity-context-valid
+    summary: The caller and called reusable workflow resolve to the same default-branch snapshot with a matching commit SHA.
+  - id: runtime-context.workflow-identity-context-invalid
+    summary: A caller repository, workflow path, ref, or SHA mismatch rejects the reusable workflow identity.
+  - id: runtime-context.preset-materialization-valid
+    summary: Repository and external-skill sources resolve and all selected destinations are new or content-identical.
+  - id: runtime-context.preset-materialization-conflict
+    summary: A selected source is invalid or a destination already contains different content.
+  - id: runtime-context.preset-assurance-roots-missing
+    summary: Preset assurance is invoked without an explicit repository root or skill-collection root.
+  - id: runtime-context.preset-assurance-read-only-output-requested
+    summary: Read-only preset assurance is invoked with remediation output requested.

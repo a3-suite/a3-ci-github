@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.platform-matrix
+  summary: Validating a CI platform manifest and producing a deterministic include matrix.

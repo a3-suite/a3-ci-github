@@ -1,0 +1,26 @@
+name: ci-vitest-summary
+description: Render a Vitest JSON report as a GitHub step summary.
+inputs:
+  report-json:
+    required: true
+    description: Path to the Vitest JSON report.
+  label:
+    required: false
+    default: tests
+    description: Heading label for the summary.
+  summary-path:
+    required: false
+    default: ''
+    description: Summary output path. Empty uses GITHUB_STEP_SUMMARY; absent sinks to stdout.
+outputs:
+  status:
+    description: passed, failed, or unresolved.
+  collection:
+    description: complete, partial, or unavailable.
+  summary-path:
+    description: Path written for the rendered summary, when a file sink was used.
+  digest:
+    description: SHA-256 digest of the rendered summary bytes.
+runs:
+  using: node24
+  main: dist/index.js

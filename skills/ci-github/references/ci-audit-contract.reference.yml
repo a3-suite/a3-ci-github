@@ -1,0 +1,345 @@
+schemaVersion: "1"
+kind: ci-audit-contract
+id: ci.audit-contract
+title: CI audit contract
+summary: >-
+  適用先 CI 資産の監査モード、必須フェーズ、監査 status、集約、証拠適用性、
+  監査完了と適合 success の共通意味を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - audit mode semantics
+    - audit phase order and applicability
+    - audit status semantics and result aggregation
+    - audit reporting status layers and their owners
+    - semantic audit subject aggregation interface
+    - evidence applicability and reuse conditions
+    - local audit evidence cache lifecycle and storage shape
+    - audit completion and conformance success boundary
+  excludes:
+    - workflow runtime status semantics
+    - provider-specific commands and evidence acquisition procedures
+    - review finding severity and final review judgment
+    - semantic audit subject definitions and owner delegation
+usage:
+  whenToRead:
+    - 適用先 CI 資産を読み取り専用で監査するとき
+    - CI 資産を修正して再検証するとき
+    - provider 固有の監査手順を共通監査へ写像するとき
+  consumers: [human, agent, validator]
+auditContract:
+  modes:
+    read-only:
+      managedTargetState: forbidden
+      externalState: forbidden
+      ephemeralToolState:
+        policy: isolated-tool-owned
+    remediation:
+      managedTargetState: explicit-change-authorization
+      externalState: explicit-operation-authorization
+      ephemeralToolState:
+        policy: isolated-tool-owned
+      postChangeVerification: required
+  preAudit:
+    purpose: 監査対象を固定し、監査を開始できる状態かを事前に機械検証する。
+    steps:
+    - id: target-resolution
+      requirement: required
+      purpose: 対象 revision、preset、language profile、adapter、provider 設定を固定する。
+      records:
+        - audit-mode
+        - audit-target-identity
+    - id: provider-preflight
+      requirement: required
+      purpose: 配置資産、設定、固定参照、provider 前提の不一致を検出する。
+    completion:
+      requires:
+        - audit-mode-recorded
+        - audit-target-identity-fixed
+        - provider-preflight-has-terminal-status
+    continuation:
+      auditMayStartWith: [success, failed]
+      auditMustNotStartWith: [blocked, 未実施]
+      failedStatusHandling: preserve-preflight-failure-and-run-audit-phases
+      stoppedEffect: audit-not-started
+  phases:
+    - id: static-validation
+      requirement: required
+      layer: machine-audit
+      purpose: workflow、設定、到達資産を状態変更なしで検証する。
+    - id: use-case-simulation
+      requirement: required
+      layer: semantic-audit
+      purpose: 通常・例外・再実行経路を契約と配置済み実装の間で双方向に照合する。
+    - id: contract-evidence
+      requirement: required
+      layer: semantic-audit
+      purpose: 外部観測可能な契約と安全不変条件を直接検証する。
+    - id: supplemental-evidence
+      requirement: conditional
+      layer: machine-audit
+      purpose: 契約証拠と重複しない局所保証が必要な場合だけ補助証拠を確認する。
+    - id: runtime-evidence
+      requirement: conditional
+      layer: overall-supporting
+      purpose: 契約が要求する provider 実行環境または remote readback を確認する。
+  statuses:
+    success:
+      terminal: true
+      meaning: 適用対象の必須確認を完了し、契約を満たした。
+    failed:
+      terminal: true
+      meaning: 観測した対象が契約を満たさないことを確認した。
+    blocked:
+      terminal: true
+      meaning: 前提、authority、または安全条件により、必須の監査操作を開始または継続できない。
+    判定不能:
+      terminal: true
+      meaning: 監査操作は完了したが、証拠の不足または曖昧さにより適合か不適合かを確定できない。
+    未実施:
+      terminal: false
+      meaning: 適用対象の確認をまだ実施していない。
+  statusClassification:
+    rules:
+      - condition: observed-target-contract-violation
+        status: failed
+      - condition: required-audit-operation-cannot-start-or-continue
+        status: blocked
+      - condition: completed-audit-operation-has-insufficient-evidence
+        status: 判定不能
+      - condition: completed-required-audit-operation-satisfies-contract
+        status: success
+    invariants:
+      - classify-one-terminal-status-per-result
+      - not-started-is-unexecuted
+      - undecidable-requires-completed-operation
+      - do-not-use-blocked-for-observed-target-nonconformance
+      - do-not-use-undecidable-when-required-audit-operation-did-not-run
+      - preflight-success-does-not-imply-audit-success
+  statusAggregation:
+    precedenceHighToLow: [failed, blocked, 判定不能, success]
+    rules:
+      required-input-unexecuted: 未実施
+      terminal-inputs: highest-precedence
+      conditional-input:
+        applicable: terminal-status
+        inapplicable: excluded-from-aggregation
+        inapplicableReason: required
+  reporting:
+    aggregation:
+      id: result-aggregation
+      owner: audit-orchestrator
+    statusOrder:
+      - preflight
+      - machine-audit
+      - semantic-audit
+      - overall-audit
+      - conformance
+    statuses:
+      preflight:
+        owner: provider-audit-adapter
+        source: provider-preflight
+      machine-audit:
+        owner: audit-orchestrator
+        aggregation: statusAggregation
+        sources: [static-validation, supplemental-evidence]
+      semantic-audit:
+        owner: audit-orchestrator
+        aggregation: statusAggregation
+        sources: [use-case-simulation, contract-evidence]
+        subjectSource: ci.audit-subjects
+        subjectAggregation:
+          selection: every-subject
+          phaseField: phase
+          statusSource: subject-status
+          aggregation: statusAggregation
+        candidateSource: semanticCandidates
+        candidateAggregation:
+          sourceField: candidateSource
+          selection: every-candidate
+          statusMapping: semanticCandidateStatus
+          sourceRequirement: required
+          emptyCandidateSet: no-additional-input
+      overall-audit:
+        owner: audit-orchestrator
+        aggregation: statusAggregation
+        sources: [machine-audit, semantic-audit, runtime-evidence]
+      conformance:
+        owner: audit-orchestrator
+        derivation: conformanceSuccess
+        statusSources: [preflight, overall-audit]
+        evidenceApplicabilitySource: evidenceApplicability
+        evaluationOrder: [preflight, overall-audit, evidence-applicability]
+    semanticCandidateStatus:
+      not-reviewed: 未実施
+      reviewed-insufficient-evidence: 判定不能
+      retain-with-contract-evidence: success
+      remove-or-replace-required: failed
+    conformanceStatus:
+      preflight-unexecuted: 未実施
+      preflight-failed: 不適合
+      preflight-blocked: 判定不能
+      overall-audit-unexecuted: 未実施
+      overall-audit-failed: 不適合
+      overall-audit-blocked-or-undecidable: 判定不能
+      overall-audit-success-and-evidence-applicability-unsatisfied: 判定不能
+      overall-audit-success-and-evidence-applicable: 適合
+  result:
+    inputs: [machine-audit, semantic-audit, runtime-evidence]
+    aggregation: statusAggregation
+  evidenceApplicability:
+    reuseCondition: all-required-bindings-match
+    mismatchStatus: 判定不能
+    mismatchStatusScope: evidence-submitted-for-current-result
+    reuseEvaluation:
+      alwaysRun:
+        - target-resolution
+        - provider-preflight
+        - audit-scope-discovery
+        - semantic-subject-applicability
+        - semantic-candidate-discovery
+        - evidence-applicability
+        - status-classification
+        - result-aggregation
+      reusableStatuses: [success, failed]
+      nonReusableStatuses: [blocked, 判定不能, 未実施]
+      executionDisposition: [executed, reused]
+      requires:
+        - reusable-evidence-kind
+        - every-required-binding-resolved
+        - all-required-bindings-match
+        - complete-evidence-provenance
+        - classification-observation-facts-available
+        - no-mutable-external-state-dependency
+      statusRule: execution-disposition-does-not-change-audit-status
+    bindingsByKind:
+      local:
+        - repository-identity
+        - audit-target-identity
+        - audit-scope-identity
+        - asset-identity
+        - resolved-configuration-identity
+        - evaluation-contract-identity
+        - execution-environment-identity
+        - observation-input-identity
+      provider-run:
+        - repository-identity
+        - audit-target-identity
+        - audit-scope-identity
+        - source-identity
+        - workflow-control-identity
+        - resolved-configuration-identity
+        - evaluation-contract-identity
+        - provider-run-identity
+        - provider-run-attempt-identity
+        - evidence-identity
+      remote-readback:
+        - audit-target-identity
+        - remote-resource-identity
+        - expected-source-or-artifact-identity
+    localCache:
+      owner: audit-orchestrator
+      path: .a3-skills/ci/audit-cache.json
+      format: json
+      role: optional-rebuildable-local-optimization
+      sourceOfTruth: false
+      versionControl: must-be-ignored
+      maxSnapshots: 1
+      timePolicy: observed-at-is-informational-not-reuse-authority
+      storedEvidenceKinds: [local]
+      record:
+        schemaVersion: "1"
+        requiredFields:
+          - schemaVersion
+          - repositoryIdentity
+          - auditTargetIdentity
+          - auditScopeIdentity
+          - evaluationContractIdentity
+          - resolvedConfigurationIdentity
+          - executorIdentity
+          - toolRuntimeIdentities
+          - completedAt
+          - evidence
+        evidenceEntryRequiredFields:
+          - phase
+          - status
+          - evidenceIdentity
+          - provenance
+          - requiredBindings
+          - observationFacts
+        observationFacts: non-secret-minimum-required-for-current-classification
+        forbiddenFields:
+          - secret-values
+          - environment-variable-values
+          - authenticated-urls
+          - raw-logs
+          - raw-error-output
+      read:
+        reusePolicy: reuseEvaluation
+        requiredBeforeReuse:
+          - current-audit-scope-rediscovered
+          - current-semantic-subject-applicability-recomputed
+          - current-semantic-candidates-rediscovered
+        missConditions:
+          - cache-absent
+          - cache-schema-unsupported-or-invalid
+          - required-binding-unresolved
+          - required-binding-mismatch
+          - evidence-status-not-reusable
+          - evidence-or-observation-facts-missing
+          - mutable-external-state-dependency
+        cacheMiss:
+          action: acquire-current-evidence
+          auditStatusEffect: none
+      write:
+        trigger: completed-audit
+        atomicReplace:
+          temporaryDirectory: .a3-skills/ci/tmp
+          replaceAfterValidation: true
+        failure:
+          reporting: warning
+          auditStatusEffect: none
+          previousCache: preserve
+      disposal:
+        stateLossEffect: cache-miss
+        incompatibleContinuation:
+          cachedEvidenceHandling: discard-from-reuse
+          historyReconciliation: forbidden
+          snapshotMerge: forbidden
+          replacement: next-completed-audit
+        cleanupAuthority: explicit-cache-owner-operation
+  completion:
+    terminalStatuses: [success, failed, blocked, 判定不能]
+    requires:
+      - pre-audit-has-terminal-status
+      - audit-mode-recorded
+      - audit-target-identity-fixed
+      - every-applicable-phase-has-terminal-status
+      - inapplicable-conditional-phase-has-reason
+      - every-result-retains-evidence-provenance
+      - no-required-phase-is-unexecuted
+      - machine-audit-has-terminal-status
+      - semantic-audit-has-terminal-status
+      - every-semantic-candidate-has-derived-status
+      - no-semantic-candidate-is-unexecuted
+      - every-applicable-semantic-audit-subject-is-reviewed
+      - every-inapplicable-semantic-audit-subject-has-discovery-scope-and-reason
+      - overall-audit-has-terminal-status
+  conformanceSuccess:
+    requiredAggregateStatus: success
+    requiredEvidenceApplicability: satisfied
+    requires:
+      - preflight-status-is-success
+      - every-applicable-required-contract-is-satisfied
+      - every-required-evidence-binding-matches-current-audit-target
+      - no-required-result-is-failed-blocked-or-undecidable
+  providerMapping:
+    requirements:
+      - map-every-pre-audit-step-exactly-once
+      - map-every-common-audit-phase-exactly-once
+      - map-every-post-preflight-provider-check-to-exactly-one-common-audit-phase
+      - preserve-common-status-without-redefinition
+      - preserve-evidence-provenance-and-identity-bindings
+      - derive-audit-completion-and-conformance-only-from-common-contract
+      - keep-review-severity-and-final-judgment-outside-audit-contract

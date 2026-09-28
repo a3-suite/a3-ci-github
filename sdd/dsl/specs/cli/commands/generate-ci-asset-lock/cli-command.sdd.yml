@@ -1,0 +1,27 @@
+version: 1
+name: cli-command
+command:
+  id: generate-ci-asset-lock
+  path:
+    - tsx
+    - runtime/preset/generate-ci-asset-lock.ts
+  summary: Generate the distribution identity lock for all applied CI preset assets
+  usage_targets:
+    - id: generate
+      summary: Compare canonical and applied assets and write one CI asset lock
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: skill-collection-root
+          presence: required
+        - option_id: source-revision
+          presence: required
+  option_groups:
+    - id: inputs
+      title: Lock generation inputs
+      options:
+        - repo-root
+        - skill-collection-root
+        - source-revision
+  help:
+    usage: tsx runtime/preset/generate-ci-asset-lock.ts [--repo-root <PATH>] --skill-collection-root <PATH> --source-revision <SHA>

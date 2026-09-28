@@ -1,0 +1,29 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.platform-matrix
+observations:
+  - id: observation.ci-platform-matrix.outputs
+    summary: The Action exposes a validated platform matrix output.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: matrix
+          kind: observation_field
+          meaning: Compact JSON object containing the validated platform entries under include.
+  - id: observation.ci-platform-matrix.result
+    summary: The Action exposes its step outcome to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success for a valid bounded manifest and failure otherwise.
+        - selector: matrix-output-state
+          kind: observation_field
+          meaning: Present when a matrix output was emitted and absent otherwise.

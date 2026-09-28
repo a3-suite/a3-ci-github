@@ -1,0 +1,34 @@
+name: ci-github-toolchain-verifier
+description: Verify exact gh, jq, and sha256sum versions for GitHub CI
+inputs:
+  mode:
+    description: Verification mode (jq, gh-jq, jq-sha256, or gh-jq-sha256)
+    required: true
+  gh-version:
+    description: Exact gh version required by modes that include gh
+    required: false
+    default: ''
+  jq-version:
+    description: Exact jq version
+    required: true
+  sha256sum-version:
+    description: Exact sha256sum version required by modes that include sha256
+    required: false
+    default: ''
+outputs:
+  verified:
+    description: true when every selected command matches the expected version
+    value: ${{ steps.verify.outputs.verified }}
+runs:
+  using: composite
+  steps:
+    - id: verify
+      shell: bash
+      env:
+        VERIFY_MODE: ${{ inputs.mode }}
+        CI_GH_VERSION: ${{ inputs.gh-version }}
+        CI_JQ_VERSION: ${{ inputs.jq-version }}
+        CI_SHA256SUM_VERSION: ${{ inputs.sha256sum-version }}
+      run: |
+        "${GITHUB_ACTION_PATH}/../../runtime/github-toolchain/verify-github-toolchain.sh" "$VERIFY_MODE"
+        echo 'verified=true' >> "${GITHUB_OUTPUT}"

@@ -1,0 +1,74 @@
+name: release-request-tag
+
+on:
+  push:
+    tags:
+      - <release-tag-pattern>
+
+permissions: {}
+
+jobs:
+  request:
+    runs-on: <versioned-runner>
+    permissions:
+      actions: write
+      contents: read
+    env:
+      CI_GITHUB_TOKEN: ${{ github.token }}
+      CI_GH_VERSION: <gh-version>
+      CI_JQ_VERSION: <jq-version>
+      CI_SHA256SUM_VERSION: <sha256sum-version>
+    steps:
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Provision fixed gh
+        uses: a3-suite/a3-actions/actions/ci-gh-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+      - name: Verify fixed GitHub tools
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: gh-jq-sha256
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
+      - name: Resolve annotated tag identity
+        id: tag
+        uses: a3-suite/a3-actions/actions/ci-annotated-tag-resolver@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          github-token: ${{ env.CI_GITHUB_TOKEN }}
+      - name: Write tag request handoff
+        uses: a3-suite/a3-actions/actions/ci-release-request-handoff@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          output-directory: release-request
+          tag-source-sha: ${{ steps.tag.outputs.source-sha }}
+          tag-object-sha: ${{ steps.tag.outputs.tag-object-sha }}
+          github-ref: ${{ github.ref }}
+          github-ref-name: ${{ github.ref_name }}
+          request-run-id: ${{ github.run_id }}
+          request-actor: ${{ github.actor }}
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: release-request
+          path: release-request
+          if-no-files-found: error
+
+  summary:
+    needs: request
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      REQUEST_RESULT: ${{ needs.request.result }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"request","execution":"tag event handoff","result":"${{ needs.request.result == 'success' && 'success' || needs.request.result == 'failure' && 'failed' || (needs.request.result == 'cancelled' || needs.request.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.request.result == 'success' || needs.request.result == 'failure') && '完了' || needs.request.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"request job result: ${{ needs.request.result }}"}]}

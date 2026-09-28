@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.quality-adapter
+  summary: Execute validated read-only quality adapters against fixed source checkouts.

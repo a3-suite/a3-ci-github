@@ -1,0 +1,19 @@
+version: 1
+name: constraint
+constraint_id: github-actions-action-boundary-and-distribution
+summary: Action は公開契約と実行単位を所有し、workflow 接続と provider 運用を所有しない
+scope:
+  namespace: skills
+  key: github-actions
+rule: >-
+    Action は action.yml の input、output、runtime、entrypoint、実装への入出力写像、secret 取り扱い、依存固定、配布物を所有する。
+    provider から独立して実行できる定型処理は設計で指定された共有 runtime 境界が実装と検証を所有し、Composite Action は処理本体を重複して所有しない。
+    CI preset、stage、workflow trigger、job、runner、matrix、caller permissions、artifact handoff、publish 判断、provider 固有の
+    input mapping は Action に定義せず、ci または選択した provider の契約へ委譲する。実装 ref は action.yml と実行方式に応じた
+    配布物を同一 commit に含め、exact release tag は移動しない。
+rationale:
+  why: Action と workflow/provider の責務を混ぜると、同じ Action を異なる workflow で安全に再利用できず、配布物と実装の不一致も検出できないため
+violation_impact: 利用者側の build 失敗、機密情報の漏えい、権限境界の逸脱、または実装と配布物の異なる Action が実行される
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-actions-action-contract-and-distribution

@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.quality-workflow
+  summary: Execute canonical quality checks and expose an aggregate decision without hiding missing or failed checks.

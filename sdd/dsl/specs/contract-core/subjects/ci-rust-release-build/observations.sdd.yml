@@ -1,0 +1,40 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.rust-release-build
+observations:
+  - id: observation.ci-rust-release-build.script-result
+    summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
+    boundary:
+      ref: boundary.script-result
+    value:
+      root: script.result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
+        - selector: final-output
+          kind: observation_field
+          meaning: A verified asset is published on success; failure leaves no agent-owned final asset and preserves a destination owned by another process.
+  - id: observation.ci-rust-release-build.outputs
+    summary: The Composite Action exposes successful Rust release build completion to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: completed
+          kind: observation_field
+          meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
+  - id: observation.ci-rust-release-build.result
+    summary: The Composite Action exposes its step outcome to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: The success or failure outcome of the release build step.

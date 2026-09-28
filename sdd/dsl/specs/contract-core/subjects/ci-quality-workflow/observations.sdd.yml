@@ -1,0 +1,21 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.quality-workflow
+observations:
+  - id: observation.ci-quality-workflow.result
+    summary: Observable canonical workflow definition for this capability.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: execution-chain
+          kind: observation_field
+          meaning: Declared trusted checkout, adapter execution, and aggregate decision chain.
+        - selector: failure-summary
+          kind: observation_field
+          meaning: Declared summary route that keeps failed, missing, and unresolved checks visible.
+        - selector: optional-platform-chain
+          kind: observation_field
+          meaning: Declared trusted platform resolution, matrix execution, and aggregate platform decision chain when the optional asset is selected.

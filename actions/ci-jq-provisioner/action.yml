@@ -1,0 +1,9 @@
+name: ci-jq-provisioner
+description: Install an exact jq release asset after checking its release checksum.
+inputs:
+  jq-version:
+    description: Exact jq release version to install.
+    required: true
+runs:
+  using: node24
+  main: dist/index.js

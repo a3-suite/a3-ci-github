@@ -1,0 +1,23 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.config-snapshot
+verifications:
+  - id: verification.ci-config-snapshot.outputs
+    contract_id: contract.ci-config-snapshot.outputs
+    cases:
+      - id: valid-config-sources
+        intent_id: config-snapshot-output-set
+        input:
+          sources-json: '{"preset":{"MODE":"release"},"workflow":{"MODE":"candidate"},"runtime":{"MODE":"dry-run"}}'
+          snapshot-path: .ci/config-snapshot.json
+        checks:
+          - id: check-config-snapshot-status
+            guarantee_ref: config-snapshot-status-produced
+      - id: command-file-collision-rejected
+        intent_id: config-snapshot-rejected
+        input:
+          snapshot-path: github-output.txt
+          github-output: github-output.txt
+        checks:
+          - id: check-config-snapshot-failure-status
+            guarantee_ref: config-snapshot-failure-propagated

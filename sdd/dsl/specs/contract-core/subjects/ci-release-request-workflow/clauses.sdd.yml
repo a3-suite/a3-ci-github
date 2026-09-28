@@ -1,0 +1,45 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-request-workflow
+contracts:
+  - id: contract.ci-release-request-workflow.handoff
+    summary: The canonical release request workflow declares annotated-tag resolution and immutable handoff without publication permission.
+    conditions:
+      - id: ci-release-request-workflow-canonical-source-available
+        input_predicate:
+          kind: input
+          term: input.canonical-source
+          op: present
+      - id: ci-release-request-workflow-failure-route-required
+        input_predicate:
+          kind: input
+          term: input.failure-route
+          op: present
+    guarantees:
+      - id: ci-release-request-workflow-success-observed
+        when: ci-release-request-workflow-canonical-source-available
+        observation_ref: observation.ci.release-request-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: request-handoff
+      - id: ci-release-request-workflow-failure-observed
+        when: ci-release-request-workflow-failure-route-required
+        observation_ref: observation.ci.release-request-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: failure-summary
+    verification_intents:
+      - id: ci-release-request-workflow-success-intent
+        goal: Verify the canonical source declares the trusted capability boundary.
+        guarantee_refs:
+          - ci-release-request-workflow-success-observed
+      - id: ci-release-request-workflow-failure-intent
+        goal: Verify the canonical source declares a failure-visible summary route.
+        guarantee_refs:
+          - ci-release-request-workflow-failure-observed

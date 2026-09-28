@@ -1,0 +1,26 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.workflow-identity
+observations:
+  - id: observation.ci-workflow-identity.outputs
+    summary: The Action exposes the verified workflow snapshot SHA.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: sha
+          kind: observation_field
+          meaning: Verified workflow snapshot commit SHA.
+  - id: observation.ci-workflow-identity.result
+    summary: The Action exposes its failed step outcome when the workflow identity does not match.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected workflow identity check.

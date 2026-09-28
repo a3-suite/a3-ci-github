@@ -1,0 +1,62 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.rust-release-build
+verifications:
+  - id: verification.ci-rust-release-build.processing
+    contract_id: contract.ci-rust-release-build.processing
+    cases:
+      - id: matching-rust-release-processing
+        intent_id: rust-release-processing-verified
+        input:
+          language-profile: rust
+          platform-id: linux-x64
+          platform-target: x86_64-unknown-linux-gnu
+          output-directory: build/linux-x64
+        checks:
+          - id: check-rust-release-processing-outcome
+            guarantee_ref: rust-release-processing-concludes-safely
+          - id: check-rust-release-final-output-safe
+            guarantee_ref: rust-release-final-output-safe
+      - id: rejected-rust-release-processing
+        intent_id: rust-release-processing-rejected
+        input:
+          language-profile: rust
+          platform-id: macos-arm64
+          platform-target: x86_64-unknown-linux-gnu
+          output-directory: build/macos-arm64
+        checks:
+          - id: check-rust-release-processing-failure
+            guarantee_ref: rust-release-processing-fails
+          - id: check-rust-release-rejected-final-output-safe
+            guarantee_ref: rust-release-rejected-final-output-safe
+      - id: version-report-rejected
+        intent_id: rust-release-version-report-rejected
+        input:
+          version: 0.3.0
+          version-output: rejected-set
+        checks:
+          - id: check-rust-release-version-diagnostic
+            guarantee_ref: rust-release-version-diagnostic-present
+  - id: verification.ci-rust-release-build.outputs
+    contract_id: contract.ci-rust-release-build.outputs
+    cases:
+      - id: matching-authority-bound-build-inputs
+        intent_id: rust-release-build-completed
+        input:
+          language-profile: rust
+          platform-id: linux-x64
+          platform-target: x86_64-unknown-linux-gnu
+          output-directory: build/linux-x64
+        checks:
+          - id: check-completed-output
+            guarantee_ref: completed-output-produced
+      - id: mismatching-authority-bound-build-inputs
+        intent_id: invalid-release-build-rejected
+        input:
+          language-profile: rust
+          platform-id: macos-arm64
+          platform-target: x86_64-unknown-linux-gnu
+          output-directory: build/macos-arm64
+        checks:
+          - id: check-release-build-failure
+            guarantee_ref: release-build-failure-propagated

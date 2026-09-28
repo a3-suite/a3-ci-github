@@ -1,0 +1,64 @@
+schemaVersion: "1"
+kind: ci-adapter-bundles
+id: ci.adapter-bundles
+title: CI adapter bundle contract
+summary: >-
+  quality-gate の品質コマンドを言語または project の実装へ接続する adapter bundle の選択と配置契約を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - adapter bundle descriptor contract and selection rules
+    - adapter bundle compatibility and placement contract
+    - adapter execution boundary metadata
+  excludes:
+    - 処理契約の input/output semantics
+    - provider-specific workflow syntax
+    - language-specific command policy
+usage:
+  whenToRead:
+    - workflow に adapter bundle を選択するとき
+    - adapter bundle をコピーして project に配置するとき
+    - language profile と provider の適合を検証するとき
+  consumers: [human, agent, validator]
+contract:
+  requiredFields: [schemaVersion, kind, id, contract, languageProfiles, provider, executionBoundary, sourceCheckout, copyable, owner, assets, projectSettings, toolchain, preparation, commands]
+  kind: ci-adapter-bundle
+  contract: quality-scripts を指定する。
+  languageProfiles: 対応する language profile の識別子を列挙する。空配列は禁止する。
+  provider: provider-neutral または provider 固有スキルが所有する provider 識別子。
+  executionBoundary: read-only
+  sourceCheckout: fixed-source
+  copyable: コピー可能な entrypoint と設定を含むかを示す。false の bundle は owner が実装を提供する。
+  assets: descriptor に加えて配置する stable asset ID と対象プロジェクト内の destination を列挙する。source は含めない。追加 asset が不要な bundle は空配列を許可する。
+  projectSettings: 対象プロジェクトに必要な固定ファイルと設定を `requiredFiles`、`requiredScripts` で列挙する。選択実装が project ごとの path を受け取る場合は `requiredEnvironmentPaths` に環境変数名を列挙し、値を project root 内の既存通常ファイルへ解決する。required script は空でない実行文字列で、配布元スキルの配置ディレクトリを参照しない。不必要な設定の上書きは行わない。
+  toolchain: 選択した `CI_TOOLCHAIN_VERSION` を使う実行時版検証の宣言。`verify` は shell を経由せず実行する `command`、`args` を持ち、version 検証の受理規則と実行時出力の形式・パース規則は descriptor ではなく実行 provider の契約が所有する。provider は command の出力に `${CI_TOOLCHAIN_VERSION}` が独立トークン（version または `v`・`V` を1文字付けた版）として現れることを検証する。
+  preparation: quality command の前に実行する依存復元 command の配列。lockfile を尊重し、secret、credential、source の配布元スキル配置 path を含めない。
+  commands: shell を経由せず実行する command と args の配列。secret と credential を含めない。
+  output: status、evidence、command result を `ci.adapter-runner.v1` へ写像する。
+profilePolicy:
+  rule: >-
+    adapterBundles に language profile が一致する copyable bundle があれば標準 bundle として選択する。
+    一致する bundle がない profile は、project owner が用途、command、toolchain、evidence、停止条件を定義し、
+    adapter descriptor の契約適合を確認できる場合だけ project-owned adapter として利用する。
+  unknownHandling: adapter、profile、provider、asset の実体を観測できない場合は bundle 選択を確定しない。監査では観測不能の事実を audit status の分類 owner へ渡す。
+  trustedQualitySource: >-
+    quality workflow は標準では base ref から取得した descriptor を使用し、source checkout の adapter を実行制御に使わない。
+    base に lock が無い初回導入では、provider profile が定める canonical bootstrap に限り same-repo head の descriptor と
+    trusted project root を使用する。bootstrap の判定と終了条件は provider profile が所有する。
+    runner と runtime は provider binding の固定参照と trust 契約に従う。
+copyContract:
+  destinationContainsSkillTree: false
+  sourceResolution: source-inventory-only
+  runtimeRule: >-
+    配布元の source は `ci.script-assets` の source inventory を選択する時だけ解決する。コピー先には配布元スキルの配置ディレクトリが
+    存在しないため、配置後の workflow、script、descriptor は destination と project-local の入力だけを参照する。
+  bundleDescriptor: source descriptor を project の `.ci/adapters/` 配下へ materializer が配置する。配置済み descriptor は target-only 形式とする。
+  entrypoints: bundle の stable asset ID を source inventory で解決し、descriptor の destination へコピーする。destination の存在、衝突、symlink による root 外到達を preflight で検証する。
+  runtime: materializer の runtime と lockfile は導入用の隔離 tool state に固定し、対象 project へ配置しない。配置後の descriptor を実行する runtime は provider binding の契約に委譲する。
+  configuration: secret、token、credential、承認済み本文を bundle descriptor に保存しない。
+materialization:
+  scriptId: ci-adapter-bundle-materializer
+  input: source root、ci.script-assets inventory、bundle ID、target project root
+  collisionPolicy: 同一内容は再利用し、異なる既存ファイルは停止する。
+  output: target project 内の `.ci/` 配下へ配置したファイルと検証結果

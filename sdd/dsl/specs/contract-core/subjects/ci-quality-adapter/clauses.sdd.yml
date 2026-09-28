@@ -1,0 +1,68 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.quality-adapter
+contracts:
+  - id: contract.ci-quality-adapter.outputs
+    summary: A valid read-only descriptor produces an aggregate execution status.
+    conditions:
+      - id: quality-adapter-bundle-present
+        input_predicate:
+          kind: input
+          term: input.bundle-path
+          op: present
+      - id: quality-adapter-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+      - id: quality-adapter-toolchain-version-report-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-adapter-toolchain-version-report-rejected
+          op: available
+    guarantees:
+      - id: quality-adapter-status-produced
+        when: quality-adapter-bundle-present
+        observation_ref: observation.ci-quality-adapter.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
+      - id: quality-adapter-failure-propagated
+        when: quality-adapter-rejected
+        observation_ref: observation.ci-quality-adapter.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: quality-adapter-toolchain-version-diagnostic-present
+        when: quality-adapter-toolchain-version-report-rejected
+        observation_ref: observation.ci-quality-adapter.result
+        claim:
+          kind: diagnostic-present
+          op: contains
+          target:
+            kind: diagnostic_code
+            value: quality-adapter-toolchain-version-mismatch
+    verification_intents:
+      - id: quality-adapter-execution
+        goal: A read-only descriptor executes in the selected source root and returns status.
+        guarantee_refs:
+          - quality-adapter-status-produced
+      - id: quality-adapter-rejected
+        goal: An adapter that violates the read-only contract fails before project commands run.
+        guarantee_refs:
+          - quality-adapter-failure-propagated
+      - id: quality-adapter-toolchain-version-report-rejected
+        goal: A toolchain version command that does not report the requested version as an independent token fails with the stable version-mismatch diagnostic.
+        guarantee_refs:
+          - quality-adapter-toolchain-version-diagnostic-present

@@ -1,0 +1,22 @@
+{
+  "name": "ci-quality-summary",
+  "inputs": {
+    "summary-json": {
+      "required": true,
+      "description": "Quality result JSON containing a non-empty jobs or tests array."
+    },
+    "summary-path": {
+      "required": false,
+      "default": "",
+      "description": "Summary output path. Empty uses GITHUB_STEP_SUMMARY."
+    },
+    "evidence-path": {
+      "required": false,
+      "default": ".ci/ci-quality-summary.evidence.md",
+      "description": "Evidence file path containing exactly the rendered summary bytes."
+    }
+  },
+  "outputs": ["status", "digest", "evidence-path"],
+  "runtime": "node24",
+  "failure": "same summary-path and evidence-path are rejected"
+}

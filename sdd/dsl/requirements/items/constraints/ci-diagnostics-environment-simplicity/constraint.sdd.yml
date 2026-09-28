@@ -1,0 +1,18 @@
+version: 1
+name: constraint
+constraint_id: ci-diagnostics-environment-simplicity
+summary: 障害診断のためにCI環境へ常設の外部基盤や不要な実行経路を追加しない
+scope:
+  namespace: ci
+  key: failure-diagnostics
+rule: >-
+  障害診断はGitHub Actionsが提供するlog、annotation、job summary、output、artifactと、各componentの明示的な
+  終了状態を優先して成立させる。診断だけを目的とする常設service、daemon、database、外部log基盤、追加runner、
+  または必須の別workflowを導入しない。artifactはlogとsummaryでは原因切り分けに不足する場合だけ生成し、
+  診断経路を通常の実行経路と分岐した第二の運用系にしない。
+rationale:
+  why: 診断基盤自体の設定、認証、可用性、保守対象を増やすと、CI障害時の新たな故障点となり、原因切り分けと復旧をかえって難しくするため
+violation_impact: CIの故障点、権限管理、運用手順、費用および保守対象が増え、元の障害より診断基盤の調査が優先される
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-failure-diagnostics

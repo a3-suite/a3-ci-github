@@ -1,0 +1,24 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.annotated-tag-resolver
+verifications:
+  - id: verification.ci-annotated-tag-resolver.outputs
+    contract_id: contract.ci-annotated-tag-resolver.outputs
+    cases:
+      - id: annotated-tag-resolution
+        intent_id: tag-resolution-output-set
+        input:
+          repository: owner/repo
+          tag: v1.2.3
+          github-token: test-token
+        checks:
+          - id: check-tag-resolution-output
+            guarantee_ref: tag-resolution-outputs-produced
+      - id: missing-token-rejected
+        intent_id: tag-resolution-rejected
+        input:
+          tag: v1.2.3
+          github-token: ""
+        checks:
+          - id: check-tag-resolution-failure
+            guarantee_ref: tag-resolution-failure-propagated

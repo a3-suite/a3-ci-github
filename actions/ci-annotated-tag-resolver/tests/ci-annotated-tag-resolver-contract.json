@@ -1,0 +1,1 @@
+{"name":"ci-annotated-tag-resolver","inputs":{"repository":{"required":true,"description":"GitHub repository in owner/name form."},"tag":{"required":true,"description":"Tag name to resolve."},"github-token":{"required":true,"description":"Token used for read-only GitHub API access."}},"outputs":["tag-object-sha","tag-object-type","source-sha"],"runtime":"node24"}

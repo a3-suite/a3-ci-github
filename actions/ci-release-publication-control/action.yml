@@ -1,0 +1,51 @@
+name: ci-release-publication-control
+description: Create and verify release publication request handoffs and provenance.
+inputs:
+  operation:
+    required: true
+    description: create-request, verify-publication-request, verify-provenance, or verify-approval.
+  root-directory:
+    required: false
+    default: .
+    description: Root containing the release handoff directories.
+  release-request-run-id:
+    required: false
+    description: Release request workflow run ID.
+  request-workflow-run-id:
+    required: false
+    description: Publication request workflow run ID.
+  request-head-sha:
+    required: false
+    description: Publication request workflow head SHA.
+  release-identity:
+    required: false
+    description: Release tag identity.
+  release-notes:
+    required: false
+    description: Approved release notes body.
+  approval-id:
+    required: false
+    description: Approval identifier.
+  approval-expires-at:
+    required: false
+    description: Approval expiry timestamp.
+  approval-body-sha256:
+    required: false
+    description: Approved release notes body digest.
+  publication-request-run-id:
+    required: false
+    description: Publication request run ID used by provenance verification.
+  release-request-tag-workflow-name:
+    required: false
+    description: Tag release request workflow name.
+  release-request-tag-workflow-path:
+    required: false
+    description: Tag release request workflow path.
+outputs:
+  status:
+    description: success or failed.
+  request-run-id:
+    description: Verified release request workflow run ID.
+runs:
+  using: node24
+  main: dist/index.js

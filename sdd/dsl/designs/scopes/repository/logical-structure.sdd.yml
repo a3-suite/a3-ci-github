@@ -1,0 +1,31 @@
+version: 2
+name: logical-structure
+structure_id: a3-ci-github-repository
+components:
+  - component_id: action-contracts
+    responsibility: 各 GitHub Action の公開 I/O 契約と自己完結した実装・配布物を提供する
+    kind_ref: application-service
+  - component_id: workflow-sources
+    responsibility: quality、Release、package publication の canonical workflow source を提供する
+    kind_ref: application-service
+  - component_id: runtime-implementations
+    responsibility: workflow の配置・preflight、Action の共有処理、hosted delivery から呼び出す単独検証可能な repository 処理を提供する
+    kind_ref: application-service
+  - component_id: provider-static-validation
+    responsibility: GitHub Actions 資産を対象とする単一ファイル静的検証ルールを提供する
+    kind_ref: governance-gate
+  - component_id: agent-guidance
+    responsibility: AIエージェントへ設計・導入・検証・監査・復旧の入口を提供する
+    kind_ref: docs-surface
+  - component_id: sdd-specifications
+    responsibility: 要求・仕様・設計を接続する SDD 正本を管理する
+    kind_ref: governance-recorder
+  - component_id: contract-verification
+    responsibility: 契約対象ごとのテスト写像と回帰実行定義を管理する
+    kind_ref: governance-gate
+  - component_id: repository-documentation
+    responsibility: 利用・保守・運用のリポジトリ横断文書を提供する
+    kind_ref: docs-surface
+  - component_id: hosted-delivery
+    responsibility: このリポジトリ自身の検証と公開を GitHub Actions 上で調停し、処理本体を runtime-implementations へ委譲する
+    kind_ref: application-service

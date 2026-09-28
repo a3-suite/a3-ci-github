@@ -1,0 +1,78 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.jq-provisioner
+verifications:
+  - id: verification.ci-jq-provisioner.provision
+    contract_id: contract.ci-jq-provisioner.provision
+    cases:
+      - id: supported-runner-assets
+        intent_id: checked-jq-provisioned
+        input:
+          runner-os-arch: supported-matrix
+        checks:
+          - id: check-supported-runner-assets
+            guarantee_ref: checked-jq-available
+      - id: checked-release-asset
+        intent_id: checked-jq-provisioned
+        input:
+          jq-version: 1.7.1
+          runner-os: Linux
+          runner-arch: X64
+        checks:
+          - id: check-jq-on-path
+            guarantee_ref: checked-jq-available
+      - id: mismatched-release-asset
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: 1.7.1
+          checksum: mismatch
+        checks:
+          - id: check-jq-provisioning-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: invalid-version
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: not-exact
+        checks:
+          - id: check-invalid-version-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: unsupported-runner
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          runner-os: Windows
+          runner-arch: ARM64
+        checks:
+          - id: check-unsupported-runner-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: unavailable-release-asset
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: 1.7.1
+          asset: unavailable
+        checks:
+          - id: check-download-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: invalid-checksum-manifest
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: 1.7.1
+          checksum-entry: missing-or-duplicate
+        checks:
+          - id: check-checksum-entry-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: installation-failure
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: 1.7.1
+          installation: failed
+        checks:
+          - id: check-installation-failure
+            guarantee_ref: failed-provisioning-stops
+      - id: path-update-failure
+        intent_id: failed-jq-provisioning-rejected
+        input:
+          jq-version: 1.7.1
+          path-update: failed
+        checks:
+          - id: check-path-update-failure
+            guarantee_ref: failed-provisioning-stops

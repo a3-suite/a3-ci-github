@@ -1,0 +1,29 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-request-handoff
+observations:
+  - id: observation.ci-release-request-handoff.outputs
+    summary: The Action exposes the generated tag request and digest paths.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: request-path
+          kind: observation_field
+          meaning: Path to the immutable release request JSON.
+        - selector: request-digest
+          kind: observation_field
+          meaning: Path to the request digest file.
+  - id: observation.ci-release-request-handoff.result
+    summary: The Action exposes its failed step outcome when a release request handoff is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected release request handoff step.

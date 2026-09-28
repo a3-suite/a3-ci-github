@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.publish-version
+  summary: Materializing an owner-approved version plan into a publish version.

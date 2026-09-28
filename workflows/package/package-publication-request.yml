@@ -1,0 +1,63 @@
+name: package-publication-request
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Source SHA represented by this request ref
+        required: true
+        type: string
+      version:
+        description: Concrete package version requested for publication
+        required: true
+        type: string
+      target_identity:
+        description: Package target identity requested for publication
+        required: true
+        type: string
+      language_profile:
+        description: Language profile used by the package build adapter
+        required: true
+        type: string
+      toolchain:
+        description: Fixed toolchain used by the package build adapter
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  request:
+    runs-on: <versioned-runner>
+    permissions: {}
+    steps:
+      - name: Validate and write request handoff
+        uses: a3-suite/a3-actions/actions/ci-package-publication-request@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          operation: create
+          source-sha: ${{ inputs.source_sha }}
+          version: ${{ inputs.version }}
+          target-identity: ${{ inputs.target_identity }}
+          language-profile: ${{ inputs.language_profile }}
+          toolchain: ${{ inputs.toolchain }}
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: package-publication-request
+          path: package-publication-request
+          if-no-files-found: error
+          retention-days: 1
+
+  summary:
+    needs: request
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","result":"${{ needs.request.result == 'success' && 'success' || needs.request.result == 'failure' && 'failed' || (needs.request.result == 'cancelled' || needs.request.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.request.result == 'success' || needs.request.result == 'failure') && '完了' || needs.request.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"request job result: ${{ needs.request.result }}"}]}

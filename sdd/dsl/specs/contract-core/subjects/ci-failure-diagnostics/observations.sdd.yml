@@ -1,0 +1,27 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.failure-diagnostics
+observations:
+  - id: observation.ci-failure-diagnostics.result
+    summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+    boundary:
+      ref: boundary.diagnostic-result
+    value:
+      root: diagnostic
+      kind: object
+      fields:
+        - selector: workflow-evidence
+          kind: observation_field
+          meaning: Declared workflow summary route preserving evidence and reason fields.
+        - selector: workflow-classification-correlation
+          kind: observation_field
+          meaning: Job-level result classification, reason, and workflow-run correlation exposed by every managed summary route.
+        - selector: workflow-secret-safe-summary
+          kind: observation_field
+          meaning: Managed diagnostic summary definitions do not reference secret contexts.
+        - selector: workflow-source-state-preserved
+          kind: observation_field
+          meaning: Aggregate diagnostics run after source jobs and classify their original result states without replacing them.
+        - selector: bootstrap-diagnostic
+          kind: observation_field
+          meaning: Stable machine-readable failure envelope emitted before runtime validation starts.

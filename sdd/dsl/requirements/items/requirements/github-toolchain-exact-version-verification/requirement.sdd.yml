@@ -1,0 +1,24 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: github-toolchain-exact-version-verification
+    type: functional
+    summary: GitHub CI の定型処理が利用する CLI を supported mode ごとに完全一致の version で検証できる
+    rationale:
+      why: toolchain の暗黙更新や不足した CLI によって同じ CI 入力の結果が変化することを防ぐため
+    subject:
+      namespace: skills
+      key: ci-github
+    priority: must
+    fit_criteria:
+      - supported mode が要求するすべての CLI の存在を検証する
+      - 各 CLI の実際の version と要求 version を完全一致で比較する
+      - unsupported mode、CLI 不在、version 不一致を成功扱いにしない
+      - 検証成功時だけ利用側へ verified 状態を公開する
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: github-tool-exact-version-provisioning
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: github-toolchain-exact-version-verification-safe

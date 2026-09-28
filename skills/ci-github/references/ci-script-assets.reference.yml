@@ -1,0 +1,165 @@
+schemaVersion: "1"
+kind: ci-script-assets
+id: ci.script-assets
+title: CI script asset inventory
+summary: >-
+  script use case と CIプリセットを実装する現在の reusable asset、project/provider adapter、
+  trusted control、外部補助を定義する。
+placementRole: public_reference
+assetPrinciples:
+  - id: minimal-project-change
+    rule: >-
+      reusable CI asset は、project 側の変更を設定値の投入と、契約上必要な最小限の
+      project-owned adapter 実装に限定する。CIプリセットの workflow や共通 script の fork・個別改変を導入条件にしない。
+  - id: cross-project-consistency
+    rule: >-
+      同一 provider の同一 CIプリセットは、project 間で共通 asset、実行段階、入出力契約、停止条件を共有する。
+      言語・project・provider の差異は、それぞれの adapter 契約または provider 固有スキルの境界へ閉じ込める。
+  - id: declared-variation-only
+    rule: >-
+      project 固有の差異は配置済み workflow、language profile、adapter descriptor、project policy で表現し、
+      workflow の複製で吸収しない。配置実体を検証できない差異は導入を完了扱いにしない。
+  - id: no-avoidable-project-owned-duplicate
+    rule: >-
+      project-owned 実装は、利用可能な reusable asset または provider binding と契約適合性を比較したうえで、
+      適合候補がない場合か owner 契約に定義された明示的な例外がある場合だけ選択する。許可されていることだけを理由に、
+      代替可能な共通処理を独自実装へ置き換えてはならない。provider の actionization target がある処理は固定 SHA の
+      Action binding を優先し、同じ処理を copyable asset または project-owned entrypoint として重複配置してはならない。
+      trusted-control という分類だけを Action 化の禁止理由にせず、候補適格条件と移管しない責務は選択した provider registry
+      の正本に従う。
+authority:
+  role: authoritative-definition
+  owns:
+    - script asset registry identity and classification
+    - asset implementation kind, status, scope, and owner
+    - asset entrypoint and copyability metadata
+    - repository-owned resource と外部 skill resource の解決境界
+  excludes:
+    - asset usage instructions and invocation examples
+    - provider-specific placement procedure
+    - provider-specific placement and Action mapping
+usage:
+  whenToRead:
+    - script asset、skill script、または処理契約を実装し、配置境界を確認するとき
+    - reusable asset と project/provider adapter の不足を確認するとき
+  consumers: [human, agent, validator]
+pathResolution:
+  repositorySource:
+    shape: "source: {path: <a3-ci-github repository root 相対>}"
+    fields:
+      - assets[].source（skill を省略した resource）
+    rule: >-
+      repository-owned runtime は a3-ci-github repository root 相対 path で表す。
+      Agent Skill root からは解決せず、導入先 project の entrypoint とも区別する。
+  externalSkillSource:
+    shape: "source: {skill: <skill 名>, path: <所有スキル root 相対>}"
+    fields:
+      - adapterBundles[].source
+    rule: >-
+      外部 owner の resource だけを skill identity と skill root 相対 path で表す。
+      ソース管理上の category と配備後の平坦化は tooling が解決し、source へ含めない。
+  projectLocal:
+    fields:
+      - assets[].entrypoints（kind が project-adapter、trusted-control、provider-adapter）
+    rule: 導入先 project root からの相対で解決する。
+statusValues: [available, required]
+kindValues: [reusable-asset, workflow-embedded, project-adapter, trusted-control, provider-adapter, helper, external-tool, skill-script]
+scopeValues: [workflow, shared, workflow-external]
+assets:
+  - id: release-source-gate-adapter
+    useCases: [release-source-identity]
+    kind: project-adapter
+    status: required
+    scope: workflow
+    entrypoints: [.ci/scripts/ci-source-gate.sh]
+    copyable: false
+    owner: language-and-project-adapter
+  - id: release-authority-control
+    useCases: [release-authority-validation]
+    kind: trusted-control
+    status: required
+    scope: workflow
+    entrypoints: [.ci/trusted/ci-release-authority.sh]
+    copyable: false
+    owner: project-owner
+  - id: release-build-adapter
+    useCases: [release-artifact-build]
+    kind: project-adapter
+    status: required
+    scope: workflow
+    entrypoints: [.ci/scripts/ci-release-build.sh]
+    copyable: false
+    owner: language-and-project-adapter
+  - id: release-supplemental-asset-adapter
+    useCases: [release-supplemental-asset-build]
+    kind: project-adapter
+    status: required
+    requiredWhen: supplemental-release-asset-selected
+    scope: workflow
+    entrypoints: [.ci/scripts/ci-release-supplemental-asset.sh]
+    copyable: false
+    owner: project-owner-adapter
+  - id: package-build-adapter
+    useCases: [package-artifact-build]
+    kind: project-adapter
+    status: required
+    scope: workflow
+    entrypoints: [.ci/scripts/ci-package-build.sh]
+    copyable: false
+    owner: package-owner-adapter
+  - id: release-assembly-control
+    useCases: [release-assembly]
+    kind: trusted-control
+    status: required
+    scope: workflow
+    entrypoints: [.ci/trusted/ci-release-assemble.sh]
+    copyable: false
+    owner: project-owner
+  - id: release-publication-adapter
+    useCases: [release-remote-publish-readback]
+    kind: provider-adapter
+    status: required
+    scope: workflow
+    entrypoints: [.ci/trusted/ci-release-publish.sh]
+    copyable: false
+    owner: provider-and-project-adapter
+  - id: package-publication-adapter
+    useCases: [package-availability, package-remote-publish-readback, package-recovery-state]
+    kind: provider-adapter
+    status: required
+    scope: workflow
+    entrypoints: [.ci/trusted/ci-package-publish.sh]
+    copyable: false
+    owner: provider-and-project-adapter
+  - id: vitest-result-summary-tool
+    useCases: []
+    kind: external-tool
+    status: available
+    scope: workflow-external
+    source: {path: runtime/adapter/vitest-test-summary.ts}
+    copyable: false
+    owner: ci
+  - id: ci-adapter-bundle-materializer
+    useCases: []
+    kind: skill-script
+    status: available
+    scope: workflow-external
+    source: {path: runtime/adapter/materialize-adapter-bundle.ts}
+    copyable: false
+    owner: ci
+    contractRefs:
+      - documentId: ci.adapter-bundles
+        path: materialization
+adapterBundles:
+  - id: rust-cargo-quality
+    languageProfiles: [rust]
+    source: {skill: rust, path: assets/ci/adapter-bundles/rust-quality.yml}
+    targetDescriptor: .ci/adapters/rust-quality.yml
+  - id: python-uv-quality
+    languageProfiles: [python]
+    source: {skill: python, path: assets/ci/adapter-bundles/python-quality.yml}
+    targetDescriptor: .ci/adapters/python-quality.yml
+  - id: typescript-npm-quality
+    languageProfiles: [typescript]
+    source: {skill: typescript, path: assets/ci/adapter-bundles/typescript-quality.yml}
+    targetDescriptor: .ci/adapters/typescript-quality.yml

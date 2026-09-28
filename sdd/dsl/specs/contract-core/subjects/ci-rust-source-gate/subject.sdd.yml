@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.rust-source-gate
+  summary: Verifying Rust release authority against the checked-out source.

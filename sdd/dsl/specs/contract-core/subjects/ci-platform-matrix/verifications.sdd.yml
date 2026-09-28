@@ -1,0 +1,23 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.platform-matrix
+verifications:
+  - id: verification.ci-platform-matrix.outputs
+    contract_id: contract.ci-platform-matrix.outputs
+    cases:
+      - id: valid-platform-manifest
+        intent_id: platform-matrix-output-set
+        input:
+          manifest-path: .ci/release/platforms.yml
+        checks:
+          - id: check-platform-matrix-output
+            guarantee_ref: platform-matrix-produced
+      - id: invalid-platform-manifest
+        intent_id: invalid-platform-manifest-rejected
+        input:
+          manifest-path: .ci/release/invalid-platforms.yml
+        checks:
+          - id: check-invalid-platform-manifest-failure
+            guarantee_ref: invalid-platform-manifest-fails
+          - id: check-invalid-platform-manifest-no-output
+            guarantee_ref: invalid-platform-manifest-has-no-output

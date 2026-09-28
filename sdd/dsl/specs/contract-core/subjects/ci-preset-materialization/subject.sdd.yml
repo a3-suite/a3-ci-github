@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.preset-materialization
+  summary: Materialize selected repository and external-skill adapter assets without overwriting conflicting project files.

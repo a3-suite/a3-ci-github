@@ -1,0 +1,25 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.repository.managed-source-integrity
+test_maps:
+  - verification_id: verification.repository-managed-source-integrity.integrity
+    case_id: repository-managed-source-integrity-success
+    tests:
+      - path: tests/repository-managed-source-integrity.test.mjs
+        symbol: managed source inventory resolves every canonical repository asset
+        check_refs:
+          - check-repository-managed-source-integrity-success
+  - verification_id: verification.repository-managed-source-integrity.integrity
+    case_id: repository-managed-source-integrity-failure
+    tests:
+      - path: tests/repository-managed-source-integrity.test.mjs
+        symbol: managed source inventory rejects stale legacy locations
+        check_refs:
+          - check-repository-managed-source-integrity-failure
+  - verification_id: verification.repository-managed-source-integrity.execution-mapping
+    case_id: repository-contract-execution-mapped
+    tests:
+      - path: tests/contract-subject-execution.test.mjs
+        symbol: execution definition covers every contract-package subject scope
+        check_refs:
+          - check-repository-contract-execution-mapped

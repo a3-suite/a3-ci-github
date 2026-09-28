@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.failure-diagnostics
+  summary: Expose actionable CI failure context and evidence without replacing the original failure or disclosing protected values.

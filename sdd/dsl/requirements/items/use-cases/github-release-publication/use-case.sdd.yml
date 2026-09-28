@@ -1,0 +1,50 @@
+version: 1
+name: use-case
+use_case_id: github-release-publication
+summary: Release管理者が承認済みnotesとrequestから検証済み資材をGitHub Releaseへ公開する
+actors:
+  - actor_id: release-maintainer
+    kind: human
+    role: primary
+    summary: release notes、publication requestおよび公開対象identityを承認する主体
+  - actor_id: github-release-service
+    kind: external-system
+    role: secondary
+    summary: 検証済みtag、notesおよびassetをReleaseとして保持しreadbackを提供するGitHub
+goal: 承認、source、workflow identity、assetおよび公開結果を同じrelease identityへ拘束して公開する
+preconditions:
+  - immutableなrelease request handoffと承認済みrelease notesが存在する
+  - publication request、caller、reusable publication workflowが同じdefault branch revisionに配置されている
+trigger: Release管理者が承認済みnotesを指定してpublication requestを実行する
+main_success_scenario:
+  - summary: publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する
+  - summary: default branchのcallerがrequest artifactとworkflow identityを検証してreusable publicationを呼び出す
+  - summary: publication workflowがsource、authority、設定、toolchainおよびquality証跡を検証する
+  - summary: projectが選択した実装でassetを生成・assembleし、handoffと公開直前のapprovalを再検証する
+  - summary: 検証済みtag、notesおよびassetをGitHub Releaseへ公開し、公開結果をreadbackする
+success_outcomes:
+  - approval、notes、source、workflow revision、assetおよびGitHub Releaseが同じrelease identityで一致する
+  - 公開済みassetとreadback結果を後続監査で追跡できる
+failure_outcomes:
+  - identity、provenance、approval、quality、assetまたはreadbackの不一致時は未実行の公開処理を停止する
+  - 部分公開または状態不明では自動上書きや自動再公開を行わず、観測済み状態を保持する
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-release-workflow
+  - requirement_ref:
+      requirement_id: ci-common-processing-action-reuse
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-release-publication-workflow.publication
+  - contract_ref:
+      contract_id: contract.ci-workflow-identity.verify
+  - contract_ref:
+      contract_id: contract.ci-release-publication-control.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-notes-input-resolution.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-notes-binding.outputs
+  - contract_ref:
+      contract_id: contract.ci-handoff-integrity.outputs
+  - contract_ref:
+      contract_id: contract.ci-publish-version.outputs

@@ -1,0 +1,158 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.rust-release-build
+contracts:
+  - id: contract.ci-rust-release-build.processing
+    summary: The shared scripts build, package, and verify an authority-bound Rust release asset or fail closed.
+    conditions:
+      - id: rust-release-build-inputs-match-authority
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-build-inputs-match-authority
+          op: available
+      - id: rust-release-build-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-build-rejected
+          op: available
+      - id: rust-release-version-report-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-version-report-rejected
+          op: available
+    guarantees:
+      - id: rust-release-processing-concludes-safely
+        when: rust-release-build-inputs-match-authority
+        observation_ref: observation.ci-rust-release-build.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - success
+                - failure
+      - id: rust-release-final-output-safe
+        when: rust-release-build-inputs-match-authority
+        observation_ref: observation.ci-rust-release-build.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: final-output
+            right:
+              kind: value_set
+              values:
+                - verified
+                - absent
+                - preserved
+      - id: rust-release-processing-fails
+        when: rust-release-build-rejected
+        observation_ref: observation.ci-rust-release-build.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: rust-release-rejected-final-output-safe
+        when: rust-release-build-rejected
+        observation_ref: observation.ci-rust-release-build.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: final-output
+            right:
+              kind: value_set
+              values:
+                - absent
+                - preserved
+      - id: rust-release-version-diagnostic-present
+        when: rust-release-version-report-rejected
+        observation_ref: observation.ci-rust-release-build.script-result
+        claim:
+          kind: diagnostic-present
+          op: contains
+          target:
+            kind: diagnostic_code
+            value: binary-version-mismatch
+    verification_intents:
+      - id: rust-release-processing-verified
+        goal: Matching authority-bound inputs produce a verified Rust release asset or fail without publishing an unverified final asset.
+        guarantee_refs:
+          - rust-release-processing-concludes-safely
+          - rust-release-final-output-safe
+      - id: rust-release-processing-rejected
+        goal: Invalid, ambiguous, mutable, mismatching, existing-output, or tampered inputs fail without an unverified final asset.
+        guarantee_refs:
+          - rust-release-processing-fails
+          - rust-release-rejected-final-output-safe
+      - id: rust-release-version-report-rejected
+        goal: A binary that does not report the authority version as an independent token fails with the stable version-mismatch diagnostic.
+        guarantee_refs:
+          - rust-release-version-diagnostic-present
+  - id: contract.ci-rust-release-build.outputs
+    summary: The Composite Action maps shared script success to completed output and propagates script failure.
+    conditions:
+      - id: rust-release-build-script-succeeded
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-build-script-succeeded
+          op: available
+      - id: rust-release-build-script-failed
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-build-script-failed
+          op: available
+    guarantees:
+      - id: completed-output-produced
+        when: rust-release-build-script-succeeded
+        observation_ref: observation.ci-rust-release-build.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: completed
+            right:
+              kind: value_set
+              values:
+                - "true"
+      - id: release-build-failure-propagated
+        when: rust-release-build-script-failed
+        observation_ref: observation.ci-rust-release-build.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: rust-release-build-completed
+        goal: Shared script success exposes completed=true.
+        guarantee_refs:
+          - completed-output-produced
+      - id: invalid-release-build-rejected
+        goal: Shared script failure fails the release build step without completed output.
+        guarantee_refs:
+          - release-build-failure-propagated

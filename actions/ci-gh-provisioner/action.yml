@@ -1,0 +1,9 @@
+name: ci-gh-provisioner
+description: Install an exact GitHub CLI release asset after checking its release checksum.
+inputs:
+  gh-version:
+    description: Exact GitHub CLI release version to install.
+    required: true
+runs:
+  using: node24
+  main: dist/index.js

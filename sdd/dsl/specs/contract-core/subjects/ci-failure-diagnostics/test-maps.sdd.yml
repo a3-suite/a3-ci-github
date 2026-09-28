@@ -1,0 +1,21 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.failure-diagnostics
+test_maps:
+  - verification_id: verification.ci-failure-diagnostics.workflow-evidence
+    case_id: workflow-evidence-declared
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: managed workflows expose correlated secret-safe failure evidence without hiding source results
+        check_refs:
+          - check.ci-failure-diagnostics.workflow-evidence
+          - check.ci-failure-diagnostics.workflow-correlation
+          - check.ci-failure-diagnostics.workflow-summary-secret-safe
+          - check.ci-failure-diagnostics.workflow-source-state-preserved
+  - verification_id: verification.ci-failure-diagnostics.bootstrap-diagnostic
+    case_id: bootstrap-diagnostic-emitted
+    tests:
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset assurance rejects a request without explicit roots
+        check_refs:
+          - check.ci-failure-diagnostics.bootstrap-diagnostic

@@ -1,0 +1,60 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.github-toolchain-verifier
+verifications:
+  - id: verification.ci-github-toolchain-verifier.processing
+    contract_id: contract.ci-github-toolchain-verifier.processing
+    cases:
+      - id: matching-exact-toolchain-processing
+        intent_id: exact-toolchain-processing-verified
+        input:
+          mode: gh-jq-sha256
+        checks:
+          - id: check-exact-toolchain-processing-success
+            guarantee_ref: exact-toolchain-processing-succeeds
+      - id: mismatching-exact-toolchain-processing
+        intent_id: invalid-toolchain-processing-rejected
+        input:
+          mode: unsupported
+        checks:
+          - id: check-invalid-toolchain-processing-failure
+            guarantee_ref: invalid-toolchain-processing-fails
+      - id: unavailable-toolchain-processing
+        intent_id: invalid-toolchain-processing-rejected
+        input:
+          mode: gh-jq-sha256
+          unavailable-command: jq
+        checks:
+          - id: check-unavailable-toolchain-processing-failure
+            guarantee_ref: invalid-toolchain-processing-fails
+      - id: version-mismatch-toolchain-processing
+        intent_id: invalid-toolchain-processing-rejected
+        input:
+          mode: jq-sha256
+          jq-version: "1.6"
+        checks:
+          - id: check-version-mismatch-toolchain-processing-failure
+            guarantee_ref: invalid-toolchain-processing-fails
+  - id: verification.ci-github-toolchain-verifier.outputs
+    contract_id: contract.ci-github-toolchain-verifier.outputs
+    cases:
+      - id: matching-selected-tool-versions
+        intent_id: exact-toolchain-verified
+        input:
+          mode: gh-jq-sha256
+          gh-version: 2.80.0
+          jq-version: 1.7
+          sha256sum-version: 9.5
+        checks:
+          - id: check-verified-output
+            guarantee_ref: verified-output-produced
+      - id: mismatching-selected-tool-version
+        intent_id: invalid-toolchain-rejected
+        input:
+          mode: gh-jq-sha256
+          gh-version: 2.80.0
+          jq-version: 1.6
+          sha256sum-version: 9.5
+        checks:
+          - id: check-verification-failure
+            guarantee_ref: verification-failure-propagated

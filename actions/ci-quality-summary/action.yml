@@ -1,0 +1,24 @@
+name: ci-quality-summary
+description: Render CI quality results to a GitHub step summary.
+inputs:
+  summary-json:
+    required: true
+    description: Quality result JSON containing a non-empty jobs or tests array.
+  summary-path:
+    required: false
+    default: ''
+    description: Summary output path. Empty uses GITHUB_STEP_SUMMARY.
+  evidence-path:
+    required: false
+    default: .ci/ci-quality-summary.evidence.md
+    description: Evidence file path containing exactly the rendered summary bytes.
+outputs:
+  status:
+    description: 'Aggregated status: success, failed, blocked, or unresolved.'
+  digest:
+    description: sha256 digest of the rendered summary evidence.
+  evidence-path:
+    description: Path written for the rendered summary evidence.
+runs:
+  using: node24
+  main: dist/index.js

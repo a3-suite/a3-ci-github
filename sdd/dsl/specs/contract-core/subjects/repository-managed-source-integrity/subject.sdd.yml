@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.repository.managed-source-integrity
+  summary: Maintain canonical workflows, runtime, rules, guidance, SDD, and verification assets as one resolvable repository source.

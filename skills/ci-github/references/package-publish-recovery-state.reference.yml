@@ -1,0 +1,66 @@
+schemaVersion: "1"
+kind: package-publish-recovery-state
+id: ci.package-publish-recovery-state
+title: package publication recovery state
+summary: >-
+  Package publication の再実行可否、完了済み判定、停止して owner へ委譲する境界を定義する。
+placementRole: public_reference
+recoveryStateVersion: "3"
+authority:
+  role: authoritative-definition
+  owns:
+    - package publication recovery state classification
+    - workflow rerun eligibility
+    - fail-closed delegation boundary
+usage:
+  whenToRead:
+    - package publication の失敗後に workflow を再実行できるか判断するとき
+    - publish target の状態が不明または不一致のとき
+  consumers:
+    - human
+    - agent
+    - validator
+states:
+  - id: absent
+    meaning: 対象identityのpublish済みresourceを確認できない。
+  - id: complete-same
+    meaning: 対象identityと内容が一致し、publishが完了している。
+  - id: partial
+    meaning: 対象identityのpublishが一部だけ完了している。
+  - id: different
+    meaning: 対象identityに異なる内容が存在する。
+  - id: unknown-permission-denied
+    meaning: 権限不足または照会失敗により状態を確認できない。
+decisions:
+  - id: rerun-eligible
+    effect: evaluate-rerun
+    condition: stateがabsentで、通常publish経路の非上書き条件を再検証できる。
+  - id: already-complete
+    effect: stop-success
+    condition: stateがcomplete-sameである。
+  - id: stop-and-delegate
+    effect: fail-closed
+    condition: stateがpartial、different、またはunknown-permission-deniedである。
+recovery:
+  sameCriteria:
+    - publish target identity
+    - immutable version
+    - artifact digest
+  stateDecision:
+    absent: rerun-eligible
+    complete-same: already-complete
+    partial: stop-and-delegate
+    different: stop-and-delegate
+    unknown-permission-denied: stop-and-delegate
+  destructiveRecovery:
+    ciOwned: false
+    rule: 削除、上書き、tag操作、Release操作はworkflowに実装せず、対象resourceのownerへ委譲する。
+invariants:
+  - id: permission-denied-fails-closed
+    rule: permission denied または状態を確認できない場合は変更処理へ進まない。
+  - id: no-unconditional-overwrite
+    rule: 既存resourceを上書きまたはclobberしない。
+  - id: no-ci-owned-destructive-recovery
+    rule: CIは破壊的復旧の操作、権限、承認要件を所有しない。
+  - id: normal-publish-contract-remains-authoritative
+    rule: rerun時も通常publish経路のidentity、availability、安全条件を再検証する。

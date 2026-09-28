@@ -1,0 +1,22 @@
+name: ci-annotated-tag-resolver
+description: Resolve an annotated Git tag to its tag object and source commit.
+inputs:
+  repository:
+    required: true
+    description: GitHub repository in owner/name form.
+  tag:
+    required: true
+    description: Tag name to resolve.
+  github-token:
+    required: true
+    description: Token used for read-only GitHub API access.
+outputs:
+  tag-object-sha:
+    description: SHA of the annotated tag object.
+  tag-object-type:
+    description: Git object type, always tag on success.
+  source-sha:
+    description: SHA of the commit referenced by the annotated tag.
+runs:
+  using: node24
+  main: dist/index.js

@@ -1,0 +1,21 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.preset-materialization
+verifications:
+  - id: verification.ci-preset-materialization.application
+    contract_id: contract.ci-preset-materialization.application
+    cases:
+      - id: ci-preset-materialization-success
+        intent_id: ci-preset-materialization-success-intent
+        input:
+          scenario: valid
+        checks:
+          - id: check-ci-preset-materialization-success
+            guarantee_ref: ci-preset-materialization-success-observed
+      - id: ci-preset-materialization-failure
+        intent_id: ci-preset-materialization-failure-intent
+        input:
+          scenario: rejected
+        checks:
+          - id: check-ci-preset-materialization-failure
+            guarantee_ref: ci-preset-materialization-failure-observed

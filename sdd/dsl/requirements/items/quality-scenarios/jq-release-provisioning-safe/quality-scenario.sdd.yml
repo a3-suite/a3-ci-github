@@ -1,0 +1,17 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: jq-release-provisioning-safe
+summary: jq の取得または checksum が失敗した場合に未検証バイナリを実行経路へ公開しない
+quality_attribute: reliability
+stimulus: GitHub Actions runner が jq の exact version を要求する
+environment: 対応 runner と jqlang/jq の GitHub Release
+response: Release の取得物を checksum 照合後にだけ job の PATH へ追加する
+response_measure:
+  - checksum が一致する取得物だけを PATH へ追加する
+  - 取得失敗、checksum 不一致、未対応 runner、配置失敗、PATH 更新失敗は jq-provision-failed で停止し、jq を PATH に追加しない
+related_requirements:
+  - requirement_ref:
+      requirement_id: jq-release-provisioning
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-jq-provisioner.provision

@@ -1,0 +1,29 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.quality-adapter
+verifications:
+  - id: verification.ci-quality-adapter.outputs
+    contract_id: contract.ci-quality-adapter.outputs
+    cases:
+      - id: read-only-adapter-execution
+        intent_id: quality-adapter-execution
+        input:
+          bundle-path: adapter.yml
+        checks:
+          - id: check-quality-adapter-status
+            guarantee_ref: quality-adapter-status-produced
+      - id: writable-adapter-rejected
+        intent_id: quality-adapter-rejected
+        input:
+          bundle-path: writable-adapter.yml
+        checks:
+          - id: check-quality-adapter-failure-status
+            guarantee_ref: quality-adapter-failure-propagated
+      - id: toolchain-version-report-rejected
+        intent_id: quality-adapter-toolchain-version-report-rejected
+        input:
+          bundle-path: adapter.yml
+          toolchain-version: 9.9.9
+        checks:
+          - id: check-quality-adapter-toolchain-version-diagnostic
+            guarantee_ref: quality-adapter-toolchain-version-diagnostic-present

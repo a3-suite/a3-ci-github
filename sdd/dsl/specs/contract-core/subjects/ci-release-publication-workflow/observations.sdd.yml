@@ -1,0 +1,18 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-publication-workflow
+observations:
+  - id: observation.ci.release-publication-workflow.result
+    summary: Observable canonical workflow definition for this capability.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: publication-boundary
+          kind: observation_field
+          meaning: Declared request, caller validation, reusable publication, and permission boundary.
+        - selector: failure-summary
+          kind: observation_field
+          meaning: Declared summary route that preserves failed and unknown publication outcomes.

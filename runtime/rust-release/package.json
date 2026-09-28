@@ -1,0 +1,14 @@
+{
+  "name": "@a3-suite/rust-release-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "ncc build src/verify-platform-manifest.mjs -o dist --minify"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "0.38.4"
+  }
+}

@@ -1,0 +1,18 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.package-publication-workflow
+observations:
+  - id: observation.ci-package-publication-workflow.result
+    summary: Observable canonical workflow definition for this capability.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: publication-boundary
+          kind: observation_field
+          meaning: Declared preparation, request validation, publication, and registry permission boundary.
+        - selector: failure-summary
+          kind: observation_field
+          meaning: Declared summary route that preserves failed and unknown package outcomes.

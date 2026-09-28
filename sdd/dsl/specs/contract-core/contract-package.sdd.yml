@@ -1,0 +1,68 @@
+version: 1
+name: contract-package
+package_id: a3-ci-github-contracts
+subject_scopes:
+  - subject_id: subject.repository.action-distribution
+    path: subjects/repository-action-distribution/
+  - subject_id: subject.ci.github-toolchain-verifier
+    path: subjects/ci-github-toolchain-verifier/
+  - subject_id: subject.ci.jq-provisioner
+    path: subjects/ci-jq-provisioner/
+  - subject_id: subject.ci.gh-provisioner
+    path: subjects/ci-gh-provisioner/
+  - subject_id: subject.ci.rust-source-gate
+    path: subjects/ci-rust-source-gate/
+  - subject_id: subject.ci.rust-release-build
+    path: subjects/ci-rust-release-build/
+  - subject_id: subject.ci.change-scope
+    path: subjects/ci-change-scope/
+  - subject_id: subject.ci.config-snapshot
+    path: subjects/ci-config-snapshot/
+  - subject_id: subject.ci.platform-matrix
+    path: subjects/ci-platform-matrix/
+  - subject_id: subject.ci.handoff-integrity
+    path: subjects/ci-handoff-integrity/
+  - subject_id: subject.ci.quality-summary
+    path: subjects/ci-quality-summary/
+  - subject_id: subject.ci.release-notes-binding
+    path: subjects/ci-release-notes-binding/
+  - subject_id: subject.ci.annotated-tag-resolver
+    path: subjects/ci-annotated-tag-resolver/
+  - subject_id: subject.ci.release-request-handoff
+    path: subjects/ci-release-request-handoff/
+  - subject_id: subject.ci.release-publication-control
+    path: subjects/ci-release-publication-control/
+  - subject_id: subject.ci.package-publication-request
+    path: subjects/ci-package-publication-request/
+  - subject_id: subject.ci.quality-adapter
+    path: subjects/ci-quality-adapter/
+  - subject_id: subject.ci.release-notes-input-resolution
+    path: subjects/ci-release-notes-input-resolution/
+  - subject_id: subject.ci.publish-version
+    path: subjects/ci-publish-version/
+  - subject_id: subject.ci.vitest-summary
+    path: subjects/ci-vitest-summary/
+  - subject_id: subject.ci.workflow-identity
+    path: subjects/ci-workflow-identity/
+  - subject_id: subject.ci.quality-workflow
+    path: subjects/ci-quality-workflow/
+  - subject_id: subject.ci.release-request-workflow
+    path: subjects/ci-release-request-workflow/
+  - subject_id: subject.ci.release-publication-workflow
+    path: subjects/ci-release-publication-workflow/
+  - subject_id: subject.ci.package-publication-workflow
+    path: subjects/ci-package-publication-workflow/
+  - subject_id: subject.ci.preset-materialization
+    path: subjects/ci-preset-materialization/
+  - subject_id: subject.ci.preset-assurance
+    path: subjects/ci-preset-assurance/
+  - subject_id: subject.repository.managed-source-integrity
+    path: subjects/repository-managed-source-integrity/
+  - subject_id: subject.ci.failure-diagnostics
+    path: subjects/ci-failure-diagnostics/
+environment_ref:
+  environment_id: a3-ci-github-github-environment
+  path: environments/github-actions.sdd.yml
+validator_profile_ref:
+  profile_id: default-contract-core-validator-profile
+  path: validator-profiles/default.sdd.yml

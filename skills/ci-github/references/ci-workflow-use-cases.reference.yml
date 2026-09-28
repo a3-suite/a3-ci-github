@@ -1,0 +1,170 @@
+schemaVersion: "1"
+kind: ci-workflow-use-cases
+id: ci.workflow-use-cases
+title: CI workflow use cases
+summary: >-
+  CI workflow の通常・例外ユースケースと、標準 preset、内部段階（stage id は `ci.preset-contracts` の語彙と一致させる）、owner 委譲の対応を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - workflow use case classification
+    - CI preset selection boundary
+    - workflow exception delegation boundary
+  excludes:
+    - audit status classification and aggregation
+auditBoundary:
+  observationSource: workflow-runtime-result-and-evidence
+  classificationOwner: ci.audit-contract.statusClassification
+  aggregationOwner: ci.audit-contract.statusAggregation
+usage:
+  whenToRead:
+    - CI workflow の用途と preset を選ぶとき
+    - workflow の例外経路と owner 委譲を確認するとき
+  consumers: [human, agent, validator]
+normalUseCases:
+  - id: change-validation
+    purpose: PR または untrusted source の変更を merge 前に検証する。
+    preset: quality-gate
+    executionMode: change
+    externalSideEffects: read-only
+  - id: integration-validation
+    purpose: 保護 branch または merge queue へ統合された source を検証する。
+    preset: quality-gate
+    executionMode: integration
+    externalSideEffects: read-only
+  - id: scheduled-validation
+    purpose: drift、依存、security、構造を定期検証する。
+    preset: quality-gate
+    executionMode: scheduled
+    externalSideEffects: read-only
+  - id: release-request
+    purpose: version、tag、承認済み本文を immutable request handoff にする。
+    preset: release-request
+    externalSideEffects: request-artifact
+  - id: release-publication
+    purpose: authority と検証済み資材を選択済み Release 配布先へ公開する。
+    preset: release-publication
+    externalSideEffects: release-resource-and-assets
+    selectionCriteria:
+      selectWhen:
+        - この workflow が Release object または Release assets のリモート書き込みを所有する。
+      doNotSelectWhen:
+        - source-only の tag、source tree、record、mirror だけをリリースする。
+        - release request または handoff だけを作成する。
+        - リモート公開を手動担当者または外部システムが所有する。
+      credentialRule:
+        requiredWhen: この workflow が選択済み Release 配布先へリモート書き込みを行う。
+        notRequiredWhen: この workflow がリモート書き込みを行わない。
+  - id: package-publication
+    purpose: owner が許可した registry へ package を登録する。
+    preset: package-publication
+    externalSideEffects: registry-resource
+invariants:
+  - id: quality-mode-is-not-a-preset
+    rule: change、integration、scheduled は trigger と trust boundary の違いであり、別 preset を増やさない。
+  - id: request-trigger-is-an-adapter
+    rule: manual と tag は release-request の trigger adapter の違いである。
+internalStages:
+  - id: source-gate
+    presets: [quality-gate, release-publication]
+    reason: build / publish の authority と分離した検証段階だから。
+  - id: quality
+    presets: [release-publication]
+    reason: 固定 source に対する format / lint / test を source identity 検証と分離して実行する検証段階だから。
+  - id: build
+    presets: [release-publication]
+    reason: asset manifest、version、target の owner 契約と結合するから。
+  - id: supplemental-asset-build
+    presets: [release-publication]
+    requiredWhen: owner が補助 Release asset を選択した場合。
+    reason: platform build を変更せず、owner 契約に従う補助 asset と証跡を独立して生成するため。
+  - id: version-plan
+    owner: package-owner
+    placement: preceding-workflow
+    purpose: owner-approved version_plan を trusted control が検証し、artifact と結び付く publish_version を確定する。
+  - id: package-artifact-build
+    owner: package-owner
+    placement: preceding-workflow
+    purpose: 確定した publish_version と ecosystem 固有の package 形式を結び付け、完成 handoff を publication へ渡す。
+  - id: assemble
+    presets: [release-publication]
+    reason: publish 前 handoff の一部であり、単独では公開保証にならないから。
+  - id: remote-observe
+    presets: [release-publication, package-publication]
+    reason: 書込結果を同じ identity へ再結合する完了確認だから。
+exceptions:
+  - id: fork-untrusted-pr
+    appliesTo: [quality-gate]
+    decision: secrets と write 権限を与えず、source を data として検証する。
+  - id: approval-expired
+    appliesTo: [release-request, release-publication]
+    decision: publish せず、新しい承認を持つ request を要求する。
+  - id: identity-mismatch
+    appliesTo: [release-publication]
+    decision: fail-closed。tag や source を自動補正しない。
+  - id: release-body-missing
+    appliesTo: [release-publication]
+    decision: Release publish せず、欠落を判定不能として返す。
+  - id: provider-publication-unsuitable
+    appliesTo: [release-publication]
+    decision: fail-closed。tag や公開 source を自動で作り直さず、不適合の観測結果を owner へ返す。
+  - id: release-request-body-missing
+    appliesTo: [release-request]
+    decision: manual request の承認済み本文が欠落している場合は request を生成せず、判定不能として返す。
+  - id: handoff-digest-missing
+    appliesTo: [release-publication, package-publication]
+    decision: publish せず、欠落を判定不能として返す。
+  - id: artifact-set-mismatch
+    appliesTo: [release-publication, package-publication]
+    decision: draft または registry 登録へ進まず停止する。
+  - id: existing-release-or-asset
+    appliesTo: [release-publication]
+    decision: 上書きせず、同一性の再確認または owner recovery へ委譲する。
+  - id: existing-package-resource
+    appliesTo: [package-publication]
+    decision: >-
+      target identity、version、artifact digest を照合する。complete-same は再 publish せず成功終了し、
+      partial、different、unknown-permission-denied は fail closed で owner recovery へ委譲する。
+  - id: partial-or-unknown-publish
+    appliesTo: [release-publication, package-publication]
+    decision: remote を再観測し、削除・上書き・推測による再 publish をしない。
+  - id: dependency-or-provider-unavailable
+    appliesTo: [all]
+    decision: >-
+      必須処理を開始または継続できない事実、または処理完了後も証拠が不足・曖昧な事実を記録し、
+      mutable な代替へ切り替えない。監査 status は auditBoundary の owner へ委譲する。
+  - id: cancel-skip-required-check-missing
+    appliesTo: [quality-gate, release-publication]
+    decision: >-
+      workflow runtime の summary には未実施と理由を記録し、未実施を成功へ読み替えない。
+      条件または owner 契約により実行対象外のジョブは `対象外` として理由付きで記録し、required check の判定から除外する。
+      対象外を未実施または成功へ読み替えない。監査では runtime の事実と証拠だけを auditBoundary の owner へ渡す。
+  - id: rerun
+    appliesTo: [selected-preset]
+    decision: identity、入力、権限、非上書き条件を再確認し、条件が変われば新規 request にする。
+  - id: hotfix-emergency-release
+    appliesTo: [release-request, release-publication]
+    decision: 通常の authority、承認、source、checksum を省略しない。
+  - id: deploy-rollback
+    appliesTo: [ci-output-handoff]
+    decision: deployment / runtime owner へ委譲し、CI preset へ混在させない。
+  - id: external-result-analysis
+    appliesTo: [workflow-external]
+    decision: artifact を取得した解析経路へ委譲し、workflow runtime に解析 CLI を追加しない。
+selectionRules:
+  - id: select-existing-preset
+    rule: 変更検証、Release 要求、Release 公開、package 公開は既存の標準 preset を選び、change/integration/scheduled と manual/tag は mode または trigger adapter として指定する。
+  - id: extend-with-adapter
+    rule: 品質、build、package、security、E2E、benchmark の具体処理だけが異なる場合は既存 preset の用途別 adapter または project-owned adapter へ委譲する。
+  - id: platform-quality-extension
+    rule: platform 固有の品質検証は quality-gate の platform 次元として扱い、必要な platform の選択を project data に置く。標準実装がない場合だけ owner-defined workflow へ委譲し、preset 契約と停止条件を維持する。
+  - id: keep-owner-workflow
+    rule: 単一 project の独自成果物、owner 固有 metadata、deploy、rollback、外部結果解析は owner-defined workflow または workflow 外経路へ委譲し、例外専用 preset を作らない。
+selectionOrder:
+  - 変更検証、Release 要求、Release 公開、package 公開のいずれかを選ぶ。
+  - 変更検証なら change、integration、scheduled の execution mode を選ぶ。
+  - 公開経路なら request、authority、build、handoff、publish、observe の責務境界を確認する。
+  - 例外がある場合は停止条件と owner 委譲を適用し、例外専用 preset は作らない。
+  - 新規用途は selectionRules を適用し、既存 preset、adapter、owner 委譲のいずれかを根拠付きで決める。
+  - provider 実装は選択した provider 固有スキルへ委譲し、trigger、job、Action 構文は定義しない。

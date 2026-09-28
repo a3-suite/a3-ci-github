@@ -1,0 +1,26 @@
+name: ci-rust-source-gate
+description: Verify Rust release authority and checked-out source identity
+inputs:
+  language-profile:
+    description: Language profile recorded in the release authority
+    required: true
+  authority-path:
+    description: Path to the release authority JSON
+    required: true
+outputs:
+  verified:
+    description: true when the release authority matches the checked-out Rust source
+    value: ${{ steps.verify.outputs.verified }}
+runs:
+  using: composite
+  steps:
+    - id: verify
+      name: Verify Rust release source identity
+      shell: bash
+      env:
+        LANGUAGE_PROFILE: ${{ inputs.language-profile }}
+        AUTHORITY_PATH: ${{ inputs.authority-path }}
+      run: |
+        "${GITHUB_ACTION_PATH}/../../runtime/rust-release/ci-source-gate.sh" \
+          "$LANGUAGE_PROFILE" "$AUTHORITY_PATH"
+        echo 'verified=true' >> "$GITHUB_OUTPUT"

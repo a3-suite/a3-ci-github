@@ -1,0 +1,654 @@
+name: release-publication
+
+on:
+  workflow_call:
+    inputs:
+      request_run_id:
+        description: Successful release-request workflow run ID
+        required: true
+        type: string
+      publication_request_run_id:
+        description: Successful release-publication-request workflow run ID
+        required: true
+        type: string
+      supplemental_release_asset_enabled:
+        description: Build the owner-selected supplemental Release asset set
+        required: true
+        type: boolean
+      supplemental_release_asset_owner_contract:
+        description: Static owner contract ID, or __unset__ when disabled
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
+env:
+  CI_LANGUAGE_PROFILE: <language-profile>
+  CI_PLATFORM_MANIFEST: <platform-manifest>
+  CI_TOOLCHAIN_VERSION: <toolchain-version>
+  CI_UV_VERSION: <uv-version>
+  CI_CARGO_AUDIT_VERSION: <cargo-audit-version>
+  CI_GH_VERSION: <gh-version>
+  CI_JQ_VERSION: <jq-version>
+  CI_SHA256SUM_VERSION: <sha256sum-version>
+  CI_RELEASE_IMPLEMENTATION: <release-implementation>
+  CI_ADAPTER_DESCRIPTOR: .ci-base/.ci/adapters/<adapter-descriptor>
+  CI_CARGO_MANIFEST_PATH: <cargo-manifest-path>
+  CI_CARGO_LOCK_PATH: <cargo-lock-path>
+  CI_RELEASE_BINARY_NAME: <release-binary-name>
+  CI_RELEASE_ASSET_PREFIX: <release-asset-prefix>
+
+jobs:
+  authority:
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_RELEASE_REQUEST_RUN_ID: ${{ inputs.request_run_id }}
+      CI_RELEASE_PUBLICATION_REQUEST_RUN_ID: ${{ inputs.publication_request_run_id }}
+      CI_RELEASE_REQUEST_TAG_WORKFLOW_NAME: release-request-tag
+      CI_RELEASE_REQUEST_TAG_WORKFLOW_PATH: .github/workflows/release-request-tag.yml
+      CI_RELEASE_PUBLICATION_REQUEST_WORKFLOW_PATH: .github/workflows/release-publication-request.yml
+      CI_CONFIG_SNAPSHOT_PATH: ci-config-snapshot.json
+    outputs:
+      source_sha: ${{ steps.authority.outputs.source_sha }}
+      version: ${{ steps.authority.outputs.version }}
+      target_identity: ${{ steps.authority.outputs.target_identity }}
+      platform_matrix: ${{ steps.platform-matrix.outputs.matrix }}
+      approval_id: ${{ steps.publication_notes.outputs.approval-id }}
+      approval_body_sha256: ${{ steps.publication_notes.outputs.digest }}
+    steps:
+      - name: Verify workflow identity
+        id: workflow-identity
+        uses: a3-suite/a3-actions/actions/ci-release-workflow-identity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          repository: ${{ github.repository }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
+          expected-called-workflow-path: .github/workflows/release-publication.yml
+          caller-workflow-ref: ${{ github.workflow_ref }}
+          caller-workflow-sha: ${{ github.workflow_sha }}
+          called-workflow-repository: ${{ job.workflow_repository }}
+          called-workflow-file-path: ${{ job.workflow_file_path }}
+          called-workflow-ref: ${{ job.workflow_ref }}
+          called-workflow-sha: ${{ job.workflow_sha }}
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ steps.workflow-identity.outputs.sha }}
+      - name: Verify trusted control checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+      - name: Validate publication inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CI_RELEASE_REQUEST_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$CI_RELEASE_PUBLICATION_REQUEST_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+      - name: Resolve platform build matrix
+        id: platform-matrix
+        uses: a3-suite/a3-actions/actions/ci-platform-matrix@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Provision fixed gh
+        uses: a3-suite/a3-actions/actions/ci-gh-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+      - name: Verify fixed GitHub tools
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: gh-jq-sha256
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
+      - name: Verify publication request workflow run
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-metadata
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RELEASE_PUBLICATION_REQUEST_RUN_ID}" > run-metadata/publication-request.json
+          test "$(jq -er '.id | tostring' run-metadata/publication-request.json)" = "$CI_RELEASE_PUBLICATION_REQUEST_RUN_ID"
+          test "$(jq -er '.conclusion' run-metadata/publication-request.json)" = success
+          test "$(jq -er '.repository.full_name' run-metadata/publication-request.json)" = "$GITHUB_REPOSITORY"
+          test "$(jq -er '.name' run-metadata/publication-request.json)" = release-publication-request
+          test "$(jq -er '.event' run-metadata/publication-request.json)" = workflow_dispatch
+          test -n "$(jq -er '.actor.login' run-metadata/publication-request.json)"
+          test -n "$(jq -er '.triggering_actor.login' run-metadata/publication-request.json)"
+          default_branch="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .default_branch)"
+          test -n "$default_branch"
+          test "$(jq -er '.head_branch' run-metadata/publication-request.json)" = "$default_branch"
+          publication_request_path="$(jq -er '.path' run-metadata/publication-request.json)"
+          case "$publication_request_path" in
+            "$CI_RELEASE_PUBLICATION_REQUEST_WORKFLOW_PATH"|"$CI_RELEASE_PUBLICATION_REQUEST_WORKFLOW_PATH"@"$default_branch") ;;
+            *) exit 1 ;;
+          esac
+          [[ "$(jq -er '.head_sha' run-metadata/publication-request.json)" =~ ^[a-f0-9]{40}$ ]]
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-publication-request
+          path: release-publication-request
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.publication_request_run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-notes-handoff
+          path: release-notes-handoff
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.publication_request_run_id }}
+      - name: Verify release request workflow run
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RELEASE_REQUEST_RUN_ID}" > run-metadata/release-request.json
+          test "$(jq -er '.id | tostring' run-metadata/release-request.json)" = "$CI_RELEASE_REQUEST_RUN_ID"
+          test "$(jq -er '.conclusion' run-metadata/release-request.json)" = success
+          test "$(jq -er '.repository.full_name' run-metadata/release-request.json)" = "$GITHUB_REPOSITORY"
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-request
+          path: release-request
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.request_run_id }}
+      - name: Resolve release identity
+        id: release_identity
+        shell: bash
+        run: echo "tag=$(jq -er '.tag' release-request/release-request.json)" >> "$GITHUB_OUTPUT"
+      - name: Verify publication notes handoff
+        id: publication_notes
+        uses: a3-suite/a3-actions/actions/ci-release-notes-binding@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          handoff-json: release-notes-handoff/release-notes.json
+          approval-json: release-notes-handoff/release-notes-approval.json
+          release-identity: ${{ steps.release_identity.outputs.tag }}
+      - name: Verify request and notes provenance
+        uses: a3-suite/a3-actions/actions/ci-release-publication-control@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          operation: verify-provenance
+          publication-request-run-id: ${{ inputs.publication_request_run_id }}
+          release-request-run-id: ${{ inputs.request_run_id }}
+          approval-id: ${{ steps.publication_notes.outputs.approval-id }}
+          approval-body-sha256: ${{ steps.publication_notes.outputs.digest }}
+          release-request-tag-workflow-name: ${{ env.CI_RELEASE_REQUEST_TAG_WORKFLOW_NAME }}
+          release-request-tag-workflow-path: ${{ env.CI_RELEASE_REQUEST_TAG_WORKFLOW_PATH }}
+      - name: Resolve configuration snapshot
+        id: config
+        uses: a3-suite/a3-actions/actions/ci-config-snapshot@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          sources-json: >-
+            {"runtime":{"CI_LANGUAGE_PROFILE":"${{ env.CI_LANGUAGE_PROFILE }}","CI_TOOLCHAIN_VERSION":"${{ env.CI_TOOLCHAIN_VERSION }}","CI_PLATFORM_MANIFEST":"${{ env.CI_PLATFORM_MANIFEST }}","CI_RELEASE_IMPLEMENTATION":"${{ env.CI_RELEASE_IMPLEMENTATION }}","CI_CARGO_MANIFEST_PATH":"${{ env.CI_CARGO_MANIFEST_PATH }}","CI_CARGO_LOCK_PATH":"${{ env.CI_CARGO_LOCK_PATH }}","CI_RELEASE_BINARY_NAME":"${{ env.CI_RELEASE_BINARY_NAME }}","CI_RELEASE_ASSET_PREFIX":"${{ env.CI_RELEASE_ASSET_PREFIX }}"},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":"${{ inputs.supplemental_release_asset_owner_contract }}","CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh"},"preset":{}}
+          snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
+      - name: Validate release notes binding
+        uses: a3-suite/a3-actions/actions/ci-release-notes-input-resolution@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          input-handoff-directory: release-notes-handoff
+          output-directory: release-request
+      - name: Verify release notes binding
+        uses: a3-suite/a3-actions/actions/ci-release-notes-binding@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          handoff-json: release-request/release-notes.json
+          approval-json: release-request/release-notes-approval.json
+          release-identity: ${{ steps.release_identity.outputs.tag }}
+      - name: Verify release authority
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CI_LANGUAGE_PROFILE" =~ ^[a-z][a-z0-9-]*$ ]]
+          [[ -n "${CI_TOOLCHAIN_VERSION:-}" && "${CI_TOOLCHAIN_VERSION:-}" != "__unset__" && "${CI_TOOLCHAIN_VERSION:-}" != *'<'* && "${CI_TOOLCHAIN_VERSION:-}" != *'>'* ]]
+          [[ -n "${CI_PLATFORM_MANIFEST:-}" && "${CI_PLATFORM_MANIFEST:-}" != "__unset__" && "${CI_PLATFORM_MANIFEST:-}" != *'<'* && "${CI_PLATFORM_MANIFEST:-}" != *'>'* ]]
+          test -s "$CI_CONFIG_SNAPSHOT_PATH"
+          .ci/trusted/ci-release-authority.sh release-request/release-request.json authority
+          test -s authority/authority.json
+          cp "$CI_CONFIG_SNAPSHOT_PATH" authority/config-snapshot.json
+          cp release-publication-request/request.json authority/publication-request.json
+          source_sha="$(jq -er '.source_sha' authority/authority.json)"
+          version="$(jq -er '.version' authority/authority.json)"
+          target_identity="$(jq -er '.target_identity' authority/authority.json)"
+          {
+            echo "source_sha=$source_sha"
+            echo "version=$version"
+            echo "target_identity=$target_identity"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          if-no-files-found: error
+
+  source-gate:
+    needs: authority
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ needs.authority.outputs.source_sha }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Verify fixed jq
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: jq
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Run standard Rust source gate
+        if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'
+        uses: a3-suite/a3-actions/actions/ci-rust-source-gate@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          authority-path: authority/authority.json
+
+  quality:
+    needs: authority
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    steps:
+      - name: Verify workflow identity
+        id: workflow-identity
+        uses: a3-suite/a3-actions/actions/ci-release-workflow-identity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          repository: ${{ github.repository }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
+          expected-called-workflow-path: .github/workflows/release-publication.yml
+          caller-workflow-ref: ${{ github.workflow_ref }}
+          caller-workflow-sha: ${{ github.workflow_sha }}
+          called-workflow-repository: ${{ job.workflow_repository }}
+          called-workflow-file-path: ${{ job.workflow_file_path }}
+          called-workflow-ref: ${{ job.workflow_ref }}
+          called-workflow-sha: ${{ job.workflow_sha }}
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ needs.authority.outputs.source_sha }}
+      - name: Checkout trusted CI assets
+        uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ steps.workflow-identity.outputs.sha }}
+          path: .ci-base
+          sparse-checkout: |
+            .ci/adapters
+            package.json
+            package-lock.json
+            Cargo.toml
+            Cargo.lock
+      - name: Verify trusted control checkout
+        shell: bash
+        run: test "$(git -C .ci-base rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+      - name: Set up TypeScript toolchain
+        if: env.CI_LANGUAGE_PROFILE == 'typescript'
+        uses: actions/setup-node@<commit-sha>
+        with:
+          node-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          cache: npm
+      - name: Set up Python toolchain
+        if: env.CI_LANGUAGE_PROFILE == 'python'
+        uses: actions/setup-python@<commit-sha>
+        with:
+          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+      - name: Set up uv
+        if: env.CI_LANGUAGE_PROFILE == 'python'
+        uses: astral-sh/setup-uv@<commit-sha>
+        with:
+          version: ${{ env.CI_UV_VERSION }}
+          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+      - name: Set up Rust toolchain
+        if: env.CI_LANGUAGE_PROFILE == 'rust'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install "$CI_TOOLCHAIN_VERSION" --profile minimal --component rustfmt --component clippy
+          echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
+      - name: Set up cargo-audit
+        if: env.CI_LANGUAGE_PROFILE == 'rust'
+        shell: bash
+        run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Verify fixed jq
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: jq
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Run project quality adapter
+        id: quality-adapter
+        uses: a3-suite/a3-actions/actions/ci-quality-adapter@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR }}
+          source-root: .
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+      - name: Report project quality adapter result
+        if: always()
+        shell: bash
+        env:
+          CI_QUALITY_RESULT_PATH: ${{ steps.quality-adapter.outputs['result-path'] }}
+        run: |
+          if [[ -n "${CI_QUALITY_RESULT_PATH:-}" && -f "$CI_QUALITY_RESULT_PATH" ]]; then
+            cat -- "$CI_QUALITY_RESULT_PATH"
+          fi
+
+  build:
+    needs: [authority, source-gate, quality]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.authority.outputs.platform_matrix) }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      actions: read
+      contents: read
+    env:
+      CI_PLATFORM_ID: ${{ matrix.id }}
+      CI_PLATFORM_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ needs.authority.outputs.source_sha }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Verify fixed jq
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: jq
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Build and verify standard Rust release assets
+        if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'
+        uses: a3-suite/a3-actions/actions/ci-rust-release-build@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          platform-manifest: ${{ env.CI_PLATFORM_MANIFEST }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          platform-id: ${{ env.CI_PLATFORM_ID }}
+          platform-target: ${{ env.CI_PLATFORM_TARGET }}
+          authority-path: authority/authority.json
+          output-directory: build/${{ env.CI_PLATFORM_ID }}
+          cargo-manifest-path: ${{ env.CI_CARGO_MANIFEST_PATH }}
+          release-binary-name: ${{ env.CI_RELEASE_BINARY_NAME }}
+          release-asset-prefix: ${{ env.CI_RELEASE_ASSET_PREFIX }}
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: release-build-${{ matrix.id }}
+          path: build/${{ matrix.id }}
+          if-no-files-found: error
+      - name: Build and verify supplemental Release asset platform
+        if: inputs.supplemental_release_asset_enabled
+        shell: bash
+        run: .ci/scripts/ci-release-supplemental-asset.sh build-platform authority/authority.json authority/config-snapshot.json build/${{ matrix.id }} supplemental-build/${{ matrix.id }}
+      - uses: actions/upload-artifact@<commit-sha>
+        if: inputs.supplemental_release_asset_enabled
+        with:
+          name: supplemental-build-${{ matrix.id }}
+          path: supplemental-build/${{ matrix.id }}
+          if-no-files-found: error
+
+  supplemental-asset:
+    if: inputs.supplemental_release_asset_enabled
+    needs: [authority, source-gate, quality, build]
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ needs.authority.outputs.source_sha }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          pattern: release-build-*
+          path: build
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          pattern: supplemental-build-*
+          path: supplemental-build
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Build and verify supplemental Release asset
+        shell: bash
+        run: .ci/scripts/ci-release-supplemental-asset.sh assemble authority/authority.json authority/config-snapshot.json build supplemental-build supplemental-asset
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: release-supplemental-asset
+          path: supplemental-asset
+          if-no-files-found: error
+
+  assemble:
+    needs: [authority, build, supplemental-asset]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.authority.result == 'success' &&
+        needs.build.result == 'success' &&
+        ((inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'success') ||
+        (!inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'skipped'))
+      }}
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact_transfer_id: ${{ steps.upload_release_handoff.outputs.artifact-id }}
+    steps:
+      - name: Verify workflow identity
+        id: workflow-identity
+        uses: a3-suite/a3-actions/actions/ci-release-workflow-identity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          repository: ${{ github.repository }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
+          expected-called-workflow-path: .github/workflows/release-publication.yml
+          caller-workflow-ref: ${{ github.workflow_ref }}
+          caller-workflow-sha: ${{ github.workflow_sha }}
+          called-workflow-repository: ${{ job.workflow_repository }}
+          called-workflow-file-path: ${{ job.workflow_file_path }}
+          called-workflow-ref: ${{ job.workflow_ref }}
+          called-workflow-sha: ${{ job.workflow_sha }}
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ steps.workflow-identity.outputs.sha }}
+      - name: Verify trusted control checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Provision fixed gh
+        uses: a3-suite/a3-actions/actions/ci-gh-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+      - name: Verify fixed GitHub tools
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: gh-jq-sha256
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          pattern: release-build-*
+          path: build
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        if: inputs.supplemental_release_asset_enabled
+        with:
+          name: release-supplemental-asset
+          path: supplemental-asset
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Assemble release handoff
+        shell: bash
+        env:
+          CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: ${{ inputs.supplemental_release_asset_enabled }}
+        run: |
+          if [[ "$CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED" == true ]]; then
+            .ci/trusted/ci-release-assemble.sh authority/authority.json authority/config-snapshot.json build release-handoff supplemental-asset
+          else
+            .ci/trusted/ci-release-assemble.sh authority/authority.json authority/config-snapshot.json build release-handoff
+          fi
+      - id: upload_release_handoff
+        uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: release-handoff
+          path: release-handoff
+          if-no-files-found: error
+
+  publish:
+    needs: [authority, assemble]
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: write
+    outputs:
+      release_remote_identity: ${{ steps.publish.outputs['release-remote-identity'] }}
+      publish_receipt: ${{ steps.publish.outputs['publish-receipt'] }}
+      readback_evidence: ${{ steps.publish.outputs['readback-evidence'] }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CI_GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify workflow identity
+        id: workflow-identity
+        uses: a3-suite/a3-actions/actions/ci-release-workflow-identity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          repository: ${{ github.repository }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
+          expected-called-workflow-path: .github/workflows/release-publication.yml
+          caller-workflow-ref: ${{ github.workflow_ref }}
+          caller-workflow-sha: ${{ github.workflow_sha }}
+          called-workflow-repository: ${{ job.workflow_repository }}
+          called-workflow-file-path: ${{ job.workflow_file_path }}
+          called-workflow-ref: ${{ job.workflow_ref }}
+          called-workflow-sha: ${{ job.workflow_sha }}
+      - uses: actions/checkout@<commit-sha>
+        with:
+          ref: ${{ steps.workflow-identity.outputs.sha }}
+      - name: Verify trusted control checkout
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+      - name: Provision fixed jq
+        uses: a3-suite/a3-actions/actions/ci-jq-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Provision fixed gh
+        uses: a3-suite/a3-actions/actions/ci-gh-provisioner@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+      - name: Verify fixed GitHub tools
+        uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          mode: gh-jq-sha256
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-authority
+          path: authority
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          artifact-ids: ${{ needs.assemble.outputs.artifact_transfer_id }}
+          path: release-handoff
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Validate release handoff integrity
+        uses: a3-suite/a3-actions/actions/ci-handoff-integrity@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          handoff-root: release-handoff
+          descriptor: handoff.json
+          source-sha: ${{ needs.authority.outputs.source_sha }}
+          version: ${{ needs.authority.outputs.version }}
+          target-identity: ${{ needs.authority.outputs.target_identity }}
+      - name: Verify approval is still valid
+        uses: a3-suite/a3-actions/actions/ci-release-publication-control@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          operation: verify-approval
+          approval-id: ${{ needs.authority.outputs.approval_id }}
+          approval-body-sha256: ${{ needs.authority.outputs.approval_body_sha256 }}
+      - id: publish
+        name: Publish draft and finalize release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          .ci/trusted/ci-release-publish.sh authority/authority.json release-handoff
+      - name: Verify publication readback evidence
+        shell: bash
+        env:
+          RELEASE_REMOTE_IDENTITY: ${{ steps.publish.outputs['release-remote-identity'] }}
+          PUBLISH_RECEIPT: ${{ steps.publish.outputs['publish-receipt'] }}
+          READBACK_EVIDENCE: ${{ steps.publish.outputs['readback-evidence'] }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_REMOTE_IDENTITY"
+          test -n "$PUBLISH_RECEIPT"
+          test -n "$READBACK_EVIDENCE"
+
+  summary:
+    needs: [authority, source-gate, quality, build, supplemental-asset, assemble, publish]
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      AUTHORITY_RESULT: ${{ needs.authority.result }}
+      SOURCE_GATE_RESULT: ${{ needs.source-gate.result }}
+      QUALITY_RESULT: ${{ needs.quality.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      SUPPLEMENTAL_ASSET_RESULT: ${{ needs.supplemental-asset.result }}
+      ASSEMBLE_RESULT: ${{ needs.assemble.result }}
+      PUBLISH_RESULT: ${{ needs.publish.result }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-actions/actions/ci-quality-summary@3b705bcbb0286a9da0f3bdb73f39d58043ca5605
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"authority","execution":"manual release publication / trusted control","result":"${{ needs.authority.result == 'success' && 'success' || needs.authority.result == 'failure' && 'failed' || (needs.authority.result == 'cancelled' || needs.authority.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.authority.result == 'success' || needs.authority.result == 'failure') && '完了' || needs.authority.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"authority job result: ${{ needs.authority.result }}"},{"unit":"source-gate","execution":"fixed source SHA identity","result":"${{ needs.source-gate.result == 'success' && 'success' || needs.source-gate.result == 'failure' && 'failed' || (needs.source-gate.result == 'cancelled' || needs.source-gate.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.source-gate.result == 'success' || needs.source-gate.result == 'failure') && '完了' || needs.source-gate.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"source-gate result: ${{ needs.source-gate.result }}"},{"unit":"quality","execution":"fixed source / trusted adapter","result":"${{ needs.quality.result == 'success' && 'success' || needs.quality.result == 'failure' && 'failed' || (needs.quality.result == 'cancelled' || needs.quality.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.quality.result == 'success' || needs.quality.result == 'failure') && '完了' || needs.quality.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"quality result: ${{ needs.quality.result }}"},{"unit":"build","execution":"platform manifest","result":"${{ needs.build.result == 'success' && 'success' || needs.build.result == 'failure' && 'failed' || (needs.build.result == 'cancelled' || needs.build.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.build.result == 'success' || needs.build.result == 'failure') && '完了' || needs.build.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"build result: ${{ needs.build.result }}"},{"unit":"supplemental-asset","execution":"owner-selected supplemental Release asset","result":"${{ needs.supplemental-asset.result == 'success' && 'success' || needs.supplemental-asset.result == 'failure' && 'failed' || (needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) && '対象外' || (needs.supplemental-asset.result == 'cancelled' || needs.supplemental-asset.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.supplemental-asset.result == 'success' || needs.supplemental-asset.result == 'failure' || (needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled)) && '完了' || needs.supplemental-asset.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"${{ (needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) && 'supplemental asset disabled by workflow input' || format('supplemental-asset result: {0}', needs.supplemental-asset.result) }}"},{"unit":"assemble","execution":"trusted handoff","result":"${{ needs.assemble.result == 'success' && 'success' || needs.assemble.result == 'failure' && 'failed' || (needs.assemble.result == 'cancelled' || needs.assemble.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.assemble.result == 'success' || needs.assemble.result == 'failure') && '完了' || needs.assemble.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"assemble result: ${{ needs.assemble.result }}"},{"unit":"publish","execution":"Release remote readback","result":"${{ needs.publish.result == 'success' && 'success' || needs.publish.result == 'failure' && 'failed' || (needs.publish.result == 'cancelled' || needs.publish.result == 'skipped') && '未実施' || '判定不能' }}","evidence":"${{ env.WORKFLOW_RUN_URL }}","collection":"${{ (needs.publish.result == 'success' || needs.publish.result == 'failure') && '完了' || needs.publish.result == 'cancelled' && '一部取得' || '取得不可' }}","reason":"publish result: ${{ needs.publish.result }}"}]}

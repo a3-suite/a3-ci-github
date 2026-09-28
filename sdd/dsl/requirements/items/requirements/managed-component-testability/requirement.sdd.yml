@@ -1,0 +1,24 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: managed-component-testability
+    type: quality
+    summary: 本リポジトリが管理するコンポーネントは、本番実装の責務境界を保ったまま容易にテストできる
+    rationale:
+      why: >-
+        テスト専用実装や本番コード内の特別な分岐で検証を成立させると、実運用経路とテスト経路が乖離し、
+        変更時の信頼性と保守性が低下するため
+    subject:
+      namespace: ci
+      key: managed-components
+    priority: must
+    fit_criteria:
+      - 管理対象コンポーネントは、入力、依存、副作用、出力の責務境界が明確で、対象責務を独立して検証できる
+      - 外部サービス、ファイルシステム、プロセス、時刻などの外部依存は明示的な境界から注入または制御でき、内部実装の改変をテスト前提にしない
+      - 判断ロジックと外部副作用を分離し、対象外コンポーネントの内部実装を起動せずに主要な正常系、失敗系、境界条件を検証できる
+      - 結果、エラー、終了状態、状態遷移、生成物を公開契約または責務境界から観測でき、非公開状態の直接操作を必須にしない
+      - テスト容易性は依存注入と責務分割の結果として成立し、テストのためだけの実装、実行モード、条件分岐、公開入口を本番コードへ追加しない
+    derived_artifacts:
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: managed-component-testability-maintained
