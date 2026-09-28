@@ -27,7 +27,7 @@ status は `failed`、`判定不能`、収集状態が `完了` でない row、
 ```yaml
 - name: Write quality summary
   id: quality-summary
-  uses: a3-suite/a3-actions/actions/ci-quality-summary@<40-char-commit-sha>
+  uses: a3-suite/a3-ci-github/actions/ci-quality-summary@<40-char-commit-sha>
   with:
     summary-json: ${{ steps.results.outputs.quality-results }}
 ```

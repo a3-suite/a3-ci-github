@@ -10,7 +10,7 @@ permissions、matrix適用は所有しません。
 [`action.yml`](action.yml)を正本とします。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-platform-matrix@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@<40-char-commit-sha>
   id: platform-matrix
   with:
     manifest-path: .ci/release/platforms.yml

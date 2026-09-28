@@ -3,7 +3,7 @@
 Rust CLI の Release authority に記録された language profile と source SHA を、現在の checkout に照合します。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-rust-source-gate@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-rust-source-gate@<40-char-commit-sha>
   with:
     language-profile: rust
     authority-path: authority/authority.json

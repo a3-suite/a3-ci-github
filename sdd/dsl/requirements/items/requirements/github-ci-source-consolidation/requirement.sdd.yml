@@ -17,7 +17,7 @@ requirements:
       - Agent Skillは操作導線だけを所有し、workflow、Action、runtime、lint ruleの実体を内包しない
       - 適用先へ配布するcanonical workflowと、このリポジトリ自身のworkflowを別の公開面として識別できる
       - Actionは短く安定したactions/<action-name>の公開パスを使用できる
-      - 移行期間中のコピー元authority、baseline revision、cutover条件を確認できる
+      - 移行のauthority、baseline revision、cutover状態を確認できる
     derived_artifacts:
       use_cases:
         - use_case_ref:

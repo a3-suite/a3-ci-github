@@ -4,7 +4,7 @@
 Release archive、checksum、`asset-manifest.json` を新しい出力ディレクトリへ生成して検証します。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-rust-release-build@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-rust-release-build@<40-char-commit-sha>
   with:
     language-profile: rust
     platform-manifest: .ci/platform-manifest.yml

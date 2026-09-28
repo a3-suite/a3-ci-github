@@ -3,7 +3,7 @@
 GitHub CI で利用する `gh`、`jq`、`sha256sum` の存在と完全一致バージョンを検証するときに使います。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-github-toolchain-verifier@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@<40-char-commit-sha>
   with:
     mode: gh-jq-sha256
     gh-version: '2.80.0'

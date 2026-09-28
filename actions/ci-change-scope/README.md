@@ -7,7 +7,7 @@
 `base-sha`、`head-sha`、`event-name`、`pr-base-sha`、`before-sha` を入力し、`docs-only-patterns` はカンマ区切りで指定します。outputs は `status`、`run-ci`、`run-docs`、`files`、`docs-files`、`other-files` です。`git diff --name-only` を実行するため、workflow で checkout と read-only git access を用意してください。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-change-scope@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-change-scope@<40-char-commit-sha>
   id: scope
   with:
     base-sha: ${{ github.event.pull_request.base.sha }}

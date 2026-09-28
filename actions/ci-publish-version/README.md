@@ -5,7 +5,7 @@
 source / artifact binding は trusted control または handoff 契約で先に確定し、承認済み plan を入力してください。Action は GitHub API、credential、publish command、workflow job 境界を扱いません。
 
 ```yaml
-- uses: a3-suite/a3-actions/actions/ci-publish-version@<40-char-commit-sha>
+- uses: a3-suite/a3-ci-github/actions/ci-publish-version@<40-char-commit-sha>
   with:
     version-plan-json: .ci/version-plan.json
 ```

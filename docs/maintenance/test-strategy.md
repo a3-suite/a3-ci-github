@@ -41,7 +41,7 @@ Hosted E2E は、外部 repository への書き込みや公開を暗黙に行い
 | Flow | 実行時期 | 必須観測 |
 | --- | --- | --- |
 | Quality | Git 初期化後の通常 CI | push、same-repository PR、fork PR、docs-only、失敗summary、optional platform |
-| Release | cutover 前の明示受入 | annotated tag、request handoff、source identity、artifact handoff、alias readback |
+| Release | Release 公開前の明示受入 | annotated tag、request handoff、source identity、artifact handoff、alias readback |
 | Package | 公開前の明示受入 | publication request、preparation handoff、承認済み test target |
 
 Quality 以外は専用 fixture repository または承認済み test target を使用します。Production Release、production registry、公開 alias を通常の PR テストから更新しません。
