@@ -197,6 +197,25 @@ test('repository quality workflow scopes branch events and cancels only stale PR
   assert.match(workflow, /^  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m);
 });
 
+// integration_id: repository-quality-delivery-regression
+test('repository workflow provider actions use registry-approved pins', () => {
+  const registry = read('skills/ci-github/references/ci-github-preset-assets.reference.yml');
+  for (const relative of ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml']) {
+    const workflow = read(relative);
+    const external = [...workflow.matchAll(/uses: ([a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+)@([0-9a-f]{40})/g)]
+      .map(([, action, sha]) => ({ action, sha }));
+    assert.ok(external.length > 0, `${relative} must pin external provider actions`);
+    for (const { action, sha } of external) {
+      const escaped = action.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      assert.match(
+        registry,
+        new RegExp(`\\baction: ${escaped}\\b[^\\n]*\\bcommitSha: ${sha}\\b`),
+        `${relative} uses ${action}@${sha} without a matching registry approval`,
+      );
+    }
+  }
+});
+
 // integration_id: failure-diagnostics-contract
 test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
   const workflows = [

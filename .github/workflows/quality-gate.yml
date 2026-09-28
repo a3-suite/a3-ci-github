@@ -284,6 +284,7 @@ jobs:
             echo "invalid version plan unexpectedly succeeded" >&2
             exit 1
           fi
+          grep -q 'publish-version-plan-component-missing' .ci/invalid-version.log
           echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Verify invalid version plan mapping
@@ -311,6 +312,7 @@ jobs:
             echo "unresolved summary unexpectedly succeeded" >&2
             exit 1
           fi
+          grep -q 'ci-summary-unresolved' .ci/unresolved-summary.log
           echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Verify unresolved mapping
@@ -337,6 +339,7 @@ jobs:
             echo "invalid input unexpectedly succeeded" >&2
             exit 1
           fi
+          grep -q 'ci-summary-rows-invalid' .ci/invalid-input.log
           echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Verify invalid input mapping
