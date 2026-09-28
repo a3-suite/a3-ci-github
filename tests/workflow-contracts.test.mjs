@@ -217,6 +217,50 @@ test('repository workflow provider actions use registry-approved pins', () => {
 });
 
 // integration_id: repository-quality-delivery-regression
+test('repository gate Action steps match their action.yml inputs', () => {
+  const job = jobBlock(read('.github/workflows/quality-gate.yml'), 'contract');
+  const actionInputs = (name) => {
+    const inputsSection = read(`actions/${name}/action.yml`).split(/^inputs:\s*$/m)[1];
+    if (!inputsSection) return [];
+    return inputsSection.split(/^\S/m)[0]
+      .split(/^  (?=[a-zA-Z0-9_-]+:)/m)
+      .filter((entry) => /^([a-zA-Z0-9_-]+):/.test(entry))
+      .map((entry) => ({
+        name: entry.match(/^([a-zA-Z0-9_-]+):/)[1],
+        required: /^    required:\s*true\s*$/m.test(entry),
+      }));
+  };
+  let checked = 0;
+  let direct = 0;
+  for (const step of job.split('\n      - ').slice(1)) {
+    const useMatch = step.match(/^        uses: \.\/actions\/([a-zA-Z0-9_-]+)$/m);
+    const runMatch = step.match(/\bnode actions\/([a-zA-Z0-9_-]+)\/dist\/index\.js\b/);
+    const action = useMatch?.[1] ?? runMatch?.[1];
+    if (!action) continue;
+    const stepName = step.match(/^        name: (.+)$/m)?.[1] ?? action;
+    const declared = actionInputs(action);
+    const provided = useMatch
+      ? [...(step.split(/^        with:\s*$/m)[1] ?? '').split(/^        \S/m)[0]
+          .matchAll(/^          ([a-zA-Z0-9_-]+):/gm)].map((match) => match[1])
+      : [...(step.split(/^        env:\s*$/m)[1] ?? '').split(/^        \S/m)[0]
+          .matchAll(/^          INPUT_([A-Z0-9_-]+):/gm)].map((match) => match[1].toLowerCase());
+    const declaredNames = declared.map((input) => input.name);
+    for (const input of provided) {
+      assert.ok(declaredNames.includes(input), `${stepName} passes undeclared input ${input} to ${action}`);
+    }
+    for (const input of declared) {
+      if (input.required) {
+        assert.ok(provided.includes(input.name), `${stepName} omits required input ${input.name} of ${action}`);
+      }
+    }
+    if (runMatch) direct += 1;
+    checked += 1;
+  }
+  assert.ok(checked > 0, 'expected the repository gate to use local Action steps');
+  assert.ok(direct > 0, 'expected the repository gate to validate direct Action invocations');
+});
+
+// integration_id: repository-quality-delivery-regression
 test('canonical workflow summaries cover exactly their needs jobs', () => {
   const workflows = [
     ['workflows/quality/quality-gate.yml', 'summary'],
