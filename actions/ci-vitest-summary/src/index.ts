@@ -8,7 +8,7 @@ export const run = (): void => {
     const reportPath = core.getInput('report-json', { required: true });
     if (!reportPath || /[\0\r\n]/.test(reportPath)) throw new Error('ci-vitest-report-path-invalid');
     const label = core.getInput('label') || 'tests';
-    let report = null;
+    let report: unknown = null;
     try { report = parseVitestReport(fs.readFileSync(reportPath, 'utf8')); } catch { report = null; }
     const result = summarizeVitest(report, label, reportPath);
     const outputPath = core.getInput('summary-path') || process.env.GITHUB_STEP_SUMMARY;

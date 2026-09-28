@@ -119,3 +119,9 @@ runtime_contexts:
     summary: Preset assurance is invoked without an explicit repository root or skill-collection root.
   - id: runtime-context.preset-assurance-read-only-output-requested
     summary: Read-only preset assurance is invoked with remediation output requested.
+  - id: runtime-context.vitest-report-complete
+    summary: The Vitest report has a valid result structure, complete and consistent counts, at least one test, and no explicit failure.
+  - id: runtime-context.vitest-report-explicit-failure
+    summary: The Vitest report reports a failed test count or an explicit failure flag.
+  - id: runtime-context.vitest-report-insufficient
+    summary: The Vitest report is missing, has an invalid result structure, has incomplete or inconsistent counts, or contains no tests, and reports no explicit failure.

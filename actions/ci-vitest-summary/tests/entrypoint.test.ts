@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,7 +17,15 @@ test('bundled entrypoint writes a Vitest summary', () => {
   // Act
   const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  try { assert.equal(result.status, 0, result.stderr); assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'passed'); assert.match(fs.readFileSync(summary, 'utf8'), /unit テスト結果/); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  try {
+    assert.equal(result.status, 0, result.stderr);
+    const outputs = fs.readFileSync(output, 'utf8');
+    assert.equal(outputValue(outputs, 'status'), 'passed');
+    assert.equal(outputValue(outputs, 'collection'), 'complete');
+    const markdown = fs.readFileSync(summary, 'utf8');
+    assert.match(markdown, /unit テスト結果/);
+    assert.equal(outputValue(outputs, 'digest'), `sha256:${createHash('sha256').update(markdown, 'utf8').digest('hex')}`);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
 // integration_id: ci-vitest-summary-entrypoint-regression
@@ -24,6 +33,18 @@ test('bundled entrypoint keeps malformed report shapes unresolved', () => {
   // Arrange
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-vitest-summary-malformed-')); const report = path.join(temp, 'report.json'); const output = path.join(temp, 'outputs');
   fs.writeFileSync(report, JSON.stringify({ testResults: {} })); fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, 'INPUT_REPORT-JSON': report };
+  // Act
+  const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' });
+  // Assert
+  try { assert.equal(result.status, 0, result.stderr); assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+// integration_id: ci-vitest-summary-entrypoint-regression
+test('bundled entrypoint keeps assertion-level malformation unresolved', () => {
+  // Arrange
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-vitest-summary-malformed-assertion-')); const report = path.join(temp, 'report.json'); const output = path.join(temp, 'outputs');
+  fs.writeFileSync(report, JSON.stringify({ numTotalTests: 2, numPassedTests: 2, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true, testResults: [{ assertionResults: [null] }] })); fs.writeFileSync(output, '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, 'INPUT_REPORT-JSON': report };
   // Act
   const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' });

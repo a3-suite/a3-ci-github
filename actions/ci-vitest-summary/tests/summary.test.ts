@@ -23,3 +23,38 @@ test('keeps malformed reports unresolved without failing the step', () => {
   // Assert
   assert.deepEqual(results.map((result) => [result.status, result.collection]), [['unresolved', 'unavailable'], ['unresolved', 'unavailable'], ['unresolved', 'partial']]);
 });
+
+// target_id: summarizeVitest(unknown,string,string)
+test('rejects assertion-level malformation and unknown statuses with complete counts', () => {
+  // Arrange
+  const complete = { numTotalTests: 2, numPassedTests: 2, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true };
+  // Act
+  const malformedAssertion = summarizeVitest({ ...complete, testResults: [{ assertionResults: [null] }] }, 'unit', 'vitest.json');
+  const unknownStatus = summarizeVitest({ ...complete, testResults: [{ assertionResults: [{ status: 'mystery' }] }] }, 'unit', 'vitest.json');
+  // Assert
+  assert.deepEqual([malformedAssertion.status, malformedAssertion.collection], ['unresolved', 'partial']);
+  assert.match(malformedAssertion.markdown, /結果構造が不正/);
+  assert.deepEqual([unknownStatus.status, unknownStatus.collection], ['unresolved', 'partial']);
+});
+
+// target_id: summarizeVitest(unknown,string,string)
+test('keeps explicit failure precedence over malformed structure', () => {
+  // Arrange
+  const report = { numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, numTodoTests: 0, success: false, testResults: [{ assertionResults: [null] }] };
+  // Act
+  const result = summarizeVitest(report, 'unit', 'vitest.json');
+  // Assert
+  assert.equal(result.status, 'failed');
+  assert.match(result.markdown, /失敗を報告/);
+});
+
+// target_id: summarizeVitest(unknown,string,string)
+test('treats a zero-test report as unresolved instead of a false success', () => {
+  // Arrange
+  const report = { numTotalTests: 0, numPassedTests: 0, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true };
+  // Act
+  const result = summarizeVitest(report, 'unit', 'vitest.json');
+  // Assert
+  assert.deepEqual([result.status, result.collection], ['unresolved', 'unavailable']);
+  assert.match(result.markdown, /テストが含まれていません/);
+});
