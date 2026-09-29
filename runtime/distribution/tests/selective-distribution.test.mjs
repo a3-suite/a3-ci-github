@@ -21,6 +21,7 @@ import {
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
 const tsx = path.join(repositoryRoot, 'runtime/preset/node_modules/.bin/tsx');
+const releaseTag = `v${fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim()}`;
 const committedSourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-distribution-source-'));
 for (const relative of [
   'VERSION',
@@ -72,7 +73,7 @@ const prepareRelease = (root) => {
     '--repository-root', committedSourceRoot,
     '--output-directory', output,
     '--source-revision', sourceRevision,
-    '--release-tag', 'v0.1.0',
+    '--release-tag', releaseTag,
   ], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   return {
@@ -127,7 +128,7 @@ test('release generator rejects invalid version source and output boundaries', a
     const invalidSha = execute([
       '--output-directory', path.join(root, 'invalid-sha'),
       '--source-revision', 'main',
-      '--release-tag', 'v0.1.0',
+      '--release-tag', releaseTag,
     ]);
     assert.equal(invalidSha.status, 2);
     assert.match(invalidSha.stderr, /distribution-release-source-revision-invalid/);
@@ -148,7 +149,7 @@ test('release generator rejects invalid version source and output boundaries', a
     const headMismatch = execute([
       '--output-directory', path.join(root, 'head-mismatch'),
       '--source-revision', 'e'.repeat(40),
-      '--release-tag', 'v0.1.0',
+      '--release-tag', releaseTag,
     ]);
     assert.equal(headMismatch.status, 2);
     assert.match(headMismatch.stderr, /distribution-release-source-head-mismatch/);
@@ -157,7 +158,7 @@ test('release generator rejects invalid version source and output boundaries', a
     const outputConflict = execute([
       '--output-directory', existingOutput,
       '--source-revision', sourceRevision,
-      '--release-tag', 'v0.1.0',
+      '--release-tag', releaseTag,
     ]);
     assert.equal(outputConflict.status, 2);
     assert.match(outputConflict.stderr, /distribution-release-output-exists/);
@@ -217,7 +218,7 @@ test('remote manifest loading confines the Release URL and release tag mapping',
           arrayBuffer: async () => release.manifestBytes,
         };
       };
-      const validUrl = 'https://github.com/a3-suite/a3-ci-github/releases/download/v0.1.0/a3-ci-github-distribution-manifest.json';
+      const validUrl = `https://github.com/a3-suite/a3-ci-github/releases/download/${releaseTag}/a3-ci-github-distribution-manifest.json`;
       const loaded = await loadDistributionManifest({ manifestUrl: validUrl });
       assert.equal(loaded.manifest.sourceRevision, sourceRevision);
       await assert.rejects(

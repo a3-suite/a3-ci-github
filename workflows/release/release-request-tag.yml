@@ -20,15 +20,15 @@ jobs:
       CI_SHA256SUM_VERSION: <sha256sum-version>
     steps:
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@312c534de67720de060689d78ada17da9c84c4e2
         with:
           mode: gh-jq-sha256
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -36,13 +36,13 @@ jobs:
           sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
       - name: Resolve annotated tag identity
         id: tag
-        uses: a3-suite/a3-ci-github/actions/ci-annotated-tag-resolver@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-annotated-tag-resolver@312c534de67720de060689d78ada17da9c84c4e2
         with:
           repository: ${{ github.repository }}
           tag: ${{ github.ref_name }}
           github-token: ${{ env.CI_GITHUB_TOKEN }}
       - name: Write tag request handoff
-        uses: a3-suite/a3-ci-github/actions/ci-release-request-handoff@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-release-request-handoff@312c534de67720de060689d78ada17da9c84c4e2
         with:
           output-directory: release-request
           tag-source-sha: ${{ steps.tag.outputs.source-sha }}
@@ -68,7 +68,7 @@ jobs:
       REQUEST_RESULT: ${{ needs.request.result }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"tag event handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}
