@@ -54,7 +54,7 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@312c534de67720de060689d78ada17da9c84c4e2
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.sha }}
@@ -283,7 +283,7 @@ jobs:
         run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2
         with:
           bundle-path: ${{ needs.resolve-platforms.outputs['trusted_root'] }}/${{ env.CI_ADAPTER_DESCRIPTOR }}
           source-root: .
@@ -382,6 +382,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}

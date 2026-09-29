@@ -6,7 +6,7 @@
 
 ## 正本と対象境界
 
-- CI の用途、入出力、停止条件は本スキルの workflow／preset／script 契約を正本とする。
+- CI の用途、入出力、停止条件は `ci` スキルの workflow／preset／script 契約を正本とし、本スキルは provider 写像と provider-local 差分（物理 source、解決 root、実行 binding）だけを定義する。
 - 監査モード、検証フェーズ、監査 status、証拠適用性、監査完了と適合 success の境界は `ci-audit-contract.reference.yml` を正本とする。本ガイドでは再定義しない。
 - 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目は `ci-audit-subjects.reference.yml` を正本とする。本ガイドでは個別subjectの判断規則を補完しない。
 - SDD を利用する project は、project の contract registry で外部観測可能な CI 境界を契約対象として宣言する。

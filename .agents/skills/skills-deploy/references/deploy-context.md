@@ -25,6 +25,13 @@
 - 委譲時は上記の固定入力を渡し、外部書き込みまたは削除の明示許可がない場合は検査結果の報告で停止する。
 - リポジトリ固有の判断は、Agent Skill以外の資産を配備対象へ追加しないことと、旧実装資産の削除を移行完了の証拠にしないことに限定する。
 
+## コミットゲート連携
+
+- `commit-gate` スキルの `skill-deploy-parity` は、このコンテキストの固定入力を `project-skill-deploy` へ渡して差分を確認する。
+- 配備先 root は `A3_CI_GITHUB_SKILL_DEPLOY_ROOT` で明示する。未設定の場合は配備整合ゲートを `非適用` とする。
+- 使用する CLI は `{destination-root}/project-skill-deploy/scripts/deploy_project_skills.py` とし、`A3_PROJECT_SKILL_DEPLOY_CLI` で上書きできる。
+- コミットゲートは削除を伴わない更新差分だけを自動反映し、削除、prune、管理外 skill の削除では停止する。この自動反映を、外部書き込みの明示許可として扱う。
+
 ## 旧スキル置換
 
 - 旧スキルと新スキルを異なる destination root へ恒久的に二重配置しない。

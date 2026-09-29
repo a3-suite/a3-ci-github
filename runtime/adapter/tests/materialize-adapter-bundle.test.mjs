@@ -119,6 +119,37 @@ test('materializer separates repository-owned assets from external skill resourc
       }),
       /adapter-materializer-destination-conflict/,
     );
+
+    rmSync(targetRoot, { recursive: true, force: true });
+    writeFileSync(descriptorSource, JSON.stringify({
+      ...JSON.parse(descriptorSourceContent),
+      projectSettings: { requiredFiles: [], requiredScripts: ['lint', 'shared-check'] },
+    }));
+    mkdirSync(targetRoot, { recursive: true });
+    writeFileSync(path.join(targetRoot, 'package.json'), JSON.stringify({
+      scripts: { lint: '', 'shared-check': 'node skills/ci/source.ts' },
+    }));
+    assert.throws(
+      () => materializeAdapterBundle({
+        sourceRoot: skillCollectionRoot,
+        inventoryPath: 'tests/fixtures/materializer-inventory.json',
+        bundleId: 'test-bundle',
+        targetRoot,
+      }),
+      /adapter-materializer-project-script-invalid:lint/,
+    );
+    writeFileSync(path.join(targetRoot, 'package.json'), JSON.stringify({
+      scripts: { lint: 'true', 'shared-check': 'node skills/ci/source.ts' },
+    }));
+    assert.throws(
+      () => materializeAdapterBundle({
+        sourceRoot: skillCollectionRoot,
+        inventoryPath: 'tests/fixtures/materializer-inventory.json',
+        bundleId: 'test-bundle',
+        targetRoot,
+      }),
+      /adapter-materializer-project-script-source-reference:shared-check/,
+    );
   } finally {
     if (previousRuntimeRoot === undefined) delete process.env.CI_FIXED_RUNTIME_ROOT;
     else process.env.CI_FIXED_RUNTIME_ROOT = previousRuntimeRoot;
