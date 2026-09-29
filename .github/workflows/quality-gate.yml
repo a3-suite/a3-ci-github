@@ -89,6 +89,10 @@ jobs:
         shell: bash
         run: node --test runtime/path/tests/same-file-core.test.mjs
 
+      - name: Test shared platform manifest core
+        shell: bash
+        run: node --test runtime/platform/tests/platform-manifest-core.test.mjs
+
       - name: Test shared Vitest summary core
         shell: bash
         run: node --test runtime/vitest/tests/vitest-summary-core.test.mjs
