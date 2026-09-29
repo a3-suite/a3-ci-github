@@ -23,7 +23,13 @@ const temporaryRoot = path.join(sharedTemporaryRoot, `distribution-release-${pro
 mkdirSync(temporaryRoot, { recursive: true });
 after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
-  if (!sharedTemporaryRootExisted) rmdirSync(sharedTemporaryRoot);
+  if (!sharedTemporaryRootExisted) {
+    try {
+      rmdirSync(sharedTemporaryRoot);
+    } catch (error) {
+      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTEMPTY') throw error;
+    }
+  }
 });
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');

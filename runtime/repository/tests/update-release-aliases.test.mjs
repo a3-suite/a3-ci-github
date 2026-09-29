@@ -15,7 +15,13 @@ mkdirSync(temporaryRoot, { recursive: true });
 after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
   assert.equal(existsSync(temporaryRoot), false);
-  if (!sharedTemporaryRootExisted) rmdirSync(sharedTemporaryRoot);
+  if (!sharedTemporaryRootExisted) {
+    try {
+      rmdirSync(sharedTemporaryRoot);
+    } catch (error) {
+      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTEMPTY') throw error;
+    }
+  }
 });
 
 const execute = (command, args, options = {}) => spawnSync(command, args, {
