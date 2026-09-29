@@ -1,0 +1,89 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.selective-distribution
+observations:
+  - id: observation.ci-selective-distribution.selection-result
+    summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
+    boundary:
+      ref: boundary.cli-result
+    value:
+      root: distribution.selection
+      kind: object
+      fields:
+        - selector: selectedAssets
+          kind: observation_field
+          meaning: Stable asset identities in the validated selection closure.
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable rejection reason for an unknown or incomplete selection.
+  - id: observation.ci-selective-distribution.fetch-result
+    summary: Revision-bound local distribution receipt or fetch diagnostic.
+    boundary:
+      ref: boundary.cli-result
+    value:
+      root: distribution.fetch
+      kind: object
+      fields:
+        - selector: sourceRevision
+          kind: observation_field
+          meaning: Full immutable source commit SHA.
+        - selector: selectedAssets
+          kind: observation_field
+          meaning: Asset identities whose selected files passed integrity validation.
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
+  - id: observation.ci-selective-distribution.publication-result
+    summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
+    boundary:
+      ref: boundary.script-result
+    value:
+      root: distribution.publication
+      kind: object
+      fields:
+        - selector: releaseTag
+          kind: observation_field
+          meaning: Exact validated SemVer tag that owns the published assets.
+        - selector: assetNames
+          kind: observation_field
+          meaning: Manifest, standalone fetch CLI, and checksum asset names without bundled implementation files.
+        - selector: readbackStatus
+          kind: observation_field
+          meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable failure evidence for invalid source, duplicate or missing assets, or changed readback bytes.
+  - id: observation.ci-selective-distribution.plan-result
+    summary: Immutable application plan bound to selected source and current destination state.
+    boundary:
+      ref: boundary.project-ci-assets
+    value:
+      root: distribution.plan
+      kind: object
+      fields:
+        - selector: planDigest
+          kind: observation_field
+          meaning: Digest binding manifest, selection, source, destinations, and observed destination identities.
+        - selector: actions
+          kind: observation_field
+          meaning: Create, reuse, update, or conflict classification for canonical workflow destinations.
+        - selector: stale
+          kind: observation_field
+          meaning: Previously managed paths excluded from the current selection without automatic deletion.
+  - id: observation.ci-selective-distribution.apply-result
+    summary: Approved application transaction, rollback result, or stable rejection diagnostic.
+    boundary:
+      ref: boundary.cli-result
+    value:
+      root: distribution.apply
+      kind: object
+      fields:
+        - selector: transactionId
+          kind: observation_field
+          meaning: Identity of the exclusive application transaction and its before state.
+        - selector: rollbackStatus
+          kind: observation_field
+          meaning: Explicit evidence that transaction changes were restored.
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable rejection reason for conflict, lock contention, changed input, or invalid approval.

@@ -1,0 +1,32 @@
+name: ci-handoff-integrity
+description: Validate a release handoff descriptor, manifest, and artifact digests.
+inputs:
+  handoff-root:
+    required: true
+    description: Root directory containing the handoff descriptor and artifacts.
+  descriptor:
+    required: true
+    description: Relative descriptor path below handoff-root.
+  source-sha:
+    required: true
+    description: Expected source identity.
+  version:
+    required: true
+    description: Expected release version.
+  target-identity:
+    required: true
+    description: Expected target identity.
+outputs:
+  status:
+    description: success or failed.
+  descriptor:
+    description: Validated relative descriptor path.
+  manifest:
+    description: Validated relative manifest path.
+  manifest-digest:
+    description: SHA-256 digest of the manifest bytes.
+  entries:
+    description: Number of validated manifest entries.
+runs:
+  using: node24
+  main: dist/index.js

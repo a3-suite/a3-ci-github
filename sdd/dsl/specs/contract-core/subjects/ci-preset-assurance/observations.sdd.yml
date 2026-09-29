@@ -1,0 +1,75 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.preset-assurance
+observations:
+  - id: observation.ci-preset-assurance.bootstrap-result
+    summary: Stable bootstrap diagnostic exposed when preset assurance cannot start.
+    boundary:
+      ref: boundary.cli-result
+    value:
+      root: cli.result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Bootstrap outcome when assurance cannot start.
+        - selector: reason
+          kind: observation_field
+          meaning: Stable machine-readable rejection reason.
+        - selector: message
+          kind: observation_field
+          meaning: Actionable explanation of the rejected invocation.
+  - id: observation.ci-preset-assurance.preflight-report
+    summary: Read-only provider preflight report for the selected applied presets.
+    boundary:
+      ref: boundary.cli-result
+    value:
+      root: cli.result
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Success or failed provider preflight status.
+        - selector: inspectedPresets
+          kind: observation_field
+          meaning: Applied presets included in the preflight decision.
+        - selector: missingSettings
+          kind: observation_field
+          meaning: Required settings or assets that could not be resolved.
+        - selector: mismatches
+          kind: observation_field
+          meaning: Canonical, identity, permission, trust, or integrity mismatches.
+        - selector: evidence
+          kind: observation_field
+          meaning: Evidence collected for inspected workflows and assets.
+        - selector: semanticReviewRequired
+          kind: observation_field
+          meaning: Whether evidence outside provider preflight still requires semantic review.
+  - id: observation.ci-preset-assurance.asset-lock
+    summary: Distribution identity lock generated from validated canonical and applied preset assets.
+    boundary:
+      ref: boundary.project-ci-assets
+    value:
+      root: ci-assets-lock
+      kind: object
+      fields:
+        - selector: sourceRevision
+          kind: observation_field
+          meaning: Full immutable distribution commit SHA.
+        - selector: generatedAt
+          kind: observation_field
+          meaning: Minute-normalized observation timestamp that is not used as version identity.
+        - selector: assets
+          kind: observation_field
+          meaning: Canonical and applied SHA-256 identity for every managed asset.
+  - id: observation.ci-preset-assurance.asset-lock-failure
+    summary: Rejection exposed when an asset lock cannot be generated safely.
+    boundary:
+      ref: boundary.script-result
+    value:
+      root: process.result
+      kind: object
+      fields:
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable reason that prevents an invalid lock from being written.

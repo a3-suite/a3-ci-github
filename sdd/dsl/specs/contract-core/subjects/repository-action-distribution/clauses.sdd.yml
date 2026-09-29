@@ -1,0 +1,132 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.repository.action-distribution
+contracts:
+  - id: contract.repository-action-distribution.integrity
+    summary: Repository gates derive distribution and source-verification work plus catalog projection from maintained Action sources and reject untracked distribution state.
+    conditions:
+      - id: distribution-inputs-available
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.repository-action-distribution-inputs-available
+          op: available
+      - id: distribution-inconsistent
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.repository-action-distribution-inconsistent
+          op: available
+      - id: catalog-inputs-available
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.repository-action-catalog-inputs-available
+          op: available
+      - id: exact-release-tag-available
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.repository-exact-release-tag-available
+          op: available
+      - id: release-version-invalid-or-mismatched
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.repository-release-version-invalid-or-mismatched
+          op: available
+    guarantees:
+      - id: distribution-plan-produced
+        when: distribution-inputs-available
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: distribution
+      - id: inconsistent-distribution-rejected
+        when: distribution-inconsistent
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: distribution
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: action-catalog-projected
+        when: catalog-inputs-available
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: catalog
+      - id: action-contract-coverage-confirmed
+        when: catalog-inputs-available
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: contract-coverage
+      - id: action-source-verification-plan-produced
+        when: distribution-inputs-available
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: source-verification
+      - id: release-version-confirmed
+        when: exact-release-tag-available
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: release-version
+      - id: invalid-or-mismatched-release-version-rejected
+        when: release-version-invalid-or-mismatched
+        observation_ref: observation.repository-action-distribution.gate-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-version
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: distribution-plan-derived
+        goal: Maintained Action and script bundles produce a complete distribution rebuild and comparison plan.
+        guarantee_refs:
+          - distribution-plan-produced
+      - id: inconsistent-distribution-stopped
+        goal: Untracked distribution files and untracked Composite Action script references stop the gate.
+        guarantee_refs:
+          - inconsistent-distribution-rejected
+      - id: action-catalog-derived
+        goal: The catalog projection adds and removes discovered Actions while preserving curated usage text.
+        guarantee_refs:
+          - action-catalog-projected
+      - id: action-contract-coverage-derived
+        goal: Discovered Actions remain connected to packaged contract subjects and all declared public outputs remain observable.
+        guarantee_refs:
+          - action-contract-coverage-confirmed
+      - id: action-source-verification-derived
+        goal: Every bundled Action contributes typecheck and test execution, including focused tests for shared Action runtime cores, without repeating dependency installation or distribution build work.
+        guarantee_refs:
+          - action-source-verification-plan-produced
+      - id: release-version-bound
+        goal: Exact release tags and mutable aliases cannot advance unless the tagged commit declares the same repository version.
+        guarantee_refs:
+          - release-version-confirmed
+          - invalid-or-mismatched-release-version-rejected

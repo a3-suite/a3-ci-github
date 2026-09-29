@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-notes-input-resolution
+contracts:
+  - id: contract.ci-release-notes-input-resolution.outputs
+    summary: A valid external handoff produces normalized release notes paths.
+    conditions:
+      - id: input-handoff-directory-present
+        input_predicate:
+          kind: input
+          term: input.input-handoff-directory
+          op: present
+      - id: notes-resolution-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: notes-resolution-output-produced
+        when: input-handoff-directory-present
+        observation_ref: observation.ci-release-notes-input-resolution.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: release-notes-path
+      - id: notes-resolution-failure-propagated
+        when: notes-resolution-rejected
+        observation_ref: observation.ci-release-notes-input-resolution.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: notes-resolution-output-set
+        goal: A valid external handoff produces normalized release notes paths.
+        guarantee_refs:
+          - notes-resolution-output-produced
+      - id: notes-resolution-rejected
+        goal: Input resolution fails when the normalized handoff destination is unsafe or already occupied.
+        guarantee_refs:
+          - notes-resolution-failure-propagated

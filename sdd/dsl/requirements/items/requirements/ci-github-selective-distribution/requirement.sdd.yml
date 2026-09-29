@@ -1,0 +1,31 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-github-selective-distribution
+    type: functional
+    summary: 利用projectが固定revisionから選択したCI資材だけを検証付きで取得し、競合を確認して適用・復旧できる
+    rationale:
+      why: >-
+        repository全体または旧Agent Skill同梱資産へ依存すると、不要資材の取得、配布authorityの重複、
+        consumerごとの更新差分と復旧状態の不明確化が発生するため
+    subject:
+      namespace: ci
+      key: selective-distribution
+    priority: must
+    fit_criteria:
+      - 配布assetとpresetの依存閉包をrepository registryから一意に選択できる
+      - Release manifestは同一full commit SHAの登録済み通常ファイルについてpath、size、SHA-256を提示する
+      - exact tagのGitHub Releaseはmanifest、standalone fetch CLI、SHA256SUMSだけを公開し、remote readbackが準備済みbyteと一致した後だけ成功する
+      - consumerは選択した資材だけを固定SHA URLからstagingへ取得し、全file検証後にproject-local distributionとして利用できる
+      - asset単体取得は不足依存を診断し、preset選択は必須依存閉包を解決する
+      - canonical workflowのcopyは差分plan、明示承認、排他、前提再確認を経て実行され、管理外差分を上書きしない
+      - apply失敗または明示rollback時に今回のtransactionが変更したmanaged fileを復旧できる
+      - runtime、lint、Agent Skill、Action、external skill、project-owned extensionの適用責務を混在させない
+      - clean checkoutから固定Release identityを使って選択済みdistributionを再構成できる
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: ci-github-selective-asset-delivery
+      quality_scenarios:
+        - quality_scenario_ref:
+            quality_scenario_id: ci-github-selective-distribution-safe

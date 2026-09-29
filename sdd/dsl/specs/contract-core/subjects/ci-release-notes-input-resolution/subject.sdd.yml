@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-notes-input-resolution
+  summary: Select and normalize release notes inputs for release publication.

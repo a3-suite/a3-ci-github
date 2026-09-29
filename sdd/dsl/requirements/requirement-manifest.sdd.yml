@@ -1,0 +1,75 @@
+version: 1
+name: requirement-manifest
+items:
+  - path: items/requirements/github-actions-action-contract-and-distribution/requirement.sdd.yml
+    kind: requirement
+  - path: items/use-cases/github-actions-action-contract-and-distribution/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/rust-cli-release-asset-preparation/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/ci-quality-gate-execution/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/github-tool-exact-version-provisioning/use-case.sdd.yml
+    kind: use-case
+  - path: items/quality-scenarios/github-actions-action-contract-and-distribution-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/constraints/github-actions-action-boundary-and-distribution/constraint.sdd.yml
+    kind: constraint
+  - path: items/requirements/ci-common-processing-action-reuse/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/ci-common-processing-action-reuse-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/rust-release-asset-integrity/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/rust-release-asset-integrity-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/github-toolchain-exact-version-verification/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/github-toolchain-exact-version-verification-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/jq-release-provisioning/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/jq-release-provisioning-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/gh-release-provisioning/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/gh-release-provisioning-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/github-ci-source-consolidation/requirement.sdd.yml
+    kind: requirement
+  - path: items/constraints/github-ci-migration-authority/constraint.sdd.yml
+    kind: constraint
+  - path: items/requirements/managed-component-testability/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/managed-component-testability-maintained/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/requirements/ci-failure-diagnostics/requirement.sdd.yml
+    kind: requirement
+  - path: items/quality-scenarios/ci-failure-diagnostics-actionable/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/constraints/ci-diagnostics-environment-simplicity/constraint.sdd.yml
+    kind: constraint
+  - path: items/requirements/github-ci-project-lifecycle/requirement.sdd.yml
+    kind: requirement
+  - path: items/requirements/ci-github-selective-distribution/requirement.sdd.yml
+    kind: requirement
+  - path: items/use-cases/ci-github-selective-asset-delivery/use-case.sdd.yml
+    kind: use-case
+  - path: items/quality-scenarios/ci-github-selective-distribution-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
+  - path: items/use-cases/ci-github-preset-application/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/ci-github-preset-audit/use-case.sdd.yml
+    kind: use-case
+  - path: items/requirements/github-release-workflow/requirement.sdd.yml
+    kind: requirement
+  - path: items/use-cases/github-release-request-preparation/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/github-release-publication/use-case.sdd.yml
+    kind: use-case
+  - path: items/requirements/github-package-publication-workflow/requirement.sdd.yml
+    kind: requirement
+  - path: items/use-cases/github-package-publication/use-case.sdd.yml
+    kind: use-case
+  - path: items/use-cases/ci-github-managed-source-maintenance/use-case.sdd.yml
+    kind: use-case

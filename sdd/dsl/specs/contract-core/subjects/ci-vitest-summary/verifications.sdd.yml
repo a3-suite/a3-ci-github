@@ -1,0 +1,47 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.vitest-summary
+verifications:
+  - id: verification.ci.vitest-summary.outputs
+    contract_id: contract.ci.vitest-summary.outputs
+    cases:
+      - id: complete-vitest-report
+        intent_id: vitest-summary-output-set
+        input:
+          report-json: .ci/vitest.json
+          label: unit
+          summary-path: .ci/summary.md
+        checks:
+          - {id: check-vitest-summary-output, guarantee_ref: vitest-summary-output-produced}
+          - {id: check-vitest-summary-passed-status, guarantee_ref: vitest-summary-passed-status-produced}
+          - {id: check-vitest-summary-passed-collection, guarantee_ref: vitest-summary-passed-collection-produced}
+          - {id: check-vitest-cli-passed-status, guarantee_ref: vitest-cli-passed-status-produced}
+          - {id: check-vitest-cli-passed-collection, guarantee_ref: vitest-cli-passed-collection-produced}
+      - id: explicit-failure-report
+        intent_id: vitest-summary-failure-set
+        input:
+          report-json: explicit-failure.json
+        checks:
+          - {id: check-vitest-summary-failed-status, guarantee_ref: vitest-summary-failed-status-produced}
+          - {id: check-vitest-cli-failed-status, guarantee_ref: vitest-cli-failed-status-produced}
+      - id: malformed-report-unresolved
+        intent_id: vitest-summary-unresolved-output-set
+        input:
+          report-json: malformed-report.json
+        checks:
+          - {id: check-vitest-summary-unresolved-status, guarantee_ref: vitest-summary-unresolved-output-produced}
+          - {id: check-vitest-cli-unresolved-status, guarantee_ref: vitest-cli-unresolved-status-produced}
+      - id: assertion-malformation-unresolved
+        intent_id: vitest-summary-unresolved-output-set
+        input:
+          report-json: assertion-malformed-report.json
+        checks:
+          - {id: check-vitest-summary-unresolved-status, guarantee_ref: vitest-summary-unresolved-output-produced}
+          - {id: check-vitest-cli-unresolved-status, guarantee_ref: vitest-cli-unresolved-status-produced}
+      - id: zero-test-report-unresolved
+        intent_id: vitest-summary-unresolved-output-set
+        input:
+          report-json: zero-test-report.json
+        checks:
+          - {id: check-vitest-summary-unresolved-status, guarantee_ref: vitest-summary-unresolved-output-produced}
+          - {id: check-vitest-cli-unresolved-status, guarantee_ref: vitest-cli-unresolved-status-produced}

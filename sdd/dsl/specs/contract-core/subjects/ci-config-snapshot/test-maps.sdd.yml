@@ -1,0 +1,18 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.config-snapshot
+test_maps:
+  - verification_id: verification.ci-config-snapshot.outputs
+    case_id: valid-config-sources
+    tests:
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: bundled entrypoint writes snapshot and outputs
+        check_refs:
+          - check-config-snapshot-status
+  - verification_id: verification.ci-config-snapshot.outputs
+    case_id: command-file-collision-rejected
+    tests:
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
+        check_refs:
+          - check-config-snapshot-failure-status

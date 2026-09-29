@@ -1,0 +1,50 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.quality-summary
+verifications:
+  - id: verification.ci-quality-summary.outputs
+    contract_id: contract.ci-quality-summary.outputs
+    cases:
+      - id: successful-quality-result
+        intent_id: quality-summary-output-set
+        input:
+          summary-json: '{"tests":[{"unit":"contract","execution":"node","result":"success","evidence":"tests","collection":"完了"}]}'
+        checks:
+          - id: check-quality-summary-status
+            guarantee_ref: quality-summary-status-produced
+      - id: raw-job-results-normalized
+        intent_id: quality-summary-output-set
+        input:
+          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true,"evidence":"run"},{"unit":"optional","execution":"optional","rawResult":"skipped","applicable":false,"evidence":"owner-policy","reason":"disabled by owner policy"}]}'
+        checks:
+          - id: check-quality-summary-raw-result-status
+            guarantee_ref: quality-summary-status-produced
+      - id: missing-summary-path-rejected
+        intent_id: quality-summary-rejected
+        input:
+          summary-json: valid
+          github-step-summary: unset
+        checks:
+          - id: check-quality-summary-failure-status
+            guarantee_ref: quality-summary-failure-propagated
+      - id: unresolved-quality-evidence-rejected
+        intent_id: quality-summary-rejected
+        input:
+          summary-json: '{"tests":[{"unit":"unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"missing evidence"}]}'
+        checks:
+          - id: check-quality-summary-unresolved-failure
+            guarantee_ref: quality-summary-failure-propagated
+      - id: excluded-rows-ignored-in-aggregation
+        intent_id: quality-summary-output-set
+        input:
+          summary-json: '{"tests":[{"unit":"considered","execution":"node","result":"success","evidence":"tests","collection":"完了"},{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
+        checks:
+          - id: check-quality-summary-excluded-status
+            guarantee_ref: quality-summary-status-produced
+      - id: all-excluded-rows-rejected
+        intent_id: quality-summary-rejected
+        input:
+          summary-json: '{"tests":[{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
+        checks:
+          - id: check-quality-summary-all-excluded-failure
+            guarantee_ref: quality-summary-failure-propagated

@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.publish-version
+contracts:
+  - id: contract.ci-publish-version.outputs
+    summary: An owner-approved version plan produces a publish-version output.
+    conditions:
+      - id: version-plan-input-present
+        input_predicate:
+          kind: input
+          term: input.version-plan-json
+          op: present
+      - id: publish-version-plan-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: publish-version-output-produced
+        when: version-plan-input-present
+        observation_ref: observation.ci-publish-version.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: publish-version
+      - id: publish-version-failure-propagated
+        when: publish-version-plan-rejected
+        observation_ref: observation.ci-publish-version.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: publish-version-output-set
+        goal: A valid owner-approved version plan exposes its materialized publish version.
+        guarantee_refs:
+          - publish-version-output-produced
+      - id: publish-version-plan-rejected
+        goal: An invalid publish version plan fails the Action without a publish version output.
+        guarantee_refs:
+          - publish-version-failure-propagated

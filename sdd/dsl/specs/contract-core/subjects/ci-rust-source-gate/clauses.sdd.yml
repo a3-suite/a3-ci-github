@@ -1,0 +1,106 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.rust-source-gate
+contracts:
+  - id: contract.ci-rust-source-gate.processing
+    summary: The shared script accepts only checked-out Rust source bound to the release authority.
+    conditions:
+      - id: rust-source-matches-authority
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-source-matches-authority
+          op: available
+      - id: rust-source-does-not-match-authority
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-source-does-not-match-authority
+          op: available
+    guarantees:
+      - id: rust-source-processing-succeeds
+        when: rust-source-matches-authority
+        observation_ref: observation.ci-rust-source-gate.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - success
+      - id: rust-source-processing-fails
+        when: rust-source-does-not-match-authority
+        observation_ref: observation.ci-rust-source-gate.script-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: rust-source-processing-verified
+        goal: The shared script succeeds when the checked-out Rust source matches the release authority.
+        guarantee_refs:
+          - rust-source-processing-succeeds
+      - id: rust-source-processing-rejected
+        goal: The shared script fails when the language profile or source SHA does not match the release authority.
+        guarantee_refs:
+          - rust-source-processing-fails
+  - id: contract.ci-rust-source-gate.outputs
+    summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    conditions:
+      - id: rust-source-script-succeeded
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-source-script-succeeded
+          op: available
+      - id: rust-source-script-failed
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-source-script-failed
+          op: available
+    guarantees:
+      - id: verified-output-produced
+        when: rust-source-script-succeeded
+        observation_ref: observation.ci-rust-source-gate.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: verified
+            right:
+              kind: value_set
+              values:
+                - "true"
+      - id: source-verification-failure-propagated
+        when: rust-source-script-failed
+        observation_ref: observation.ci-rust-source-gate.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: rust-source-identity-verified
+        goal: Shared script success exposes verified=true.
+        guarantee_refs:
+          - verified-output-produced
+      - id: mismatching-rust-source-rejected
+        goal: Shared script failure fails the source verification step without verified output.
+        guarantee_refs:
+          - source-verification-failure-propagated

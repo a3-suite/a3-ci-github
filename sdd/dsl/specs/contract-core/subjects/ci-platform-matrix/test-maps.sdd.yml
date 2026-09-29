@@ -1,0 +1,24 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.platform-matrix
+test_maps:
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: valid-platform-manifest
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: bundled entrypoint emits the validated matrix
+        check_refs:
+          - check-platform-matrix-output
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: invalid-platform-manifest
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails closed for an unsupported runner
+        check_refs:
+          - check-invalid-platform-manifest-failure
+          - check-invalid-platform-manifest-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects an oversized manifest before parsing
+        check_refs:
+          - check-invalid-platform-manifest-failure
+          - check-invalid-platform-manifest-no-output

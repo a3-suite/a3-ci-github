@@ -1,0 +1,14 @@
+name: ci-publish-version
+description: Materialize an owner-approved CI version plan into a publish version.
+inputs:
+  version-plan-json:
+    required: true
+    description: Path to the owner-approved version plan JSON.
+outputs:
+  status:
+    description: success or failed.
+  publish-version:
+    description: Materialized publish version.
+runs:
+  using: node24
+  main: dist/index.js

@@ -1,0 +1,30 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.change-scope
+observations:
+  - id: observation.ci-change-scope.outputs
+    summary: The Action exposes deterministic change-scope outputs to the caller.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Whether the change range was evaluated successfully or unresolved.
+        - selector: run-ci
+          kind: observation_field
+          meaning: Whether CI checks should run.
+        - selector: run-docs
+          kind: observation_field
+          meaning: Whether documentation checks should run.
+        - selector: files
+          kind: observation_field
+          meaning: Newline-separated changed paths.
+        - selector: docs-files
+          kind: observation_field
+          meaning: Newline-separated documentation paths.
+        - selector: other-files
+          kind: observation_field
+          meaning: Newline-separated non-documentation paths.

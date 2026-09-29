@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.package-publication-workflow
+  summary: Publish a verified package through separated preparation, request validation, and privileged publication stages.

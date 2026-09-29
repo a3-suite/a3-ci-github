@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.config-snapshot
+contracts:
+  - id: contract.ci-config-snapshot.outputs
+    summary: Valid configuration sources produce a snapshot status output.
+    conditions:
+      - id: sources-input-present
+        input_predicate:
+          kind: input
+          term: input.sources-json
+          op: present
+      - id: config-snapshot-rejected
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.action-input-invalid
+          op: available
+    guarantees:
+      - id: config-snapshot-status-produced
+        when: sources-input-present
+        observation_ref: observation.ci-config-snapshot.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
+      - id: config-snapshot-failure-propagated
+        when: config-snapshot-rejected
+        observation_ref: observation.ci-config-snapshot.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+    verification_intents:
+      - id: config-snapshot-output-set
+        goal: Valid sources produce their status output.
+        guarantee_refs:
+          - config-snapshot-status-produced
+      - id: config-snapshot-rejected
+        goal: Unsafe or colliding snapshot input fails the Action before writing a snapshot.
+        guarantee_refs:
+          - config-snapshot-failure-propagated

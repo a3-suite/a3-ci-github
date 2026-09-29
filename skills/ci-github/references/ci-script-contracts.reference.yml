@@ -1,0 +1,174 @@
+schemaVersion: "1"
+kind: ci-script-contracts
+id: ci.script-contracts
+title: CI script processing contracts
+summary: >-
+  script の共通入力、出力、信頼境界を処理契約として定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - script processing input and output contracts
+    - script processing trust and failure boundaries
+usage:
+  whenToRead:
+    - workflow の script 処理を選ぶとき
+    - script asset または project adapter の接続条件を確定するとき
+  consumers: [human, agent, validator]
+commonContract:
+  identity: 処理契約 ID、版、entrypoint の集合を実行開始時に固定する。
+  input: execution_context、処理契約が要求する場合の config_snapshot、必要な source / handoff identity、language profile、adapter を明示する。
+  output: status、evidence、生成 artifact / handoff、digest、identity_bindings を返す。
+  runtime: 選択した再利用 asset または provider の公開契約に従って依存と runner を固定する。project-owned 実装は project の実行基盤を固定する。
+  configuration: config_snapshot を要求する CIプリセットだけが、設定 source、workflow 初期パラメータ、CIプリセットの既定値の順で解決し、snapshot に保存する。
+  trust: source checkout、secret、write 権限、trusted control の実行可否を処理契約ごとに固定する。
+  failure: 欠落、不一致、観測不能、権限不足を成功へ補完せず、`ci.preset-contracts.commonOutput.status` の workflow runtime 結果へ写像する。監査 status は分類しない。
+  rerun: identity、入力、digest、非上書き条件を再検証し、同じ handoff を再利用できる場合だけ再実行する。
+  providerMapping: provider output、summary sink、artifact transfer は provider adapter が output と evidence へ写像する。
+  outputSink: output を生成する CLI は明示した output path へ書き込み、未指定時は stdout へ出力する。provider adapter は自分の output または summary sink の path を引数で渡す。
+  secretRule: secret の値を input、snapshot、log、receipt に含めない。
+contracts:
+  - id: quality-scripts
+    input: [source-identity, language-profile, toolchain, quality-adapter]
+    optionalInput: [change-scope]
+    output: [quality-results, summary, execution-evidence]
+    boundary: untrusted source では secret と write 権限を持たず、language command は adapter へ委譲する。
+    stopConditions: [profile-missing, toolchain-missing, adapter-missing, source-identity-missing, required-check-skipped-or-cancelled]
+  - id: request-handoff-scripts
+    input:
+      common: [event, ref, source-sha, request-identity, tag]
+      manual: [version, approved-release-body, approval, expiry]
+      tag: [version-resolution-delegation-state]
+    output: [immutable-request-handoff, handoff-digest, identity-binding]
+    boundary: 対象 source を checkout または実行せず、artifact write は request handoff に限定する。
+    stopConditions:
+      common: [event-missing-or-mismatch, ref-missing-or-mismatch, source-sha-missing-or-mismatch, tag-missing-or-mismatch, digest-missing, event-identity-missing]
+      manual: [version-missing-or-mismatch, body-missing, approval-missing-or-unproven, expiry-missing-or-expired]
+      tag: [version-resolution-delegation-missing-or-invalid]
+  - id: release-notes-input-resolution-scripts
+    input:
+      common: [request-handoff, event]
+      tag: [approved-notes-handoff-identity, release-notes-handoff-files]
+      workflowDispatch: [release-notes, release-notes-approval]
+    output: [normalized-release-notes, normalized-release-notes-approval]
+    boundary: event別の入力選択と handoff 配置だけを行い、本文・承認 digest の結合検証は release-notes-binding へ委譲する。
+    stopConditions: [request-event-invalid, external-handoff-identity-missing, release-notes-missing, release-notes-approval-missing, normalized-input-write-failed]
+  - id: release-authority-scripts
+    input: [request-handoff, owner-contract, owner-contract-digest, config-snapshot, source-identity]
+    output: [authority-context, release-source-version-approval-binding, provider-publication-suitability-observation]
+    suitabilityContract: ci.release-asset-publication-contract#providerPublicationSuitability
+    boundary: trusted control で実行し、request と source を検証データとして扱う。source identity の確定後、build 前に provider 適合を観測し、不適合または判定不能は後続 stage へ進めず停止する。早期観測を write 直前の再観測の代替にしない。
+    stopConditions: [request-inconsistent, source-inconsistent, version-inconsistent, approval-inconsistent, config-inconsistent, owner-contract-inconsistent, provider-publication-suitability-unknown-or-unsupported]
+  - id: release-source-identity-scripts
+    input: [authority-context, fixed-source-sha, language-profile]
+    output: [source-identity-evidence]
+    boundary: write 権限を要求せず、checkout identity を検証する。format、lint、test、build、package は実行しない。
+    stopConditions: [authority-context-missing, source-sha-missing-or-mismatch, profile-missing-or-mismatch]
+  - id: version-plan-scripts
+    input: [owner-approved-version-plan]
+    output: [publish-version]
+    boundary: template、component source、公開要否、source identity を選択または再検証せず、owner が承認した plan だけを検証・具体化する。source / artifact binding は上流の trusted control または handoff 契約が所有する。package では owner の前段 workflow で実行する。
+    stopConditions: [strategy-invalid, field-invalid, template-invalid, component-invalid, owner-contract-inconsistent]
+  - id: handoff-integrity-scripts
+    input: [handoff-root, descriptor, manifest, checksum, expected-source-version-target-identity]
+    output: [normalized-descriptor, digest, manifest-binding, validation-evidence]
+    boundary: handoff root 外、絶対 path、path traversal、symbolic link、通常ファイル以外を受け付けない。
+    stopConditions: [descriptor-missing-or-invalid, manifest-mismatch, checksum-mismatch, digest-mismatch, identity-binding-mismatch]
+  - id: release-build-scripts
+    input: [authority-context, fixed-source-sha, language-profile, toolchain, platform-id, platform-target, build-adapter]
+    output: [platform-build-artifact, source-version-target-binding]
+    boundary: write 権限を要求せず、固定 source と許可された language adapter だけを実行する。
+    responsibilities:
+      build: 固定 toolchain、manifest、binary、target から実行可能資材を生成する。
+      package: project owner の asset 命名互換性に従い、archive と checksum を明示された output directory に生成する。
+      verification: binary version は、command の出力に release version（または `v`・`V` を1文字付けた版）が独立トークンとして現れることで検証する。受理規則は実行 provider の version 検証契約に従い、archive 内容、checksum、source／version／target binding も検証する。
+    artifactManifest:
+      path: asset-manifest.json
+      schemaVersion: "1"
+      kind: ci-release-build-manifest
+      fields: [schema_version, kind, source_sha, version, platform_id, platform_target, assets]
+      fieldTypes:
+        schema_version: string
+        kind: string
+        source_sha: string
+        version: string
+        platform_id: string
+        platform_target: string
+        assets: array
+      assetCount: 1
+      assetFields: [path, sha256, checksum_path]
+      assetFieldTypes:
+        path: string
+        sha256: string
+        checksum_path: string
+      formats:
+        source_sha: lowercase-hex-40
+        sha256: lowercase-hex-64
+      bindings:
+        checksum_path: asset-path-plus-.sha256
+      unknownFields: forbidden
+    outputPolicy: 既存 output directory または同名 asset を削除・上書きせず停止する。
+    stopConditions: [source-sha-mismatch, profile-mismatch, toolchain-mismatch, platform-id-missing-or-duplicated, runner-not-allowed, target-missing-or-duplicated, build-adapter-missing, output-already-exists, artifact-missing, artifact-verification-failed]
+  - id: release-supplemental-asset-build-scripts
+    publicationContract: ci.release-asset-publication-contract#supplementalAsset
+    input: [authority-context, config-snapshot, fixed-source-sha, owner-selected-supplemental-asset-contract, supplemental-asset-build-adapter]
+    output: [supplemental-release-asset-handoff, asset-identity-checksum-provenance-verification-evidence, owner-contract-evidence-record, owner-contract-evidence-record-digest]
+    adapterInterface:
+      version: "2"
+      assetRef: release-supplemental-asset-adapter
+      phases:
+        buildPlatform:
+          execution: after-each-platform-build
+          subcommand: build-platform
+          arguments: [authority-context-path, config-snapshot-path, standard-platform-build-directory, supplemental-platform-output-directory]
+          boundary: standard-platform-build-directory-read-only-and-write-only-to-supplemental-platform-output-directory
+          result: verified-supplemental-platform-build
+        assemble:
+          execution: after-all-platform-builds
+          subcommand: assemble
+          arguments: [authority-context-path, config-snapshot-path, standard-platform-build-root, supplemental-platform-build-root, output-directory]
+          result: supplemental-release-asset-handoff
+      compatibility:
+        legacyThreeArgumentInvocation: unsupported
+        adoption: adapter-contract-test-and-workflow-in-one-acceptance-unit
+    boundary: write 権限を要求せず、固定 source と owner が選択した契約適合 adapter だけを実行する。asset の意味と証跡生成方法は owner 契約、公開に必要な証跡集合と選択境界は publicationContract を正本とする。
+    outputPolicy: 既存 output directory または同名 asset を削除・上書きせず停止する。
+    stopConditions: [supplemental-asset-not-selected, supplemental-asset-contract-missing, supplemental-asset-build-adapter-missing, authority-contract-binding-mismatch, source-or-version-mismatch, standard-platform-build-mutated, output-already-exists, supplemental-asset-missing, checksum-mismatch, provenance-missing, verification-evidence-missing-or-failed, owner-contract-evidence-missing-or-mismatched]
+  - id: release-assembly-scripts
+    publicationContract: ci.release-asset-publication-contract#supplementalAsset
+    input: [authority-context, config-snapshot, fixed-source-sha, completed-build-artifact, platform-manifest]
+    optionalInput: [verified-supplemental-release-asset-handoff-with-owner-contract-evidence]
+    output: [release-handoff, asset-set, checksum, source-version-asset-binding]
+    boundary: trusted control で実行し、Release remote へ書き込まない。
+    assetSetPolicy:
+      platform: platform-manifest と完全一致する。
+    stopConditions: [asset-set-mismatch, platform-mismatch, version-mismatch, checksum-mismatch, source-identity-mismatch, unexpected-supplemental-asset, selected-supplemental-asset-missing, supplemental-asset-evidence-mismatch, supplemental-asset-owner-contract-mismatch, asset-name-collision]
+  - id: release-publication-scripts
+    input: [authority-context, release-handoff, target-identity, approved-release-body, non-overwrite-policy, credential-route, remote-observation-before]
+    output: [release-remote-identity, version, asset-digest, publish-receipt, readback-evidence]
+    publicationContract: ci.release-asset-publication-contract#observation
+    suitabilityContract: ci.release-asset-publication-contract#providerPublicationSuitability
+    outputChannel: publish 段は identity、receipt、readback evidence を workflow が観測・露出できる機械可読出力として提供する。
+    boundary: trusted control で検証済み handoff だけを publish し、操作対象 source を実行または再 build しない。事前観測が absent の場合だけ非上書き publish command を実行し、その command が出力する事後 readback を検証する。観測の段階規則、不在判定、timestamp の利用禁止は publicationContract を正本とする。既存 Release は成功へ読み替えない。write 直前に provider 適合を再観測し、不適合または判定不能は write せず停止し、provider 操作の失敗は操作単位の診断として返す。
+    stopConditions: [authority-context-missing, release-handoff-missing, authority-handoff-binding-mismatch, remote-state-unknown, existing-release-or-asset, tag-version-asset-checksum-or-body-mismatch, provider-publication-suitability-unknown-or-unsupported]
+  - id: package-build-scripts
+    input: [concrete-publish-version, fixed-source-sha, language-or-ecosystem-profile, package-build-adapter]
+    output: [package-artifact-handoff, metadata, checksum, version-binding]
+    boundary: write 権限を要求せず、package owner が許可した source と build adapter だけを実行する。
+    stopConditions: [version-mismatch, target-mismatch, metadata-mismatch, checksum-mismatch, build-adapter-missing, handoff-missing]
+  - id: package-publication-scripts
+    input: [concrete-publish-version, package-handoff, metadata, checksum, target-identity, availability, credential-route, remote-observation-before]
+    output: [registry-resource-identity, version, digest, publish-receipt, readback-evidence, recovery-state]
+    boundary: build / validate と write を分離し、write 側は検証済み handoff だけを使う。publish command と metadata は owner adapter が所有し、command が出力する事後 readback を trusted control が検証する。
+    completionConditions: [complete-same-stop-success]
+    stopConditions: [partial, different, unknown-permission-denied, availability-unknown, metadata-mismatch, checksum-mismatch, version-binding-mismatch, overwrite-request]
+ownershipBoundary:
+  ci: script ユースケース、処理契約の意味、共通契約
+  languageSkill: format、lint、test、build、package の具体 command
+  projectOwner: metadata、availability、credential route、publish command、trusted control
+  providerSkill: 選択した provider の output、summary、artifact、権限、trigger の写像
+  inventory: ci-script-assets が共通 asset の ID、kind、status、scope、owner、entrypoint、copyability を所有し、provider 固有 asset は選択した provider registry が所有する。
+  catalog: ci-script-catalog が asset の使用方法、実行例、配置手順を所有する。catalog は inventory の機械情報を再定義しない。
+providerBoundary:
+  providerNeutral: true
+  forbidden: provider 固有の trigger、job、uses、permissions 構文

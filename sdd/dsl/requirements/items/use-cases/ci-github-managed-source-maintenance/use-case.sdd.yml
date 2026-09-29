@@ -1,0 +1,33 @@
+version: 1
+name: use-case
+use_case_id: ci-github-managed-source-maintenance
+summary: Repository保守者がa3-ci-githubの管理資産を単一の整合した変更集合として更新する
+actors:
+  - actor_id: repository-maintainer
+    kind: human
+    role: primary
+    summary: a3-ci-githubの要求、契約、workflow、Action、runtime、検証および公開準備を保守する主体
+goal: 管理資産のownerと責務境界を維持し、契約、実装、配布物および検証を同じrevisionで整合させる
+preconditions:
+  - 変更対象の要求、owner、公開面、影響する契約および移行authorityが識別されている
+trigger: 管理対象の要求、契約、workflow、Action、runtimeまたは検証資産を変更する
+main_success_scenario:
+  - summary: 変更要求をSDDのownerと責務境界へ割り当て、変更対象と非対象を確定する
+  - summary: canonical sourceを一つのownerで更新し、skill文書や配布先へ実装を重複させない
+  - summary: 影響する契約テスト、実装テスト、配布物検証、静的検証およびSDD検証を実行する
+  - summary: Action catalog、workflow registry、lock生成・preflight経路および公開文書の参照整合を確認する
+  - summary: migration authorityとcutover状態に従い、公開可能な単一revisionとして変更結果を記録する
+success_outcomes:
+  - 要求、契約、管理資産、配布物および検証結果を同じ変更集合から追跡できる
+  - skill、workflow、Action、runtime、lint rule、SDDのownerが一意に保たれる
+failure_outcomes:
+  - owner不明、契約不一致、配布物差分、検証失敗またはauthority違反があれば公開可能状態にしない
+  - コピー元と移行先で同じ契約を独立更新しない
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-ci-source-consolidation
+related_contracts:
+  - contract_ref:
+      contract_id: contract.repository-managed-source-integrity.integrity
+  - contract_ref:
+      contract_id: contract.repository-action-distribution.integrity

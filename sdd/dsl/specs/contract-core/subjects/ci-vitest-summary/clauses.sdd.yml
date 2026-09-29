@@ -1,0 +1,102 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.vitest-summary
+contracts:
+  - id: contract.ci.vitest-summary.outputs
+    summary: A Vitest report produces a deterministic classification for the Action outputs and the shared CLI result; malformed, insufficient, or empty evidence never becomes a false success, while explicit failure keeps precedence.
+    conditions:
+      - id: report-input-present
+        input_predicate: {kind: input, term: input.report-json, op: present}
+      - id: vitest-report-complete
+        environment_predicate: {kind: environment-ref, target_ref: runtime-context.vitest-report-complete, op: available}
+      - id: vitest-report-explicit-failure
+        environment_predicate: {kind: environment-ref, target_ref: runtime-context.vitest-report-explicit-failure, op: available}
+      - id: vitest-report-insufficient
+        environment_predicate: {kind: environment-ref, target_ref: runtime-context.vitest-report-insufficient, op: available}
+    guarantees:
+      - id: vitest-summary-output-produced
+        when: report-input-present
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim: {kind: observable-result, op: present, target: {kind: observation_field, value: digest}}
+      - id: vitest-summary-passed-status-produced
+        when: vitest-report-complete
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [passed]}
+      - id: vitest-summary-failed-status-produced
+        when: vitest-report-explicit-failure
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [failed]}
+      - id: vitest-summary-unresolved-output-produced
+        when: vitest-report-insufficient
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [unresolved]}
+      - id: vitest-summary-passed-collection-produced
+        when: vitest-report-complete
+        observation_ref: observation.ci.vitest-summary.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: collection}
+            right: {kind: value_set, values: [complete]}
+      - id: vitest-cli-passed-status-produced
+        when: vitest-report-complete
+        observation_ref: observation.ci.vitest-summary.cli-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [passed]}
+      - id: vitest-cli-passed-collection-produced
+        when: vitest-report-complete
+        observation_ref: observation.ci.vitest-summary.cli-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: collection}
+            right: {kind: value_set, values: [complete]}
+      - id: vitest-cli-failed-status-produced
+        when: vitest-report-explicit-failure
+        observation_ref: observation.ci.vitest-summary.cli-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [failed]}
+      - id: vitest-cli-unresolved-status-produced
+        when: vitest-report-insufficient
+        observation_ref: observation.ci.vitest-summary.cli-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [unresolved]}
+    verification_intents:
+      - id: vitest-summary-output-set
+        goal: A complete Vitest report exposes passed status and complete collection on both entrypoints, and the Action exposes the summary digest.
+        guarantee_refs: [vitest-summary-output-produced, vitest-summary-passed-status-produced, vitest-summary-passed-collection-produced, vitest-cli-passed-status-produced, vitest-cli-passed-collection-produced]
+      - id: vitest-summary-failure-set
+        goal: Explicit failure keeps precedence over malformed structure and incomplete evidence on both entrypoints.
+        guarantee_refs: [vitest-summary-failed-status-produced, vitest-cli-failed-status-produced]
+      - id: vitest-summary-unresolved-output-set
+        goal: A malformed, insufficient, or empty Vitest report produces an unresolved result instead of a false success on both entrypoints.
+        guarantee_refs: [vitest-summary-unresolved-output-produced, vitest-cli-unresolved-status-produced]

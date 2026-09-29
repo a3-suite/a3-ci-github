@@ -1,0 +1,71 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.repository.action-distribution
+verifications:
+  - id: verification.repository-action-distribution.integrity
+    contract_id: contract.repository-action-distribution.integrity
+    cases:
+      - id: maintained-distribution-inputs
+        intent_id: distribution-plan-derived
+        input:
+          actions-root: actions
+          runtime-root: runtime
+        checks:
+          - id: check-distribution-plan-produced
+            guarantee_ref: distribution-plan-produced
+      - id: inconsistent-distribution-state
+        intent_id: inconsistent-distribution-stopped
+        input:
+          actions-root: actions
+          runtime-root: runtime
+        checks:
+          - id: check-inconsistent-distribution-rejected
+            guarantee_ref: inconsistent-distribution-rejected
+      - id: maintained-action-catalog
+        intent_id: action-catalog-derived
+        input:
+          actions-root: actions
+          catalog-path: README.md
+        checks:
+          - id: check-action-catalog-projected
+            guarantee_ref: action-catalog-projected
+      - id: maintained-action-contract-coverage
+        intent_id: action-contract-coverage-derived
+        input:
+          actions-root: actions
+          contract-package: sdd/dsl/specs/contract-core/contract-package.sdd.yml
+        checks:
+          - id: check-action-contract-coverage
+            guarantee_ref: action-contract-coverage-confirmed
+      - id: maintained-action-source-verification
+        intent_id: action-source-verification-derived
+        input:
+          actions-root: actions
+          prepared-by: distribution-plan
+        checks:
+          - id: check-action-source-verification-plan
+            guarantee_ref: action-source-verification-plan-produced
+      - id: matching-release-version
+        intent_id: release-version-bound
+        input:
+          tag: v1.2.3
+          repository-version: 1.2.3
+        checks:
+          - id: check-release-version-confirmed
+            guarantee_ref: release-version-confirmed
+      - id: invalid-release-version
+        intent_id: release-version-bound
+        input:
+          tag: v1.2.3
+          repository-version-variants: [missing, 01.2.3]
+        checks:
+          - id: check-invalid-release-version-rejected
+            guarantee_ref: invalid-or-mismatched-release-version-rejected
+      - id: mismatched-release-version
+        intent_id: release-version-bound
+        input:
+          tag: v1.2.3
+          repository-version: 1.2.4
+        checks:
+          - id: check-mismatched-release-version-rejected
+            guarantee_ref: invalid-or-mismatched-release-version-rejected

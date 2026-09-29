@@ -1,0 +1,63 @@
+name: package-publication-request
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Source SHA represented by this request ref
+        required: true
+        type: string
+      version:
+        description: Concrete package version requested for publication
+        required: true
+        type: string
+      target_identity:
+        description: Package target identity requested for publication
+        required: true
+        type: string
+      language_profile:
+        description: Language profile used by the package build adapter
+        required: true
+        type: string
+      toolchain:
+        description: Fixed toolchain used by the package build adapter
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  request:
+    runs-on: <versioned-runner>
+    permissions: {}
+    steps:
+      - name: Validate and write request handoff
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@9b659081c5a7a5712825993542d5b21bbd97a553
+        with:
+          operation: create
+          source-sha: ${{ inputs.source_sha }}
+          version: ${{ inputs.version }}
+          target-identity: ${{ inputs.target_identity }}
+          language-profile: ${{ inputs.language_profile }}
+          toolchain: ${{ inputs.toolchain }}
+      - uses: actions/upload-artifact@<commit-sha>
+        with:
+          name: package-publication-request
+          path: package-publication-request
+          if-no-files-found: error
+          retention-days: 1
+
+  summary:
+    needs: request
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b659081c5a7a5712825993542d5b21bbd97a553
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}

@@ -1,0 +1,101 @@
+version: 1
+name: cli-option-vocabulary
+options:
+  - id: audit-mode
+    long: --audit-mode
+    kind: value
+    value_name: MODE
+    summary: Select read-only audit or explicitly authorized remediation
+    allowed_values: [read-only, remediation]
+  - id: repo-root
+    long: --repo-root
+    kind: value
+    value_name: PATH
+    summary: Consumer project root containing the applied CI assets
+  - id: skill-collection-root
+    long: --skill-collection-root
+    kind: value
+    value_name: PATH
+    summary: External skill collection root used to resolve explicit language-skill sources
+  - id: preset
+    long: --preset
+    kind: value
+    value_name: ID
+    summary: Limit validation to one selected preset
+    repeatable: true
+  - id: output
+    long: --output
+    kind: value
+    value_name: PATH
+    summary: Write the command result to the supplied path, resolving a relative path from the process working directory
+  - id: source-revision
+    long: --source-revision
+    kind: value
+    value_name: SHA
+    summary: Full distribution commit SHA recorded in the CI asset lock
+  - id: source-root
+    long: --source-root
+    kind: value
+    value_name: PATH
+    summary: Explicit canonical source root used by the selected command
+  - id: inventory
+    long: --inventory
+    kind: value
+    value_name: PATH
+    summary: Repository-relative adapter bundle inventory path
+  - id: bundle
+    long: --bundle
+    kind: value
+    value_name: ID
+    summary: Adapter bundle identity selected from the inventory
+  - id: target-root
+    long: --target-root
+    kind: value
+    value_name: PATH
+    summary: Consumer project root receiving materialized adapter assets
+  - id: manifest
+    long: --manifest
+    kind: value
+    value_name: PATH
+    summary: Local verified distribution manifest used for repository maintenance or offline reconstruction
+  - id: manifest-url
+    long: --manifest-url
+    kind: value
+    value_name: URL
+    summary: Exact GitHub Release URL of the distribution manifest
+  - id: asset
+    long: --asset
+    kind: value
+    value_name: ID
+    summary: Select one registered distribution asset
+    repeatable: true
+  - id: plan
+    long: --plan
+    kind: value
+    value_name: PATH
+    summary: Distribution application plan selected for apply
+  - id: approve
+    long: --approve
+    kind: value
+    value_name: SHA256
+    summary: Explicit approval of one unchanged distribution plan digest
+  - id: transaction
+    long: --transaction
+    kind: value
+    value_name: ID
+    summary: Applied distribution transaction selected for rollback
+  - id: repository-root
+    long: --repository-root
+    kind: value
+    value_name: PATH
+    summary: a3-ci-github repository snapshot used to prepare Release distribution metadata
+  - id: output-directory
+    long: --output-directory
+    kind: value
+    value_name: PATH
+    summary: New directory receiving prepared distribution Release assets
+  - id: release-tag
+    long: --release-tag
+    kind: value
+    value_name: TAG
+    summary: Exact vX.Y.Z Release tag bound to VERSION and source revision

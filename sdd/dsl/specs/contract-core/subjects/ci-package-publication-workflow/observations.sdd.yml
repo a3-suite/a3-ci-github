@@ -1,0 +1,18 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.package-publication-workflow
+observations:
+  - id: observation.ci-package-publication-workflow.result
+    summary: Observable canonical workflow definition for this capability.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: publication-boundary
+          kind: observation_field
+          meaning: Declared order in which source and version request validation precedes preparation, workflow identity and handoff validation precede credential-bearing publication, and publication precedes registry readback.
+        - selector: failure-summary
+          kind: observation_field
+          meaning: Declared always-run summary route after request validation, preparation, and publication that preserves failed and unknown outcomes.

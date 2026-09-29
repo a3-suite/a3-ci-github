@@ -1,0 +1,29 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-publication-control
+observations:
+  - id: observation.ci-release-publication-control.outputs
+    summary: The Action exposes the publication control status and verified request identity when available.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Publication control operation status.
+        - selector: request-run-id
+          kind: observation_field
+          meaning: Verified release request workflow run ID.
+  - id: observation.ci-release-publication-control.result
+    summary: The Action exposes its failed step outcome when publication control input is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected publication control step.

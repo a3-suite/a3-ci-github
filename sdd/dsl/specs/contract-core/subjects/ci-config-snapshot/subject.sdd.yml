@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.config-snapshot
+  summary: Resolving CI configuration precedence and writing a deterministic snapshot.

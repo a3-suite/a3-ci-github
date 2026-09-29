@@ -1,0 +1,23 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.publish-version
+verifications:
+  - id: verification.ci-publish-version.outputs
+    contract_id: contract.ci-publish-version.outputs
+    cases:
+      - id: valid-version-plan
+        intent_id: publish-version-output-set
+        input:
+          version-plan-json: .ci/version-plan.json
+        checks:
+          - id: check-publish-version-output
+            guarantee_ref: publish-version-output-produced
+      - id: invalid-plan-rejected
+        intent_id: publish-version-plan-rejected
+        input:
+          strategy: ciGenerated
+          template: "{baseVersion}"
+          components: {}
+        checks:
+          - id: check-publish-version-failure
+            guarantee_ref: publish-version-failure-propagated

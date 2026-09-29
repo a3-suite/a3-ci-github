@@ -20,3 +20,6 @@
 **/tests/tmp/
 **/coverage/
 **/.nyc_output/
+
+# エージェントが出力するログ・レポートの証跡
+/logs/

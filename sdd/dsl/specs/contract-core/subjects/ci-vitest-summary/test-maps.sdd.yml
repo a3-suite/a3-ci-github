@@ -1,0 +1,124 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.vitest-summary
+test_maps:
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: complete-vitest-report
+    tests:
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: classifies a complete report as passed with complete collection
+        check_refs: [check-vitest-summary-passed-status, check-vitest-summary-passed-collection, check-vitest-cli-passed-status, check-vitest-cli-passed-collection]
+      - path: actions/ci-vitest-summary/tests/summary.test.ts
+        symbol: summarizes a complete report
+        check_refs: [check-vitest-summary-passed-status, check-vitest-summary-passed-collection]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint writes a Vitest summary
+        check_refs: [check-vitest-summary-output, check-vitest-summary-passed-status, check-vitest-summary-passed-collection]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders a complete report as success with complete collection
+        check_refs: [check-vitest-cli-passed-status, check-vitest-cli-passed-collection]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on complete-pass
+        check_refs: [check-vitest-summary-passed-status, check-vitest-summary-passed-collection, check-vitest-cli-passed-status, check-vitest-cli-passed-collection]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on derived-counts
+        check_refs: [check-vitest-summary-passed-status, check-vitest-cli-passed-status]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: explicit-failure-report
+    tests:
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: derives counts from valid test results when counts are missing
+        check_refs: [check-vitest-summary-failed-status]
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: keeps explicit failure precedence over malformed structure
+        check_refs: [check-vitest-summary-failed-status]
+      - path: actions/ci-vitest-summary/tests/summary.test.ts
+        symbol: keeps explicit failure precedence over malformed structure
+        check_refs: [check-vitest-summary-failed-status]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders explicit failures and failed names
+        check_refs: [check-vitest-cli-failed-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on explicit-failure
+        check_refs: [check-vitest-summary-failed-status, check-vitest-cli-failed-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on failure-with-malformation
+        check_refs: [check-vitest-summary-failed-status, check-vitest-cli-failed-status]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: malformed-report-unresolved
+    tests:
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: rejects missing and malformed reports
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: rejects malformed report elements with inconsistent counts
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: does not let summary counts hide a detail-level failure
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: keeps a partial count as partial collection
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/summary.test.ts
+        symbol: keeps malformed reports unresolved without failing the step
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint keeps malformed report shapes unresolved
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint keeps malformed report elements unresolved
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders a missing report as indeterminate
+        check_refs: [check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders invalid JSON as indeterminate
+        check_refs: [check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on malformed-elements
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on summary-detail-contradiction
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on partial-counts
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: assertion-malformation-unresolved
+    tests:
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: rejects assertion-level malformation even with complete counts
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: rejects unknown assertion statuses
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/summary.test.ts
+        symbol: rejects assertion-level malformation and unknown statuses with complete counts
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint keeps assertion-level malformation unresolved
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders assertion-level malformation as indeterminate with partial collection
+        check_refs: [check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on assertion-malformation
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on unknown-status
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: zero-test-report-unresolved
+    tests:
+      - path: runtime/vitest/tests/vitest-summary-core.test.mjs
+        symbol: treats zero tests as unresolved instead of a false success
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/summary.test.ts
+        symbol: treats a zero-test report as unresolved instead of a false success
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: runtime/adapter/tests/vitest-test-summary.test.mjs
+        symbol: renders zero-test reports as indeterminate
+        check_refs: [check-vitest-cli-unresolved-status]
+      - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
+        symbol: Action and CLI agree on zero-tests
+        check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]

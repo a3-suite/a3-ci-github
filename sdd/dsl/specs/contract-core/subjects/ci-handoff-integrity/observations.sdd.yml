@@ -1,0 +1,38 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.handoff-integrity
+observations:
+  - id: observation.ci-handoff-integrity.outputs
+    summary: The Action exposes validated handoff identity and manifest outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Whether handoff validation succeeded.
+        - selector: descriptor
+          kind: observation_field
+          meaning: Validated descriptor path relative to the handoff root.
+        - selector: manifest
+          kind: observation_field
+          meaning: Validated manifest path relative to the handoff root.
+        - selector: manifest-digest
+          kind: observation_field
+          meaning: SHA-256 digest of manifest bytes.
+        - selector: entries
+          kind: observation_field
+          meaning: Number of validated manifest entries.
+  - id: observation.ci-handoff-integrity.result
+    summary: The Action exposes its failed step outcome when handoff validation is rejected.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failure outcome of the rejected handoff validation step.

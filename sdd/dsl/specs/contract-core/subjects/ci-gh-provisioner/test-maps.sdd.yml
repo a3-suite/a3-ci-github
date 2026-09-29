@@ -1,0 +1,74 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.gh-provisioner
+test_maps:
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: supported-runner-assets
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: selects the supported runner assets
+        check_refs:
+          - check-supported-runner-assets
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: checked-release-asset
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: installs the checksummed asset and exports its directory
+        check_refs:
+          - check-gh-on-path
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: mismatched-release-asset
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: rejects a checksum mismatch without exposing a binary
+        check_refs:
+          - check-gh-provisioning-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: invalid-version
+    tests:
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: bundled Action rejects an invalid version as provisioning failure
+        check_refs:
+          - check-invalid-version-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: unsupported-runner
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: rejects an unsupported runner before download or PATH handoff
+        check_refs:
+          - check-unsupported-runner-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: unavailable-release-asset
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: reports a download failure separately from version verification
+        check_refs:
+          - check-download-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: invalid-checksum-manifest
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: rejects missing or duplicate checksum entries
+        check_refs:
+          - check-checksum-entry-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: extraction-failure
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: rejects an extraction failure before PATH handoff
+        check_refs:
+          - check-extraction-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: installation-failure
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: rejects an installation failure before PATH handoff
+        check_refs:
+          - check-installation-failure
+  - verification_id: verification.ci-gh-provisioner.provision
+    case_id: path-update-failure
+    tests:
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: removes the installed binary when PATH update fails
+        check_refs:
+          - check-path-update-failure

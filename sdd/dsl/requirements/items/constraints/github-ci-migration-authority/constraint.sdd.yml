@@ -1,0 +1,17 @@
+version: 1
+name: constraint
+constraint_id: github-ci-migration-authority
+summary: source cutover後のbinding authorityを本リポジトリへ固定し、旧repositoryの公開済み資産と独立した二重更新を行わない
+scope:
+  namespace: ci
+  key: github-source-consolidation
+rule: >-
+  source cutoverにより、canonical workflow と Action registry の Action binding は a3-ci-github の固定SHAで管理する。
+  a3-actions と a3-prompts の公開済み資産は既存consumer向けに維持し、同じ契約を本リポジトリとコピー元で独立に変更しない。
+  Release tagの公開と利用側の接続、コピー元からの削除またはarchiveは、代表フローの検証と別途承認の後に行う。
+rationale:
+  why: 移行中に複数の正本が同時に更新され、公開済み利用者と再構築中の実装が追跡不能に分岐することを防ぐため
+violation_impact: 公開Action、workflow、スキル契約の不一致と、固定SHA利用者の再現性喪失を招く
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-ci-source-consolidation

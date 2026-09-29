@@ -1,0 +1,29 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: github-ci-project-lifecycle
+    type: functional
+    summary: 利用projectがa3-ci-githubのpresetを選択、適用、更新、検証および監査できる
+    rationale:
+      why: >-
+        workflowの実行時振る舞いだけでは、利用projectへの安全な導入、配布元との同一性、設定差分、
+        更新後の整合性を保証できず、projectごとに独自の導入手順が増えるため
+    subject:
+      namespace: ci
+      key: project-lifecycle
+    priority: must
+    fit_criteria:
+      - 利用目的に対応するpresetと、そのcanonical workflow、Action binding、adapter、required extensionの閉包をregistryから選択できる
+      - 既存資産との差分を確認し、利用projectが所有する設定と配布元から配置する資産を区別して適用できる
+      - 配布元revision、canonical asset、配置済みassetの同一性をlockとpreflightで検証できる
+      - 更新時は既存資産を暗黙に上書きせず、追加、変更、撤去対象とproject固有差分を確認できる
+      - read-only監査では利用projectの管理対象資産、依存またはlockを変更せず、不一致と未確認事項を記録できる
+      - remediationは明示的な変更許可がある場合だけ行い、監査結果を成功させるために不足資産を暗黙補完しない
+    derived_artifacts:
+      use_cases:
+        - use_case_ref:
+            use_case_id: ci-github-selective-asset-delivery
+        - use_case_ref:
+            use_case_id: ci-github-preset-application
+        - use_case_ref:
+            use_case_id: ci-github-preset-audit

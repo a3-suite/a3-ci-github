@@ -1,0 +1,28 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.quality-workflow
+verifications:
+  - id: verification.ci-quality-workflow.execution
+    contract_id: contract.ci-quality-workflow.execution
+    cases:
+      - id: ci-quality-workflow-success
+        intent_id: ci-quality-workflow-success-intent
+        input:
+          scenario: valid
+        checks:
+          - id: check-ci-quality-workflow-success
+            guarantee_ref: ci-quality-workflow-success-observed
+      - id: ci-quality-workflow-failure
+        intent_id: ci-quality-workflow-failure-intent
+        input:
+          scenario: rejected
+        checks:
+          - id: check-ci-quality-workflow-failure
+            guarantee_ref: ci-quality-workflow-failure-observed
+      - id: ci-quality-workflow-platform
+        intent_id: ci-quality-workflow-platform-intent
+        input:
+          scenario: optional-platform-source-selected
+        checks:
+          - id: check-ci-quality-workflow-platform
+            guarantee_ref: ci-quality-workflow-platform-chain-observed

@@ -1,0 +1,63 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.preset-assurance
+test_maps:
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: case.ci-preset-assurance.explicit-roots-required
+    tests:
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset assurance rejects a request without explicit roots
+        check_refs: [check.ci-preset-assurance.explicit-roots-required]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: case.ci-preset-assurance.read-only-output-rejected
+    tests:
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset assurance rejects remediation output in read-only mode
+        check_refs: [check.ci-preset-assurance.read-only-output-rejected]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: case.ci-preset-assurance.valid-preset-succeeds
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset assurance validates a canonical preset and writes a deterministic asset lock
+        check_refs:
+          - check.ci-preset-assurance.valid-preset-succeeds
+          - check.ci-preset-assurance.valid-evidence-exposed
+          - check.ci-preset-assurance.semantic-review-state-exposed
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: public preset CLIs generate an asset lock and validate read-only without consumer drift
+        check_refs:
+          - check.ci-preset-assurance.valid-preset-succeeds
+          - check.ci-preset-assurance.valid-evidence-exposed
+          - check.ci-preset-assurance.semantic-review-state-exposed
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: registry binds every canonical workflow Action use to a declared target
+        check_refs:
+          - check.ci-preset-assurance.valid-preset-succeeds
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: case.ci-preset-assurance.drift-fails
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset assurance reports canonical drift without modifying the consumer project
+        check_refs: [check.ci-preset-assurance.drift-fails]
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset assurance rejects an asset lock digest drift without remediation
+        check_refs: [check.ci-preset-assurance.drift-fails]
+  - verification_id: verification.ci-preset-assurance.asset-lock
+    case_id: case.ci-preset-assurance.asset-lock-generated
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset assurance validates a canonical preset and writes a deterministic asset lock
+        check_refs:
+          - check.ci-preset-assurance.asset-lock-source-bound
+          - check.ci-preset-assurance.asset-lock-assets-recorded
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: public preset CLIs generate an asset lock and validate read-only without consumer drift
+        check_refs:
+          - check.ci-preset-assurance.asset-lock-source-bound
+          - check.ci-preset-assurance.asset-lock-assets-recorded
+  - verification_id: verification.ci-preset-assurance.asset-lock
+    case_id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: asset lock generation rejects a noncanonical source revision
+        check_refs: [check.ci-preset-assurance.asset-lock-invalid-revision-rejected]

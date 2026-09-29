@@ -1,0 +1,1583 @@
+{
+  "schemaVersion": 1,
+  "kind": "contract-subject-execution",
+  "id": "a3-ci-github.contract-subject-execution",
+  "authority": {
+    "role": "project-owned-test-execution-definition",
+    "owns": [
+      "contract-subject selection",
+      "test-level execution segments",
+      "excluded test-level reasons",
+      "coverage source and exclusion scopes",
+      "contract-subject and execution-segment report unit"
+    ]
+  },
+  "report": {
+    "unit": "contract-subject-and-execution-segment",
+    "metrics": [
+      "C0",
+      "C1",
+      "line"
+    ],
+    "output": "tests/tmp/coverage/contract-subject/report.json"
+  },
+  "subjects": [
+    {
+      "subjectId": "subject.ci.annotated-tag-resolver",
+      "build": {
+        "cwd": "actions/ci-annotated-tag-resolver",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-annotated-tag-resolver",
+          "tests": [
+            "tests/tag.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-annotated-tag-resolver",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "The Action contract is fully observed by the project-owned unit and bundled-entrypoint segments; no external system flow is defined."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.change-scope",
+      "build": {
+        "cwd": "actions/ci-change-scope",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source suite composes multiple change-scope functions; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-change-scope",
+          "tests": [
+            "tests/scope.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-change-scope",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.config-snapshot",
+      "build": {
+        "cwd": "actions/ci-config-snapshot",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-config-snapshot",
+          "tests": [
+            "tests/snapshot-unit.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/snapshot.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-config-snapshot",
+          "tests": [
+            "tests/snapshot.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-config-snapshot",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.github-toolchain-verifier",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The implementation boundary is a shell adapter; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-script",
+          "level": "integration",
+          "cwd": "runtime/github-toolchain",
+          "tests": [
+            "tests/verify-github-toolchain.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "shell",
+            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
+          }
+        },
+        {
+          "id": "integration-action",
+          "level": "integration",
+          "cwd": "actions/ci-github-toolchain-verifier",
+          "tests": [
+            "tests/action-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Composite Action YAML and referenced shell execution are validated without a Node source bundle."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted toolchain execution requires GitHub-hosted evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.jq-provisioner",
+      "build": {
+        "cwd": "actions/ci-jq-provisioner",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-jq-provisioner",
+          "tests": [
+            "tests/provision.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-jq-provisioner",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted jq provisioning is checked by the GitHub workflow and requires runner evidence outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.gh-provisioner",
+      "build": {
+        "cwd": "actions/ci-gh-provisioner",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-gh-provisioner",
+          "tests": [
+            "tests/provision.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-gh-provisioner",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted gh provisioning is checked by the GitHub workflow and requires runner evidence outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.handoff-integrity",
+      "build": {
+        "cwd": "actions/ci-handoff-integrity",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source behavior validates filesystem-backed handoff assets; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-handoff-integrity",
+          "tests": [
+            "tests/integrity.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-handoff-integrity",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.platform-matrix",
+      "build": {
+        "cwd": "actions/ci-platform-matrix",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-platform-matrix",
+          "tests": [
+            "tests/matrix.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-platform-matrix",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "The Action contract is observed through the bundled entrypoint; no external system flow is defined."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.publish-version",
+      "build": {
+        "cwd": "actions/ci-publish-version",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-publish-version",
+          "tests": [
+            "tests/materialize.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-publish-version",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.quality-summary",
+      "build": {
+        "cwd": "actions/ci-quality-summary",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-quality-summary",
+          "tests": [
+            "tests/summary.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-quality-summary",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-notes-binding",
+      "build": {
+        "cwd": "actions/ci-release-notes-binding",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-release-notes-binding",
+          "tests": [
+            "tests/binding.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-notes-binding",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-notes-input-resolution",
+      "build": {
+        "cwd": "actions/ci-release-notes-input-resolution",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source behavior resolves and copies filesystem-backed handoffs; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-notes-input-resolution",
+          "tests": [
+            "tests/resolution.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-notes-input-resolution",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-request-handoff",
+      "build": {
+        "cwd": "actions/ci-release-request-handoff",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source behavior writes filesystem-backed handoff assets; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-request-handoff",
+          "tests": [
+            "tests/handoff.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-request-handoff",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-publication-control",
+      "build": {
+        "cwd": "actions/ci-release-publication-control",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-release-publication-control",
+          "tests": [
+            "tests/time.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-publication-control",
+          "tests": [
+            "tests/control.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-publication-control",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted release publication requires external workflow evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.package-publication-request",
+      "build": {
+        "cwd": "actions/ci-package-publication-request",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source behavior depends on the filesystem; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-package-publication-request",
+          "tests": [
+            "tests/request.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-package-publication-request",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted package publication requires external workflow evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.quality-adapter",
+      "build": {
+        "cwd": "actions/ci-quality-adapter",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The source behavior depends on the filesystem and child processes; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/adapter.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted multi-checkout execution requires GitHub-hosted evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.rust-release-build",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The implementation boundary is a shell adapter; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-script",
+          "level": "integration",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "shell",
+            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
+          }
+        },
+        {
+          "id": "integration-action",
+          "level": "integration",
+          "cwd": "actions/ci-rust-release-build",
+          "tests": [
+            "tests/action-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Composite Action YAML and referenced shell execution are validated without a Node source bundle."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted release execution requires external toolchain evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.rust-source-gate",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The implementation boundary is a shell adapter; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-script",
+          "level": "integration",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "shell",
+            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
+          }
+        },
+        {
+          "id": "integration-action",
+          "level": "integration",
+          "cwd": "actions/ci-rust-source-gate",
+          "tests": [
+            "tests/action-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Composite Action YAML and referenced shell execution are validated without a Node source bundle."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted source verification requires external workflow evidence and is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.vitest-summary",
+      "build": {
+        "cwd": "actions/ci-vitest-summary",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-vitest-summary",
+          "tests": [
+            "tests/summary.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "unit-core",
+          "level": "unit",
+          "cwd": "runtime/vitest",
+          "tests": [
+            "tests/vitest-summary-core.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The shared classification core is a plain ESM module verified without product source coverage attribution."
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-vitest-summary",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-adapter",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/adapter/tests/vitest-test-summary.test.mjs",
+            "runtime/adapter/tests/vitest-summary-conformance.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The CLI and conformance matrix observe public process boundaries and the shared core classification rather than attributing Action source coverage."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "No external system flow is defined for this Action."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.workflow-identity",
+      "build": {
+        "cwd": "actions/ci-workflow-identity",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "cwd": "actions/ci-workflow-identity",
+          "tests": [
+            "tests/identity.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-workflow-identity",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted reusable-workflow identity is observed by the GitHub workflow; no external system flow is defined for local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.repository.action-distribution",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Distribution consistency is a repository gate, not an isolated product unit."
+        },
+        {
+          "id": "integration-gates",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/action-dist-gate.test.mjs",
+            "tests/action-index-gate.test.mjs",
+            "tests/action-package-verification.test.mjs",
+            "runtime/repository/tests/update-release-aliases.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "repository-scripts",
+            "include": [
+              "runtime/repository/**/*.mjs"
+            ],
+            "exclude": [
+              "actions/**/dist/**",
+              "runtime/**/dist/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Distribution validation has no external user flow; hosted execution is covered by workflow evidence separately."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.quality-workflow",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Canonical workflow behavior is contract-tested structurally; hosted execution remains external evidence."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-request-workflow",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Canonical workflow behavior is contract-tested structurally; hosted tag execution remains external evidence."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-publication-workflow",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Canonical workflow behavior is contract-tested structurally; hosted publication remains external evidence."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.package-publication-workflow",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Canonical workflow behavior is contract-tested structurally; registry publication remains external evidence."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.preset-assurance",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": "runtime/preset",
+          "tests": [
+            "tests/preset-assurance-contract.test.mjs",
+            "tests/preset-validation-contract.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Preset assurance combines a Node bootstrap and TypeScript validator; this segment verifies the public boundary without source coverage attribution."
+          }
+        },
+        {
+          "id": "e2e-public-cli",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/public-cli-lifecycle.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The E2E segment observes public process boundaries and consumer filesystem state rather than attributing source coverage."
+          }
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.repository.managed-source-integrity",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/repository-managed-source-integrity.test.mjs",
+            "tests/contract-subject-execution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Repository inventory behavior spans declarative assets and has no isolated source coverage unit."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.failure-diagnostics",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The contract target is a composed repository capability rather than an isolated product unit."
+        },
+        {
+          "id": "integration-contract",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs",
+            "runtime/preset/tests/preset-assurance-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Diagnostic behavior spans workflows and runtime entrypoints and has no single source coverage unit."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.selective-distribution",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Selection, integrity, filesystem planning, and transaction recovery form one distribution boundary."
+        },
+        {
+          "id": "integration-runtime",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.test.mjs",
+            "runtime/repository/tests/manage-distribution-release.test.mjs",
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "runtime/distribution/**/*.mjs"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-release-builder",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "repository-scripts",
+            "include": [
+              "runtime/distribution/**/*.ts"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "GitHub Release and Raw availability require hosted evidence after publication."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.preset-materialization",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Materialization is verified across inventory, filesystem, and source-resolution boundaries."
+        },
+        {
+          "id": "integration-runtime",
+          "level": "integration",
+          "cwd": "runtime/preset",
+          "tests": [
+            "../adapter/tests/materialize-adapter-bundle.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "The test imports repository TypeScript through the fixed preset runtime; cross-root coverage is not attributed to one package."
+          }
+        },
+        {
+          "id": "e2e-public-cli",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/public-cli-lifecycle.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The E2E segment observes public process boundaries and consumer filesystem state rather than attributing source coverage."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-publication-workflow
+contracts:
+  - id: contract.ci-release-publication-workflow.publication
+    summary: The canonical release workflows order unprivileged request creation, trusted request and identity validation, handoff production, privileged publication, and publication readback.
+    conditions:
+      - id: ci-release-publication-workflow-canonical-source-available
+        input_predicate:
+          kind: input
+          term: input.canonical-source
+          op: present
+      - id: ci-release-publication-workflow-failure-route-required
+        input_predicate:
+          kind: input
+          term: input.failure-route
+          op: present
+    guarantees:
+      - id: ci-release-publication-workflow-success-observed
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci.release-publication-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: publication-boundary
+      - id: ci-release-publication-workflow-failure-observed
+        when: ci-release-publication-workflow-failure-route-required
+        observation_ref: observation.ci.release-publication-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: failure-summary
+    verification_intents:
+      - id: ci-release-publication-workflow-success-intent
+        goal: Verify request, identity, and handoff validation precede credential-bearing publication, which precedes publication readback.
+        guarantee_refs:
+          - ci-release-publication-workflow-success-observed
+      - id: ci-release-publication-workflow-failure-intent
+        goal: Verify failed or unresolved prerequisite stages block publication while the aggregate summary remains observable.
+        guarantee_refs:
+          - ci-release-publication-workflow-failure-observed

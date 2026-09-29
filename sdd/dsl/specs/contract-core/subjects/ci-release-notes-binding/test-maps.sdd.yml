@@ -1,0 +1,18 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-notes-binding
+test_maps:
+  - verification_id: verification.ci-release-notes-binding.outputs
+    case_id: approved-release-notes
+    tests:
+      - path: actions/ci-release-notes-binding/tests/entrypoint.test.ts
+        symbol: bundled entrypoint validates an approved notes binding
+        check_refs:
+          - check-release-notes-binding-status
+  - verification_id: verification.ci-release-notes-binding.outputs
+    case_id: release-identity-mismatch-rejected
+    tests:
+      - path: actions/ci-release-notes-binding/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails an identity mismatch
+        check_refs:
+          - check-release-notes-binding-failure-status

@@ -1,0 +1,24 @@
+name: ci-release-notes-binding
+description: Verify release notes body, identity, digest, and approval binding.
+inputs:
+  handoff-json:
+    required: true
+    description: Path to the ci.release-notes.v1 handoff JSON.
+  approval-json:
+    required: true
+    description: Path to the ci.release-notes-approval.v1 approval JSON.
+  release-identity:
+    required: true
+    description: Expected release identity.
+outputs:
+  status:
+    description: success or failed.
+  release-identity:
+    description: Validated release identity.
+  digest:
+    description: SHA-256 digest of the release notes body.
+  approval-id:
+    description: Validated approval identifier.
+runs:
+  using: node24
+  main: dist/index.js

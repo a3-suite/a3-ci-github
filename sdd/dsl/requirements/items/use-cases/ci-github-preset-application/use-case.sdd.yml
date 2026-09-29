@@ -1,0 +1,36 @@
+version: 1
+name: use-case
+use_case_id: ci-github-preset-application
+summary: CI管理者が利用projectへa3-ci-githubのpresetを選択して適用または更新する
+actors:
+  - actor_id: ci-maintainer
+    kind: human
+    role: primary
+    summary: 利用projectのCI構成、設定値、権限境界および導入差分を管理する主体
+goal: canonical assetとproject固有設定の責務を混ぜず、選択したpresetを検証可能な状態で利用projectへ配置する
+preconditions:
+  - 利用projectの目的、language profile、公開経路およびownerが確定している
+  - 選択配布use caseにより、配布元のfull commit SHA、必要なrepository-owned assetおよび外部skill collectionを解決できる
+trigger: 利用projectへCI presetを新規導入または更新する
+main_success_scenario:
+  - summary: 利用目的に対応するpresetと依存するworkflow、Action binding、adapterおよびextensionをregistryから選択する
+  - summary: 既存資産との差分を確認し、canonical assetとproject-owned設定の配置範囲を確定する
+  - summary: 選択したassetを配置し、placeholder、固定SHA、設定、Secretおよびproject-owned extensionを責務ごとの正本へ接続する
+  - summary: 配布元revisionと配置済みassetを結ぶlockを生成し、静的検証とpreflightを実行する
+  - summary: 採用preset、project固有差分、owner、検証証跡および更新・撤去条件を利用projectへ記録する
+success_outcomes:
+  - 利用projectは配布元のcanonical workflow原本と導入・検証runtimeを実行時参照せず、配置済みworkflowとproject設定から固定SHA Actionおよびproject-owned extensionへ接続して選択したCIを実行できる
+  - canonical asset、project固有差分、Action pin、lockおよび検証結果を一意に追跡できる
+failure_outcomes:
+  - 未解決placeholder、asset不一致、未登録Action、必要extension不足または既存資産との競合があれば適用完了にしない
+  - 既存資産を暗黙に上書きせず、差分と必要な判断をCI管理者へ返す
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-ci-project-lifecycle
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-preset-materialization.application
+  - contract_ref:
+      contract_id: contract.ci-preset-assurance.verification
+  - contract_ref:
+      contract_id: contract.ci-preset-assurance.asset-lock

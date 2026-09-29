@@ -1,0 +1,43 @@
+name: ci-change-scope
+description: Classify changed files and report CI or documentation scope.
+inputs:
+  base-sha:
+    required: false
+    default: ''
+    description: Explicit base commit SHA.
+  head-sha:
+    required: false
+    default: ''
+    description: Head commit SHA.
+  event-name:
+    required: false
+    default: ''
+    description: Event name used when resolving the base SHA.
+  pr-base-sha:
+    required: false
+    default: ''
+    description: Pull request base SHA.
+  before-sha:
+    required: false
+    default: ''
+    description: Previous revision SHA for push events.
+  docs-only-patterns:
+    required: false
+    default: 'docs/**,README.md,**/*.md'
+    description: Comma-separated documentation-only path patterns.
+outputs:
+  status:
+    description: success or unresolved when the range could not be evaluated.
+  run-ci:
+    description: Whether CI checks should run.
+  run-docs:
+    description: Whether documentation checks should run.
+  files:
+    description: Newline-separated changed paths.
+  docs-files:
+    description: Newline-separated documentation paths.
+  other-files:
+    description: Newline-separated non-documentation paths.
+runs:
+  using: node24
+  main: dist/index.js

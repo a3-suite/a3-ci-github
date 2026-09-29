@@ -1,0 +1,24 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.change-scope
+verifications:
+  - id: verification.ci-change-scope.outputs
+    contract_id: contract.ci-change-scope.outputs
+    cases:
+      - id: valid-change-range
+        intent_id: change-scope-output-set
+        input:
+          base-sha: 0000000000000000000000000000000000000001
+          head-sha: 0000000000000000000000000000000000000002
+          docs-only-patterns: docs/**,README.md,**/*.md
+        checks:
+          - id: check-change-scope-status
+            guarantee_ref: change-scope-status-produced
+      - id: invalid-sha-unresolved
+        intent_id: change-scope-unresolved-output-set
+        input:
+          base-sha: short
+          head-sha: short
+        checks:
+          - id: check-change-scope-unresolved-status
+            guarantee_ref: change-scope-unresolved-status-produced

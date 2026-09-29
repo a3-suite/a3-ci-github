@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.vitest-summary
+  summary: Converting a Vitest JSON report into a framework-specific summary.

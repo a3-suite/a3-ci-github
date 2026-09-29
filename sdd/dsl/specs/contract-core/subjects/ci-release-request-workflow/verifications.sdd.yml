@@ -1,0 +1,21 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-request-workflow
+verifications:
+  - id: verification.ci-release-request-workflow.handoff
+    contract_id: contract.ci-release-request-workflow.handoff
+    cases:
+      - id: ci-release-request-workflow-success
+        intent_id: ci-release-request-workflow-success-intent
+        input:
+          scenario: valid
+        checks:
+          - id: check-ci-release-request-workflow-success
+            guarantee_ref: ci-release-request-workflow-success-observed
+      - id: ci-release-request-workflow-failure
+        intent_id: ci-release-request-workflow-failure-intent
+        input:
+          scenario: rejected
+        checks:
+          - id: check-ci-release-request-workflow-failure
+            guarantee_ref: ci-release-request-workflow-failure-observed

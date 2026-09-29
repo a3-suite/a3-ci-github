@@ -1,0 +1,46 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.quality-summary
+test_maps:
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: successful-quality-result
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint writes matching evidence and outputs
+        check_refs:
+          - check-quality-summary-status
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: raw-job-results-normalized
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint normalizes a raw GitHub job result
+        check_refs:
+          - check-quality-summary-raw-result-status
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: missing-summary-path-rejected
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects a missing summary path
+        check_refs:
+          - check-quality-summary-failure-status
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: unresolved-quality-evidence-rejected
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: bundled entrypoint fails unresolved and invalid path relationships
+        check_refs:
+          - check-quality-summary-unresolved-failure
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: excluded-rows-ignored-in-aggregation
+    tests:
+      - path: actions/ci-quality-summary/tests/summary.test.ts
+        symbol: excludes intentionally-not-applicable rows from aggregation
+        check_refs:
+          - check-quality-summary-excluded-status
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: all-excluded-rows-rejected
+    tests:
+      - path: actions/ci-quality-summary/tests/summary.test.ts
+        symbol: rejects an input where every row is excluded
+        check_refs:
+          - check-quality-summary-all-excluded-failure

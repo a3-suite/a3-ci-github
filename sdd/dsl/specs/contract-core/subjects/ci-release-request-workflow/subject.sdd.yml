@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-request-workflow
+  summary: Bind an annotated tag event to an immutable release request handoff without publication authority.

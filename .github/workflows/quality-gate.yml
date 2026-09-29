@@ -1,0 +1,443 @@
+name: quality-gate
+
+on:
+  push:
+    branches: [main, develop, 'release/**', 'hotfix/**']
+  pull_request:
+    branches: [main, develop, 'release/**', 'hotfix/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI_GH_VERSION: '2.80.0'
+
+jobs:
+  contract-linux:
+    name: CI Action contract / Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Verify bundled Action distributions
+        shell: bash
+        run: node runtime/repository/check-action-dist.mjs
+
+      - name: Test bundled Action distribution gate
+        shell: bash
+        run: node --test tests/action-dist-gate.test.mjs
+
+      - name: Validate contract-subject execution definition
+        shell: bash
+        run: node runtime/contract-subject-coverage.mjs --check
+
+      - name: Test contract-subject coverage reporter
+        shell: bash
+        run: node --test tests/contract-subject-execution.test.mjs
+
+      - name: Test workflow and repository capability contracts
+        shell: bash
+        run: >-
+          node --test
+          tests/workflow-contracts.test.mjs
+          runtime/preset/tests/preset-assurance-contract.test.mjs
+          tests/repository-managed-source-integrity.test.mjs
+          tests/cli-specification.test.mjs
+
+      - name: Verify README Action catalog
+        shell: bash
+        run: node runtime/repository/update-action-index.mjs --check
+
+      - name: Test README Action catalog gate
+        shell: bash
+        run: node --test tests/action-index-gate.test.mjs
+
+      - name: Test repository Release delivery
+        shell: bash
+        run: >-
+          node --test
+          runtime/repository/tests/update-release-aliases.test.mjs
+          runtime/repository/tests/manage-distribution-release.test.mjs
+
+      - name: Test adapter bundle source resolution
+        shell: bash
+        run: |
+          npm --prefix runtime/preset ci --no-audit --no-fund
+          CI_FIXED_RUNTIME_ROOT=runtime/preset \
+            runtime/preset/node_modules/.bin/tsx --test \
+            runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
+            runtime/preset/tests/source-resolution.test.mjs \
+            runtime/preset/tests/preset-validation-contract.test.mjs
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
+            node --test tests/public-cli-lifecycle.test.mjs
+          node --test runtime/distribution/tests/selective-distribution.test.mjs
+
+      - name: Test shared GitHub toolchain verifier
+        shell: bash
+        run: node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+
+      - name: Test shared path identity core
+        shell: bash
+        run: node --test runtime/path/tests/same-file-core.test.mjs
+
+      - name: Test shared Vitest summary core
+        shell: bash
+        run: node --test runtime/vitest/tests/vitest-summary-core.test.mjs
+
+      - name: Test Vitest summary CLI and conformance
+        shell: bash
+        env:
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
+        run: |
+          node --test \
+            runtime/adapter/tests/vitest-test-summary.test.mjs \
+            runtime/adapter/tests/vitest-summary-conformance.test.mjs
+
+      - name: Test GitHub toolchain verifier Action contract
+        shell: bash
+        run: node --test actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+
+      - name: Verify all bundled Action sources
+        shell: bash
+        run: node runtime/repository/verify-action-packages.mjs
+
+      - name: Provision jq 1.7.1
+        uses: ./actions/ci-jq-provisioner
+        with:
+          jq-version: 1.7.1
+
+      - name: Verify provisioned jq 1.7.1
+        uses: ./actions/ci-github-toolchain-verifier
+        with:
+          mode: jq
+          jq-version: 1.7.1
+
+      - name: Provision GitHub CLI ${{ env.CI_GH_VERSION }}
+        uses: ./actions/ci-gh-provisioner
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+
+      - name: Test shared Rust release scripts
+        shell: bash
+        run: node --test runtime/rust-release/tests/rust-release-scripts.test.mjs
+
+      - name: Test Rust release Action contracts
+        shell: bash
+        run: >-
+          node --test
+          actions/ci-rust-source-gate/tests/action-contract.test.mjs
+          actions/ci-rust-release-build/tests/action-contract.test.mjs
+
+      - name: Resolve hosted jq and sha256sum versions
+        id: toolchain-versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "jq=$(jq --version | sed 's/^jq-//')"
+            echo "sha256sum=$(sha256sum --version | sed -n '1s/.*) \([0-9][0-9.]*\).*/\1/p')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify pinned GitHub toolchain
+        id: toolchain
+        uses: ./actions/ci-github-toolchain-verifier
+        with:
+          mode: gh-jq-sha256
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ steps.toolchain-versions.outputs.jq }}
+          sha256sum-version: ${{ steps.toolchain-versions.outputs.sha256sum }}
+
+      - name: Verify hosted GitHub toolchain output
+        env:
+          VERIFIED: ${{ steps.toolchain.outputs.verified }}
+        shell: bash
+        run: test "$VERIFIED" = true
+
+      - name: Prepare Rust source gate authority
+        shell: bash
+        run: |
+          mkdir -p .ci/rust-source-gate
+          jq -n --arg source_sha "$GITHUB_SHA" \
+            '{language_profile:"rust", source_sha:$source_sha}' \
+            > .ci/rust-source-gate/authority.json
+
+      - name: Verify hosted Rust source gate
+        uses: ./actions/ci-rust-source-gate
+        with:
+          language-profile: rust
+          authority-path: .ci/rust-source-gate/authority.json
+
+      - name: Resolve configuration snapshot
+        id: config
+        uses: ./actions/ci-config-snapshot
+        with:
+          sources-json: '{"preset":{"MODE":"release"},"workflow":{"MODE":"candidate"},"runtime":{"MODE":"dry-run"}}'
+          snapshot-path: .ci/config-snapshot.json
+
+      - name: Prepare platform manifest fixture
+        shell: bash
+        run: |
+          mkdir -p .ci
+          printf '%s\n' \
+            'platforms:' \
+            '  - id: linux-x64' \
+            '    runner: ubuntu-24.04' \
+            '    target: x86_64-unknown-linux-gnu' \
+            > .ci/platforms.yml
+
+      - name: Resolve platform matrix
+        id: platform-matrix
+        uses: ./actions/ci-platform-matrix
+        with:
+          manifest-path: .ci/platforms.yml
+
+      - name: Detect change scope
+        id: scope
+        uses: ./actions/ci-change-scope
+        with:
+          base-sha: ${{ github.event.pull_request.base.sha || github.sha }}
+          head-sha: ${{ github.sha }}
+          docs-only-patterns: docs/**,README.md,**/*.md
+
+      - name: Prepare handoff fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/handoff
+          printf '%s' 'hosted-payload' > .ci/handoff/artifact.bin
+          artifact_digest="$(sha256sum .ci/handoff/artifact.bin | cut -d' ' -f1)"
+          printf '[{"path":"artifact.bin","sha256":"%s"}]' "$artifact_digest" > .ci/handoff/manifest.json
+          printf '{"schema":"ci.handoff.v1","source_sha":"%s","version":"1.0.0","target_identity":"linux-x64","manifest":"manifest.json"}' "${GITHUB_SHA}" > .ci/handoff/handoff.json
+
+      - name: Validate handoff integrity
+        id: handoff
+        uses: ./actions/ci-handoff-integrity
+        with:
+          handoff-root: .ci/handoff
+          descriptor: handoff.json
+          source-sha: ${{ github.sha }}
+          version: 1.0.0
+          target-identity: linux-x64
+
+      - name: Prepare release notes fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_digest="$(printf '%s\n' '# Release v1.2.3' | sha256sum | cut -d' ' -f1)"
+          printf '{"schema":"ci.release-notes.v1","source_contract":"git.release-flow","source_field":"body","release_identity":"v1.2.3","body":"# Release v1.2.3\\n","body_sha256":"%s"}' "$body_digest" > .ci/release-notes.json
+          printf '{"schema":"ci.release-notes-approval.v1","source_contract":"git.release-flow","source_field":"body","release_identity":"v1.2.3","body_sha256":"%s","approval_id":"hosted-review"}' "$body_digest" > .ci/release-notes-approval.json
+
+      - name: Validate release notes binding
+        id: notes
+        uses: ./actions/ci-release-notes-binding
+        with:
+          handoff-json: .ci/release-notes.json
+          approval-json: .ci/release-notes-approval.json
+          release-identity: v1.2.3
+
+      - name: Prepare version plan fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '{"strategy":"ciGenerated","template":"{baseVersion}-dev.{build}","components":{"baseVersion":"1.2.3","build":"42"}}' > .ci/version-plan.json
+
+      - name: Materialize publish version
+        id: version
+        uses: ./actions/ci-publish-version
+        with:
+          version-plan-json: .ci/version-plan.json
+
+      - name: Write quality summary
+        id: summary
+        uses: ./actions/ci-quality-summary
+        with:
+          summary-json: >-
+            {"tests":[{"unit":"hosted-contract","execution":"local Action","rawResult":"success","applicable":true,"evidence":"steps"}]}
+          # 検証fixtureの描画をrun要約へ出さず、証跡ファイルとして隔離する。
+          summary-path: .ci/hosted-summary.md
+          evidence-path: .ci/hosted-summary.evidence.md
+
+      - name: Verify successful outputs
+        env:
+          CONFIG_STATUS: ${{ steps.config.outputs.status }}
+          PLATFORM_MATRIX: ${{ steps.platform-matrix.outputs.matrix }}
+          SCOPE_STATUS: ${{ steps.scope.outputs.status }}
+          HANDOFF_STATUS: ${{ steps.handoff.outputs.status }}
+          NOTES_STATUS: ${{ steps.notes.outputs.status }}
+          VERSION_STATUS: ${{ steps.version.outputs.status }}
+          PUBLISH_VERSION: ${{ steps.version.outputs['publish-version'] }}
+          SUMMARY_STATUS: ${{ steps.summary.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CONFIG_STATUS" = success
+          test "$(printf '%s' "$PLATFORM_MATRIX" | jq -r '.include[0].target')" = x86_64-unknown-linux-gnu
+          test "$SCOPE_STATUS" = success
+          test "$HANDOFF_STATUS" = success
+          test "$NOTES_STATUS" = success
+          test "$VERSION_STATUS" = success
+          test "$PUBLISH_VERSION" = '1.2.3-dev.42'
+          test "$SUMMARY_STATUS" = success
+
+      - name: Verify summary evidence digest
+        env:
+          SUMMARY_DIGEST: ${{ steps.summary.outputs.digest }}
+          SUMMARY_EVIDENCE: ${{ steps.summary.outputs['evidence-path'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # summary結果の証跡が出力digestと一致することを検証する。
+          test -f "$SUMMARY_EVIDENCE"
+          test "$SUMMARY_DIGEST" = "sha256:$(sha256sum "$SUMMARY_EVIDENCE" | cut -d' ' -f1)"
+
+      - name: Prepare invalid version plan fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '{"strategy":"ciGenerated","template":"{baseVersion}","components":{}}' > .ci/invalid-version-plan.json
+
+      # 期待失敗の診断を注釈へ出さないため、runner同等のINPUT_*環境でbundled entrypointを
+      # 実行し、出力をlogへ逃がす。step自体は検証後に成功終了し、exit codeをoutputで渡す。
+      - name: Verify invalid version plan stops the Action
+        id: invalid-version
+        shell: bash
+        env:
+          INPUT_VERSION-PLAN-JSON: .ci/invalid-version-plan.json
+        run: |
+          set -euo pipefail
+          exit_code=0
+          node actions/ci-publish-version/dist/index.js > .ci/invalid-version.log 2>&1 || exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "invalid version plan unexpectedly succeeded" >&2
+            exit 1
+          fi
+          grep -q 'publish-version-plan-component-missing' .ci/invalid-version.log
+          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Verify invalid version plan mapping
+        env:
+          INVALID_VERSION_STATUS: ${{ steps.invalid-version.outputs.status }}
+          INVALID_VERSION_EXIT_CODE: ${{ steps.invalid-version.outputs['exit-code'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$INVALID_VERSION_STATUS" = failed
+          test "$INVALID_VERSION_EXIT_CODE" -ne 0
+
+      - name: Verify unresolved summary stops the Action
+        id: unresolved
+        shell: bash
+        env:
+          INPUT_SUMMARY-JSON: >-
+            {"tests":[{"unit":"hosted-unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"hosted contract fixture"}]}
+          INPUT_SUMMARY-PATH: .ci/unresolved-summary.md
+          INPUT_EVIDENCE-PATH: .ci/unresolved-summary.evidence.md
+        run: |
+          set -euo pipefail
+          exit_code=0
+          node actions/ci-quality-summary/dist/index.js > .ci/unresolved-summary.log 2>&1 || exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "unresolved summary unexpectedly succeeded" >&2
+            exit 1
+          fi
+          grep -q 'ci-summary-unresolved' .ci/unresolved-summary.log
+          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Verify unresolved mapping
+        env:
+          UNRESOLVED_STATUS: ${{ steps.unresolved.outputs.status }}
+          UNRESOLVED_EXIT_CODE: ${{ steps.unresolved.outputs['exit-code'] }}
+          UNRESOLVED_DIGEST: ${{ steps.unresolved.outputs.digest }}
+          UNRESOLVED_EVIDENCE: ${{ steps.unresolved.outputs['evidence-path'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$UNRESOLVED_STATUS" = unresolved
+          test "$UNRESOLVED_EXIT_CODE" -ne 0
+          # unresolved結果でも証跡が出力digestと一致することを検証する。
+          test -f "$UNRESOLVED_EVIDENCE"
+          test "$UNRESOLVED_DIGEST" = "sha256:$(sha256sum "$UNRESOLVED_EVIDENCE" | cut -d' ' -f1)"
+
+      - name: Verify invalid input stops the Action
+        id: invalid
+        shell: bash
+        env:
+          INPUT_SUMMARY-JSON: '{}'
+          INPUT_EVIDENCE-PATH: .ci/ci-quality-summary.evidence.md
+        run: |
+          set -euo pipefail
+          exit_code=0
+          node actions/ci-quality-summary/dist/index.js > .ci/invalid-input.log 2>&1 || exit_code=$?
+          if [ "$exit_code" -eq 0 ]; then
+            echo "invalid input unexpectedly succeeded" >&2
+            exit 1
+          fi
+          grep -q 'ci-summary-rows-invalid' .ci/invalid-input.log
+          echo "exit-code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Verify invalid input mapping
+        env:
+          INVALID_STATUS: ${{ steps.invalid.outputs.status }}
+          INVALID_EXIT_CODE: ${{ steps.invalid.outputs['exit-code'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$INVALID_STATUS" = failed
+          test "$INVALID_EXIT_CODE" -ne 0
+
+      - name: Prepare Vitest report fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' '{"numTotalTests":2,"numPassedTests":2,"numFailedTests":0,"numPendingTests":0,"numTodoTests":0,"success":true}' > .ci/vitest.json
+
+      - name: Render Vitest summary
+        id: vitest
+        uses: ./actions/ci-vitest-summary
+        with:
+          report-json: .ci/vitest.json
+          label: hosted
+
+      - name: Verify Vitest summary outputs
+        env:
+          STATUS: ${{ steps.vitest.outputs.status }}
+          COLLECTION: ${{ steps.vitest.outputs.collection }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$STATUS" = passed
+          test "$COLLECTION" = complete
+
+  rust-windows:
+    name: Rust release contract / Windows
+    runs-on: windows-2025
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Test Windows Rust release contracts
+        shell: pwsh
+        run: node --test --test-name-pattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+
+  contract:
+    name: CI Action contract / hosted
+    if: always()
+    needs: [contract-linux, rust-windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require Linux and Windows contract evidence
+        env:
+          LINUX_RESULT: ${{ needs.contract-linux.result }}
+          WINDOWS_RESULT: ${{ needs.rust-windows.result }}
+        shell: bash
+        run: |
+          test "$LINUX_RESULT" = success
+          test "$WINDOWS_RESULT" = success

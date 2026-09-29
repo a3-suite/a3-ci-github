@@ -1,0 +1,13 @@
+version: 1
+name: cli-command-manifest
+commands:
+  - id: validate-ci-preset
+    path: commands/validate-ci-preset/cli-command.sdd.yml
+  - id: generate-ci-asset-lock
+    path: commands/generate-ci-asset-lock/cli-command.sdd.yml
+  - id: materialize-adapter-bundle
+    path: commands/materialize-adapter-bundle/cli-command.sdd.yml
+  - id: manage-ci-distribution
+    path: commands/manage-ci-distribution/cli-command.sdd.yml
+  - id: generate-ci-distribution-release
+    path: commands/generate-ci-distribution-release/cli-command.sdd.yml

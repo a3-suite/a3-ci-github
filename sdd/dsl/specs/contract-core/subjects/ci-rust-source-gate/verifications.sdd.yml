@@ -1,0 +1,42 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.rust-source-gate
+verifications:
+  - id: verification.ci-rust-source-gate.processing
+    contract_id: contract.ci-rust-source-gate.processing
+    cases:
+      - id: matching-rust-source-processing
+        intent_id: rust-source-processing-verified
+        input:
+          language-profile: rust
+          authority-path: authority.json
+        checks:
+          - id: check-rust-source-processing-success
+            guarantee_ref: rust-source-processing-succeeds
+      - id: mismatching-rust-source-processing
+        intent_id: rust-source-processing-rejected
+        input:
+          language-profile: rust
+          authority-path: authority.json
+        checks:
+          - id: check-rust-source-processing-failure
+            guarantee_ref: rust-source-processing-fails
+  - id: verification.ci-rust-source-gate.outputs
+    contract_id: contract.ci-rust-source-gate.outputs
+    cases:
+      - id: matching-rust-source-authority
+        intent_id: rust-source-identity-verified
+        input:
+          language-profile: rust
+          authority-path: authority.json
+        checks:
+          - id: check-verified-output
+            guarantee_ref: verified-output-produced
+      - id: mismatching-rust-source-authority
+        intent_id: mismatching-rust-source-rejected
+        input:
+          language-profile: python
+          authority-path: authority.json
+        checks:
+          - id: check-source-verification-failure
+            guarantee_ref: source-verification-failure-propagated

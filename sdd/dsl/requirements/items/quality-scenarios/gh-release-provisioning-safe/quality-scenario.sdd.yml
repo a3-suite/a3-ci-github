@@ -1,0 +1,17 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: gh-release-provisioning-safe
+summary: GitHub CLI の取得または checksum が失敗した場合に未検証バイナリを実行経路へ公開しない
+quality_attribute: reliability
+stimulus: GitHub Actions runner が GitHub CLI の exact version を要求する
+environment: Linux X64/ARM64 の runner と cli/cli の GitHub Release
+response: Release の取得物を checksum 照合後にだけ展開し、検証済みの gh を job の PATH へ追加する
+response_measure:
+  - checksum が一致する取得物だけを展開し PATH へ追加する
+  - 取得失敗、checksum 不一致、未対応 runner、抽出失敗、配置失敗、PATH 更新失敗は gh-provision-failed で停止し、gh を PATH に追加しない
+related_requirements:
+  - requirement_ref:
+      requirement_id: gh-release-provisioning
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-gh-provisioner.provision

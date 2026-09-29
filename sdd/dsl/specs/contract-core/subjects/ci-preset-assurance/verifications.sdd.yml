@@ -1,0 +1,72 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.preset-assurance
+verifications:
+  - id: verification.ci-preset-assurance.verification
+    contract_id: contract.ci-preset-assurance.verification
+    cases:
+      - id: case.ci-preset-assurance.explicit-roots-required
+        intent_id: ci-preset-assurance-explicit-roots-intent
+        input:
+          audit-mode: read-only
+        _authoring:
+          case_focus: Invoke the bootstrap without required roots and inspect the stable rejection envelope.
+        checks:
+          - id: check.ci-preset-assurance.explicit-roots-required
+            guarantee_ref: ci-preset-assurance-explicit-roots-required
+      - id: case.ci-preset-assurance.read-only-output-rejected
+        intent_id: ci-preset-assurance-read-only-output-intent
+        input:
+          audit-mode: read-only
+          output: remediation-output.json
+        _authoring:
+          case_focus: Invoke read-only audit with remediation output and inspect the stable rejection envelope.
+        checks:
+          - id: check.ci-preset-assurance.read-only-output-rejected
+            guarantee_ref: ci-preset-assurance-read-only-output-rejected
+      - id: case.ci-preset-assurance.valid-preset-succeeds
+        intent_id: ci-preset-assurance-valid-intent
+        input:
+          audit-mode: read-only
+          preset: configured-preset
+        _authoring:
+          case_focus: Validate a configured canonical preset and compare the project tree before and after preflight.
+        checks:
+          - id: check.ci-preset-assurance.valid-preset-succeeds
+            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
+          - id: check.ci-preset-assurance.valid-evidence-exposed
+            guarantee_ref: ci-preset-assurance-valid-evidence-exposed
+          - id: check.ci-preset-assurance.semantic-review-state-exposed
+            guarantee_ref: ci-preset-assurance-semantic-review-state-exposed
+      - id: case.ci-preset-assurance.drift-fails
+        intent_id: ci-preset-assurance-drift-intent
+        input:
+          applied-preset-drift: true
+        _authoring:
+          case_focus: Drift an applied canonical workflow and inspect the failed report without remediation side effects.
+        checks:
+          - id: check.ci-preset-assurance.drift-fails
+            guarantee_ref: ci-preset-assurance-drift-fails
+  - id: verification.ci-preset-assurance.asset-lock
+    contract_id: contract.ci-preset-assurance.asset-lock
+    cases:
+      - id: case.ci-preset-assurance.asset-lock-generated
+        intent_id: ci-preset-assurance-lock-generation-intent
+        input:
+          source-revision: full-source-revision
+        _authoring:
+          case_focus: Generate a lock from a valid configured preset and inspect source revision and managed asset digests.
+        checks:
+          - id: check.ci-preset-assurance.asset-lock-source-bound
+            guarantee_ref: ci-preset-assurance-lock-source-bound
+          - id: check.ci-preset-assurance.asset-lock-assets-recorded
+            guarantee_ref: ci-preset-assurance-lock-assets-recorded
+      - id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
+        intent_id: ci-preset-assurance-lock-rejection-intent
+        input:
+          source-revision: noncanonical-source-revision
+        _authoring:
+          case_focus: Request generation with a noncanonical source revision and confirm rejection before output creation.
+        checks:
+          - id: check.ci-preset-assurance.asset-lock-invalid-revision-rejected
+            guarantee_ref: ci-preset-assurance-invalid-revision-rejected

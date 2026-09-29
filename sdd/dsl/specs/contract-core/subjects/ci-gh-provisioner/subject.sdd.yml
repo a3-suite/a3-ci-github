@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.gh-provisioner
+  summary: Provisioning an exact GitHub CLI Release asset for later GitHub CI steps.

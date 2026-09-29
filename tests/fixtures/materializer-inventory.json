@@ -1,0 +1,17 @@
+{
+  "assets": [
+    {
+      "id": "repository-helper",
+      "kind": "external-tool",
+      "source": { "path": "runtime/adapter/vitest-test-summary.ts" },
+      "copyable": true
+    }
+  ],
+  "adapterBundles": [
+    {
+      "id": "test-bundle",
+      "source": { "skill": "rust", "path": "assets/test-bundle.json" },
+      "targetDescriptor": ".ci/adapters/test-bundle.json"
+    }
+  ]
+}

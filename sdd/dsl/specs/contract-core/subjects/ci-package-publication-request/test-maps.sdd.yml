@@ -1,0 +1,19 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.package-publication-request
+test_maps:
+  - verification_id: verification.ci-package-publication-request.outputs
+    case_id: package-request-round-trip
+    tests:
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: bundled entrypoint creates and verifies a request
+        check_refs:
+          - check-package-request-status
+          - check-package-request-source
+  - verification_id: verification.ci-package-publication-request.outputs
+    case_id: source-sha-mismatch-rejected
+    tests:
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects a source SHA mismatch
+        check_refs:
+          - check-package-request-failure-status

@@ -1,0 +1,30 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.failure-diagnostics
+verifications:
+  - id: verification.ci-failure-diagnostics.workflow-evidence
+    contract_id: contract.ci-failure-diagnostics.actionable
+    cases:
+      - id: workflow-evidence-declared
+        intent_id: ci-failure-diagnostics-workflow-evidence-intent
+        input:
+          scenario: managed-workflow-source
+        checks:
+          - id: check.ci-failure-diagnostics.workflow-evidence
+            guarantee_ref: ci-failure-diagnostics-workflow-evidence-declared
+          - id: check.ci-failure-diagnostics.workflow-correlation
+            guarantee_ref: ci-failure-diagnostics-workflow-correlation-declared
+          - id: check.ci-failure-diagnostics.workflow-summary-secret-safe
+            guarantee_ref: ci-failure-diagnostics-workflow-summary-secret-safe
+          - id: check.ci-failure-diagnostics.workflow-source-state-preserved
+            guarantee_ref: ci-failure-diagnostics-workflow-source-state-preserved
+  - id: verification.ci-failure-diagnostics.bootstrap-diagnostic
+    contract_id: contract.ci-failure-diagnostics.actionable
+    cases:
+      - id: bootstrap-diagnostic-emitted
+        intent_id: ci-failure-diagnostics-bootstrap-intent
+        input:
+          scenario: invalid-bootstrap-invocation
+        checks:
+          - id: check.ci-failure-diagnostics.bootstrap-diagnostic
+            guarantee_ref: ci-failure-diagnostics-bootstrap-envelope-emitted

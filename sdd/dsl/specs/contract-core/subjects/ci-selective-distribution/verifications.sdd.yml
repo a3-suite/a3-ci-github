@@ -1,0 +1,62 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.selective-distribution
+verifications:
+  - id: verification.ci-selective-distribution.selection
+    contract_id: contract.ci-selective-distribution.selection
+    cases:
+      - id: selective-distribution-selection
+        intent_id: selective-distribution-selection-intent
+        input:
+          scenario: preset-and-direct-asset-selection
+        checks:
+          - id: check-selective-distribution-closure
+            guarantee_ref: selective-distribution-closure-exposed
+          - id: check-selective-distribution-missing-dependency
+            guarantee_ref: selective-distribution-missing-dependency-rejected
+  - id: verification.ci-selective-distribution.delivery
+    contract_id: contract.ci-selective-distribution.delivery
+    cases:
+      - id: selective-distribution-delivery
+        intent_id: selective-distribution-delivery-intent
+        input:
+          scenario: valid-and-invalid-selected-source
+        checks:
+          - id: check-selective-distribution-receipt
+            guarantee_ref: selective-distribution-receipt-exposed
+          - id: check-selective-distribution-assets
+            guarantee_ref: selective-distribution-assets-exposed
+          - id: check-selective-distribution-invalid-source
+            guarantee_ref: selective-distribution-invalid-source-rejected
+  - id: verification.ci-selective-distribution.publication
+    contract_id: contract.ci-selective-distribution.publication
+    cases:
+      - id: selective-distribution-publication
+        intent_id: selective-distribution-publication-intent
+        input:
+          scenario: exact-release-assets-and-readback
+        checks:
+          - id: check-selective-distribution-publication
+            guarantee_ref: selective-distribution-publication-exposed
+          - id: check-selective-distribution-publication-failure
+            guarantee_ref: selective-distribution-publication-failure-exposed
+  - id: verification.ci-selective-distribution.application
+    contract_id: contract.ci-selective-distribution.application
+    cases:
+      - id: selective-distribution-application
+        intent_id: selective-distribution-application-intent
+        input:
+          scenario: create-conflict-change-and-rollback
+        checks:
+          - id: check-selective-distribution-plan
+            guarantee_ref: selective-distribution-plan-exposed
+          - id: check-selective-distribution-transaction
+            guarantee_ref: selective-distribution-transaction-exposed
+          - id: check-selective-distribution-conflict
+            guarantee_ref: selective-distribution-conflict-rejected
+          - id: check-selective-distribution-incomplete-application
+            guarantee_ref: selective-distribution-incomplete-application-rejected
+          - id: check-selective-distribution-changed-input
+            guarantee_ref: selective-distribution-changed-input-rejected
+          - id: check-selective-distribution-rollback
+            guarantee_ref: selective-distribution-rollback-exposed

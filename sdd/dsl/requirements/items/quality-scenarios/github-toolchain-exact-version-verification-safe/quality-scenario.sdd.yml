@@ -1,0 +1,20 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: github-toolchain-exact-version-verification-safe
+summary: GitHub CI toolchain の不足や version 差異を成功前に検出する
+quality_attribute: reliability
+stimulus: 利用者が supported mode と CLI ごとの要求 version を指定して検証する
+environment: GitHub Actions runner または同じ CLI surface を持つ実行環境
+response: mode が要求する全 CLI の存在と完全一致 version を検証し、不一致時は失敗する
+response_measure:
+  - supported mode の全 CLI が存在し要求 version と完全一致する場合だけ成功する
+  - unsupported mode、CLI 不在、version 不一致は失敗終了状態になる
+  - Composite Action は shared script 成功時だけ verified output を公開する
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-toolchain-exact-version-verification
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-github-toolchain-verifier.processing
+  - contract_ref:
+      contract_id: contract.ci-github-toolchain-verifier.outputs

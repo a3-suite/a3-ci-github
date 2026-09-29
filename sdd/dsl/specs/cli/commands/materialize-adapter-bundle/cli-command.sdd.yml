@@ -1,0 +1,33 @@
+version: 1
+name: cli-command
+command:
+  id: materialize-adapter-bundle
+  path:
+    - tsx
+    - runtime/adapter/materialize-adapter-bundle.ts
+  summary: Materialize one registered adapter bundle into a consumer project without overwriting conflicting files
+  usage_targets:
+    - id: materialize
+      summary: Resolve repository and external-skill sources and place one adapter bundle
+      option_bindings:
+        - option_id: source-root
+          presence: required
+        - option_id: inventory
+          presence: required
+        - option_id: bundle
+          presence: required
+        - option_id: target-root
+          presence: required
+        - option_id: output
+          presence: optional
+  option_groups:
+    - id: inputs
+      title: Materialization inputs
+      options:
+        - source-root
+        - inventory
+        - bundle
+        - target-root
+        - output
+  help:
+    usage: tsx runtime/adapter/materialize-adapter-bundle.ts --source-root <PATH> --inventory <PATH> --bundle <ID> --target-root <PATH> [--output <PATH>]
