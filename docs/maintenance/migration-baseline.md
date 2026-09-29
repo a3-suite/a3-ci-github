@@ -22,8 +22,10 @@
 
 - source cutover: 完了。canonical workflow と Action registry は `a3-suite/a3-ci-github` の固定SHAを参照します。
 - Release gate: 完了。annotated `v0.1.0` の peeled target `312c534de67720de060689d78ada17da9c84c4e2` をremoteで確認し、registryの`implementationSource.exactRef`とcanonical workflowのAction参照を同じSHAへ固定しました。
-- 旧repositoryからの削除またはarchive: 利用者承認済みです。外部スキルルートの置換は完了し、旧repositoryのsource削除は未実施です。
-- 利用側の新しい固定SHAへの接続: clean consumerで`v0.1.0`の配布manifestを起点とするfetch、verify、plan、apply、rollbackを確認しました。
+- 最新 Release: `v0.1.3`（annotated。公開 asset は manifest、単独実行可能な fetch CLI、`SHA256SUMS` の3点）。`v0` と `v0.1` alias は `v0.1.3` を指します。
+- 利用側の新しい固定SHAへの接続: clean consumer で `v0.1.3` の配布 manifest を起点とする fetch、verify、plan、apply、rollback を確認しました。
+- 旧 owner 資産の削除: 完了。`izumilufty/a3-prompts` の旧 GitHub CI スキル資産を削除し、外部スキルルートを本リポジトリの `skills/ci-github` へ置換しました。
+- `a3-suite/a3-actions` の公開資産: 既存 consumer 向けに維持中です。削除または archive は別途承認まで行いません。
 
 ## 終了条件
 
