@@ -46,12 +46,10 @@ jobs:
       contents: read
       packages: write
     env:
-      PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_REGISTRY_TOKEN }}
       CI_SOURCE_SHA: ${{ inputs.source_sha }}
       CI_VERSION: ${{ inputs.version }}
       CI_TARGET_IDENTITY: ${{ inputs.target_identity }}
       CI_PACKAGE_HANDOFF_RUN_ID: ${{ inputs.package_handoff_run_id }}
-      CI_GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Verify workflow identity
         id: workflow-identity
@@ -104,6 +102,9 @@ jobs:
           version: ${{ env.CI_VERSION }}
           target-identity: ${{ env.CI_TARGET_IDENTITY }}
       - name: Publish verified package handoff
+        env:
+          PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_REGISTRY_TOKEN }}
+          CI_GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail

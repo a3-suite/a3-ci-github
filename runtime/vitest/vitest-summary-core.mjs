@@ -23,29 +23,32 @@ const resolveFailedName = (assertion) =>
 
 const diagnostic = (code, message) => ({ code, message });
 
-export const classifyVitestReport = (report) => {
-  if (!isRecord(report)) {
-    return {
-      status: 'unresolved',
-      collection: 'unavailable',
-      counts: emptyCounts(),
-      failedNames: [],
-      diagnostics: [diagnostic('vitest-report-missing', 'テストレポートが見つからないか、形式が不正です')],
-    };
-  }
-
-  const provided = {
-    total: count(report.numTotalTests),
-    passed: count(report.numPassedTests),
-    failed: count(report.numFailedTests),
-    skipped: count(report.numPendingTests) ?? count(report.numSkippedTests),
-    todo: count(report.numTodoTests),
+const collectProvidedCounts = (report) => {
+  const providedFields = {
+    total: { present: 'numTotalTests' in report, value: count(report.numTotalTests) },
+    passed: { present: 'numPassedTests' in report, value: count(report.numPassedTests) },
+    failed: { present: 'numFailedTests' in report, value: count(report.numFailedTests) },
+    pending: { present: 'numPendingTests' in report, value: count(report.numPendingTests) },
+    skipped: { present: 'numSkippedTests' in report, value: count(report.numSkippedTests) },
+    todo: { present: 'numTodoTests' in report, value: count(report.numTodoTests) },
   };
+  const provided = {
+    total: providedFields.total.value,
+    passed: providedFields.passed.value,
+    failed: providedFields.failed.value,
+    skipped: providedFields.pending.value ?? providedFields.skipped.value,
+    todo: providedFields.todo.value,
+  };
+  const providedInvalid = Object.values(providedFields)
+    .some((field) => field.present && field.value === null);
+  return { provided, providedInvalid };
+};
+
+const deriveAssertionCounts = (testResults) => {
   const derived = { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 };
   const failedNames = [];
   let structureValid = true;
   let derivedAvailable = false;
-  const testResults = report.testResults;
   if (testResults !== undefined) {
     if (!Array.isArray(testResults)) {
       structureValid = false;
@@ -72,28 +75,22 @@ export const classifyVitestReport = (report) => {
       }
     }
   }
+  return { derived, failedNames, structureValid, derivedAvailable };
+};
 
-  const source = derivedAvailable ? derived : emptyCounts();
-  const counts = {
-    total: provided.total ?? source.total,
-    passed: provided.passed ?? source.passed,
-    failed: provided.failed ?? source.failed,
-    skipped: provided.skipped ?? source.skipped,
-    todo: provided.todo ?? source.todo,
-  };
-  const hasAnyCount = Object.values(counts).some((value) => value !== null);
-  const hasAllCounts = Object.values(counts).every((value) => value !== null);
-  const consistent = hasAllCounts
-    && counts.total === counts.passed + counts.failed + counts.skipped + counts.todo;
-  const contradictory = derivedAvailable
-    && Object.keys(derived).some((key) => provided[key] !== null && provided[key] !== derived[key]);
-  const explicitFailure = (counts.failed ?? 0) > 0 || report.success === false;
-  const zero = structureValid && !contradictory && counts.total === 0;
-  const complete = structureValid && consistent && !contradictory;
+const classifyOutcome = ({
+  explicitFailure,
+  zero,
+  complete,
+  contradictory,
+  structureValid,
+  consistent,
+  hasAnyCount,
+  providedInvalid,
+}) => {
   const diagnostics = [];
   let status;
   let collection;
-
   if (explicitFailure) {
     status = 'failed';
     collection = complete ? 'complete' : hasAnyCount ? 'partial' : 'unavailable';
@@ -121,6 +118,54 @@ export const classifyVitestReport = (report) => {
       diagnostics.push(diagnostic('vitest-report-counts-contradictory', '集計値と詳細結果の件数が一致しません'));
     }
   }
+  if (providedInvalid) {
+    diagnostics.push(diagnostic('vitest-report-counts-invalid', 'テストレポートの集計値が不正です'));
+  }
+  return { status, collection, diagnostics };
+};
+
+export const classifyVitestReport = (report) => {
+  if (!isRecord(report)) {
+    return {
+      status: 'unresolved',
+      collection: 'unavailable',
+      counts: emptyCounts(),
+      failedNames: [],
+      diagnostics: [diagnostic('vitest-report-missing', 'テストレポートが見つからないか、形式が不正です')],
+    };
+  }
+
+  const { provided, providedInvalid } = collectProvidedCounts(report);
+  const { derived, failedNames, structureValid, derivedAvailable } =
+    deriveAssertionCounts(report.testResults);
+
+  const source = derivedAvailable ? derived : emptyCounts();
+  const counts = {
+    total: provided.total ?? source.total,
+    passed: provided.passed ?? source.passed,
+    failed: provided.failed ?? source.failed,
+    skipped: provided.skipped ?? source.skipped,
+    todo: provided.todo ?? source.todo,
+  };
+  const hasAnyCount = Object.values(counts).some((value) => value !== null);
+  const hasAllCounts = Object.values(counts).every((value) => value !== null);
+  const consistent = hasAllCounts
+    && counts.total === counts.passed + counts.failed + counts.skipped + counts.todo;
+  const contradictory = derivedAvailable
+    && Object.keys(derived).some((key) => provided[key] !== null && provided[key] !== derived[key]);
+  const explicitFailure = (counts.failed ?? 0) > 0 || report.success === false;
+  const zero = structureValid && !providedInvalid && !contradictory && counts.total === 0;
+  const complete = structureValid && !providedInvalid && consistent && !contradictory;
+  const { status, collection, diagnostics } = classifyOutcome({
+    explicitFailure,
+    zero,
+    complete,
+    contradictory,
+    structureValid,
+    consistent,
+    hasAnyCount,
+    providedInvalid,
+  });
 
   return { status, collection, counts, failedNames, diagnostics };
 };

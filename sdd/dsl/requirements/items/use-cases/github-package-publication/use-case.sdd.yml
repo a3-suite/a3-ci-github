@@ -17,16 +17,16 @@ preconditions:
   - package publicationを構成するcanonical workflow群が同じ検証済みrevisionに配置されている
 trigger: Package管理者が公開対象のsourceとexact versionを承認してpublication requestを実行する
 main_success_scenario:
-  - summary: preparation workflowが固定sourceとversion planを検証し、packageとimmutableなhandoffを生成する
-  - summary: publication requestがpackage、version、source、公開先およびrun provenanceを固定する
-  - summary: default branchのcallerがrequest、handoffおよびworkflow identityを検証してpublication workflowを呼び出す
-  - summary: publication workflowが検証済みpackageへcredentialを注入し、指定registryへ公開する
+  - summary: publication requestがsource、version、target identity、language profile、toolchain、公開先およびrun provenanceを固定する
+  - summary: default branchのcallerがrequestとworkflow identityを検証し、固定入力からpreparation workflowを呼び出す
+  - summary: preparation workflowが固定sourceとversion planを検証し、package digestを含むimmutableなhandoffを生成する
+  - summary: publication workflowがworkflow identityとhandoffを検証してからcredentialを注入し、指定registryへ公開する
   - summary: registryからversionとpackage identityをreadbackし、requestおよびhandoffと照合する
 success_outcomes:
   - source、version、package digest、公開先およびregistry上のpackageを一意に対応付けられる
   - write権限を持つ処理は検証済みhandoff以外からpackageやversionを再決定しない
 failure_outcomes:
-  - preparation、request、identity、handoff、publishまたはreadbackの失敗時は後続処理を停止する
+  - request、preparation、identity、handoff、publishまたはreadbackの失敗時は後続処理を停止する
   - 部分公開または状態不明では自動上書きやversion再利用を行わず、観測済み状態を保持する
 related_requirements:
   - requirement_ref:
@@ -42,3 +42,5 @@ related_contracts:
       contract_id: contract.ci-handoff-integrity.outputs
   - contract_ref:
       contract_id: contract.ci-publish-version.outputs
+  - contract_ref:
+      contract_id: contract.ci-workflow-identity.verify

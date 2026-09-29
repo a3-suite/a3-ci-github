@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { pathsReferToSameFile } from '../path/same-file-core.mjs';
 import { isDirectExecution, resolveOutputPath } from './cli-runtime.ts';
 
 type YamlDocument = { errors: unknown[]; toJS: () => unknown };
@@ -20,7 +21,7 @@ type BundleInventory = {
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 type AdapterAsset = { id: string; destination: string };
-type AdapterCommand = { command: string; args: string[] };
+type AdapterCommand = { id?: string; command: string; args: string[] };
 type AdapterDescriptor = {
   schemaVersion: string;
   kind: string;
@@ -103,13 +104,18 @@ const resolveResource = (sourceRoot: string, source: ResourceSource): string => 
   throw new Error(`adapter-materializer-skill-not-found:${skill}`);
 };
 
-const resolveInside = (root: string, requested: string): string => {
-  const absoluteRoot = path.resolve(root);
+const resolveContainedPath = (absoluteRoot: string, requested: string): string => {
   const candidate = path.resolve(absoluteRoot, requested);
   const relative = path.relative(absoluteRoot, candidate);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error(`adapter-materializer-path-outside-root:${requested}`);
   }
+  return candidate;
+};
+
+const resolveInside = (root: string, requested: string): string => {
+  const absoluteRoot = path.resolve(root);
+  const candidate = resolveContainedPath(absoluteRoot, requested);
   const realRoot = fs.realpathSync(absoluteRoot);
   let cursor = absoluteRoot;
   for (const part of path.relative(absoluteRoot, candidate).split(path.sep).filter(Boolean)) {
@@ -172,6 +178,7 @@ const parseDescriptor = (filePath: string): AdapterDescriptor => {
     return items.map((item) => {
     if (!isRecord(item)) throw new Error('adapter-materializer-command-invalid');
     return {
+      ...(item.id === undefined ? {} : { id: nonEmptyString(item.id, 'command-id') }),
       command: nonEmptyString(item.command, 'command'),
       args: item.args === undefined ? [] : stringList(item.args, 'args'),
     };
@@ -186,10 +193,16 @@ const parseDescriptor = (filePath: string): AdapterDescriptor => {
   const toolchain = {
     versionEnv: value.toolchain.versionEnv,
     verify: {
+      ...(verify.id === undefined ? {} : { id: nonEmptyString(verify.id, 'command-id') }),
       command: nonEmptyString(verify.command, 'toolchain-command'),
       args: verify.args === undefined ? [] : stringList(verify.args, 'toolchain-args'),
     },
   };
+  const commandIds = [...commands, ...preparation, toolchain.verify]
+    .flatMap((command) => command.id === undefined ? [] : [command.id]);
+  if (new Set(commandIds).size !== commandIds.length) {
+    throw new Error('adapter-materializer-command-duplicate');
+  }
   return {
     schemaVersion: '1',
     kind: 'ci-adapter-bundle',
@@ -317,6 +330,7 @@ export type MaterializeAdapterBundleOptions = {
   inventoryPath: string;
   bundleId: string;
   targetRoot: string;
+  outputPath?: string;
 };
 
 export type MaterializeAdapterBundleReport = {
@@ -329,7 +343,6 @@ export type MaterializeAdapterBundleReport = {
 export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions): MaterializeAdapterBundleReport => {
   const sourceRoot = path.resolve(options.sourceRoot);
   const targetRoot = path.resolve(options.targetRoot);
-  fs.mkdirSync(targetRoot, { recursive: true });
   const inventoryPath = resolveInside(REPOSITORY_ROOT, options.inventoryPath);
   const inventory = parseYaml(inventoryPath);
   const bundle = findBundle(inventory, options.bundleId);
@@ -341,8 +354,6 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       throw new Error('adapter-materializer-command-source-reference');
     }
   }
-  validateProjectSettings(targetRoot, descriptor.projectSettings);
-
   const assets = sourceAssetMap(inventory);
 
   const plan: Array<{ source: ResourceSource; destination: string }> = [];
@@ -363,11 +374,25 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
   if (!bundle.targetDescriptor.startsWith('.ci/')) throw new Error(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
   plan.push({ source: bundle.source, destination: bundle.targetDescriptor });
 
-  const preparedPlan = plan.map((item) => {
+  const sourcePlan = plan.map((item) => {
     const sourcePath = resolveResource(sourceRoot, item.source);
     if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
       throw new Error(`adapter-materializer-source-missing:${resourceDisplay(item.source)}`);
     }
+    return { ...item, sourcePath };
+  });
+  if (options.outputPath) {
+    const outputPath = path.resolve(options.outputPath);
+    const conflict = [inventoryPath, ...sourcePlan.flatMap((item) => [
+      item.sourcePath,
+      resolveContainedPath(targetRoot, item.destination),
+    ])].some((candidate) => pathsReferToSameFile(outputPath, candidate, 'adapter-materializer-output-path-invalid'));
+    if (conflict) throw new Error(`adapter-materializer-output-conflict:${outputPath}`);
+  }
+
+  fs.mkdirSync(targetRoot, { recursive: true });
+  validateProjectSettings(targetRoot, descriptor.projectSettings);
+  const preparedPlan = sourcePlan.map((item) => {
     const destinationPath = resolveInside(targetRoot, item.destination);
     let destinationStat: fs.Stats | undefined;
     try {
@@ -376,10 +401,10 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     if (destinationStat?.isSymbolicLink()) throw new Error(`adapter-materializer-destination-symlink:${destinationPath}`);
-    if (destinationStat && (!destinationStat.isFile() || !fs.readFileSync(sourcePath).equals(fs.readFileSync(destinationPath)))) {
+    if (destinationStat && (!destinationStat.isFile() || !fs.readFileSync(item.sourcePath).equals(fs.readFileSync(destinationPath)))) {
       throw new Error(`adapter-materializer-destination-conflict:${destinationPath}`);
     }
-    return { ...item, sourcePath, destinationPath, action: destinationStat ? 'reused' as const : 'copied' as const };
+    return { ...item, destinationPath, action: destinationStat ? 'reused' as const : 'copied' as const };
   });
   const destinations = new Set<string>();
   for (const item of preparedPlan) {
@@ -425,9 +450,9 @@ const parseArgs = (args: string[]): MaterializeAdapterBundleOptions & { output?:
 const main = (): void => {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const report = materializeAdapterBundle(options);
-    const output = `${JSON.stringify(report, null, 2)}\n`;
     const outputPath = resolveOutputPath(options.output);
+    const report = materializeAdapterBundle({ ...options, outputPath });
+    const output = `${JSON.stringify(report, null, 2)}\n`;
     if (outputPath) fs.writeFileSync(outputPath, output, 'utf8');
     else process.stdout.write(output);
   } catch (error) {

@@ -38,6 +38,21 @@ test('rejects assertion-level malformation and unknown statuses with complete co
 });
 
 // target_id: summarizeVitest(unknown,string,string)
+test('keeps invalid provided counts unresolved instead of deriving a false success', () => {
+  // Arrange
+  const reports = [
+    { numFailedTests: -1, testResults: [{ assertionResults: [{ status: 'passed' }] }] },
+    { numTotalTests: 1.5, numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0 },
+    { numTotalTests: '1', numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0 },
+  ];
+  // Act
+  const results = reports.map((report) => summarizeVitest(report, 'unit', 'vitest.json'));
+  // Assert
+  assert.deepEqual(results.map((result) => result.status), ['unresolved', 'unresolved', 'unresolved']);
+  for (const result of results) assert.match(result.markdown, /集計値が不正/);
+});
+
+// target_id: summarizeVitest(unknown,string,string)
 test('keeps explicit failure precedence over malformed structure', () => {
   // Arrange
   const report = { numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, numTodoTests: 0, success: false, testResults: [{ assertionResults: [null] }] };

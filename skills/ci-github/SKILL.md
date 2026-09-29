@@ -41,9 +41,17 @@ description: GitHub Actions向けCIの設計、canonical workflowの選択・配
 
 ### canonical workflowを適用したい
 
-- `workflows/` から対象を選び、runtimeのmaterializeとpreflightを使って適用先を検証する。
+- exact Releaseの配布manifestから対象presetを取得し、差分planと明示承認を経てcanonical workflowを配置する。
+- runtimeのmaterializeとpreflightを使って適用先を検証する。
+- 参照: `references/distribute-ci-assets.guide.md`
 - 参照: `references/configure-ci-preset.guide.md`
 - 参照: `references/validate-ci-preset.guide.md`
+
+### 必要なCI資材だけを取得・更新・復旧したい
+
+- presetまたはassetを選択し、full commit SHA固定sourceから検証済みproject-local distributionへ取得する。
+- workflowのcopy、更新、rollbackはfetch／plan／apply／rollbackの境界に従う。
+- 参照: `references/distribute-ci-assets.guide.md`
 
 ### 適用済みCIを監査したい
 

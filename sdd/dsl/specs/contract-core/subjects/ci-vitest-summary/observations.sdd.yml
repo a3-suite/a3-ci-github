@@ -20,5 +20,5 @@ observations:
       root: cli.result
       kind: object
       fields:
-        - {selector: status, kind: observation_field, meaning: Canonical classification, rendered as 成功, 失敗, or 判定不能 in the CLI summary.}
-        - {selector: collection, kind: observation_field, meaning: Canonical collection state, rendered as 完了, 一部取得, or 取得不可.}
+        - {selector: status, kind: observation_field, meaning: "Canonical classification, rendered as 成功, 失敗, or 判定不能 in the CLI summary."}
+        - {selector: collection, kind: observation_field, meaning: "Canonical collection state, rendered as 完了, 一部取得, or 取得不可."}

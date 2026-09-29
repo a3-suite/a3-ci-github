@@ -58,9 +58,9 @@ const pushReleaseTag = (work, tag, sha, annotated = true) => {
   else git(work, 'tag', tag, sha);
   git(work, 'push', 'origin', `refs/tags/${tag}`);
 };
-const updateAliasesAt = (cwd, tag, sha) => execute(scriptPath, [], {
+const updateAliasesAt = (cwd, tag, sha, extraEnv = {}) => execute(scriptPath, [], {
   cwd,
-  env: { ...process.env, RELEASE_TAG: tag, RELEASE_SHA: sha },
+  env: { ...process.env, RELEASE_TAG: tag, RELEASE_SHA: sha, ...extraEnv },
 });
 const updateAliases = (work, tag, sha) => updateAliasesAt(work, tag, sha);
 const remoteTagObject = (work, tag) => git(work, 'ls-remote', '--refs', 'origin', `refs/tags/${tag}`).split(/\s+/)[0] ?? '';
@@ -77,13 +77,27 @@ test('release workflow delegates alias mutation to the executable repository run
   const marker = '      - name: Update major and minor aliases\n';
   const start = workflow.indexOf(marker);
   assert.notEqual(start, -1);
-  const updateStep = workflow.slice(start);
+  const nextJob = workflow.indexOf('\n\n  ', start);
+  const updateStep = workflow.slice(start, nextJob === -1 ? undefined : nextJob);
   assert.match(updateStep, /^          RELEASE_TAG: \$\{\{ github\.ref_name \}\}$/m);
   assert.match(updateStep, /^          RELEASE_SHA: \$\{\{ github\.sha \}\}$/m);
   assert.match(updateStep, /^        shell: bash$/m);
   assert.match(updateStep, /^        run: runtime\/repository\/update-release-aliases\.sh$/m);
   assert.doesNotMatch(updateStep, /^        run: \|/m);
   assert.notEqual(statSync(scriptPath).mode & 0o111, 0);
+});
+
+// integration_id: repository-release-alias-update
+test('release source validation performs no alias mutation', () => {
+  const { work } = createRepository();
+  const sourceSha = git(work, 'rev-parse', 'HEAD');
+  pushReleaseTag(work, 'v1.2.3', sourceSha);
+
+  const validated = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+  assert.equal(validated.status, 0, validated.stderr);
+  assert.match(validated.stdout, /Validated release source/);
+  assert.equal(remoteTagObject(work, 'v1'), '');
+  assert.equal(remoteTagObject(work, 'v1.2'), '');
 });
 
 // integration_id: repository-release-alias-update

@@ -31,3 +31,12 @@ related_requirements:
       requirement_id: gh-release-provisioning
   - requirement_ref:
       requirement_id: ci-common-processing-action-reuse
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-jq-provisioner.provision
+  - contract_ref:
+      contract_id: contract.ci-gh-provisioner.provision
+  - contract_ref:
+      contract_id: contract.ci-github-toolchain-verifier.processing
+  - contract_ref:
+      contract_id: contract.ci-github-toolchain-verifier.outputs

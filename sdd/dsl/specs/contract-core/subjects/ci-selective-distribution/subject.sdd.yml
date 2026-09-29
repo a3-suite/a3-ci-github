@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.selective-distribution
+  summary: Select, fetch, plan, apply, and recover immutable CI distribution assets without overwriting unmanaged consumer state.

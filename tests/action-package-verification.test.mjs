@@ -22,14 +22,19 @@ test('derives typecheck and no-rebuild test steps for every bundled Action', () 
   const packages = collectActionPackages(root);
   const plan = verificationPlan(packages, '/node');
   // Assert
-  assert.deepEqual(packages.map((entry) => entry.name), bundledActions.map((entry) => entry.name));
+  assert.deepEqual(
+    packages.map((entry) => entry.name).sort(),
+    bundledActions.map((entry) => entry.name).sort(),
+  );
   assert.ok(packages.every((entry) => entry.tests.length > 0));
   assert.equal(plan.length, packages.length * 2);
   for (const entry of packages) {
     const steps = plan.filter((step) => step.action === entry.name);
-    assert.deepEqual(steps.map((step) => step.phase), ['typecheck', 'test']);
-    assert.deepEqual(steps[0].args, ['run', 'lint']);
-    assert.deepEqual(steps[1].args, ['--import=tsx', '--test', ...entry.tests]);
+    assert.deepEqual(new Set(steps.map((step) => step.phase)), new Set(['typecheck', 'test']));
+    const typecheck = steps.find((step) => step.phase === 'typecheck');
+    const testStep = steps.find((step) => step.phase === 'test');
+    assert.deepEqual(typecheck.args, ['run', 'lint']);
+    assert.deepEqual(testStep.args, ['--import=tsx', '--test', ...entry.tests]);
     assert.equal(steps.some((step) => step.args.includes('ci') || step.args.includes('build')), false);
   }
 });

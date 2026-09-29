@@ -164,14 +164,15 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 
 | 表記 | 意味 |
 | --- | --- |
-| `{ci-github-source-root}` | `workflows/`、`runtime/`、`lint-rules/`、`skills/ci-github/` を含む a3-ci-github 配布元 repository root |
+| `{ci-github-source-root}` | `distribute-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
 | `{skill-collection-root}` | adapter bundle の `source.skill` を解決できる外部スキル集合 root |
-| `{ci-github-skill-root}` | 導線と参照文書だけを持つ `{ci-github-source-root}/skills/ci-github` |
+| `{ci-github-skill-root}` | `project-skill-deploy`で別途配備した、導線と参照文書だけを持つ`ci-github` Agent Skill root |
 | `{project-root}` | CI を導入する project の root |
 
 `{skill-collection-root}` は、選択した言語スキルを identity で解決する場合だけ使用する。
-repository-owned の workflow、runtime、lint rule は `{ci-github-source-root}` から解決し、
-`{ci-github-skill-root}` 配下へ複製しない。コピー先の `{project-root}` は両方と別であり、
+repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
+`{ci-github-skill-root}` 配下へ複製しない。取得とworkflow copyは
+`distribute-ci-assets.guide.md`のfetch／plan／applyを先に完了する。コピー先の`{project-root}`は両方と別であり、
 導入後の workflow や adapter から配布元を参照しない。
 
 ## プリセット別の値
@@ -190,10 +191,10 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 ## 導入手順
 
 1. `ci-github` スキルで用途に対応するプリセットを選ぶ。
-2. registry から選択した preset の workflow、copyable asset、固定 SHA Action binding、その依存閉包、残る `requiredExtensions` を解決する。固定本数や platform 数から必要ファイルを推測しない。
-3. registry の copyable asset を配置する。
+2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchし、planと明示承認を経てcanonical workflowを配置する。
+3. registry から選択した preset の copyable asset、固定 SHA Action binding、その依存閉包、残る `requiredExtensions` を解決し、copyable assetを配置する。固定本数や platform 数から必要ファイルを推測しない。
 4. quality は adapter descriptor、Release と package は選択した Action binding と残る `requiredExtensions` を workflow から直接接続する。依存閉包に属する copyable asset は改変しない。
-5. registry の `workflowAssets` を canonical destination へコピーする。
+5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
 6. workflow の placeholder だけを project の値へ置換し、外部 Action は `workflow-version-policy.reference.md` の「Action と版情報の扱い」に従って registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin を設定する。あわせて registry の `providerActions.pinCompanion` が宣言する `.ci/provider-action-pins.yml` を生成して配置する。job、step、permissions、trust 境界、summary 経路は直接変更しない。
 7. workflow 初期パラメータ、必要な Variables、Secrets、workflow input の値を上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
 8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、owner、正本への導線、検証導線、更新・撤去条件を記録する。
@@ -213,15 +214,11 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 1. `ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
    entryを選ぶ。entryの`id`を`{bundle-id}`、`targetDescriptor`をworkflowに設定するdescriptor名として使う。
 
-2. workflow を配置する。導入用 TypeScript helper の runtime は管理対象 CI 資産に含めず、
-   `references/validate-ci-preset.guide.md` の remediation 手順で `runtime/preset/` の固定依存定義から
-   `{project-root}/.a3-skills/ci-github/runtime/` へ準備する。
-
-   ```bash
-   mkdir -p "{project-root}/.github/workflows"
-   cp "{ci-github-source-root}/workflows/quality/quality-gate.yml" \
-     "{project-root}/.github/workflows/quality-gate.yml"
-   ```
+2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchし、planの
+   `create`／`reuse`／`update`と競合なしを確認してから、plan digestを明示してapplyする。
+   導入用 TypeScript helper のruntimeは管理対象CI資産に含めず、取得済みdistributionの
+   `runtime/preset/`固定依存定義から`references/validate-ci-preset.guide.md`のremediation手順で
+   `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。
 
 3. remediation 手順で準備・検証した `ci_github_local_runtime` を使い、選択した bundle をmaterializeする。
 

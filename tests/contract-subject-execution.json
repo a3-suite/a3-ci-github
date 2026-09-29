@@ -1252,7 +1252,8 @@
           "tests": [
             "tests/action-dist-gate.test.mjs",
             "tests/action-index-gate.test.mjs",
-            "tests/action-package-verification.test.mjs"
+            "tests/action-package-verification.test.mjs",
+            "runtime/repository/tests/update-release-aliases.test.mjs"
           ],
           "coverage": {
             "enabled": true,
@@ -1484,6 +1485,61 @@
           "level": "e2e",
           "status": "excluded",
           "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.selective-distribution",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Selection, integrity, filesystem planning, and transaction recovery form one distribution boundary."
+        },
+        {
+          "id": "integration-runtime",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.test.mjs",
+            "runtime/repository/tests/manage-distribution-release.test.mjs",
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "runtime/distribution/**/*.mjs"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-release-builder",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "repository-scripts",
+            "include": [
+              "runtime/distribution/**/*.ts"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "GitHub Release and Raw availability require hosted evidence after publication."
         }
       ]
     },

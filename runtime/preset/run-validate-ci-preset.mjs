@@ -234,7 +234,7 @@ const run = () => {
     );
   }
 
-  try {
+  const executeValidator = () => {
     const npmResult = spawnSync(
       'npm',
       ['ls', '--prefix', runtimeRoot, '--all', '--json', '--no-audit', '--no-fund'],
@@ -264,7 +264,6 @@ const run = () => {
       env: { ...childEnv, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot },
     });
     if (result.error) return diagnostic('validator-cannot-start', result.error.message);
-    if (result.stdout) process.stdout.write(result.stdout);
     if (result.status === null) {
       return diagnostic('validator-cannot-start', 'validator terminated without an exit status');
     }
@@ -275,11 +274,37 @@ const run = () => {
         'cannot-complete',
       );
     }
-    if (result.stderr) process.stderr.write(result.stderr);
-    return result.status;
-  } finally {
-    fs.rmSync(runStateRoot, { recursive: true, force: true });
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  };
+
+  let execution;
+  let executionError;
+  try {
+    execution = executeValidator();
+  } catch (error) {
+    executionError = error;
   }
+  let cleanupError;
+  try {
+    fs.rmSync(runStateRoot, { recursive: true, force: true });
+  } catch (error) {
+    cleanupError = error;
+  }
+  if (cleanupError) {
+    const cleanupStatus = diagnostic(
+      'tool-state-cleanup-failed',
+      cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      'cannot-complete',
+    );
+    if (!executionError && typeof execution !== 'number' && execution?.status === 0) {
+      return cleanupStatus;
+    }
+  }
+  if (executionError) throw executionError;
+  if (typeof execution === 'number') return execution;
+  if (execution.stdout) process.stdout.write(execution.stdout);
+  if (execution.stderr) process.stderr.write(execution.stderr);
+  return execution.status;
 };
 
 process.exitCode = run();

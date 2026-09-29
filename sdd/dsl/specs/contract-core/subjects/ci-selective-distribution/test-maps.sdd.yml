@@ -1,0 +1,111 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.selective-distribution
+test_maps:
+  - verification_id: verification.ci-selective-distribution.selection
+    case_id: selective-distribution-selection
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: preset selection closes dependencies while direct asset selection reports missing dependencies
+        check_refs:
+          - check-selective-distribution-closure
+          - check-selective-distribution-missing-dependency
+  - verification_id: verification.ci-selective-distribution.delivery
+    case_id: selective-distribution-delivery
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: release generator derives deterministic selective assets and checksums from registries
+        check_refs:
+          - check-selective-distribution-receipt
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: same revision merges separately fetched verified asset groups without replacing prior files
+        check_refs:
+          - check-selective-distribution-assets
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: release generator binds every published byte to the exact source commit
+        check_refs:
+          - check-selective-distribution-receipt
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: release generator rejects invalid version source and output boundaries
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: manifest validation rejects malformed authority identity files and dependency references
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: remote manifest loading confines the Release URL and release tag mapping
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: fetch rejects source bytes that do not match the release manifest
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: fetch rejects a project-local state path redirected through a symlink
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: local verification rejects distribution bytes changed after fetch
+        check_refs:
+          - check-selective-distribution-invalid-source
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: standalone public CLI executes the local fetch plan and approved apply boundary
+        check_refs:
+          - check-selective-distribution-receipt
+  - verification_id: verification.ci-selective-distribution.publication
+    case_id: selective-distribution-publication
+    tests:
+      - path: runtime/repository/tests/manage-distribution-release.test.mjs
+        symbol: distribution Release publication is idempotent and readback rejects changed remote bytes
+        check_refs:
+          - check-selective-distribution-publication
+          - check-selective-distribution-publication-failure
+      - path: tests/workflow-contracts.test.mjs
+        symbol: repository release publishes and reads back the exact selective distribution asset set before aliases
+        check_refs:
+          - check-selective-distribution-publication
+  - verification_id: verification.ci-selective-distribution.application
+    case_id: selective-distribution-application
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: fetch, plan, apply and rollback preserve explicit consumer state transitions
+        check_refs:
+          - check-selective-distribution-plan
+          - check-selective-distribution-transaction
+          - check-selective-distribution-rollback
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: plan rejects unmanaged destination drift and apply rejects changed plan inputs
+        check_refs:
+          - check-selective-distribution-conflict
+          - check-selective-distribution-changed-input
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: direct workflow asset fetch cannot bypass preset closure during apply planning
+        check_refs:
+          - check-selective-distribution-incomplete-application
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: apply rechecks destination ancestry immediately before writing
+        check_refs:
+          - check-selective-distribution-changed-input
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: partial apply failure restores files changed earlier in the transaction
+        check_refs:
+          - check-selective-distribution-rollback
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: application rejects invalid ownership approval and concurrent mutation locks
+        check_refs:
+          - check-selective-distribution-conflict
+          - check-selective-distribution-changed-input
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: rollback validates every backup identity before changing consumer files
+        check_refs:
+          - check-selective-distribution-rollback
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: rollback refuses to overwrite consumer changes made after apply
+        check_refs:
+          - check-selective-distribution-changed-input
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: standalone public CLI executes the local fetch plan and approved apply boundary
+        check_refs:
+          - check-selective-distribution-plan
+          - check-selective-distribution-transaction

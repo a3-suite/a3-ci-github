@@ -8,6 +8,7 @@ fail() {
 
 release_tag="${RELEASE_TAG:-}"
 release_sha="${RELEASE_SHA:-}"
+validate_only="${CI_RELEASE_VALIDATE_ONLY:-false}"
 
 [[ "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
   || fail "release tag must match vX.Y.Z: $release_tag"
@@ -39,6 +40,13 @@ repository_version="$(git show "$source_sha:VERSION" 2>/dev/null)" \
 git fetch --no-tags origin main
 if ! git merge-base --is-ancestor "$source_sha" origin/main; then
   fail "release tag source is not integrated into main"
+fi
+
+[[ "$validate_only" == true || "$validate_only" == false ]] \
+  || fail "CI_RELEASE_VALIDATE_ONLY must be true or false"
+if [[ "$validate_only" == true ]]; then
+  echo "Validated release source $release_tag at $source_sha"
+  exit 0
 fi
 
 git config user.name github-actions[bot]

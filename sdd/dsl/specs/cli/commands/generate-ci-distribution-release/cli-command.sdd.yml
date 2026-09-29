@@ -1,0 +1,26 @@
+version: 1
+name: cli-command
+command:
+  id: generate-ci-distribution-release
+  path:
+    - tsx
+    - runtime/distribution/generate-distribution-release.ts
+  summary: Derive selective distribution Release metadata and bootstrap assets from repository registries
+  usage_targets:
+    - id: prepare
+      summary: Write manifest, standalone fetch CLI, and checksums into one new output directory
+      option_bindings:
+        - option_id: repository-root
+          presence: optional
+        - option_id: output-directory
+          presence: required
+        - option_id: source-revision
+          presence: required
+        - option_id: release-tag
+          presence: required
+  option_groups:
+    - id: release-inputs
+      title: Immutable Release preparation inputs
+      options: [repository-root, output-directory, source-revision, release-tag]
+  help:
+    usage: tsx runtime/distribution/generate-distribution-release.ts --output-directory <PATH> --source-revision <SHA> --release-tag <TAG> [--repository-root <PATH>]

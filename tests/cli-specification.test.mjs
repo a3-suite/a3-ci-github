@@ -10,7 +10,13 @@ const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 // integration_id: repository-cli-specification
 test('CLI specification indexes only repository-owned public entrypoints', () => {
   const manifest = read('sdd/dsl/specs/cli/cli-command-manifest.sdd.yml');
-  for (const pattern of [/id: validate-ci-preset/, /id: generate-ci-asset-lock/, /id: materialize-adapter-bundle/]) {
+  for (const pattern of [
+    /id: validate-ci-preset/,
+    /id: generate-ci-asset-lock/,
+    /id: materialize-adapter-bundle/,
+    /id: manage-ci-distribution/,
+    /id: generate-ci-distribution-release/,
+  ]) {
     assert.match(manifest, pattern);
   }
   assert.doesNotMatch(manifest, /sdd-check/);
@@ -24,11 +30,15 @@ test('CLI option vocabulary matches public parser flags', () => {
     read('runtime/preset/run-validate-ci-preset.mjs'),
     read('runtime/preset/generate-ci-asset-lock.ts'),
     read('runtime/adapter/materialize-adapter-bundle.ts'),
+    read('runtime/distribution/fetch-a3-ci-github.mjs'),
+    read('runtime/distribution/generate-distribution-release.ts'),
   ].join('\n');
   const declared = [...vocabulary.matchAll(/^\s+long:\s+(--\S+)$/gm)].map((match) => match[1]);
   assert.deepEqual(declared.sort(), [
-    '--audit-mode', '--bundle', '--inventory', '--output', '--preset', '--repo-root',
-    '--skill-collection-root', '--source-revision', '--source-root', '--target-root',
+    '--approve', '--asset', '--audit-mode', '--bundle', '--inventory', '--manifest',
+    '--manifest-url', '--output', '--output-directory', '--plan', '--preset', '--release-tag',
+    '--repo-root', '--repository-root', '--skill-collection-root', '--source-revision',
+    '--source-root', '--target-root', '--transaction',
   ].sort());
   for (const flag of declared) assert.equal(implementations.includes(`'${flag}'`), true, flag);
   assert.match(vocabulary, /resolving a relative path from the process working directory/);

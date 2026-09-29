@@ -96,6 +96,12 @@ const cases = [
     collection: 'partial',
   },
   {
+    title: 'Action and CLI agree on invalid provided counts',
+    report: { numFailedTests: -1, testResults: [{ assertionResults: [{ status: 'passed' }] }] },
+    status: 'unresolved',
+    collection: 'partial',
+  },
+  {
     title: 'Action and CLI agree on failure-with-malformation',
     report: { numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, numTodoTests: 0, success: false, testResults: [{ assertionResults: [null] }] },
     status: 'failed',

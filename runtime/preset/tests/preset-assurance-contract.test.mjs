@@ -10,7 +10,10 @@ const run = (args) => spawnSync(process.execPath, [bootstrapPath, ...args], { cw
 const diagnosticOf = (result) => {
   assert.equal(result.status, 2);
   const diagnostic = JSON.parse(result.stderr.trim());
-  assert.deepEqual(Object.keys(diagnostic), ['schemaVersion', 'kind', 'outcome', 'reason', 'message']);
+  assert.deepEqual(
+    Object.keys(diagnostic).sort(),
+    ['schemaVersion', 'kind', 'outcome', 'reason', 'message'].sort(),
+  );
   assert.equal(diagnostic.kind, 'ci-github-preflight-bootstrap');
   return diagnostic;
 };

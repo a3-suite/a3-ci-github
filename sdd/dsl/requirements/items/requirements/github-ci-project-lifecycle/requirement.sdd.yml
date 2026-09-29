@@ -22,6 +22,8 @@ requirements:
     derived_artifacts:
       use_cases:
         - use_case_ref:
+            use_case_id: ci-github-selective-asset-delivery
+        - use_case_ref:
             use_case_id: ci-github-preset-application
         - use_case_ref:
             use_case_id: ci-github-preset-audit

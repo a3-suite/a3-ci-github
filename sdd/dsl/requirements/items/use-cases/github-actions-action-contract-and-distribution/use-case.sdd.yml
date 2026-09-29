@@ -19,6 +19,7 @@ goal: Action の公開契約を保ったまま、利用者側の build や内部
 preconditions:
   - Action の実行方式と公開契約が選択されている
   - provider 側が workflow mapping、権限、runner、信頼境界を所有している
+  - release tagのsourceは必須quality checkを通過したprotected mainへ統合されている
 trigger: Action の新規作成または公開契約・実装・依存の変更
 main_success_scenario:
   - summary: action.yml に公開 input、output、runtime、entrypoint を定義する
@@ -36,3 +37,6 @@ failure_outcomes:
 related_requirements:
   - requirement_ref:
       requirement_id: github-actions-action-contract-and-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.repository-action-distribution.integrity

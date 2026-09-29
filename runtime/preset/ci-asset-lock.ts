@@ -45,7 +45,7 @@ export type WriteAssetLockOptions = {
   sha256: (absolutePath: string) => string;
 };
 
-const FULL_SHA = /^[0-9a-f]{40}$/;
+export const FULL_SHA = /^[0-9a-f]{40}$/;
 
 export const minuteTimestamp = (value: string | Date): string => {
   const date = value instanceof Date ? value : new Date(value);

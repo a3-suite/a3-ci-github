@@ -29,6 +29,23 @@ test('bundled entrypoint writes a Vitest summary', () => {
 });
 
 // integration_id: ci-vitest-summary-entrypoint-regression
+test('bundled entrypoint rejects a summary path that aliases the input report without modifying it', () => {
+  // Arrange
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-vitest-summary-output-collision-')); const report = path.join(temp, 'report.json'); const output = path.join(temp, 'outputs');
+  const original = JSON.stringify({ numTotalTests: 1, numPassedTests: 1, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true });
+  fs.writeFileSync(report, original); fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, 'INPUT_REPORT-JSON': report, 'INPUT_SUMMARY-PATH': report };
+  // Act
+  const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' });
+  // Assert
+  try {
+    assert.notEqual(result.status, 0);
+    assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'failed');
+    assert.equal(fs.readFileSync(report, 'utf8'), original);
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});
+
+// integration_id: ci-vitest-summary-entrypoint-regression
 test('bundled entrypoint keeps malformed report shapes unresolved', () => {
   // Arrange
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-vitest-summary-malformed-')); const report = path.join(temp, 'report.json'); const output = path.join(temp, 'outputs');

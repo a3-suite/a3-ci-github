@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-publication-workflow
 contracts:
   - id: contract.ci-release-publication-workflow.publication
-    summary: The canonical release workflows separate unprivileged request creation, trusted request validation, and privileged publication.
+    summary: The canonical release workflows order unprivileged request creation, trusted request and identity validation, handoff production, privileged publication, and publication readback.
     conditions:
       - id: ci-release-publication-workflow-canonical-source-available
         input_predicate:
@@ -36,10 +36,10 @@ contracts:
             value: failure-summary
     verification_intents:
       - id: ci-release-publication-workflow-success-intent
-        goal: Verify the canonical source declares the trusted capability boundary.
+        goal: Verify request, identity, and handoff validation precede credential-bearing publication, which precedes publication readback.
         guarantee_refs:
           - ci-release-publication-workflow-success-observed
       - id: ci-release-publication-workflow-failure-intent
-        goal: Verify the canonical source declares a failure-visible summary route.
+        goal: Verify failed or unresolved prerequisite stages block publication while the aggregate summary remains observable.
         guarantee_refs:
           - ci-release-publication-workflow-failure-observed
