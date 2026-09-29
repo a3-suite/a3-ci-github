@@ -107,3 +107,33 @@ test('renders invalid JSON as indeterminate', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(cliOutcome(result.stdout), '判定不能');
 });
+
+test('renders the summary table and keeps detail values line-normalized', () => {
+  const reportPath = writeReport('display.json', {
+    numTotalTests: 1,
+    numPassedTests: 0,
+    numFailedTests: 1,
+    numPendingTests: 0,
+    numTodoTests: 0,
+    success: false,
+    testResults: [{ assertionResults: [{ status: 'failed', fullName: 'suite ng`case\nnext' }] }],
+  });
+  const result = runCli(['--log', reportPath]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^### テストサマリ$/m);
+  assert.match(result.stdout, /^\| テスト \| 実施 \| 結果 \|$/m);
+  assert.match(result.stdout, /^\|:--\|:--\|:--:\|$/m);
+  assert.match(result.stdout, /^\| `テスト` \| テストレポートを解析 \| ❌ 失敗（1件） \|$/m);
+  assert.match(result.stdout, /^- 判定: 失敗$/m);
+  assert.match(result.stdout, /^- 収集: 完了$/m);
+  const failedNameLine = result.stdout.split('\n').find((line) => line.includes('suite'));
+  assert.ok(failedNameLine, result.stdout);
+  assert.ok(failedNameLine.includes('next'), failedNameLine);
+  assert.doesNotMatch(result.stdout, /\r/);
+
+  const partialPath = writeReport('partial.json', { numTotalTests: 3 });
+  const partial = runCli(['--log', partialPath]);
+  assert.equal(partial.status, 0, partial.stderr);
+  assert.match(partial.stdout, /^- テスト: 3件$/m);
+  assert.doesNotMatch(partial.stdout, /- テスト: 3件（/);
+});
