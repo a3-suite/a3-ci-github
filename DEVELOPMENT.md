@@ -38,6 +38,15 @@ node --test runtime/distribution/tests/selective-distribution.test.mjs
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
 
+## コミットゲート
+
+コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、公開 Agent Skill `ci-github` の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。
+
+```sh
+export A3_CI_GITHUB_SKILL_DEPLOY_ROOT=<external-skills-root>
+python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
+```
+
 ## Action catalog
 
 ```sh
