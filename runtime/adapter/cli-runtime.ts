@@ -1,10 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const isDirectExecution = (moduleUrl: string, argv: string[] = process.argv): boolean => {
   const entrypoint = argv[1];
-  return Boolean(entrypoint) && moduleUrl === pathToFileURL(path.resolve(entrypoint)).href;
+  if (!entrypoint) return false;
+  try {
+    return fs.realpathSync(fileURLToPath(moduleUrl)) === fs.realpathSync(entrypoint);
+  } catch {
+    return moduleUrl === pathToFileURL(path.resolve(entrypoint)).href;
+  }
 };
 
 export const writeLine = (line: string, outputPath?: string): void => {

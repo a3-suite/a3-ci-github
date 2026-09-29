@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -331,7 +331,16 @@ const main = () => {
   console.log(`Contract-subject coverage report written to ${path.relative(SCRIPT_ROOT, reportPath)}.`);
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isDirectExecution = (() => {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+})();
+
+if (isDirectExecution) {
   try {
     main();
   } catch (error) {

@@ -780,6 +780,18 @@ test('standalone public CLI executes the local fetch plan and approved apply bou
 });
 
 // contract_id: contract.ci-selective-distribution.delivery
+test('standalone public CLI executes through an absolute symlinked path', async () => {
+  await withFixture('a3-ci-github-distribution-cli-symlink-', (root) => {
+    const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+    const link = path.join(root, 'fetch-a3-ci-github.mjs');
+    fs.symlinkSync(cli, link);
+    const result = spawnSync(process.execPath, [link, 'unknown-command'], { encoding: 'utf8' });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /distribution-command-unknown/);
+  });
+});
+
+// contract_id: contract.ci-selective-distribution.delivery
 test('same revision merges separately fetched verified asset groups without replacing prior files', async () => {
   await withFixture('a3-ci-github-distribution-merge-', async (root) => {
       const release = prepareRelease(root);
