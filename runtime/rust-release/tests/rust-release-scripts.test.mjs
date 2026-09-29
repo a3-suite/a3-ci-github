@@ -470,6 +470,107 @@ test('PowerShell package and verification roundtrip when pwsh is available', { s
   assert.equal(verified.status, 0, verified.stderr);
 }));
 
+// contract_id: contract.ci-rust-release-build.processing
+// integration_id: rust-release-scripts-regression
+test('PowerShell package failure removes staging and missing or mismatched artifacts fail closed', { skip: !hasPwsh }, () => withFixture((fixture) => {
+  // Arrange
+  const binary = path.join(fixture, 'example-cli.exe');
+  const output = path.join(fixture, 'release-output');
+  const sourceSha = 'a'.repeat(40);
+  writeFileSync(binary, 'release-binary');
+  const packageArgs = [
+    binary, 'different-name.exe', 'example-cli', '1.2.3', 'windows-x64',
+    'x86_64-pc-windows-msvc', sourceSha, output,
+  ];
+
+  // Act
+  const failedPackage = run('pwsh', [
+    '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'package-release.ps1'), ...packageArgs,
+  ]);
+  // Assert
+  assert.notEqual(failedPackage.status, 0);
+  assert.equal(existsSync(output), false);
+  assert.deepEqual(
+    readdirSync(fixture).filter((name) => name.startsWith('release-output.tmp.')),
+    [],
+  );
+
+  // Arrange
+  mkdirSync(output);
+  const verifyArgs = [
+    'example-cli.exe', 'example-cli', '1.2.3', 'windows-x64',
+    'x86_64-pc-windows-msvc', sourceSha, output,
+  ];
+  // Act
+  const missingArtifact = run('pwsh', [
+    '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'verify-release-asset.ps1'), ...verifyArgs,
+  ]);
+  // Assert
+  assert.notEqual(missingArtifact.status, 0);
+  assert.match(missingArtifact.stderr, /release archive missing/);
+
+  // Arrange
+  rmSync(output, { recursive: true, force: true });
+  const created = run('pwsh', [
+    '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'package-release.ps1'),
+    binary, 'example-cli.exe', 'example-cli', '1.2.3', 'windows-x64',
+    'x86_64-pc-windows-msvc', sourceSha, output,
+  ]);
+  assert.equal(created.status, 0, created.stderr);
+  const assetManifestPath = path.join(output, 'asset-manifest.json');
+  const assetManifest = JSON.parse(readFileSync(assetManifestPath, 'utf8'));
+  assetManifest.version = '1.2.4';
+  writeFileSync(assetManifestPath, JSON.stringify(assetManifest));
+  // Act
+  const versionMismatch = run('pwsh', [
+    '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'verify-release-asset.ps1'), ...verifyArgs,
+  ]);
+  // Assert
+  assert.notEqual(versionMismatch.status, 0);
+  assert.match(versionMismatch.stderr, /release asset manifest source or version mismatch/);
+}));
+
+// contract_id: contract.ci-rust-release-build.processing
+// integration_id: rust-release-scripts-regression
+test('Windows build stops when native toolchain setup fails', { skip: process.platform !== 'win32' || !hasPwsh }, () => withFixture((fixture) => {
+  // Arrange
+  const sourceSha = initializeGitFixture(fixture);
+  const manifestPath = path.join(fixture, 'platform-manifest.yml');
+  const manifestText = 'platforms:\n  - {id: windows-x64, runner: windows-2025, target: x86_64-pc-windows-msvc}\n';
+  writeFileSync(manifestPath, manifestText);
+  const authorityPath = path.join(fixture, 'authority.json');
+  writeFileSync(authorityPath, JSON.stringify({
+    language_profile: 'rust',
+    toolchain_version: '1.90.0',
+    platform_manifest: manifestPath,
+    platform_manifest_sha256: sha256(manifestText),
+    source_sha: sourceSha,
+    version: '1.2.3',
+  }));
+  const fakeBin = path.join(fixture, 'bin');
+  mkdirSync(fakeBin);
+  writeFileSync(path.join(fakeBin, 'rustup.cmd'), '@exit /b 1\r\n');
+  const output = path.join(fixture, 'release-output');
+  const environment = {
+    ...process.env,
+    PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`,
+    CI_CARGO_MANIFEST_PATH: path.join(fixture, 'Cargo.toml'),
+    CI_RELEASE_BINARY_NAME: 'example-cli',
+    CI_RELEASE_ASSET_PREFIX: 'example-cli',
+  };
+
+  // Act
+  const result = run('pwsh', [
+    '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'ci-release-build.ps1'),
+    'rust', manifestPath, '1.90.0', 'windows-x64', 'x86_64-pc-windows-msvc',
+    authorityPath, output,
+  ], { cwd: fixture, env: environment });
+  // Assert
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /rust toolchain setup failed/);
+  assert.equal(existsSync(output), false);
+}));
+
 // integration_id: rust-release-scripts-regression
 test('Windows build uses case-sensitive package and binary version token checks', () => {
   // Arrange

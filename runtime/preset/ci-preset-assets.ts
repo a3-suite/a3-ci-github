@@ -364,6 +364,110 @@ export const collectProviderStaticValidationConfigPaths = (
   return paths;
 };
 
+const isValidWorkflowAsset = (value: unknown): value is WorkflowAsset =>
+  isMap(value)
+  && typeof value.id === 'string'
+  && isValidResourceSource(value.source)
+  && typeof value.destination === 'string';
+
+const isValidOptionalWorkflowAsset = (value: unknown): value is OptionalWorkflowAsset => {
+  if (!isValidWorkflowAsset(value) || !isMap(value)) return false;
+  const companionPaths = value.companionPaths;
+  return companionPaths === undefined
+    || (Array.isArray(companionPaths)
+      && companionPaths.every((entry) => typeof entry === 'string'));
+};
+
+const isValidPreset = (value: unknown): value is Preset =>
+  isMap(value)
+  && typeof value.id === 'string'
+  && Array.isArray(value.workflowAssets)
+  && value.workflowAssets.every(isValidWorkflowAsset)
+  && (value.optionalWorkflowAssets === undefined
+    || (Array.isArray(value.optionalWorkflowAssets)
+      && value.optionalWorkflowAssets.every(isValidOptionalWorkflowAsset)));
+
+const isValidActionTarget = (value: unknown): value is ActionTarget =>
+  isMap(value)
+  && typeof value.id === 'string'
+  && typeof value.actionPath === 'string'
+  && Array.isArray(value.workflows)
+  && Array.isArray(value.privilegedJobs)
+  && value.privilegedJobs.every((entry) => typeof entry === 'string');
+
+const isValidStandardImplementation = (value: unknown): value is StandardImplementation =>
+  isMap(value)
+  && typeof value.id === 'string'
+  && Array.isArray(value.languageProfiles)
+  && isMap(value.fulfillsExtensions)
+  && Array.isArray(value.projectSettingsEnv)
+  && Array.isArray(value.dependencies);
+
+const isAdapterBundleShape = (value: unknown): value is ValueMap =>
+  isMap(value)
+  && typeof value.id === 'string'
+  && isValidResourceSource(value.source)
+  && typeof value.targetDescriptor === 'string';
+
+const collectApprovedProviderActionPins = (
+  providerActions: ValueMap,
+): { pins: Map<string, string>; entries: Map<string, Record<string, string>> } => {
+  const pins = new Map<string, string>();
+  const entries = new Map<string, Record<string, string>>();
+  for (const entry of Array.isArray(providerActions.entries) ? providerActions.entries : []) {
+    const candidate = map(entry);
+    const action = String(candidate.action ?? '');
+    const commitSha = String(candidate.commitSha ?? '');
+    if (!action || !FULL_SHA.test(commitSha)) continue;
+    pins.set(action, commitSha);
+    entries.set(action, Object.fromEntries(
+      Object.entries(candidate).map(([key, value]) => [key, String(value ?? '')]),
+    ));
+  }
+  return { pins, entries };
+};
+
+const collectQualityTriggerExtensions = (
+  conformance: ValueMap,
+  report: DiagnosticReport,
+): Record<string, TriggerExtensionRule> => {
+  const triggerExtensions = map(map(conformance.workflowTriggerExtensions)['quality-gate']);
+  const qualityTriggerExtensions: Record<string, TriggerExtensionRule> = {};
+  for (const [event, rule] of Object.entries(triggerExtensions)) {
+    if (rule === 'empty-map' || rule === 'cron-list') qualityTriggerExtensions[event] = rule;
+    else add(report.mismatches, {
+      path: `conformance.workflowTriggerExtensions.quality-gate.${event}`,
+      message: 'unsupported trigger extension rule',
+    });
+  }
+  return qualityTriggerExtensions;
+};
+
+const interpretActionization = (
+  actionization: ValueMap,
+  report: DiagnosticReport,
+): { implementationSource: ValueMap; actionReleaseTag: string; actionExactRef: string } => {
+  const implementationSource = map(actionization.implementationSource);
+  const actionReleaseTag = String(implementationSource.releaseTag ?? '');
+  const actionExactRef = String(implementationSource.exactRef ?? '');
+  const availabilityRequirements = strings(map(actionization.availabilityGate).requires);
+  if (!/^v\d+\.\d+\.\d+$/.test(actionReleaseTag)) add(report.mismatches, {
+    path: 'actionization.implementationSource.releaseTag',
+    message: 'a3 Action release tag must be an exact vX.Y.Z tag',
+  });
+  if (!FULL_SHA.test(actionExactRef)) add(report.mismatches, {
+    path: 'actionization.implementationSource.exactRef',
+    message: 'a3 Action exact ref must be a full lowercase commit SHA',
+  });
+  for (const requirement of ['exact-release-tag', 'release-tag-mapping', 'exact-ref']) {
+    if (!availabilityRequirements.includes(requirement)) add(report.mismatches, {
+      path: 'actionization.availabilityGate.requires',
+      message: `a3 Action availability gate is missing ${requirement}`,
+    });
+  }
+  return { implementationSource, actionReleaseTag, actionExactRef };
+};
+
 export const loadRegistry = (report: DiagnosticReport): RegistryData => {
   const registry = map(parseYaml(fs.readFileSync(REGISTRY_PATH, 'utf8'), REGISTRY_PATH, report));
   const ciAssetRegistry = map(parseYaml(
@@ -384,52 +488,18 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     report,
   );
   const providerActions = map(registry.providerActions);
-  const approvedProviderActionPins = new Map<string, string>();
-  const approvedProviderActionEntries = new Map<string, Record<string, string>>();
-  for (const entry of Array.isArray(providerActions.entries) ? providerActions.entries : []) {
-    const candidate = map(entry);
-    const action = String(candidate.action ?? '');
-    const commitSha = String(candidate.commitSha ?? '');
-    if (!action || !FULL_SHA.test(commitSha)) continue;
-    approvedProviderActionPins.set(action, commitSha);
-    approvedProviderActionEntries.set(action, Object.fromEntries(
-      Object.entries(candidate).map(([key, value]) => [key, String(value ?? '')]),
-    ));
-  }
+  const { pins: approvedProviderActionPins, entries: approvedProviderActionEntries } =
+    collectApprovedProviderActionPins(providerActions);
   const pinCompanion = map(providerActions.pinCompanion);
   const providerActionPinCompanionPath = String(pinCompanion.path ?? '');
   const providerActionPinCompanionComparison = String(pinCompanion.appliedComparison ?? '');
   const providerActionPinFields = strings(pinCompanion.fields);
   const providerId = String(map(registry.provider).id ?? '');
   const conformance = map(registry.conformance);
-  const triggerExtensions = map(map(conformance.workflowTriggerExtensions)['quality-gate']);
-  const qualityTriggerExtensions: Record<string, TriggerExtensionRule> = {};
-  for (const [event, rule] of Object.entries(triggerExtensions)) {
-    if (rule === 'empty-map' || rule === 'cron-list') qualityTriggerExtensions[event] = rule;
-    else add(report.mismatches, {
-      path: `conformance.workflowTriggerExtensions.quality-gate.${event}`,
-      message: 'unsupported trigger extension rule',
-    });
-  }
+  const qualityTriggerExtensions = collectQualityTriggerExtensions(conformance, report);
   const actionization = map(registry.actionization);
-  const implementationSource = map(actionization.implementationSource);
-  const actionReleaseTag = String(implementationSource.releaseTag ?? '');
-  const actionExactRef = String(implementationSource.exactRef ?? '');
-  const availabilityRequirements = strings(map(actionization.availabilityGate).requires);
-  if (!/^v\d+\.\d+\.\d+$/.test(actionReleaseTag)) add(report.mismatches, {
-    path: 'actionization.implementationSource.releaseTag',
-    message: 'a3 Action release tag must be an exact vX.Y.Z tag',
-  });
-  if (!FULL_SHA.test(actionExactRef)) add(report.mismatches, {
-    path: 'actionization.implementationSource.exactRef',
-    message: 'a3 Action exact ref must be a full lowercase commit SHA',
-  });
-  for (const requirement of ['exact-release-tag', 'release-tag-mapping', 'exact-ref']) {
-    if (!availabilityRequirements.includes(requirement)) add(report.mismatches, {
-      path: 'actionization.availabilityGate.requires',
-      message: `a3 Action availability gate is missing ${requirement}`,
-    });
-  }
+  const { implementationSource, actionReleaseTag, actionExactRef } =
+    interpretActionization(actionization, report);
   const targets = actionization.targets;
   // Omitted `source.skill` identifies a repository-owned asset. Explicit skill
   // identities remain reserved for externally owned language adapter bundles.
@@ -441,49 +511,19 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
       .map((value) => normalizeProviderAsset(value, commonSourceSkill)),
   ].filter((value): value is ProviderAsset => value !== undefined);
   return {
-    presets: Array.isArray(presets) ? presets.filter((value): value is Preset => {
-    return isMap(value) && typeof value.id === 'string' && Array.isArray(value.workflowAssets)
-      && value.workflowAssets.every((asset) => isMap(asset)
-        && typeof asset.id === 'string'
-        && isValidResourceSource(asset.source)
-        && typeof asset.destination === 'string')
-      && (value.optionalWorkflowAssets === undefined
-        || (Array.isArray(value.optionalWorkflowAssets)
-          && value.optionalWorkflowAssets.every((asset) => isMap(asset)
-            && typeof asset.id === 'string'
-            && isValidResourceSource(asset.source)
-            && typeof asset.destination === 'string'
-            && (asset.companionPaths === undefined
-              || (Array.isArray(asset.companionPaths)
-                && asset.companionPaths.every((entry) => typeof entry === 'string'))))));
-    }) : [],
+    presets: Array.isArray(presets) ? presets.filter(isValidPreset) : [],
     providerId,
     actionRepository: String(implementationSource.repository ?? ''),
     actionReleaseTag,
     actionExactRef,
-    actionTargets: Array.isArray(targets) ? targets.filter((value): value is ActionTarget =>
-      isMap(value)
-      && typeof value.id === 'string'
-      && typeof value.actionPath === 'string'
-      && Array.isArray(value.workflows)
-      && Array.isArray(value.privilegedJobs)
-      && value.privilegedJobs.every((entry) => typeof entry === 'string')) : [],
+    actionTargets: Array.isArray(targets) ? targets.filter(isValidActionTarget) : [],
     registeredAssets,
     copyableAssets: registeredAssets.filter((value) => value.copyable === true),
     standardImplementations: Array.isArray(standardImplementations)
-      ? standardImplementations.filter((value): value is StandardImplementation =>
-        isMap(value)
-        && typeof value.id === 'string'
-        && Array.isArray(value.languageProfiles)
-        && isMap(value.fulfillsExtensions)
-        && Array.isArray(value.projectSettingsEnv)
-        && Array.isArray(value.dependencies))
+      ? standardImplementations.filter(isValidStandardImplementation)
       : [],
     adapterBundles: Array.isArray(adapterBundles)
-      ? adapterBundles.filter((value) => isMap(value)
-        && typeof value.id === 'string'
-        && isValidResourceSource(value.source)
-        && typeof value.targetDescriptor === 'string')
+      ? adapterBundles.filter(isAdapterBundleShape)
         .map((value): AdapterBundle => ({
           id: String(value.id),
           languageProfiles: Array.isArray(value.languageProfiles)
@@ -537,6 +577,24 @@ export const selectPresets = (
 
 export const managedAssets = (root: string, registry: RegistryData, selected: Preset[]): ManagedAsset[] => {
   const result = new Map<string, ManagedAsset>();
+  const registerAdapterBundle = (bundle: AdapterBundle): void => {
+    result.set(bundle.targetDescriptor, {
+      path: bundle.targetDescriptor,
+      sourcePath: canonicalSourcePath(bundle.source, SKILL_ROOT, registry.skillCollectionRoot),
+      exactCopy: true,
+    });
+    for (const asset of adapterBundleAssets(bundle, registry.skillCollectionRoot)) {
+      const registered = registry.copyableAssets.find((candidate) => candidate.id === asset.id);
+      const registeredSource = registered?.source
+        ?? (registered?.entrypoints?.length === 1 ? registered.entrypoints[0] : undefined);
+      if (!registered || registeredSource === undefined) continue;
+      result.set(asset.destination, {
+        path: asset.destination,
+        sourcePath: canonicalSourcePath(registeredSource, SKILL_ROOT, registry.skillCollectionRoot),
+        exactCopy: true,
+      });
+    }
+  };
   for (const preset of selected) {
     for (const asset of preset.workflowAssets) {
       if (!fs.existsSync(path.join(root, asset.destination))) continue;
@@ -584,22 +642,7 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
         const bundle = standardQualityBundles(registry, profile)
           .find((candidate) => candidate.targetDescriptor === normalized);
         if (!bundle) continue;
-        result.set(bundle.targetDescriptor, {
-          path: bundle.targetDescriptor,
-          sourcePath: canonicalSourcePath(bundle.source, SKILL_ROOT, registry.skillCollectionRoot),
-          exactCopy: true,
-        });
-        for (const asset of adapterBundleAssets(bundle, registry.skillCollectionRoot)) {
-          const registered = registry.copyableAssets.find((candidate) => candidate.id === asset.id);
-          const registeredSource = registered?.source
-            ?? (registered?.entrypoints?.length === 1 ? registered.entrypoints[0] : undefined);
-          if (!registered || registeredSource === undefined) continue;
-          result.set(asset.destination, {
-            path: asset.destination,
-            sourcePath: canonicalSourcePath(registeredSource, SKILL_ROOT, registry.skillCollectionRoot),
-            exactCopy: true,
-          });
-        }
+        registerAdapterBundle(bundle);
       }
     }
     const implementation = selectedStandardImplementation(root, registry, preset);
@@ -608,22 +651,7 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
         if (dependency.kind !== 'adapter-bundle') continue;
         const bundle = registry.adapterBundles.find((candidate) => candidate.id === dependency.id);
         if (!bundle) continue;
-        result.set(bundle.targetDescriptor, {
-          path: bundle.targetDescriptor,
-          sourcePath: canonicalSourcePath(bundle.source, SKILL_ROOT, registry.skillCollectionRoot),
-          exactCopy: true,
-        });
-        for (const asset of adapterBundleAssets(bundle, registry.skillCollectionRoot)) {
-          const registered = registry.copyableAssets.find((candidate) => candidate.id === asset.id);
-          const registeredSource = registered?.source
-            ?? (registered?.entrypoints?.length === 1 ? registered.entrypoints[0] : undefined);
-          if (!registered || registeredSource === undefined) continue;
-          result.set(asset.destination, {
-            path: asset.destination,
-            sourcePath: canonicalSourcePath(registeredSource, SKILL_ROOT, registry.skillCollectionRoot),
-            exactCopy: true,
-          });
-        }
+        registerAdapterBundle(bundle);
       }
     }
   }

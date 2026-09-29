@@ -105,6 +105,69 @@ test('public preset CLIs generate an asset lock and validate read-only without c
   });
 });
 
+// flow_id: consumer-preset-assurance-cli
+// contract_id: contract.ci-preset-assurance.verification
+test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
+  withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {
+    const skillCollectionRoot = path.join(consumerRoot, 'skills');
+    mkdirSync(skillCollectionRoot);
+    writeReleaseRequestFixture({ repositoryRoot, root: consumerRoot, model });
+    const lockResult = execute(tsxPath, [
+      path.join(repositoryRoot, 'runtime/preset/generate-ci-asset-lock.ts'),
+      '--repo-root', consumerRoot,
+      '--skill-collection-root', skillCollectionRoot,
+      '--source-revision', 'c'.repeat(40),
+    ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
+    assert.equal(lockResult.status, 0, lockResult.stderr);
+    prepareBootstrapRuntime(consumerRoot);
+
+    const preload = path.join(consumerRoot, 'fail-cleanup.mjs');
+    const cleanupTargetRecord = path.join(consumerRoot, 'cleanup-target');
+    writeFileSync(preload, [
+      "import fs from 'node:fs';",
+      "const original = fs.rmSync.bind(fs);",
+      "fs.rmSync = (target, options) => {",
+      "  if (String(target).includes('a3-ci-github-')) {",
+      "    fs.writeFileSync(process.env.CLEANUP_TARGET_RECORD, String(target));",
+      "    throw new Error('injected cleanup failure');",
+      "  }",
+      "  return original(target, options);",
+      "};",
+      '',
+    ].join('\n'));
+    const command = [
+      '--import', preload,
+      path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
+      '--audit-mode', 'read-only',
+      '--repo-root', consumerRoot,
+      '--skill-collection-root', skillCollectionRoot,
+      '--preset', 'release-request',
+    ];
+    const environment = { ...process.env, CLEANUP_TARGET_RECORD: cleanupTargetRecord };
+    const cleanupLeakedState = () => {
+      const target = readFileSync(cleanupTargetRecord, 'utf8');
+      rmSync(target, { recursive: true, force: true });
+      rmSync(cleanupTargetRecord, { force: true });
+    };
+
+    const successfulValidation = execute(process.execPath, command, { env: environment });
+    assert.equal(successfulValidation.status, 2);
+    assert.equal(successfulValidation.stdout, '');
+    assert.equal(JSON.parse(successfulValidation.stderr.trim()).reason, 'tool-state-cleanup-failed');
+    cleanupLeakedState();
+
+    writeFileSync(
+      path.join(consumerRoot, '.github/workflows/release-request-tag.yml'),
+      'name: drifted\n',
+    );
+    const failedValidation = execute(process.execPath, command, { env: environment });
+    assert.equal(failedValidation.status, 1);
+    assert.equal(JSON.parse(failedValidation.stdout).status, 'failed');
+    assert.equal(JSON.parse(failedValidation.stderr.trim()).reason, 'tool-state-cleanup-failed');
+    cleanupLeakedState();
+  });
+});
+
 // flow_id: consumer-adapter-materialization-cli
 // contract_id: contract.ci-preset-materialization.application
 test('public materializer CLI copies reuses and protects consumer adapter files', () => {

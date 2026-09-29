@@ -5,18 +5,185 @@ on:
     tags:
       - 'v*.*.*'
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
-  group: release-alias-tags-${{ github.ref_name }}
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
+env:
+  CI_GH_VERSION: '2.80.0'
+  CI_JQ_VERSION: '1.7.1'
+
 jobs:
-  update-aliases:
-    name: Update release tag aliases
+  prepare-distribution:
+    name: Prepare selective distribution
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      source_sha: ${{ steps.release-identity.outputs.source_sha }}
+      tag_object: ${{ steps.release-identity.outputs.tag_object }}
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Validate immutable release source
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          CI_RELEASE_VALIDATE_ONLY: 'true'
+        shell: bash
+        run: runtime/repository/update-release-aliases.sh
+
+      - name: Record validated release identity
+        id: release-identity
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+          tag_object="$(git rev-parse "refs/tags/${RELEASE_TAG}")"
+          printf 'source_sha=%s\ntag_object=%s\n' "$source_sha" "$tag_object" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: runtime/preset/package-lock.json
+
+      - name: Install distribution builder dependencies
+        shell: bash
+        run: npm --prefix runtime/preset ci --no-audit --no-fund
+
+      - name: Generate selective distribution Release assets
+        shell: bash
+        run: >-
+          runtime/preset/node_modules/.bin/tsx
+          runtime/distribution/generate-distribution-release.ts
+          --repository-root .
+          --output-directory release-distribution
+          --source-revision "${{ github.sha }}"
+          --release-tag "${{ github.ref_name }}"
+
+      - name: Verify selective distribution asset set
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=$'SHA256SUMS\na3-ci-github-distribution-manifest.json\nfetch-a3-ci-github.mjs'
+          observed="$(find release-distribution -maxdepth 1 -type f -printf '%f\n' | sort)"
+          test "$observed" = "$expected"
+          (cd release-distribution && sha256sum --check --strict SHA256SUMS)
+
+      - name: Upload selective distribution handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: selective-distribution-release
+          path: release-distribution
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-distribution:
+    name: Publish selective distribution
+    needs: prepare-distribution
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Download selective distribution handoff
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: selective-distribution-release
+          path: release-distribution
+
+      - name: Provision fixed jq
+        uses: ./actions/ci-jq-provisioner
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+
+      - name: Provision fixed GitHub CLI
+        uses: ./actions/ci-gh-provisioner
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+
+      - name: Verify fixed GitHub tools
+        uses: ./actions/ci-github-toolchain-verifier
+        with:
+          mode: gh-jq
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+
+      - name: Publish exact selective distribution assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_SOURCE_SHA: ${{ needs.prepare-distribution.outputs.source_sha }}
+          EXPECTED_TAG_OBJECT: ${{ needs.prepare-distribution.outputs.tag_object }}
+        shell: bash
+        run: runtime/repository/manage-distribution-release.sh publish release-distribution
+
+  readback-distribution:
+    name: Verify selective distribution readback
+    needs: [prepare-distribution, publish-distribution]
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Download selective distribution handoff
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: selective-distribution-release
+          path: release-distribution
+
+      - name: Provision fixed jq
+        uses: ./actions/ci-jq-provisioner
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+
+      - name: Provision fixed GitHub CLI
+        uses: ./actions/ci-gh-provisioner
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+
+      - name: Verify fixed GitHub tools
+        uses: ./actions/ci-github-toolchain-verifier
+        with:
+          mode: gh-jq
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+
+      - name: Verify published asset bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_SOURCE_SHA: ${{ needs.prepare-distribution.outputs.source_sha }}
+          EXPECTED_TAG_OBJECT: ${{ needs.prepare-distribution.outputs.tag_object }}
+        shell: bash
+        run: runtime/repository/manage-distribution-release.sh readback release-distribution
+
+  update-aliases:
+    name: Update release tag aliases
+    needs: readback-distribution
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout tagged release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -29,3 +196,33 @@ jobs:
           RELEASE_SHA: ${{ github.sha }}
         shell: bash
         run: runtime/repository/update-release-aliases.sh
+
+  summary:
+    name: Release distribution / hosted
+    if: always()
+    needs: [prepare-distribution, publish-distribution, readback-distribution, update-aliases]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require successful publication and readback
+        env:
+          PREPARE_RESULT: ${{ needs.prepare-distribution.result }}
+          PUBLISH_RESULT: ${{ needs.publish-distribution.result }}
+          READBACK_RESULT: ${{ needs.readback-distribution.result }}
+          ALIASES_RESULT: ${{ needs.update-aliases.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '## Release distribution result'
+            echo "- prepare: $PREPARE_RESULT"
+            echo "- publish: $PUBLISH_RESULT"
+            echo "- readback: $READBACK_RESULT"
+            echo "- aliases: $ALIASES_RESULT"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          failed=0
+          test "$PREPARE_RESULT" = success || failed=1
+          test "$PUBLISH_RESULT" = success || failed=1
+          test "$READBACK_RESULT" = success || failed=1
+          test "$ALIASES_RESULT" = success || failed=1
+          test "$failed" = 0

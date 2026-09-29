@@ -29,14 +29,24 @@ const strings = (value: unknown, field: string, optional = false): string[] => {
   if (!Array.isArray(value) || (!optional && value.length === 0)) throw new Error(`quality-adapter-${field}-invalid`);
   return value.map((item) => text(item, field));
 };
-const command = (value: unknown): CommandSpec => {
+const command = (value: unknown, fallbackId: string, taken: Set<string>): CommandSpec => {
   if (!record(value)) throw new Error('quality-adapter-command-invalid');
-  return { id: text(value.id, 'command-id'), command: text(value.command, 'command'), ...(value.args === undefined ? {} : { args: strings(value.args, 'args') }) };
+  let id: string;
+  if (value.id === undefined) {
+    let candidate = fallbackId;
+    let suffix = 1;
+    while (taken.has(candidate)) candidate = `${fallbackId}-${suffix++}`;
+    id = candidate;
+  } else {
+    id = text(value.id, 'command-id');
+  }
+  taken.add(id);
+  return { id, command: text(value.command, 'command'), ...(value.args === undefined ? {} : { args: strings(value.args, 'args') }) };
 };
-const commands = (value: unknown, field: string, optional = false): CommandSpec[] => {
+const commands = (value: unknown, field: string, optional: boolean, taken: Set<string>): CommandSpec[] => {
   if (value === undefined && optional) return [];
   if (!Array.isArray(value) || (!optional && value.length === 0)) throw new Error(`quality-adapter-${field}-invalid`);
-  return value.map(command);
+  return value.map((item, index) => command(item, `${field}-${index}`, taken));
 };
 const hasSkillPath = (value: string): boolean => /(?:^|[\s/'"`])(?:\.\.?\/)?skills\//.test(value);
 const versionTokenPresent = (output: string, version: string): boolean =>
@@ -57,13 +67,21 @@ export const loadAdapterBundle = (bundlePath: string): AdapterBundle => {
     if (!record(item) || item.source !== undefined) throw new Error('quality-adapter-asset-invalid');
     return { id: text(item.id, 'asset-id'), destination: text(item.destination, 'asset-destination') };
   });
+  const commandIds = new Set<string>();
+  const reserveCommandId = (entry: unknown): void => {
+    if (!record(entry) || entry.id === undefined) return;
+    commandIds.add(text(entry.id, 'command-id'));
+  };
+  for (const entry of Array.isArray(value.preparation) ? value.preparation : []) reserveCommandId(entry);
+  for (const entry of Array.isArray(value.commands) ? value.commands : []) reserveCommandId(entry);
+  if (record(value.toolchain.verify)) reserveCommandId(value.toolchain.verify);
   const bundle: AdapterBundle = {
     schemaVersion: '1', kind: 'ci-adapter-bundle', id: text(value.id, 'id'), contract: text(value.contract, 'contract'),
     languageProfiles: strings(value.languageProfiles, 'language-profiles'), provider: text(value.provider, 'provider'),
     executionBoundary: 'read-only', sourceCheckout: 'fixed-source', copyable: value.copyable, owner: text(value.owner, 'owner'), assets,
     projectSettings: { requiredFiles: strings(value.projectSettings.requiredFiles, 'required-files', true), requiredScripts: strings(value.projectSettings.requiredScripts, 'required-scripts', true), requiredEnvironmentPaths: strings(value.projectSettings.requiredEnvironmentPaths, 'required-environment-paths', true) },
-    toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: command({ ...value.toolchain.verify, id: 'toolchain-verify' }) },
-    preparation: commands(value.preparation, 'preparation'), commands: commands(value.commands, 'commands'),
+    toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: command(value.toolchain.verify, 'toolchain-verify', commandIds) },
+    preparation: commands(value.preparation, 'preparation', false, commandIds), commands: commands(value.commands, 'commands', false, commandIds),
   };
   if (bundle.contract !== 'quality-scripts') throw new Error('quality-adapter-contract-invalid');
   const ids = new Set<string>();
@@ -106,14 +124,18 @@ const verifyPaths = (settings: ProjectSettings, root: string, environment: NodeJ
   }
 };
 
-const runCommand = (spec: CommandSpec, root: string, environment: NodeJS.ProcessEnv, allowedPaths: string[]): CommandResult => {
+const prepareCommand = (spec: CommandSpec, environment: NodeJS.ProcessEnv, allowedPaths: string[]): CommandSpec & { args: string[] } => {
   const allowed = new Set(['CI_TOOLCHAIN_VERSION', ...allowedPaths]);
   const args = (spec.args ?? []).map((arg) => arg.replace(/\$\{([A-Z][A-Z0-9_]*)\}/g, (_match, name: string) => {
     if (!allowed.has(name)) throw new Error(`quality-adapter-environment-reference-forbidden:${name}`);
     return environment[name] ?? '';
   }));
-  const result = spawnSync(spec.command, args, { cwd: root, encoding: 'utf8', shell: false, env: environment });
-  return { ...spec, args, status: result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed', exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' };
+  return { ...spec, args };
+};
+
+const runCommand = (spec: CommandSpec & { args: string[] }, root: string, environment: NodeJS.ProcessEnv): CommandResult => {
+  const result = spawnSync(spec.command, spec.args, { cwd: root, encoding: 'utf8', shell: false, env: environment });
+  return { ...spec, status: result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed', exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' };
 };
 
 export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload => {
@@ -128,8 +150,11 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
     for (const name of bundle.projectSettings.requiredScripts) if (current[name] === undefined || current[name] !== trusted[name]) throw new Error(`quality-adapter-project-script-binding-mismatch:${name}`);
   }
   verifyPaths(bundle.projectSettings, sourceRoot, environment);
+  const verifyCommand = prepareCommand(bundle.toolchain.verify, environment, []);
+  const preparationCommands = bundle.preparation.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
+  const commands = bundle.commands.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
   const results: CommandResult[] = [];
-  const verify = runCommand(bundle.toolchain.verify, sourceRoot, environment, []);
+  const verify = runCommand(verifyCommand, sourceRoot, environment);
   if (verify.status !== '判定不能') {
     const received = `${verify.stdout}\n${verify.stderr}`;
     const reportsVersion = verify.status === 'success' && versionTokenPresent(received, options.toolchainVersion);
@@ -142,12 +167,12 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
   }
   results.push(verify);
   if (verify.status === 'success') {
-    for (const spec of bundle.preparation) {
-      const result = runCommand(spec, sourceRoot, environment, bundle.projectSettings.requiredEnvironmentPaths);
+    for (const spec of preparationCommands) {
+      const result = runCommand(spec, sourceRoot, environment);
       results.push(result);
       if (result.status !== 'success') break;
     }
-    if (results.every((result) => result.status === 'success')) for (const spec of bundle.commands) results.push(runCommand(spec, sourceRoot, environment, bundle.projectSettings.requiredEnvironmentPaths));
+    if (results.every((result) => result.status === 'success')) for (const spec of commands) results.push(runCommand(spec, sourceRoot, environment));
   }
   const status = results.some((result) => result.status === 'failed') ? 'failed' : results.some((result) => result.status === '判定不能') ? '判定不能' : 'success';
   return { schema: 'ci.adapter-runner.v1', adapter: bundle.id, contract: bundle.contract, languageProfiles: bundle.languageProfiles, status, results };

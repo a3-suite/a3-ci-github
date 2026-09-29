@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-workflow
 contracts:
   - id: contract.ci-quality-workflow.execution
-    summary: The canonical quality workflow declares its trusted execution chain and an aggregate failure-visible summary.
+    summary: The canonical quality workflow orders trusted source resolution before adapter execution and aggregates every applicable result in a failure-visible summary.
     conditions:
       - id: ci-quality-workflow-canonical-source-available
         input_predicate:
@@ -50,11 +50,11 @@ contracts:
             value: optional-platform-chain
     verification_intents:
       - id: ci-quality-workflow-success-intent
-        goal: Verify the canonical source declares the trusted capability boundary.
+        goal: Verify trusted source resolution precedes adapter execution and the aggregate decision follows the applicable execution jobs.
         guarantee_refs:
           - ci-quality-workflow-success-observed
       - id: ci-quality-workflow-failure-intent
-        goal: Verify the canonical source declares a failure-visible summary route.
+        goal: Verify the failure-visible summary runs after applicable execution jobs even when they fail or remain unresolved.
         guarantee_refs:
           - ci-quality-workflow-failure-observed
       - id: ci-quality-workflow-platform-intent

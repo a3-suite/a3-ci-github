@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { loadDefinition, parseLcov, validateDefinition } from '../runtime/contract-subject-coverage.mjs';
+import { aggregateCoverageMaps, loadDefinition, parseLcov, validateDefinition } from '../runtime/contract-subject-coverage.mjs';
 
 // integration_id: repository-contract-subject-execution
 test('project execution definition resolves every declared contract subject', () => {
@@ -17,6 +17,7 @@ test('project execution definition resolves every declared contract subject', ()
   const presetAssurance = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.preset-assurance');
   const workflow = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.quality-workflow');
   const managedSource = definition.subjects.find((subject) => subject.subjectId === 'subject.repository.managed-source-integrity');
+  const actionDistribution = definition.subjects.find((subject) => subject.subjectId === 'subject.repository.action-distribution');
   // Assert
   assert.deepEqual(
     platform.segments.map((segment) => [segment.id, segment.level, segment.status ?? 'active']),
@@ -41,6 +42,7 @@ test('project execution definition resolves every declared contract subject', ()
     'tests/repository-managed-source-integrity.test.mjs',
     'tests/contract-subject-execution.test.mjs',
   ]);
+  assert.ok(actionDistribution.segments[1].tests.includes('runtime/repository/tests/update-release-aliases.test.mjs'));
 });
 
 // integration_id: repository-contract-subject-execution
@@ -86,6 +88,57 @@ test('LCOV report is reduced to separate C0, C1, and line metrics', () => {
     C1: { covered: 5, total: 6, percentage: 83.33, acquisitionStatus: 'available', unavailableReason: null },
     line: { covered: 8, total: 10, percentage: 80, acquisitionStatus: 'available', unavailableReason: null },
   });
+});
+
+// target_id: aggregateCoverageMaps(coverageMaps, root)
+test('coverage aggregate sums per-file counters within one instrumentation group', () => {
+  // Arrange
+  const root = path.resolve('/repo');
+  const sourceGroup = {
+    groupId: 'subject/a/source',
+    levels: ['unit', 'integration'],
+    scope: 'source',
+    cwd: path.resolve('/repo/actions/x'),
+    files: [{ sourceFile: 'src/a.ts', branches: { hit: 3, total: 4 }, lines: { hit: 9, total: 10 } }],
+  };
+  const distGroup = {
+    groupId: 'subject/a/dist',
+    levels: ['integration'],
+    scope: 'dist',
+    cwd: path.resolve('/repo/actions/x'),
+    files: [{ sourceFile: 'dist/index.js', branches: { hit: 1, total: 1 }, lines: { hit: 2, total: 2 } }],
+  };
+  // Act
+  const result = aggregateCoverageMaps([sourceGroup, distGroup], root);
+  // Assert
+  assert.deepEqual(result.metricSemantics, { C0: 'statement', C1: 'branch', line: 'line' });
+  assert.deepEqual(result.byScope.source.levels, ['integration', 'unit']);
+  assert.deepEqual(result.byScope.source.metrics.C1, { covered: 3, total: 4, percentage: 75 });
+  assert.deepEqual(result.byScope.source.files, [{
+    path: 'actions/x/src/a.ts',
+    C1: { covered: 3, total: 4, percentage: 75 },
+    line: { covered: 9, total: 10, percentage: 90 },
+  }]);
+  assert.deepEqual(result.byScope.dist.metrics.C1, { covered: 1, total: 1, percentage: 100 });
+});
+
+// target_id: aggregateCoverageMaps(coverageMaps, root)
+test('coverage aggregate rejects a file observed by more than one instrumentation group', () => {
+  // Arrange
+  const root = path.resolve('/repo');
+  const firstGroup = {
+    groupId: 'subject/a/source',
+    levels: ['unit'],
+    scope: 'source',
+    cwd: path.resolve('/repo/actions/x'),
+    files: [{ sourceFile: 'src/a.ts', branches: { hit: 1, total: 1 }, lines: { hit: 1, total: 1 } }],
+  };
+  const secondGroup = { ...firstGroup, groupId: 'subject/b/source' };
+  let failure;
+  // Act
+  try { aggregateCoverageMaps([firstGroup, secondGroup], root); } catch (error) { failure = error; }
+  // Assert
+  assert.match(String(failure), /cannot merge .* across instrumentation groups/);
 });
 
 // integration_id: repository-contract-subject-execution

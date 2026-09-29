@@ -111,6 +111,22 @@ runtime_contexts:
     summary: The caller and called reusable workflow resolve to the same default-branch snapshot with a matching commit SHA.
   - id: runtime-context.workflow-identity-context-invalid
     summary: A caller repository, workflow path, ref, or SHA mismatch rejects the reusable workflow identity.
+  - id: runtime-context.selective-distribution-selection-valid
+    summary: The requested preset or explicitly complete asset set resolves to registered assets and dependencies.
+  - id: runtime-context.selective-distribution-selection-incomplete
+    summary: A requested preset or direct asset selection is unknown, cyclic, or missing a declared dependency.
+  - id: runtime-context.selective-distribution-source-valid
+    summary: The trusted manifest and every selected regular file match the immutable repository revision, size, and SHA-256.
+  - id: runtime-context.selective-distribution-source-invalid
+    summary: The manifest, redirect, path, source file, size, or SHA-256 does not satisfy the selective distribution contract.
+  - id: runtime-context.selective-distribution-application-valid
+    summary: The approved plan, selected local distribution, and observed consumer destinations remain unchanged under an exclusive apply lock.
+  - id: runtime-context.selective-distribution-application-conflict
+    summary: A canonical workflow destination contains content not owned by the prior asset lock or the selected plan contains a conflict.
+  - id: runtime-context.selective-distribution-application-incomplete
+    summary: A copyable asset was fetched directly without selecting the preset dependency closure required for application.
+  - id: runtime-context.selective-distribution-plan-changed
+    summary: The manifest, source, destination, approval digest, or plan input changed after planning.
   - id: runtime-context.preset-materialization-valid
     summary: Repository and external-skill sources resolve and all selected destinations are new or content-identical.
   - id: runtime-context.preset-materialization-conflict

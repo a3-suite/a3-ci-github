@@ -8,12 +8,18 @@ mappings:
     element_id: workflows-root
   - component_id: runtime-implementations
     element_id: runtime-root
+  - component_id: selective-distribution
+    element_id: distribution-runtime-root
   - component_id: provider-static-validation
     element_id: lint-rules-root
   - component_id: agent-guidance
     element_id: skills-root
+  - component_id: repository-maintainer-guidance
+    element_id: local-agent-skills-root
   - component_id: sdd-specifications
     element_id: sdd-root
+  - component_id: sdd-specifications
+    element_id: repository-version
   - component_id: contract-verification
     element_id: tests-root
   - component_id: repository-documentation

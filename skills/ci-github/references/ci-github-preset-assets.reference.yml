@@ -17,6 +17,7 @@ authority:
     - provider-neutral preset semantics
     - language または project 固有の処理
     - Action 自体の公開 API
+    - selective distribution の配布単位、取得手順、local state
 usage:
   whenToRead:
     - GitHub Actions 用の CI asset を選ぶとき
@@ -47,6 +48,11 @@ provider:
 distribution:
   destinationContainsSkillTree: false
   sourceResolution: registry-selection-only
+  selectiveDelivery:
+    registry: skills/ci-github/references/ci-distribution-assets.reference.yml
+    manifestRole: generated-release-evidence
+    transferUnit: individual-file
+    usabilityUnit: asset-or-preset-dependency-closure
   integrityLock:
     path: .ci/ci-assets.lock.json
     schemaVersion: "1"

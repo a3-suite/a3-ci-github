@@ -29,6 +29,42 @@ test('executes a read-only adapter in the source root', () => {
 });
 
 // integration_id: ci-quality-adapter-source
+test('derives deterministic command ids when the descriptor omits them', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-derived-ids-'));
+  const bundlePath = path.join(root, 'adapter.yml');
+  fs.writeFileSync(bundlePath, descriptor
+    .replace('  - id: prepare\n    command: node', '  - command: node')
+    .replace('  - id: test\n    command: node', '  - command: node'));
+
+  // Act
+  const result = executeAdapter(loadAdapterBundle(bundlePath), { sourceRoot: root, toolchainVersion: process.version.slice(1), requireTrustedProjectScripts: false });
+
+  // Assert
+  assert.equal(result.status, 'success');
+  assert.deepEqual(result.results.map((item) => item.id), ['toolchain-verify', 'preparation-0', 'commands-0']);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// integration_id: ci-quality-adapter-source
+test('derives an id that does not collide with reserved ids', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-reserved-ids-'));
+  const bundlePath = path.join(root, 'adapter.yml');
+  fs.writeFileSync(bundlePath, descriptor
+    .replace('  - id: prepare\n    command: node', '  - id: commands-0\n    command: node')
+    .replace('  - id: test\n    command: node', '  - command: node'));
+
+  // Act
+  const result = executeAdapter(loadAdapterBundle(bundlePath), { sourceRoot: root, toolchainVersion: process.version.slice(1), requireTrustedProjectScripts: false });
+
+  // Assert
+  assert.equal(result.status, 'success');
+  assert.deepEqual(result.results.map((item) => item.id), ['toolchain-verify', 'commands-0', 'commands-0-1']);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// integration_id: ci-quality-adapter-source
 test('accepts a quality descriptor without copied assets', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-no-assets-'));
@@ -104,6 +140,30 @@ test('allows matching multiline scripts outside the required script set', () => 
   assert.equal(result.status, 'success');
   fs.rmSync(root, { recursive: true, force: true });
   fs.rmSync(trusted, { recursive: true, force: true });
+});
+
+// integration_id: ci-quality-adapter-source
+test('validates every command before running the toolchain verifier', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-preflight-'));
+  const bundlePath = path.join(root, 'adapter.yml');
+  const markerPath = path.join(root, 'toolchain-ran');
+  fs.writeFileSync(bundlePath, descriptor);
+  const bundle = loadAdapterBundle(bundlePath);
+  bundle.toolchain.verify = {
+    id: 'toolchain-verify',
+    command: process.execPath,
+    args: ['-e', `require('node:fs').writeFileSync(${JSON.stringify(markerPath)}, 'ran'); process.stdout.write(process.version)`],
+  };
+  bundle.commands.push({ id: 'invalid-environment-reference', command: process.execPath, args: ['${FORBIDDEN}'] });
+
+  // Act / Assert
+  assert.throws(
+    () => executeAdapter(bundle, { sourceRoot: root, toolchainVersion: process.version.slice(1), requireTrustedProjectScripts: false }),
+    /quality-adapter-environment-reference-forbidden:FORBIDDEN/,
+  );
+  assert.equal(fs.existsSync(markerPath), false);
+  fs.rmSync(root, { recursive: true, force: true });
 });
 
 // integration_id: ci-quality-adapter-source

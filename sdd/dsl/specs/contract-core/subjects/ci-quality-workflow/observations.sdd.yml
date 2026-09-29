@@ -12,10 +12,10 @@ observations:
       fields:
         - selector: execution-chain
           kind: observation_field
-          meaning: Declared trusted checkout, adapter execution, and aggregate decision chain.
+          meaning: Declared order in which trusted checkout and asset resolution precede adapter execution, and applicable execution results precede the aggregate decision.
         - selector: failure-summary
           kind: observation_field
-          meaning: Declared summary route that keeps failed, missing, and unresolved checks visible.
+          meaning: Declared always-run summary route after all applicable execution jobs that keeps failed, missing, and unresolved checks visible.
         - selector: optional-platform-chain
           kind: observation_field
           meaning: Declared trusted platform resolution, matrix execution, and aggregate platform decision chain when the optional asset is selected.

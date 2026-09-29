@@ -37,7 +37,7 @@ options:
     long: --source-root
     kind: value
     value_name: PATH
-    summary: External skill collection root used by adapter materialization
+    summary: Explicit canonical source root used by the selected command
   - id: inventory
     long: --inventory
     kind: value
@@ -53,3 +53,49 @@ options:
     kind: value
     value_name: PATH
     summary: Consumer project root receiving materialized adapter assets
+  - id: manifest
+    long: --manifest
+    kind: value
+    value_name: PATH
+    summary: Local verified distribution manifest used for repository maintenance or offline reconstruction
+  - id: manifest-url
+    long: --manifest-url
+    kind: value
+    value_name: URL
+    summary: Exact GitHub Release URL of the distribution manifest
+  - id: asset
+    long: --asset
+    kind: value
+    value_name: ID
+    summary: Select one registered distribution asset
+    repeatable: true
+  - id: plan
+    long: --plan
+    kind: value
+    value_name: PATH
+    summary: Distribution application plan selected for apply
+  - id: approve
+    long: --approve
+    kind: value
+    value_name: SHA256
+    summary: Explicit approval of one unchanged distribution plan digest
+  - id: transaction
+    long: --transaction
+    kind: value
+    value_name: ID
+    summary: Applied distribution transaction selected for rollback
+  - id: repository-root
+    long: --repository-root
+    kind: value
+    value_name: PATH
+    summary: a3-ci-github repository snapshot used to prepare Release distribution metadata
+  - id: output-directory
+    long: --output-directory
+    kind: value
+    value_name: PATH
+    summary: New directory receiving prepared distribution Release assets
+  - id: release-tag
+    long: --release-tag
+    kind: value
+    value_name: TAG
+    summary: Exact vX.Y.Z Release tag bound to VERSION and source revision

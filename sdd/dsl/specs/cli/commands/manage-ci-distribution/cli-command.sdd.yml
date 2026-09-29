@@ -1,0 +1,67 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+  summary: Selectively fetch, plan, apply, or roll back immutable CI distribution assets
+  usage_targets:
+    - id: fetch
+      summary: Fetch selected preset or asset files into a verified project-local distribution
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: manifest
+          presence: optional
+        - option_id: manifest-url
+          presence: optional
+        - option_id: preset
+          presence: optional
+        - option_id: asset
+          presence: optional
+        - option_id: source-root
+          presence: optional
+    - id: verify
+      summary: Revalidate every file recorded by one fetched local distribution receipt
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: source-revision
+          presence: required
+    - id: plan
+      summary: Classify canonical workflow copy actions without changing managed consumer files
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: source-revision
+          presence: required
+        - option_id: preset
+          presence: optional
+        - option_id: asset
+          presence: optional
+    - id: apply
+      summary: Apply one explicitly approved unchanged plan under an exclusive transaction
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: plan
+          presence: required
+        - option_id: approve
+          presence: required
+    - id: rollback
+      summary: Restore managed files changed by one successfully applied transaction
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: transaction
+          presence: required
+  option_groups:
+    - id: selection
+      title: Distribution selection
+      options: [manifest, manifest-url, preset, asset, source-revision, source-root]
+    - id: application
+      title: Planned application or recovery
+      options: [repo-root, plan, approve, transaction]
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs <fetch|verify|plan|apply|rollback> [options]

@@ -49,9 +49,9 @@ test('materializer separates repository-owned assets from external skill resourc
     languageProfiles: ['rust'],
     owner: 'rust',
     assets: [{ id: 'repository-helper', destination: '.ci/runtime/vitest-test-summary.ts' }],
-    commands: [{ command: 'echo', args: ['test'] }],
-    preparation: [{ command: 'echo', args: ['prepare'] }],
-    toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: { command: 'echo', args: ['verify'] } },
+    commands: [{ id: 'test', command: 'echo', args: ['test'] }],
+    preparation: [{ id: 'prepare', command: 'echo', args: ['prepare'] }],
+    toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: { id: 'verify', command: 'echo', args: ['verify'] } },
     projectSettings: { requiredFiles: [], requiredScripts: [] },
   }));
 
@@ -76,8 +76,39 @@ test('materializer separates repository-owned assets from external skill resourc
       /Vitest/,
     );
     const targetDescriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
-    assert.equal(JSON.parse(readFileSync(targetDescriptor, 'utf8')).id, 'test-bundle');
+    const targetAsset = path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts');
+    const materialized = JSON.parse(readFileSync(targetDescriptor, 'utf8'));
+    assert.equal(materialized.id, 'test-bundle');
+    assert.deepEqual(materialized.preparation.map((command) => command.id), ['prepare']);
+    assert.deepEqual(materialized.commands.map((command) => command.id), ['test']);
+    assert.equal(materialized.toolchain.verify.id, 'verify');
 
+    const descriptorSource = path.join(rustSkillRoot, 'assets/test-bundle.json');
+    const descriptorSourceContent = readFileSync(descriptorSource, 'utf8');
+    for (const outputPath of [targetDescriptor, targetAsset, descriptorSource]) {
+      rmSync(targetRoot, { recursive: true, force: true });
+      assert.throws(
+        () => materializeAdapterBundle({
+          sourceRoot: skillCollectionRoot,
+          inventoryPath: 'tests/fixtures/materializer-inventory.json',
+          bundleId: 'test-bundle',
+          targetRoot,
+          outputPath,
+        }),
+        /adapter-materializer-output-conflict/,
+      );
+      assert.equal(existsSync(targetRoot), false);
+      assert.equal(existsSync(targetDescriptor), false);
+      assert.equal(existsSync(targetAsset), false);
+      assert.equal(readFileSync(descriptorSource, 'utf8'), descriptorSourceContent);
+    }
+
+    materializeAdapterBundle({
+      sourceRoot: skillCollectionRoot,
+      inventoryPath: 'tests/fixtures/materializer-inventory.json',
+      bundleId: 'test-bundle',
+      targetRoot,
+    });
     writeFileSync(targetDescriptor, '{"id":"conflicting-descriptor"}\n');
     assert.throws(
       () => materializeAdapterBundle({

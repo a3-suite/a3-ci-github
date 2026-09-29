@@ -30,6 +30,13 @@ elements:
     area_kinds: [implementation, verification]
     source_control: managed
     placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: distribution-runtime-root
+    element_kind: directory
+    path: runtime/distribution
+    primary_area_kind: implementation
+    area_kinds: [implementation, verification]
+    source_control: managed
+    placement_purpose: selective distribution manifest生成、固定revision取得、workflow差分計画、承認済み適用およびtransaction復旧を所有する
   - element_id: lint-rules-root
     element_kind: directory
     path: lint-rules
@@ -44,6 +51,13 @@ elements:
     area_kinds: [documentation]
     source_control: managed
     placement_purpose: AIエージェント向けの起動条件と公開操作導線を所有する
+  - element_id: local-agent-skills-root
+    element_kind: directory
+    path: .agents/skills
+    primary_area_kind: documentation
+    area_kinds: [documentation]
+    source_control: managed
+    placement_purpose: repository保守者向けのproject-local Agent Skillと公開スキル配備の操作導線を所有する
   - element_id: sdd-root
     element_kind: directory
     path: sdd

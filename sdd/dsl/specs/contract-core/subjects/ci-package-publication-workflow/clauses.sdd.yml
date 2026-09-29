@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.package-publication-workflow
 contracts:
   - id: contract.ci-package-publication-workflow.publication
-    summary: The canonical package workflows separate preparation, request validation, and privileged registry publication.
+    summary: The canonical package workflows order source and version request validation, package preparation, handoff validation, privileged registry publication, and registry readback.
     conditions:
       - id: ci-package-publication-workflow-canonical-source-available
         input_predicate:
@@ -36,10 +36,10 @@ contracts:
             value: failure-summary
     verification_intents:
       - id: ci-package-publication-workflow-success-intent
-        goal: Verify the canonical source declares the trusted capability boundary.
+        goal: Verify request and workflow identity validation precede preparation, and handoff validation precedes credential-bearing publication and registry readback.
         guarantee_refs:
           - ci-package-publication-workflow-success-observed
       - id: ci-package-publication-workflow-failure-intent
-        goal: Verify the canonical source declares a failure-visible summary route.
+        goal: Verify failed or unresolved prerequisite stages block publication while the aggregate summary remains observable.
         guarantee_refs:
           - ci-package-publication-workflow-failure-observed

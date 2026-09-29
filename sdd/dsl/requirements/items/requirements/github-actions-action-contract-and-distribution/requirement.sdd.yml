@@ -24,7 +24,7 @@ requirements:
       - 契約テスト、実装テスト、配布物検証を分離して実行でき、必須・不正・境界・正常入力と成功 output、失敗終了状態を確認できる
       - Action は CI preset、stage、workflow trigger、job、runner、matrix、caller permissions、artifact handoff、publish 判断を実装責務として持たない
       - workflow から Action への input mapping、secret 注入、provider 権限、runner、信頼境界は選択した provider の契約へ委譲できる
-      - version 変更時は実装方式に対応する配布物を更新し、exact release tag はその配布物と同一 commit を指し、tag version は対象commitのrepository VERSIONと一致し、alias は検証済み exact release だけを指す
+      - version 変更時は実装方式に対応する配布物を更新し、exact release tag はその配布物と同一 commit を指し、tag version は対象commitのrepository VERSIONと一致し、alias は必須quality checkを通過したprotected mainへ統合済みのexact releaseだけを指す
       - Action の追加・削除時はコミットゲートが Action ディレクトリを列挙し、README.md の Action 一覧と用途の同期を検証する
     derived_artifacts:
       use_cases:

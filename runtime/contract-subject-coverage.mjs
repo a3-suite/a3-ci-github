@@ -192,6 +192,111 @@ const executeSubject = (subject, root, reportRoot, dryRun) => {
   return { subjectId: subject.subjectId, segments };
 };
 
+// The aggregate threshold is acquired by running a subject's unit and integration segments
+// together in a single process, so Node reports one LCOV branch set for that group with
+// stable, comparable branch counters. This collector sums the per-file BRH/BRF and LH/LF
+// counters (the same metric semantics as the segment report) across groups and fails closed
+// when the same source artifact is observed by more than one group, because LCOV branch
+// numbering is process-dependent and must not be merged across instrumentation contexts.
+export const aggregateCoverageMaps = (coverageMaps, root) => {
+  const byScope = new Map();
+  const ownerByFile = new Map();
+  for (const map of coverageMaps) {
+    if (!map || !Array.isArray(map.files)) continue;
+    const bucket = byScope.get(map.scope) ?? { levels: new Set(), files: new Map() };
+    for (const level of map.levels ?? []) bucket.levels.add(level);
+    for (const file of map.files) {
+      const relative = path.relative(root, path.resolve(map.cwd, file.sourceFile));
+      if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) continue;
+      const owner = ownerByFile.get(relative);
+      if (owner !== undefined && owner !== map.groupId) {
+        throw new Error(`coverage aggregate cannot merge ${relative} across instrumentation groups (${owner} and ${map.groupId})`);
+      }
+      ownerByFile.set(relative, map.groupId);
+      const target = bucket.files.get(relative) ?? { C1: { covered: 0, total: 0 }, line: { covered: 0, total: 0 } };
+      target.C1.covered += file.branches.hit;
+      target.C1.total += file.branches.total;
+      target.line.covered += file.lines.hit;
+      target.line.total += file.lines.total;
+      bucket.files.set(relative, target);
+    }
+    byScope.set(map.scope, bucket);
+  }
+  const withPercentage = (value) => ({
+    covered: value.covered,
+    total: value.total,
+    percentage: value.total === 0 ? null : Number(((value.covered / value.total) * 100).toFixed(2)),
+  });
+  const byScopeResult = {};
+  for (const [scope, bucket] of byScope) {
+    const files = [...bucket.files.entries()]
+      .map(([filePath, records]) => ({
+        path: filePath,
+        C1: withPercentage(records.C1),
+        line: withPercentage(records.line),
+      }))
+      .sort((left, right) => left.path.localeCompare(right.path));
+    const sum = (key) => files.reduce(
+      (total, file) => ({
+        covered: total.covered + file[key].covered,
+        total: total.total + file[key].total,
+      }),
+      { covered: 0, total: 0 },
+    );
+    byScopeResult[scope] = {
+      scope,
+      levels: [...bucket.levels].sort(),
+      metrics: {
+        C0: unavailableMetric('Node LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.'),
+        C1: withPercentage(sum('C1')),
+        line: withPercentage(sum('line')),
+      },
+      files,
+    };
+  }
+  return {
+    metricSemantics: { C0: 'statement', C1: 'branch', line: 'line' },
+    byScope: byScopeResult,
+  };
+};
+
+export const collectAggregateCoverage = (subjects, root, reportRoot) => {
+  const maps = [];
+  for (const subject of subjects) {
+    const byScope = new Map();
+    for (const segment of subject.segments) {
+      if (segment.status === 'excluded' || !segment.coverage?.enabled) continue;
+      if (!['unit', 'integration'].includes(segment.level)) continue;
+      const scope = segment.coverage.scope;
+      const group = byScope.get(scope) ?? [];
+      group.push(segment);
+      byScope.set(scope, group);
+    }
+    for (const [scope, group] of byScope) {
+      const cwd = path.join(root, group[0].cwd);
+      const tests = [...new Set(group.flatMap((segment) => segment.tests))];
+      const include = [...new Set(group.flatMap((segment) => segment.coverage.include))];
+      const exclude = [...new Set(group.flatMap((segment) => segment.coverage.exclude))];
+      const groupId = `${subject.subjectId}/${scope}`;
+      const lcovPath = path.join(reportRoot, 'aggregate', subject.subjectId.replaceAll('.', '_'), `${scope}.lcov`);
+      mkdirSync(path.dirname(lcovPath), { recursive: true });
+      const args = ['--experimental-test-coverage'];
+      for (const pattern of include) args.push(`--test-coverage-include=${pattern}`);
+      for (const pattern of exclude) args.push(`--test-coverage-exclude=${pattern}`);
+      args.push('--test-reporter=lcov', `--test-reporter-destination=${lcovPath}`);
+      if (group.some((segment) => segment.typescript === true)) args.push('--import=tsx');
+      args.push('--test', ...tests);
+      const result = run(process.execPath, args, cwd);
+      if (result.status !== 0) {
+        throw new Error(`${groupId}: aggregate coverage run failed\n${result.stderr || result.stdout}`);
+      }
+      const coverage = parseLcov(readFileSync(lcovPath, 'utf8'));
+      maps.push({ groupId, levels: group.map((segment) => segment.level), scope, cwd, files: coverage.files });
+    }
+  }
+  return aggregateCoverageMaps(maps, root);
+};
+
 const parseArgs = (args) => {
   const options = { definition: DEFAULT_DEFINITION, subject: null, all: false, check: false, dryRun: false };
   for (let index = 0; index < args.length; index += 1) {
@@ -219,9 +324,10 @@ const main = () => {
   const reportRoot = path.join(SCRIPT_ROOT, 'tests/tmp/coverage/contract-subject');
   const results = subjects.map((subject) => executeSubject(subject, SCRIPT_ROOT, reportRoot, options.dryRun));
   if (options.dryRun) return;
+  const coverageAggregate = collectAggregateCoverage(subjects, SCRIPT_ROOT, reportRoot);
   const reportPath = path.join(SCRIPT_ROOT, definition.report.output);
   mkdirSync(path.dirname(reportPath), { recursive: true });
-  writeFileSync(reportPath, `${JSON.stringify({ schemaVersion: 1, definitionId: definition.id, reportUnit: definition.report.unit, metrics: definition.report.metrics, subjects: results }, null, 2)}\n`);
+  writeFileSync(reportPath, `${JSON.stringify({ schemaVersion: 1, definitionId: definition.id, reportUnit: definition.report.unit, metrics: definition.report.metrics, coverageAggregate, subjects: results }, null, 2)}\n`);
   console.log(`Contract-subject coverage report written to ${path.relative(SCRIPT_ROOT, reportPath)}.`);
 };
 

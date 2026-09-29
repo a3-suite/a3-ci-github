@@ -8,7 +8,7 @@
 ## 入力
 
 - 監査モード
-- `{ci-github-source-root}`: `workflows/`、`runtime/`、`lint-rules/`、`skills/ci-github/` を含む a3-ci-github 配布元 repository root
+- `{ci-github-source-root}`: `distribute-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
 - `{skill-collection-root}`: adapter bundle が明示する外部 language skill を解決できるスキル集合 root
 - 導入先 project root
 - `{project-root}/.a3-skills/ci-github/` のスキル専用ローカル状態 root
@@ -26,7 +26,7 @@
 
 ## 実行
 
-validator の依存定義は `{ci-github-source-root}/runtime/preset/package.json` と `package-lock.json` を正本とする。配布元 repository には `node_modules/` を作成しない。preflight は Node.js 標準機能だけで起動する `{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs` を公開入口とし、canonical runtime と準備済み runtime の一致、依存ツリー、隔離境界を確認してから TypeScript validator を起動する。
+validator の依存定義は `{ci-github-source-root}/runtime/preset/package.json` と `package-lock.json` を正本とする。project-local distributionには`node_modules/`を作成しない。preflight は Node.js 標準機能だけで起動する `{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs` を公開入口とし、canonical runtimeと準備済みruntimeの一致、依存ツリー、隔離境界を確認してから TypeScript validator を起動する。distribution receiptとsource revisionの検証は、この入口を呼ぶ前に選択配布CLIが所有する。
 
 ### read-only 監査
 

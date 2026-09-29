@@ -33,3 +33,12 @@ related_requirements:
       requirement_id: rust-release-asset-integrity
   - requirement_ref:
       requirement_id: ci-common-processing-action-reuse
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-rust-source-gate.processing
+  - contract_ref:
+      contract_id: contract.ci-rust-source-gate.outputs
+  - contract_ref:
+      contract_id: contract.ci-rust-release-build.processing
+  - contract_ref:
+      contract_id: contract.ci-rust-release-build.outputs

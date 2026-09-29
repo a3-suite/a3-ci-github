@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as core from '@actions/core';
+import { pathsReferToSameFile } from '../../../runtime/path/same-file-core.mjs';
 import { parseVitestReport, summarizeVitest } from './summary.js';
 
 export const run = (): void => {
@@ -13,6 +14,9 @@ export const run = (): void => {
     const result = summarizeVitest(report, label, reportPath);
     const outputPath = core.getInput('summary-path') || process.env.GITHUB_STEP_SUMMARY;
     if (outputPath) {
+      if (pathsReferToSameFile(reportPath, outputPath, 'ci-vitest-summary-path-invalid')) {
+        throw new Error('ci-vitest-summary-paths-must-differ');
+      }
       fs.mkdirSync(path.dirname(outputPath), { recursive: true });
       fs.appendFileSync(outputPath, result.markdown, 'utf8');
       core.setOutput('summary-path', outputPath);

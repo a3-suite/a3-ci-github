@@ -14,11 +14,11 @@ requirements:
     priority: must
     fit_criteria:
       - package preparationは固定sourceとversionからpackageと検証可能なhandoffを生成する
-      - publication requestは公開対象のpackage、version、sourceおよびprovenanceをimmutableに固定する
-      - default branch上のcallerがrequestとworkflow identityを検証してからpublication workflowを呼び出す
+      - publication requestは公開対象のsource、version、target identity、language profile、toolchainおよびrequest provenanceをimmutableに固定する
+      - default branch上のcallerがrequestとworkflow identityを検証し、その固定入力からpreparation workflowを呼び出す
       - credentialを使用するpublish処理は検証済みhandoffだけを入力とし、buildやversion決定をやり直さない
       - 公開後はregistryからversionとpackage identityをreadbackし、不一致または状態不明を成功扱いしない
-      - preparation、request、handoff、publishまたはreadbackの失敗時は未検証の後続処理を停止する
+      - request、preparation、identity、handoff、publishまたはreadbackの失敗時は未検証の後続処理を停止する
     derived_artifacts:
       use_cases:
         - use_case_ref:

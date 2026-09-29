@@ -1,0 +1,216 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.selective-distribution
+contracts:
+  - id: contract.ci-selective-distribution.selection
+    summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
+    conditions:
+      - id: selective-distribution-selection-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-selection-valid
+          op: available
+      - id: selective-distribution-selection-incomplete
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-selection-incomplete
+          op: available
+    guarantees:
+      - id: selective-distribution-closure-exposed
+        when: selective-distribution-selection-valid
+        observation_ref: observation.ci-selective-distribution.selection-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: selectedAssets
+      - id: selective-distribution-missing-dependency-rejected
+        when: selective-distribution-selection-incomplete
+        observation_ref: observation.ci-selective-distribution.selection-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+    verification_intents:
+      - id: selective-distribution-selection-intent
+        goal: A preset exposes its complete registered closure and a direct incomplete asset request is rejected.
+        guarantee_refs:
+          - selective-distribution-closure-exposed
+          - selective-distribution-missing-dependency-rejected
+  - id: contract.ci-selective-distribution.delivery
+    summary: Selected files are published locally only after immutable source identity and file integrity validation.
+    conditions:
+      - id: selective-distribution-source-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-source-valid
+          op: available
+      - id: selective-distribution-source-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-source-invalid
+          op: available
+    guarantees:
+      - id: selective-distribution-receipt-exposed
+        when: selective-distribution-source-valid
+        observation_ref: observation.ci-selective-distribution.fetch-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: sourceRevision
+      - id: selective-distribution-assets-exposed
+        when: selective-distribution-source-valid
+        observation_ref: observation.ci-selective-distribution.fetch-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: selectedAssets
+      - id: selective-distribution-invalid-source-rejected
+        when: selective-distribution-source-invalid
+        observation_ref: observation.ci-selective-distribution.fetch-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+    verification_intents:
+      - id: selective-distribution-delivery-intent
+        goal: Valid selected files produce a revision-bound receipt and invalid source bytes do not become a usable local distribution.
+        guarantee_refs:
+          - selective-distribution-receipt-exposed
+          - selective-distribution-assets-exposed
+          - selective-distribution-invalid-source-rejected
+  - id: contract.ci-selective-distribution.publication
+    summary: Exact distribution bootstrap assets are published only from a validated release commit and accepted only after remote byte readback.
+    conditions:
+      - id: selective-distribution-publication-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-source-valid
+          op: available
+      - id: selective-distribution-publication-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-source-invalid
+          op: available
+    guarantees:
+      - id: selective-distribution-publication-exposed
+        when: selective-distribution-publication-valid
+        observation_ref: observation.ci-selective-distribution.publication-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: readbackStatus
+      - id: selective-distribution-publication-failure-exposed
+        when: selective-distribution-publication-invalid
+        observation_ref: observation.ci-selective-distribution.publication-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+    verification_intents:
+      - id: selective-distribution-publication-intent
+        goal: A validated exact tag publishes only the three bootstrap assets, requires byte-identical readback, and blocks alias updates on failure.
+        guarantee_refs:
+          - selective-distribution-publication-exposed
+          - selective-distribution-publication-failure-exposed
+  - id: contract.ci-selective-distribution.application
+    summary: Canonical workflow copy requires an approved unchanged plan and restores this transaction after failure or rollback.
+    conditions:
+      - id: selective-distribution-application-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-application-valid
+          op: available
+      - id: selective-distribution-application-conflict
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-application-conflict
+          op: available
+      - id: selective-distribution-application-incomplete
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-application-incomplete
+          op: available
+      - id: selective-distribution-plan-changed
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-plan-changed
+          op: available
+    guarantees:
+      - id: selective-distribution-plan-exposed
+        when: selective-distribution-application-valid
+        observation_ref: observation.ci-selective-distribution.plan-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: planDigest
+      - id: selective-distribution-transaction-exposed
+        when: selective-distribution-application-valid
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: transactionId
+      - id: selective-distribution-conflict-rejected
+        when: selective-distribution-application-conflict
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+      - id: selective-distribution-incomplete-application-rejected
+        when: selective-distribution-application-incomplete
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+      - id: selective-distribution-changed-input-rejected
+        when: selective-distribution-plan-changed
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+      - id: selective-distribution-rollback-exposed
+        when: selective-distribution-application-valid
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: rollbackStatus
+    verification_intents:
+      - id: selective-distribution-application-intent
+        goal: Approved unchanged plans apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop.
+        guarantee_refs:
+          - selective-distribution-plan-exposed
+          - selective-distribution-transaction-exposed
+          - selective-distribution-conflict-rejected
+          - selective-distribution-incomplete-application-rejected
+          - selective-distribution-changed-input-rejected
+          - selective-distribution-rollback-exposed

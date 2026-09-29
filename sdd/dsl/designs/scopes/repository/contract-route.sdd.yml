@@ -184,6 +184,37 @@ routes:
     hops:
       - component_id: workflow-sources
       - component_id: contract-verification
+  - route_id: selective-distribution-selection
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.selection
+    hops:
+      - component_id: selective-distribution
+      - component_id: contract-verification
+  - route_id: selective-distribution-delivery
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.delivery
+    hops:
+      - component_id: hosted-delivery
+      - component_id: selective-distribution
+      - component_id: contract-verification
+  - route_id: selective-distribution-publication
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.publication
+    hops:
+      - component_id: hosted-delivery
+      - component_id: selective-distribution
+      - component_id: contract-verification
+  - route_id: selective-distribution-application
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.application
+    hops:
+      - component_id: agent-guidance
+      - component_id: selective-distribution
+      - component_id: contract-verification
   - route_id: runtime-preset-materialization
     contract_ref:
       subject_ref: subject.ci.preset-materialization
@@ -216,6 +247,7 @@ routes:
       - component_id: runtime-implementations
       - component_id: provider-static-validation
       - component_id: agent-guidance
+      - component_id: repository-maintainer-guidance
       - component_id: repository-documentation
       - component_id: contract-verification
   - route_id: repository-contract-execution-mapping
@@ -224,6 +256,7 @@ routes:
       contract_id: contract.repository-managed-source-integrity.execution-mapping
     hops:
       - component_id: sdd-specifications
+      - component_id: runtime-implementations
       - component_id: contract-verification
   - route_id: ci-failure-diagnostics
     contract_ref:

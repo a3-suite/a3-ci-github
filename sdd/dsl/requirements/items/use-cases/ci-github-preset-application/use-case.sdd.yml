@@ -10,7 +10,7 @@ actors:
 goal: canonical assetとproject固有設定の責務を混ぜず、選択したpresetを検証可能な状態で利用projectへ配置する
 preconditions:
   - 利用projectの目的、language profile、公開経路およびownerが確定している
-  - 配布元のfull commit SHAと外部skill collectionを解決できる
+  - 選択配布use caseにより、配布元のfull commit SHA、必要なrepository-owned assetおよび外部skill collectionを解決できる
 trigger: 利用projectへCI presetを新規導入または更新する
 main_success_scenario:
   - summary: 利用目的に対応するpresetと依存するworkflow、Action binding、adapterおよびextensionをregistryから選択する

@@ -32,9 +32,9 @@ contract:
   copyable: コピー可能な entrypoint と設定を含むかを示す。false の bundle は owner が実装を提供する。
   assets: descriptor に加えて配置する stable asset ID と対象プロジェクト内の destination を列挙する。source は含めない。追加 asset が不要な bundle は空配列を許可する。
   projectSettings: 対象プロジェクトに必要な固定ファイルと設定を `requiredFiles`、`requiredScripts` で列挙する。選択実装が project ごとの path を受け取る場合は `requiredEnvironmentPaths` に環境変数名を列挙し、値を project root 内の既存通常ファイルへ解決する。required script は空でない実行文字列で、配布元スキルの配置ディレクトリを参照しない。不必要な設定の上書きは行わない。
-  toolchain: 選択した `CI_TOOLCHAIN_VERSION` を使う実行時版検証の宣言。`verify` は shell を経由せず実行する `command`、`args` を持ち、version 検証の受理規則と実行時出力の形式・パース規則は descriptor ではなく実行 provider の契約が所有する。provider は command の出力に `${CI_TOOLCHAIN_VERSION}` が独立トークン（version または `v`・`V` を1文字付けた版）として現れることを検証する。
-  preparation: quality command の前に実行する依存復元 command の配列。lockfile を尊重し、secret、credential、source の配布元スキル配置 path を含めない。
-  commands: shell を経由せず実行する command と args の配列。secret と credential を含めない。
+  toolchain: 選択した `CI_TOOLCHAIN_VERSION` を使う実行時版検証の宣言。`verify` は shell を経由せず実行する `command`、`args` と任意の `id` を持ち、version 検証の受理規則と実行時出力の形式・パース規則は descriptor ではなく実行 provider の契約が所有する。provider は command の出力に `${CI_TOOLCHAIN_VERSION}` が独立トークン（version または `v`・`V` を1文字付けた版）として現れることを検証する。
+  preparation: quality command の前に実行する依存復元 command の配列。各要素は `command`、`args` と任意の `id` を持ち、`id` を指定する場合は descriptor 内で一意とする。lockfile を尊重し、secret、credential、source の配布元スキル配置 path を含めない。
+  commands: shell を経由せず実行する command と args の配列。各要素は任意の `id` を持ち、省略時は consumer が descriptor 内で一意な決定的 id を導出し、指定する場合は descriptor 内で一意とする。secret と credential を含めない。
   output: status、evidence、command result を `ci.adapter-runner.v1` へ写像する。
 profilePolicy:
   rule: >-

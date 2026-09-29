@@ -52,6 +52,8 @@ subject_scopes:
     path: subjects/ci-release-publication-workflow/
   - subject_id: subject.ci.package-publication-workflow
     path: subjects/ci-package-publication-workflow/
+  - subject_id: subject.ci.selective-distribution
+    path: subjects/ci-selective-distribution/
   - subject_id: subject.ci.preset-materialization
     path: subjects/ci-preset-materialization/
   - subject_id: subject.ci.preset-assurance

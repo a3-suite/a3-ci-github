@@ -1,3 +1,3 @@
 # Specifications
 
-リポジトリ横断の外部仕様を配置します。Action 固有の仕様は各 Action 配下の `docs/specs/` に置きます。
+リポジトリ横断の外部仕様を配置します。契約の正本は `sdd/dsl/specs/` と各 `actions/<action-name>/action.yml` です。

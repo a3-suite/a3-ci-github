@@ -546,9 +546,6 @@ jobs:
       release_remote_identity: ${{ steps.publish.outputs['release-remote-identity'] }}
       publish_receipt: ${{ steps.publish.outputs['publish-receipt'] }}
       readback_evidence: ${{ steps.publish.outputs['readback-evidence'] }}
-    env:
-      GH_TOKEN: ${{ github.token }}
-      CI_GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Verify workflow identity
         id: workflow-identity
@@ -614,6 +611,9 @@ jobs:
           approval-body-sha256: ${{ needs.authority.outputs.approval_body_sha256 }}
       - id: publish
         name: Publish draft and finalize release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail

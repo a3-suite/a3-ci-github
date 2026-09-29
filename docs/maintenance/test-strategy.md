@@ -63,6 +63,12 @@ node runtime/contract-subject-coverage.mjs --check
 node --test tests/contract-subject-execution.test.mjs
 ```
 
+SDD 正本は CI runtime へ `a3-*` を持ち込まず、ローカル保守・リリース前受入として workspace ルートから検証します。手順と生成状態の扱いは [DEVELOPMENT.md](../../DEVELOPMENT.md) を参照してください。
+
+```sh
+a3-sdd sdd check --workspace-root . --format json
+```
+
 a3-lint rule の実行回帰は、a3-lint 自体を workflow runtime 依存にせず、導入済みの固定版を明示して実行します。
 
 ```sh

@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { loadRegistry } from '../ci-preset-assets.ts';
-import { validateCiPreset, writeCiAssetLock } from '../validate-ci-preset.ts';
+import { validateCiPreset } from '../validate-ci-preset.ts';
+import { writeCiAssetLock } from '../ci-asset-lock-plan.ts';
+import { validateDescriptor } from '../descriptor-validation.ts';
+import { createReport } from '../validation-report.ts';
 import {
   loadReleaseRequestFixtureModel,
   snapshotTree,
@@ -154,4 +157,64 @@ test('registry binds every canonical workflow Action use to a declared target', 
     assert.deepEqual(entry.observed, entry.declared, `registry coverage mismatch: ${entry.preset}`);
   }
   assert.ok(coverage.length > 0);
+});
+
+// integration_id: preset-assurance-contract
+// contract_id: contract.ci-preset-assurance.verification
+test('preflight rejects malformed adapter commands consistently with materializer and Action', () => {
+  const base = [
+    'schemaVersion: "1"',
+    'kind: ci-adapter-bundle',
+    'id: test-adapter',
+    'contract: quality-scripts',
+    'languageProfiles: [node]',
+    'provider: provider-neutral',
+    'executionBoundary: read-only',
+    'sourceCheckout: fixed-source',
+    'copyable: true',
+    'owner: ci',
+    'assets: []',
+    'projectSettings:',
+    '  requiredFiles: []',
+    '  requiredScripts: []',
+    '  requiredEnvironmentPaths: []',
+    'toolchain:',
+    '  versionEnv: CI_TOOLCHAIN_VERSION',
+    '  verify:',
+    '    command: node',
+    '    args: [--version]',
+    'preparation:',
+    '  - command: node',
+    '    args: [x]',
+    'commands:',
+    '  - command: node',
+    '    args: [x]',
+    '',
+  ].join('\n');
+  const cases = [
+    { command: '  - null', message: 'command must be a mapping' },
+    { command: '  - command: ""\n    args: [x]', message: 'command must be a non-empty string without NUL or line breaks' },
+    { command: '  - command: node\n    args: [1]', message: 'command args must be a non-empty string list without NUL or line breaks' },
+    { command: '  - command: node\n    args: []', message: 'command args must be a non-empty string list without NUL or line breaks' },
+    { command: '  - id: "a\\nb"\n    command: node\n    args: [x]', message: 'command id must be a non-empty string without NUL or line breaks' },
+    { command: '  - id: same\n    command: node\n    args: [x]\n  - id: same\n    command: node\n    args: [x]', message: 'command ids must be unique within the descriptor' },
+  ];
+  for (const testCase of cases) {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'ci-descriptor-invalid-'));
+    try {
+      mkdirSync(path.join(root, '.ci/adapters'), { recursive: true });
+      writeFileSync(
+        path.join(root, '.ci/adapters/test-adapter.yml'),
+        base.replace('commands:\n  - command: node\n    args: [x]', `commands:\n${testCase.command}`),
+      );
+      const report = createReport();
+      validateDescriptor(root, '.ci/adapters/test-adapter.yml', report, {}, 'github');
+      assert.ok(
+        report.mismatches.some((finding) => finding.message === testCase.message),
+        `${testCase.message}: ${JSON.stringify(report.mismatches)}`,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
 });

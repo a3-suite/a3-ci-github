@@ -51,6 +51,12 @@ items:
     kind: constraint
   - path: items/requirements/github-ci-project-lifecycle/requirement.sdd.yml
     kind: requirement
+  - path: items/requirements/ci-github-selective-distribution/requirement.sdd.yml
+    kind: requirement
+  - path: items/use-cases/ci-github-selective-asset-delivery/use-case.sdd.yml
+    kind: use-case
+  - path: items/quality-scenarios/ci-github-selective-distribution-safe/quality-scenario.sdd.yml
+    kind: quality-scenario
   - path: items/use-cases/ci-github-preset-application/use-case.sdd.yml
     kind: use-case
   - path: items/use-cases/ci-github-preset-audit/use-case.sdd.yml

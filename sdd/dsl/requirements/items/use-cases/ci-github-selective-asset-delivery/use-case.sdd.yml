@@ -1,0 +1,51 @@
+version: 1
+name: use-case
+use_case_id: ci-github-selective-asset-delivery
+summary: CI管理者がRelease manifestから必要なCI資材を選択取得し、canonical workflowを安全に適用または復旧する
+actors:
+  - actor_id: ci-maintainer
+    kind: human
+    role: primary
+    summary: 利用projectの配布asset選択、差分承認、適用後検証および復旧を管理する主体
+goal: 不要資材と実装authorityの複製を避け、固定revisionの必要資材だけを再現可能な状態で利用projectへ接続する
+preconditions:
+  - 承認済みGitHub Release identity、配布manifestおよびfetch CLIの取得元を解決できる
+  - 利用project rootと適用するpresetまたはassetが明示されている
+trigger: 利用projectがa3-ci-githubの資材を新規取得、追加取得、更新または復旧する
+main_success_scenario:
+  - summary: repository Release workflowが検証済みexact tagから3つのbootstrap assetを生成・公開し、remote byte readback後にaliasを更新する
+  - summary: Release manifestとfetch CLIの完全性を確認し、発行者信頼境界とchecksum検証を区別する
+  - summary: presetまたはassetを選び、registry由来の必須依存閉包と外部owner境界を確認する
+  - summary: full commit SHA固定URLから選択fileだけをstagingへ取得し、sizeとSHA-256を検証する
+  - summary: 検証済みfileと取得receiptをsource revision単位のproject-local distributionへ公開する
+  - summary: canonical workflowのdestination、既存digest、owner状態、create・reuse・update・conflict・staleをplanへ固定する
+  - summary: 明示承認、排他取得、plan前提再確認後にcopyし、transactionと変更前状態を保持する
+  - summary: 設定解決とadapter materializeを既存ownerへ委譲し、asset lock、lint、preflight、consumer契約テストを順に実行する
+success_outcomes:
+  - 選択した配布assetだけがfull source revision、manifest digest、receipt、planおよびtransactionから追跡できる
+  - 通常CI実行はproject-local distributionを参照せず、配置済みworkflow、固定SHA Action、project-owned設定で成立する
+  - 更新失敗時は旧distributionを保持し、今回transactionの変更を復旧できる
+failure_outcomes:
+  - manifest、source、size、digest、依存閉包またはredirect境界が不正ならconsumer管理資産を変更しない
+  - plan後のsource、destination、manifestまたは承認digestが変化した場合はcopyを開始または継続しない
+  - 管理外差分、並行apply、未取得assetまたは不完全な閉包を成功扱いにしない
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution
+  - requirement_ref:
+      requirement_id: github-ci-project-lifecycle
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.selection
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.delivery
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.publication
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.application
+  - contract_ref:
+      contract_id: contract.ci-preset-materialization.application
+  - contract_ref:
+      contract_id: contract.ci-preset-assurance.asset-lock
+  - contract_ref:
+      contract_id: contract.ci-preset-assurance.verification

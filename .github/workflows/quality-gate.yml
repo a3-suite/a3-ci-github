@@ -18,8 +18,8 @@ env:
   CI_GH_VERSION: '2.80.0'
 
 jobs:
-  contract:
-    name: CI Action contract / hosted
+  contract-linux:
+    name: CI Action contract / Linux
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -60,9 +60,12 @@ jobs:
         shell: bash
         run: node --test tests/action-index-gate.test.mjs
 
-      - name: Test repository release alias updater
+      - name: Test repository Release delivery
         shell: bash
-        run: node --test runtime/repository/tests/update-release-aliases.test.mjs
+        run: >-
+          node --test
+          runtime/repository/tests/update-release-aliases.test.mjs
+          runtime/repository/tests/manage-distribution-release.test.mjs
 
       - name: Test adapter bundle source resolution
         shell: bash
@@ -75,6 +78,7 @@ jobs:
             runtime/preset/tests/preset-validation-contract.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
             node --test tests/public-cli-lifecycle.test.mjs
+          node --test runtime/distribution/tests/selective-distribution.test.mjs
 
       - name: Test shared GitHub toolchain verifier
         shell: bash
@@ -271,8 +275,6 @@ jobs:
           VERSION_STATUS: ${{ steps.version.outputs.status }}
           PUBLISH_VERSION: ${{ steps.version.outputs['publish-version'] }}
           SUMMARY_STATUS: ${{ steps.summary.outputs.status }}
-          SUMMARY_DIGEST: ${{ steps.summary.outputs.digest }}
-          SUMMARY_EVIDENCE: ${{ steps.summary.outputs['evidence-path'] }}
         shell: bash
         run: |
           set -euo pipefail
@@ -284,6 +286,14 @@ jobs:
           test "$VERSION_STATUS" = success
           test "$PUBLISH_VERSION" = '1.2.3-dev.42'
           test "$SUMMARY_STATUS" = success
+
+      - name: Verify summary evidence digest
+        env:
+          SUMMARY_DIGEST: ${{ steps.summary.outputs.digest }}
+          SUMMARY_EVIDENCE: ${{ steps.summary.outputs['evidence-path'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
           # summary結果の証跡が出力digestと一致することを検証する。
           test -f "$SUMMARY_EVIDENCE"
           test "$SUMMARY_DIGEST" = "sha256:$(sha256sum "$SUMMARY_EVIDENCE" | cut -d' ' -f1)"
@@ -405,3 +415,29 @@ jobs:
           set -euo pipefail
           test "$STATUS" = passed
           test "$COLLECTION" = complete
+
+  rust-windows:
+    name: Rust release contract / Windows
+    runs-on: windows-2025
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Test Windows Rust release contracts
+        shell: pwsh
+        run: node --test --test-name-pattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+
+  contract:
+    name: CI Action contract / hosted
+    if: always()
+    needs: [contract-linux, rust-windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require Linux and Windows contract evidence
+        env:
+          LINUX_RESULT: ${{ needs.contract-linux.result }}
+          WINDOWS_RESULT: ${{ needs.rust-windows.result }}
+        shell: bash
+        run: |
+          test "$LINUX_RESULT" = success
+          test "$WINDOWS_RESULT" = success
