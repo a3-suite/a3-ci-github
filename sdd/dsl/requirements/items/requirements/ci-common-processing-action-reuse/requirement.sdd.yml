@@ -25,9 +25,6 @@ requirements:
       - requirement_ref:
           requirement_id: github-actions-action-contract-and-distribution
     external_document_refs:
-      - document_id: a3-prompts-ci-github
-      - document_id: a3-prompts-ci-github-preset-assets
-        locator: actionization
       - document_id: a3-prompts-ci-script-contracts
         locator: commonContract
       - document_id: a3-prompts-ci-adapter-bundles
