@@ -74,6 +74,7 @@ jobs:
           CI_FIXED_RUNTIME_ROOT=runtime/preset \
             runtime/preset/node_modules/.bin/tsx --test \
             runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
+            runtime/adapter/tests/cli-runtime.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
             runtime/preset/tests/preset-validation-contract.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
