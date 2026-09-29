@@ -74,7 +74,7 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
   ]);
   includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
     /^        id: quality-adapter$/m,
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2$/m,
     /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
   ]);
   const untrusted = jobBlock(workflow, 'untrusted-pr');
@@ -87,7 +87,7 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
     /^          path: \.ci-base$/m,
   ]);
   includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2$/m,
     /^          bundle-path: \.ci-base\/\$\{\{ env\.CI_ADAPTER_DESCRIPTOR \}\}$/m,
   ]);
   const summary = jobBlock(workflow, 'summary');
@@ -307,7 +307,7 @@ test('package workflows separate preparation request validation and publication'
   includesAll(publicationJob, [
     /packages: write/,
     /^      - name: Verify workflow identity$/m,
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-workflow-identity@9b659081c5a7a5712825993542d5b21bbd97a553$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2$/m,
     /expected-called-workflow-path: .github\/workflows\/package-publication\.yml/,
   ]);
   assert.ok(stepIndexContaining(publicationJob, '- name: Verify workflow identity') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity'));

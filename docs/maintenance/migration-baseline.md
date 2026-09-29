@@ -21,9 +21,9 @@
 ## Cutover状態
 
 - source cutover: 完了。canonical workflow と Action registry は `a3-suite/a3-ci-github` の固定SHAを参照します。
-- Release gate: 未完了。`implementationSource.releaseTag` の `v0.1.0` は未公開であるため、`exact-release-tag` と `release-tag-mapping` は未充足です。registry は `availabilityGate.status: release-pending` とし、初回Releaseで peeled target と `exactRef` の一致を確認した後に `available` へ更新します。
-- 旧repositoryからの削除またはarchive: 未実施。別途承認まで行いません。
-- 利用側の新しい固定SHAへの接続: `release-pending` により未実施。初回Releaseとavailability gateの確認までconsumer接続を行いません。
+- Release gate: 完了。annotated `v0.1.0` の peeled target `312c534de67720de060689d78ada17da9c84c4e2` をremoteで確認し、registryの`implementationSource.exactRef`とcanonical workflowのAction参照を同じSHAへ固定しました。
+- 旧repositoryからの削除またはarchive: 利用者承認済みです。外部スキルルートの置換は完了し、旧repositoryのsource削除は未実施です。
+- 利用側の新しい固定SHAへの接続: clean consumerで`v0.1.0`の配布manifestを起点とするfetch、verify、plan、apply、rollbackを確認しました。
 
 ## 終了条件
 
