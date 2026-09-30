@@ -26,10 +26,17 @@ x
 x
 ### project 固有差分
 差分種別: なし
+標準で成立しない理由: なし
 owner: x
 正本・検証導線: x
 検証証跡: x
 更新・撤去条件: x
+`;
+const nonstandardReadme = `${readme
+  .replace('差分種別: なし', '差分種別: trigger extension')
+  .replace('標準で成立しない理由: なし', '標準で成立しない理由: 標準 trigger では対象イベントを表現できないため')}
+## 自由記述（標準からの差異がある場合のみ）
+- 追加条件: x
 `;
 
 const rules = [
@@ -110,6 +117,38 @@ const rules = [
     lang: 'markdown',
     code: 'ci_github_ci_readme_owner_missing',
     invalid: ['.ci/README.md', readme.replace('owner: x\n', '')],
+    valid: ['.ci/README.md', readme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', nonstandardReadme.replace('標準で成立しない理由: 標準 trigger では対象イベントを表現できないため\n', '')],
+    valid: ['.ci/README.md', nonstandardReadme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', nonstandardReadme.replace('標準で成立しない理由: 標準 trigger では対象イベントを表現できないため', '標準で成立しない理由: なし')],
+    valid: ['.ci/README.md', nonstandardReadme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', readme.replace('標準で成立しない理由: なし', '標準で成立しない理由: 標準 trigger では対象イベントを表現できないため')],
+    valid: ['.ci/README.md', readme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', readme.replace('標準で成立しない理由: なし\n', '')],
     valid: ['.ci/README.md', readme],
     falsePositive: ['README.md', ''],
   },

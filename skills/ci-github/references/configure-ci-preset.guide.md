@@ -81,7 +81,8 @@ verifier 実行で再検証する。package-publication は `gh-jq` のため対
 ### `.ci/README.md` の責務
 
 `.ci/README.md` は、すべての適用済み project に必須で置く。設定の正本にはせず、
-project 固有差分がある場合は差分が必要な理由と正本への導線を記録する。差分がない場合も、
+project 固有差分がある場合は、標準の preset / flow をそのまま採用できない理由と正本への導線を記録する。
+理由は、標準のどの契約・機能・前提が project の要件を満たせないのかが読み取れる粒度で書く。差分がない場合も、
 採用した preset / flow と「project 固有差分なし」を明記する。影響する preset または flow と、
 workflow の実値、adapter descriptor、project policy、`requiredExtension` のうち該当する正本を示す。
 owner、検証手順、撤去条件も記録する。
@@ -89,9 +90,9 @@ owner、検証手順、撤去条件も記録する。
 記載項目は、固定項目、オプション項目、自由記述に分類する。標準からずれない project は固定項目だけで完了とし、
 標準の説明を補足文として繰り返さない。空の項目や未記入のテンプレートを完了扱いにしない。
 
-- 固定項目（必須）: 目的と対象、採用 preset / flow、project 固有差分の有無、owner、正本・検証導線、検証証跡、更新・撤去条件。
+- 固定項目（必須）: 目的と対象、採用 preset / flow、project 固有差分の有無、標準で成立しない理由（差分がない場合は「なし」）、owner、正本・検証導線、検証証跡、更新・撤去条件。
 - オプション項目（該当時のみ）: 例外経路、配置資産の責務、追加の検証証跡。該当しない項目の見出しは置かない。
-- 自由記述（標準からの差異がある場合のみ）: 差異の背景、追加条件、handoff 先など。正本の decision、停止条件、共有契約、実値、command、workflow 構造を再定義しない。
+- 自由記述（標準からの差異がある場合のみ）: 追加条件、handoff 先など。正本の decision、停止条件、共有契約、実値、command、workflow 構造を再定義しない。
 
 root `README.md` に platform、artifact、Release flow などの利用者向け事実を記載する場合は、project policy / manifest と照合する。
 root README は利用者向けの入口であり、CI契約の正本にはしない。値が正本と異なる場合はREADMEの補足で済ませず、正本との不一致として扱う。
@@ -107,6 +108,7 @@ root README は利用者向けの入口であり、CI契約の正本にはしな
 
 ### project 固有差分
 - 差分種別: なし / placeholder / trigger extension / policy data / requiredExtension / adapter
+- 標準で成立しない理由:
 - owner:
 - 正本・検証導線:
 - 検証証跡:
@@ -127,8 +129,11 @@ trusted CI assets の初期解決は provider profile の canonical state であ
 
 ## 自由記述（標準からの差異がある場合のみ）
 
-- 差異の背景、追加条件、handoff 先など:
+- 追加条件、handoff 先など:
 ```
+
+差分種別が「なし」以外のときは、「標準で成立しない理由」へ標準では満たせない要件と標準側の制約を書く。
+差分がない場合は「なし」と記入し、標準の説明を繰り返さない。
 
 `例外経路` は `ci-workflow-use-cases.reference.yml` の `exceptions` にある exception ID を記録する。
 例外の decision、停止条件、共有契約は正本を参照し、README へ複製しない。trigger extension、
@@ -197,7 +202,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
 6. workflow の placeholder だけを project の値へ置換し、外部 Action は `workflow-version-policy.reference.md` の「Action と版情報の扱い」に従って registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin を設定する。あわせて registry の `providerActions.pinCompanion` が宣言する `.ci/provider-action-pins.yml` を生成して配置する。job、step、permissions、trust 境界、summary 経路は直接変更しない。
 7. workflow 初期パラメータ、必要な Variables、Secrets、workflow input の値を上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
-8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、owner、正本への導線、検証導線、更新・撤去条件を記録する。
+8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証導線、更新・撤去条件を記録する。
 9. 配布元 revision の full commit SHA を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。生成日時はUTCの分単位に正規化され、版識別には使わない。
 10. CI向けa3-lintルールとactionlintで単一workflowの一般規則を検証する。actionlint 設定は `.github/actionlint.yaml`（project-owned、内容非固定）を registry の `provider.staticValidation` に従って扱う。
 11. `references/validate-ci-preset.guide.md` に従い、canonical workflowとの構造照合と配布同一性を含むpreflightを実行する。
