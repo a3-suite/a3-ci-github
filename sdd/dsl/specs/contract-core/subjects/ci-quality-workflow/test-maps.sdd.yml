@@ -3,6 +3,15 @@ name: contract-test-maps
 subject_ref: subject.ci.quality-workflow
 test_maps:
   - verification_id: verification.ci-quality-workflow.execution
+    case_id: ci-quality-workflow-reusable-binding
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: quality caller passes explicit inputs and preserves the summary check without copying quality jobs
+        check_refs: [check-ci-quality-workflow-reusable-binding]
+      - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
+        symbol: reusable quality preflight connects fixed source without copying the callee and rejects caller drift
+        check_refs: [check-ci-quality-workflow-reusable-binding]
+  - verification_id: verification.ci-quality-workflow.execution
     case_id: ci-quality-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
@@ -12,6 +21,9 @@ test_maps:
   - verification_id: verification.ci-quality-workflow.execution
     case_id: ci-quality-workflow-failure
     tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
+        check_refs: [check-ci-quality-workflow-failure]
       - path: tests/workflow-contracts.test.mjs
         symbol: quality workflow keeps failed or missing checks visible
         check_refs:

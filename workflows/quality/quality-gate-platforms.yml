@@ -21,7 +21,8 @@ env:
   CI_CARGO_MANIFEST_PATH: <cargo-manifest-path>
   CI_CARGO_LOCK_PATH: <cargo-lock-path>
   CI_PROVIDER: github
-  CI_ADAPTER_DESCRIPTOR: .ci/adapters/<adapter-descriptor>
+  CI_STANDARD_BUNDLE_ID: <standard-bundle-id>
+  CI_ADAPTER_DESCRIPTOR: ''
   CI_DOCS_ONLY_PATTERNS: 'docs/**,README.md,**/*.md'
   CI_PLATFORM_MANIFEST: .ci/platform-manifest.yml
   CI_QUALITY_PLATFORM_SELECTION: .ci/quality-platforms.yml
@@ -84,11 +85,13 @@ jobs:
         run: |
           set -euo pipefail
           present=0
-          for asset in ".ci-base/$CI_ADAPTER_DESCRIPTOR" ".ci-base/$CI_PLATFORM_MANIFEST" ".ci-base/$CI_QUALITY_PLATFORM_SELECTION"; do
+          expected=2
+          if [[ -n "$CI_ADAPTER_DESCRIPTOR" ]]; then expected=3; fi
+          for asset in ${CI_ADAPTER_DESCRIPTOR:+".ci-base/$CI_ADAPTER_DESCRIPTOR"} ".ci-base/$CI_PLATFORM_MANIFEST" ".ci-base/$CI_QUALITY_PLATFORM_SELECTION"; do
             if [[ -f "$asset" ]]; then present=$((present + 1)); fi
           done
           if [[ -f ".ci-base/.ci/ci-assets.lock.json" ]]; then
-            if [[ "$present" -ne 3 ]]; then
+            if [[ "$present" -ne "$expected" ]]; then
               echo "trusted CI assets are partially present in the base branch" >&2
               exit 1
             fi
@@ -167,9 +170,10 @@ jobs:
         run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@<release-publication-action-sha>
         with:
-          bundle-path: ${{ needs.resolve-platforms.outputs['trusted_root'] }}/${{ env.CI_ADAPTER_DESCRIPTOR }}
+          standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
+          bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', needs.resolve-platforms.outputs['trusted_root'], env.CI_ADAPTER_DESCRIPTOR) || '' }}
           source-root: .
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}

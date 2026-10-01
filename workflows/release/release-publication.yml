@@ -38,7 +38,8 @@ env:
   CI_SHA256SUM_VERSION: <sha256sum-version>
   CI_RELEASE_IMPLEMENTATION: <release-implementation>
   CI_RELEASE_OWNER_CONTRACT: git.release-flow
-  CI_ADAPTER_DESCRIPTOR: .ci-base/.ci/adapters/<adapter-descriptor>
+  CI_STANDARD_BUNDLE_ID: <standard-bundle-id>
+  CI_ADAPTER_DESCRIPTOR: ''
   CI_CARGO_MANIFEST_PATH: <cargo-manifest-path>
   CI_CARGO_LOCK_PATH: <cargo-lock-path>
   CI_RELEASE_BINARY_NAME: <release-binary-name>
@@ -345,9 +346,10 @@ jobs:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@<release-publication-action-sha>
         with:
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR }}
+          standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           source-root: .
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}

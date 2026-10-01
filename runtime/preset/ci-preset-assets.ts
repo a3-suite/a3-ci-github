@@ -57,6 +57,7 @@ export type AdapterBundle = {
   languageProfiles: string[];
   source: ResourceSource;
   targetDescriptor: string;
+  delivery?: string;
 };
 export type AssetLockContract = { path: string; schemaVersion: string; kind: string };
 export type ManagedAsset = {
@@ -97,6 +98,7 @@ export type RegistryData = {
   providerActionPinFields: string[];
   emptyAllowedPlaceholders: Set<string>;
   qualityTriggerExtensions: Record<string, TriggerExtensionRule>;
+  qualityReusableWorkflow?: { source: string; status: 'available' | 'pending-release'; referencePlaceholder: string; exactRef?: string };
 };
 
 // Minimal diagnostic surface required by registry interpretation. The validator
@@ -375,7 +377,7 @@ const isValidWorkflowAsset = (value: unknown): value is WorkflowAsset =>
 
 const isValidOptionalWorkflowAsset = (value: unknown): value is OptionalWorkflowAsset => {
   if (!isValidWorkflowAsset(value) || !isMap(value)) return false;
-  const companionPaths = value.companionPaths;
+  const companionPaths = map(value).companionPaths;
   return companionPaths === undefined
     || (Array.isArray(companionPaths)
       && companionPaths.every((entry) => typeof entry === 'string'));
@@ -506,6 +508,13 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
   const providerActionPinFields = strings(pinCompanion.fields);
   const providerId = String(map(registry.provider).id ?? '');
   const conformance = map(registry.conformance);
+  const reusable = map(registry.qualityReusableWorkflow);
+  if (typeof reusable.source !== 'string' || !/^\.github\/workflows\/[a-z0-9-]+\.ya?ml$/.test(reusable.source)
+    || !['available', 'pending-release'].includes(String(reusable.status))
+    || typeof reusable.referencePlaceholder !== 'string'
+    || reusable.status === 'available' && !FULL_SHA.test(String(reusable.exactRef ?? ''))) add(report.mismatches, {
+    path: 'qualityReusableWorkflow', message: 'quality reusable workflow declaration is invalid',
+  });
   const qualityTriggerExtensions = collectQualityTriggerExtensions(conformance, report);
   const actionization = map(registry.actionization);
   const { implementationSource, actionReleaseTag, actionExactRef } =
@@ -543,6 +552,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
             : [],
           source: toResourceSource(map(value).source, commonSourceSkill),
           targetDescriptor: String(map(value).targetDescriptor),
+          delivery: typeof value.delivery === 'string' ? value.delivery : undefined,
         }))
       : [],
     assetLock: {
@@ -560,7 +570,35 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     providerActionPinFields,
     emptyAllowedPlaceholders: new Set(strings(conformance.emptyAllowedPlaceholders)),
     qualityTriggerExtensions,
+    qualityReusableWorkflow: typeof reusable.source === 'string' ? {
+      source: reusable.source, status: reusable.status as 'available' | 'pending-release',
+      referencePlaceholder: String(reusable.referencePlaceholder ?? ''),
+      exactRef: typeof reusable.exactRef === 'string' ? reusable.exactRef : undefined,
+    } : undefined,
   };
+};
+
+export const resolveQualityWorkflow = (
+  workflow: ValueMap, registry: RegistryData, report: DiagnosticReport = { missingSettings: [], mismatches: [] },
+): ValueMap => {
+  const binding = registry.qualityReusableWorkflow;
+  const call = map(map(workflow.jobs).quality);
+  if (!binding || typeof call.uses !== 'string'
+    || !call.uses.startsWith(`${registry.actionRepository}/${binding.source}@`)) return workflow;
+  const source = path.resolve(SOURCE_ROOT, binding.source);
+  if (!source.startsWith(`${SOURCE_ROOT}${path.sep}`) || !fs.existsSync(source)) {
+    add(report.mismatches, { path: binding.source, message: 'fixed quality reusable workflow source is missing' });
+    return workflow;
+  }
+  const callee = map(parseYaml(fs.readFileSync(source, 'utf8'), binding.source, report));
+  const inputs = map(call.with);
+  const definitions = map(map(map(callee.on).workflow_call).inputs);
+  const env = Object.fromEntries(Object.entries(map(callee.env)).map(([key, value]) => {
+    const match = typeof value === 'string' ? value.match(/^\$\{\{ inputs\.([a-z0-9-]+) \}\}$/) : undefined;
+    const input = match?.[1];
+    return [key, input ? inputs[input] ?? map(definitions[input]).default : value];
+  }));
+  return { ...callee, env };
 };
 
 export const selectPresets = (
@@ -645,7 +683,8 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
     }
     if (preset.qualityAdapter) {
       for (const installed of installedPresetWorkflows(root, preset)) {
-        const workflowEnv = map(installed.workflow.env);
+        const workflowEnv = map(resolveQualityWorkflow(installed.workflow, registry).env);
+        if (typeof workflowEnv.CI_STANDARD_BUNDLE_ID === 'string' && workflowEnv.CI_STANDARD_BUNDLE_ID !== '') continue;
         const descriptor = workflowEnv.CI_ADAPTER_DESCRIPTOR;
         const profile = workflowEnv.CI_LANGUAGE_PROFILE;
         if (typeof descriptor !== 'string' || typeof profile !== 'string') continue;
@@ -663,6 +702,7 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
         if (dependency.kind !== 'adapter-bundle') continue;
         const bundle = registry.adapterBundles.find((candidate) => candidate.id === dependency.id);
         if (!bundle) continue;
+        if (map(presetWorkflow(root, preset).env).CI_STANDARD_BUNDLE_ID === bundle.id) continue;
         registerAdapterBundle(bundle);
       }
     }

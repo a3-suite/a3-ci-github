@@ -2,8 +2,11 @@ name: ci-quality-adapter
 description: Execute a validated read-only quality adapter against a fixed source checkout.
 inputs:
   bundle-path:
-    required: true
-    description: Trusted quality adapter descriptor YAML.
+    required: false
+    description: Trusted project-owned descriptor YAML. Specify exactly one of bundle-path and standard-bundle-id.
+  standard-bundle-id:
+    required: false
+    description: Registered standard bundle embedded in this fixed Action revision. Exclusive with bundle-path.
   source-root:
     required: true
     description: Fixed source checkout used as the command working directory.

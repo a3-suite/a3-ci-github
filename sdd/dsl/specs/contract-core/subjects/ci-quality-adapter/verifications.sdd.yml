@@ -5,6 +5,20 @@ verifications:
   - id: verification.ci-quality-adapter.outputs
     contract_id: contract.ci-quality-adapter.outputs
     cases:
+      - id: standard-adapter-execution
+        intent_id: quality-adapter-standard-execution
+        input:
+          standard-bundle-id: typescript-npm-quality
+        checks:
+          - id: check-quality-adapter-standard-status
+            guarantee_ref: quality-adapter-standard-status-produced
+      - id: standard-selection-rejected
+        intent_id: quality-adapter-rejected
+        input:
+          scenario: ambiguous-or-unknown-standard-selection
+        checks:
+          - id: check-quality-adapter-standard-rejection
+            guarantee_ref: quality-adapter-failure-propagated
       - id: read-only-adapter-execution
         intent_id: quality-adapter-execution
         input:

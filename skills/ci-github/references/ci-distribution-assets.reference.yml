@@ -46,6 +46,7 @@ assets:
     application: local-reference
     dependencies: [registry.ci-github]
     sourcePaths:
+      - .github/workflows/ci-quality.yml
       - runtime/preset/package.json
       - runtime/preset/package-lock.json
       - runtime/preset/run-validate-ci-preset.mjs
@@ -57,6 +58,8 @@ assets:
       - runtime/preset/generate-ci-asset-lock.ts
       - runtime/preset/publication-validation.ts
       - runtime/preset/quality-validation.ts
+      - runtime/adapter/standard-quality-bundles.ts
+      - runtime/adapter/standard-quality-bundles.generated.ts
       - runtime/preset/action-availability.ts
       - runtime/preset/semantic-candidates.ts
       - runtime/preset/validate-ci-preset-core.ts
@@ -74,6 +77,8 @@ assets:
     sourcePaths:
       - runtime/adapter/cli-runtime.ts
       - runtime/adapter/materialize-adapter-bundle.ts
+      - runtime/adapter/standard-quality-bundles.ts
+      - runtime/adapter/standard-quality-bundles.generated.ts
       - runtime/path/same-file-core.d.mts
       - runtime/path/same-file-core.mjs
   - id: runtime.vitest-summary

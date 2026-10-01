@@ -22,6 +22,7 @@ const validateDescriptor = (
   report: Report,
   workflowEnv: ValueMap,
   providerId: string,
+  providedContent?: string,
 ): Set<string> => {
   const destinations = new Set<string>();
   let absolute: string;
@@ -33,7 +34,7 @@ const validateDescriptor = (
     });
     return destinations;
   }
-  if (!fs.existsSync(absolute)) {
+  if (providedContent === undefined && !fs.existsSync(absolute)) {
     add(report.missingSettings, {
       path: descriptorPath,
       message: 'quality adapter descriptor is missing',
@@ -41,7 +42,7 @@ const validateDescriptor = (
     });
     return destinations;
   }
-  if (!realPathIsInside(root, absolute)) {
+  if (providedContent === undefined && !realPathIsInside(root, absolute)) {
     add(report.mismatches, {
       path: descriptorPath,
       message: 'quality adapter descriptor resolves outside the project root',
@@ -49,7 +50,7 @@ const validateDescriptor = (
     });
     return destinations;
   }
-  const descriptor = map(parseYaml(fs.readFileSync(absolute, 'utf8'), descriptorPath, report));
+  const descriptor = map(parseYaml(providedContent ?? fs.readFileSync(absolute, 'utf8'), descriptorPath, report));
   const exact: Array<[string, unknown, unknown]> = [
     ['schemaVersion', descriptor.schemaVersion, '1'],
     ['kind', descriptor.kind, 'ci-adapter-bundle'],

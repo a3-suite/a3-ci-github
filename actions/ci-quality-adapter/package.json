@@ -1,7 +1,7 @@
 {
   "name": "@a3-suite/ci-quality-adapter",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Action for read-only quality adapter execution",
   "main": "dist/index.js",
   "scripts": {

@@ -62,12 +62,12 @@ distribution:
     contents: [canonical-sha256, applied-sha256]
     excludes: [preset-selection, project-settings]
   runtimeRule: >-
-    配布元 repository の source は導入・検証時だけ使う。コピー後は destination、
-    project の .ci、Secrets、workflow input だけを参照する。
+    配布元 repository の source は導入・検証時だけ使う。実行時は destination、
+    project の .ci、Secrets、workflow input、および固定Action／Reusable Workflowを参照する。
 conformance:
   comparison: canonical-yaml-structure
   configurableValues: canonical-placeholders
-  emptyAllowedPlaceholders: [uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix]
+  emptyAllowedPlaceholders: [uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
   listPlaceholderRule: placeholder だけで構成する list は一つ以上の非空 project 値へ置換できる。
   workflowTriggerExtensions:
     quality-gate:
@@ -87,6 +87,12 @@ conformance:
   lintBoundary: >-
     a3-lint は単一 workflow の一般規則を検査し、canonical asset との比較は preflight が行う。
 
+qualityReusableWorkflow:
+  source: .github/workflows/ci-quality.yml
+  status: pending-release
+  referencePlaceholder: <quality-workflow-sha>
+  activation: exact-release-tag-and-peeled-full-sha-and-hosted-required-check-acceptance-confirmed
+  requiredCallerCheck: summary
 providerAssets: []
 actionization:
   implementationSource:
@@ -245,7 +251,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: platform-build-matrix
     - id: ci-quality-adapter
-      status: available
+      status: pending-release
       actionPath: actions/ci-quality-adapter
       workflows: [quality-gate, quality-gate-platforms, release-publication]
       trust: read-only

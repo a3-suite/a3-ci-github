@@ -141,8 +141,10 @@ test('registry binds every canonical workflow Action use to a declared target', 
       .map((target) => target.id));
     const observed = new Set();
     for (const asset of assets) {
-      const workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
+      let workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
+      if (asset.id === 'quality-gate') workflow += readFileSync(path.join(repositoryRoot, registry.qualityReusableWorkflow.source), 'utf8');
       for (const [, action, ref] of workflow.matchAll(actionUse)) {
+        if (action.includes('/.github/workflows/')) continue;
         const target = registry.actionTargets
           .find((candidate) => `${registry.actionRepository}/${candidate.actionPath}` === action);
         assert.ok(target, `unregistered a3 Action in ${asset.source}: ${action}`);

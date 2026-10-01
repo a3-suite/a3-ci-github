@@ -5,6 +5,13 @@ verifications:
   - id: verification.ci-quality-workflow.execution
     contract_id: contract.ci-quality-workflow.execution
     cases:
+      - id: ci-quality-workflow-reusable-binding
+        intent_id: ci-quality-workflow-reusable-binding-intent
+        input:
+          caller-source: main-quality-caller
+        checks:
+          - id: check-ci-quality-workflow-reusable-binding
+            guarantee_ref: ci-quality-workflow-reusable-binding-observed
       - id: ci-quality-workflow-success
         intent_id: ci-quality-workflow-success-intent
         input:

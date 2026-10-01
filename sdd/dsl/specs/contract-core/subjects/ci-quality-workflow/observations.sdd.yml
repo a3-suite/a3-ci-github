@@ -10,6 +10,9 @@ observations:
       root: canonical-workflow
       kind: object
       fields:
+        - selector: reusable-binding
+          kind: observation_field
+          meaning: Declared caller-to-callee reference, explicit project inputs, retained summary job identity, and local rejection of invalid refs or input bindings. The callee is provider-owned and is not deployed into the consumer workflow directory.
         - selector: execution-chain
           kind: observation_field
           meaning: Declared order in which trusted checkout and asset resolution precede adapter execution, and applicable execution results precede the aggregate decision.

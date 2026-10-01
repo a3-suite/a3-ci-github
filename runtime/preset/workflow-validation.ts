@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FULL_SHA, minuteTimestamp } from './ci-asset-lock.ts';
-import { SKILL_ROOT, add, canonicalSourcePath, inactiveConditionalEntrypoints, isMap, map, parseYaml, strings } from './ci-preset-assets.ts';
+import { SKILL_ROOT, add, canonicalSourcePath, inactiveConditionalEntrypoints, isMap, map, parseYaml, strings, resolveQualityWorkflow } from './ci-preset-assets.ts';
 import type { Finding, ManagedAsset, Preset, RegistryData, TriggerExtensionRule, ValueMap, WorkflowAsset } from './ci-preset-assets.ts';
 import type { InspectionContext, Report } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside, realPathIsInside, sha256 } from './workflow-assets.ts';
@@ -715,8 +715,34 @@ const inspectWorkflowAsset = (
     inactiveConditionalEntrypoints(root, registry, preset),
   );
   validateTrigger(preset.id, asset.id, workflow, asset.destination, report);
-  for (const value of uses(workflow).filter((item) =>
-    item.startsWith(`${registry.actionRepository}/`))) {
+  const execution = resolveQualityWorkflow(workflow, registry, report);
+  if (asset.id === 'quality-gate' && registry.qualityReusableWorkflow) {
+    const binding = registry.qualityReusableWorkflow;
+    const call = map(map(workflow.jobs).quality);
+    const expectedRef = binding.status === 'available' ? binding.exactRef : binding.referencePlaceholder;
+    if (call.uses !== `${registry.actionRepository}/${binding.source}@${expectedRef}`) add(report.mismatches, {
+      path: `${asset.destination}:jobs.quality.uses`, message: 'quality reusable workflow ref does not match the registry', settingLocation: asset.destination,
+    });
+    if (binding.status !== 'available') add(report.missingSettings, {
+      path: `${asset.destination}:jobs.quality.uses`, message: 'quality reusable workflow is pending-release; deployment is forbidden', settingLocation: asset.destination,
+    });
+    const runner = map(call.with).runner;
+    if (typeof runner !== 'string' || runner === '' || runner.endsWith('-latest') || runner.includes('${{')) add(report.mismatches, {
+      path: `${asset.destination}:jobs.quality.with.runner`, message: 'quality runner must be a static versioned label', settingLocation: asset.destination,
+    });
+    if (execution !== workflow) {
+      const definitions = map(map(map(execution.on).workflow_call).inputs);
+      for (const [name, value] of Object.entries(map(call.with))) if (!(name in definitions) || typeof value !== map(definitions[name]).type) add(report.mismatches, {
+        path: `${asset.destination}:jobs.quality.with.${name}`, message: 'quality reusable workflow input is undeclared or has the wrong type', settingLocation: asset.destination,
+      });
+      for (const [name, definition] of Object.entries(definitions)) if (map(definition).required === true && !(name in map(call.with))) add(report.missingSettings, {
+        path: `${asset.destination}:jobs.quality.with.${name}`, message: 'required quality reusable workflow input is missing', settingLocation: asset.destination,
+      });
+      validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry);
+    }
+  }
+  for (const value of new Set([...actionUses(workflow), ...actionUses(execution)].filter((item) =>
+    item.startsWith(`${registry.actionRepository}/`)))) {
     const separator = value.lastIndexOf('@');
     const actionName = separator < 0 ? value : value.slice(0, separator);
     const ref = separator < 0 ? '' : value.slice(separator + 1);

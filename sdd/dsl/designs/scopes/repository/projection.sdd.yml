@@ -6,6 +6,8 @@ mappings:
     element_id: actions-root
   - component_id: workflow-sources
     element_id: workflows-root
+  - component_id: workflow-sources
+    element_id: quality-reusable-workflow
   - component_id: runtime-implementations
     element_id: runtime-root
   - component_id: selective-distribution

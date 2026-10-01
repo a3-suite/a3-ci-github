@@ -1318,7 +1318,8 @@
           "level": "integration",
           "cwd": "actions/ci-quality-adapter",
           "tests": [
-            "tests/adapter.test.ts"
+            "tests/adapter.test.ts",
+            "tests/standard-bundles.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1760,7 +1761,9 @@
             "tests/preset-validation-contract.test.mjs",
             "tests/action-availability.test.mjs",
             "tests/publication-validation.test.mjs",
-            "tests/quality-platform-selection.test.mjs"
+            "tests/quality-platform-selection.test.mjs",
+            "tests/standard-quality-bundles.test.mjs",
+            "tests/reusable-quality-workflow.test.mjs"
           ],
           "typescript": true,
           "coverage": {
@@ -1912,7 +1915,8 @@
           "cwd": "runtime/preset",
           "tests": [
             "../adapter/tests/materialize-adapter-bundle.test.mjs",
-            "../adapter/tests/standard-quality-footprint.test.mjs"
+            "../adapter/tests/standard-quality-footprint.test.mjs",
+            "../adapter/tests/generate-standard-quality-bundles.test.mjs"
           ],
           "typescript": true,
           "coverage": {

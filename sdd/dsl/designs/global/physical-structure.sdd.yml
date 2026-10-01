@@ -30,6 +30,13 @@ elements:
     area_kinds: [implementation, verification]
     source_control: managed
     placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: quality-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-quality.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer の主品質 caller が固定参照する共通品質 workflow source を所有する
   - element_id: distribution-runtime-root
     element_kind: directory
     path: runtime/distribution
@@ -85,4 +92,4 @@ elements:
     primary_area_kind: delivery
     area_kinds: [delivery]
     source_control: managed
-    placement_purpose: このリポジトリ自身の検証・公開 workflow を所有する
+    placement_purpose: このリポジトリ自身の検証・公開 workflow と固定参照される reusable workflow の配置先を所有する

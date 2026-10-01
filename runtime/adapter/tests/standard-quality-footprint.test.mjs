@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
+import { standardQualityBundle } from '../standard-quality-bundles.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const skillRoot = process.env.A3_CI_GITHUB_QUALITY_SKILL_ROOT;
@@ -15,8 +16,7 @@ const filesIn = (directory) => fs.readdirSync(directory, { withFileTypes: true }
   entry.isDirectory() ? filesIn(path.join(directory, entry.name)) : [path.join(directory, entry.name)]);
 
 // integration_id: adapter-bundle-materialization-contract
-test('registered standard quality bundles materialize only descriptors and preserve consumer files',
-  { skip: skillRoot ? false : 'A3_CI_GITHUB_QUALITY_SKILL_ROOT must name the read-only owner skill collection' }, () => {
+test('registered standard quality bundles require no consumer copies and preserve consumer files', () => {
     const inventory = yaml.parse(fs.readFileSync(path.join(root, inventoryPath), 'utf8'));
     fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
     const fixture = fs.mkdtempSync(path.join(root, 'tmp', 'standard-quality-footprint-'));
@@ -26,8 +26,9 @@ test('registered standard quality bundles materialize only descriptors and prese
       for (const profile of ['rust', 'python', 'typescript']) {
         const bundle = inventory.adapterBundles.find((item) => item.languageProfiles.includes(profile));
         assert.ok(bundle, `unregistered standard profile: ${profile}`);
-        const source = path.join(skillRoot, bundle.source.skill, bundle.source.path);
-        const original = fs.readFileSync(source, 'utf8');
+        const source = skillRoot ? path.join(skillRoot, bundle.source.skill, bundle.source.path) : undefined;
+        const original = standardQualityBundle(bundle.id).descriptor;
+        const ownerBefore = source ? fs.readFileSync(source, 'utf8') : undefined;
         const descriptor = yaml.parse(original);
         assert.deepEqual(descriptor.assets, [], `${profile} unexpectedly requires common scripts`);
         const project = path.join(fixture, profile);
@@ -41,17 +42,25 @@ test('registered standard quality bundles materialize only descriptors and prese
               .map((script) => [script, 'node --version'])) }) : '\n');
         }
         const before = new Map(filesIn(project).map((file) => [file, fs.readFileSync(file)]));
-        const report = materializeAdapterBundle({ sourceRoot: skillRoot, inventoryPath, bundleId: bundle.id, targetRoot: project });
+        const options = { sourceRoot: skillRoot ?? path.join(fixture, 'unavailable-owner-collection'), inventoryPath, bundleId: bundle.id, targetRoot: project };
+        const report = materializeAdapterBundle(options);
         assert.equal(report.schema, 'ci.adapter-materializer.v1');
-        assert.deepEqual(report.files.map((file) => file.destination), [bundle.targetDescriptor]);
-        assert.deepEqual(filesIn(project).filter((file) => !before.has(file)), [path.join(project, bundle.targetDescriptor)]);
-        assert.equal(fs.readFileSync(path.join(project, bundle.targetDescriptor), 'utf8'), original);
+        assert.deepEqual(report.files, []);
+        assert.equal(report.descriptor, '');
+        assert.equal(report.binding.standardBundleId, bundle.id);
+        assert.deepEqual(filesIn(project).filter((file) => !before.has(file)), []);
         for (const [file, bytes] of before) assert.deepEqual(fs.readFileSync(file), bytes);
-        assert.equal(fs.readFileSync(source, 'utf8'), original);
-        assert.equal(materializeAdapterBundle({ sourceRoot: skillRoot, inventoryPath, bundleId: bundle.id, targetRoot: project }).files[0].action, 'reused');
+        if (source) assert.equal(fs.readFileSync(source, 'utf8'), ownerBefore);
+        assert.deepEqual(materializeAdapterBundle(options), report);
+        assert.throws(() => materializeAdapterBundle({ ...options, outputPath: path.join(project, 'README.md') }), /output-conflict/);
+        assert.equal(fs.readFileSync(path.join(project, 'README.md'), 'utf8'), 'consumer-owned documentation\n');
+        const danglingOutput = path.join(project, 'report-link');
+        fs.symlinkSync('missing-report.json', danglingOutput);
+        assert.throws(() => materializeAdapterBundle({ ...options, outputPath: danglingOutput }), /output-conflict/);
+        assert.equal(fs.existsSync(path.join(project, 'missing-report.json')), false);
         if (descriptor.projectSettings.requiredScripts.length > 0) {
           fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ scripts: {} }));
-          assert.throws(() => materializeAdapterBundle({ sourceRoot: skillRoot, inventoryPath, bundleId: bundle.id, targetRoot: project }), /project-script/);
+          assert.throws(() => materializeAdapterBundle(options), /project-script/);
         }
       }
     } finally {

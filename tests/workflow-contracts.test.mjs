@@ -1,11 +1,97 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
+const yaml = createRequire(import.meta.url)(path.join(root, 'runtime/preset/node_modules/yaml'));
+
+// integration_id: quality-workflow-contract
+test('quality caller passes explicit inputs and preserves the summary check without copying quality jobs', () => {
+  const caller = yaml.parse(read('workflows/quality/quality-gate.yml'));
+  const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
+  assert.deepEqual(Object.keys(caller.jobs), ['quality', 'summary']);
+  assert.equal(caller.env, undefined);
+  assert.equal(caller.jobs.quality.steps, undefined);
+  assert.equal(caller.jobs.quality.secrets, undefined);
+  assert.equal(caller.jobs.quality.permissions.contents, 'read');
+  assert.equal(caller.jobs.quality.uses, 'a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@<quality-workflow-sha>');
+  assert.deepEqual(Object.keys(caller.jobs.quality.with).sort(), Object.keys(callee.on.workflow_call.inputs).sort());
+  assert.deepEqual(Object.keys(callee.on), ['workflow_call']);
+  assert.equal(callee.on.workflow_call.secrets, undefined);
+  assert.equal(callee.concurrency, undefined);
+  assert.equal(caller.jobs.summary.needs, 'quality');
+  assert.equal(caller.jobs.summary.if, 'always()');
+  assert.equal(caller.jobs.summary.name, undefined);
+  assert.deepEqual(Object.keys(callee.jobs), ['trusted', 'untrusted-pr', 'summary']);
+});
+
+// integration_id: quality-workflow-contract
+test('caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action', () => {
+  const caller = yaml.parse(read('workflows/quality/quality-gate.yml'));
+  const template = caller.jobs.summary.steps.find((step) => step.with?.['summary-json']).with['summary-json'];
+  mkdirSync(path.join(root, 'tmp'), { recursive: true });
+  const directory = mkdtempSync(path.join(root, 'tmp/reusable-quality-summary-'));
+  try {
+    for (const result of ['success', 'failure', 'cancelled', 'skipped', '', 'unknown']) {
+      const payload = template.replaceAll('${{ needs.quality.result }}', result).replaceAll('${{ env.WORKFLOW_RUN_URL }}', 'https://github.com/example/project/actions/runs/1');
+      const run = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
+        cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
+          'INPUT_SUMMARY-JSON': payload, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'),
+          'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md'),
+        },
+      });
+      assert.equal(run.status === 0, result === 'success', `${result}: ${run.stderr}`);
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+// integration_id: quality-workflow-contract
+test('canonical quality bootstrap scripts preserve standard custom and fork boundaries', () => {
+  const lock = '.ci-base/.ci/ci-assets.lock.json';
+  const descriptor = '.ci-base/.ci/adapters/custom.yml';
+  const platforms = ['.ci-base/.ci/platform-manifest.yml', '.ci-base/.ci/quality-platforms.yml'];
+  for (const [file, job, assets] of [
+    ['.github/workflows/ci-quality.yml', 'trusted', []],
+    ['workflows/quality/quality-gate-platforms.yml', 'resolve-platforms', platforms],
+  ]) {
+    const script = yaml.parse(read(file)).jobs[job].steps.find((step) => step.id === 'trusted-assets').run;
+    const cases = [
+      { files: [lock, ...assets], custom: false, same: false, status: 0, root: '.ci-base' },
+      { files: [lock, ...assets, descriptor], custom: true, same: false, status: 0, root: '.ci-base' },
+      { files: [lock, ...assets], custom: true, same: true, status: 1 },
+      { files: [], custom: false, same: true, status: 0, root: '.' },
+      { files: [], custom: false, same: false, status: 1 },
+      { files: [descriptor, ...assets], custom: true, same: true, status: 1 },
+    ];
+    if (assets.length) cases.push({ files: [lock, assets[0]], custom: false, same: true, status: 1 });
+    for (const scenario of cases) {
+      mkdirSync(path.join(root, 'tmp'), { recursive: true });
+      const directory = mkdtempSync(path.join(root, 'tmp/quality-bootstrap-'));
+      try {
+        for (const relative of scenario.files) {
+          mkdirSync(path.dirname(path.join(directory, relative)), { recursive: true });
+          writeFileSync(path.join(directory, relative), '{}');
+        }
+        const output = path.join(directory, 'output');
+        const result = spawnSync('bash', ['-c', script], {
+          cwd: directory, encoding: 'utf8', env: { ...process.env,
+            CI_ADAPTER_DESCRIPTOR: scenario.custom ? '.ci/adapters/custom.yml' : '',
+            CI_PLATFORM_MANIFEST: '.ci/platform-manifest.yml',
+            CI_QUALITY_PLATFORM_SELECTION: '.ci/quality-platforms.yml',
+            CI_SAME_REPO: String(scenario.same), GITHUB_OUTPUT: output,
+          },
+        });
+        assert.equal(result.status, scenario.status, `${file}: ${JSON.stringify(scenario)}: ${result.stderr}`);
+        if (scenario.status === 0) assert.ok(readFileSync(output, 'utf8').split('\n').includes(`root=${scenario.root}`));
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+    }
+  }
+});
 const includesAll = (text, values) => values.forEach((value) => assert.match(text, value));
 const jobBlock = (workflow, id) => {
   const marker = `\n  ${id}:\n`;
@@ -59,8 +145,8 @@ const unitRecord = (summary, unit) => {
 
 // integration_id: quality-workflow-contract
 test('quality workflow declares trusted execution and aggregate summary', () => {
-  const workflow = read('workflows/quality/quality-gate.yml');
-  includesAll(workflow, [/pull_request:/, /push:/, /permissions:\n  contents: read/]);
+  const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
+  includesAll(workflow, [/workflow_call:/, /permissions:\n  contents: read/]);
   const trusted = jobBlock(workflow, 'trusted');
   assert.match(trusted, /^    if: \$\{\{ github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name == github\.repository \}\}$/m);
   includesAll(stepBlock(trusted, '- uses: actions/checkout@<commit-sha>'), [
@@ -74,7 +160,7 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
   ]);
   includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
     /^        id: quality-adapter$/m,
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
     /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
   ]);
   const untrusted = jobBlock(workflow, 'untrusted-pr');
@@ -87,8 +173,8 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
     /^          path: \.ci-base$/m,
   ]);
   includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@312c534de67720de060689d78ada17da9c84c4e2$/m,
-    /^          bundle-path: \.ci-base\/\$\{\{ env\.CI_ADAPTER_DESCRIPTOR \}\}$/m,
+    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
+    /^          standard-bundle-id: \$\{\{ env\.CI_STANDARD_BUNDLE_ID \}\}$/m,
   ]);
   const summary = jobBlock(workflow, 'summary');
   assertNeeds(summary, ['trusted', 'untrusted-pr']);
@@ -128,7 +214,7 @@ test('optional platform quality workflow preserves trusted assets matrix executi
 
 // integration_id: quality-workflow-contract
 test('quality workflow keeps failed or missing checks visible', () => {
-  const summary = jobBlock(read('workflows/quality/quality-gate.yml'), 'summary');
+  const summary = jobBlock(read('.github/workflows/ci-quality.yml'), 'summary');
   includesAll(summary, [
     /if: always\(\)/,
     /"rawResult":"\$\{\{ needs\.trusted\.result \}\}"/,
@@ -430,6 +516,7 @@ test('repository gate Action steps match their action.yml inputs', () => {
 test('canonical workflow summaries cover exactly their needs jobs', () => {
   const workflows = [
     ['workflows/quality/quality-gate.yml', 'summary'],
+    ['.github/workflows/ci-quality.yml', 'summary'],
     ['workflows/release/release-request-tag.yml', 'summary'],
     ['workflows/release/release-publication-request.yml', 'summary'],
     ['workflows/release/release-publication-caller.yml', 'summary'],
@@ -453,6 +540,7 @@ test('canonical workflow summaries cover exactly their needs jobs', () => {
 test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
   const workflows = [
     ['workflows/quality/quality-gate.yml', 'summary'],
+    ['.github/workflows/ci-quality.yml', 'summary'],
     ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
     ['workflows/release/release-request-tag.yml', 'summary'],
     ['workflows/release/release-publication-request.yml', 'summary'],

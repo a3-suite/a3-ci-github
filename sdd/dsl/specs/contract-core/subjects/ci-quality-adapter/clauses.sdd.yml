@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-adapter
 contracts:
   - id: contract.ci-quality-adapter.outputs
-    summary: A valid read-only descriptor produces an aggregate execution status.
+    summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve language-owner provenance and require no consumer descriptor.
     conditions:
       - id: quality-adapter-bundle-present
         input_predicate:
@@ -15,6 +15,11 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.action-input-invalid
           op: available
+      - id: quality-adapter-standard-bundle-present
+        input_predicate:
+          kind: input
+          term: input.standard-bundle-id
+          op: present
       - id: quality-adapter-toolchain-version-report-rejected
         environment_predicate:
           kind: environment-ref
@@ -44,6 +49,15 @@ contracts:
               kind: value_set
               values:
                 - failure
+      - id: quality-adapter-standard-status-produced
+        when: quality-adapter-standard-bundle-present
+        observation_ref: observation.ci-quality-adapter.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: status
       - id: quality-adapter-toolchain-version-diagnostic-present
         when: quality-adapter-toolchain-version-report-rejected
         observation_ref: observation.ci-quality-adapter.result
@@ -62,6 +76,10 @@ contracts:
         goal: An adapter that violates the read-only contract fails before project commands run.
         guarantee_refs:
           - quality-adapter-failure-propagated
+      - id: quality-adapter-standard-execution
+        goal: A fixed owner-generated standard bundle executes without reading a consumer descriptor; ambiguous, unknown or integrity-invalid selections are rejected before commands.
+        guarantee_refs:
+          - quality-adapter-standard-status-produced
       - id: quality-adapter-toolchain-version-report-rejected
         goal: A toolchain version command that does not report the requested version as an independent token fails with the stable version-mismatch diagnostic.
         guarantee_refs:

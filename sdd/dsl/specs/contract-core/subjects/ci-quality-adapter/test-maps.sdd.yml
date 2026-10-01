@@ -3,6 +3,21 @@ name: contract-test-maps
 subject_ref: subject.ci.quality-adapter
 test_maps:
   - verification_id: verification.ci-quality-adapter.outputs
+    case_id: standard-adapter-execution
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: bundled entrypoint executes the embedded standard without reading a project descriptor
+        check_refs: [check-quality-adapter-standard-status]
+  - verification_id: verification.ci-quality-adapter.outputs
+    case_id: standard-selection-rejected
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects simultaneous standard ID and descriptor before execution
+        check_refs: [check-quality-adapter-standard-rejection]
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: bundled entrypoint rejects an unknown standard ID without a descriptor fallback
+        check_refs: [check-quality-adapter-standard-rejection]
+  - verification_id: verification.ci-quality-adapter.outputs
     case_id: read-only-adapter-execution
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts

@@ -83,13 +83,14 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
 - qualityの`merge_group`は空のevent設定、`schedule`は一つ以上の非空`cron`だけを持つlistとして検証する。
 - trigger、versioned runner、未解決 placeholder、外部 Action の40桁 SHA、直接・間接 asset を確認する。
 - a3 Action は registry の target、workflow mapping、固定 ref と双方向に照合し、未登録、宣言漏れ、余剰接続を失敗にする。
+- 主quality callerはregistryの `qualityReusableWorkflow` と照合し、固定ref・明示input・型・静的versioned runner・read permissions・caller summaryを検証する。provider側calleeの固定sourceからAction接続と固有設定へのbindingを検証し、calleeをconsumerの配置assetやlockへ追加しない。正式固定版とHosted required-check受入が未確定なら利用可能扱いにしない。
 - 適用可能な Action 化 target が登録された共通処理を、project-owned entrypoint または copyable asset として重複配置していないことを確認する。project-owned 実装は、選択済み binding が充足しない登録済み `requiredExtensions` にだけ許可し、未登録の代替分岐として補完しない。Action 化 target がなく適用可能な reusable asset もない provider helper だけを copyable asset として許可する。
 - 共通処理の候補比較、非採用理由、owner、証拠 identity は review フェーズの証拠として記録する。preflight は Action の登録・固定 ref・workflow mapping、asset の到達性・配置同一性を検証し、コードの意味的同一性を推測しない。
 - write 権限を持つ job で a3 Action を使う場合は、対象 Action の `privilegedJobs` に `workflow-id/job-id` が完全一致で登録されていることを確認する。`trust: read-only` または workflow 単位の登録だけで許可を補完しない。
 - 標準実装を選択した場合は、必要な extension と Action binding、language profile、project設定、依存閉包を照合する。未登録の実装識別子は、同名のローカル entrypoint が存在しても不一致とする。
-- registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。quality の標準 descriptor と optional workflow も同じ照合対象に含める。
-- quality は導入済みの各 quality workflow（主 workflow と配置済み optional workflow）の `CI_ADAPTER_DESCRIPTOR` を読み、descriptor の language profile が `CI_LANGUAGE_PROFILE` に対応し、provider が `provider-neutral` または registry の provider ID であることと、配置 asset を確認する。`CI_ADAPTER_DESCRIPTOR` は project-relative の静的値とし、式や実行時 output へ置き換えない。trusted CI assets の base/head 解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を正本とし、preflight は配布同一性 lock の存在と canonical 構造を照合する。
-- 選択した language profile に標準 bundle がある場合、`CI_ADAPTER_DESCRIPTOR` は registry の `targetDescriptor` と一致しなければ失敗する。一致する descriptor は canonical／配置済み digest の照合対象に含める。標準 bundle が無い profile の project-owned descriptor は digest 対象外とし、CI 意味監査の `project-owned-ci-adapter` subject で確認する。
+- registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。配置経路の標準descriptorとoptional workflowも同じ照合対象に含める。固定Action参照の標準bundleは配置assetに含めない。
+- qualityの選択・配置・固定参照は `ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を参照し、配布同一性lockとcanonical構造を照合する。
+- 標準IDはprofileに対応した登録済みAction bundleに限定する。パスによる標準bundleの既存経路はregistryのtargetDescriptorと配置digestを検証する。標準bundleがないprofileのproject-owned descriptorの意味はCI意味監査の `project-owned-ci-adapter` subjectで確認する。
 - project-owned extension は、canonical workflow から entrypoint への直接接続、参照する直接・間接 asset の存在、project root 内での解決を確認する。project-owned asset 内部の構造と処理契約の意味は preflight の保証対象外とし、CI 意味監査の `project-owned-ci-adapter` subject で project の契約テスト証拠を確認する。実行環境での成立は必要な hosted 証拠で確認する。
 - release publication は request、`workflow_run` caller、`workflow_call` publication の3 workflowを必須とし、request artifact と notes handoff の生成、caller の default branch provenance、run ID の受渡し、publication の再検証を確認する。
 - release／package は callee の `workflow_call` から必須 input／secret を導出し、caller の接続と権限上限を確認する。

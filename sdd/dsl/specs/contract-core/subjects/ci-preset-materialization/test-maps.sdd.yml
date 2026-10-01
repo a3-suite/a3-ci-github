@@ -14,7 +14,7 @@ test_maps:
         check_refs:
           - check-ci-preset-materialization-success
       - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
-        symbol: registered standard quality bundles materialize only descriptors and preserve consumer files
+        symbol: registered standard quality bundles require no consumer copies and preserve consumer files
         check_refs:
           - check-ci-preset-materialization-success
   - verification_id: verification.ci-preset-materialization.application

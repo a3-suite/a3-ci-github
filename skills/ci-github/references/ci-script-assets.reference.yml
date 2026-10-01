@@ -152,14 +152,17 @@ assets:
         path: materialization
 adapterBundles:
   - id: rust-cargo-quality
+    delivery: action
     languageProfiles: [rust]
     source: {skill: rust, path: assets/ci/adapter-bundles/rust-quality.yml}
     targetDescriptor: .ci/adapters/rust-quality.yml
   - id: python-uv-quality
+    delivery: action
     languageProfiles: [python]
     source: {skill: python, path: assets/ci/adapter-bundles/python-quality.yml}
     targetDescriptor: .ci/adapters/python-quality.yml
   - id: typescript-npm-quality
+    delivery: action
     languageProfiles: [typescript]
     source: {skill: typescript, path: assets/ci/adapter-bundles/typescript-quality.yml}
     targetDescriptor: .ci/adapters/typescript-quality.yml

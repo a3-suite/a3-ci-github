@@ -78,7 +78,7 @@ test('platform Action and preflight agree on selection and parser rejection boun
 });
 
 // integration_id: preset-assurance-contract
-test('unreleased selection API blocks optional platform introduction while ordinary quality stays available', () => {
+test('unreleased quality bundle and optional selection APIs block deployment until fixed releases exist', () => {
   const registryReport = { missingSettings: [], mismatches: [] };
   const registry = loadRegistry(registryReport);
   assert.deepEqual(registryReport, { missingSettings: [], mismatches: [] });
@@ -89,6 +89,6 @@ test('unreleased selection API blocks optional platform introduction while ordin
     const report = { missingSettings: [], mismatches: [] };
     validateActionAvailability(root, 'quality-gate', workflowIds, new Map(), registry, report);
     assert.equal(report.missingSettings.some((finding) => finding.path === 'quality-gate:actions.ci-platform-matrix'), pending);
-    if (!pending) assert.deepEqual(report.missingSettings, []);
+    assert.ok(report.missingSettings.some((finding) => finding.path === 'quality-gate:actions.ci-quality-adapter'));
   }
 });

@@ -32,13 +32,15 @@ test('project execution definition resolves every declared contract subject', ()
   assert.equal(definition.report.unit, 'contract-subject-and-execution-segment');
   assert.equal(composite.segments[1].coverage.enabled, false);
   assert.match(composite.segments[1].coverage.reason, /shell implementation/);
-  assert.deepEqual(materialization.segments[1].tests, ['../adapter/tests/materialize-adapter-bundle.test.mjs', '../adapter/tests/standard-quality-footprint.test.mjs']);
+  assert.deepEqual(materialization.segments[1].tests, ['../adapter/tests/materialize-adapter-bundle.test.mjs', '../adapter/tests/standard-quality-footprint.test.mjs', '../adapter/tests/generate-standard-quality-bundles.test.mjs']);
   assert.deepEqual(presetAssurance.segments[1].tests, [
     'tests/preset-assurance-contract.test.mjs',
     'tests/preset-validation-contract.test.mjs',
     'tests/action-availability.test.mjs',
     'tests/publication-validation.test.mjs',
     'tests/quality-platform-selection.test.mjs',
+    'tests/standard-quality-bundles.test.mjs',
+    'tests/reusable-quality-workflow.test.mjs',
   ]);
   assert.deepEqual(workflow.segments[1].tests, ['tests/workflow-contracts.test.mjs']);
   assert.deepEqual(managedSource.segments[1].tests, [

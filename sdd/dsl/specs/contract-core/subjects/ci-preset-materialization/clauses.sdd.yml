@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.preset-materialization
 contracts:
   - id: contract.ci-preset-materialization.application
-    summary: Materialize selected repository and external-skill adapter assets without overwriting conflicting project files.
+    summary: Return a fixed Action binding without copying standard quality descriptors, or materialize selected repository and external-skill adapter assets without overwriting conflicting project files. Preserve consumer settings and dependencies in both routes.
     conditions:
       - id: ci-preset-materialization-valid
         environment_predicate:
@@ -41,7 +41,7 @@ contracts:
             value: diagnostic
     verification_intents:
       - id: ci-preset-materialization-success-intent
-        goal: A successful materialization exposes the selected bundle and every copied or reused file.
+        goal: A successful materialization exposes the selected bundle and every copied or reused file; standard Action bundles return no files and include source revision and digest in their binding.
         guarantee_refs:
           - ci-preset-materialization-success-observed
       - id: ci-preset-materialization-failure-intent

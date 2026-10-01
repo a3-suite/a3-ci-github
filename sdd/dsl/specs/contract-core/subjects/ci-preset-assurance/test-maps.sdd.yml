@@ -101,5 +101,5 @@ test_maps:
     case_id: pending-quality-platform-action
     tests:
       - path: runtime/preset/tests/quality-platform-selection.test.mjs
-        symbol: unreleased selection API blocks optional platform introduction while ordinary quality stays available
+        symbol: unreleased quality bundle and optional selection APIs block deployment until fixed releases exist
         check_refs: [quality-platform-availability]

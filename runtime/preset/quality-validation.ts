@@ -10,20 +10,24 @@ import type { InspectionContext } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside } from './workflow-assets.ts';
 import { descriptorValues, validateDescriptor } from './descriptor-validation.ts';
 import { uses } from './workflow-validation.ts';
+import { standardQualityBundle } from '../adapter/standard-quality-bundles.ts';
+import { resolveQualityWorkflow } from './ci-preset-assets.ts';
 
 const validateQualityPreset = (
   context: InspectionContext,
   preset: Preset,
 ): void => {
-  const { root } = context;
+  const { root, registry } = context;
   if (!preset.qualityAdapter) return;
   const primary = preset.workflowAssets.find((asset) => asset.id === preset.id)
     ?? preset.workflowAssets[0];
   for (const installed of installedPresetWorkflows(root, preset)) {
-    const declared = descriptorValues(installed.workflow).length > 0
-      || map(installed.workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined;
+    const workflow = resolveQualityWorkflow(installed.workflow, registry, context.report);
+    const declared = descriptorValues(workflow).length > 0
+      || map(workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined
+      || map(workflow.env).CI_STANDARD_BUNDLE_ID !== undefined;
     if (!declared && installed.path !== primary?.destination) continue;
-    validateQualityWorkflow(context, installed.path, installed.workflow);
+    validateQualityWorkflow(context, installed.path, workflow);
   }
 };
 
@@ -47,6 +51,46 @@ const validateQualityWorkflow = (
     });
   }
   const values = descriptorValues(workflow);
+  const standardId = workflowEnv.CI_STANDARD_BUNDLE_ID;
+  if (standardId !== undefined && standardId !== '') {
+    if (typeof standardId !== 'string' || values.some((value) => value !== '')) {
+      add(report.mismatches, { path: `${workflowPath}:env.CI_STANDARD_BUNDLE_ID`, message: 'select exactly one standard bundle ID or project descriptor', settingLocation: workflowPath });
+      return;
+    }
+    const registered = standardQualityBundles(registry, profile).find((bundle) => bundle.id === standardId && bundle.delivery === 'action');
+    if (!registered) {
+      add(report.mismatches, { path: `${workflowPath}:env.CI_STANDARD_BUNDLE_ID`, message: 'standard quality bundle is not registered for this language profile', settingLocation: workflowPath });
+      return;
+    }
+    try {
+      const standard = standardQualityBundle(standardId);
+      if (typeof registered.source === 'string' || registered.source.skill !== standard.owner
+        || !standard.sourcePath.endsWith(`/${standard.owner}/${registered.source.path}`)) throw new Error('standard quality bundle source provenance mismatch');
+      validateDescriptor(root, `.ci/adapters/${standard.id}.yml`, report, workflowEnv, registry.providerId, standard.descriptor);
+    } catch (error) {
+      add(report.mismatches, { path: `${workflowPath}:env.CI_STANDARD_BUNDLE_ID`, message: error instanceof Error ? error.message : 'standard bundle integrity failure', settingLocation: workflowPath });
+    }
+    const jobs = map(workflow.jobs);
+    let connected = 0;
+    for (const job of Object.values(jobs)) for (const step of Array.isArray(map(job).steps) ? map(job).steps as unknown[] : []) {
+      const value = map(step);
+      if (typeof value.uses !== 'string' || !value.uses.includes('/actions/ci-quality-adapter@')) continue;
+      connected++;
+      const inputs = map(value.with);
+      const permittedPaths = new Set([
+        '${{ env.CI_ADAPTER_DESCRIPTOR }}',
+        "${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', steps.trusted-assets.outputs.root, env.CI_ADAPTER_DESCRIPTOR) || '' }}",
+        "${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}",
+        "${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', needs.resolve-platforms.outputs['trusted_root'], env.CI_ADAPTER_DESCRIPTOR) || '' }}",
+      ]);
+      if (inputs['standard-bundle-id'] !== '${{ env.CI_STANDARD_BUNDLE_ID }}'
+        || inputs['bundle-path'] !== undefined && !permittedPaths.has(String(inputs['bundle-path']))) {
+        add(report.mismatches, { path: `${workflowPath}:with.standard-bundle-id`, message: 'quality adapter must use the static standard ID without a descriptor path', settingLocation: workflowPath });
+      }
+    }
+    if (connected === 0) add(report.mismatches, { path: workflowPath, message: 'standard quality bundle has no Action binding', settingLocation: workflowPath });
+    return;
+  }
   const unique = [...new Set(values)];
   if (values.length === 0) {
     add(report.missingSettings, {
@@ -278,12 +322,15 @@ const validateStandardImplementation = (
       continue;
     }
     const selectedDescriptors = [...new Set(descriptorValues(workflow))];
-    if (selectedDescriptors.length !== 1 || selectedDescriptors[0] !== bundle.targetDescriptor) add(report.mismatches, {
+    const standardId = map(workflow.env).CI_STANDARD_BUNDLE_ID;
+    const matchesDependency = standardId === bundle.id && bundle.delivery === 'action'
+      || (!standardId && selectedDescriptors.length === 1 && selectedDescriptors[0] === bundle.targetDescriptor);
+    if (!matchesDependency) add(report.mismatches, {
       path: `${workflowPath}:env.CI_ADAPTER_DESCRIPTOR`,
       message: 'quality adapter descriptor does not match the selected standard implementation dependency',
       settingLocation: workflowPath,
     });
-    const dependencyAssets = adapterBundleAssets(bundle, registry.skillCollectionRoot, report);
+    const dependencyAssets = standardId === bundle.id ? [] : adapterBundleAssets(bundle, registry.skillCollectionRoot, report);
     for (const asset of dependencyAssets) {
       const registered = registry.copyableAssets.find((candidate) => candidate.id === asset.id);
       if (!registered || (registered.entrypoints ?? []).length !== 1) add(report.mismatches, {

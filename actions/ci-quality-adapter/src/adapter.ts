@@ -52,8 +52,8 @@ const hasSkillPath = (value: string): boolean => /(?:^|[\s/'"`])(?:\.\.?\/)?skil
 const versionTokenPresent = (output: string, version: string): boolean =>
   output.split(/[ \t\n\r]+/).some((token) => token === version || token === `v${version}` || token === `V${version}`);
 
-export const loadAdapterBundle = (bundlePath: string): AdapterBundle => {
-  const document = parseDocument(fs.readFileSync(bundlePath, 'utf8'), { prettyErrors: false });
+export const parseAdapterBundle = (content: string): AdapterBundle => {
+  const document = parseDocument(content, { prettyErrors: false });
   if (document.errors.length) throw new Error('quality-adapter-yaml-invalid');
   const value = document.toJS();
   if (!record(value) || value.schemaVersion !== '1' || value.kind !== 'ci-adapter-bundle') throw new Error('quality-adapter-metadata-invalid');
@@ -98,6 +98,8 @@ export const loadAdapterBundle = (bundlePath: string): AdapterBundle => {
   }
   return bundle;
 };
+
+export const loadAdapterBundle = (bundlePath: string): AdapterBundle => parseAdapterBundle(fs.readFileSync(bundlePath, 'utf8'));
 
 const packageScripts = (root: string): Record<string, string> => {
   let value: unknown;

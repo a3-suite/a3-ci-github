@@ -25,6 +25,7 @@ const releaseTag = `v${fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'ut
 const committedSourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-distribution-source-'));
 for (const relative of [
   'VERSION',
+  '.github/workflows/ci-quality.yml',
   'skills/ci-github',
   'workflows',
   'runtime/preset',

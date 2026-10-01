@@ -1,11 +1,19 @@
 import * as core from '@actions/core';
 import fs from 'node:fs';
 import path from 'node:path';
-import { executeAdapter, loadAdapterBundle } from './adapter.js';
+import { executeAdapter, loadAdapterBundle, parseAdapterBundle } from './adapter.js';
+import { standardQualityBundle } from '../../../runtime/adapter/standard-quality-bundles.js';
 
 export const run = (): void => {
   try {
-    const bundle = loadAdapterBundle(path.resolve(core.getInput('bundle-path', { required: true })));
+    const bundlePath = core.getInput('bundle-path');
+    const standardId = core.getInput('standard-bundle-id');
+    if (Boolean(bundlePath) === Boolean(standardId)) throw new Error('quality-adapter-bundle-selection-invalid');
+    const standard = standardId ? standardQualityBundle(standardId) : undefined;
+    const bundle = standard ? parseAdapterBundle(standard.descriptor) : loadAdapterBundle(path.resolve(bundlePath));
+    if (standard && (bundle.id !== standard.id || bundle.owner !== standard.owner || bundle.assets.length !== 0)) {
+      throw new Error('quality-adapter-standard-bundle-metadata-invalid');
+    }
     const resultPath = path.resolve(core.getInput('result-path', { required: true }));
     const payload = executeAdapter(bundle, {
       sourceRoot: path.resolve(core.getInput('source-root', { required: true })),

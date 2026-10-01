@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { pathsReferToSameFile } from '../path/same-file-core.mjs';
 import { isDirectExecution, resolveOutputPath } from './cli-runtime.ts';
+import { standardQualityBundle } from './standard-quality-bundles.js';
 
 type YamlDocument = { errors: unknown[]; toJS: () => unknown };
 type ResourceSource = string | { skill?: string; path: string };
@@ -17,6 +18,7 @@ type BundleInventory = {
   id: string;
   source: ResourceSource;
   targetDescriptor: string;
+  delivery?: string;
 };
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -148,8 +150,10 @@ const parseYaml = (filePath: string): unknown => {
   return document.toJS();
 };
 
-const parseDescriptor = (filePath: string): AdapterDescriptor => {
-  const value = parseYaml(filePath);
+const parseDescriptor = (filePath: string, content?: string): AdapterDescriptor => {
+  const document = content === undefined ? undefined : resolveYamlRuntime().parseDocument(content, { prettyErrors: false });
+  if (document?.errors.length) throw new Error('adapter-materializer-yaml-invalid');
+  const value = document ? document.toJS() : parseYaml(filePath);
   if (!isRecord(value) || value.schemaVersion !== '1' || value.kind !== 'ci-adapter-bundle') {
     throw new Error('adapter-materializer-descriptor-invalid');
   }
@@ -241,6 +245,7 @@ const findBundle = (value: unknown, bundleId: string): BundleInventory => {
     id: nonEmptyString(item.id, 'bundle-id'),
     source: parseResourceSource(item.source, 'bundle-source'),
     targetDescriptor: nonEmptyString(item.targetDescriptor, 'target-descriptor'),
+    delivery: item.delivery === undefined ? undefined : nonEmptyString(item.delivery, 'delivery'),
   };
 };
 
@@ -338,6 +343,7 @@ export type MaterializeAdapterBundleReport = {
   bundle: string;
   descriptor: string;
   files: Array<{ source: string; destination: string; action: 'copied' | 'reused' }>;
+  binding?: { action: 'ci-quality-adapter'; standardBundleId: string; sourceRevision: string; sha256: string };
 };
 
 export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions): MaterializeAdapterBundleReport => {
@@ -346,6 +352,20 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
   const inventoryPath = resolveInside(REPOSITORY_ROOT, options.inventoryPath);
   const inventory = parseYaml(inventoryPath);
   const bundle = findBundle(inventory, options.bundleId);
+  if (bundle.delivery === 'action') {
+    const standard = standardQualityBundle(bundle.id);
+    if (resourceSkill(bundle.source) !== standard.owner
+      || !standard.sourcePath.endsWith(`/${standard.owner}/${resourceRelativePath(bundle.source, 'bundle-source')}`)) {
+      throw new Error('adapter-materializer-standard-provenance-mismatch');
+    }
+    if (options.outputPath && fs.lstatSync(path.resolve(options.outputPath), { throwIfNoEntry: false })) throw new Error('adapter-materializer-output-conflict');
+    const descriptor = parseDescriptor(bundle.id, standard.descriptor);
+    if (descriptor.id !== bundle.id || descriptor.assets.length !== 0) throw new Error('adapter-materializer-standard-bundle-invalid');
+    validateProjectSettings(targetRoot, descriptor.projectSettings);
+    return { schema: 'ci.adapter-materializer.v1', bundle: bundle.id, descriptor: '', files: [],
+      binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourceRevision: standard.sourceRevision, sha256: standard.sha256 } };
+  }
+  if (bundle.delivery !== undefined) throw new Error('adapter-materializer-delivery-invalid');
   const descriptorSource = resolveResource(sourceRoot, bundle.source);
   const descriptor = parseDescriptor(descriptorSource);
   if (descriptor.id !== bundle.id) throw new Error(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`);
