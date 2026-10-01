@@ -253,6 +253,14 @@ actionization:
       privilegedJobs: [release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-publication-request-and-provenance-control
+    - id: ci-release-supplemental-asset
+      status: pending-release
+      actionPath: actions/ci-release-supplemental-asset
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-supplemental-asset-build-scripts
+      providerMapping: owner-supplemental-v2-phase-invocation
     - id: ci-release-assembly
       status: pending-release
       actionPath: actions/ci-release-assembly

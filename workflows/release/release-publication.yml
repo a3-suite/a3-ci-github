@@ -401,8 +401,13 @@ jobs:
           if-no-files-found: error
       - name: Build and verify supplemental Release asset platform
         if: inputs.supplemental_release_asset_enabled
-        shell: bash
-        run: .ci/scripts/ci-release-supplemental-asset.sh build-platform authority/authority.json authority/config-snapshot.json build/${{ matrix.id }} supplemental-build/${{ matrix.id }}
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@<release-publication-action-sha>
+        with:
+          operation: build-platform
+          authority-path: authority/authority.json
+          snapshot-path: authority/config-snapshot.json
+          standard-build-root: build/${{ matrix.id }}
+          output-directory: supplemental-build/${{ matrix.id }}
       - uses: actions/upload-artifact@<commit-sha>
         if: inputs.supplemental_release_asset_enabled
         with:
@@ -440,8 +445,14 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Build and verify supplemental Release asset
-        shell: bash
-        run: .ci/scripts/ci-release-supplemental-asset.sh assemble authority/authority.json authority/config-snapshot.json build supplemental-build supplemental-asset
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@<release-publication-action-sha>
+        with:
+          operation: assemble
+          authority-path: authority/authority.json
+          snapshot-path: authority/config-snapshot.json
+          standard-build-root: build
+          supplemental-build-root: supplemental-build
+          output-directory: supplemental-asset
       - uses: actions/upload-artifact@<commit-sha>
         with:
           name: release-supplemental-asset

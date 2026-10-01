@@ -32,6 +32,13 @@ verifications:
         checks:
           - id: availability
             guarantee_ref: unavailable-action-reported
+      - id: supplemental-phase-drift
+        intent_id: supplemental-phase-checked
+        input:
+          supplemental-phase-drift: bypass-or-argument-mismatch-or-failure-suppression
+        checks:
+          - id: phase-mismatch
+            guarantee_ref: supplemental-phase-drift-reported
       - id: retired-assembly
         intent_id: retired-assembly-blocked
         input:

@@ -37,6 +37,7 @@ test('project execution definition resolves every declared contract subject', ()
     'tests/preset-assurance-contract.test.mjs',
     'tests/preset-validation-contract.test.mjs',
     'tests/action-availability.test.mjs',
+    'tests/publication-validation.test.mjs',
   ]);
   assert.deepEqual(workflow.segments[1].tests, ['tests/workflow-contracts.test.mjs']);
   assert.deepEqual(managedSource.segments[1].tests, [
@@ -147,7 +148,7 @@ test('definition rejects a test path that escapes the repository', () => {
   // Arrange
   const definition = loadDefinition();
   const invalid = structuredClone(definition);
-  invalid.subjects[0].segments[0].tests = ['../../../../outside.test.mjs'];
+  invalid.subjects[0].segments.find((segment) => segment.status !== 'excluded').tests = ['../../../../outside.test.mjs'];
   let failure;
   // Act
   try { validateDefinition(invalid); } catch (error) { failure = error; }
@@ -160,7 +161,7 @@ test('definition rejects an active segment without an execution test', () => {
   // Arrange
   const definition = loadDefinition();
   const invalid = structuredClone(definition);
-  invalid.subjects[0].segments[0].tests = [];
+  invalid.subjects[0].segments.find((segment) => segment.status !== 'excluded').tests = [];
   let failure;
   // Act
   try { validateDefinition(invalid); } catch (error) { failure = error; }

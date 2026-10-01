@@ -10,11 +10,11 @@ const CI_SCRIPT_CONTRACT_PATH = path.resolve(
   'skills/ci-github/references/ci-script-contracts.reference.yml',
 );
 
-const supplementalAdapterCommand = (
+const supplementalAdapterInputs = (
   phaseName: string,
   argumentValues: Record<string, string>,
   report: Report,
-): string | undefined => {
+): ValueMap | undefined => {
   if (!fs.existsSync(CI_SCRIPT_CONTRACT_PATH)) {
     add(report.missingSettings, {
       path: CI_SCRIPT_CONTRACT_PATH,
@@ -43,12 +43,26 @@ const supplementalAdapterCommand = (
     });
     return undefined;
   }
-  return [
-    '.ci/scripts/ci-release-supplemental-asset.sh',
-    subcommand,
-    ...resolvedArguments,
-  ].join(' ');
+  const inputMapping: Record<string, string> = {
+    'authority-context-path': 'authority-path', 'config-snapshot-path': 'snapshot-path',
+    'standard-platform-build-directory': 'standard-build-root', 'standard-platform-build-root': 'standard-build-root',
+    'supplemental-platform-build-root': 'supplemental-build-root',
+    'supplemental-platform-output-directory': 'output-directory', 'output-directory': 'output-directory',
+  };
+  if (argumentsFromContract.some((argument) => !inputMapping[argument])) {
+    add(report.mismatches, { path: CI_SCRIPT_CONTRACT_PATH, message: 'supplemental adapter arguments have no GitHub Action mapping' });
+    return undefined;
+  }
+  return { operation: subcommand, ...Object.fromEntries(argumentsFromContract.map((argument, index) => [inputMapping[argument], resolvedArguments[index]])) };
 };
+
+const supplementalActionMatches = (step: ValueMap | undefined, inputs: ValueMap | undefined): boolean => Boolean(
+  step && inputs && typeof step.uses === 'string'
+  && step.uses.startsWith('a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@')
+  && step.run === undefined && step.shell === undefined
+  && (step['continue-on-error'] === undefined || step['continue-on-error'] === false)
+  && JSON.stringify(Object.entries(map(step.with)).sort()) === JSON.stringify(Object.entries(inputs).sort()),
+);
 
 const workflowCallRequired = (workflow: ValueMap): { inputs: string[]; secrets: string[] } => {
   const call = map(on(workflow).workflow_call);
@@ -428,15 +442,14 @@ const validateSupplementalBuildStep = (
   const supplementalPlatformVerification = buildSteps.find(
     (step) => step.name === 'Build and verify supplemental Release asset platform',
   );
-  const supplementalPlatformCommand = supplementalAdapterCommand('buildPlatform', {
+  const supplementalPlatformInputs = supplementalAdapterInputs('buildPlatform', {
     'authority-context-path': 'authority/authority.json',
     'config-snapshot-path': 'authority/config-snapshot.json',
     'standard-platform-build-directory': 'build/${{ matrix.id }}',
     'supplemental-platform-output-directory': 'supplemental-build/${{ matrix.id }}',
   }, report);
   if (supplementalPlatformVerification?.if !== 'inputs.supplemental_release_asset_enabled'
-    || supplementalPlatformVerification?.shell !== 'bash'
-    || supplementalPlatformVerification?.run !== supplementalPlatformCommand) add(report.mismatches, {
+    || !supplementalActionMatches(supplementalPlatformVerification, supplementalPlatformInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.build.steps.Build and verify supplemental Release asset platform`,
     message: 'supplemental asset platform build must use the current adapter interface',
     settingLocation: publicationPath,
@@ -453,15 +466,16 @@ const validateSupplementalAssemblyStep = (
   const supplementalAssembly = supplementalAssetSteps.find(
     (step) => step.name === 'Build and verify supplemental Release asset',
   );
-  const supplementalAssemblyCommand = supplementalAdapterCommand('assemble', {
+  const supplementalAssemblyInputs = supplementalAdapterInputs('assemble', {
     'authority-context-path': 'authority/authority.json',
     'config-snapshot-path': 'authority/config-snapshot.json',
     'standard-platform-build-root': 'build',
     'supplemental-platform-build-root': 'supplemental-build',
     'output-directory': 'supplemental-asset',
   }, report);
-  if (supplementalAssembly?.shell !== 'bash'
-    || supplementalAssembly?.run !== supplementalAssemblyCommand) add(report.mismatches, {
+  if (supplementalAssetJob.if !== 'inputs.supplemental_release_asset_enabled'
+    || supplementalAssembly?.if !== undefined
+    || !supplementalActionMatches(supplementalAssembly, supplementalAssemblyInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.supplemental-asset.steps.Build and verify supplemental Release asset`,
     message: 'supplemental asset assembly must use the current adapter interface',
     settingLocation: publicationPath,

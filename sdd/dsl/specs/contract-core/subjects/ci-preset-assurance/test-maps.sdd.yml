@@ -21,6 +21,12 @@ test_maps:
         symbol: selected pending publication Actions block deployment without disturbing released presets
         check_refs: [availability]
   - verification_id: verification.ci-preset-assurance.verification
+    case_id: supplemental-phase-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: preflight rejects supplemental phase bypasses and mismatched Action inputs
+        check_refs: [phase-mismatch]
+  - verification_id: verification.ci-preset-assurance.verification
     case_id: retired-assembly
     tests:
       - path: runtime/preset/tests/action-availability.test.mjs

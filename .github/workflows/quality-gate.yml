@@ -76,7 +76,9 @@ jobs:
             runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
             runtime/adapter/tests/cli-runtime.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
-            runtime/preset/tests/preset-validation-contract.test.mjs
+            runtime/preset/tests/preset-validation-contract.test.mjs \
+            runtime/preset/tests/action-availability.test.mjs \
+            runtime/preset/tests/publication-validation.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
             node --test tests/public-cli-lifecycle.test.mjs
           node --test runtime/distribution/tests/selective-distribution.test.mjs

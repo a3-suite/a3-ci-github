@@ -23,6 +23,45 @@
   },
   "subjects": [
     {
+      "subjectId": "subject.ci.release-supplemental-asset",
+      "build": {
+        "cwd": "actions/ci-release-supplemental-asset",
+        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+      },
+      "segments": [
+        {
+          "id": "unit", "level": "unit", "status": "excluded",
+          "reason": "The contract crosses the fixed checkout, files and owner process; evidence is integration-source and integration-bundle."
+        },
+        {
+          "id": "integration-source", "level": "integration",
+          "cwd": "actions/ci-release-supplemental-asset",
+          "tests": ["tests/phase.test.ts"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true, "scope": "source",
+            "include": ["../../runtime/release-publication/supplemental.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/io.ts"],
+            "exclude": ["tests/**", "node_modules/**", "dist/**"]
+          }
+        },
+        {
+          "id": "integration-bundle", "level": "integration",
+          "cwd": "actions/ci-release-supplemental-asset",
+          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true, "scope": "dist",
+            "include": ["dist/**/*.js"],
+            "exclude": ["src/**", "tests/**", "node_modules/**"]
+          }
+        },
+        {
+          "id": "e2e", "level": "e2e", "status": "excluded",
+          "reason": "Hosted installer builds and owner semantic acceptance require separate owner evidence; local fixtures execute both v2 phases without provider publication."
+        }
+      ]
+    },
+    {
       "subjectId": "subject.ci.release-assembly",
       "build": {
         "cwd": "actions/ci-release-assembly",
@@ -51,7 +90,7 @@
           "coverage": {
             "enabled": true,
             "scope": "source",
-            "include": ["../../runtime/release-publication/assembly.ts", "../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts", "src/platform-manifest-decoder.ts"],
+            "include": ["../../runtime/release-publication/assembly.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts", "src/platform-manifest-decoder.ts"],
             "exclude": ["dist/**"]
           }
         },
@@ -1508,7 +1547,8 @@
           "tests": [
             "tests/preset-assurance-contract.test.mjs",
             "tests/preset-validation-contract.test.mjs",
-            "tests/action-availability.test.mjs"
+            "tests/action-availability.test.mjs",
+            "tests/publication-validation.test.mjs"
           ],
           "typescript": true,
           "coverage": {

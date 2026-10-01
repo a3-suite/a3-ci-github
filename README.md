@@ -64,9 +64,10 @@ Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけ�
 | [`ci-vitest-summary`](actions/ci-vitest-summary/README.md) | Vitest JSON レポートを GitHub step summary へ変換する framework-specific の read-only Action です。レポートが欠落・不正・不整合でも `unresolved` を出力して step 自体は失敗させず、入力パスの不正や書き込み失敗だけを失敗にします。一般的な複数結果の集約は `ci-quality-summary` が担当します。 | Render a Vitest JSON report as a GitHub step summary. |
 | [`ci-release-assembly`](actions/ci-release-assembly/README.md) | Release build manifest と owner 検証済み補助 handoff を照合し、provider-write-free に公開 handoff を組み立てます。 | Assemble verified Release assets without executing source or writing to a provider. |
 | [`ci-release-publication-verifier`](actions/ci-release-publication-verifier/README.md) | GitHub Release の不在を観測し、owner write が返した receipt / readback を独立した read-only 観測と照合します。 | Observe Release absence and verify publication receipts against independent read-only remote observations. |
+| [`ci-release-supplemental-asset`](actions/ci-release-supplemental-asset/README.md) | 固定 source checkout で、authority の config snapshot が選択した owner adapter を呼び出します。共通入力検証を持つ TypeScript / `node24` Action です。consumer に Node 準備・依存復元を要求しません。 | Invoke an authority-bound owner supplemental asset adapter using the v2 phase interface. |
 
 <!-- action-catalog:end -->
 
 ## 開発
 
-保守手順と正本の所在は [DEVELOPMENT.md](DEVELOPMENT.md)、統合・E2E・Hosted受入の役割分担は[テスト戦略](docs/maintenance/test-strategy.md)を参照してください。移行中の authority と終了条件は [移行baseline](docs/maintenance/migration-baseline.md) を参照してください。
+保守手順と正本の所在は [DEVELOPMENT.md](DEVELOPMENT.md)、統合・E2E・Hosted受入の役割分担は[テスト戦略](docs/maintenance/test-strategy.md)を参照してください。移行元と切替時点の受入結果は [移行記録](docs/maintenance/migration-baseline.md) を参照してください。

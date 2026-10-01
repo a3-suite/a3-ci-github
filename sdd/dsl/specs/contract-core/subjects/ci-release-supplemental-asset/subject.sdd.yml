@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-supplemental-asset
+  summary: Invoke the selected owner supplemental adapter through authority-bound v2 phases without publishing or interpreting installer evidence.

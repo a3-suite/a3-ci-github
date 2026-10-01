@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
-import { LIMITS, fail, record, equal, canonicalJson, hex, assetName, safePath, readBytes, readRecord, hashFile, sha256, writeNewJson } from './io';
+import { LIMITS, fail, record, equal, hex, assetName, safePath, readBytes, readRecord, hashFile, sha256, writeNewJson } from './io';
 import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } from './schema';
 import type { AssemblyType } from './schema';
+import { validateSnapshot } from './snapshot';
 
 export type AssemblyOptionsType = {
   authorityPath: string; repository: string; snapshotPath: string; platformManifestPath: string;
@@ -14,12 +15,6 @@ type FileType = { filename: string; name: string; sha256: string; size?: number 
 
 function exactKeys(value: unknown, keys: string[]): asserts value is Record<string, unknown> {
   if (!record(value) || Object.keys(value).sort().join(',') !== [...keys].sort().join(',')) fail('manifest-shape-invalid');
-};
-const validateSnapshot = (snapshot: Record<string, unknown>, authority: Record<string, unknown>): Record<string, unknown> => {
-  if (snapshot.schema !== 'ci.config-snapshot.v1' || !record(snapshot.values) || !record(snapshot.sources)
-    || sha256(Buffer.from(canonicalJson({ sources: snapshot.sources, values: snapshot.values }))) !== snapshot.digest
-    || authority.config_snapshot_digest !== snapshot.digest) fail('config-inconsistent');
-  return snapshot.values;
 };
 export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: ManifestDecoderType): AssemblyType => {
   const authority = readRecord(options.authorityPath);

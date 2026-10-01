@@ -8,6 +8,7 @@ authority:
   owns: [GitHub-specific evidence representation and Action workflow mapping]
   excludes: [provider-neutral publication meaning, owner policy, credential route, installer evidence semantics]
 meaningContracts:
+  - ci.script-contracts#contracts.release-supplemental-asset-build-scripts
   - ci.script-contracts#contracts.release-assembly-scripts
   - ci.script-contracts#contracts.release-publication-scripts
   - ci.release-asset-publication-contract
@@ -45,6 +46,7 @@ observationCredential:
   visibilityRequirement: repository-permissions-push-confirmed-for-draft-visibility
   unknown: fail-closed
 supplemental:
+  phaseInvocation: actions/ci-release-supplemental-asset/README.md
   interface: actions/ci-release-assembly/README.md
   ownerRecordInterpretation: opaque-exact-bytes
   verificationAuthority: same-run-owner-adapter-with-artifact-id-bound-handoff

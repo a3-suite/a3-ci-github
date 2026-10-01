@@ -45,9 +45,9 @@ export const readJson = (filename: string): unknown => {
   const bytes = readBytes(filename);
   try { return JSON.parse(bytes.toString('utf8')); } catch { return fail('json-invalid'); }
 };
-export const hashFile = (filename: string, maximum: number = LIMITS.assetBytes): string => {
+export const hashFile = (filename: string, maximum: number = LIMITS.assetBytes, allowEmpty = false): string => {
   const stat = fs.lstatSync(filename);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0 || stat.size > maximum) fail('asset-size-or-kind-invalid');
+  if (!stat.isFile() || stat.isSymbolicLink() || (!allowEmpty && stat.size === 0) || stat.size > maximum) fail('asset-size-or-kind-invalid');
   const fd = fs.openSync(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
   const hash = crypto.createHash('sha256');
   const buffer = Buffer.alloc(1048576);

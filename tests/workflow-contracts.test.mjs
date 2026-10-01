@@ -231,7 +231,10 @@ test('release publication workflows separate request validation from privileged 
   assertNeeds(buildJob, ['authority', 'source-gate', 'quality']);
   includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
     /^        if: inputs\.supplemental_release_asset_enabled$/m,
-    /^        shell: bash$/m,
+    /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+    /^          operation: build-platform$/m,
+    /^          standard-build-root: build\/\$\{\{ matrix\.id \}\}$/m,
+    /^          output-directory: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
   ]);
   includesAll(stepContaining(buildJob, 'name: supplemental-build-${{ matrix.id }}'), [
     /actions\/upload-artifact@/,
@@ -258,8 +261,13 @@ test('release publication workflows separate request validation from privileged 
     /^          path: supplemental-build$/m,
   ]);
   includesAll(stepContaining(supplementalAssetJob, '- name: Build and verify supplemental Release asset'), [
-    /^        shell: bash$/m,
+    /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+    /^          operation: assemble$/m,
+    /^          standard-build-root: build$/m,
+    /^          supplemental-build-root: supplemental-build$/m,
+    /^          output-directory: supplemental-asset$/m,
   ]);
+  assert.doesNotMatch(publication, /run: \.ci\/scripts\/ci-release-supplemental-asset\.sh/);
   const publicationJob = jobBlock(publication, 'publish');
   assertNeeds(publicationJob, ['authority', 'assemble']);
   assert.match(publicationJob, /contents: write/);

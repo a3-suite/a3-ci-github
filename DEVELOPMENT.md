@@ -77,6 +77,6 @@ a3-sdd sdd check --workspace-root . --format json
 
 `root_layout_scan` と `owner_outcomes` を確認し、failure、未分類、対象0件を成功扱いにしません。`sdd/dsl/**/.a3-sdd` は生成状態であり、正本ツリーへ残しません。生成状態の配置は sdd-core の `definition-file-locations` に従います。
 
-## 移行の制約
+## 移行記録
 
-canonical workflow と Action registry の Action binding は、source cutover により本リポジトリの固定 SHA を参照します。旧リポジトリの公開資産は既存 consumer 向けに維持し、同じ契約を本リポジトリと旧リポジトリで独立更新しません。残る切替状態は `docs/maintenance/migration-baseline.md` を参照してください。
+移行元の revision と切替時点の受入結果は [移行記録](docs/maintenance/migration-baseline.md)、旧公開資産の保全条件は [README.md](README.md) を参照してください。

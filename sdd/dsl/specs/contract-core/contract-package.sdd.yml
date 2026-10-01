@@ -22,6 +22,8 @@ subject_scopes:
     path: subjects/ci-platform-matrix/
   - subject_id: subject.ci.handoff-integrity
     path: subjects/ci-handoff-integrity/
+  - subject_id: subject.ci.release-supplemental-asset
+    path: subjects/ci-release-supplemental-asset/
   - subject_id: subject.ci.release-assembly
     path: subjects/ci-release-assembly/
   - subject_id: subject.ci.release-publication-verifier

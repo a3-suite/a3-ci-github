@@ -20,6 +20,11 @@ contracts:
           kind: input
           term: input.selected-pending-action
           op: present
+      - id: supplemental-phase-drift
+        input_predicate:
+          kind: input
+          term: input.supplemental-phase-drift
+          op: present
       - id: retired-assembly-present
         input_predicate:
           kind: input
@@ -63,6 +68,15 @@ contracts:
           target:
             kind: observation_field
             value: missingSettings
+      - id: supplemental-phase-drift-reported
+        when: supplemental-phase-drift
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: mismatches
       - id: retired-assembly-reported
         when: retired-assembly-present
         observation_ref: observation.ci-preset-assurance.preflight-report
@@ -126,6 +140,9 @@ contracts:
       - id: pending-action-blocked
         goal: Selected pending Actions produce availability failures until exact publication SHA is confirmed; unrelated released presets remain available.
         guarantee_refs: [unavailable-action-reported]
+      - id: supplemental-phase-checked
+        goal: Supplemental phases must use the common Action and exact owner-v2 argument mapping; bypass, wrong inputs and failure suppression produce observable mismatches.
+        guarantee_refs: [supplemental-phase-drift-reported]
       - id: retired-assembly-blocked
         goal: Retained project-local assembly files or workflow invocations produce mismatches rather than supplying fallback processing.
         guarantee_refs: [retired-assembly-reported]

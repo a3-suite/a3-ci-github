@@ -1,0 +1,67 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-supplemental-asset
+test_maps:
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: platform-phase
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle emits success for the v2 build-platform phase
+        check_refs: [success, output]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: assembly-phase
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle emits success for the v2 assemble phase
+        check_refs: [success, output]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: unselected-binding
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle rejects invalid binding before owner execution
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: injected-output
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle rejects injected output before owner execution
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: owner-failure
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle propagates owner failure without owner diagnostics
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source preserves owner shebang failure semantics
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: input-mutation
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: supplemental bundle rejects mutated standard inputs and retains partial output
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects mutated authority, snapshot, adapter and supplemental inputs
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source accepts empty markers and rejects their mutation
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: unsafe-phase-path
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects unsafe paths, invalid phases and existing outputs
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: identity-selection
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects snapshot, source and owner selection mismatches
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: missing-output
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects missing and empty owner output
+        check_refs: [refusal]

@@ -96,6 +96,13 @@ routes:
       contract_id: contract.ci-handoff-integrity.outputs
     hops:
       - component_id: action-contracts
+  - route_id: action-contracts-release-supplemental-asset
+    contract_ref:
+      subject_ref: subject.ci.release-supplemental-asset
+      contract_id: contract.ci-release-supplemental-asset.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-release-assembly
     contract_ref:
       subject_ref: subject.ci.release-assembly
