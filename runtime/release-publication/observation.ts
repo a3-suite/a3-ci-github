@@ -15,7 +15,7 @@ const remoteRecord = async (client: ReadOnlyClientType, endpoint: string): Promi
   return value;
 };
 
-const remoteId = (value: unknown): string => {
+export const remoteId = (value: unknown): string => {
   if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) return String(value);
   if (typeof value === 'string' && /^[1-9][0-9]{0,19}$/.test(value)) return value;
   return fail('remote-state-unknown');
@@ -133,7 +133,7 @@ export class GithubReadOnlyClient implements ReadOnlyClientType {
     return hash.digest('hex');
   }
 }
-const repositoryEndpoint = (identity: ReleaseIdentityType): string => `/repos/${identity.repository.split('/').map(encodeURIComponent).join('/')}`;
+export const repositoryEndpoint = (identity: ReleaseIdentityType): string => `/repos/${identity.repository.split('/').map(encodeURIComponent).join('/')}`;
 const observeInventory = async (client: ReadOnlyClientType, identity: ReleaseIdentityType): Promise<string[]> => {
   const endpoint = repositoryEndpoint(identity);
   const repository = await remoteRecord(client, endpoint);
@@ -162,22 +162,22 @@ export const observeBefore = async (options: ObservationOptionsType, client: Rea
   if (ids.length !== 0) fail('existing-release-or-asset');
   return observation(identity, handoffDigest, 'pre-create', ids);
 };
-export const verifyAfter = async (options: VerificationOptionsType, client: ReadOnlyClientType): Promise<{ receipt: ReceiptType; evidence: ReadbackType }> => {
-  const { identity, assembly, handoffDigest } = loadAssembly(options);
-  const receipt = validateEvidence('receipt', readJson(options.receiptPath));
-  const supplied = validateEvidence('readback', readJson(options.readbackPath));
-  const beforeBytes = readBytes(options.beforePath);
-  const before = validateEvidence('observation', JSON.parse(beforeBytes.toString('utf8')));
-  equal(before.identity, identity, 'authority-handoff-binding-mismatch');
-  if (before.handoff_digest !== handoffDigest || before.phase !== 'pre-create' || before.release_ids.length !== 0) fail('existing-release-or-asset');
-  equal(receipt.identity, identity, 'authority-handoff-binding-mismatch');
-  if (receipt.handoff_digest !== handoffDigest || receipt.asset_digest !== assembly.asset_digest || receipt.pre_observation_sha256 !== sha256(beforeBytes)) fail('receipt-mismatch');
-  const endpoint = repositoryEndpoint(identity);
-  const release = await remoteRecord(client, `${endpoint}/releases/${receipt.release_id}`);
-  if (remoteId(release.id) !== receipt.release_id || release.tag_name !== identity.tag || release.draft !== false || typeof release.body !== 'string'
-    || sha256(Buffer.from(release.body)) !== identity.body_sha256) fail('tag-version-asset-checksum-or-body-mismatch');
+export const verifyCreatedRelease = async (identity: ReleaseIdentityType, releaseId: string, client: ReadOnlyClientType): Promise<void> => {
   await verifyTag(client, identity);
-  const remoteAssets = await client.list(`${endpoint}/releases/${receipt.release_id}/assets`);
+  await observeUniqueRelease(identity, releaseId, client);
+};
+const observeUniqueRelease = async (identity: ReleaseIdentityType, releaseId: string, client: ReadOnlyClientType): Promise<string[]> => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const ids = await observeInventory(client, identity);
+    if (ids.length > 1 || (ids.length === 1 && ids[0] !== releaseId)) fail('existing-release-or-asset');
+    if (ids.length === 1) return ids;
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return fail('remote-state-unknown');
+};
+export const observeAssets = async (identity: ReleaseIdentityType, releaseId: string, assembly: AssemblyType, client: ReadOnlyClientType): Promise<AssetType[]> => {
+  const endpoint = repositoryEndpoint(identity);
+  const remoteAssets = await client.list(`${endpoint}/releases/${releaseId}/assets`);
   if (remoteAssets.length !== assembly.assets.length) fail('asset-set-mismatch');
   const names = new Set();
   const assets: AssetType[] = [];
@@ -189,20 +189,36 @@ export const verifyAfter = async (options: VerificationOptionsType, client: Read
     if (digest !== expected.sha256) fail('checksum-mismatch');
     assets.push({ name: expected.name, size: expected.size, sha256: digest });
   }
-  let ids: string[] = [];
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    ids = await observeInventory(client, identity);
-    if (ids.length > 1 || (ids.length === 1 && ids[0] !== receipt.release_id)) fail('existing-release-or-asset');
-    if (ids.length === 1) break;
-    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
-  if (ids.length !== 1) fail('remote-state-unknown');
+  return sortedAssets(assets);
+};
+export const observeReadback = async (options: Omit<VerificationOptionsType, 'readbackPath'>, client: ReadOnlyClientType, suppliedReceipt?: ReceiptType): Promise<{ receipt: ReceiptType; evidence: ReadbackType }> => {
+  const { identity, assembly, handoffDigest } = loadAssembly(options);
+  const receipt = validateEvidence('receipt', suppliedReceipt ?? readJson(options.receiptPath));
+  const beforeBytes = readBytes(options.beforePath);
+  const before = validateEvidence('observation', JSON.parse(beforeBytes.toString('utf8')));
+  equal(before.identity, identity, 'authority-handoff-binding-mismatch');
+  if (before.handoff_digest !== handoffDigest || before.phase !== 'pre-create' || before.release_ids.length !== 0) fail('existing-release-or-asset');
+  equal(receipt.identity, identity, 'authority-handoff-binding-mismatch');
+  if (receipt.handoff_digest !== handoffDigest || receipt.asset_digest !== assembly.asset_digest || receipt.pre_observation_sha256 !== sha256(beforeBytes)) fail('receipt-mismatch');
+  const endpoint = repositoryEndpoint(identity);
+  const release = await remoteRecord(client, `${endpoint}/releases/${receipt.release_id}`);
+  if (remoteId(release.id) !== receipt.release_id || release.tag_name !== identity.tag || release.draft !== false || typeof release.body !== 'string'
+    || sha256(Buffer.from(release.body)) !== identity.body_sha256) fail('tag-version-asset-checksum-or-body-mismatch');
+  await verifyTag(client, identity);
+  const assets = await observeAssets(identity, receipt.release_id, assembly, client);
+  const ids = await observeUniqueRelease(identity, receipt.release_id, client);
   const evidence = validateEvidence('readback', {
     schema_version: '1', kind: 'ci-github-release-readback', identity, handoff_digest: handoffDigest,
     asset_digest: assembly.asset_digest, release_id: receipt.release_id, draft: false, assets: sortedAssets(assets),
     inventory: observation(identity, handoffDigest, 'post-create', ids),
   });
-  equal(supplied, evidence, 'readback-evidence-mismatch');
   return { receipt, evidence };
 };
 export const saveObservation = (filename: string, value: ObservationType): void => writeNewJson(filename, value);
+
+export const verifyAfter = async (options: VerificationOptionsType, client: ReadOnlyClientType): Promise<{ receipt: ReceiptType; evidence: ReadbackType }> => {
+  const supplied = validateEvidence('readback', readJson(options.readbackPath));
+  const result = await observeReadback(options, client);
+  equal(supplied, result.evidence, 'readback-evidence-mismatch');
+  return result;
+};

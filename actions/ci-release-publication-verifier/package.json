@@ -1,7 +1,7 @@
 {
   "name": "@a3-suite/ci-release-publication-verifier",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "GitHub Action for provider-write-free publication evidence verification",
   "main": "dist/index.js",
   "scripts": {

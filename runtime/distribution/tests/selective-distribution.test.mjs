@@ -289,6 +289,8 @@ test('fetch, plan, apply and rollback preserve explicit consumer state transitio
       const release = prepareRelease(root);
       const projectRoot = path.join(root, 'consumer');
       fs.mkdirSync(projectRoot);
+      const existingFile = path.join(projectRoot, 'README.md');
+      fs.writeFileSync(existingFile, 'consumer-owned documentation\n');
       const fetched = await fetchDistribution({
         projectRoot,
         manifest: release.manifest,
@@ -316,10 +318,65 @@ test('fetch, plan, apply and rollback preserve explicit consumer state transitio
       assert.equal(applied.status, 'applied');
       assert.ok(fs.existsSync(workflow));
       assert.ok(applied.nextSteps.includes('preflight'));
+      const ordinaryFiles = (directory) => fs.readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => directory !== projectRoot || entry.name !== '.a3-skills')
+        .flatMap((entry) => entry.isDirectory()
+          ? ordinaryFiles(path.join(directory, entry.name))
+          : [path.relative(projectRoot, path.join(directory, entry.name)).split(path.sep).join('/')]);
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), ['.github/workflows/quality-gate.yml', 'README.md']);
+      assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
+      assert.doesNotMatch(fs.readFileSync(workflow, 'utf8'), /\.a3-skills\//);
       const rolledBack = rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId });
       assert.equal(rolledBack.status, 'rolled-back');
       assert.equal(rolledBack.rollbackStatus, 'restored');
       assert.equal(fs.existsSync(workflow), false);
+      assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
+      const configurations = {
+        '.ci/platform-manifest.yml': 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n',
+        '.ci/quality-platforms.yml': 'platforms: [{id: linux-x64}]\n',
+      };
+      fs.mkdirSync(path.join(projectRoot, '.ci'), { recursive: true });
+      for (const [relative, text] of Object.entries(configurations)) {
+        fs.writeFileSync(path.join(projectRoot, relative), text);
+      }
+      const optionalSelection = {
+        requestedPresets: ['quality-gate'], requestedAssets: ['workflow.quality-gate-platforms'],
+      };
+      await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+        sourceRoot: repositoryRoot, ...optionalSelection });
+      const optionalPlan = planDistributionApplication({ projectRoot, sourceRevision, ...optionalSelection });
+      const optionalApplied = applyDistributionPlan({ projectRoot, planPath: optionalPlan.planPath, approvalDigest: optionalPlan.planDigest });
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), [
+        '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
+        '.github/workflows/quality-gate-platforms.yml', '.github/workflows/quality-gate.yml', 'README.md',
+      ]);
+      const optionalWorkflow = fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-platforms.yml'), 'utf8');
+      assert.match(optionalWorkflow, /uses: a3-suite\/a3-ci-github\/actions\/ci-platform-matrix@/);
+      assert.doesNotMatch(optionalWorkflow, /CoreLoader|pyyaml|\.a3-skills\//);
+      for (const [relative, text] of Object.entries(configurations)) {
+        assert.equal(fs.readFileSync(path.join(projectRoot, relative), 'utf8'), text);
+      }
+      assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
+      assert.equal(rollbackDistributionTransaction({ projectRoot, transactionId: optionalApplied.transactionId }).status, 'rolled-back');
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), ['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
+      const releaseSelection = { requestedPresets: ['release-request', 'release-publication'], requestedAssets: [] };
+      await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+        sourceRoot: repositoryRoot, ...releaseSelection });
+      const releasePlan = planDistributionApplication({ projectRoot, sourceRevision, ...releaseSelection });
+      const releaseApplied = applyDistributionPlan({ projectRoot, planPath: releasePlan.planPath, approvalDigest: releasePlan.planDigest });
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), [
+        '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
+        '.github/workflows/release-publication-caller.yml', '.github/workflows/release-publication-request.yml',
+        '.github/workflows/release-publication.yml', '.github/workflows/release-request-tag.yml', 'README.md',
+      ]);
+      const publication = fs.readFileSync(path.join(projectRoot, '.github/workflows/release-publication.yml'), 'utf8');
+      assert.match(publication, /uses: a3-suite\/a3-ci-github\/actions\/ci-release-authority@/);
+      assert.match(publication, /uses: a3-suite\/a3-ci-github\/actions\/ci-release-publisher@/);
+      assert.doesNotMatch(publication, /\.a3-skills\//);
+      assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
+      assert.equal(rollbackDistributionTransaction({ projectRoot, transactionId: releaseApplied.transactionId }).status, 'rolled-back');
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), ['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
+
   });
 });
 

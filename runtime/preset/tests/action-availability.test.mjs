@@ -21,7 +21,7 @@ test('selected pending publication Actions block deployment without disturbing r
   validateActionAvailability(f.root, 'release-request', new Set(['release-request']), new Map(), f.registry, f.report);
   assert.deepEqual(f.report.missingSettings, []);
   validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, f.report);
-  assert.deepEqual(f.report.missingSettings.map((item) => item.path).sort(), ['release-publication:actions.ci-release-assembly', 'release-publication:actions.ci-release-publication-verifier', 'release-publication:actions.ci-release-supplemental-asset']);
+  assert.deepEqual(f.report.missingSettings.map((item) => item.path).sort(), ['release-publication:actions.ci-platform-matrix', 'release-publication:actions.ci-release-assembly', 'release-publication:actions.ci-release-authority', 'release-publication:actions.ci-release-publication-control', 'release-publication:actions.ci-release-publication-verifier', 'release-publication:actions.ci-release-publisher', 'release-publication:actions.ci-release-supplemental-asset']);
 });
 
 // integration_id: preset-actionized-fallback-rejection

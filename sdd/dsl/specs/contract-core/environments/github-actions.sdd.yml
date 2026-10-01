@@ -68,9 +68,13 @@ runtime_contexts:
   - id: runtime-context.release-observation-invalid
     summary: Credentials or remote visibility are insufficient, a Release already exists before create, remote knowledge is incomplete, or owner evidence or independent post-create observations do not match their schema, identity or digest bindings.
   - id: runtime-context.platform-manifest-valid
-    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract.
+    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted.
   - id: runtime-context.platform-manifest-invalid
     summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
+  - id: runtime-context.quality-platform-selection-valid
+    summary: The manifest and supplied quality selection are available and satisfy the ci-platform-matrix input contract, including unique declared IDs in selection order.
+  - id: runtime-context.quality-platform-selection-invalid
+    summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid
@@ -155,3 +159,11 @@ runtime_contexts:
     summary: The Vitest report reports a failed test count or an explicit failure flag.
   - id: runtime-context.vitest-report-insufficient
     summary: The Vitest report is missing, has an invalid result structure, has incomplete or inconsistent counts, or contains no tests, and reports no explicit failure.
+  - id: runtime-context.release-publisher-valid
+    summary: Owner-approved notes, future expiry, authority and validated handoff agree; injected GitHub token has observed suitability, complete absence and successful bounded provider responses.
+  - id: runtime-context.release-publisher-invalid
+    summary: Inputs are missing or mismatched, approval is expired, source moves, inventory or provider suitability is unknown, a Release already exists, or create/upload/finalize/readback fails.
+  - id: runtime-context.release-authority-valid
+    summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with known provider suitability.
+  - id: runtime-context.release-authority-invalid
+    summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.

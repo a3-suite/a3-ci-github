@@ -23,40 +23,201 @@
   },
   "subjects": [
     {
-      "subjectId": "subject.ci.release-supplemental-asset",
+      "subjectId": "subject.ci.release-authority",
       "build": {
-        "cwd": "actions/ci-release-supplemental-asset",
-        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+        "cwd": "actions/ci-release-authority",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
       },
       "segments": [
         {
-          "id": "unit", "level": "unit", "status": "excluded",
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Local authority evidence uses actual components and fake GET-only provider responses; Hosted execution is separate."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-authority",
+          "tests": [
+            "tests/authority.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/authority.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-authority",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Local authority evidence uses actual components and fake GET-only provider responses; Hosted execution is separate."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-publisher",
+      "build": {
+        "cwd": "actions/ci-release-publisher",
+        "command": [
+          "npm",
+          "run",
+          "build"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Publication crosses handoff files and provider operations; local evidence uses actual components with fake provider responses."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-publisher",
+          "tests": [
+            "../../runtime/release-publication/tests/publisher.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/publisher.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-publisher",
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Live GitHub write and hosted/consumer acceptance require separate approval; local tests never publish."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-supplemental-asset",
+      "build": {
+        "cwd": "actions/ci-release-supplemental-asset",
+        "command": [
+          "node",
+          "node_modules/@vercel/ncc/dist/ncc/cli.js",
+          "build",
+          "src/index.ts",
+          "--minify"
+        ]
+      },
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
           "reason": "The contract crosses the fixed checkout, files and owner process; evidence is integration-source and integration-bundle."
         },
         {
-          "id": "integration-source", "level": "integration",
+          "id": "integration-source",
+          "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
-          "tests": ["tests/phase.test.ts"],
+          "tests": [
+            "tests/phase.test.ts"
+          ],
           "typescript": true,
           "coverage": {
-            "enabled": true, "scope": "source",
-            "include": ["../../runtime/release-publication/supplemental.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/io.ts"],
-            "exclude": ["tests/**", "node_modules/**", "dist/**"]
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "../../runtime/release-publication/supplemental.ts",
+              "../../runtime/release-publication/snapshot.ts",
+              "../../runtime/release-publication/io.ts"
+            ],
+            "exclude": [
+              "tests/**",
+              "node_modules/**",
+              "dist/**"
+            ]
           }
         },
         {
-          "id": "integration-bundle", "level": "integration",
+          "id": "integration-bundle",
+          "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
-          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts"],
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
           "typescript": true,
           "coverage": {
-            "enabled": true, "scope": "dist",
-            "include": ["dist/**/*.js"],
-            "exclude": ["src/**", "tests/**", "node_modules/**"]
+            "enabled": true,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**",
+              "tests/**",
+              "node_modules/**"
+            ]
           }
         },
         {
-          "id": "e2e", "level": "e2e", "status": "excluded",
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
           "reason": "Hosted installer builds and owner semantic acceptance require separate owner evidence; local fixtures execute both v2 phases without provider publication."
         }
       ]
@@ -65,46 +226,77 @@
       "subjectId": "subject.ci.release-assembly",
       "build": {
         "cwd": "actions/ci-release-assembly",
-        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+        "command": [
+          "node",
+          "node_modules/@vercel/ncc/dist/ncc/cli.js",
+          "build",
+          "src/index.ts",
+          "--minify"
+        ]
       },
       "segments": [
         {
           "id": "unit-schema",
           "level": "unit",
           "cwd": "actions/ci-release-assembly",
-          "tests": ["../../runtime/release-publication/tests/schema.test.ts"],
+          "tests": [
+            "../../runtime/release-publication/tests/schema.test.ts"
+          ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "source",
-            "include": ["../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts"],
-            "exclude": ["dist/**"]
+            "include": [
+              "../../runtime/release-publication/schema.ts",
+              "../../runtime/release-publication/io.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
           }
         },
         {
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
-          "tests": ["../../runtime/release-publication/tests/assembly.test.mjs"],
+          "tests": [
+            "../../runtime/release-publication/tests/assembly.test.mjs"
+          ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "source",
-            "include": ["../../runtime/release-publication/assembly.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts", "src/platform-manifest-decoder.ts"],
-            "exclude": ["dist/**"]
+            "include": [
+              "../../runtime/release-publication/assembly.ts",
+              "../../runtime/release-publication/snapshot.ts",
+              "../../runtime/release-publication/schema.ts",
+              "../../runtime/release-publication/io.ts",
+              "src/platform-manifest-decoder.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
           }
         },
         {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
-          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts", "tests/ci-context.test.ts"],
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts",
+            "tests/ci-context.test.ts"
+          ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "dist",
-            "include": ["dist/**/*.js"],
-            "exclude": ["src/**"]
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
           }
         },
         {
@@ -119,7 +311,13 @@
       "subjectId": "subject.ci.release-publication-verifier",
       "build": {
         "cwd": "actions/ci-release-publication-verifier",
-        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+        "command": [
+          "node",
+          "node_modules/@vercel/ncc/dist/ncc/cli.js",
+          "build",
+          "src/index.ts",
+          "--minify"
+        ]
       },
       "segments": [
         {
@@ -132,26 +330,39 @@
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
-          "tests": ["../../runtime/release-publication/tests/observation.test.mjs"],
+          "tests": [
+            "../../runtime/release-publication/tests/observation.test.mjs"
+          ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "source",
-            "include": ["../../runtime/release-publication/observation.ts"],
-            "exclude": ["dist/**"]
+            "include": [
+              "../../runtime/release-publication/observation.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
           }
         },
         {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-release-publication-verifier",
-          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts"],
+          "tests": [
+            "tests/action-contract.test.ts",
+            "tests/entrypoint.test.ts"
+          ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "dist",
-            "include": ["dist/**/*.js"],
-            "exclude": ["src/**"]
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ]
           }
         },
         {
@@ -1548,7 +1759,8 @@
             "tests/preset-assurance-contract.test.mjs",
             "tests/preset-validation-contract.test.mjs",
             "tests/action-availability.test.mjs",
-            "tests/publication-validation.test.mjs"
+            "tests/publication-validation.test.mjs",
+            "tests/quality-platform-selection.test.mjs"
           ],
           "typescript": true,
           "coverage": {
@@ -1699,7 +1911,8 @@
           "level": "integration",
           "cwd": "runtime/preset",
           "tests": [
-            "../adapter/tests/materialize-adapter-bundle.test.mjs"
+            "../adapter/tests/materialize-adapter-bundle.test.mjs",
+            "../adapter/tests/standard-quality-footprint.test.mjs"
           ],
           "typescript": true,
           "coverage": {

@@ -13,6 +13,10 @@ test_maps:
         symbol: public materializer CLI copies reuses and protects consumer adapter files
         check_refs:
           - check-ci-preset-materialization-success
+      - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
+        symbol: registered standard quality bundles materialize only descriptors and preserve consumer files
+        check_refs:
+          - check-ci-preset-materialization-success
   - verification_id: verification.ci-preset-materialization.application
     case_id: ci-preset-materialization-failure
     tests:

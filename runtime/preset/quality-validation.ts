@@ -1,8 +1,10 @@
 import fs from 'node:fs';
+import { PlatformSelectionError, resolveQualityPlatforms } from '../platform/platform-selection-core.ts';
+import type { Platform } from '../platform/platform-manifest-core.mjs';
 import { validateActionAvailability } from './action-availability.ts';
 import path from 'node:path';
 import { validatePlatformManifest as validatePlatformManifestContent } from './validate-platform-manifest.ts';
-import { adapterBundleAssets, add, installedPresetWorkflows, isMap, map, parseYaml, standardQualityBundles, strings, valueAtPath } from './ci-preset-assets.ts';
+import { adapterBundleAssets, add, installedPresetWorkflows, map, parseYaml, standardQualityBundles, strings, valueAtPath } from './ci-preset-assets.ts';
 import type { Preset, ValueMap, WorkflowAsset } from './ci-preset-assets.ts';
 import type { InspectionContext } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside } from './workflow-assets.ts';
@@ -150,15 +152,9 @@ const validateQualityPlatformSelection = (
     return;
   }
   const manifestText = fs.readFileSync(manifestAbsolute, 'utf8');
-  let manifestIds = new Set<string>();
+  let platforms: Platform[];
   try {
-    validatePlatformManifestContent(manifestText);
-    const manifest = map(parseYaml(manifestText, manifestPath, report));
-    manifestIds = new Set(
-      (Array.isArray(manifest.platforms) ? manifest.platforms : [])
-        .filter((value): value is ValueMap => isMap(value))
-        .map((value) => String(value.id)),
-    );
+    platforms = validatePlatformManifestContent(manifestText);
   } catch (error) {
     add(report.mismatches, {
       path: manifestPath,
@@ -176,40 +172,15 @@ const validateQualityPlatformSelection = (
     });
     return;
   }
-  const selection = map(parseYaml(
-    fs.readFileSync(selectionAbsolute, 'utf8'),
-    selectionPath,
-    report,
-  ));
-  if (Object.keys(selection).sort().join(',') !== 'platforms'
-    || !Array.isArray(selection.platforms) || selection.platforms.length === 0) {
+  try {
+    const selection = parseYaml(fs.readFileSync(selectionAbsolute, 'utf8'), selectionPath, report);
+    resolveQualityPlatforms(platforms, selection);
+  } catch (error) {
+    const suffix = error instanceof PlatformSelectionError && error.index !== undefined
+      ? `:platforms[${error.index}]${error.field ? `.${error.field}` : ''}` : '';
     add(report.mismatches, {
-      path: selectionPath,
-      message: 'quality platform selection must contain only a non-empty platforms list',
-      settingLocation: selectionPath,
-    });
-    return;
-  }
-  const seen = new Set<string>();
-  for (const [index, value] of selection.platforms.entries()) {
-    const entry = map(value);
-    if (Object.keys(entry).sort().join(',') !== 'id' || typeof entry.id !== 'string') {
-      add(report.mismatches, {
-        path: `${selectionPath}:platforms[${index}]`,
-        message: 'platform selection entry must contain only an id',
-        settingLocation: selectionPath,
-      });
-      continue;
-    }
-    if (seen.has(entry.id)) add(report.mismatches, {
-      path: `${selectionPath}:platforms[${index}].id`,
-      message: 'platform selection id is duplicated',
-      settingLocation: selectionPath,
-    });
-    seen.add(entry.id);
-    if (!manifestIds.has(entry.id)) add(report.mismatches, {
-      path: `${selectionPath}:platforms[${index}].id`,
-      message: 'platform selection id is not declared in the platform manifest',
+      path: `${selectionPath}${suffix}`,
+      message: error instanceof Error ? error.message : 'quality platform selection is invalid',
       settingLocation: selectionPath,
     });
   }

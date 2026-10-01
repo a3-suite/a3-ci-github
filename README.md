@@ -65,6 +65,8 @@ Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけ�
 | [`ci-release-assembly`](actions/ci-release-assembly/README.md) | Release build manifest と owner 検証済み補助 handoff を照合し、provider-write-free に公開 handoff を組み立てます。 | Assemble verified Release assets without executing source or writing to a provider. |
 | [`ci-release-publication-verifier`](actions/ci-release-publication-verifier/README.md) | GitHub Release の不在を観測し、owner write が返した receipt / readback を独立した read-only 観測と照合します。 | Observe Release absence and verify publication receipts against independent read-only remote observations. |
 | [`ci-release-supplemental-asset`](actions/ci-release-supplemental-asset/README.md) | 固定 source checkout で、authority の config snapshot が選択した owner adapter を呼び出します。共通入力検証を持つ TypeScript / `node24` Action です。consumer に Node 準備・依存復元を要求しません。 | Invoke an authority-bound owner supplemental asset adapter using the v2 phase interface. |
+| [`ci-release-authority`](actions/ci-release-authority/README.md) | 既存のowner公開要求・承認・固定source・snapshotを検証し、標準Releaseのauthorityを生成します。 | Verify owner-selected Release inputs and provenance and produce a read-only authority handoff for standard Rust Releases. |
+| [`ci-release-publisher`](actions/ci-release-publisher/README.md) | 標準GitHub Releaseのcreate・asset upload・finalizeを提供する。 | Create, upload and finalize a new GitHub Release from an owner-approved handoff; independent verifier determines publication success. |
 
 <!-- action-catalog:end -->
 

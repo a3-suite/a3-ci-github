@@ -21,6 +21,24 @@ test_maps:
         symbol: selected pending publication Actions block deployment without disturbing released presets
         check_refs: [availability]
   - verification_id: verification.ci-preset-assurance.verification
+    case_id: pending-release-publisher
+    tests:
+      - path: runtime/preset/tests/action-availability.test.mjs
+        symbol: selected pending publication Actions block deployment without disturbing released presets
+        check_refs: [publisher-availability]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: standard-publisher-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: standard Release workflow requires no local publisher and preflight rejects write binding drift
+        check_refs: [publisher-drift]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: standard-authority-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: standard Release authority requires no consumer script and rejects input binding drift
+        check_refs: [authority-drift]
+  - verification_id: verification.ci-preset-assurance.verification
     case_id: supplemental-phase-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
@@ -79,3 +97,9 @@ test_maps:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: asset lock generation rejects a noncanonical source revision
         check_refs: [check.ci-preset-assurance.asset-lock-invalid-revision-rejected]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: pending-quality-platform-action
+    tests:
+      - path: runtime/preset/tests/quality-platform-selection.test.mjs
+        symbol: unreleased selection API blocks optional platform introduction while ordinary quality stays available
+        check_refs: [quality-platform-availability]

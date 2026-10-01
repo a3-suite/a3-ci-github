@@ -37,6 +37,7 @@ env:
   CI_JQ_VERSION: <jq-version>
   CI_SHA256SUM_VERSION: <sha256sum-version>
   CI_RELEASE_IMPLEMENTATION: <release-implementation>
+  CI_RELEASE_OWNER_CONTRACT: git.release-flow
   CI_ADAPTER_DESCRIPTOR: .ci-base/.ci/adapters/<adapter-descriptor>
   CI_CARGO_MANIFEST_PATH: <cargo-manifest-path>
   CI_CARGO_LOCK_PATH: <cargo-lock-path>
@@ -58,12 +59,12 @@ jobs:
       CI_RELEASE_PUBLICATION_REQUEST_WORKFLOW_PATH: .github/workflows/release-publication-request.yml
       CI_CONFIG_SNAPSHOT_PATH: ci-config-snapshot.json
     outputs:
-      source_sha: ${{ steps.authority.outputs.source_sha }}
-      version: ${{ steps.authority.outputs.version }}
-      target_identity: ${{ steps.authority.outputs.target_identity }}
+      source_sha: ${{ steps.authority.outputs.source_sha || steps.authority_owner.outputs.source_sha }}
+      version: ${{ steps.authority.outputs.version || steps.authority_owner.outputs.version }}
+      target_identity: ${{ steps.authority.outputs.target_identity || steps.authority_owner.outputs.target_identity }}
       platform_matrix: ${{ steps.platform-matrix.outputs.matrix }}
-      approval_id: ${{ steps.publication_notes.outputs.approval-id }}
-      approval_body_sha256: ${{ steps.publication_notes.outputs.digest }}
+      approval_id: ${{ steps.authority.outputs['approval-id'] || steps.publication_notes.outputs['approval-id'] }}
+      approval_body_sha256: ${{ steps.authority.outputs['body-sha256'] || steps.publication_notes.outputs.digest }}
     steps:
       - name: Verify workflow identity
         id: workflow-identity
@@ -93,7 +94,7 @@ jobs:
           [[ "$CI_RELEASE_PUBLICATION_REQUEST_RUN_ID" =~ ^[1-9][0-9]*$ ]]
       - name: Resolve platform build matrix
         id: platform-matrix
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@<release-publication-action-sha>
         with:
           manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
       - name: Provision fixed jq
@@ -112,6 +113,7 @@ jobs:
           jq-version: ${{ env.CI_JQ_VERSION }}
           sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
       - name: Verify publication request workflow run
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         shell: bash
         run: |
           set -euo pipefail
@@ -146,6 +148,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.publication_request_run_id }}
       - name: Verify release request workflow run
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         shell: bash
         run: |
           set -euo pipefail
@@ -160,10 +163,12 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.request_run_id }}
       - name: Resolve release identity
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         id: release_identity
         shell: bash
         run: echo "tag=$(jq -er '.tag' release-request/release-request.json)" >> "$GITHUB_OUTPUT"
       - name: Verify publication notes handoff
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         id: publication_notes
         uses: a3-suite/a3-ci-github/actions/ci-release-notes-binding@312c534de67720de060689d78ada17da9c84c4e2
         with:
@@ -171,7 +176,8 @@ jobs:
           approval-json: release-notes-handoff/release-notes-approval.json
           release-identity: ${{ steps.release_identity.outputs.tag }}
       - name: Verify request and notes provenance
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@312c534de67720de060689d78ada17da9c84c4e2
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@<release-publication-action-sha>
         with:
           operation: verify-provenance
           publication-request-run-id: ${{ inputs.publication_request_run_id }}
@@ -185,40 +191,46 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@312c534de67720de060689d78ada17da9c84c4e2
         with:
           sources-json: >-
-            {"runtime":{"CI_LANGUAGE_PROFILE":"${{ env.CI_LANGUAGE_PROFILE }}","CI_TOOLCHAIN_VERSION":"${{ env.CI_TOOLCHAIN_VERSION }}","CI_PLATFORM_MANIFEST":"${{ env.CI_PLATFORM_MANIFEST }}","CI_RELEASE_IMPLEMENTATION":"${{ env.CI_RELEASE_IMPLEMENTATION }}","CI_CARGO_MANIFEST_PATH":"${{ env.CI_CARGO_MANIFEST_PATH }}","CI_CARGO_LOCK_PATH":"${{ env.CI_CARGO_LOCK_PATH }}","CI_RELEASE_BINARY_NAME":"${{ env.CI_RELEASE_BINARY_NAME }}","CI_RELEASE_ASSET_PREFIX":"${{ env.CI_RELEASE_ASSET_PREFIX }}"},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":"${{ inputs.supplemental_release_asset_owner_contract }}","CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh"},"preset":{}}
+            {"runtime":{"CI_LANGUAGE_PROFILE":"${{ env.CI_LANGUAGE_PROFILE }}","CI_TOOLCHAIN_VERSION":"${{ env.CI_TOOLCHAIN_VERSION }}","CI_PLATFORM_MANIFEST":"${{ env.CI_PLATFORM_MANIFEST }}","CI_RELEASE_IMPLEMENTATION":"${{ env.CI_RELEASE_IMPLEMENTATION }}","CI_RELEASE_OWNER_CONTRACT":"${{ env.CI_RELEASE_OWNER_CONTRACT }}","CI_CARGO_MANIFEST_PATH":"${{ env.CI_CARGO_MANIFEST_PATH }}","CI_CARGO_LOCK_PATH":"${{ env.CI_CARGO_LOCK_PATH }}","CI_RELEASE_BINARY_NAME":"${{ env.CI_RELEASE_BINARY_NAME }}","CI_RELEASE_ASSET_PREFIX":"${{ env.CI_RELEASE_ASSET_PREFIX }}"},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":"${{ inputs.supplemental_release_asset_owner_contract }}","CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh"},"preset":{}}
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
       - name: Validate release notes binding
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         uses: a3-suite/a3-ci-github/actions/ci-release-notes-input-resolution@312c534de67720de060689d78ada17da9c84c4e2
         with:
           input-handoff-directory: release-notes-handoff
           output-directory: release-request
       - name: Verify release notes binding
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         uses: a3-suite/a3-ci-github/actions/ci-release-notes-binding@312c534de67720de060689d78ada17da9c84c4e2
         with:
           handoff-json: release-request/release-notes.json
           approval-json: release-request/release-notes-approval.json
           release-identity: ${{ steps.release_identity.outputs.tag }}
-      - name: Verify release authority
+      - name: Verify standard Release authority
         id: authority
+        if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'
+        uses: a3-suite/a3-ci-github/actions/ci-release-authority@<release-publication-action-sha>
+        with:
+          root-directory: .
+          snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
+          output-directory: authority
+          release-request-run-id: ${{ inputs.request_run_id }}
+          publication-request-run-id: ${{ inputs.publication_request_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify owner-specific Release authority
+        id: authority_owner
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$CI_LANGUAGE_PROFILE" =~ ^[a-z][a-z0-9-]*$ ]]
-          [[ -n "${CI_TOOLCHAIN_VERSION:-}" && "${CI_TOOLCHAIN_VERSION:-}" != "__unset__" && "${CI_TOOLCHAIN_VERSION:-}" != *'<'* && "${CI_TOOLCHAIN_VERSION:-}" != *'>'* ]]
-          [[ -n "${CI_PLATFORM_MANIFEST:-}" && "${CI_PLATFORM_MANIFEST:-}" != "__unset__" && "${CI_PLATFORM_MANIFEST:-}" != *'<'* && "${CI_PLATFORM_MANIFEST:-}" != *'>'* ]]
-          test -s "$CI_CONFIG_SNAPSHOT_PATH"
           .ci/trusted/ci-release-authority.sh release-request/release-request.json authority
           test -s authority/authority.json
           cp "$CI_CONFIG_SNAPSHOT_PATH" authority/config-snapshot.json
           cp release-publication-request/request.json authority/publication-request.json
-          source_sha="$(jq -er '.source_sha' authority/authority.json)"
-          version="$(jq -er '.version' authority/authority.json)"
-          target_identity="$(jq -er '.target_identity' authority/authority.json)"
-          {
-            echo "source_sha=$source_sha"
-            echo "version=$version"
-            echo "target_identity=$target_identity"
-          } >> "$GITHUB_OUTPUT"
+          for field in source_sha version target_identity; do
+            value="$(jq -er --arg field "$field" '.[$field]' authority/authority.json)"
+            printf '%s=%s\n' "$field" "$value" >> "$GITHUB_OUTPUT"
+          done
       - uses: actions/upload-artifact@<commit-sha>
         with:
           name: release-authority
@@ -616,7 +628,7 @@ jobs:
           version: ${{ needs.authority.outputs.version }}
           target-identity: ${{ needs.authority.outputs.target_identity }}
       - name: Verify approval is still valid
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@<release-publication-action-sha>
         with:
           operation: verify-approval
           approval-id: ${{ needs.authority.outputs.approval_id }}
@@ -633,7 +645,19 @@ jobs:
           handoff-root: release-handoff
           observation-path: publication-before.json
       - id: publish
-        name: Publish draft and finalize release
+        name: Publish standard GitHub Release
+        if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'
+        uses: a3-suite/a3-ci-github/actions/ci-release-publisher@<release-publication-action-sha>
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          authority-path: authority/authority.json
+          release-handoff-root: release-handoff
+          pre-observation-path: publication-before.json
+          write-output-directory: publication-write
+      - id: publish_owner
+        name: Publish owner-specific Release
+        if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
         env:
           GH_TOKEN: ${{ github.token }}
           CI_GITHUB_TOKEN: ${{ github.token }}

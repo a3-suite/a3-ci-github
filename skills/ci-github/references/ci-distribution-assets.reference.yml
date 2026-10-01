@@ -67,6 +67,7 @@ assets:
       - runtime/preset/workflow-validation.ts
       - runtime/platform/platform-manifest-core.d.mts
       - runtime/platform/platform-manifest-core.mjs
+      - runtime/platform/platform-selection-core.ts
   - id: runtime.adapter-materializer
     application: local-reference
     dependencies: [registry.ci-github]

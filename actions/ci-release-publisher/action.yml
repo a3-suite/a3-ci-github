@@ -1,0 +1,23 @@
+name: ci-release-publisher
+description: Create, upload and finalize a new GitHub Release from an owner-approved handoff; independent verifier determines publication success.
+inputs:
+  authority-path:
+    description: Regular authority JSON file. Its directory must contain verified release-notes.json, release-notes-approval.json and publication-request.json. Identity must match GITHUB_REPOSITORY.
+    required: true
+  release-handoff-root:
+    description: Existing assembly handoff directory with schema-valid identity, manifest and verified asset bytes. Symlinks and escaping paths are rejected.
+    required: true
+  pre-observation-path:
+    description: Regular pre-create observation file proving complete absence, bound to authority and the exact handoff digest.
+    required: true
+  write-output-directory:
+    description: New directory for receipt.json and readback.json. Must not already exist. Input paths must not contain NUL, CR or LF.
+    required: true
+outputs:
+  receipt-path:
+    description: Path to schema-valid receipt.json, emitted only after finalize and readback complete. Does not replace independent publication verification.
+  readback-path:
+    description: Path to schema-valid readback.json, emitted only with receipt-path after all local publisher checks. No successful outputs on failure.
+runs:
+  using: node24
+  main: dist/index.js

@@ -1,7 +1,7 @@
 {
   "name": "@a3-suite/ci-release-publication-control",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Action for release publication control handoffs",
   "main": "dist/index.js",
   "scripts": {
@@ -10,6 +10,14 @@
     "test:contract": "npm run build && tsx --test tests/action-contract.test.ts tests/entrypoint.test.ts",
     "test": "npm run build && tsx --test tests/*.test.ts"
   },
-  "dependencies": { "@actions/core": "1.11.1" },
-  "devDependencies": { "@types/node": "22.20.2", "@vercel/ncc": "0.38.4", "tsx": "4.23.13", "typescript": "5.9.3", "yaml": "2.7.0" }
+  "dependencies": {
+    "@actions/core": "1.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@vercel/ncc": "0.38.4",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "yaml": "2.7.0"
+  }
 }

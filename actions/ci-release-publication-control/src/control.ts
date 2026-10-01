@@ -8,7 +8,7 @@ export type ControlResult = { requestRunId?: string };
 const sha256 = (value: crypto.BinaryLike): string => crypto.createHash('sha256').update(value).digest('hex');
 const scalar = (input: ControlInput, name: string): string => {
   const value = input[name] ?? '';
-  if (!value || /[\0\r\n]/.test(value)) throw new Error(`release-publication-${name}-invalid`);
+  if (typeof value !== 'string' || !value || /[\0\r\n]/.test(value)) throw new Error(`release-publication-${name}-invalid`);
   return value;
 };
 const readJson = (file: string): Record<string, any> => JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, any>;
@@ -59,7 +59,8 @@ const createRequest = (input: ControlInput): ControlResult => {
   parseFutureRfc3339(approvalExpiresAt);
   const bodySha256 = sha256(releaseNotes);
   if (bodySha256 !== approvedBodySha256) throw new Error('release notes do not match the approved body digest');
-  const request = { schema: 'ci.release-publication-request.v1', workflowRunId, workflowHeadSha, releaseRequestRunId, releaseIdentity, releaseNotesBodySha256: bodySha256, approvalId, approvalExpiresAt };
+  const decision = publicationDecision(input);
+  const request = { schema: decision ? 'ci.release-publication-request.v2' : 'ci.release-publication-request.v1', ...decision, workflowRunId, workflowHeadSha, releaseRequestRunId, releaseIdentity, releaseNotesBodySha256: bodySha256, approvalId, approvalExpiresAt };
   const requestDir = rootPath(input, 'release-publication-request');
   const notesDir = rootPath(input, 'release-notes-handoff');
   fs.mkdirSync(requestDir, { recursive: true });
@@ -72,14 +73,23 @@ const createRequest = (input: ControlInput): ControlResult => {
   return {};
 };
 
+const publicationDecision = (input: ControlInput): { releaseVersion: string; targetIdentity: string } | undefined => {
+  if (!input.releaseVersion && !input.targetIdentity) return undefined;
+  const releaseVersion = scalar(input, 'releaseVersion');
+  const targetIdentity = scalar(input, 'targetIdentity');
+  if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(releaseVersion) || scalar(input, 'releaseIdentity') !== `v${releaseVersion}` || targetIdentity.length > 200) throw new Error('release-publication-decision-invalid');
+  return { releaseVersion, targetIdentity };
+};
+
 const verifyPublicationRequest = (input: ControlInput): ControlResult => {
   const request = JSON.parse(verifySidecar(input, 'release-publication-request', 'request.json', 'request.json.sha256').toString('utf8')) as Record<string, unknown>;
   const fields = ['workflowRunId', 'workflowHeadSha', 'releaseRequestRunId', 'releaseIdentity', 'releaseNotesBodySha256', 'approvalId', 'approvalExpiresAt'];
-  if (request.schema !== 'ci.release-publication-request.v1' || fields.some((name) => typeof request[name] !== 'string' || !request[name])) throw new Error('request schema is invalid');
+  if (!['ci.release-publication-request.v1', 'ci.release-publication-request.v2'].includes(String(request.schema)) || fields.some((name) => typeof request[name] !== 'string' || !request[name])) throw new Error('request schema is invalid');
   if (request.workflowRunId !== scalar(input, 'requestWorkflowRunId')) throw new Error('request run ID is not bound to workflow_run');
   if (request.workflowHeadSha !== scalar(input, 'requestHeadSha')) throw new Error('request head SHA is not bound to workflow_run');
   if (!/^[1-9][0-9]*$/.test(String(request.releaseRequestRunId))) throw new Error('release request run ID is invalid');
   if (!/^[a-f0-9]{64}$/.test(String(request.releaseNotesBodySha256))) throw new Error('release notes body digest is invalid');
+  if (request.schema === 'ci.release-publication-request.v2' && !publicationDecision(request as ControlInput)) throw new Error('release-publication-decision-invalid');
   return { requestRunId: String(request.releaseRequestRunId) };
 };
 
@@ -94,7 +104,7 @@ const verifyProvenance = (input: ControlInput): ControlResult => {
   const releaseRunId = scalar(input, 'releaseRequestRunId');
   const approvalId = scalar(input, 'approvalId');
   const approvedBodySha256 = scalar(input, 'approvalBodySha256');
-  if (publicationRequest.schema !== 'ci.release-publication-request.v1') throw new Error('publication request schema is invalid');
+  if (!['ci.release-publication-request.v1', 'ci.release-publication-request.v2'].includes(publicationRequest.schema)) throw new Error('publication request schema is invalid');
   if (publicationRequest.workflowRunId !== publicationRunId || publicationRequest.workflowRunId !== String(publicationRun.id)) throw new Error('publication request run ID mismatch');
   if (publicationRequest.workflowHeadSha !== publicationRun.head_sha) throw new Error('publication request head SHA mismatch');
   if (publicationRequest.releaseRequestRunId !== releaseRunId || releaseRequest.request_run_id !== releaseRunId) throw new Error('release request run ID mismatch');
@@ -105,6 +115,7 @@ const verifyProvenance = (input: ControlInput): ControlResult => {
   const releaseRunPath = typeof releaseRun.path === 'string' ? releaseRun.path.split('@', 1)[0] : '';
   if (releaseRun.name !== expectedName || releaseRunPath !== expectedPath || releaseRun.event !== 'push') throw new Error('release request workflow provenance is invalid');
   if (releaseRequest.ref !== `refs/tags/${releaseRequest.tag}` || releaseRun.head_sha !== releaseRequest.source_sha) throw new Error('tag request source provenance is invalid');
+  if (publicationRequest.schema === 'ci.release-publication-request.v2' && !publicationDecision(publicationRequest as ControlInput)) throw new Error('release-publication-decision-invalid');
   const body = notes.body;
   if (notes.schema !== 'ci.release-notes.v1' || notes.source_contract !== 'git.release-flow' || notes.source_field !== 'body' || typeof body !== 'string' || !body) throw new Error('release notes schema is invalid');
   const bodySha256 = sha256(body);

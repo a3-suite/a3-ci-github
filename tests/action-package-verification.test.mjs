@@ -49,7 +49,7 @@ test('connects shared provisioner and publication tests without another install 
     phase: 'test',
   }, {
     command: '/node',
-    args: ['--import=tsx', '--test', '../../runtime/release-publication/tests/assembly.test.mjs', '../../runtime/release-publication/tests/observation.test.mjs', '../../runtime/release-publication/tests/schema.test.ts'],
+    args: ['--import=tsx', '--test', '../../runtime/release-publication/tests/assembly.test.mjs', '../../runtime/release-publication/tests/observation.test.mjs', '../../runtime/release-publication/tests/schema.test.ts', '../../runtime/release-publication/tests/publisher.test.mjs'],
     cwd: path.join(root, 'actions/ci-release-assembly'),
     action: 'shared-release-publication',
     phase: 'test',

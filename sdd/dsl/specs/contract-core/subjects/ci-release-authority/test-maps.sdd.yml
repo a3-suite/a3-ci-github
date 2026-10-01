@@ -1,0 +1,25 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-authority
+test_maps:
+  - verification_id: verification.ci-release-authority.outputs
+    case_id: verified-inputs
+    tests:
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: standard authority binds explicit decision, existing owner workflow, snapshot and GET-only observations
+        check_refs: [authority]
+  - verification_id: verification.ci-release-authority.outputs
+    case_id: invalid-bindings
+    tests:
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: authority rejects untrusted runs, moved tags, owner drift, snapshot drift and expired approval without authority output
+        check_refs: [failure, no-outputs]
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: authority accepts read-only repository metadata without claiming publish capability and rejects replay
+        check_refs: [failure]
+  - verification_id: verification.ci-release-authority.outputs
+    case_id: bundle-boundary
+    tests:
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: authority bundle emits verified outputs and suppresses outputs on rejection
+        check_refs: [authority]

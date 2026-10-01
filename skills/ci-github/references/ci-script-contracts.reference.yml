@@ -55,9 +55,25 @@ contracts:
     stopConditions: [request-event-invalid, external-handoff-identity-missing, release-notes-missing, release-notes-approval-missing, normalized-input-write-failed]
   - id: release-authority-scripts
     input: [request-handoff, owner-contract, owner-contract-digest, config-snapshot, source-identity]
+    standardReleaseInput:
+      source: ci.release-publication-request.v2
+      version: explicit-owner-input
+      target: explicit-owner-input
+      approvalScope: dispatched-publication-decision-and-separately-bound-notes-approval
+      ownerContract:
+        id: git.release-flow
+        realization: existing-owner-publication-request-workflow
+        path: .github/workflows/release-publication-request.yml
+        digest: sha256-of-exact-trusted-workflow-bytes-matching-request-run-revision
+        scope: release-input-receiving-binding-only
+        excludes: [branch-policy, version-policy, approval-principal-policy]
+      sourceVersionVerification: optional-owner-selected-profile-validation
+      legacyV1: existing-api-and-artifact-owner-exception-path-only
+      canonicalProducer: explicit-v2-inputs-required
+
     output: [authority-context, release-source-version-approval-binding, provider-publication-suitability-observation]
     suitabilityContract: ci.release-asset-publication-contract#providerPublicationSuitability
-    boundary: trusted control で実行し、request と source を検証データとして扱う。source identity の確定後、build 前に provider 適合を観測し、不適合または判定不能は後続 stage へ進めず停止する。早期観測を write 直前の再観測の代替にしない。
+    boundary: trusted control で実行し、request と source を検証データとして扱う。source identity の確定後、build 前に provider の repository/source/workflow 適合を観測し、その範囲の不適合または判定不能は停止する。実際の公開 credential の write capability は早期観測では未確認として記録し、publisher が write 直前に検証する。早期観測を write 直前の再観測の代替にしない。
     stopConditions: [request-inconsistent, source-inconsistent, version-inconsistent, approval-inconsistent, config-inconsistent, owner-contract-inconsistent, provider-publication-suitability-unknown-or-unsupported]
   - id: release-source-identity-scripts
     input: [authority-context, fixed-source-sha, language-profile]

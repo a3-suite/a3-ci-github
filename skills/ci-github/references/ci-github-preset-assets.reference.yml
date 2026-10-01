@@ -105,6 +105,13 @@ actionization:
       allowed: [read-only-provider-access]
       requiredBoundary: workflow-injected
       forbidden: [credential-selection, credential-storage, provider-write]
+    providerWriteException:
+      target: ci-release-publisher
+      scope: github-release-create-upload-finalize
+      credentialBoundary: workflow-injected-github-token
+      ownerPolicyAndCredentialRoute: retained
+      successAuthority: independent-read-only-verifier
+      forbidden: [credential-selection, credential-storage, credential-fallback, overwrite, delete, automatic-recovery]
     retainedByWorkflow: [job-boundary, permissions, credential-injection]
     retainedByOwner: [owner-policy, credential-route]
   exactRefFormat: "^[0-9a-f]{40}$"
@@ -230,9 +237,9 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-notes-input-resolution-scripts
       providerMapping: release-notes-handoff-resolution
     - id: ci-platform-matrix
-      status: available
+      status: pending-release
       actionPath: actions/ci-platform-matrix
-      workflows: [release-publication]
+      workflows: [quality-gate-platforms, release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
@@ -246,7 +253,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.quality-scripts
       providerMapping: quality-adapter-execution
     - id: ci-release-publication-control
-      status: available
+      status: pending-release
       actionPath: actions/ci-release-publication-control
       workflows: [release-publication-request, release-publication-caller, release-publication]
       trust: read-only
@@ -277,6 +284,22 @@ actionization:
       privilegedJobs: [release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-observation-receipt-and-readback-verification
+    - id: ci-release-authority
+      status: pending-release
+      actionPath: actions/ci-release-authority
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-authority-scripts
+      providerMapping: explicit-owner-release-authority
+    - id: ci-release-publisher
+      status: pending-release
+      actionPath: actions/ci-release-publisher
+      workflows: [release-publication]
+      trust: bounded-release-write
+      privilegedJobs: [release-publication/publish]
+      ciContract: ci.script-contracts#contracts.release-publication-scripts
+      providerMapping: github-release-create-upload-finalize
     - id: ci-package-publication-request
       status: available
       actionPath: actions/ci-package-publication-request
@@ -295,9 +318,11 @@ actionization:
     - id: rust-cli-release
       languageProfiles: [rust]
       fulfillsExtensions:
+        release-authority-control: ci-release-authority
         release-source-gate-adapter: ci-rust-source-gate
         release-build-adapter: ci-rust-release-build
         release-assembly-control: ci-release-assembly
+        release-publication-adapter: ci-release-publisher
       projectSettingsEnv:
         - CI_CARGO_MANIFEST_PATH
         - CI_CARGO_LOCK_PATH
@@ -384,7 +409,7 @@ registry:
       standardImplementation:
         source: actionization.standardImplementations
         selectionEnv: CI_RELEASE_IMPLEMENTATION
-        requiredBindings: [release-source-gate-adapter, release-build-adapter, release-assembly-control]
+        requiredBindings: [release-authority-control, release-source-gate-adapter, release-build-adapter, release-assembly-control, release-publication-adapter]
       qualityAdapter:
         source: ci.adapter-bundles
         selection: standard-or-owner

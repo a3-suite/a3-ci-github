@@ -102,22 +102,15 @@ test('optional platform quality workflow preserves trusted assets matrix executi
   includesAll(resolve, [
     /id: trusted-assets/,
     /pull_request\.base\.sha/,
-    /matrix: .*steps\.resolve\.outputs\.matrix/,
-    /expected: .*steps\.resolve\.outputs\.expected/,
-    /allowed_runners/,
-    /CoreLoader/,
-    /duplicate mapping key/,
-    /platform manifest exceeds 64 KiB/,
-    /exceeds alias count limit/,
-    /platform selection must contain only a non-empty platforms list/,
-    /platform selection entry must contain only an id/,
-    /platform manifest must contain only a platforms list/,
-    /platform manifest must contain at least one platform/,
-    /platform id is duplicated in the manifest/,
-    /platform id is invalid in the manifest/,
-    /runner is not allowed by the platform manifest contract/,
-    /platform target is invalid in the manifest/,
+    /matrix: .*steps\.resolve\.outputs\['quality-matrix'\]/,
+    /expected: .*steps\.resolve\.outputs\['expected-platforms'\]/,
+    /uses: a3-suite\/a3-ci-github\/actions\/ci-platform-matrix@<release-publication-action-sha>/,
+    /manifest-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_PLATFORM_MANIFEST/,
+    /selection-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_QUALITY_PLATFORM_SELECTION/,
+    /bootstrap is limited to same-repository pull requests/,
+
   ]);
+  assert.doesNotMatch(resolve, /CoreLoader|PyYAML|pyyaml|Set up uv|uv run/);
   includesAll(jobBlock(workflow, 'platform'), [
     /needs: resolve-platforms/,
     /matrix: .*needs\.resolve-platforms\.outputs\.matrix/,
@@ -276,7 +269,9 @@ test('release publication workflows separate request validation from privileged 
   assert.ok(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish'));
   assert.ok(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence'));
   assert.doesNotMatch(publicationJob.split(/^    steps:$/m)[0], /GH_TOKEN|CI_GITHUB_TOKEN/);
-  includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, /CI_GITHUB_TOKEN: \$\{\{ github\.token \}\}/]);
+  includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, /ci-release-publisher@<release-publication-action-sha>/, /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
+  assert.doesNotMatch(stepContaining(publicationJob, '- id: publish'), /ci-release-publish\.sh|CI_GITHUB_TOKEN/);
+  includesAll(stepContaining(publicationJob, '- id: publish_owner'), [/if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'/, /ci-release-publish\.sh/]);
   const publicationSummary = jobBlock(publication, 'summary');
   assertNeeds(publicationSummary, ['authority', 'source-gate', 'quality', 'build', 'supplemental-asset', 'assemble', 'publish']);
   includesAll(publicationSummary, [/if: always\(\)/, /ci-quality-summary@/]);

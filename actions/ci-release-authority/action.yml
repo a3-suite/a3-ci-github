@@ -1,0 +1,38 @@
+name: ci-release-authority
+description: Verify owner-selected Release inputs and provenance and produce a read-only authority handoff for standard Rust Releases.
+inputs:
+  root-directory:
+    description: Trusted checkout root containing request artifacts and the existing owner receiving workflow. No source or owner code is executed.
+    required: true
+    default: .
+  snapshot-path:
+    description: Relative regular config snapshot path under root; selects rust-cli-release and git.release-flow.
+    required: true
+  output-directory:
+    description: New direct child directory under root for authority and verified notes/request/snapshot files. Must not exist.
+    required: true
+  release-request-run-id:
+    description: Positive tag request run ID. Remote metadata, artifact sidecar and fixed source must agree.
+    required: true
+  publication-request-run-id:
+    description: Positive successful default-branch dispatch run ID producing a v2 explicit Release decision.
+    required: true
+  github-token:
+    description: Workflow-injected token for GET-only provenance, tag and provider observations. No credential selection or fallback.
+    required: true
+outputs:
+  authority-path:
+    description: Authority JSON path; emitted only after every check succeeds.
+  source_sha:
+    description: Verified fixed source SHA.
+  version:
+    description: Explicit owner-selected version; never inferred from tag.
+  target_identity:
+    description: Explicit owner-selected opaque target identity.
+  approval-id:
+    description: Verified notes approval identifier bound to the publication request.
+  body-sha256:
+    description: Verified approved notes body digest.
+runs:
+  using: node24
+  main: dist/index.js

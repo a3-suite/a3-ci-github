@@ -66,7 +66,7 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
     throw new Error('shared provisioner verification dependencies are missing');
   }
   const releaseRoot = path.join(root, 'actions/ci-release-assembly');
-  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
+  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
   if (!existsSync(path.join(releaseRoot, 'node_modules/tsx')) || releaseTests.some((file) => !existsSync(file))) {
     throw new Error('shared release publication verification dependencies are missing');
   }

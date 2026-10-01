@@ -25,11 +25,11 @@ binding:
   authority: publication projection must match authority source_sha, version and target_identity and the workflow repository
   assembly: asset inventory digest and exact manifest bytes bind the generated handoff
   preCreate: repository, annotated tag object, source, version, target, approved body digest and handoff digest
-  createResult: owner write produces the immutable Release object ID; tag lookup must not substitute it
+  createResult: selected write binding produces the immutable Release object ID; tag lookup must not substitute it
   postCreate: receipt, independently observed readback and inventory share the create-result ID and pre-create binding
 ownerWrite:
   extension: release-publication-adapter
-  remainsRequired: true
+  remainsRequired: non-standard-owner-route
   invocationArguments: [authority-path, release-handoff-root, pre-observation-path, new-write-output-directory]
   outputs: [receipt.json, readback.json]
   responsibilities: [pre-write-suitability-reobservation, pre-write-identity-and-absence-reobservation, non-overwrite-create, upload, finalize, partial-publication-failure]
@@ -37,8 +37,9 @@ ownerWrite:
 workflowMapping:
   assemble: ci-release-assembly
   beforeWrite: ci-release-publication-verifier.observe-before
-  write: owner-extension
+  write: ci.github-preset-assets#actionization.standardImplementations
   afterWrite: ci-release-publication-verifier.verify-after
+  ownerFallback: non-standard-owner-route-only
   successOutputs: verifier-only
 observationCredential:
   source: workflow-injected-GH_TOKEN

@@ -1,0 +1,7 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-publisher
+  summary: Execute owner-approved GitHub Release publication through a bounded
+    create/upload/finalize binding while independent read-only verification
+    retains success authority.

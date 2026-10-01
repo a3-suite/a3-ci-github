@@ -32,6 +32,37 @@ verifications:
         checks:
           - id: availability
             guarantee_ref: unavailable-action-reported
+      - id: pending-quality-platform-action
+        intent_id: pending-action-blocked
+        input:
+          selected-pending-action: ci-platform-matrix
+          preset: quality-gate
+          optional-workflow: quality-gate-platforms
+        checks:
+          - id: quality-platform-availability
+            guarantee_ref: unavailable-action-reported
+      - id: pending-release-publisher
+        intent_id: pending-action-blocked
+        input:
+          selected-pending-action: ci-release-publisher
+          preset: release-publication
+        checks:
+          - id: publisher-availability
+            guarantee_ref: unavailable-action-reported
+      - id: standard-publisher-drift
+        intent_id: ci-preset-assurance-drift-intent
+        input:
+          applied-preset-drift: standard-publisher-condition-credential-input-or-local-fallback
+        checks:
+          - id: publisher-drift
+            guarantee_ref: ci-preset-assurance-drift-fails
+      - id: standard-authority-drift
+        intent_id: ci-preset-assurance-drift-intent
+        input:
+          applied-preset-drift: standard-authority-condition-credential-input-or-missing-owner-decision
+        checks:
+          - id: authority-drift
+            guarantee_ref: ci-preset-assurance-drift-fails
       - id: supplemental-phase-drift
         intent_id: supplemental-phase-checked
         input:

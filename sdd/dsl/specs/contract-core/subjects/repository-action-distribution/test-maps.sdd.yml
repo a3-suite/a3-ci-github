@@ -50,7 +50,7 @@ test_maps:
         check_refs:
           - check-action-source-verification-plan
       - path: tests/action-package-verification.test.mjs
-        symbol: connects shared provisioner core tests without another install or build
+        symbol: connects shared provisioner and publication tests without another install or build
         check_refs:
           - check-action-source-verification-plan
   - verification_id: verification.repository-action-distribution.integrity

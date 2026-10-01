@@ -1,6 +1,20 @@
 version: 2
 name: contract-route
 routes:
+  - route_id: action-contracts-release-authority
+    contract_ref:
+      subject_ref: subject.ci.release-authority
+      contract_id: contract.ci-release-authority.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-release-publisher
+    contract_ref:
+      subject_ref: subject.ci.release-publisher
+      contract_id: contract.ci-release-publisher.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: repository-action-distribution-integrity
     contract_ref:
       subject_ref: subject.repository.action-distribution

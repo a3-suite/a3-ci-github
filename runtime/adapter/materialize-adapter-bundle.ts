@@ -224,7 +224,7 @@ const sourceAssetMap = (value: unknown): Map<string, SourceAsset> => {
   for (const item of value.assets) {
     if (!isRecord(item)) continue;
     const id = nonEmptyString(item.id, 'source-asset-id');
-    const entrypoints = item.entrypoints === undefined ? [] : stringList(item.entrypoints, 'entrypoints');
+    const entrypoints = item.entrypoints === undefined ? [] : stringList(item.entrypoints, 'entrypoints', true);
     const source = item.source === undefined ? undefined : parseResourceSource(item.source, 'source');
     const copyable = item.copyable === true;
     if (map.has(id)) throw new Error(`adapter-materializer-source-asset-duplicate:${id}`);

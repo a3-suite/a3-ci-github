@@ -56,7 +56,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate publication request identity
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@<release-publication-action-sha>
         with:
           operation: verify-publication-request
           request-workflow-run-id: ${{ github.event.workflow_run.id }}

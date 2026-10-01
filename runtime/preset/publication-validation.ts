@@ -211,6 +211,17 @@ const validateReleaseRequestWorkflow = (
   report: Report,
 ): void => {
   const requestInputs = map(map(on(request).workflow_dispatch).inputs);
+  const requestSteps = map(map(request.jobs).request).steps;
+  const producer = Array.isArray(requestSteps)
+    ? requestSteps.map(map).find((step) => map(step.with).operation === 'create-request') : undefined;
+  for (const [field, input] of [['release_version', 'release-version'], ['target_identity', 'target-identity']]) {
+    if (map(requestInputs[field]).required !== true
+      || map(producer?.with)[input] !== '${{ inputs.' + field + ' }}') add(report.mismatches, {
+      path: `${requestPath}:on.workflow_dispatch.inputs.${field}`,
+      message: 'standard Release request must bind explicit owner version and target',
+      settingLocation: requestPath,
+    });
+  }
   if (Object.prototype.hasOwnProperty.call(requestInputs, 'notes_handoff_run_id')) add(report.mismatches, {
     path: `${requestPath}:on.workflow_dispatch.inputs.notes_handoff_run_id`,
     message: 'release notes handoff run ID must not be supplied by the operator',
@@ -396,6 +407,24 @@ const validatePublicationControlSurface = (
   const publicationJobs = map(publication.jobs);
   const authorityJob = map(publicationJobs.authority);
   const authoritySteps = Array.isArray(authorityJob.steps) ? authorityJob.steps.map(map) : [];
+  const standardAuthority = authoritySteps.find((step) => step.id === 'authority');
+  const expectedAuthorityInputs = {
+    'root-directory': '.',
+    'snapshot-path': '${{ env.CI_CONFIG_SNAPSHOT_PATH }}',
+    'output-directory': 'authority',
+    'release-request-run-id': '${{ inputs.request_run_id }}',
+    'publication-request-run-id': '${{ inputs.publication_request_run_id }}',
+    'github-token': '${{ github.token }}',
+  };
+  if (!standardAuthority || typeof standardAuthority.uses !== 'string'
+    || !standardAuthority.uses.includes('/actions/ci-release-authority@')
+    || standardAuthority.if !== "env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'"
+    || standardAuthority.run !== undefined || standardAuthority['continue-on-error'] !== undefined
+    || Object.entries(expectedAuthorityInputs).some(([key, value]) => map(standardAuthority.with)[key] !== value)) add(report.mismatches, {
+    path: `${publicationPath}:jobs.authority.steps.authority`,
+    message: 'standard Release authority must use the common read-only Action with bound inputs',
+    settingLocation: publicationPath,
+  });
   const configSnapshotStep = authoritySteps.find((step) => step.id === 'config');
   const sourcesJson = map(configSnapshotStep?.with)['sources-json'];
   let snapshotSources: ValueMap = {};

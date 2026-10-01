@@ -39,6 +39,12 @@ node --test runtime/distribution/tests/selective-distribution.test.mjs
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
 
+標準品質bundleの配置受入は、owner skill collectionをread-onlyで明示して実行します。未指定時はこの外部資材を必要とするケースだけskipし、通常のmaterializer契約検証は継続します。この受入は配置を確認し、projectの品質commandやHosted実行は行いません。
+
+```sh
+A3_CI_GITHUB_QUALITY_SKILL_ROOT=<owner-skill-collection-root> node --import ./runtime/preset/node_modules/tsx/dist/loader.mjs --test runtime/adapter/tests/standard-quality-footprint.test.mjs
+```
+
 ## コミットゲート
 
 コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、公開 Agent Skill `ci-github` の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。

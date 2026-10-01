@@ -134,12 +134,13 @@ test('registry binds every canonical workflow Action use to a declared target', 
   const actionUse = /uses: (a3-suite\/[^@\s]+)@([^\s]+)/g;
   // Act
   const coverage = registry.presets.map((preset) => {
-    const installed = new Set(preset.workflowAssets.map((asset) => asset.id));
+    const assets = [...preset.workflowAssets, ...(preset.optionalWorkflowAssets ?? [])];
+    const installed = new Set(assets.map((asset) => asset.id));
     const declared = new Set(registry.actionTargets
       .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
       .map((target) => target.id));
     const observed = new Set();
-    for (const asset of preset.workflowAssets) {
+    for (const asset of assets) {
       const workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
       for (const [, action, ref] of workflow.matchAll(actionUse)) {
         const target = registry.actionTargets
