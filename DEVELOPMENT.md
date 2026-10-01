@@ -6,8 +6,9 @@
 2. `sdd/dsl/requirements/requirement-manifest.sdd.yml`
 3. `sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`
 4. `sdd/dsl/designs/global/physical-structure.sdd.yml`
-5. `docs/maintenance/test-strategy.md`
-6. 対象の公開契約と実装
+5. `docs/maintenance/action-construction.md`
+6. `docs/maintenance/test-strategy.md`
+7. 対象の公開契約と実装
 
 ## SSOT
 

@@ -40,6 +40,8 @@ assets:
       - skills/ci-github/references/ci-script-assets.reference.yml
       - skills/ci-github/references/ci-script-contracts.reference.yml
       - skills/ci-github/references/ci-distribution-assets.reference.yml
+      - skills/ci-github/references/release-publication-evidence.reference.yml
+      - runtime/release-publication/evidence.schema.json
   - id: runtime.preset
     application: local-reference
     dependencies: [registry.ci-github]
@@ -55,6 +57,7 @@ assets:
       - runtime/preset/generate-ci-asset-lock.ts
       - runtime/preset/publication-validation.ts
       - runtime/preset/quality-validation.ts
+      - runtime/preset/action-availability.ts
       - runtime/preset/semantic-candidates.ts
       - runtime/preset/validate-ci-preset-core.ts
       - runtime/preset/validate-ci-preset.ts

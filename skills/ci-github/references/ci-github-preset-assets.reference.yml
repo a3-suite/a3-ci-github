@@ -97,6 +97,7 @@ actionization:
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available
+    targetStatusGate: selected-targets-must-be-available
     requires: [candidate-eligibility, implementation, tests, distribution, exact-release-tag, release-tag-mapping, exact-ref, workflow-mapping, static-contract]
   candidateEligibility:
     requires: [cross-project-reusable, provider-write-free, bounded-input-output-contract, fail-closed]
@@ -252,6 +253,22 @@ actionization:
       privilegedJobs: [release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-publication-request-and-provenance-control
+    - id: ci-release-assembly
+      status: pending-release
+      actionPath: actions/ci-release-assembly
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.release-assembly-scripts
+      providerMapping: release-assembly
+    - id: ci-release-publication-verifier
+      status: pending-release
+      actionPath: actions/ci-release-publication-verifier
+      workflows: [release-publication]
+      trust: read-only
+      privilegedJobs: [release-publication/publish]
+      ciContract: ci.script-contracts#contracts.release-publication-scripts
+      providerMapping: release-observation-receipt-and-readback-verification
     - id: ci-package-publication-request
       status: available
       actionPath: actions/ci-package-publication-request
@@ -260,12 +277,19 @@ actionization:
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
       providerMapping: package-publication-request-handoff
+  pendingRelease:
+    referencePlaceholder: <release-publication-action-sha>
+    activation: exact-release-tag-and-peeled-full-sha-confirmed
+    deployment: forbidden-until-available
+  retiredProjectEntrypoints:
+    release-publication: [.ci/trusted/ci-release-assemble.sh]
   standardImplementations:
     - id: rust-cli-release
       languageProfiles: [rust]
       fulfillsExtensions:
         release-source-gate-adapter: ci-rust-source-gate
         release-build-adapter: ci-rust-release-build
+        release-assembly-control: ci-release-assembly
       projectSettingsEnv:
         - CI_CARGO_MANIFEST_PATH
         - CI_CARGO_LOCK_PATH
@@ -352,7 +376,7 @@ registry:
       standardImplementation:
         source: actionization.standardImplementations
         selectionEnv: CI_RELEASE_IMPLEMENTATION
-        requiredBindings: [release-source-gate-adapter, release-build-adapter]
+        requiredBindings: [release-source-gate-adapter, release-build-adapter, release-assembly-control]
       qualityAdapter:
         source: ci.adapter-bundles
         selection: standard-or-owner

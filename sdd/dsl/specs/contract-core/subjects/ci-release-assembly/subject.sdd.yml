@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-assembly
+  summary: Assemble authority-bound Release assets and opaque owner evidence without provider write or source execution.

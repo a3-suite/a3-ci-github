@@ -53,6 +53,16 @@ boundaries:
     direction: output
     externality: caller-owned
 runtime_contexts:
+  - id: runtime-context.release-assembly-valid
+    summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed.
+  - id: runtime-context.release-assembly-invalid
+    summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists.
+  - id: runtime-context.release-pre-observation-valid
+    summary: GitHub credentials establish draft visibility and complete GET-only inventory observes no Release for the bound tag, source and handoff identity.
+  - id: runtime-context.release-post-verification-valid
+    summary: Owner receipt and readback satisfy the evidence schema and all authority/handoff/digest bindings, and independent GET-only observations match the immutable create-result Release ID, tag/source, published state, body and exact asset/checksum inventory.
+  - id: runtime-context.release-observation-invalid
+    summary: Credentials or remote visibility are insufficient, a Release already exists before create, remote knowledge is incomplete, or owner evidence or independent post-create observations do not match their schema, identity or digest bindings.
   - id: runtime-context.platform-manifest-valid
     summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract.
   - id: runtime-context.platform-manifest-invalid

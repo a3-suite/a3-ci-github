@@ -36,6 +36,7 @@ test('project execution definition resolves every declared contract subject', ()
   assert.deepEqual(presetAssurance.segments[1].tests, [
     'tests/preset-assurance-contract.test.mjs',
     'tests/preset-validation-contract.test.mjs',
+    'tests/action-availability.test.mjs',
   ]);
   assert.deepEqual(workflow.segments[1].tests, ['tests/workflow-contracts.test.mjs']);
   assert.deepEqual(managedSource.segments[1].tests, [

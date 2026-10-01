@@ -112,9 +112,9 @@ assets:
     kind: trusted-control
     status: required
     scope: workflow
-    entrypoints: [.ci/trusted/ci-release-assemble.sh]
+    entrypoints: []
     copyable: false
-    owner: project-owner
+    owner: provider-binding
   - id: release-publication-adapter
     useCases: [release-remote-publish-readback]
     kind: provider-adapter

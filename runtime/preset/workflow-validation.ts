@@ -730,7 +730,8 @@ const inspectWorkflowAsset = (
       continue;
     }
     observedActions.add(target.id);
-    if (ref !== registry.actionExactRef) add(report.mismatches, {
+    const expectedRef = target.status === 'pending-release' ? registry.pendingActionRef : registry.actionExactRef;
+    if (ref !== expectedRef) add(report.mismatches, {
       path: `${asset.destination}:uses.${actionName}`,
       message: 'a3 Action ref does not match the registry',
       settingLocation: asset.destination,

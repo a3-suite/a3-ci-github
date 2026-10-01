@@ -520,15 +520,16 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Assemble release handoff
-        shell: bash
-        env:
-          CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: ${{ inputs.supplemental_release_asset_enabled }}
-        run: |
-          if [[ "$CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED" == true ]]; then
-            .ci/trusted/ci-release-assemble.sh authority/authority.json authority/config-snapshot.json build release-handoff supplemental-asset
-          else
-            .ci/trusted/ci-release-assemble.sh authority/authority.json authority/config-snapshot.json build release-handoff
-          fi
+        uses: a3-suite/a3-ci-github/actions/ci-release-assembly@<release-publication-action-sha>
+        with:
+          repository: ${{ github.repository }}
+          authority-path: authority/authority.json
+          snapshot-path: authority/config-snapshot.json
+          platform-manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
+          platform-matrix: ${{ needs.authority.outputs.platform_matrix }}
+          build-root: build
+          supplemental-root: ${{ inputs.supplemental_release_asset_enabled && 'supplemental-asset' || '' }}
+          output-directory: release-handoff
       - id: upload_release_handoff
         uses: actions/upload-artifact@<commit-sha>
         with:
@@ -543,9 +544,9 @@ jobs:
       actions: read
       contents: write
     outputs:
-      release_remote_identity: ${{ steps.publish.outputs['release-remote-identity'] }}
-      publish_receipt: ${{ steps.publish.outputs['publish-receipt'] }}
-      readback_evidence: ${{ steps.publish.outputs['readback-evidence'] }}
+      release_remote_identity: ${{ steps.verify_publication.outputs['release-remote-identity'] }}
+      publish_receipt: ${{ steps.verify_publication.outputs['publish-receipt'] }}
+      readback_evidence: ${{ steps.verify_publication.outputs['readback-evidence'] }}
     steps:
       - name: Verify workflow identity
         id: workflow-identity
@@ -609,6 +610,17 @@ jobs:
           operation: verify-approval
           approval-id: ${{ needs.authority.outputs.approval_id }}
           approval-body-sha256: ${{ needs.authority.outputs.approval_body_sha256 }}
+      - name: Observe complete Release absence
+        id: publication_before
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@<release-publication-action-sha>
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          operation: observe-before
+          repository: ${{ github.repository }}
+          authority-path: authority/authority.json
+          handoff-root: release-handoff
+          observation-path: publication-before.json
       - id: publish
         name: Publish draft and finalize release
         env:
@@ -618,18 +630,20 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$GH_TOKEN"
-          .ci/trusted/ci-release-publish.sh authority/authority.json release-handoff
+          .ci/trusted/ci-release-publish.sh authority/authority.json release-handoff publication-before.json publication-write
       - name: Verify publication readback evidence
-        shell: bash
+        id: verify_publication
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@<release-publication-action-sha>
         env:
-          RELEASE_REMOTE_IDENTITY: ${{ steps.publish.outputs['release-remote-identity'] }}
-          PUBLISH_RECEIPT: ${{ steps.publish.outputs['publish-receipt'] }}
-          READBACK_EVIDENCE: ${{ steps.publish.outputs['readback-evidence'] }}
-        run: |
-          set -euo pipefail
-          test -n "$RELEASE_REMOTE_IDENTITY"
-          test -n "$PUBLISH_RECEIPT"
-          test -n "$READBACK_EVIDENCE"
+          GH_TOKEN: ${{ github.token }}
+        with:
+          operation: verify-after
+          repository: ${{ github.repository }}
+          authority-path: authority/authority.json
+          handoff-root: release-handoff
+          observation-path: publication-before.json
+          receipt-path: publication-write/receipt.json
+          readback-path: publication-write/readback.json
 
   summary:
     needs: [authority, source-gate, quality, build, supplemental-asset, assemble, publish]

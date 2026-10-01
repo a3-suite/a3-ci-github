@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { validateActionAvailability } from './action-availability.ts';
 import path from 'node:path';
 import { validatePlatformManifest as validatePlatformManifestContent } from './validate-platform-manifest.ts';
 import { adapterBundleAssets, add, installedPresetWorkflows, isMap, map, parseYaml, standardQualityBundles, strings, valueAtPath } from './ci-preset-assets.ts';
@@ -285,7 +286,8 @@ const validateStandardImplementation = (
       });
       continue;
     }
-    const expectedUse = `${registry.actionRepository}/${target.actionPath}@${registry.actionExactRef}`;
+    const ref = target.status === 'pending-release' ? registry.pendingActionRef : registry.actionExactRef;
+    const expectedUse = `${registry.actionRepository}/${target.actionPath}@${ref}`;
     if (!workflowActionUses.has(expectedUse)) add(report.mismatches, {
       path: `${selectedId}:fulfillsExtensions.${extension}`,
       message: 'standard implementation Action is not connected to the workflow',
@@ -400,6 +402,7 @@ const validateActionCoverage = (
 ): void => {
   const { registry, report } = context;
   const installedWorkflowIds = new Set(assets.map((asset) => asset.id));
+  validateActionAvailability(context.root, preset.id, installedWorkflowIds, context.parsed, registry, report);
   const expectedActions = new Set(registry.actionTargets
     .filter((target) => target.workflows.some((workflow) => installedWorkflowIds.has(workflow)))
     .map((target) => target.id));

@@ -1,0 +1,69 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-assembly
+contracts:
+  - id: contract.ci-release-assembly.outputs
+    summary: Assembly checks authority, snapshot, exact platform and build inventories, source/version identity and asset/checksum bytes before producing a new handoff. Supplemental records remain opaque and bind the selected owner contract, asset, source, evidence and provenance digests. No source execution or provider write is performed.
+    conditions:
+      - id: assembly-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-assembly-valid
+          op: available
+      - id: assembly-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-assembly-invalid
+          op: available
+    guarantees:
+      - id: assembly-success
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values: [success]
+      - id: bound-handoff
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: release-handoff
+      - id: bound-asset-digest
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: asset-digest
+      - id: assembly-rejected
+        when: assembly-invalid
+        observation_ref: observation.ci-release-assembly.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values: [failure]
+    verification_intents:
+      - id: bound-assembly
+        goal: Complete validation produces the authority-bound handoff, asset digest and success output without overwriting an existing destination.
+        guarantee_refs: [assembly-success, bound-handoff, bound-asset-digest]
+      - id: fail-closed
+        goal: Reject identity, platform, checksum, unsafe path, extra asset or supplemental binding mismatches without successful outputs.
+        guarantee_refs: [assembly-rejected]

@@ -67,6 +67,7 @@ export type ManagedAsset = {
 export type TriggerExtensionRule = 'empty-map' | 'cron-list';
 export type ActionTarget = {
   id: string;
+  status: 'available' | 'pending-release';
   actionPath: string;
   workflows: string[];
   privilegedJobs: string[];
@@ -78,7 +79,9 @@ export type RegistryData = {
   actionRepository: string;
   actionReleaseTag: string;
   actionExactRef: string;
+  pendingActionRef?: string;
   actionTargets: ActionTarget[];
+  retiredProjectEntrypoints?: Record<string, string[]>;
   registeredAssets: ProviderAsset[];
   copyableAssets: ProviderAsset[];
   standardImplementations: StandardImplementation[];
@@ -390,6 +393,7 @@ const isValidPreset = (value: unknown): value is Preset =>
 const isValidActionTarget = (value: unknown): value is ActionTarget =>
   isMap(value)
   && typeof value.id === 'string'
+  && (value.status === 'available' || value.status === 'pending-release')
   && typeof value.actionPath === 'string'
   && Array.isArray(value.workflows)
   && Array.isArray(value.privilegedJobs)
@@ -451,6 +455,12 @@ const interpretActionization = (
   const actionReleaseTag = String(implementationSource.releaseTag ?? '');
   const actionExactRef = String(implementationSource.exactRef ?? '');
   const availabilityRequirements = strings(map(actionization.availabilityGate).requires);
+  for (const target of Array.isArray(actionization.targets) ? actionization.targets : []) {
+    if (!isValidActionTarget(target)) add(report.mismatches, {
+      path: `actionization.targets.${String(map(target).id ?? 'unknown')}`,
+      message: 'Action target declaration or availability status is invalid',
+    });
+  }
   if (!/^v\d+\.\d+\.\d+$/.test(actionReleaseTag)) add(report.mismatches, {
     path: 'actionization.implementationSource.releaseTag',
     message: 'a3 Action release tag must be an exact vX.Y.Z tag',
@@ -516,7 +526,9 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     actionRepository: String(implementationSource.repository ?? ''),
     actionReleaseTag,
     actionExactRef,
+    pendingActionRef: String(map(actionization.pendingRelease).referencePlaceholder ?? ''),
     actionTargets: Array.isArray(targets) ? targets.filter(isValidActionTarget) : [],
+    retiredProjectEntrypoints: Object.fromEntries(Object.entries(map(actionization.retiredProjectEntrypoints)).map(([id, entries]) => [id, strings(entries)])),
     registeredAssets,
     copyableAssets: registeredAssets.filter((value) => value.copyable === true),
     standardImplementations: Array.isArray(standardImplementations)

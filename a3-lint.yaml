@@ -33,6 +33,7 @@ project:
       include:
         - '**/ci_github_runtime_no_a3_cli.lua'
         - '**/ci_github_workflow_*.lua'
+        - '**/ci_github_action_*.lua'
         - '**/*.yml'
         - '**/*.yaml'
       languages:

@@ -23,6 +23,107 @@
   },
   "subjects": [
     {
+      "subjectId": "subject.ci.release-assembly",
+      "build": {
+        "cwd": "actions/ci-release-assembly",
+        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+      },
+      "segments": [
+        {
+          "id": "unit-schema",
+          "level": "unit",
+          "cwd": "actions/ci-release-assembly",
+          "tests": ["../../runtime/release-publication/tests/schema.test.ts"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": ["../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts"],
+            "exclude": ["dist/**"]
+          }
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-assembly",
+          "tests": ["../../runtime/release-publication/tests/assembly.test.mjs"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": ["../../runtime/release-publication/assembly.ts", "../../runtime/release-publication/schema.ts", "../../runtime/release-publication/io.ts", "src/platform-manifest-decoder.ts"],
+            "exclude": ["dist/**"]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-assembly",
+          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts", "tests/ci-context.test.ts"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": ["dist/**/*.js"],
+            "exclude": ["src/**"]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted Release execution is outside local contract-subject execution; assembly performs no provider write."
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.release-publication-verifier",
+      "build": {
+        "cwd": "actions/ci-release-publication-verifier",
+        "command": ["node", "node_modules/@vercel/ncc/dist/ncc/cli.js", "build", "src/index.ts", "--minify"]
+      },
+      "segments": [
+        {
+          "id": "unit-source",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "Verification crosses evidence files and the read-only remote client boundary; contract evidence is integration-source and integration-bundle."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "actions/ci-release-assembly",
+          "tests": ["../../runtime/release-publication/tests/observation.test.mjs"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": ["../../runtime/release-publication/observation.ts"],
+            "exclude": ["dist/**"]
+          }
+        },
+        {
+          "id": "integration-bundle",
+          "level": "integration",
+          "cwd": "actions/ci-release-publication-verifier",
+          "tests": ["tests/action-contract.test.ts", "tests/entrypoint.test.ts"],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "dist",
+            "include": ["dist/**/*.js"],
+            "exclude": ["src/**"]
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Live GitHub and owner write require hosted evidence; local tests inject a GET-only transport and do not publish."
+        }
+      ]
+    },
+    {
       "subjectId": "subject.ci.annotated-tag-resolver",
       "build": {
         "cwd": "actions/ci-annotated-tag-resolver",
@@ -1406,7 +1507,8 @@
           "cwd": "runtime/preset",
           "tests": [
             "tests/preset-assurance-contract.test.mjs",
-            "tests/preset-validation-contract.test.mjs"
+            "tests/preset-validation-contract.test.mjs",
+            "tests/action-availability.test.mjs"
           ],
           "typescript": true,
           "coverage": {

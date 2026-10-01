@@ -15,6 +15,16 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.preset-assurance-read-only-output-requested
           op: available
+      - id: selected-action-unavailable
+        input_predicate:
+          kind: input
+          term: input.selected-pending-action
+          op: present
+      - id: retired-assembly-present
+        input_predicate:
+          kind: input
+          term: input.retired-assembly-file-or-invocation
+          op: present
       - id: ci-preset-assurance-applied-preset-valid
         input_predicate:
           kind: input
@@ -44,6 +54,24 @@ contracts:
           target:
             kind: observation_field
             value: reason
+      - id: unavailable-action-reported
+        when: selected-action-unavailable
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: missingSettings
+      - id: retired-assembly-reported
+        when: retired-assembly-present
+        observation_ref: observation.ci-preset-assurance.preflight-report
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: mismatches
       - id: ci-preset-assurance-valid-preset-succeeds
         when: ci-preset-assurance-applied-preset-valid
         observation_ref: observation.ci-preset-assurance.preflight-report
@@ -95,6 +123,12 @@ contracts:
       - id: ci-preset-assurance-read-only-output-intent
         goal: Read-only audit rejects remediation output with a stable invalid-input diagnostic.
         guarantee_refs: [ci-preset-assurance-read-only-output-rejected]
+      - id: pending-action-blocked
+        goal: Selected pending Actions produce availability failures until exact publication SHA is confirmed; unrelated released presets remain available.
+        guarantee_refs: [unavailable-action-reported]
+      - id: retired-assembly-blocked
+        goal: Retained project-local assembly files or workflow invocations produce mismatches rather than supplying fallback processing.
+        guarantee_refs: [retired-assembly-reported]
       - id: ci-preset-assurance-valid-intent
         goal: A canonical applied preset produces a successful read-only preflight report without modifying the project.
         guarantee_refs:

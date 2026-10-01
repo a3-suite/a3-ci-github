@@ -1,0 +1,59 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-assembly
+verifications:
+  - id: verification.ci-release-assembly.outputs
+    contract_id: contract.ci-release-assembly.outputs
+    cases:
+      - id: bundled-assembly
+        intent_id: bound-assembly
+        input:
+          repository: owner/project
+          authority-path: authority.json
+          snapshot-path: snapshot.json
+          build-root: build
+          output-directory: handoff
+        checks:
+          - id: success
+            guarantee_ref: assembly-success
+          - id: handoff
+            guarantee_ref: bound-handoff
+          - id: digest
+            guarantee_ref: bound-asset-digest
+      - id: output-line-injection
+        intent_id: fail-closed
+        input:
+          output-directory: "handoff\nstatus=success"
+        checks:
+          - id: rejection
+            guarantee_ref: assembly-rejected
+      - id: identity-rejection
+        intent_id: fail-closed
+        input:
+          repository: other/repository
+        checks:
+          - id: rejection
+            guarantee_ref: assembly-rejected
+      - id: build-validation
+        intent_id: bound-assembly
+        input:
+          build-root: build
+        checks:
+          - id: handoff
+            guarantee_ref: bound-handoff
+          - id: digest
+            guarantee_ref: bound-asset-digest
+      - id: supplemental-binding
+        intent_id: bound-assembly
+        input:
+          supplemental-root: supplemental
+        checks:
+          - id: handoff
+            guarantee_ref: bound-handoff
+      - id: unsafe-build-inputs
+        intent_id: fail-closed
+        input:
+          build-root: invalid-build
+        checks:
+          - id: rejection
+            guarantee_ref: assembly-rejected

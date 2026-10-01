@@ -131,7 +131,7 @@ test('registry binds every canonical workflow Action use to a declared target', 
   // Arrange
   const report = { missingSettings: [], mismatches: [] };
   const registry = loadRegistry(report);
-  const actionUse = /uses: (a3-suite\/[^@\s]+)@([0-9a-f]{40})/g;
+  const actionUse = /uses: (a3-suite\/[^@\s]+)@([^\s]+)/g;
   // Act
   const coverage = registry.presets.map((preset) => {
     const installed = new Set(preset.workflowAssets.map((asset) => asset.id));
@@ -141,11 +141,12 @@ test('registry binds every canonical workflow Action use to a declared target', 
     const observed = new Set();
     for (const asset of preset.workflowAssets) {
       const workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
-      for (const [, action, sha] of workflow.matchAll(actionUse)) {
-        assert.equal(sha, registry.actionExactRef, `unexpected ref in ${asset.source}`);
+      for (const [, action, ref] of workflow.matchAll(actionUse)) {
         const target = registry.actionTargets
           .find((candidate) => `${registry.actionRepository}/${candidate.actionPath}` === action);
         assert.ok(target, `unregistered a3 Action in ${asset.source}: ${action}`);
+        const expectedRef = target.status === 'pending-release' ? registry.pendingActionRef : registry.actionExactRef;
+        assert.equal(ref, expectedRef, `unexpected ref in ${asset.source}`);
         observed.add(target.id);
       }
     }

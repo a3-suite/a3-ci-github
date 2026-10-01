@@ -15,6 +15,18 @@ test_maps:
         symbol: preset assurance rejects remediation output in read-only mode
         check_refs: [check.ci-preset-assurance.read-only-output-rejected]
   - verification_id: verification.ci-preset-assurance.verification
+    case_id: pending-publication-actions
+    tests:
+      - path: runtime/preset/tests/action-availability.test.mjs
+        symbol: selected pending publication Actions block deployment without disturbing released presets
+        check_refs: [availability]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: retired-assembly
+    tests:
+      - path: runtime/preset/tests/action-availability.test.mjs
+        symbol: preflight rejects both retained legacy assembly files and invocations
+        check_refs: [fallback-rejection]
+  - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.valid-preset-succeeds
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs

@@ -29,6 +29,7 @@ for (const relative of [
   'workflows',
   'runtime/preset',
   'runtime/platform',
+  'runtime/release-publication/evidence.schema.json',
   'runtime/adapter',
   'runtime/path',
   'runtime/vitest',
@@ -93,6 +94,20 @@ test('release generator derives deterministic selective assets and checksums fro
     assert.ok(manifest.assets.some((asset) => asset.id === 'runtime.preset'));
     assert.ok(manifest.assets.some((asset) => asset.id === 'workflow.quality-gate'));
     assert.ok(manifest.files['skills/ci-github/references/ci-script-contracts.reference.yml']);
+    for (const relative of [
+      'skills/ci-github/references/release-publication-evidence.reference.yml',
+      'runtime/release-publication/evidence.schema.json',
+      'runtime/preset/action-availability.ts',
+    ]) {
+      const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
+      assert.equal(manifest.files[relative].sha256, sha256(bytes));
+      assert.equal(manifest.files[relative].size, bytes.length);
+    }
+    const publication = resolveDistributionSelection(manifest, ['release-publication'], []);
+    const publicationFiles = publication.flatMap((asset) => asset.files.map((file) => file.sourcePath));
+    assert.ok(publicationFiles.includes('runtime/release-publication/evidence.schema.json'));
+    assert.ok(publicationFiles.includes('runtime/preset/action-availability.ts'));
+    assert.equal(publicationFiles.some((relative) => relative.startsWith('actions/')), false);
     const quality = manifest.presets.find((preset) => preset.id === 'quality-gate');
     assert.ok(quality.requiredAssets.includes('workflow.quality-gate'));
     assert.ok(quality.requiredAssets.includes('runtime.preset'));

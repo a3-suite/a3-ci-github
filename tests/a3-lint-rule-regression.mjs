@@ -41,6 +41,30 @@ const nonstandardReadme = `${readme
 
 const rules = [
   {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runtime_unsupported',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: node20\n  main: dist/index.js\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: node24\n  main: dist/index.js\n'],
+    falsePositive: ['config/action.yml', 'runs:\n  using: node20\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_main_not_dist',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: node24\n  main: src/index.ts\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: "node24"\n  main: "dist/index.js"\n'],
+    falsePositive: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: echo node\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runner_node_review',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: |\n        node script.mjs\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: bash script.sh\n'],
+    falsePositive: ['actions/example/action.yml', 'description: node example\nruns:\n  using: composite\n  steps:\n    - run: |\n        # node example\n        echo "node script.mjs"\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runner_node_review',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: "node script.mjs"\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: echo safe\n'],
+    falsePositive: ['.github/workflows/example.yml', 'runs:\n  using: composite\n  steps:\n    - run: node script.mjs\n'],
+  },
+  {
     file: 'ci_github_runtime_no_a3_cli.lua',
     lang: 'yaml',
     code: 'ci_github_runtime_a3_cli_forbidden',

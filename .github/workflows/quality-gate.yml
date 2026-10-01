@@ -114,6 +114,10 @@ jobs:
         shell: bash
         run: node runtime/repository/verify-action-packages.mjs
 
+      - name: Test Action source and runtime boundary gates
+        shell: bash
+        run: node --test tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs
+
       - name: Provision jq 1.7.1
         uses: ./actions/ci-jq-provisioner
         with:

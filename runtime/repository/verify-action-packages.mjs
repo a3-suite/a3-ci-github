@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { collectActions } from './check-action-dist.mjs';
+import { assertRuntimeBoundaries } from './check-runtime-boundaries.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, '../..');
@@ -64,11 +65,22 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
   if (!existsSync(path.join(actionRoot, 'node_modules/tsx')) || !existsSync(testPath)) {
     throw new Error('shared provisioner verification dependencies are missing');
   }
+  const releaseRoot = path.join(root, 'actions/ci-release-assembly');
+  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
+  if (!existsSync(path.join(releaseRoot, 'node_modules/tsx')) || releaseTests.some((file) => !existsSync(file))) {
+    throw new Error('shared release publication verification dependencies are missing');
+  }
   return [{
     command: nodePath,
     args: ['--import=tsx', '--test', path.relative(actionRoot, testPath)],
     cwd: actionRoot,
     action: 'shared-provisioner-core',
+    phase: 'test',
+  }, {
+    command: nodePath,
+    args: ['--import=tsx', '--test', ...releaseTests.map((file) => path.relative(releaseRoot, file))],
+    cwd: releaseRoot,
+    action: 'shared-release-publication',
     phase: 'test',
   }];
 };
@@ -86,6 +98,7 @@ export const runVerificationPlan = (plan, execute = execFileSync) => {
 
 export const verifyActionPackages = (root = defaultRoot) => {
   const packages = collectActionPackages(root);
+  assertRuntimeBoundaries(root, packages);
   const plan = [
     ...verificationPlan(packages),
     ...sharedRuntimeVerificationPlan(root),

@@ -39,13 +39,19 @@ test('derives typecheck and no-rebuild test steps for every bundled Action', () 
   }
 });
 
-test('connects shared provisioner core tests without another install or build', () => {
+test('connects shared provisioner and publication tests without another install or build', () => {
   const plan = sharedRuntimeVerificationPlan(root, '/node');
   assert.deepEqual(plan, [{
     command: '/node',
     args: ['--import=tsx', '--test', '../../runtime/provisioner/tests/provision-core.test.ts'],
     cwd: path.join(root, 'actions/ci-gh-provisioner'),
     action: 'shared-provisioner-core',
+    phase: 'test',
+  }, {
+    command: '/node',
+    args: ['--import=tsx', '--test', '../../runtime/release-publication/tests/assembly.test.mjs', '../../runtime/release-publication/tests/observation.test.mjs', '../../runtime/release-publication/tests/schema.test.ts'],
+    cwd: path.join(root, 'actions/ci-release-assembly'),
+    action: 'shared-release-publication',
     phase: 'test',
   }]);
 });

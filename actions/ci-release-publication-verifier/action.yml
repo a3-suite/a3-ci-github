@@ -1,0 +1,42 @@
+name: ci-release-publication-verifier
+description: Observe Release absence and verify publication receipts against independent read-only remote observations.
+inputs:
+  operation:
+    required: true
+    description: observe-before or verify-after; no operation performs provider write.
+  repository:
+    required: true
+    description: Expected owner/repository identity on github.com.
+  authority-path:
+    required: true
+    description: Trusted authority JSON containing the publication identity projection.
+  handoff-root:
+    required: true
+    description: Verified release handoff produced by ci-release-assembly.
+  observation-path:
+    required: true
+    description: New pre-create observation output or the same immutable input for verify-after.
+  receipt-path:
+    required: false
+    default: ''
+    description: Owner write adapter receipt JSON; required for verify-after.
+  readback-path:
+    required: false
+    default: ''
+    description: Owner write adapter readback JSON; required for verify-after.
+outputs:
+  status:
+    description: success, produced only after the selected operation succeeds.
+  observation-path:
+    description: Pre-create observation path, produced only by observe-before.
+  observation-digest:
+    description: SHA-256 of exact observation file bytes, produced only by observe-before.
+  release-remote-identity:
+    description: Immutable create-result Release ID, produced only by verify-after.
+  publish-receipt:
+    description: Validated compact receipt JSON, produced only by verify-after.
+  readback-evidence:
+    description: Independently verified compact readback JSON, produced only by verify-after.
+runs:
+  using: node24
+  main: dist/index.js
