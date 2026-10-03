@@ -3,7 +3,8 @@ import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'nod
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
+import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,17 +29,33 @@ test('quality caller passes explicit inputs and preserves the summary check with
   assert.equal(caller.jobs.summary.if, 'always()');
   assert.equal(caller.jobs.summary.name, undefined);
   assert.deepEqual(Object.keys(callee.jobs), ['trusted', 'untrusted-pr', 'summary']);
+  assert.equal(callee.on.workflow_call.inputs['jq-version'].required, false);
+  assert.equal(callee.on.workflow_call.inputs['jq-version'].default, '');
+  for (const id of ['trusted', 'untrusted-pr']) {
+    const steps = callee.jobs[id].steps;
+    const jqSteps = steps.filter((step) => /actions\/ci-(?:jq-provisioner|github-toolchain-verifier)@/.test(step.uses ?? ''));
+    assert.equal(jqSteps.length, 2);
+    for (const step of jqSteps) {
+      assert.equal(step.if, "steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''");
+      assert.equal(step.with['jq-version'], '${{ env.CI_JQ_VERSION }}');
+    }
+    for (const step of steps.filter((step) => /actions\/ci-quality-(?:toolchain|adapter)@/.test(step.uses ?? ''))) {
+      assert.equal(step.if, "steps.change-scope.outputs['run-ci'] != 'false'");
+    }
+  }
 });
 
 // integration_id: quality-workflow-contract
 test('caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action', () => {
-  const caller = yaml.parse(read('workflows/quality/quality-gate.yml'));
-  const template = caller.jobs.summary.steps.find((step) => step.with?.['summary-json']).with['summary-json'];
+  const templates = [
+    ['workflows/quality/quality-gate.yml', 'summary', 'quality'],
+    ['workflows/quality/quality-gate-platforms.yml', 'platform-summary', 'platforms'],
+  ].map(([file, job, source]) => ({ source, template: yaml.parse(read(file)).jobs[job].steps.find((step) => step.with?.['summary-json']).with['summary-json'] }));
   mkdirSync(path.join(root, 'tmp'), { recursive: true });
   const directory = mkdtempSync(path.join(root, 'tmp/reusable-quality-summary-'));
   try {
-    for (const result of ['success', 'failure', 'cancelled', 'skipped', '', 'unknown']) {
-      const payload = template.replaceAll('${{ needs.quality.result }}', result).replaceAll('${{ env.WORKFLOW_RUN_URL }}', 'https://github.com/example/project/actions/runs/1');
+    for (const { source, template } of templates) for (const result of ['success', 'failure', 'cancelled', 'skipped', '', 'unknown']) {
+      const payload = template.replaceAll('${{ needs.' + source + '.result }}', result).replaceAll('${{ env.WORKFLOW_RUN_URL }}', 'https://github.com/example/project/actions/runs/1');
       const run = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
         cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
           'INPUT_SUMMARY-JSON': payload, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'),
@@ -57,7 +74,7 @@ test('canonical quality bootstrap scripts preserve standard custom and fork boun
   const platforms = ['.ci-base/.ci/platform-manifest.yml', '.ci-base/.ci/quality-platforms.yml'];
   for (const [file, job, assets] of [
     ['.github/workflows/ci-quality.yml', 'trusted', []],
-    ['workflows/quality/quality-gate-platforms.yml', 'resolve-platforms', platforms],
+    ['.github/workflows/ci-quality-platforms.yml', 'resolve-platforms', platforms],
   ]) {
     const script = yaml.parse(read(file)).jobs[job].steps.find((step) => step.id === 'trusted-assets').run;
     const cases = [
@@ -179,11 +196,108 @@ test('quality workflow declares trusted execution and aggregate summary', () => 
   const summary = jobBlock(workflow, 'summary');
   assertNeeds(summary, ['trusted', 'untrusted-pr']);
   includesAll(summary, [/if: always\(\)/, /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-summary@/]);
+  const main = yaml.parse(workflow).jobs;
+  const platforms = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs;
+  const baseCheckout = (job) => job.steps.find((step) => step.name === 'Checkout trusted CI assets');
+  const resolver = main.trusted.steps.find((step) => step.id === 'trusted-assets');
+  const standardBundles = JSON.parse(read('runtime/adapter/standard-quality-bundles.generated.ts')
+    .match(/^export const STANDARD_QUALITY_BUNDLES = (\[[\s\S]*\]) as const;$/m)[1]);
+  // Evaluate only the lowercase string comparisons and boolean operators exercised by these fixtures.
+  const selected = (step, id, descriptor = '', runCi = 'true', root = '.ci-base') => runInNewContext(
+    step.if.replaceAll('steps.change-scope', "steps['change-scope']").replaceAll('needs.resolve-platforms', "needs['resolve-platforms']"),
+    { env: { CI_STANDARD_BUNDLE_ID: id, CI_ADAPTER_DESCRIPTOR: descriptor },
+      steps: { 'change-scope': { outputs: { 'run-ci': runCi } } },
+      needs: { 'resolve-platforms': { outputs: { trusted_root: root } } } },
+  );
+  for (const [id, descriptor, required] of [
+    ['rust-cargo-quality', '', false], ['python-uv-quality', '', false],
+    ['typescript-npm-quality', '', true], ['', '.ci/adapters/custom.yml', true],
+    ['rust-cargo-quality', '.ci/adapters/custom.yml', true], ['unknown', '', true],
+  ]) {
+    assert.equal(selected(baseCheckout(main.trusted), id, descriptor), required, `${id}: trusted checkout`);
+    assert.equal(selected(resolver, id, descriptor), required, `${id}: trusted resolver`);
+    assert.equal(selected(baseCheckout(main['untrusted-pr']), id, descriptor), descriptor !== '', `${id}: fork checkout`);
+    assert.equal(selected(baseCheckout(platforms.platform), id, descriptor), required, `${id}: platform checkout`);
+    assert.equal(selected(baseCheckout(platforms.platform), id, descriptor, 'true', '.'), false, `${id}: platform bootstrap`);
+    assert.equal(selected(baseCheckout(main.trusted), id, descriptor, 'false'), false, `${id}: docs-only checkout`);
+    assert.equal(selected(resolver, id, descriptor, 'false'), false, `${id}: docs-only resolver`);
+    assert.equal(selected(baseCheckout(main['untrusted-pr']), id, descriptor, 'false'), false, `${id}: docs-only fork`);
+    if (!required) {
+      const bundle = standardBundles.find((entry) => entry.id === id);
+      assert.deepEqual(yaml.parse(bundle.descriptor).projectSettings.requiredScripts, [], `${id}: skipped trusted root must remain unused`);
+    }
+  }
+  assert.equal(baseCheckout(platforms['resolve-platforms']).if, undefined, 'manifest and selection resolution still require base assets');
+});
+
+// integration_id: quality-workflow-contract
+test('platform caller passes explicit inputs and retains the summary identity', () => {
+  const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
+  const callee = yaml.parse(read('.github/workflows/ci-quality-platforms.yml'));
+  assert.deepEqual(Object.keys(caller.jobs), ['platforms', 'platform-summary']);
+  assert.equal(caller.env, undefined);
+  assert.equal(caller.jobs.platforms.steps, undefined);
+  assert.equal(caller.jobs.platforms.secrets, undefined);
+  assert.deepEqual(caller.jobs.platforms.permissions, { contents: 'read' });
+  assert.equal(caller.jobs.platforms.uses, 'a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@<quality-platforms-workflow-sha>');
+  assert.deepEqual(Object.keys(caller.jobs.platforms.with).sort(), Object.keys(callee.on.workflow_call.inputs).sort());
+  assert.deepEqual(Object.keys(callee.on), ['workflow_call']);
+  assert.equal(callee.on.workflow_call.secrets, undefined);
+  assert.equal(callee.concurrency, undefined);
+  assert.equal(caller.jobs['platform-summary'].name, 'quality-gate-platforms / summary');
+  assert.notEqual(callee.jobs['platform-summary'].name, caller.jobs['platform-summary'].name);
+  assert.equal(caller.jobs['platform-summary'].needs, 'platforms');
+  assert.equal(caller.jobs['platform-summary'].if, 'always()');
+  assert.deepEqual(Object.keys(callee.jobs), ['resolve-platforms', 'platform', 'platform-summary']);
+});
+
+// integration_id: quality-workflow-contract
+test('platform summary scripts preserve docs-only failed cancelled and missing outcomes', () => {
+  const summary = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs['platform-summary'];
+  const enforce = summary.steps.find((step) => step.name === 'Enforce required platform results').run;
+  const build = summary.steps.find((step) => step.id === 'platform-summary').run;
+  const cases = [
+    ['success', 'success', 'true', 'linux-x64', 'success', true],
+    ['success', 'success', 'true', 'linux-x64,macos-arm64', 'success', true],
+    ['success', 'failure', 'true', 'linux-x64,macos-arm64', 'failed', false],
+    ['success', 'skipped', 'false', 'linux-x64,macos-arm64', 'success', true],
+    ['failure', 'skipped', 'false', 'linux-x64', 'failed', false],
+    ['success', 'failure', 'true', 'linux-x64', 'failed', false],
+    ['success', 'cancelled', 'true', 'linux-x64', '未実施', false],
+    ['success', 'skipped', 'true', 'linux-x64', '未実施', false],
+    ['success', '', 'true', 'linux-x64', '判定不能', false],
+    ['', '', '', '', '判定不能', false],
+    ['success', 'skipped', 'false', '', 'failed', false],
+  ];
+  mkdirSync(path.join(root, 'tmp'), { recursive: true });
+  const directory = mkdtempSync(path.join(root, 'tmp/platform-summary-'));
+  try {
+    for (const [resolve, platform, runCi, expected, status, accepted] of cases) {
+      const output = path.join(directory, 'output');
+      writeFileSync(output, '');
+      const env = { ...process.env, RESOLVE_RESULT: resolve, PLATFORM_RESULT: platform,
+        RUN_CI: runCi, EXPECTED_PLATFORMS: expected, WORKFLOW_RUN_URL: 'https://github.com/example/project/actions/runs/1', GITHUB_OUTPUT: output };
+      const enforcement = spawnSync('bash', ['-c', enforce], { cwd: directory, env, encoding: 'utf8' });
+      const result = spawnSync('bash', ['-c', build], { cwd: directory, env, encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stderr);
+      const payload = readFileSync(output, 'utf8').trim().slice('summary='.length);
+      const records = JSON.parse(payload).jobs;
+      assert.equal(records[0].result, status);
+      assert.equal(records[0].evidence, env.WORKFLOW_RUN_URL);
+      if (accepted && runCi === 'true') assert.equal(records[0].reason, `all selected platforms succeeded: ${expected}`);
+      if (accepted && runCi === 'false') assert.deepEqual(records.slice(1).map((entry) => [entry.unit, entry.result]), [['platform:linux-x64', '対象外'], ['platform:macos-arm64', '対象外']]);
+      const action = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
+        cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', 'INPUT_SUMMARY-JSON': payload,
+          'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'), 'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md') },
+      });
+      assert.equal(enforcement.status === 0 && action.status === 0, accepted, JSON.stringify({ resolve, platform, runCi, expected }));
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 // integration_id: quality-workflow-contract
 test('optional platform quality workflow preserves trusted assets matrix execution and summary', () => {
-  const workflow = read('workflows/quality/quality-gate-platforms.yml');
+  const workflow = read('.github/workflows/ci-quality-platforms.yml');
   const resolve = jobBlock(workflow, 'resolve-platforms');
   includesAll(resolve, [
     /id: trusted-assets/,
@@ -279,6 +393,7 @@ test('release request workflow binds annotated tags without release publication 
   assert.match(workflow, /push:\n    tags:/);
   includesAll(jobBlock(workflow, 'request'), [/permissions:\n      actions: write\n      contents: read/, /ci-annotated-tag-resolver@/, /ci-release-request-handoff@/]);
   assert.doesNotMatch(workflow, /contents: write/);
+  assert.doesNotMatch(workflow, /CI_(?:GH|JQ|SHA256SUM)_VERSION|ci-(?:gh-provisioner|jq-provisioner|github-toolchain-verifier)@/);
   includesAll(jobBlock(workflow, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
 });
 
@@ -288,11 +403,56 @@ test('release request workflow reports handoff failure in its summary', () => {
   includesAll(summary, [/if: always\(\)/, /ci-quality-summary@/, /request job result:/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]);
 });
 
+const assertPublicationControl = (text, kind) => {
+  const workflow = yaml.parse(text);
+  const entryJob = kind === 'release' ? 'authority' : 'publish';
+  const entry = workflow.jobs[entryJob].steps[0];
+  assert.equal(entry.id, 'publication-entry');
+  assert.deepEqual(entry.env, {
+    REPOSITORY: '${{ github.repository }}',
+    DEFAULT_BRANCH: '${{ github.event.repository.default_branch }}',
+    CALLER_EVENT: '${{ github.event_name }}',
+    CALLER_WORKFLOW_REF: '${{ github.workflow_ref }}',
+    CONTROL_SHA: '${{ github.workflow_sha }}',
+  });
+  assert.doesNotMatch(text, /ci-workflow-identity@|job\.workflow_|steps\.workflow-identity|control_sha:/);
+  const valid = {
+    REPOSITORY: 'example/consumer', DEFAULT_BRANCH: 'main', CALLER_EVENT: 'workflow_run',
+    CALLER_WORKFLOW_REF: `example/consumer/.github/workflows/${kind}-publication-caller.yml@refs/heads/main`,
+    CONTROL_SHA: 'a'.repeat(40),
+  };
+  const run = (env) => spawnSync('bash', ['-c', entry.run], { encoding: 'utf8', env: { PATH: process.env.PATH, ...env } });
+  assert.equal(run(valid).status, 0);
+  for (const [field, values] of Object.entries({
+    REPOSITORY: ['', 'other/consumer'], DEFAULT_BRANCH: ['', 'feature'],
+    CALLER_EVENT: ['workflow_dispatch', 'push', 'pull_request'],
+    CALLER_WORKFLOW_REF: ['', `other/consumer/.github/workflows/${kind}-publication-caller.yml@refs/heads/main`, `example/consumer/.github/workflows/other.yml@refs/heads/main`, `example/consumer/.github/workflows/${kind}-publication-caller.yml@refs/tags/v1`, '$(exit 0)'],
+    CONTROL_SHA: ['', 'main', 'a'.repeat(39), 'A'.repeat(40), '$(exit 0)'],
+  })) for (const value of values) assert.notEqual(run({ ...valid, [field]: value }).status, 0, `${kind}: ${field}=${value}`);
+  const controlJobs = kind === 'release' ? ['authority', 'quality', 'assemble', 'publish'] : ['publish'];
+  for (const jobName of controlJobs) {
+    const job = workflow.jobs[jobName];
+    if (jobName !== entryJob) {
+      assert.ok([job.needs].flat().includes('authority'));
+      if (job.if !== undefined) assert.match(job.if, /needs\.authority\.result == 'success'/);
+      assert.equal(job.steps.some(step => step.id === 'publication-entry'), false);
+    }
+    const index = job.steps.findIndex(step => step.uses?.startsWith('actions/checkout@') && step.with?.ref === '${{ github.workflow_sha }}');
+    assert.ok(index >= 0);
+    assert.equal(job.steps[index].with.repository, '${{ github.repository }}');
+    const verification = job.steps[index + 1];
+    assert.equal(verification.name, 'Verify trusted control checkout');
+    assert.equal(verification.env.CONTROL_SHA, '${{ github.workflow_sha }}');
+    const git = jobName === 'quality' ? 'git -C .ci-base' : 'git';
+    assert.equal(verification.run, `test "$(${git} rev-parse HEAD)" = "$CONTROL_SHA"`);
+  }
+};
+
 // integration_id: release-publication-workflow-contract
 test('release publication workflows separate request validation from privileged publication', () => {
   const request = read('workflows/release/release-publication-request.yml');
   const caller = read('workflows/release/release-publication-caller.yml');
-  const publication = read('workflows/release/release-publication.yml');
+  const publication = read('.github/workflows/ci-release-publication.yml');
   assert.match(request, /workflow_dispatch:/);
   includesAll(jobBlock(request, 'request'), [/contents: read/, /operation: create-request/]);
   includesAll(jobBlock(request, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
@@ -300,12 +460,22 @@ test('release publication workflows separate request validation from privileged 
   includesAll(jobBlock(caller, 'validate-request'), [/actions: read/, /contents: read/, /operation: verify-publication-request/]);
   const callerPublish = jobBlock(caller, 'publish');
   assertNeeds(callerPublish, ['validate-request']);
-  includesAll(callerPublish, [/contents: write/, /uses: \.\/\.github\/workflows\/release-publication\.yml/]);
+  includesAll(callerPublish, [/contents: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
   const callerSummary = jobBlock(caller, 'summary');
   assertNeeds(callerSummary, ['validate-request', 'publish']);
   includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
   assert.match(publication, /workflow_call:/);
-  includesAll(jobBlock(publication, 'authority'), [/Verify workflow identity/, /Verify publication request workflow run/]);
+  assertPublicationControl(publication, 'release');
+  const qualitySteps = yaml.parse(publication).jobs.quality.steps;
+  const qualityAdapter = qualitySteps.find(step => step.id === 'quality-adapter');
+  assert.equal(qualityAdapter.with['bundle-path'], "${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}");
+  assert.equal(qualityAdapter.with['require-trusted-project-scripts'], 'true');
+  assert.equal(qualityAdapter.with['trusted-project-root'], '.ci-base');
+  const qualityCheckout = qualitySteps.find(step => step.with?.path === '.ci-base');
+  const qualityVerification = qualitySteps.find(step => step.name === 'Verify trusted control checkout');
+  assert.equal(qualityCheckout.if, "env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''");
+  assert.equal(qualityVerification.if, qualityCheckout.if);
+  includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify publication request workflow run/]);
   const buildJob = jobBlock(publication, 'build');
   assertNeeds(buildJob, ['authority', 'source-gate', 'quality']);
   includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
@@ -350,7 +520,7 @@ test('release publication workflows separate request validation from privileged 
   const publicationJob = jobBlock(publication, 'publish');
   assertNeeds(publicationJob, ['authority', 'assemble']);
   assert.match(publicationJob, /contents: write/);
-  assert.ok(stepIndexContaining(publicationJob, '- name: Verify workflow identity') < stepIndexContaining(publicationJob, '- name: Validate release handoff integrity'));
+  assert.ok(stepIndexContaining(publicationJob, '- name: Verify trusted control checkout') < stepIndexContaining(publicationJob, '- name: Validate release handoff integrity'));
   assert.ok(stepIndexContaining(publicationJob, '- name: Validate release handoff integrity') < stepIndexContaining(publicationJob, '- name: Verify approval is still valid'));
   assert.ok(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish'));
   assert.ok(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence'));
@@ -373,8 +543,8 @@ test('release publication workflows preserve failed and unknown outcomes', () =>
 test('package workflows separate preparation request validation and publication', () => {
   const request = read('workflows/package/package-publication-request.yml');
   const caller = read('workflows/package/package-publication-caller.yml');
-  const preparation = read('workflows/package/package-preparation.yml');
-  const publication = read('workflows/package/package-publication.yml');
+  const preparation = read('.github/workflows/ci-package-preparation.yml');
+  const publication = read('.github/workflows/ci-package-publication.yml');
   assert.match(request, /workflow_dispatch:/);
   includesAll(jobBlock(request, 'request'), [/permissions: \{\}/, /operation: create/]);
   includesAll(jobBlock(request, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
@@ -382,24 +552,33 @@ test('package workflows separate preparation request validation and publication'
   includesAll(jobBlock(caller, 'validate-request'), [/actions: read/, /operation: verify/]);
   const prepareJob = jobBlock(caller, 'prepare');
   assertNeeds(prepareJob, ['validate-request']);
-  assert.match(prepareJob, /uses: \.\/\.github\/workflows\/package-preparation\.yml/);
+  assert.match(prepareJob, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-preparation\.yml@<package-preparation-workflow-sha>/);
   const publishJob = jobBlock(caller, 'publish');
   assertNeeds(publishJob, ['validate-request', 'prepare']);
-  includesAll(publishJob, [/packages: write/, /uses: \.\/\.github\/workflows\/package-publication\.yml/]);
+  includesAll(publishJob, [/packages: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-publication\.yml@<package-publication-workflow-sha>/]);
   const callerSummary = jobBlock(caller, 'summary');
   assertNeeds(callerSummary, ['validate-request', 'prepare', 'publish']);
   includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
   assert.match(preparation, /workflow_call:/);
+  const preparationContract = yaml.parse(preparation);
+  assert.deepEqual(Object.keys(preparationContract.on.workflow_call.inputs).sort(), ['language_profile', 'source_sha', 'target_identity', 'toolchain', 'version']);
+  assert.ok(Object.values(preparationContract.on.workflow_call.inputs).every((input) => input.required === true && input.type === 'string'));
+  assert.deepEqual(Object.keys(preparationContract.on.workflow_call.outputs).sort(), ['artifact_id', 'handoff_run_id', 'publish_version']);
+  assert.deepEqual(preparationContract.permissions, {});
+  assert.equal(preparationContract.on.workflow_call.secrets, undefined);
+  assert.equal(preparationContract.concurrency, undefined);
+  assert.deepEqual(preparationContract.jobs.build.permissions, { contents: 'read' });
+
   assert.match(jobBlock(preparation, 'build'), /needs: version-plan/);
   assert.match(publication, /workflow_call:/);
+  assertPublicationControl(publication, 'package');
   const publicationJob = jobBlock(publication, 'publish');
   includesAll(publicationJob, [
     /packages: write/,
-    /^      - name: Verify workflow identity$/m,
-    /^        uses: a3-suite\/a3-ci-github\/actions\/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2$/m,
-    /expected-called-workflow-path: .github\/workflows\/package-publication\.yml/,
+    /^      - name: Verify publication entry$/m,
+    /CALLER_WORKFLOW_REF: \$\{\{ github\.workflow_ref \}\}/,
   ]);
-  assert.ok(stepIndexContaining(publicationJob, '- name: Verify workflow identity') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity'));
+  assert.ok(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity'));
   assert.ok(stepIndexContaining(publicationJob, '- name: Validate package handoff integrity') < stepIndexContaining(publicationJob, '- name: Publish verified package handoff'));
   assert.doesNotMatch(publicationJob.split(/^    steps:$/m)[0], /PACKAGE_REGISTRY_TOKEN|CI_GITHUB_TOKEN/);
   includesAll(stepContaining(publicationJob, '- name: Publish verified package handoff'), [
@@ -438,7 +617,7 @@ test('repository quality workflow keeps the required hosted check behind Linux a
   includesAll(windows, [
     /^    name: Rust release contract \/ Windows$/m,
     /^    runs-on: windows-2025$/m,
-    /--test-name-pattern="PowerShell\|Windows"/,
+    /--testNamePattern="PowerShell\|Windows"/,
   ]);
   assert.deepEqual(new Set(summaryNeeds(aggregate)), new Set(['contract-linux', 'rust-windows']));
   includesAll(aggregate, [
@@ -516,15 +695,16 @@ test('repository gate Action steps match their action.yml inputs', () => {
 test('canonical workflow summaries cover exactly their needs jobs', () => {
   const workflows = [
     ['workflows/quality/quality-gate.yml', 'summary'],
+    ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
     ['.github/workflows/ci-quality.yml', 'summary'],
     ['workflows/release/release-request-tag.yml', 'summary'],
     ['workflows/release/release-publication-request.yml', 'summary'],
     ['workflows/release/release-publication-caller.yml', 'summary'],
-    ['workflows/release/release-publication.yml', 'summary'],
+    ['.github/workflows/ci-release-publication.yml', 'summary'],
     ['workflows/package/package-publication-request.yml', 'summary'],
     ['workflows/package/package-publication-caller.yml', 'summary'],
-    ['workflows/package/package-preparation.yml', 'summary'],
-    ['workflows/package/package-publication.yml', 'summary'],
+    ['.github/workflows/ci-package-preparation.yml', 'summary'],
+    ['.github/workflows/ci-package-publication.yml', 'summary'],
   ];
   for (const [relative, summaryId] of workflows) {
     const summary = jobBlock(read(relative), summaryId);
@@ -542,14 +722,15 @@ test('managed workflows expose correlated secret-safe failure evidence without h
     ['workflows/quality/quality-gate.yml', 'summary'],
     ['.github/workflows/ci-quality.yml', 'summary'],
     ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
+    ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
     ['workflows/release/release-request-tag.yml', 'summary'],
     ['workflows/release/release-publication-request.yml', 'summary'],
     ['workflows/release/release-publication-caller.yml', 'summary'],
-    ['workflows/release/release-publication.yml', 'summary'],
+    ['.github/workflows/ci-release-publication.yml', 'summary'],
     ['workflows/package/package-publication-request.yml', 'summary'],
     ['workflows/package/package-publication-caller.yml', 'summary'],
-    ['workflows/package/package-preparation.yml', 'summary'],
-    ['workflows/package/package-publication.yml', 'summary'],
+    ['.github/workflows/ci-package-preparation.yml', 'summary'],
+    ['.github/workflows/ci-package-publication.yml', 'summary'],
   ];
   for (const [relative, summaryId] of workflows) {
     const summary = jobBlock(read(relative), summaryId);
@@ -562,7 +743,7 @@ test('managed workflows expose correlated secret-safe failure evidence without h
     ]);
     assert.doesNotMatch(summary, /secrets(?:\.|\s*\[)/);
 
-    if (summaryId === 'platform-summary') {
+    if (summaryId === 'platform-summary' && relative === '.github/workflows/ci-quality-platforms.yml') {
       includesAll(summary, [
         /^      RESOLVE_RESULT: \$\{\{ needs\.resolve-platforms\.result \}\}$/m,
         /^      PLATFORM_RESULT: \$\{\{ needs\.platform\.result \}\}$/m,
@@ -586,5 +767,25 @@ test('managed workflows expose correlated secret-safe failure evidence without h
       assert.match(record, /"evidence":"\$\{\{ env\.WORKFLOW_RUN_URL \}\}"/);
       assert.match(record, new RegExp(`"reason":"[^"]*needs\\.${escapedJob}\\.result`));
     }
+  }
+});
+
+// integration_id: quality-workflow-contract
+test('quality toolchain callers bind four inputs and preserve execution gates', () => {
+  const pairs = [['.github/workflows/ci-quality.yml', 'trusted'], ['.github/workflows/ci-quality.yml', 'untrusted-pr'], ['.github/workflows/ci-quality-platforms.yml', 'platform'], ['.github/workflows/ci-release-publication.yml', 'quality']];
+  const contract = yaml.parse(read('actions/ci-quality-toolchain/action.yml'));
+  for (const [file, jobId] of pairs) {
+    const workflow = yaml.parse(read(file));
+    const job = workflow.jobs[jobId];
+    const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
+    assert.equal(call.length, 1, file);
+    assert.equal(call[0].uses, 'a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>');
+    assert.deepEqual(Object.keys(call[0].with).sort(), Object.keys(contract.inputs).sort());
+    assert.deepEqual(call[0].with, { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}' });
+    assert.equal(call[0].if, file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);
+    assert.equal(call[0]['continue-on-error'], undefined);
+    assert.ok(job.steps.some((step) => step.uses?.includes('/actions/ci-quality-adapter@')));
+    assert.ok(job.steps.every((step) => step.name !== 'Report project quality adapter result' && !step.env?.CI_QUALITY_RESULT_PATH));
+    assert.ok(!job.steps.some((step) => step.run?.includes('rustup toolchain install') || step.uses?.startsWith('actions/setup-node@') || step.uses?.startsWith('actions/setup-python@') || step.uses?.startsWith('astral-sh/setup-uv@')));
   }
 });

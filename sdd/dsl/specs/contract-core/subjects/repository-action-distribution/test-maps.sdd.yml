@@ -35,6 +35,10 @@ test_maps:
         symbol: removes rows for deleted actions
         check_refs:
           - check-action-catalog-projected
+      - path: tests/action-index-gate.test.mjs
+        symbol: catalog projection preserves section boundaries and is idempotent with generated markers
+        check_refs:
+          - check-action-catalog-projected
   - verification_id: verification.repository-action-distribution.integrity
     case_id: maintained-action-contract-coverage
     tests:

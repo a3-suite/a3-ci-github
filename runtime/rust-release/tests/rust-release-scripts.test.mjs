@@ -13,7 +13,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -37,6 +37,32 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
 });
 
 const sha256 = (content) => createHash('sha256').update(content.replaceAll('\r', '')).digest('hex');
+
+// contract_id: contract.ci-rust-release-build.processing
+// integration_id: rust-release-build-script
+test.each(['src/verify-platform-manifest.mjs', 'dist/index.mjs'])('platform verifier %s rejects an unbound selection', (entrypoint) => withFixture((fixture) => {
+  // Arrange
+  const manifest = path.join(fixture, 'platforms.yml');
+  writeFileSync(manifest, 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n');
+  const executable = path.join(scriptRoot, entrypoint);
+  // Catch the CLI error before Node prints a minified bundle as its code frame.
+  const invocation = ['--input-type=module', '--eval', "import { pathToFileURL } from 'node:url'; try { await import(pathToFileURL(process.argv[1]).href); } catch (error) { console.error(error.message); process.exitCode = 1; }", executable];
+  // Act
+  const accepted = run(process.execPath, [...invocation, manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']);
+  const missingId = run(process.execPath, [...invocation, manifest, 'unknown', 'x86_64-unknown-linux-gnu']);
+  const wrongTarget = run(process.execPath, [...invocation, manifest, 'linux-x64', 'wrong-target']);
+  // Assert
+  assert.equal(accepted.status, 0, accepted.stderr);
+  assert.notEqual(missingId.status, 0);
+  assert.match(missingId.stderr, /selected platform id is not present/);
+  assert.notEqual(wrongTarget.status, 0);
+  assert.match(wrongTarget.stderr, /selected platform target does not match/);
+  for (const args of [[], [manifest], [manifest, 'linux-x64']]) {
+    const incomplete = run(process.execPath, [...invocation, ...args]);
+    assert.notEqual(incomplete.status, 0);
+    assert.match(incomplete.stderr, /usage:/);
+  }
+}));
 
 const initializeGitFixture = (fixture) => {
   writeFileSync(path.join(fixture, 'source.txt'), 'fixture source\n');

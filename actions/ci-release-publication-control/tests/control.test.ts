@@ -3,8 +3,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
-import { runControl } from '../src/control.js';
+import { test } from 'vitest';
+import { runControl } from '../../../runtime/release-publication/control.js';
 
 const writeJsonWithSidecar = (directory: string, filename: string, value: unknown): void => {
   fs.mkdirSync(directory, { recursive: true });

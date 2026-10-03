@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 // integration_id: ci-release-authority-action-contract
 test('authority contract uses bundled node24 and explicit read-only inputs', () => {
   const contract = fs.readFileSync(path.resolve(__dirname, '../action.yml'), 'utf8');

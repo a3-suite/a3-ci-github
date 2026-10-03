@@ -6,13 +6,21 @@ test_maps:
     case_id: annotated-tag-resolution
     tests:
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: bundled entrypoint resolves an annotated tag to its commit
+        symbol: "source entrypoint > entrypoint resolves an annotated tag to its commit"
+        check_refs:
+          - check-tag-resolution-output
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint resolves an annotated tag to its commit"
         check_refs:
           - check-tag-resolution-output
   - verification_id: verification.ci-annotated-tag-resolver.outputs
     case_id: missing-token-rejected
     tests:
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: bundled entrypoint fails when the token is missing
+        symbol: "source entrypoint > entrypoint fails when the token is missing"
+        check_refs:
+          - check-tag-resolution-failure
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint fails when the token is missing"
         check_refs:
           - check-tag-resolution-failure

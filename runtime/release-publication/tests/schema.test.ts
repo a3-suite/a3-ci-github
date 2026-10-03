@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { evidenceSchema, validateEvidence } from '../schema';
 import type { ReleaseIdentityType, AssetType, AssemblyType, ObservationType, ReceiptType, ReadbackType } from '../schema';
 import { record } from '../io';

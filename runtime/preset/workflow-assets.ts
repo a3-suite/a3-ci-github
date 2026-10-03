@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { map, normalizeAsset, parseYaml } from './ci-preset-assets.ts';
-import type { ValueMap } from './ci-preset-assets.ts';
+import { map, normalizeAsset } from './preset-model.ts';
+import { parseYaml } from './preset-registry.ts';
+import type { ValueMap } from './preset-model.ts';
 
 const WORKFLOW_ASSET = /(?:\.ci-base\/)?(\.ci\/(?:scripts|provider|trusted|runtime)\/[A-Za-z0-9._/-]+)/g;
 

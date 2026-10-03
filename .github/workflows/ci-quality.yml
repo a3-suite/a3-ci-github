@@ -35,9 +35,10 @@ on:
         required: false
         default: ""
       jq-version:
-        description: CI_JQ_VERSION
+        description: Optional exact jq version; empty skips jq preparation
         type: string
-        required: true
+        required: false
+        default: ""
       standard-bundle-id:
         description: CI_STANDARD_BUNDLE_ID
         type: string
@@ -101,7 +102,10 @@ jobs:
           before-sha: ${{ github.event.before || '' }}
           docs-only-patterns: ${{ env.CI_DOCS_ONLY_PATTERNS }}
       - name: Checkout trusted CI assets
-        if: steps.change-scope.outputs['run-ci'] != 'false'
+        if: >-
+          steps.change-scope.outputs['run-ci'] != 'false' &&
+          (env.CI_ADAPTER_DESCRIPTOR != '' ||
+          (env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' && env.CI_STANDARD_BUNDLE_ID != 'python-uv-quality'))
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
@@ -113,7 +117,10 @@ jobs:
             package-lock.json
       - name: Resolve trusted assets root
         id: trusted-assets
-        if: steps.change-scope.outputs['run-ci'] != 'false'
+        if: >-
+          steps.change-scope.outputs['run-ci'] != 'false' &&
+          (env.CI_ADAPTER_DESCRIPTOR != '' ||
+          (env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' && env.CI_STANDARD_BUNDLE_ID != 'python-uv-quality'))
         shell: bash
         env:
           CI_SAME_REPO: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
@@ -140,41 +147,21 @@ jobs:
           echo "root=$root" >> "$GITHUB_OUTPUT"
           echo "source=$source" >> "$GITHUB_OUTPUT"
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-      - name: Set up TypeScript toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'typescript'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-          cache: npm
-      - name: Set up Python toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'python'
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up uv
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'python'
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-        with:
-          version: ${{ env.CI_UV_VERSION }}
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up Rust toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: |
-          set -euo pipefail
-          rustup toolchain install "$CI_TOOLCHAIN_VERSION" --profile minimal --component rustfmt --component clippy
-          echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
-      - name: Set up cargo-audit
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
-      - name: Provision fixed jq
+      - name: Set up quality toolchain
         if: steps.change-scope.outputs['run-ci'] != 'false'
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          uv-version: ${{ env.CI_UV_VERSION }}
+          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+      - name: Provision fixed jq
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
         uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed GitHub tools
-        if: steps.change-scope.outputs['run-ci'] != 'false'
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
         uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@312c534de67720de060689d78ada17da9c84c4e2
         with:
           mode: jq
@@ -191,15 +178,6 @@ jobs:
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
           require-trusted-project-scripts: 'true'
           trusted-project-root: ${{ steps.trusted-assets.outputs.root }}
-      - name: Report project quality adapter result
-        if: ${{ always() && steps.change-scope.outputs['run-ci'] != 'false' }}
-        shell: bash
-        env:
-          CI_QUALITY_RESULT_PATH: ${{ steps.quality-adapter.outputs['result-path'] }}
-        run: |
-          if [[ -n "${CI_QUALITY_RESULT_PATH:-}" && -f "$CI_QUALITY_RESULT_PATH" ]]; then
-            cat -- "$CI_QUALITY_RESULT_PATH"
-          fi
 
   untrusted-pr:
     name: quality-gate / untrusted-pr
@@ -233,7 +211,7 @@ jobs:
           before-sha: ${{ github.event.before || '' }}
           docs-only-patterns: ${{ env.CI_DOCS_ONLY_PATTERNS }}
       - name: Checkout trusted CI assets
-        if: steps.change-scope.outputs['run-ci'] != 'false'
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_ADAPTER_DESCRIPTOR != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.base.sha }}
@@ -242,41 +220,21 @@ jobs:
             .ci/adapters
             package.json
             package-lock.json
-      - name: Set up TypeScript toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'typescript'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-          cache: npm
-      - name: Set up Python toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'python'
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
-        with:
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up uv
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'python'
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-        with:
-          version: ${{ env.CI_UV_VERSION }}
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up Rust toolchain
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: |
-          set -euo pipefail
-          rustup toolchain install "$CI_TOOLCHAIN_VERSION" --profile minimal --component rustfmt --component clippy
-          echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
-      - name: Set up cargo-audit
-        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
-      - name: Provision fixed jq
+      - name: Set up quality toolchain
         if: steps.change-scope.outputs['run-ci'] != 'false'
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          uv-version: ${{ env.CI_UV_VERSION }}
+          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+      - name: Provision fixed jq
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
         uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed GitHub tools
-        if: steps.change-scope.outputs['run-ci'] != 'false'
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
         uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@312c534de67720de060689d78ada17da9c84c4e2
         with:
           mode: jq
@@ -291,15 +249,6 @@ jobs:
           source-root: .
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Report project quality adapter result
-        if: ${{ always() && steps.change-scope.outputs['run-ci'] != 'false' }}
-        shell: bash
-        env:
-          CI_QUALITY_RESULT_PATH: ${{ steps.quality-adapter.outputs['result-path'] }}
-        run: |
-          if [[ -n "${CI_QUALITY_RESULT_PATH:-}" && -f "$CI_QUALITY_RESULT_PATH" ]]; then
-            cat -- "$CI_QUALITY_RESULT_PATH"
-          fi
 
   summary:
     needs: [trusted, untrusted-pr]
@@ -309,13 +258,8 @@ jobs:
       contents: read
     env:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      TRUSTED_RESULT: ${{ needs.trusted.result }}
-      UNTRUSTED_RESULT: ${{ needs.untrusted-pr.result }}
       SELECTED_RUN_CI: ${{ needs.trusted.result == 'skipped' && needs.untrusted-pr.outputs.run-ci || needs.trusted.outputs.run-ci }}
     steps:
-      - name: Prepare summary evidence directory
-        shell: bash
-        run: mkdir -p .ci
       - name: Write workflow summary
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
         with:

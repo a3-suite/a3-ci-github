@@ -4,26 +4,32 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
 // integration_id: ci-annotated-tag-resolver-entrypoint-regression
-test('bundled entrypoint fails when the token is missing', () => {
+test('entrypoint fails when the token is missing', () => {
   // Arrange
   const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ci-tag-resolver-')), 'output');
   fs.writeFileSync(output, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, 'INPUT_REPOSITORY': 'owner/repo', 'INPUT_TAG': 'v1.2.3', GITHUB_API_URL: 'https://api.example.test' } as Record<string, string>;
+  delete env['INPUT_GITHUB-TOKEN'];
   // Act
-  const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
   assert.notEqual(result.status, 0);
+  assert.equal(fs.readFileSync(output, 'utf8'), '');
   fs.rmSync(path.dirname(output), { recursive: true, force: true });
 });
 
 // contract_id: contract.ci-annotated-tag-resolver.outputs
 // integration_id: ci-annotated-tag-resolver-contract-entrypoint
-test('bundled entrypoint resolves an annotated tag to its commit', async () => {
+test('entrypoint resolves an annotated tag to its commit', async () => {
   // Arrange
   const server = http.createServer((request, response) => {
     response.setHeader('content-type', 'application/json');
@@ -55,7 +61,7 @@ test('bundled entrypoint resolves an annotated tag to its commit', async () => {
   } as Record<string, string>;
   // Act
   const result = await new Promise<{ status: number | null; stderr: string }>((resolve, reject) => {
-    const child = spawn(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env });
+    const child = spawn(process.execPath, [...entrypointArgs], { cwd: root, env });
     let stderr = '';
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk: string) => { stderr += chunk; });
@@ -72,4 +78,6 @@ test('bundled entrypoint resolves an annotated tag to its commit', async () => {
   assert.match(contents, /source-sha/);
   assert.match(contents, /b{40}/);
   fs.rmSync(outputDirectory, { recursive: true, force: true });
+});
+
 });

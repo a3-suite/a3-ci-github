@@ -40,6 +40,23 @@
           "reason": "Local authority evidence uses actual components and fake GET-only provider responses; Hosted execution is separate."
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-authority",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-authority",
@@ -68,14 +85,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -102,6 +120,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "Publication crosses handoff files and provider operations; local evidence uses actual components with fake provider responses."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-publisher",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -132,14 +167,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -170,6 +206,23 @@
           "reason": "The contract crosses the fixed checkout, files and owner process; evidence is integration-source and integration-bundle."
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-supplemental-asset",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
@@ -189,7 +242,8 @@
               "tests/**",
               "node_modules/**",
               "dist/**"
-            ]
+            ],
+            "aggregateGroup": "release-publication-shared"
           }
         },
         {
@@ -202,7 +256,7 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
@@ -211,7 +265,8 @@
               "src/**",
               "tests/**",
               "node_modules/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -252,7 +307,25 @@
             ],
             "exclude": [
               "dist/**"
-            ]
+            ],
+            "aggregateGroup": "release-publication-shared"
+          }
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-assembly",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
           }
         },
         {
@@ -275,7 +348,8 @@
             ],
             "exclude": [
               "dist/**"
-            ]
+            ],
+            "aggregateGroup": "release-publication-shared"
           }
         },
         {
@@ -289,14 +363,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -327,6 +402,23 @@
           "reason": "Verification crosses evidence files and the read-only remote client boundary; contract evidence is integration-source and integration-bundle."
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-publication-verifier",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
@@ -355,14 +447,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -404,6 +497,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-annotated-tag-resolver",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-annotated-tag-resolver",
@@ -413,14 +523,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -447,6 +558,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source suite composes multiple change-scope functions; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-change-scope",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -477,14 +605,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -526,22 +655,20 @@
           }
         },
         {
-          "id": "integration-source",
+          "id": "integration-source-entrypoint",
           "level": "integration",
           "cwd": "actions/ci-config-snapshot",
           "tests": [
-            "tests/snapshot.test.ts"
+            "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "source",
             "include": [
-              "src/**/*.ts"
+              "src/index.ts"
             ],
-            "exclude": [
-              "dist/**"
-            ]
+            "exclude": []
           }
         },
         {
@@ -554,14 +681,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -646,6 +774,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-jq-provisioner",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-jq-provisioner",
@@ -655,14 +800,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -704,6 +850,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-gh-provisioner",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-gh-provisioner",
@@ -713,14 +876,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -747,6 +911,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source behavior validates filesystem-backed handoff assets; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-handoff-integrity",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -777,14 +958,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -826,6 +1008,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-platform-matrix",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-platform-matrix",
@@ -835,14 +1034,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -884,6 +1084,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-publish-version",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-publish-version",
@@ -893,14 +1110,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -942,6 +1160,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-quality-summary",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-quality-summary",
@@ -951,14 +1186,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -992,11 +1228,28 @@
             "enabled": true,
             "scope": "source",
             "include": [
-              "src/**/*.ts"
+              "../../runtime/release-publication/notes-binding.ts"
             ],
             "exclude": [
               "dist/**"
             ]
+          }
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-notes-binding",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
           }
         },
         {
@@ -1009,14 +1262,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1043,6 +1297,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source behavior resolves and copies filesystem-backed handoffs; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-notes-input-resolution",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -1073,14 +1344,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1107,6 +1379,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source behavior writes filesystem-backed handoff assets; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-request-handoff",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -1137,14 +1426,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1178,11 +1468,28 @@
             "enabled": true,
             "scope": "source",
             "include": [
-              "src/**/*.ts"
+              "../../runtime/release-publication/control.ts"
             ],
             "exclude": [
               "dist/**"
             ]
+          }
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-release-publication-control",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
           }
         },
         {
@@ -1197,7 +1504,7 @@
             "enabled": true,
             "scope": "source",
             "include": [
-              "src/**/*.ts"
+              "../../runtime/release-publication/control.ts"
             ],
             "exclude": [
               "dist/**"
@@ -1214,14 +1521,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1248,6 +1556,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source behavior depends on the filesystem; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-package-publication-request",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -1278,14 +1603,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1312,6 +1638,23 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The source behavior depends on the filesystem and child processes; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source",
@@ -1343,14 +1686,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1369,6 +1713,25 @@
           "level": "unit",
           "status": "excluded",
           "reason": "The implementation boundary is a shell adapter; no isolated unit test surface is declared."
+        },
+        {
+          "id": "integration-source",
+          "level": "integration",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/verify-platform-manifest.mjs",
+              "../platform/platform-manifest-core.mjs"
+            ],
+            "exclude": [
+              "dist/**"
+            ]
+          }
         },
         {
           "id": "integration-script",
@@ -1478,6 +1841,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-vitest-summary",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "unit-core",
           "level": "unit",
           "cwd": "runtime/vitest",
@@ -1499,14 +1879,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1561,6 +1942,23 @@
           }
         },
         {
+          "id": "integration-source-entrypoint",
+          "level": "integration",
+          "cwd": "actions/ci-workflow-identity",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "src/index.ts"
+            ],
+            "exclude": []
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-workflow-identity",
@@ -1570,14 +1968,15 @@
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "dist",
             "include": [
               "dist/**/*.js"
             ],
             "exclude": [
               "src/**"
-            ]
+            ],
+            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
           }
         },
         {
@@ -1639,14 +2038,16 @@
         {
           "id": "integration-contract",
           "level": "integration",
-          "cwd": ".",
+          "cwd": "runtime/preset",
           "tests": [
-            "tests/workflow-contracts.test.mjs"
+            "../../tests/workflow-contracts.test.mjs",
+            "tests/reusable-quality-workflow.test.mjs"
           ],
           "coverage": {
             "enabled": false,
             "reason": "Canonical workflow behavior is contract-tested structurally; hosted execution remains external evidence."
-          }
+          },
+          "typescript": true
         },
         {
           "id": "e2e",
@@ -1726,14 +2127,16 @@
         {
           "id": "integration-contract",
           "level": "integration",
-          "cwd": ".",
+          "cwd": "runtime/preset",
           "tests": [
-            "tests/workflow-contracts.test.mjs"
+            "../../tests/workflow-contracts.test.mjs",
+            "tests/reusable-quality-workflow.test.mjs"
           ],
           "coverage": {
             "enabled": false,
             "reason": "Canonical workflow behavior is contract-tested structurally; registry publication remains external evidence."
-          }
+          },
+          "typescript": true
         },
         {
           "id": "e2e",
@@ -1935,6 +2338,36 @@
             "enabled": false,
             "reason": "The E2E segment observes public process boundaries and consumer filesystem state rather than attributing source coverage."
           }
+        }
+      ]
+    },
+    {
+      "subjectId": "subject.ci.quality-toolchain",
+      "segments": [
+        {
+          "id": "unit",
+          "level": "unit",
+          "status": "excluded",
+          "reason": "The preparation boundary is composite YAML and shell; local tests exercise the actual Action scripts."
+        },
+        {
+          "id": "integration-action",
+          "level": "integration",
+          "cwd": "actions/ci-quality-toolchain",
+          "tests": [
+            "tests/action-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Node coverage does not measure composite YAML or Bash; executable scripts and dependency bindings provide local contract evidence."
+          }
+        },
+        {
+          "id": "e2e",
+          "level": "e2e",
+          "status": "excluded",
+          "reason": "Hosted toolchain download and supported runner execution require separate GitHub-hosted acceptance."
         }
       ]
     }

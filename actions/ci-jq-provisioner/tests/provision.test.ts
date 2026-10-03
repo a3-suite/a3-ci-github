@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { after, test } from 'node:test';
+import { afterAll as after, test } from 'vitest';
 import { provisionJq, provisionJqOnPath, selectAsset } from '../src/provision.js';
 
 const ownedTemporaryPaths: string[] = [];

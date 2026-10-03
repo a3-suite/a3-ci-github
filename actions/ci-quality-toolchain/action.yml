@@ -1,0 +1,66 @@
+name: ci-quality-toolchain
+description: Prepare the selected fixed quality toolchain without running project commands.
+inputs:
+  language-profile:
+    required: true
+    description: Selected quality language profile (typescript, python, or rust).
+  toolchain-version:
+    required: true
+    description: Exact three-component Node, Python, or Rust version, optionally including a prerelease suffix.
+  uv-version:
+    required: false
+    default: ''
+    description: Exact uv version; required for python and ignored otherwise.
+  cargo-audit-version:
+    required: false
+    default: ''
+    description: Exact cargo-audit version; required for rust and ignored otherwise.
+runs:
+  using: composite
+  steps:
+    - name: Validate selected toolchain inputs
+      shell: bash
+      env:
+        CI_LANGUAGE_PROFILE: ${{ inputs.language-profile }}
+        CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+        CI_UV_VERSION: ${{ inputs.uv-version }}
+        CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
+      run: |
+        set -euo pipefail
+        exact_version() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; }
+        case "$CI_LANGUAGE_PROFILE" in typescript|python|rust) ;; *) echo 'quality-toolchain-profile-invalid' >&2; exit 1 ;; esac
+        exact_version "$CI_TOOLCHAIN_VERSION" || { echo 'quality-toolchain-version-invalid' >&2; exit 1; }
+        if [[ "$CI_LANGUAGE_PROFILE" == python ]]; then exact_version "$CI_UV_VERSION" || { echo 'quality-toolchain-uv-version-invalid' >&2; exit 1; }; fi
+        if [[ "$CI_LANGUAGE_PROFILE" == rust ]]; then exact_version "$CI_CARGO_AUDIT_VERSION" || { echo 'quality-toolchain-cargo-audit-version-invalid' >&2; exit 1; }; fi
+    - name: Set up TypeScript toolchain
+      if: inputs.language-profile == 'typescript'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      with:
+        node-version: ${{ inputs.toolchain-version }}
+        cache: npm
+    - name: Set up Python toolchain
+      if: inputs.language-profile == 'python'
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+      with:
+        python-version: ${{ inputs.toolchain-version }}
+    - name: Set up uv
+      if: inputs.language-profile == 'python'
+      uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+      with:
+        version: ${{ inputs.uv-version }}
+        python-version: ${{ inputs.toolchain-version }}
+    - name: Set up Rust toolchain
+      if: inputs.language-profile == 'rust'
+      shell: bash
+      env:
+        CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+      run: |
+        set -euo pipefail
+        rustup toolchain install "$CI_TOOLCHAIN_VERSION" --profile minimal --component rustfmt --component clippy
+        echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
+    - name: Set up cargo-audit
+      if: inputs.language-profile == 'rust'
+      shell: bash
+      env:
+        CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
+      run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"

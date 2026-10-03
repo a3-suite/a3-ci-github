@@ -8,16 +8,17 @@ import { parseFlagArguments } from './cli-args.ts';
 
 const parseArgs = (argv: string[]): {
   repoRoot: string;
-  skillCollectionRoot: string;
+  skillCollectionRoot?: string;
   sourceRevision: string;
 } => {
-  const result = { repoRoot: '.', skillCollectionRoot: '', sourceRevision: '' };
+  const result: { repoRoot: string; skillCollectionRoot?: string; sourceRevision: string } = {
+    repoRoot: '.', sourceRevision: '',
+  };
   parseFlagArguments(argv, {
     '--repo-root': (value) => { result.repoRoot = value; },
     '--skill-collection-root': (value) => { result.skillCollectionRoot = value; },
     '--source-revision': (value) => { result.sourceRevision = value; },
   });
-  if (!result.skillCollectionRoot) throw new Error('--skill-collection-root is required');
   return result;
 };
 

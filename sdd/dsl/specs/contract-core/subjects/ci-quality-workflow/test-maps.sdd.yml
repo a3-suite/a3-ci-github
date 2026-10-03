@@ -15,6 +15,9 @@ test_maps:
     case_id: ci-quality-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
+        symbol: quality toolchain callers bind four inputs and preserve execution gates
+        check_refs: [check-ci-quality-workflow-success]
+      - path: tests/workflow-contracts.test.mjs
         symbol: quality workflow declares trusted execution and aggregate summary
         check_refs:
           - check-ci-quality-workflow-success
@@ -31,6 +34,15 @@ test_maps:
   - verification_id: verification.ci-quality-workflow.execution
     case_id: ci-quality-workflow-platform
     tests:
+      - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
+        symbol: platform reusable preflight validates callee inputs quality selection and availability without consumer copies
+        check_refs: [check-ci-quality-workflow-platform]
+      - path: tests/workflow-contracts.test.mjs
+        symbol: platform caller passes explicit inputs and retains the summary identity
+        check_refs: [check-ci-quality-workflow-platform]
+      - path: tests/workflow-contracts.test.mjs
+        symbol: platform summary scripts preserve docs-only failed cancelled and missing outcomes
+        check_refs: [check-ci-quality-workflow-platform]
       - path: tests/workflow-contracts.test.mjs
         symbol: optional platform quality workflow preserves trusted assets matrix execution and summary
         check_refs:

@@ -27,7 +27,11 @@ test_maps:
     case_id: invalid-version
     tests:
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
-        symbol: bundled Action rejects an invalid version as provisioning failure
+        symbol: "source entrypoint > Action rejects an invalid version as provisioning failure"
+        check_refs:
+          - check-invalid-version-failure
+      - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > Action rejects an invalid version as provisioning failure"
         check_refs:
           - check-invalid-version-failure
   - verification_id: verification.ci-jq-provisioner.provision

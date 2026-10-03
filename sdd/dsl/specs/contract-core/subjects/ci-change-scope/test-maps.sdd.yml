@@ -6,13 +6,21 @@ test_maps:
     case_id: valid-change-range
     tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: bundled entrypoint reports a valid range
+        symbol: "source entrypoint > entrypoint reports a valid range"
+        check_refs:
+          - check-change-scope-status
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint reports a valid range"
         check_refs:
           - check-change-scope-status
   - verification_id: verification.ci-change-scope.outputs
     case_id: invalid-sha-unresolved
     tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: bundled entrypoint fails open for an invalid SHA
+        symbol: "source entrypoint > entrypoint fails open for an invalid SHA"
+        check_refs:
+          - check-change-scope-unresolved-status
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint fails open for an invalid SHA"
         check_refs:
           - check-change-scope-unresolved-status

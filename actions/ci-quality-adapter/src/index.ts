@@ -23,9 +23,11 @@ export const run = (): void => {
       trustedProjectRoot: core.getInput('trusted-project-root') || undefined,
     });
     fs.mkdirSync(path.dirname(resultPath), { recursive: true });
-    fs.writeFileSync(resultPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    const resultJson = `${JSON.stringify(payload, null, 2)}\n`;
+    fs.writeFileSync(resultPath, resultJson, 'utf8');
     core.setOutput('status', payload.status);
     core.setOutput('result-path', resultPath);
+    process.stdout.write(resultJson);
     if (payload.status !== 'success') core.setFailed(`quality-adapter-${payload.status}`);
   } catch (error) {
     core.setOutput('status', 'failed');

@@ -54,13 +54,13 @@ test_maps:
     case_id: case.ci-preset-assurance.valid-preset-succeeds
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
-        symbol: preset assurance validates a canonical preset and writes a deterministic asset lock
+        symbol: preset assurance validates a canonical preset without modifying the consumer project
         check_refs:
           - check.ci-preset-assurance.valid-preset-succeeds
           - check.ci-preset-assurance.valid-evidence-exposed
           - check.ci-preset-assurance.semantic-review-state-exposed
       - path: tests/public-cli-lifecycle.test.mjs
-        symbol: public preset CLIs generate an asset lock and validate read-only without consumer drift
+        symbol: public preset validation CLI preserves the consumer tree in read-only mode
         check_refs:
           - check.ci-preset-assurance.valid-preset-succeeds
           - check.ci-preset-assurance.valid-evidence-exposed
@@ -72,22 +72,31 @@ test_maps:
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.drift-fails
     tests:
+      - path: runtime/preset/tests/standard-quality-bundles.test.mjs
+        symbol: preflight validates fixed standard quality bundles without a descriptor or external owner checkout
+        check_refs: [check.ci-preset-assurance.drift-fails]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: preset assurance reports canonical drift without modifying the consumer project
         check_refs: [check.ci-preset-assurance.drift-fails]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: preset assurance rejects an asset lock digest drift without remediation
         check_refs: [check.ci-preset-assurance.drift-fails]
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preflight validates owner descriptor settings and rejects malformed content without remediation
+        check_refs: [check.ci-preset-assurance.drift-fails]
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preflight accepts registered quality trigger extensions and rejects malformed event settings
+        check_refs: [check.ci-preset-assurance.drift-fails]
   - verification_id: verification.ci-preset-assurance.asset-lock
     case_id: case.ci-preset-assurance.asset-lock-generated
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
-        symbol: preset assurance validates a canonical preset and writes a deterministic asset lock
+        symbol: asset lock generation records the source revision and canonical asset digests
         check_refs:
           - check.ci-preset-assurance.asset-lock-source-bound
           - check.ci-preset-assurance.asset-lock-assets-recorded
       - path: tests/public-cli-lifecycle.test.mjs
-        symbol: public preset CLIs generate an asset lock and validate read-only without consumer drift
+        symbol: public asset lock CLI records source revision and managed assets
         check_refs:
           - check.ci-preset-assurance.asset-lock-source-bound
           - check.ci-preset-assurance.asset-lock-assets-recorded

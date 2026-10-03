@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { updateActionTable } from '../runtime/repository/update-action-index.mjs';
 
@@ -69,4 +69,47 @@ test('normalizes a multiline Action summary into one table row', () => {
   // Assert
   assert.match(updated, /\| \[`beta`\].*beta summary first line, second line\..*beta description \|/);
   assert.doesNotMatch(updated, /beta summary first line,\nsecond line/);
+});
+
+// evidence_role: contract
+// test_level: integration
+// contract_id: contract.repository-action-distribution.integrity
+// integration_id: repository-action-distribution-gates
+test('catalog projection preserves section boundaries and is idempotent with generated markers', () => {
+  // Arrange
+  const actions = [{ name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha' }];
+  const nextSection = '## Installation\n\nProject-owned installation text.\n';
+  const variants = [
+    readme + nextSection,
+    readme.replace('\n\n説明。\n', '\n') + nextSection,
+    readme,
+  ];
+  for (const source of variants) {
+    // Act
+    const once = updateActionTable(source, actions);
+    const twice = updateActionTable(once, actions);
+    // Assert
+    assert.equal(twice, once);
+    assert.equal((once.match(/action-catalog:start/g) ?? []).length, 1);
+    assert.equal((once.match(/action-catalog:end/g) ?? []).length, 1);
+    assert.match(once, /alpha を使うとき.*alpha summary/);
+    if (source.includes('## Installation')) assert.ok(once.endsWith(nextSection));
+    if (source.includes('説明。')) assert.match(once, /説明。/);
+  }
+});
+
+// evidence_role: supplemental
+// test_level: integration
+// integration_id: repository-action-index-regression
+test('catalog projection rejects missing headings tables and undelimited table endings', () => {
+  // Arrange
+  const cases = [
+    ['# project\n', /README.md is missing/],
+    ['# project\n\n## Action一覧\n\nNo table.\n', /Action table could not be located/],
+    ['# project\n\n## Action一覧\n| Action | 用途 | 概要 |\n| --- | --- | --- |\n', /Action table could not be located/],
+  ];
+  for (const [source, message] of cases) {
+    // Act / Assert
+    assert.throws(() => updateActionTable(source, []), message);
+  }
 });

@@ -1,4 +1,4 @@
-import type { TestContext } from 'node:test';
+import type { TestContext } from 'vitest';
 import type { AssemblyType, ReleaseIdentityType } from '../schema';
 import type { ReadOnlyClientType } from '../observation';
 export function fixture(t: TestContext): {

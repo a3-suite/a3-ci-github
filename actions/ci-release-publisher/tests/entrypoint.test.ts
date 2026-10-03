@@ -1,17 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
 import { observeBefore } from '../../../runtime/release-publication/observation';
 import { remoteClient } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
-const bundle = path.resolve(__dirname, '../dist/index.js');
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
+const bundle = entrypointArgs;
 
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-flow
-test('publisher bundle writes once by immutable ID and emits evidence paths', async (t) => {
+test('publisher entrypoint writes once by immutable ID and emits evidence paths', async (t) => {
   const f = fixture(t);
   const assembly = f.assemble();
   const before = await observeBefore({ authorityPath: f.options.authorityPath, repository: f.identity.repository, handoffRoot: f.options.outputRoot }, remoteClient(f, assembly, { ids: [] }).client);
@@ -64,7 +68,7 @@ globalThis.fetch = async (url, init) => {
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: f.identity.repository, GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
     'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot, 'INPUT_PRE-OBSERVATION-PATH': beforePath,
     'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls };
-  const result = spawnSync(process.execPath, ['--import', mock, bundle], { env, cwd: f.root, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, cwd: f.root, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.readFileSync(output, 'utf8'), `receipt-path=${outputRoot}/receipt.json\nreadback-path=${outputRoot}/readback.json\n`);
   const writes = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { method: string; endpoint: string });
@@ -74,7 +78,7 @@ globalThis.fetch = async (url, init) => {
   assert.equal((result.stdout + result.stderr + fs.readFileSync(output, 'utf8')).includes('synthetic-secret'), false);
   fs.writeFileSync(output, ''); fs.writeFileSync(calls, '');
   const failedRoot = path.join(f.root, 'failed-write');
-  const failed = spawnSync(process.execPath, ['--import', mock, bundle], { env: { ...env, MOCK_FAILURE: 'upload', 'INPUT_WRITE-OUTPUT-DIRECTORY': failedRoot }, cwd: f.root, encoding: 'utf8' });
+  const failed = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: { ...env, MOCK_FAILURE: 'upload', 'INPUT_WRITE-OUTPUT-DIRECTORY': failedRoot }, cwd: f.root, encoding: 'utf8' });
   assert.equal(failed.status, 1);
   assert.equal(fs.readFileSync(output, 'utf8'), '');
   assert.equal(fs.existsSync(`${failedRoot}/receipt.json`), false);
@@ -85,14 +89,16 @@ globalThis.fetch = async (url, init) => {
 
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-rejection
-test('publisher bundle rejects missing credential and path injection without outputs', (t) => {
+test('publisher entrypoint rejects missing credential and path injection without outputs', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
   for (const token of ['', 'synthetic-secret']) {
-    const result = spawnSync(process.execPath, [bundle], { env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: token,
+    const result = spawnSync(process.execPath, [...bundle], { env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: token,
       'INPUT_AUTHORITY-PATH': 'bad\npath', 'INPUT_RELEASE-HANDOFF-ROOT': 'handoff', 'INPUT_PRE-OBSERVATION-PATH': 'before.json', 'INPUT_WRITE-OUTPUT-DIRECTORY': 'write', GITHUB_REPOSITORY: 'owner/project' }, encoding: 'utf8' });
     assert.equal(result.status, 1);
     assert.equal(fs.readFileSync(output, 'utf8'), '');
     assert.equal(result.stderr.includes('synthetic-secret'), false);
   }
+});
+
 });

@@ -21,7 +21,7 @@ components:
     responsibility: AIエージェントへ設計・導入・検証・監査・復旧の入口を提供する
     kind_ref: docs-surface
   - component_id: repository-maintainer-guidance
-    responsibility: repository保守者へproject-localな公開スキル配備の判断境界と汎用デプロイ機能への委譲入口を提供する
+    responsibility: repository保守者へproject-localな資材監査・コミット前検証・公開Agent Skill配備の判断境界と、共通機能への委譲入口を提供する
     kind_ref: docs-surface
   - component_id: sdd-specifications
     responsibility: 要求・仕様・設計を接続する SDD 正本を管理する

@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { createRequest, verifyRequest } from '../src/request.js';
 
 // integration_id: ci-package-publication-request-source

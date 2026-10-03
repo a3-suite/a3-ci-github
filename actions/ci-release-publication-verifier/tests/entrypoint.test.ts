@@ -2,16 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
-const bundle = path.resolve(__dirname, '../dist/index.js');
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
+const bundle = entrypointArgs;
 const hash = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-verifier-entrypoint
-test('publication bundle observes absence then verifies owner evidence independently', (t) => {
+test('publication entrypoint observes absence then verifies owner evidence independently', (t) => {
   const f = fixture(t);
   f.assemble();
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
@@ -36,7 +40,7 @@ globalThis.fetch = async (url, init) => {
   const beforePath = path.join(f.root, 'before.json');
   const output = f.put('github-output', '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
-  const beforeResult = spawnSync(process.execPath, ['--import', mock, bundle], { env, encoding: 'utf8', cwd: f.root });
+  const beforeResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
   assert.equal(beforeResult.status, 0, beforeResult.stderr);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
   assert.match(beforeOutputs, /^status=success\n/);
@@ -51,7 +55,7 @@ globalThis.fetch = async (url, init) => {
   const receiptPath = f.put('receipt.json', receipt);
   const readbackPath = f.put('readback.json', readback);
   fs.writeFileSync(output, '');
-  const afterResult = spawnSync(process.execPath, ['--import', mock, bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
+  const afterResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
   assert.equal(afterResult.status, 0, afterResult.stderr);
   const outputs = fs.readFileSync(output, 'utf8');
   assert.match(outputs, /^status=success\n/);
@@ -65,11 +69,11 @@ globalThis.fetch = async (url, init) => {
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-output-injection-rejection
-test('publication bundle rejects output path line injection before remote observation', (t) => {
+test('publication entrypoint rejects output path line injection before remote observation', (t) => {
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [bundle], {
+  const result = spawnSync(process.execPath, [...bundle], {
     env: {
       ...process.env, GH_TOKEN: 'synthetic-secret', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
@@ -85,12 +89,14 @@ test('publication bundle rejects output path line injection before remote observ
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-verifier-entrypoint-rejection
-test('publication bundle refuses missing credentials without success evidence', (t) => {
+test('publication entrypoint refuses missing credentials without success evidence', (t) => {
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [bundle], { env: { ...process.env, GH_TOKEN: '', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json') }, encoding: 'utf8', cwd: f.root });
+  const result = spawnSync(process.execPath, [...bundle], { env: { ...process.env, GH_TOKEN: '', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json') }, encoding: 'utf8', cwd: f.root });
   assert.equal(result.status, 1);
   assert.equal(fs.readFileSync(output, 'utf8'), '');
   assert.match(result.stderr, /credential-missing/);
+});
+
 });

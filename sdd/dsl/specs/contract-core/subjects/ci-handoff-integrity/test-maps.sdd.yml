@@ -6,13 +6,21 @@ test_maps:
     case_id: valid-handoff
     tests:
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: bundled entrypoint validates a handoff
+        symbol: "source entrypoint > entrypoint validates a handoff"
+        check_refs:
+          - check-handoff-status
+      - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint validates a handoff"
         check_refs:
           - check-handoff-status
   - verification_id: verification.ci-handoff-integrity.outputs
     case_id: source-identity-mismatch-rejected
     tests:
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: bundled entrypoint fails an identity mismatch
+        symbol: "source entrypoint > entrypoint fails an identity mismatch"
+        check_refs:
+          - check-handoff-failure-status
+      - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint fails an identity mismatch"
         check_refs:
           - check-handoff-failure-status

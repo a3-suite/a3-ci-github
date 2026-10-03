@@ -16,6 +16,18 @@ test_maps:
     case_id: bootstrap-diagnostic-emitted
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset assurance rejects unavailable or inconsistent prepared runtime without changing the project
+        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset bootstrap confines dependency files and accepts internal symlink cycles
+        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset bootstrap reports unavailable npm and cleans up state after dependency command failures
+        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset bootstrap reports validator startup and completion failures without consumer changes
+        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: preset assurance rejects a request without explicit roots
         check_refs:
           - check.ci-failure-diagnostics.bootstrap-diagnostic

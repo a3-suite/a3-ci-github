@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 import { runSupplemental } from '../../../runtime/release-publication/supplemental';
 import { hashFile } from '../../../runtime/release-publication/io';
 import { fixture } from './fixtures';
@@ -20,7 +20,7 @@ for (const operation of ['build-platform', 'assemble']) {
   });
 }
 
-test('supplemental source rejects unsafe paths, invalid phases and existing outputs', async (t) => {
+describe('supplemental source rejects unsafe paths, invalid phases and existing outputs', () => {
   const cases = [
     { operation: 'unknown' }, { operation: 'assemble' },
     { supplementalBuildRoot: 'supplemental build' },
@@ -32,7 +32,7 @@ test('supplemental source rejects unsafe paths, invalid phases and existing outp
     { operation: 'assemble', supplementalBuildRoot: 'standard build' },
     { operation: 'assemble', supplementalBuildRoot: 'STANDARD BUILD' },
   ];
-  for (const changes of cases) await t.test(JSON.stringify(changes), (sub) => {
+  for (const changes of cases) test(JSON.stringify(changes), (sub) => {
     const f = fixture(sub);
     fs.symlinkSync(path.join(f.root, 'standard build'), path.join(f.root, 'symlink'));
     fs.symlinkSync(path.join(f.root, 'missing'), path.join(f.root, 'dangling'));
@@ -46,8 +46,8 @@ test('supplemental source rejects unsafe paths, invalid phases and existing outp
   });
 });
 
-test('supplemental source rejects snapshot, source and owner selection mismatches', async (t) => {
-  for (const field of ['snapshot', 'source', 'contract', 'adapter', 'dirty-adapter']) await t.test(field, (sub) => {
+describe('supplemental source rejects snapshot, source and owner selection mismatches', () => {
+  for (const field of ['snapshot', 'source', 'contract', 'adapter', 'dirty-adapter']) test(field, (sub) => {
     const f = fixture(sub);
     if (field === 'snapshot') fs.writeFileSync(path.join(f.root, 'snapshot.json'), '{}');
     if (field === 'source') f.configure({}, { source_sha: 'a'.repeat(40) });
@@ -59,14 +59,14 @@ test('supplemental source rejects snapshot, source and owner selection mismatche
   });
 });
 
-test('supplemental source rejects mutated authority, snapshot, adapter and supplemental inputs', async (t) => {
+describe('supplemental source rejects mutated authority, snapshot, adapter and supplemental inputs', () => {
   const changes = [
     'printf changed > "$2"', 'printf changed > "$3"', 'printf "\\n# changed\\n" >> "$0"',
     'printf changed > "$5/input"', 'printf "%040d\\n" 0 > .git/HEAD',
     'mv "$4" moved-standard && ln -s moved-standard "$4"',
     ...(process.platform === 'win32' ? [] : ['chmod 700 "$4"']),
   ];
-  for (const change of changes) await t.test(change, (sub) => {
+  for (const change of changes) test(change, (sub) => {
     const f = fixture(sub, 'mkdir -p -- "${!#}"\nprintf data > "${!#}/asset"\n' + change);
     f.options.operation = 'assemble';
     f.options.supplementalBuildRoot = 'supplemental build';
@@ -75,8 +75,8 @@ test('supplemental source rejects mutated authority, snapshot, adapter and suppl
   });
 });
 
-test('supplemental source accepts empty markers and rejects their mutation', async (t) => {
-  for (const mutate of [false, true]) await t.test(String(mutate), (sub) => {
+describe('supplemental source accepts empty markers and rejects their mutation', () => {
+  for (const mutate of [false, true]) test(String(mutate), (sub) => {
     const f = fixture(sub, 'mkdir -p -- "$6"\nprintf data > "$6/asset"\n' + (mutate ? 'printf changed > "$5/marker"' : ''));
     f.options.operation = 'assemble';
     f.options.supplementalBuildRoot = 'supplemental build';
@@ -95,8 +95,8 @@ test('supplemental source preserves owner shebang failure semantics', (t) => {
   assert.equal(fs.existsSync(path.join(f.root, 'new output')), false);
 });
 
-test('supplemental source rejects missing and empty owner output', async (t) => {
-  for (const body of ['true', 'mkdir -p -- "${!#}"']) await t.test(body, (sub) => {
+describe('supplemental source rejects missing and empty owner output', () => {
+  for (const body of ['true', 'mkdir -p -- "${!#}"']) test(body, (sub) => {
     const f = fixture(sub, body);
     assert.throws(() => runSupplemental(f.options));
   });

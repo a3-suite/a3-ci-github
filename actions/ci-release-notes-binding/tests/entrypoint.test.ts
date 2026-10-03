@@ -4,9 +4,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 
 
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 const createInputs = () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-release-notes-binding-'));
@@ -23,12 +27,12 @@ const runBundled = (tempRoot: string, identity: string) => {
   env['INPUT_HANDOFF-JSON'] = path.join(tempRoot, 'handoff.json');
   env['INPUT_APPROVAL-JSON'] = path.join(tempRoot, 'approval.json');
   env['INPUT_RELEASE-IDENTITY'] = identity;
-  return { output, result: spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: root, env, encoding: 'utf8' }) };
+  return { output, result: spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' }) };
 };
 
 // contract_id: contract.ci-release-notes-binding.outputs
 // integration_id: ci-release-notes-binding-contract-entrypoint
-test('bundled entrypoint validates an approved notes binding', () => {
+test('entrypoint validates an approved notes binding', () => {
   // Arrange
   const tempRoot = createInputs();
   // Act
@@ -41,7 +45,7 @@ test('bundled entrypoint validates an approved notes binding', () => {
 });
 
 // integration_id: ci-release-notes-binding-entrypoint-regression
-test('bundled entrypoint fails an identity mismatch', () => {
+test('entrypoint fails an identity mismatch', () => {
   // Arrange
   const tempRoot = createInputs();
   // Act
@@ -50,4 +54,6 @@ test('bundled entrypoint fails an identity mismatch', () => {
   assert.notEqual(run.result.status, 0);
   assert.match(fs.readFileSync(run.output, 'utf8'), /failed/);
   fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
 });

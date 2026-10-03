@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { add } from './ci-preset-assets.ts';
-import type { RegistryData, ValueMap } from './ci-preset-assets.ts';
+import { add } from './validation-report.ts';
+import type { RegistryData, ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
 
 export const validateActionAvailability = (

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import test from 'node:test';
+import { test } from 'vitest';
 
 // Importing a fixture must not launch an Action in the parent CI test process.
 test('shared fixture import remains side-effect-free under GitHub Actions environment', () => {

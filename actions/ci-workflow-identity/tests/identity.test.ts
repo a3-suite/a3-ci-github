@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vitest';
 import { verifyWorkflowIdentity } from '../src/identity.js';
 
 const SHA = '3407e7b799c2c1f8726fc88a7b997aa4a23eac1a';

@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { afterAll, test } from 'vitest';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   applyDistributionPlan,
@@ -17,15 +16,22 @@ import {
   validateDistributionManifest,
   verifyFetchedDistribution,
 } from '../fetch-a3-ci-github.mjs';
+import { loadReleaseRequestFixtureModel, snapshotTree, writeReleaseRequestFixture } from '../../preset/tests/support/release-request-fixture.mjs';
 
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
 const tsx = path.join(repositoryRoot, 'runtime/preset/node_modules/.bin/tsx');
 const releaseTag = `v${fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim()}`;
-const committedSourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-distribution-source-'));
+const temporaryRoot = path.join(repositoryRoot, 'tmp');
+fs.mkdirSync(temporaryRoot, { recursive: true });
+const committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
 for (const relative of [
   'VERSION',
   '.github/workflows/ci-quality.yml',
+  '.github/workflows/ci-quality-platforms.yml',
+  '.github/workflows/ci-package-preparation.yml',
+  '.github/workflows/ci-release-publication.yml',
+  '.github/workflows/ci-package-publication.yml',
   'skills/ci-github',
   'workflows',
   'runtime/preset',
@@ -56,11 +62,11 @@ runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
 runFixtureGit(['add', '--all']);
 runFixtureGit(['commit', '-qm', 'fixture']);
 const sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
-test.after(() => fs.rmSync(committedSourceRoot, { recursive: true, force: true }));
+afterAll(() => fs.rmSync(committedSourceRoot, { recursive: true, force: true }));
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 const withFixture = async (name, callback) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), name));
+  const root = fs.mkdtempSync(path.join(temporaryRoot, name));
   try {
     return await callback(root);
   } finally {
@@ -99,6 +105,10 @@ test('release generator derives deterministic selective assets and checksums fro
       'skills/ci-github/references/release-publication-evidence.reference.yml',
       'runtime/release-publication/evidence.schema.json',
       'runtime/preset/action-availability.ts',
+      '.github/workflows/ci-quality-platforms.yml',
+      '.github/workflows/ci-package-preparation.yml',
+      '.github/workflows/ci-release-publication.yml',
+      '.github/workflows/ci-package-publication.yml',
     ]) {
       const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
       assert.equal(manifest.files[relative].sha256, sha256(bytes));
@@ -106,9 +116,21 @@ test('release generator derives deterministic selective assets and checksums fro
     }
     const publication = resolveDistributionSelection(manifest, ['release-publication'], []);
     const publicationFiles = publication.flatMap((asset) => asset.files.map((file) => file.sourcePath));
-    assert.ok(publicationFiles.includes('runtime/release-publication/evidence.schema.json'));
+    const releaseEvidenceFiles = [
+      'skills/ci-github/references/release-publication-evidence.reference.yml',
+      'runtime/release-publication/evidence.schema.json',
+    ];
+    for (const relative of releaseEvidenceFiles) assert.ok(publicationFiles.includes(relative));
+    for (const preset of ['quality-gate', 'release-request', 'package-publication']) {
+      const files = resolveDistributionSelection(manifest, [preset], [])
+        .flatMap((asset) => asset.files.map((file) => file.sourcePath));
+      for (const relative of releaseEvidenceFiles) assert.equal(files.includes(relative), false, `${preset}: ${relative}`);
+    }
     assert.ok(publicationFiles.includes('runtime/preset/action-availability.ts'));
     assert.equal(publicationFiles.some((relative) => relative.startsWith('actions/')), false);
+    const packagePreset = manifest.presets.find((preset) => preset.id === 'package-publication');
+    assert.deepEqual(packagePreset.requiredAssets.filter((id) => id.startsWith('workflow.')).sort(), ['workflow.package-publication-caller', 'workflow.package-publication-request']);
+    assert.equal(manifest.assets.some((asset) => asset.id === 'workflow.package-preparation'), false);
     const quality = manifest.presets.find((preset) => preset.id === 'quality-gate');
     assert.ok(quality.requiredAssets.includes('workflow.quality-gate'));
     assert.ok(quality.requiredAssets.includes('runtime.preset'));
@@ -116,6 +138,72 @@ test('release generator derives deterministic selective assets and checksums fro
     const checksums = fs.readFileSync(path.join(first.output, 'SHA256SUMS'), 'utf8');
     assert.match(checksums, new RegExp(sha256(first.manifestBytes)));
     assert.match(checksums, /fetch-a3-ci-github\.mjs/);
+  });
+});
+
+// contract_id: contract.ci-selective-distribution.selection
+test('preset closure includes only its reusable workflow sources and excludes optional materializer', async () => {
+  await withFixture('a3-ci-github-distribution-source-selection-', (root) => {
+    const { manifest } = prepareRelease(root);
+    const expected = {
+      'quality-gate': ['ci-quality.yml'],
+      'release-request': [],
+      'release-publication': ['ci-release-publication.yml'],
+      'package-publication': ['ci-package-preparation.yml', 'ci-package-publication.yml'],
+    };
+    for (const [preset, workflows] of Object.entries(expected)) {
+      const selected = resolveDistributionSelection(manifest, [preset], []);
+      assert.equal(selected.some((asset) => asset.id === 'runtime.adapter-materializer'), false);
+      assert.deepEqual(selected.flatMap((asset) => asset.files.map((file) => file.sourcePath))
+        .filter((source) => source.startsWith('.github/workflows/')).sort(),
+      workflows.map((file) => `.github/workflows/${file}`).sort());
+    }
+    assert.throws(() => resolveDistributionSelection(manifest, ['quality-gate'], ['workflow.quality-gate-platforms']),
+      /distribution-dependency-missing:workflow.quality-gate-platforms:runtime.quality-platforms-workflow/);
+    const platforms = resolveDistributionSelection(manifest, ['quality-gate'],
+      ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']);
+    assert.deepEqual(platforms.flatMap((asset) => asset.files.map((file) => file.sourcePath))
+      .filter((source) => source.startsWith('.github/workflows/')).sort(),
+    ['.github/workflows/ci-quality-platforms.yml', '.github/workflows/ci-quality.yml']);
+    assert.throws(() => resolveDistributionSelection(manifest, [], ['runtime.adapter-materializer']),
+      /distribution-dependency-missing:runtime.adapter-materializer:runtime.preset/);
+  });
+});
+
+// contract_id: contract.ci-selective-distribution.delivery
+test('each selected callee resolves from fetched sources and missing sources remain rejected', async () => {
+  await withFixture('a3-ci-github-distribution-callee-preflight-', async (root) => {
+    const release = prepareRelease(root);
+    for (const [preset, asset, binding, job, resolver, extras] of [
+      ['quality-gate', 'quality-gate', 'qualityReusableWorkflow', 'quality', 'resolveQualityWorkflow', []],
+      ['quality-gate', 'quality-gate-platforms', 'qualityPlatformsReusableWorkflow', 'platforms', 'resolveQualityWorkflow', ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']],
+      ['release-publication', 'release-publication-caller', 'releasePublicationReusableWorkflow', 'publish', 'resolvePublicationWorkflow', []],
+      ['package-publication', 'package-publication-caller', 'packagePublicationReusableWorkflow', 'publish', 'resolvePublicationWorkflow', []],
+    ]) {
+      const projectRoot = path.join(root, asset);
+      fs.mkdirSync(projectRoot);
+      const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+        requestedPresets: [preset], requestedAssets: extras, sourceRoot: repositoryRoot });
+      const scriptPath = path.join(root, `${asset}.mts`);
+      fs.writeFileSync(scriptPath, `import assert from 'node:assert/strict';
+        import fs from 'node:fs';
+        import { ${resolver} } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-preset-assets.ts')).href)};
+        import { loadRegistry } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/preset-registry.ts')).href)};
+        const report = { missingSettings: [], mismatches: [] };
+        const registry = loadRegistry(report);
+        assert.deepEqual(report.mismatches, []);
+        const source = registry[${JSON.stringify(binding)}].source;
+        const workflow = { jobs: { ${job}: { uses: registry.actionRepository + '/' + source + '@' + 'a'.repeat(40), with: {} } } };
+        assert.ok(${resolver}(workflow, registry, report).env);
+        assert.deepEqual(report.mismatches, []);
+        fs.unlinkSync(${JSON.stringify(fetched.distributionRoot)} + '/' + source);
+        ${resolver}(workflow, registry, report);
+        assert.ok(report.mismatches.some(item => item.path === source && item.message.includes('missing')));`);
+      const result = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: {
+        ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'),
+      } });
+      assert.equal(result.status, 0, result.stderr);
+    }
   });
 });
 
@@ -341,7 +429,7 @@ test('fetch, plan, apply and rollback preserve explicit consumer state transitio
         fs.writeFileSync(path.join(projectRoot, relative), text);
       }
       const optionalSelection = {
-        requestedPresets: ['quality-gate'], requestedAssets: ['workflow.quality-gate-platforms'],
+        requestedPresets: ['quality-gate'], requestedAssets: ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'],
       };
       await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
         sourceRoot: repositoryRoot, ...optionalSelection });
@@ -352,7 +440,8 @@ test('fetch, plan, apply and rollback preserve explicit consumer state transitio
         '.github/workflows/quality-gate-platforms.yml', '.github/workflows/quality-gate.yml', 'README.md',
       ]);
       const optionalWorkflow = fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-platforms.yml'), 'utf8');
-      assert.match(optionalWorkflow, /uses: a3-suite\/a3-ci-github\/actions\/ci-platform-matrix@/);
+      assert.match(optionalWorkflow, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-quality-platforms.yml@<quality-platforms-workflow-sha>/);
+      assert.doesNotMatch(optionalWorkflow, /ci-platform-matrix@|id: trusted-assets/);
       assert.doesNotMatch(optionalWorkflow, /CoreLoader|pyyaml|\.a3-skills\//);
       for (const [relative, text] of Object.entries(configurations)) {
         assert.equal(fs.readFileSync(path.join(projectRoot, relative), 'utf8'), text);
@@ -368,14 +457,30 @@ test('fetch, plan, apply and rollback preserve explicit consumer state transitio
       assert.deepEqual(ordinaryFiles(projectRoot).sort(), [
         '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
         '.github/workflows/release-publication-caller.yml', '.github/workflows/release-publication-request.yml',
-        '.github/workflows/release-publication.yml', '.github/workflows/release-request-tag.yml', 'README.md',
+        '.github/workflows/release-request-tag.yml', 'README.md',
       ]);
-      const publication = fs.readFileSync(path.join(projectRoot, '.github/workflows/release-publication.yml'), 'utf8');
-      assert.match(publication, /uses: a3-suite\/a3-ci-github\/actions\/ci-release-authority@/);
-      assert.match(publication, /uses: a3-suite\/a3-ci-github\/actions\/ci-release-publisher@/);
+      assert.equal(fs.existsSync(path.join(projectRoot, '.github/workflows/release-publication.yml')), false);
+      const publication = fs.readFileSync(path.join(projectRoot, '.github/workflows/release-publication-caller.yml'), 'utf8');
+      assert.match(publication, /ci-release-publication\.yml@<release-publication-workflow-sha>/);
       assert.doesNotMatch(publication, /\.a3-skills\//);
       assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
       assert.equal(rollbackDistributionTransaction({ projectRoot, transactionId: releaseApplied.transactionId }).status, 'rolled-back');
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), ['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
+      const packageSelection = { requestedPresets: ['package-publication'], requestedAssets: [] };
+      await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+        sourceRoot: repositoryRoot, ...packageSelection });
+      const packagePlan = planDistributionApplication({ projectRoot, sourceRevision, ...packageSelection });
+      const packageApplied = applyDistributionPlan({ projectRoot, planPath: packagePlan.planPath, approvalDigest: packagePlan.planDigest });
+      assert.deepEqual(ordinaryFiles(projectRoot).sort(), [
+        '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
+        '.github/workflows/package-publication-caller.yml', '.github/workflows/package-publication-request.yml', 'README.md',
+      ]);
+      assert.equal(fs.existsSync(path.join(projectRoot, '.github/workflows/package-publication.yml')), false);
+      assert.equal(fs.existsSync(path.join(projectRoot, '.github/workflows/package-preparation.yml')), false);
+      const packageCaller = fs.readFileSync(path.join(projectRoot, '.github/workflows/package-publication-caller.yml'), 'utf8');
+      assert.match(packageCaller, /ci-package-publication\.yml@<package-publication-workflow-sha>/);
+      assert.equal(fs.readFileSync(existingFile, 'utf8'), 'consumer-owned documentation\n');
+      assert.equal(rollbackDistributionTransaction({ projectRoot, transactionId: packageApplied.transactionId }).status, 'rolled-back');
       assert.deepEqual(ordinaryFiles(projectRoot).sort(), ['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
 
   });
@@ -438,7 +543,7 @@ test('fetch rejects source bytes that do not match the release manifest', async 
         manifest,
         manifestBytes,
         requestedPresets: [],
-        requestedAssets: ['workflow.quality-gate'],
+        requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
         sourceRoot: repositoryRoot,
       }),
       /distribution-file-integrity-mismatch/,
@@ -482,7 +587,7 @@ test('local verification rejects distribution bytes changed after fetch', async 
       manifest: release.manifest,
       manifestBytes: release.manifestBytes,
       requestedPresets: [],
-      requestedAssets: ['workflow.quality-gate'],
+      requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
       sourceRoot: repositoryRoot,
     });
     fs.writeFileSync(path.join(fetched.distributionRoot, 'workflows/quality/quality-gate.yml'), 'tampered\n');
@@ -505,7 +610,7 @@ test('direct workflow asset fetch cannot bypass preset closure during apply plan
       manifest: release.manifest,
       manifestBytes: release.manifestBytes,
       requestedPresets: [],
-      requestedAssets: ['workflow.quality-gate'],
+      requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
       sourceRoot: repositoryRoot,
     });
     assert.throws(
@@ -513,7 +618,7 @@ test('direct workflow asset fetch cannot bypass preset closure during apply plan
         projectRoot,
         sourceRevision,
         requestedPresets: [],
-        requestedAssets: ['workflow.quality-gate'],
+        requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
       }),
       /distribution-copy-requires-matching-preset:workflow\.quality-gate/,
     );
@@ -530,7 +635,7 @@ test('direct workflow asset fetch cannot bypass preset closure during apply plan
         projectRoot,
         sourceRevision,
         requestedPresets: ['release-request'],
-        requestedAssets: ['workflow.quality-gate'],
+        requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
       }),
       /distribution-copy-requires-matching-preset:workflow\.quality-gate/,
     );
@@ -539,14 +644,14 @@ test('direct workflow asset fetch cannot bypass preset closure during apply plan
       manifest: release.manifest,
       manifestBytes: release.manifestBytes,
       requestedPresets: ['quality-gate'],
-      requestedAssets: ['workflow.quality-gate-platforms'],
+      requestedAssets: ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'],
       sourceRoot: repositoryRoot,
     });
     const optionalPlan = planDistributionApplication({
       projectRoot,
       sourceRevision,
       requestedPresets: ['quality-gate'],
-      requestedAssets: ['workflow.quality-gate-platforms'],
+      requestedAssets: ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'],
     });
     assert.ok(optionalPlan.actions.some((entry) => entry.assetId === 'workflow.quality-gate-platforms'));
   });
@@ -890,5 +995,228 @@ test('same revision merges separately fetched verified asset groups without repl
       assert.deepEqual(merged.selectedAssets, ['lint.github-actions', 'registry.ci-github']);
       assert.ok(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/references/ci-distribution-assets.reference.yml')));
       assert.ok(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_workflow_name_matches_file.lua')));
+  });
+});
+
+// contract_id: contract.ci-selective-distribution.delivery
+test('selected distribution runs preflight and lock without materializer and supports its later acquisition', async () => {
+  await withFixture('a3-ci-github-distribution-runtime-', async (root) => {
+    const release = prepareRelease(root);
+    const projectRoot = path.join(root, 'consumer');
+    fs.mkdirSync(projectRoot);
+    const runtimeRoot = path.join(repositoryRoot, 'runtime/preset');
+    const run = (script) => {
+      const scriptPath = path.join(root, 'check.mts');
+      fs.writeFileSync(scriptPath, script);
+      const result = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: {
+        ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot, CI_FIXED_RUNTIME_ROOT: runtimeRoot,
+      } });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    const request = await fetchDistribution({ projectRoot, manifest: release.manifest,
+      manifestBytes: release.manifestBytes, requestedPresets: ['release-request'], requestedAssets: [], sourceRoot: repositoryRoot });
+    const model = loadReleaseRequestFixtureModel({ repositoryRoot: request.distributionRoot, runtimeRoot });
+    writeReleaseRequestFixture({ repositoryRoot: request.distributionRoot, root: projectRoot, model });
+    const moduleUrl = (distributionRoot, relative) => JSON.stringify(pathToFileURL(path.join(distributionRoot, relative)).href);
+    run(`import assert from 'node:assert/strict';
+      import { writeCiAssetLock } from ${moduleUrl(request.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')};
+      import { validateCiPreset } from ${moduleUrl(request.distributionRoot, 'runtime/preset/validate-ci-preset.ts')};
+      const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });
+      assert.equal(lock.assets.length, 1);
+      assert.equal(validateCiPreset({ repoRoot: ${JSON.stringify(projectRoot)}, presets: ['release-request'] }).status, 'success');`);
+    const quality = await fetchDistribution({ projectRoot, manifest: release.manifest,
+      manifestBytes: release.manifestBytes, requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });
+    const materializer = path.join(quality.distributionRoot, 'runtime/adapter/materialize-adapter-bundle.ts');
+    assert.equal(fs.existsSync(materializer), false);
+    run(`import assert from 'node:assert/strict';
+      import fs from 'node:fs';
+      import { resolveQualityWorkflow } from ${moduleUrl(quality.distributionRoot, 'runtime/preset/ci-preset-assets.ts')};
+      import { loadRegistry } from ${moduleUrl(quality.distributionRoot, 'runtime/preset/preset-registry.ts')};
+      const report = { missingSettings: [], mismatches: [] };
+      const registry = loadRegistry(report);
+      assert.deepEqual(report.mismatches, []);
+      const workflow = { jobs: { quality: { uses: registry.actionRepository + '/' + registry.qualityReusableWorkflow.source + '@' + 'a'.repeat(40), with: { 'toolchain-version': '24.0.0' } } } };
+      assert.equal(resolveQualityWorkflow(workflow, registry, report).env.CI_TOOLCHAIN_VERSION, '24.0.0');
+      const source = ${JSON.stringify(path.join(quality.distributionRoot, '.github/workflows/ci-quality.yml'))};
+      fs.unlinkSync(source);
+      resolveQualityWorkflow(workflow, registry, report);
+      assert.ok(report.mismatches.some(item => item.message === 'fixed quality reusable workflow source is missing'));`);
+    fs.copyFileSync(path.join(repositoryRoot, '.github/workflows/ci-quality.yml'), path.join(quality.distributionRoot, '.github/workflows/ci-quality.yml'));
+    const before = verifyFetchedDistribution({ projectRoot, sourceRevision });
+    const merged = await fetchDistribution({ projectRoot, manifest: release.manifest,
+      manifestBytes: release.manifestBytes, requestedPresets: ['quality-gate'], requestedAssets: ['runtime.adapter-materializer'], sourceRoot: repositoryRoot });
+    assert.equal(merged.action, 'merged');
+    assert.ok(fs.existsSync(materializer));
+    assert.equal(verifyFetchedDistribution({ projectRoot, sourceRevision }).status, before.status);
+    const adapterProject = path.join(root, 'adapter-consumer');
+    fs.mkdirSync(adapterProject);
+    fs.writeFileSync(path.join(adapterProject, 'package.json'), JSON.stringify({ scripts: Object.fromEntries(['format:check', 'lint', 'typecheck', 'test'].map(name => [name, 'node --version'])) }));
+    fs.writeFileSync(path.join(adapterProject, 'package-lock.json'), '{}');
+    const beforeFiles = fs.readdirSync(adapterProject);
+    run(`import assert from 'node:assert/strict';
+      import { materializeAdapterBundle } from ${moduleUrl(merged.distributionRoot, 'runtime/adapter/materialize-adapter-bundle.ts')};
+      const result = materializeAdapterBundle({ sourceRoot: ${JSON.stringify(adapterProject)}, inventoryPath: 'skills/ci-github/references/ci-script-assets.reference.yml', bundleId: 'typescript-npm-quality', targetRoot: ${JSON.stringify(adapterProject)} });
+      assert.deepEqual(result.files, []);
+      assert.equal(result.binding.standardBundleId, 'typescript-npm-quality');`);
+    assert.deepEqual(fs.readdirSync(adapterProject), beforeFiles);
+  });
+});
+
+// evidence_role: contract
+// test_level: integration
+// contract_id: contract.ci-selective-distribution.delivery
+// integration_id: selective-distribution-delivery
+test('remote fetch rejects invalid redirect and transport responses without publishing consumer assets', async () => {
+  // Arrange
+  await withFixture('distribution-remote-rejection-', async (root) => {
+    const release = prepareRelease(root);
+    const projectRoot = path.join(root, 'consumer');
+    const stateRoot = path.join(projectRoot, '.a3-skills/ci-github');
+    fs.mkdirSync(stateRoot, { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, 'README.md'), 'project-owned content');
+    const before = snapshotTree(projectRoot);
+    const originalFetch = globalThis.fetch;
+    const cases = [
+      ['missing Location', { status: 302, location: null }, /distribution-download-redirect-location-missing/],
+      ['untrusted redirect', { status: 302, location: 'https://example.invalid/asset' }, /distribution-download-redirect-untrusted/],
+      ['insecure redirect', { status: 302, location: 'http://raw.githubusercontent.com/asset' }, /distribution-download-redirect-untrusted/],
+      ['HTTP failure', { status: 404, location: null }, /http-404/],
+      ['opaque transport failure', { failure: 'transport unavailable' }, /transport unavailable/],
+    ];
+    try {
+      for (const [label, response, diagnostic] of cases) {
+        const requests = [];
+        globalThis.fetch = async (url) => {
+          requests.push(String(url));
+          if (response.failure) throw response.failure;
+          return { ok: false, status: response.status, headers: { get: () => response.location } };
+        };
+        // Act / Assert
+        await assert.rejects(fetchDistribution({
+          projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          requestedPresets: ['quality-gate'], requestedAssets: [],
+        }), diagnostic, label);
+        assert.ok(requests.length > 0, label);
+        assert.ok(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`)), label);
+        assert.deepEqual(snapshotTree(projectRoot), before, label);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+// evidence_role: contract
+// test_level: integration
+// contract_id: contract.ci-selective-distribution.application
+// integration_id: selective-distribution-application
+test('plan rejects malformed prior ownership locks before changing consumer state', async () => {
+  // Arrange
+  await withFixture('distribution-prior-lock-', async (root) => {
+    const release = prepareRelease(root);
+    const projectRoot = path.join(root, 'consumer');
+    fs.mkdirSync(projectRoot);
+    await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+      requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });
+    const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+    fs.mkdirSync(path.dirname(lockPath));
+    const valid = { schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
+      assets: [{ path: '.github/workflows/quality-gate.yml', appliedSha256: 'a'.repeat(64) }] };
+    const cases = [
+      ['schema', (lock) => { lock.schemaVersion = '2'; }],
+      ['revision', (lock) => { lock.sourceRevision = 'main'; }],
+      ['missing revision', (lock) => { delete lock.sourceRevision; }],
+      ['assets type', (lock) => { lock.assets = {}; }],
+      ['missing assets', (lock) => { delete lock.assets; }],
+      ['null entry', (lock) => { lock.assets = [null]; }],
+      ['path type', (lock) => { lock.assets[0].path = 42; }],
+      ['duplicate path', (lock) => { lock.assets.push({ ...lock.assets[0] }); }],
+      ['digest', (lock) => { lock.assets[0].appliedSha256 = 'invalid'; }],
+      ['missing digest', (lock) => { delete lock.assets[0].appliedSha256; }],
+    ];
+    for (const [label, mutate] of cases) {
+      const lock = structuredClone(valid);
+      mutate(lock);
+      fs.writeFileSync(lockPath, JSON.stringify(lock));
+      const before = snapshotTree(projectRoot);
+      // Act / Assert
+      assert.throws(() => planDistributionApplication({ projectRoot, sourceRevision,
+        requestedPresets: ['quality-gate'], requestedAssets: [] }), /distribution-prior-asset-lock-invalid/, label);
+      assert.deepEqual(snapshotTree(projectRoot), before, label);
+    }
+  });
+});
+
+// evidence_role: contract
+// test_level: integration
+// contract_id: contract.ci-selective-distribution.application
+// integration_id: selective-distribution-application
+test('approved plans reuse identical workflows update owned bytes and reject unmanaged changes', async () => {
+  // Arrange
+  await withFixture('distribution-owned-update-', async (root) => {
+    const release = prepareRelease(root);
+    const projectRoot = path.join(root, 'consumer');
+    fs.mkdirSync(projectRoot);
+    const projectDocument = path.join(projectRoot, 'README.md');
+    fs.writeFileSync(projectDocument, 'project-owned content');
+    await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+      requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });
+    const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
+    const initial = planDistributionApplication(options);
+    applyDistributionPlan({ projectRoot, planPath: initial.planPath, approvalDigest: initial.planDigest });
+    const workflowPath = '.github/workflows/quality-gate.yml';
+    const workflow = path.join(projectRoot, workflowPath);
+    const canonical = fs.readFileSync(workflow);
+    const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+    fs.mkdirSync(path.dirname(lockPath));
+    const writeOwnership = (bytes) => fs.writeFileSync(lockPath, JSON.stringify({
+      schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
+      generatedAt: '2026-01-01T00:00:00Z',
+      assets: [{ path: workflowPath, canonicalSha256: sha256(canonical), appliedSha256: sha256(bytes) }],
+    }));
+    writeOwnership(canonical);
+    const reuse = planDistributionApplication(options);
+    let writes = 0;
+    // Act
+    const reused = applyDistributionPlan({ projectRoot, planPath: reuse.planPath, approvalDigest: reuse.planDigest,
+      beforeWrite: () => { writes += 1; } });
+    // Assert
+    assert.deepEqual(reuse.actions.map((entry) => entry.action), ['reuse']);
+    assert.equal(writes, 0);
+    assert.deepEqual(fs.readFileSync(workflow), canonical);
+    const reusedTransaction = path.join(projectRoot, '.a3-skills/ci-github/transactions', reused.transactionId);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(reusedTransaction, 'transaction.json'), 'utf8')).actions, []);
+    rollbackDistributionTransaction({ projectRoot, transactionId: reused.transactionId });
+    assert.deepEqual(fs.readFileSync(workflow), canonical);
+    // Arrange
+    const oldManagedBytes = Buffer.from('name: previously managed workflow\n');
+    fs.writeFileSync(workflow, oldManagedBytes);
+    writeOwnership(oldManagedBytes);
+    const ownershipBefore = fs.readFileSync(lockPath);
+    const update = planDistributionApplication(options);
+    // Act
+    const updated = applyDistributionPlan({ projectRoot, planPath: update.planPath, approvalDigest: update.planDigest });
+    // Assert
+    assert.deepEqual(update.actions.map((entry) => entry.action), ['update']);
+    assert.deepEqual(fs.readFileSync(workflow), canonical);
+    const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', updated.transactionId);
+    assert.deepEqual(fs.readFileSync(path.join(transactionRoot, 'before', workflowPath)), oldManagedBytes);
+    assert.deepEqual(fs.readFileSync(lockPath), ownershipBefore);
+    // Act
+    const rolledBack = rollbackDistributionTransaction({ projectRoot, transactionId: updated.transactionId });
+    // Assert
+    assert.equal(rolledBack.rollbackStatus, 'restored');
+    assert.deepEqual(fs.readFileSync(workflow), oldManagedBytes);
+    assert.deepEqual(fs.readFileSync(lockPath), ownershipBefore);
+    assert.equal(fs.readFileSync(projectDocument, 'utf8'), 'project-owned content');
+    // Arrange
+    fs.writeFileSync(workflow, 'unmanaged project edit');
+    const conflict = planDistributionApplication(options);
+    const before = snapshotTree(projectRoot);
+    // Act / Assert
+    assert.deepEqual(conflict.actions.map((entry) => entry.action), ['conflict']);
+    assert.throws(() => applyDistributionPlan({ projectRoot, planPath: conflict.planPath,
+      approvalDigest: conflict.planDigest }), /distribution-plan-has-conflicts/);
+    assert.deepEqual(snapshotTree(projectRoot), before);
   });
 });

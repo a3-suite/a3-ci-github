@@ -53,6 +53,14 @@ boundaries:
     direction: output
     externality: caller-owned
 runtime_contexts:
+  - id: runtime-context.annotated-tag-resolution-valid
+    summary: Repository and tag inputs are valid, credentials permit access to the configured provider, and its tag records identify an annotated tag and referenced commit with canonical SHAs.
+  - id: runtime-context.publish-version-plan-valid
+    summary: The readable owner-approved plan conforms to the declared exact or ciGenerated version-plan input contract, with complete matching template components and a safe materialized version.
+  - id: runtime-context.release-request-handoff-valid
+    summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
+  - id: runtime-context.release-notes-input-resolution-valid
+    summary: Safe input paths identify nonempty notes and approval files, and the writable normalized destination has neither notes nor approval files already present.
   - id: runtime-context.supplemental-phase-valid
     summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory.
   - id: runtime-context.supplemental-phase-invalid

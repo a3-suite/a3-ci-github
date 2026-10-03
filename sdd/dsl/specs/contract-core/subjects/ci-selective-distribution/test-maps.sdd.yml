@@ -10,6 +10,11 @@ test_maps:
         check_refs:
           - check-selective-distribution-closure
           - check-selective-distribution-missing-dependency
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: preset closure includes only its reusable workflow sources and excludes optional materializer
+        check_refs:
+          - check-selective-distribution-closure
+          - check-selective-distribution-missing-dependency
   - verification_id: verification.ci-selective-distribution.delivery
     case_id: selective-distribution-delivery
     tests:
@@ -17,6 +22,14 @@ test_maps:
         symbol: release generator derives deterministic selective assets and checksums from registries
         check_refs:
           - check-selective-distribution-receipt
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: each selected callee resolves from fetched sources and missing sources remain rejected
+        check_refs:
+          - check-selective-distribution-assets
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: selected distribution runs preflight and lock without materializer and supports its later acquisition
+        check_refs:
+          - check-selective-distribution-assets
       - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: same revision merges separately fetched verified asset groups without replacing prior files
         check_refs:
@@ -53,6 +66,10 @@ test_maps:
         symbol: standalone public CLI executes the local fetch plan and approved apply boundary
         check_refs:
           - check-selective-distribution-receipt
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: remote fetch rejects invalid redirect and transport responses without publishing consumer assets
+        check_refs:
+          - check-selective-distribution-invalid-source
   - verification_id: verification.ci-selective-distribution.publication
     case_id: selective-distribution-publication
     tests:
@@ -74,6 +91,17 @@ test_maps:
           - check-selective-distribution-plan
           - check-selective-distribution-transaction
           - check-selective-distribution-rollback
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: approved plans reuse identical workflows update owned bytes and reject unmanaged changes
+        check_refs:
+          - check-selective-distribution-plan
+          - check-selective-distribution-transaction
+          - check-selective-distribution-rollback
+          - check-selective-distribution-conflict
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: plan rejects malformed prior ownership locks before changing consumer state
+        check_refs:
+          - check-selective-distribution-conflict
       - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: plan rejects unmanaged destination drift and apply rejects changed plan inputs
         check_refs:

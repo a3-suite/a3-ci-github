@@ -6,19 +6,28 @@ test_maps:
     case_id: bundled-assembly
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: assembly bundle emits bound outputs only on complete success
+        symbol: "source entrypoint > assembly bundle emits bound outputs only on complete success"
+        check_refs: [success, handoff, digest]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > assembly bundle emits bound outputs only on complete success"
         check_refs: [success, handoff, digest]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: output-line-injection
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: assembly bundle rejects output path line injection before assembly
+        symbol: "source entrypoint > assembly bundle rejects output path line injection before assembly"
+        check_refs: [rejection]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > assembly bundle rejects output path line injection before assembly"
         check_refs: [rejection]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: identity-rejection
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: assembly bundle rejects invalid input without successful outputs
+        symbol: "source entrypoint > assembly bundle rejects invalid input without successful outputs"
+        check_refs: [rejection]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > assembly bundle rejects invalid input without successful outputs"
         check_refs: [rejection]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: build-validation

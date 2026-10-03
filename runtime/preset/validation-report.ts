@@ -1,4 +1,4 @@
-import type { ActionTarget, Finding, RegistryData, ValueMap } from './ci-preset-assets.ts';
+import type { ActionTarget, Finding, RegistryData, ValueMap } from './preset-model.ts';
 
 type Status = 'success' | 'failed';
 
@@ -31,6 +31,12 @@ type Report = {
   evidence: string[];
   semanticReviewRequired: boolean;
   semanticCandidates: SemanticCandidate[];
+};
+
+export const add = (findings: Finding[], finding: Finding): void => {
+  if (!findings.some((item) => item.path === finding.path && item.message === finding.message)) {
+    findings.push(finding);
+  }
 };
 
 export const createReport = (): Report => ({

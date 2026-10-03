@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { inactiveConditionalEntrypoints, managedAssets } from './ci-preset-assets.ts';
-import type { Preset, RegistryData, ValueMap } from './ci-preset-assets.ts';
+import type { Preset, RegistryData, ValueMap } from './preset-model.ts';
 import type { Report, SemanticCandidate } from './validation-report.ts';
 import { filesUnder, findWorkflowAssetReferences, inventoryUnder } from './workflow-assets.ts';
 import { uses } from './workflow-validation.ts';
@@ -42,13 +42,12 @@ const collectSemanticCandidates = (
   for (const [workflowPath, workflow] of parsed) {
     const preset = selected.find((candidate) =>
       [...candidate.workflowAssets, ...(candidate.optionalWorkflowAssets ?? [])]
-        .some((asset) => asset.destination === workflowPath));
+        .some((asset) => asset.destination === workflowPath)
+      || workflowPath === `.github/workflows/${candidate.id}.yml`);
     const excludedReferences = preset
       ? inactiveConditionalEntrypoints(root, registry, preset)
       : new Set<string>();
-    const workflowReachable = new Set(findWorkflowAssetReferences(root, fs.readFileSync(
-      path.join(root, workflowPath), 'utf8',
-    ), excludedReferences));
+    const workflowReachable = new Set(findWorkflowAssetReferences(root, JSON.stringify(workflow), excludedReferences));
     for (const asset of workflowReachable) reachable.add(asset);
     const actionUses = uses(workflow)
       .filter((value) => value.startsWith(`${registry.actionRepository}/`));

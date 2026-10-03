@@ -1,0 +1,25 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.quality-toolchain
+test_maps:
+  - verification_id: verification.ci-quality-toolchain.preparation
+    case_id: selected-quality-toolchain
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: quality toolchain contract selects only fixed profile dependencies without project execution
+        check_refs: [check-selected-quality-toolchain]
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        check_refs: [check-selected-quality-toolchain]
+  - verification_id: verification.ci-quality-toolchain.preparation
+    case_id: invalid-quality-toolchain
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup
+        check_refs: [check-invalid-quality-toolchain]
+  - verification_id: verification.ci-quality-toolchain.preparation
+    case_id: failed-quality-toolchain-setup
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        check_refs: [check-failed-quality-toolchain-setup]

@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-workflow
 contracts:
   - id: contract.ci-quality-workflow.execution
-    summary: The main quality caller passes explicit project settings to a fixed reusable workflow, which orders trusted source resolution before adapter execution and aggregates every applicable result. The caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Deployment remains forbidden until fixed publication and Hosted required-check acceptance.
+    summary: The main and optional platform quality callers pass explicit project settings to fixed reusable workflows, which order trusted source resolution before adapter execution and aggregate every applicable result. Each caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Deployment remains forbidden until fixed publication of the workflows and their dependencies and Hosted required-check acceptance.
     conditions:
       - id: ci-quality-workflow-caller-selected
         input_predicate:
@@ -75,6 +75,6 @@ contracts:
         guarantee_refs:
           - ci-quality-workflow-failure-observed
       - id: ci-quality-workflow-platform-intent
-        goal: Verify the optional platform source preserves trusted asset resolution, selected matrix execution, and aggregate platform evidence.
+        goal: Verify the optional platform caller passes explicit typed project inputs to its registered fixed source without copying the callee, preserves trusted asset resolution, selected matrix execution, docs-only platform records and aggregate evidence, and rejects invalid settings and unpublished dependencies through preflight. Local evidence does not establish Hosted check-name compatibility.
         guarantee_refs:
           - ci-quality-workflow-platform-chain-observed

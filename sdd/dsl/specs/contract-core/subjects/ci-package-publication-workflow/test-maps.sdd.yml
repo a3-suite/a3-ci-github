@@ -9,6 +9,10 @@ test_maps:
         symbol: package workflows separate preparation request validation and publication
         check_refs:
           - check-ci-package-publication-workflow-success
+      - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
+        symbol: package preparation fixed source preflight rejects drift and retains owner adapters without callee copies
+        check_refs:
+          - check-ci-package-publication-workflow-success
   - verification_id: verification.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-failure
     tests:

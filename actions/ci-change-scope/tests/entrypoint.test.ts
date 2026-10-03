@@ -3,9 +3,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 
 
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 const git = (cwd: string, ...args: string[]): string => execFileSync(
   'git',
@@ -27,13 +31,13 @@ const runBundled = (base: 'head' | string) => {
   env['INPUT_BASE-SHA'] = base === 'head' ? head : base;
   env['INPUT_HEAD-SHA'] = head;
   env['INPUT_DOCS-ONLY-PATTERNS'] = 'docs/**,README.md,**/*.md';
-  const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], { cwd: tempRoot, env, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: tempRoot, env, encoding: 'utf8' });
   return { output, result, tempRoot };
 };
 
 // contract_id: contract.ci-change-scope.outputs
 // integration_id: ci-change-scope-contract-entrypoint
-test('bundled entrypoint reports a valid range', () => {
+test('entrypoint reports a valid range', () => {
   // Arrange
   // Act
   const run = runBundled('head');
@@ -48,7 +52,7 @@ test('bundled entrypoint reports a valid range', () => {
 });
 
 // integration_id: ci-change-scope-entrypoint-regression
-test('bundled entrypoint fails open for an invalid SHA', () => {
+test('entrypoint fails open for an invalid SHA', () => {
   // Arrange
   // Act
   const run = runBundled('--relative=src');
@@ -61,4 +65,6 @@ test('bundled entrypoint fails open for an invalid SHA', () => {
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }
+});
+
 });

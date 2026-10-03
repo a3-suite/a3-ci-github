@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { add, isMap, map, parseYaml, strings } from './ci-preset-assets.ts';
-import type { ValueMap } from './ci-preset-assets.ts';
+import { add } from './validation-report.ts';
+import { isMap, map, strings } from './preset-model.ts';
+import { parseYaml } from './preset-registry.ts';
+import type { ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
 import { inside, realPathIsInside } from './workflow-assets.ts';
 import { walk } from './workflow-validation.ts';
@@ -46,6 +48,14 @@ const validateDescriptor = (
     add(report.mismatches, {
       path: descriptorPath,
       message: 'quality adapter descriptor resolves outside the project root',
+      settingLocation: descriptorPath,
+    });
+    return destinations;
+  }
+  if (providedContent === undefined && !fs.statSync(absolute).isFile()) {
+    add(report.mismatches, {
+      path: descriptorPath,
+      message: 'quality adapter descriptor must be a regular file',
       settingLocation: descriptorPath,
     });
     return destinations;

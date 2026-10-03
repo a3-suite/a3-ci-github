@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { OWNER_HANDOFF_PATH } from '../src/authority';
-import { runControl } from '../../ci-release-publication-control/src/control';
+import { runControl } from '../../../runtime/release-publication/control';
 import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 import { GithubReadOnlyClient } from '../../../runtime/release-publication/observation';
 

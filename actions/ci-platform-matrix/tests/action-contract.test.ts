@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { parse } from 'yaml';
 
 // integration_id: ci-platform-matrix-action-contract

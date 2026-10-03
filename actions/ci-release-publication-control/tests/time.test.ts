@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
-import test from 'node:test';
-import { parseFutureRfc3339 } from '../src/control.js';
+import { test } from 'vitest';
+import { parseFutureRfc3339 } from '../../../runtime/release-publication/control.js';
 
 // target_id: parseFutureRfc3339(string)
 test('rejects expired approval timestamps', () => {

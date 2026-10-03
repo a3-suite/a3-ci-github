@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import crypto from 'node:crypto';
-import test from 'node:test';
-import { validateReleaseNotesBinding } from '../src/binding.js';
+import { test } from 'vitest';
+import { validateReleaseNotesBinding } from '../../../runtime/release-publication/notes-binding.js';
 
 // target_id: validateReleaseNotesBinding(ReleaseNotesHandoff,ReleaseNotesApproval,string)
 test('binds approved release notes by identity and digest', () => {

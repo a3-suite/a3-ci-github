@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { writeReleaseRequestHandoff } from '../src/handoff.js';
 
 const base = { tagSourceSha: 'a'.repeat(40), tagObjectSha: 'b'.repeat(40), requestRunId: '42', requestActor: 'release-operator' };

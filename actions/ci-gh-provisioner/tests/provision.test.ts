@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { after, test } from 'node:test';
+import { afterAll as after, test } from 'vitest';
 import { provisionGh, provisionGhOnPath, selectAsset } from '../src/provision.js';
 
 const ownedTemporaryPaths: string[] = [];

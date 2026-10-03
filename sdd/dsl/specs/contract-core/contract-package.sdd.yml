@@ -2,6 +2,8 @@ version: 1
 name: contract-package
 package_id: a3-ci-github-contracts
 subject_scopes:
+  - subject_id: subject.ci.quality-toolchain
+    path: subjects/ci-quality-toolchain/
   - subject_id: subject.ci.release-authority
     path: subjects/ci-release-authority/
   - subject_id: subject.ci.release-publisher

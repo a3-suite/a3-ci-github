@@ -42,7 +42,9 @@ export const collectActionPackages = (root, actions = collectActions(root)) => a
     };
   });
 
-export const verificationPlan = (packages, nodePath = process.execPath) => packages.flatMap((entry) => [
+export const verificationPlan = (packages, nodePath = process.execPath) => packages.flatMap((entry) => {
+  const root = path.resolve(entry.path, '../..');
+  return [
   {
     command: 'npm',
     args: ['run', 'lint'],
@@ -52,33 +54,34 @@ export const verificationPlan = (packages, nodePath = process.execPath) => packa
   },
   {
     command: nodePath,
-    args: ['--import=tsx', '--test', ...entry.tests],
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...entry.tests.map((file) => path.join(entry.path, file))],
     cwd: entry.path,
     action: entry.name,
     phase: 'test',
   },
-]);
+  ];
+});
 
 export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath) => {
   const actionRoot = path.join(root, 'actions/ci-gh-provisioner');
   const testPath = path.join(root, 'runtime/provisioner/tests/provision-core.test.ts');
-  if (!existsSync(path.join(actionRoot, 'node_modules/tsx')) || !existsSync(testPath)) {
+  if (!existsSync(path.join(root, 'node_modules/vitest')) || !existsSync(testPath)) {
     throw new Error('shared provisioner verification dependencies are missing');
   }
   const releaseRoot = path.join(root, 'actions/ci-release-assembly');
   const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
-  if (!existsSync(path.join(releaseRoot, 'node_modules/tsx')) || releaseTests.some((file) => !existsSync(file))) {
+  if (!existsSync(path.join(root, 'node_modules/vitest')) || releaseTests.some((file) => !existsSync(file))) {
     throw new Error('shared release publication verification dependencies are missing');
   }
   return [{
     command: nodePath,
-    args: ['--import=tsx', '--test', path.relative(actionRoot, testPath)],
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), testPath],
     cwd: actionRoot,
     action: 'shared-provisioner-core',
     phase: 'test',
   }, {
     command: nodePath,
-    args: ['--import=tsx', '--test', ...releaseTests.map((file) => path.relative(releaseRoot, file))],
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...releaseTests],
     cwd: releaseRoot,
     action: 'shared-release-publication',
     phase: 'test',

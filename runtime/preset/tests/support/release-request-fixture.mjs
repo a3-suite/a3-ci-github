@@ -27,10 +27,7 @@ export const loadReleaseRequestFixtureModel = ({ repositoryRoot, runtimeRoot }) 
   if (!preset) throw new Error('release-request preset must be registered');
   const placeholders = new Map([
     ['<commit-sha>', 'a'.repeat(40)],
-    ['<gh-version>', '2.80.0'],
-    ['<jq-version>', '1.7.1'],
     ['<release-tag-pattern>', 'v*'],
-    ['<sha256sum-version>', '9.5'],
     ['<versioned-runner>', 'ubuntu-24.04'],
   ]);
   const configureWorkflow = (text) => text

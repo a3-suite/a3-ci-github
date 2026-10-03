@@ -2,9 +2,13 @@ import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 
 
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
 const runBundled = (manifest: string, selection?: string) => {
@@ -23,7 +27,7 @@ const runBundled = (manifest: string, selection?: string) => {
     fs.writeFileSync(selectionPath, selection, 'utf8');
     env['INPUT_SELECTION-PATH'] = selectionPath;
   }
-  const result = spawnSync(process.execPath, [path.join(root, 'dist/index.js')], {
+  const result = spawnSync(process.execPath, [...entrypointArgs], {
     cwd: root,
     env,
     encoding: 'utf8',
@@ -33,7 +37,7 @@ const runBundled = (manifest: string, selection?: string) => {
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
-test('bundled entrypoint emits the validated matrix', () => {
+test('entrypoint emits the validated matrix', () => {
   // Arrange
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-24.04\n    target: x86_64-unknown-linux-gnu\n');
@@ -48,7 +52,7 @@ test('bundled entrypoint emits the validated matrix', () => {
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
-test('bundled entrypoint fails closed for an unsupported runner', () => {
+test('entrypoint fails closed for an unsupported runner', () => {
   // Arrange
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-latest\n    target: x86_64-unknown-linux-gnu\n');
@@ -61,7 +65,7 @@ test('bundled entrypoint fails closed for an unsupported runner', () => {
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
-test('bundled entrypoint rejects an oversized manifest before parsing', () => {
+test('entrypoint rejects an oversized manifest before parsing', () => {
   // Arrange
   // Act
   const run = runBundled(`platforms:\n${' '.repeat(64 * 1024)}`);
@@ -74,7 +78,7 @@ test('bundled entrypoint rejects an oversized manifest before parsing', () => {
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
-test('bundled entrypoint emits ordered quality outputs without changing the manifest matrix', () => {
+test('entrypoint emits ordered quality outputs without changing the manifest matrix', () => {
   const run = runBundled(`platforms:
   - id: linux-x64
     runner: ubuntu-24.04
@@ -98,11 +102,13 @@ test('bundled entrypoint emits ordered quality outputs without changing the mani
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
-test('bundled entrypoint fails without any outputs for invalid selection', () => {
+test('entrypoint fails without any outputs for invalid selection', () => {
   const run = runBundled('platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]', 'platforms: [{id: unknown}]');
   try {
     assert.notEqual(run.result.status, 0);
     assert.match(run.result.stderr, /not declared/);
     assert.equal(fs.readFileSync(run.outputPath, 'utf8'), '');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
 });

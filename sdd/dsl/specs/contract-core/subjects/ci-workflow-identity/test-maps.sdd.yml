@@ -10,14 +10,22 @@ test_maps:
         check_refs:
           - check-verified-snapshot-sha
       - path: actions/ci-workflow-identity/tests/entrypoint.test.ts
-        symbol: bundled entrypoint exposes the verified workflow snapshot sha
+        symbol: "source entrypoint > entrypoint exposes the verified workflow snapshot sha"
+        check_refs:
+          - check-verified-snapshot-sha
+      - path: actions/ci-workflow-identity/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint exposes the verified workflow snapshot sha"
         check_refs:
           - check-verified-snapshot-sha
   - verification_id: verification.ci-workflow-identity.verify
     case_id: mismatched-workflow-identity
     tests:
       - path: actions/ci-workflow-identity/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects a mismatched workflow snapshot
+        symbol: "source entrypoint > entrypoint rejects a mismatched workflow snapshot"
+        check_refs:
+          - check-mismatched-identity-failure
+      - path: actions/ci-workflow-identity/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects a mismatched workflow snapshot"
         check_refs:
           - check-mismatched-identity-failure
   - verification_id: verification.ci-workflow-identity.verify

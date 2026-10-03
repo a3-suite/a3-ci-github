@@ -6,31 +6,46 @@ test_maps:
     case_id: platform-phase
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle emits success for the v2 build-platform phase
+        symbol: "source entrypoint > supplemental entrypoint emits success for the v2 build-platform phase"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint emits success for the v2 build-platform phase"
         check_refs: [success, output]
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: assembly-phase
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle emits success for the v2 assemble phase
+        symbol: "source entrypoint > supplemental entrypoint emits success for the v2 assemble phase"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint emits success for the v2 assemble phase"
         check_refs: [success, output]
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: unselected-binding
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle rejects invalid binding before owner execution
+        symbol: "source entrypoint > supplemental entrypoint rejects invalid binding before owner execution"
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint rejects invalid binding before owner execution"
         check_refs: [refusal]
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: injected-output
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle rejects injected output before owner execution
+        symbol: "source entrypoint > supplemental entrypoint rejects injected output before owner execution"
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint rejects injected output before owner execution"
         check_refs: [refusal]
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: owner-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle propagates owner failure without owner diagnostics
+        symbol: "source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics"
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics"
         check_refs: [refusal]
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source preserves owner shebang failure semantics
@@ -39,7 +54,10 @@ test_maps:
     case_id: input-mutation
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: supplemental bundle rejects mutated standard inputs and retains partial output
+        symbol: "source entrypoint > supplemental entrypoint rejects mutated standard inputs and retains partial output"
+        check_refs: [refusal]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint rejects mutated standard inputs and retains partial output"
         check_refs: [refusal]
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source rejects mutated authority, snapshot, adapter and supplemental inputs

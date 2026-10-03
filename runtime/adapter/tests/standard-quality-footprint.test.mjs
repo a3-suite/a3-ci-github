@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
+import { test } from 'vitest';
 import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
 import { standardQualityBundle } from '../standard-quality-bundles.ts';
 
@@ -42,8 +43,17 @@ test('registered standard quality bundles require no consumer copies and preserv
               .map((script) => [script, 'node --version'])) }) : '\n');
         }
         const before = new Map(filesIn(project).map((file) => [file, fs.readFileSync(file)]));
-        const options = { sourceRoot: skillRoot ?? path.join(fixture, 'unavailable-owner-collection'), inventoryPath, bundleId: bundle.id, targetRoot: project };
+        const options = { inventoryPath, bundleId: bundle.id, targetRoot: project };
         const report = materializeAdapterBundle(options);
+        assert.deepEqual(materializeAdapterBundle({ ...options,
+          sourceRoot: skillRoot ?? path.join(fixture, 'unavailable-owner-collection') }), report);
+        const cli = spawnSync(process.execPath, [
+          '--import', require.resolve('tsx', { paths: [path.join(root, 'runtime/preset')] }),
+          path.join(root, 'runtime/adapter/materialize-adapter-bundle.ts'),
+          '--inventory', inventoryPath, '--bundle', bundle.id, '--target-root', project,
+        ], { encoding: 'utf8', cwd: root });
+        assert.equal(cli.status, 0, cli.stderr);
+        assert.deepEqual(JSON.parse(cli.stdout), report);
         assert.equal(report.schema, 'ci.adapter-materializer.v1');
         assert.deepEqual(report.files, []);
         assert.equal(report.descriptor, '');

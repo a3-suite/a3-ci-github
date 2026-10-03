@@ -1,15 +1,22 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 
+// evidence_role: supplemental
+// test_level: integration
 // integration_id: repository-cli-specification
 test('CLI specification indexes only repository-owned public entrypoints', () => {
-  const manifest = read('sdd/dsl/specs/cli/cli-command-manifest.sdd.yml');
+  // Arrange
+  const manifestPath = 'sdd/dsl/specs/cli/cli-command-manifest.sdd.yml';
+  // Act
+  const manifest = read(manifestPath);
+  const externalCommandPresent = existsSync(path.join(root, 'sdd/dsl/specs/cli/commands/sdd-check'));
+  // Assert
   for (const pattern of [
     /id: validate-ci-preset/,
     /id: generate-ci-asset-lock/,
@@ -20,12 +27,17 @@ test('CLI specification indexes only repository-owned public entrypoints', () =>
     assert.match(manifest, pattern);
   }
   assert.doesNotMatch(manifest, /sdd-check/);
-  assert.equal(existsSync(path.join(root, 'sdd/dsl/specs/cli/commands/sdd-check')), false);
+  assert.equal(externalCommandPresent, false);
 });
 
+// evidence_role: supplemental
+// test_level: integration
 // integration_id: repository-cli-specification
 test('CLI option vocabulary matches public parser flags', () => {
-  const vocabulary = read('sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml');
+  // Arrange
+  const vocabularyPath = 'sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml';
+  // Act
+  const vocabulary = read(vocabularyPath);
   const implementations = [
     read('runtime/preset/run-validate-ci-preset.mjs'),
     read('runtime/preset/generate-ci-asset-lock.ts'),
@@ -34,6 +46,7 @@ test('CLI option vocabulary matches public parser flags', () => {
     read('runtime/distribution/generate-distribution-release.ts'),
   ].join('\n');
   const declared = [...vocabulary.matchAll(/^\s+long:\s+(--\S+)$/gm)].map((match) => match[1]);
+  // Assert
   assert.deepEqual(declared.sort(), [
     '--approve', '--asset', '--audit-mode', '--bundle', '--inventory', '--manifest',
     '--manifest-url', '--output', '--output-directory', '--plan', '--preset', '--release-tag',
@@ -44,10 +57,16 @@ test('CLI option vocabulary matches public parser flags', () => {
   assert.match(vocabulary, /resolving a relative path from the process working directory/);
 });
 
+// evidence_role: supplemental
+// test_level: integration
 // integration_id: repository-cli-specification
 test('validate preset usage keeps read-only output invalid', () => {
-  const specification = read('sdd/dsl/specs/cli/commands/validate-ci-preset/cli-command.sdd.yml');
+  // Arrange
+  const specificationPath = 'sdd/dsl/specs/cli/commands/validate-ci-preset/cli-command.sdd.yml';
+  // Act
+  const specification = read(specificationPath);
   const [readOnly, remediation] = specification.split('    - id: remediation');
+  // Assert
   assert.doesNotMatch(readOnly, /option_id: output/);
   assert.match(remediation, /option_id: output/);
   assert.match(specification, /--audit-mode read-only[^\n]*\n      - node[^\n]*--audit-mode remediation[^\n]*--output/);

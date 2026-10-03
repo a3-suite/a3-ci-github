@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 
 test('supplemental Action declares the bound v2 invocation inputs and node24 bundle', () => {
   const action = fs.readFileSync(path.resolve(__dirname, '../action.yml'), 'utf8');

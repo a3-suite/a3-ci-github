@@ -19,6 +19,55 @@ on:
         description: Static owner contract ID, or __unset__ when disabled
         required: true
         type: string
+      sha256sum-version:
+        required: true
+        type: string
+      runner:
+        description: Static versioned runner label selected by the owner caller
+        required: true
+        type: string
+      language-profile:
+        required: true
+        type: string
+      platform-manifest:
+        required: true
+        type: string
+      toolchain-version:
+        required: true
+        type: string
+      uv-version:
+        required: true
+        type: string
+      cargo-audit-version:
+        required: true
+        type: string
+      gh-version:
+        required: true
+        type: string
+      jq-version:
+        required: true
+        type: string
+      release-implementation:
+        required: true
+        type: string
+      standard-bundle-id:
+        required: true
+        type: string
+      adapter-descriptor:
+        required: true
+        type: string
+      cargo-manifest-path:
+        required: true
+        type: string
+      cargo-lock-path:
+        required: true
+        type: string
+      release-binary-name:
+        required: true
+        type: string
+      release-asset-prefix:
+        required: true
+        type: string
 
 permissions: {}
 
@@ -28,26 +77,26 @@ concurrency:
   queue: max
 
 env:
-  CI_LANGUAGE_PROFILE: <language-profile>
-  CI_PLATFORM_MANIFEST: <platform-manifest>
-  CI_TOOLCHAIN_VERSION: <toolchain-version>
-  CI_UV_VERSION: <uv-version>
-  CI_CARGO_AUDIT_VERSION: <cargo-audit-version>
-  CI_GH_VERSION: <gh-version>
-  CI_JQ_VERSION: <jq-version>
-  CI_SHA256SUM_VERSION: <sha256sum-version>
-  CI_RELEASE_IMPLEMENTATION: <release-implementation>
+  CI_LANGUAGE_PROFILE: ${{ inputs.language-profile }}
+  CI_PLATFORM_MANIFEST: ${{ inputs.platform-manifest }}
+  CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+  CI_UV_VERSION: ${{ inputs.uv-version }}
+  CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
+  CI_GH_VERSION: ${{ inputs.gh-version }}
+  CI_JQ_VERSION: ${{ inputs.jq-version }}
+  CI_SHA256SUM_VERSION: ${{ inputs.sha256sum-version }}
+  CI_RELEASE_IMPLEMENTATION: ${{ inputs.release-implementation }}
   CI_RELEASE_OWNER_CONTRACT: git.release-flow
-  CI_STANDARD_BUNDLE_ID: <standard-bundle-id>
-  CI_ADAPTER_DESCRIPTOR: ''
-  CI_CARGO_MANIFEST_PATH: <cargo-manifest-path>
-  CI_CARGO_LOCK_PATH: <cargo-lock-path>
-  CI_RELEASE_BINARY_NAME: <release-binary-name>
-  CI_RELEASE_ASSET_PREFIX: <release-asset-prefix>
+  CI_STANDARD_BUNDLE_ID: ${{ inputs.standard-bundle-id }}
+  CI_ADAPTER_DESCRIPTOR: ${{ inputs.adapter-descriptor }}
+  CI_CARGO_MANIFEST_PATH: ${{ inputs.cargo-manifest-path }}
+  CI_CARGO_LOCK_PATH: ${{ inputs.cargo-lock-path }}
+  CI_RELEASE_BINARY_NAME: ${{ inputs.release-binary-name }}
+  CI_RELEASE_ASSET_PREFIX: ${{ inputs.release-asset-prefix }}
 
 jobs:
   authority:
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
       contents: read
@@ -67,26 +116,31 @@ jobs:
       approval_id: ${{ steps.authority.outputs['approval-id'] || steps.publication_notes.outputs['approval-id'] }}
       approval_body_sha256: ${{ steps.authority.outputs['body-sha256'] || steps.publication_notes.outputs.digest }}
     steps:
-      - name: Verify workflow identity
-        id: workflow-identity
-        uses: a3-suite/a3-ci-github/actions/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2
-        with:
-          repository: ${{ github.repository }}
-          default-branch: ${{ github.event.repository.default_branch }}
-          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
-          expected-called-workflow-path: .github/workflows/release-publication.yml
-          caller-workflow-ref: ${{ github.workflow_ref }}
-          caller-workflow-sha: ${{ github.workflow_sha }}
-          called-workflow-repository: ${{ job.workflow_repository }}
-          called-workflow-file-path: ${{ job.workflow_file_path }}
-          called-workflow-ref: ${{ job.workflow_ref }}
-          called-workflow-sha: ${{ job.workflow_sha }}
+      - name: Verify publication entry
+        id: publication-entry
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          CALLER_EVENT: ${{ github.event_name }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          test "$CALLER_EVENT" = workflow_run
+          test -n "$REPOSITORY"
+          test -n "$DEFAULT_BRANCH"
+          test "$CALLER_WORKFLOW_REF" = "$REPOSITORY/.github/workflows/release-publication-caller.yml@refs/heads/$DEFAULT_BRANCH"
+          [[ "$CONTROL_SHA" =~ ^[a-f0-9]{40}$ ]]
       - uses: actions/checkout@<commit-sha>
         with:
-          ref: ${{ steps.workflow-identity.outputs.sha }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
       - name: Verify trusted control checkout
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+        env:
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Validate publication inputs
         shell: bash
         run: |
@@ -240,7 +294,7 @@ jobs:
 
   source-gate:
     needs: authority
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
       contents: read
@@ -272,31 +326,19 @@ jobs:
 
   quality:
     needs: authority
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     steps:
-      - name: Verify workflow identity
-        id: workflow-identity
-        uses: a3-suite/a3-ci-github/actions/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2
-        with:
-          repository: ${{ github.repository }}
-          default-branch: ${{ github.event.repository.default_branch }}
-          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
-          expected-called-workflow-path: .github/workflows/release-publication.yml
-          caller-workflow-ref: ${{ github.workflow_ref }}
-          caller-workflow-sha: ${{ github.workflow_sha }}
-          called-workflow-repository: ${{ job.workflow_repository }}
-          called-workflow-file-path: ${{ job.workflow_file_path }}
-          called-workflow-ref: ${{ job.workflow_ref }}
-          called-workflow-sha: ${{ job.workflow_sha }}
       - uses: actions/checkout@<commit-sha>
         with:
           ref: ${{ needs.authority.outputs.source_sha }}
       - name: Checkout trusted CI assets
+        if: env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''
         uses: actions/checkout@<commit-sha>
         with:
-          ref: ${{ steps.workflow-identity.outputs.sha }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
           path: .ci-base
           sparse-checkout: |
             .ci/adapters
@@ -305,36 +347,18 @@ jobs:
             Cargo.toml
             Cargo.lock
       - name: Verify trusted control checkout
+        if: env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''
         shell: bash
-        run: test "$(git -C .ci-base rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
-      - name: Set up TypeScript toolchain
-        if: env.CI_LANGUAGE_PROFILE == 'typescript'
-        uses: actions/setup-node@<commit-sha>
+        env:
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: test "$(git -C .ci-base rev-parse HEAD)" = "$CONTROL_SHA"
+      - name: Set up quality toolchain
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>
         with:
-          node-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-          cache: npm
-      - name: Set up Python toolchain
-        if: env.CI_LANGUAGE_PROFILE == 'python'
-        uses: actions/setup-python@<commit-sha>
-        with:
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up uv
-        if: env.CI_LANGUAGE_PROFILE == 'python'
-        uses: astral-sh/setup-uv@<commit-sha>
-        with:
-          version: ${{ env.CI_UV_VERSION }}
-          python-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Set up Rust toolchain
-        if: env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: |
-          set -euo pipefail
-          rustup toolchain install "$CI_TOOLCHAIN_VERSION" --profile minimal --component rustfmt --component clippy
-          echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
-      - name: Set up cargo-audit
-        if: env.CI_LANGUAGE_PROFILE == 'rust'
-        shell: bash
-        run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          uv-version: ${{ env.CI_UV_VERSION }}
+          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
       - name: Provision fixed jq
         uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
@@ -348,20 +372,13 @@ jobs:
         id: quality-adapter
         uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@<release-publication-action-sha>
         with:
-          bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR }}
+          bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
+          require-trusted-project-scripts: 'true'
+          trusted-project-root: .ci-base
           source-root: .
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-      - name: Report project quality adapter result
-        if: always()
-        shell: bash
-        env:
-          CI_QUALITY_RESULT_PATH: ${{ steps.quality-adapter.outputs['result-path'] }}
-        run: |
-          if [[ -n "${CI_QUALITY_RESULT_PATH:-}" && -f "$CI_QUALITY_RESULT_PATH" ]]; then
-            cat -- "$CI_QUALITY_RESULT_PATH"
-          fi
 
   build:
     needs: [authority, source-gate, quality]
@@ -432,7 +449,7 @@ jobs:
   supplemental-asset:
     if: inputs.supplemental_release_asset_enabled
     needs: [authority, source-gate, quality, build]
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
       contents: read
@@ -483,33 +500,22 @@ jobs:
         ((inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'success') ||
         (!inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'skipped'))
       }}
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
       contents: read
     outputs:
       artifact_transfer_id: ${{ steps.upload_release_handoff.outputs.artifact-id }}
     steps:
-      - name: Verify workflow identity
-        id: workflow-identity
-        uses: a3-suite/a3-ci-github/actions/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2
-        with:
-          repository: ${{ github.repository }}
-          default-branch: ${{ github.event.repository.default_branch }}
-          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
-          expected-called-workflow-path: .github/workflows/release-publication.yml
-          caller-workflow-ref: ${{ github.workflow_ref }}
-          caller-workflow-sha: ${{ github.workflow_sha }}
-          called-workflow-repository: ${{ job.workflow_repository }}
-          called-workflow-file-path: ${{ job.workflow_file_path }}
-          called-workflow-ref: ${{ job.workflow_ref }}
-          called-workflow-sha: ${{ job.workflow_sha }}
       - uses: actions/checkout@<commit-sha>
         with:
-          ref: ${{ steps.workflow-identity.outputs.sha }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
       - name: Verify trusted control checkout
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+        env:
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
         uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
@@ -564,7 +570,7 @@ jobs:
 
   publish:
     needs: [authority, assemble]
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
       contents: write
@@ -573,26 +579,15 @@ jobs:
       publish_receipt: ${{ steps.verify_publication.outputs['publish-receipt'] }}
       readback_evidence: ${{ steps.verify_publication.outputs['readback-evidence'] }}
     steps:
-      - name: Verify workflow identity
-        id: workflow-identity
-        uses: a3-suite/a3-ci-github/actions/ci-workflow-identity@312c534de67720de060689d78ada17da9c84c4e2
-        with:
-          repository: ${{ github.repository }}
-          default-branch: ${{ github.event.repository.default_branch }}
-          expected-caller-workflow-path: .github/workflows/release-publication-caller.yml
-          expected-called-workflow-path: .github/workflows/release-publication.yml
-          caller-workflow-ref: ${{ github.workflow_ref }}
-          caller-workflow-sha: ${{ github.workflow_sha }}
-          called-workflow-repository: ${{ job.workflow_repository }}
-          called-workflow-file-path: ${{ job.workflow_file_path }}
-          called-workflow-ref: ${{ job.workflow_ref }}
-          called-workflow-sha: ${{ job.workflow_sha }}
       - uses: actions/checkout@<commit-sha>
         with:
-          ref: ${{ steps.workflow-identity.outputs.sha }}
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
       - name: Verify trusted control checkout
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ steps.workflow-identity.outputs.sha }}"
+        env:
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
         uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
         with:
@@ -685,18 +680,11 @@ jobs:
   summary:
     needs: [authority, source-gate, quality, build, supplemental-asset, assemble, publish]
     if: always()
-    runs-on: <versioned-runner>
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     env:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      AUTHORITY_RESULT: ${{ needs.authority.result }}
-      SOURCE_GATE_RESULT: ${{ needs.source-gate.result }}
-      QUALITY_RESULT: ${{ needs.quality.result }}
-      BUILD_RESULT: ${{ needs.build.result }}
-      SUPPLEMENTAL_ASSET_RESULT: ${{ needs.supplemental-asset.result }}
-      ASSEMBLE_RESULT: ${{ needs.assemble.result }}
-      PUBLISH_RESULT: ${{ needs.publish.result }}
     steps:
       - name: Write workflow summary
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2

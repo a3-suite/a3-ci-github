@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import test from 'node:test';
-import { loadRegistry } from '../ci-preset-assets.ts';
+import { test } from 'vitest';
+import { loadRegistry } from '../preset-registry.ts';
 import { validateActionAvailability } from '../action-availability.ts';
 import { createReport } from '../validation-report.ts';
 
 const fixture = (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-action-availability-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const report = createReport();
   return { root, report, registry: loadRegistry(report) };
 };
@@ -21,7 +21,7 @@ test('selected pending publication Actions block deployment without disturbing r
   validateActionAvailability(f.root, 'release-request', new Set(['release-request']), new Map(), f.registry, f.report);
   assert.deepEqual(f.report.missingSettings, []);
   validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, f.report);
-  assert.deepEqual(f.report.missingSettings.map((item) => item.path).sort(), ['release-publication:actions.ci-platform-matrix', 'release-publication:actions.ci-quality-adapter', 'release-publication:actions.ci-release-assembly', 'release-publication:actions.ci-release-authority', 'release-publication:actions.ci-release-publication-control', 'release-publication:actions.ci-release-publication-verifier', 'release-publication:actions.ci-release-publisher', 'release-publication:actions.ci-release-supplemental-asset']);
+  assert.deepEqual(f.report.missingSettings.map((item) => item.path).sort(), ['release-publication:actions.ci-platform-matrix', 'release-publication:actions.ci-quality-adapter', 'release-publication:actions.ci-quality-toolchain', 'release-publication:actions.ci-release-assembly', 'release-publication:actions.ci-release-authority', 'release-publication:actions.ci-release-publication-control', 'release-publication:actions.ci-release-publication-verifier', 'release-publication:actions.ci-release-publisher', 'release-publication:actions.ci-release-supplemental-asset']);
 });
 
 // integration_id: preset-actionized-fallback-rejection

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import type { TestContext } from 'node:test';
+import type { TestContext } from 'vitest';
 import type { SupplementalOptionsType } from '../../../runtime/release-publication/supplemental';
 import { canonicalJson, sha256 } from '../../../runtime/release-publication/io';
 
@@ -12,7 +12,7 @@ export const fixture = (t: TestContext, body = 'test -z "${GITHUB_OUTPUT-}"\nmkd
   const parent = path.resolve(__dirname, '../../../tests/tmp');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'supplemental-phase-'));
-  t.after(() => fs.rmSync(root, { force: true, recursive: true }));
+  t.onTestFinished(() => fs.rmSync(root, { force: true, recursive: true }));
   execFileSync('git', ['init', '-q', '--object-format=sha1', root]);
   fs.mkdirSync(path.join(root, '.ci/scripts'), { recursive: true });
   fs.writeFileSync(path.join(root, '.ci/scripts/ci-release-supplemental-asset.sh'), `${header}${body}\n`, { mode: 0o700 });
@@ -44,8 +44,8 @@ export const fixture = (t: TestContext, body = 'test -z "${GITHUB_OUTPUT-}"\nmkd
   const options = { operation: 'build-platform', sourceRoot: root, authorityPath: 'authority.json', snapshotPath: 'snapshot.json', standardBuildRoot: 'standard build', outputDirectory: 'new output' };
   return { root, outputPath, options, configure };
 };
-export const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, string> = {}): ReturnType<typeof spawnSync> => spawnSync(process.execPath,
-  [path.resolve(__dirname, '../dist/index.js')], {
+export const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, string> = {}, entrypointArgs = [path.resolve(__dirname, '../dist/index.js')]): ReturnType<typeof spawnSync> => spawnSync(process.execPath,
+  entrypointArgs, {
     cwd: f.root, encoding: 'utf8', env: {
       ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: f.outputPath,
       'INPUT_OPERATION': f.options.operation, 'INPUT_SOURCE-ROOT': f.options.sourceRoot,

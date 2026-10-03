@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { test } from 'node:test';
+import { test } from 'vitest';
 
 // integration_id: ci-workflow-identity-action-contract
 test('action.yml exposes the workflow identity contract', () => {
   // Arrange
-  const action = readFileSync(path.resolve(process.cwd(), 'action.yml'), 'utf8');
+  const action = readFileSync(path.resolve(path.resolve(__dirname, '..'), 'action.yml'), 'utf8');
   const inputs = [
     'repository',
     'default-branch',

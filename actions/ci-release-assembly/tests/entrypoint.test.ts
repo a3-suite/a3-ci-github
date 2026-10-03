@@ -1,11 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
-const bundle = path.resolve(__dirname, '../dist/index.js');
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
+const bundle = entrypointArgs;
 const environment = (options: Record<string, string>, output: string): NodeJS.ProcessEnv => ({
   ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
   INPUT_REPOSITORY: options.repository, 'INPUT_AUTHORITY-PATH': options.authorityPath,
@@ -19,7 +23,7 @@ const environment = (options: Record<string, string>, output: string): NodeJS.Pr
 test('assembly bundle emits bound outputs only on complete success', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
+  const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
   assert.equal(result.status, 0, result.stderr);
   assert.match(fs.readFileSync(output, 'utf8'), /status=success\nrelease-handoff=/);
   assert.match(fs.readFileSync(output, 'utf8'), /asset-digest=[a-f0-9]{64}\n/);
@@ -31,7 +35,7 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
 test('assembly bundle rejects output path line injection before assembly', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [bundle], {
+  const result = spawnSync(process.execPath, [...bundle], {
     env: { ...environment(f.options, output), 'INPUT_OUTPUT-DIRECTORY': `${f.options.outputRoot}\nstatus=success` },
     encoding: 'utf8', cwd: f.root,
   });
@@ -46,8 +50,10 @@ test('assembly bundle rejects output path line injection before assembly', (t) =
 test('assembly bundle rejects invalid input without successful outputs', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [bundle], { env: { ...environment(f.options, output), INPUT_REPOSITORY: 'other/repository' }, encoding: 'utf8', cwd: f.root });
+  const result = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), INPUT_REPOSITORY: 'other/repository' }, encoding: 'utf8', cwd: f.root });
   assert.equal(result.status, 1);
   assert.equal(fs.readFileSync(output, 'utf8'), '');
   assert.match(result.stderr, /authority-handoff-binding-mismatch/);
+});
+
 });

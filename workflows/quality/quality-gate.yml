@@ -27,7 +27,7 @@ jobs:
       cargo-audit-version: <cargo-audit-version>
       cargo-manifest-path: <cargo-manifest-path>
       cargo-lock-path: <cargo-lock-path>
-      jq-version: <jq-version>
+      jq-version: <optional-jq-version>
       standard-bundle-id: <standard-bundle-id>
       adapter-descriptor: <adapter-descriptor>
       docs-only-patterns: docs/**,README.md,**/*.md
@@ -40,9 +40,6 @@ jobs:
     env:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Prepare summary evidence directory
-        shell: bash
-        run: mkdir -p .ci
       - name: Write workflow summary
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
         with:

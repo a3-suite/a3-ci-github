@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +27,8 @@ test('collects bundled and composite Actions with their distribution contract', 
     if (action.runtime === 'node24') assert.equal(action.distPath, `actions/${action.name}/dist`);
     if (action.runtime === 'composite') {
       assert.equal(action.distPath, null);
-      assert.ok(action.referencedPaths.length > 0);
+      if (action.name === 'ci-quality-toolchain') assert.deepEqual(action.referencedPaths, []);
+      else assert.ok(action.referencedPaths.length > 0);
       for (const relative of action.referencedPaths) assert.equal(existsSync(path.join(root, relative)), true);
     }
   }

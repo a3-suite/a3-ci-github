@@ -24,7 +24,7 @@ Node で実装した共通処理を、bundle 作成を省くためだけに Comp
 
 共有処理は既存の `runtime/` 責務へ配置し、TypeScript Action の bundle に含めます。各 Action に同じ source を複製しません。Action 固有の input mapping、credential の受け取り、output mapping、終了状態の設定は `src/index.ts` に置きます。共有処理は入力・client・必要な decoder を引数で受け取り、結果を返します。
 
-共有処理から Action の内部 source へ逆依存しません。platform の意味検証は既存の `runtime/platform/` を利用し、YAML decoder は既存の `yaml` 依存を持つ Action から渡します。別 Action の parser を import したり、共有 package を追加して解決したりしません。
+共有処理から Action の内部 source へ逆依存しません。Action も別 Action の内部 source へ実装依存せず、共有処理は `runtime/` から利用します。platform の意味検証は既存の `runtime/platform/` を利用し、YAML decoder は既存の `yaml` 依存を持つ Action から渡します。共有 package を追加して解決しません。
 
 各 bundled Action は既存 package と同じ構成を用います。
 
@@ -57,7 +57,7 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 検査は `a3-lint.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
 
-内部依存は `runtime/repository/check-runtime-boundaries.mjs` を source verification gate から実行します。既存の固定版 TypeScript compiler で Action entrypoint から到達する local source の静的 import、reexport、literal dynamic import、直接の literal require を解決し、runtime から Action への逆依存と runtime 内の実装循環を拒否します。type-only import、テスト・保守 CLI の独立 entrypoint、任意の動的 module 名の網羅解析は対象外です。正常・違反・誤検知防止は `tests/runtime-boundaries.test.mjs` で検証します。
+内部依存は `runtime/repository/check-runtime-boundaries.mjs` を source verification gate から実行します。既存の固定版 TypeScript compiler で Action entrypoint から到達する local source の静的 import、reexport、literal dynamic import、直接の literal require を解決し、別 Action の内部 source への実装依存、runtime から Action への逆依存、runtime 内の実装循環を拒否します。type-only import、テスト・保守 CLI の独立 entrypoint、任意の動的 module 名の網羅解析は対象外です。正常・違反・誤検知防止は `tests/runtime-boundaries.test.mjs` で検証します。
 
 ## 検証と公開前状態
 

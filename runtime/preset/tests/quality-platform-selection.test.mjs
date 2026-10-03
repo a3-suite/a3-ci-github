@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
-import { loadRegistry } from '../ci-preset-assets.ts';
+import { test } from 'vitest';
+import { loadRegistry } from '../preset-registry.ts';
 import { validateActionAvailability } from '../action-availability.ts';
 import { validateQualityPlatformSelection } from '../quality-validation.ts';
 
@@ -18,9 +18,12 @@ const manifest = `platforms:
     target: aarch64-apple-darwin
 `;
 
-// integration_id: preset-assurance-contract
+// evidence_role: contract
+// test_level: integration
+// integration_id: platform-selection-conformance
 // contract_id: contract.ci-platform-matrix.outputs
 test('platform Action and preflight agree on selection and parser rejection boundaries', () => {
+  // Arrange
   fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
   const fixture = fs.mkdtempSync(path.join(root, 'tmp', 'quality-platform-contract-'));
   try {
@@ -53,6 +56,7 @@ test('platform Action and preflight agree on selection and parser rejection boun
       [manifest, 'platforms: [', false],
     ];
     for (const [manifestText, selectionText, accepted, diagnostic] of cases) {
+      // Arrange
       fs.writeFileSync(path.join(fixture, '.ci/platforms.yml'), manifestText);
       fs.writeFileSync(path.join(fixture, '.ci/selection.yml'), selectionText);
       const outputPath = path.join(fixture, 'outputs');
@@ -60,11 +64,13 @@ test('platform Action and preflight agree on selection and parser rejection boun
       const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath,
         'INPUT_MANIFEST-PATH': path.join(fixture, '.ci/platforms.yml'),
         'INPUT_SELECTION-PATH': path.join(fixture, '.ci/selection.yml') };
-      const action = spawnSync(process.execPath, [path.join(root, 'actions/ci-platform-matrix/dist/index.js')], { env, encoding: 'utf8' });
       const report = { missingSettings: [], mismatches: [] };
+      // Act
+      const action = spawnSync(process.execPath, [path.join(root, 'actions/ci-platform-matrix/dist/index.js')], { env, encoding: 'utf8' });
       validateQualityPlatformSelection({ root: fixture, registry: {
         platformManifestPath: '.ci/platforms.yml', qualityPlatformSelectionPath: '.ci/selection.yml',
       }, report }, { id: 'quality-gate', optionalWorkflowAssets: [{ destination: 'quality.yml' }] });
+      // Assert
       assert.equal(action.status === 0, accepted, `${selectionText}: ${action.stderr}`);
       assert.equal(report.missingSettings.length + report.mismatches.length === 0, accepted,
         `${selectionText}: ${JSON.stringify(report)}`);

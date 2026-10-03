@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { validateReleaseDecision } from '../src/authority';
 
 // integration_id: ci-release-authority-decision

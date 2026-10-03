@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { add, loadRegistry, managedAssets, map, parseYaml, selectPresets } from './ci-preset-assets.ts';
-import type { ValueMap } from './ci-preset-assets.ts';
+import { add } from './validation-report.ts';
+import { loadRegistry, parseYaml } from './preset-registry.ts';
+import { managedAssets, selectPresets } from './ci-preset-assets.ts';
+import { map } from './preset-model.ts';
+import type { ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
 import { createReport } from './validation-report.ts';
 import { collectSemanticCandidates } from './semantic-candidates.ts';
-import { inspectWorkflowAsset, localWorkflows, validateAssetLock, validateCommon, validateCopiedAssetContent, validateNoProjectRuntime, validateProviderActionPinCompanion } from './workflow-validation.ts';
+import { inspectWorkflowAsset, remapPublicationDiagnostics, localWorkflows, validateAssetLock, validateCommon, validateCopiedAssetContent, validateNoProjectRuntime, validateProviderActionPinCompanion } from './workflow-validation.ts';
 import { validateCaller, validatePackagePublicationFlow, validatePublicationConcurrency, validatePublicationRequest, validateReleasePublicationFlow } from './publication-validation.ts';
 import { validateActionCoverage, validateConditionalExtensions, validatePlatformManifest, validateQualityPlatformSelection, validateQualityPreset, validateStandardImplementation } from './quality-validation.ts';
 
@@ -126,6 +129,7 @@ const validateCiPresetInternal = (options: {
     requested.length > 0,
   );
 
+  remapPublicationDiagnostics(parsed, registry, report);
   report.evidence.unshift(...report.inspectedWorkflows.map((workflow) => `${workflow}: inspected`));
   if (report.missingSettings.length > 0 || report.mismatches.length > 0) report.status = 'failed';
   return report;

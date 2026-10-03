@@ -6,25 +6,37 @@ test_maps:
     case_id: bundled-pre-observation
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: publication bundle observes absence then verifies owner evidence independently
+        symbol: "source entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        check_refs: [status, path, digest]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, path, digest]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: bundled-post-verification
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: publication bundle observes absence then verifies owner evidence independently
+        symbol: "source entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        check_refs: [status, release-id, receipt, readback]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, release-id, receipt, readback]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: output-line-injection
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: publication bundle rejects output path line injection before remote observation
+        symbol: "source entrypoint > publication entrypoint rejects output path line injection before remote observation"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint rejects output path line injection before remote observation"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: missing-credentials
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: publication bundle refuses missing credentials without success evidence
+        symbol: "source entrypoint > publication entrypoint refuses missing credentials without success evidence"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint refuses missing credentials without success evidence"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: independent-readback

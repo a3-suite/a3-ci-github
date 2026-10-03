@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { fixture } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
 import { validateEvidence } from '../schema.ts';

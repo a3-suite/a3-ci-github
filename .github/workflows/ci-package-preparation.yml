@@ -57,7 +57,7 @@ jobs:
       handoff_run_id: ${{ github.run_id }}
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.source_sha }}
       - id: build
@@ -73,7 +73,7 @@ jobs:
           test -n "$CI_SOURCE_SHA"; test -n "$CI_VERSION"; test -n "$CI_TARGET_IDENTITY"
           .ci/scripts/ci-package-build.sh "$CI_LANGUAGE_PROFILE" "$CI_TOOLCHAIN" "$CI_SOURCE_SHA" "$CI_VERSION" "$CI_TARGET_IDENTITY" package-handoff
       - id: upload
-        uses: actions/upload-artifact@<commit-sha>
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: package-handoff
           path: package-handoff

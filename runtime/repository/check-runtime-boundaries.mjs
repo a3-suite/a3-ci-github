@@ -7,9 +7,14 @@ export const inspectRuntimeGraph = (root, graph) => {
   const findings = [];
   const relative = (file) => path.relative(root, file).split(path.sep).join('/');
   for (const [source, targets] of graph) {
-    if (!relative(source).startsWith('runtime/')) continue;
+    const sourcePath = relative(source);
     for (const target of targets) {
-      if (relative(target).startsWith('actions/')) findings.push(`runtime-to-action: ${relative(source)} -> ${relative(target)}`);
+      const targetPath = relative(target);
+      if (!targetPath.startsWith('actions/')) continue;
+      if (sourcePath.startsWith('runtime/')) findings.push(`runtime-to-action: ${sourcePath} -> ${targetPath}`);
+      if (sourcePath.startsWith('actions/') && sourcePath.split('/')[1] !== targetPath.split('/')[1]) {
+        findings.push(`action-to-action: ${sourcePath} -> ${targetPath}`);
+      }
     }
   }
   const visiting = new Set();

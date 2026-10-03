@@ -15,15 +15,15 @@
 - repository Release version: `VERSION`
 - 要求・観測可能な契約・設計境界: `sdd/`
 - Action の公開 I/O: `actions/<action-name>/action.yml`
-- canonical workflow source: `workflows/`
+- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)
 - 選択配布単位と依存閉包: `skills/ci-github/references/ci-distribution-assets.reference.yml`
 - 選択配布manifest生成・取得・適用・復旧: `runtime/distribution/`
 - 配置・検証処理: `runtime/`
 - Agent Skill の起動条件と操作導線: `skills/ci-github/`
 - repository保守用のproject-local Agent Skill: `.agents/skills/`
-- このリポジトリ自身のCI: `.github/workflows/`
+- provider再利用calleeと、このリポジトリ自身のCI: `.github/workflows/`
 
-スキル文書へ workflow、Action、runtime の実装を複製しません。`workflows/` と `.github/workflows/` を相互の代替として扱いません。
+スキル文書へ workflow、Action、runtime の実装を複製しません。適用先へ配置するcaller・request workflowのsourceは`workflows/`に置き、個々のcanonical sourceとbindingは上記registryを参照します。
 
 `skills/ci-github/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
 
@@ -34,7 +34,7 @@
 ## 選択配布のローカル検証
 
 ```sh
-node --test runtime/distribution/tests/selective-distribution.test.mjs
+npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 ```
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
@@ -44,7 +44,7 @@ Release assetの組立は`runtime/distribution/generate-distribution-release.ts`
 ```sh
 node runtime/adapter/generate-standard-quality-bundles.mjs --source-root <owner-repository-root> --source-revision <full-owner-commit-sha>
 node runtime/adapter/generate-standard-quality-bundles.mjs --source-root <owner-repository-root> --source-revision <full-owner-commit-sha> --check
-node --import ./runtime/preset/node_modules/tsx/dist/loader.mjs --test runtime/adapter/tests/standard-quality-footprint.test.mjs runtime/preset/tests/standard-quality-bundles.test.mjs
+npm test -- runtime/adapter/tests/standard-quality-footprint.test.mjs runtime/preset/tests/standard-quality-bundles.test.mjs
 ```
 
 コピー0の受入は、consumerの固有設定・依存・lockを保存し、標準bindingだけを返すことを検証します。`A3_CI_GITHUB_QUALITY_SKILL_ROOT` を明示した場合はそのowner資材が不変であることも確認します。Hosted実行と正式版提供は別の受入です。
@@ -53,8 +53,8 @@ node --import ./runtime/preset/node_modules/tsx/dist/loader.mjs --test runtime/a
 
 ```sh
 actionlint .github/workflows/ci-quality.yml
-node --test tests/workflow-contracts.test.mjs
-node --import ./runtime/preset/node_modules/tsx/dist/loader.mjs --test runtime/preset/tests/reusable-quality-workflow.test.mjs
+npm test -- tests/workflow-contracts.test.mjs
+npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 ```
 
 ## コミットゲート
@@ -76,12 +76,18 @@ node runtime/repository/update-action-index.mjs --check
 ## 基本検証
 
 ```sh
-node --test tests/action-index-gate.test.mjs
-node --test tests/action-dist-gate.test.mjs
-node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-node --test runtime/rust-release/tests/rust-release-scripts.test.mjs
-node runtime/contract-subject-coverage.mjs --check
+npm test -- tests/action-index-gate.test.mjs
+npm test -- tests/action-dist-gate.test.mjs
+npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+npm test -- runtime/rust-release/tests/rust-release-scripts.test.mjs
+node tests/coverage-tools/contract-subject-coverage.mjs --check
+npm ci --ignore-scripts --no-audit --no-fund
+npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
 ```
+
+カバレッジの取得・集計・品質判定は元ソースのみを対象とします。`dist/` などの生成済み配布物のカバレッジは取得せず、ソースの計測値へ合算・読み替えもしません。配布物は動作と生成結果の同一性を検証します。
+
+`tests/coverage-tools/` は契約対象別の実行・集計と元ソースの計測を担当し、テストrunnerは固定版Vitestへ委譲します。標準Istanbulで変換前に作った同じカウンタをVitestとNode子プロセス・workerに渡します。Vitestのファイル隔離が終わる前に結果を保存し、未ロード分も同じ分母の0件として集計します。異なるカウンタ一覧や変換失敗は測定エラーです。保守依存はconsumer配布runtime・presetへ追加せず、LCOVの関数数をC0へ読み替えません。
 
 各 JavaScript / TypeScript Action の依存復元、test、lint、dist 同一性は対象 Action の `package.json` と `runtime/repository/check-action-dist.mjs` に従います。統合、ローカルE2E、Hosted E2Eの境界と追加コマンドは[テスト戦略](docs/maintenance/test-strategy.md)を参照してください。
 
@@ -98,3 +104,5 @@ a3-sdd sdd check --workspace-root . --format json
 ## 移行記録
 
 移行元の revision と切替時点の受入結果は [移行記録](docs/maintenance/migration-baseline.md)、旧公開資産の保全条件は [README.md](README.md) を参照してください。
+
+Vitestの依存は `npm ci --ignore-scripts --no-audit --no-fund`、計測依存は `npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund` で復元し、全体は `npm test`、ソース計測は `npm run test:coverage` で実行します。通常のテスト配置と契約参照は維持し、実装を持つAction entrypointはファイル名だけで除外しません。

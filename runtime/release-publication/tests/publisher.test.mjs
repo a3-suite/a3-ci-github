@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import { fixture, remoteClient } from './fixtures.mjs';
 import { publishRelease, GithubPublisherClient } from '../../../actions/ci-release-publisher/src/publisher.ts';
 import { observeBefore, verifyAfter } from '../observation.ts';

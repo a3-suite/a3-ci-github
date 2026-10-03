@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { runControl } from '../../ci-release-publication-control/src/control';
-import { validateReleaseNotesBinding } from '../../ci-release-notes-binding/src/binding';
+import { runControl } from '../../../runtime/release-publication/control';
+import { validateReleaseNotesBinding } from '../../../runtime/release-publication/notes-binding';
 import { fail, text, hex, record, readBytes, readRecord, safePath, sha256, writeNewJson } from '../../../runtime/release-publication/io';
 import { validateSnapshot } from '../../../runtime/release-publication/snapshot';
 import { validateEvidence } from '../../../runtime/release-publication/schema';

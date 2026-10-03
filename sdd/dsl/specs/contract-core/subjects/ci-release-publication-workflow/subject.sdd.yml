@@ -2,4 +2,4 @@ version: 1
 name: contract-subject
 subject:
   id: subject.ci.release-publication-workflow
-  summary: Publish a release only after request, approval, workflow identity, asset, and provenance verification.
+  summary: Publish a release only after request, approval, publication entry, asset, and provenance verification.

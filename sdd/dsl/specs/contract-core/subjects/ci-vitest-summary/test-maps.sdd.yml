@@ -12,7 +12,10 @@ test_maps:
         symbol: summarizes a complete report
         check_refs: [check-vitest-summary-passed-status, check-vitest-summary-passed-collection]
       - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
-        symbol: bundled entrypoint writes a Vitest summary
+        symbol: "source entrypoint > entrypoint writes a Vitest summary"
+        check_refs: [check-vitest-summary-output, check-vitest-summary-passed-status, check-vitest-summary-passed-collection]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint writes a Vitest summary"
         check_refs: [check-vitest-summary-output, check-vitest-summary-passed-status, check-vitest-summary-passed-collection]
       - path: runtime/adapter/tests/vitest-test-summary.test.mjs
         symbol: renders a complete report as success with complete collection
@@ -63,10 +66,16 @@ test_maps:
         symbol: keeps malformed reports unresolved without failing the step
         check_refs: [check-vitest-summary-unresolved-status]
       - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
-        symbol: bundled entrypoint keeps malformed report shapes unresolved
+        symbol: "source entrypoint > entrypoint keeps malformed report shapes unresolved"
         check_refs: [check-vitest-summary-unresolved-status]
       - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
-        symbol: bundled entrypoint keeps malformed report elements unresolved
+        symbol: "dist entrypoint > entrypoint keeps malformed report shapes unresolved"
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint keeps malformed report elements unresolved"
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint keeps malformed report elements unresolved"
         check_refs: [check-vitest-summary-unresolved-status]
       - path: runtime/adapter/tests/vitest-test-summary.test.mjs
         symbol: renders a missing report as indeterminate
@@ -96,7 +105,10 @@ test_maps:
         symbol: rejects assertion-level malformation and unknown statuses with complete counts
         check_refs: [check-vitest-summary-unresolved-status]
       - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
-        symbol: bundled entrypoint keeps assertion-level malformation unresolved
+        symbol: "source entrypoint > entrypoint keeps assertion-level malformation unresolved"
+        check_refs: [check-vitest-summary-unresolved-status]
+      - path: actions/ci-vitest-summary/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint keeps assertion-level malformation unresolved"
         check_refs: [check-vitest-summary-unresolved-status]
       - path: runtime/adapter/tests/vitest-test-summary.test.mjs
         symbol: renders assertion-level malformation as indeterminate with partial collection

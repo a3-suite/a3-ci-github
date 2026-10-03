@@ -45,7 +45,6 @@ const parseArgs = (argv) => {
     throw new Error('--audit-mode must be read-only or remediation');
   }
   if (!options.repoRoot) throw new Error('--repo-root is required');
-  if (!options.skillCollectionRoot) throw new Error('--skill-collection-root is required');
   if (options.auditMode === 'read-only' && options.output) {
     throw new Error('--output is not allowed in read-only mode');
   }
@@ -105,7 +104,9 @@ const run = () => {
   let expectedToolStateRoot;
   try {
     repoRoot = realDirectory(options.repoRoot, 'repo root');
-    skillCollectionRoot = realDirectory(options.skillCollectionRoot, 'skill collection root');
+    if (options.skillCollectionRoot !== undefined) {
+      skillCollectionRoot = realDirectory(options.skillCollectionRoot, 'skill collection root');
+    }
     expectedToolStateRoot = path.join(repoRoot, '.a3-skills', 'ci-github');
     toolStateRoot = realDirectory(expectedToolStateRoot, 'project-local tool state root');
   } catch (error) {
@@ -255,8 +256,8 @@ const run = () => {
     const validatorArgs = [
       validatorPath,
       '--repo-root', repoRoot,
-      '--skill-collection-root', skillCollectionRoot,
     ];
+    if (skillCollectionRoot !== undefined) validatorArgs.push('--skill-collection-root', skillCollectionRoot);
     for (const preset of options.presets) validatorArgs.push('--preset', preset);
     if (options.output) validatorArgs.push('--output', options.output);
     const result = spawnSync(tsxPath, validatorArgs, {

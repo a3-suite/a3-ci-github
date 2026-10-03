@@ -67,7 +67,7 @@ distribution:
 conformance:
   comparison: canonical-yaml-structure
   configurableValues: canonical-placeholders
-  emptyAllowedPlaceholders: [uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
+  emptyAllowedPlaceholders: [optional-jq-version, uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
   listPlaceholderRule: placeholder だけで構成する list は一つ以上の非空 project 値へ置換できる。
   workflowTriggerExtensions:
     quality-gate:
@@ -86,6 +86,31 @@ conformance:
     canonical 比較と lock の対象にし、companion のみの先行配置は許容する。
   lintBoundary: >-
     a3-lint は単一 workflow の一般規則を検査し、canonical asset との比較は preflight が行う。
+
+releasePublicationReusableWorkflow:
+  source: .github/workflows/ci-release-publication.yml
+  status: pending-release
+  referencePlaceholder: <release-publication-workflow-sha>
+  activation: exact-release-tag-and-peeled-full-sha-and-hosted-publication-acceptance-confirmed
+
+packagePublicationReusableWorkflow:
+  source: .github/workflows/ci-package-publication.yml
+  status: pending-release
+  referencePlaceholder: <package-publication-workflow-sha>
+  activation: exact-release-tag-and-peeled-full-sha-and-hosted-publication-acceptance-confirmed
+
+packagePreparationReusableWorkflow:
+  source: .github/workflows/ci-package-preparation.yml
+  status: pending-release
+  referencePlaceholder: <package-preparation-workflow-sha>
+  activation: exact-release-tag-and-peeled-full-sha-and-hosted-handoff-acceptance-confirmed
+
+qualityPlatformsReusableWorkflow:
+  source: .github/workflows/ci-quality-platforms.yml
+  status: pending-release
+  referencePlaceholder: <quality-platforms-workflow-sha>
+  activation: exact-release-tag-and-peeled-full-sha-and-hosted-required-check-acceptance-confirmed
+  requiredCallerCheck: quality-gate-platforms / summary
 
 qualityReusableWorkflow:
   source: .github/workflows/ci-quality.yml
@@ -125,25 +150,25 @@ actionization:
     - id: ci-jq-provisioner
       status: available
       actionPath: actions/ci-jq-provisioner
-      workflows: [quality-gate, release-request-tag, release-publication, package-publication]
+      workflows: [quality-gate, release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-jq-provisioning
     - id: ci-gh-provisioner
       status: available
       actionPath: actions/ci-gh-provisioner
-      workflows: [release-request-tag, release-publication, package-publication]
+      workflows: [release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-gh-provisioning
     - id: ci-github-toolchain-verifier
       status: available
       actionPath: actions/ci-github-toolchain-verifier
-      workflows: [quality-gate, release-request-tag, release-publication, package-publication]
+      workflows: [quality-gate, release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-request-tag/request, release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-tool-version-verification
     - id: ci-rust-source-gate
@@ -173,9 +198,9 @@ actionization:
     - id: ci-workflow-identity
       status: available
       actionPath: actions/ci-workflow-identity
-      workflows: [release-publication, package-publication]
+      workflows: []
       trust: read-only
-      privilegedJobs: [release-publication/publish, package-publication/publish]
+      privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
       providerMapping: release-workflow-identity
     - id: ci-config-snapshot
@@ -213,7 +238,7 @@ actionization:
     - id: ci-publish-version
       status: available
       actionPath: actions/ci-publish-version
-      workflows: [package-preparation]
+      workflows: [package-preparation, package-publication-caller]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.version-plan-scripts
@@ -250,6 +275,14 @@ actionization:
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
       providerMapping: platform-build-matrix
+    - id: ci-quality-toolchain
+      status: pending-release
+      actionPath: actions/ci-quality-toolchain
+      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      trust: read-only
+      privilegedJobs: []
+      ciContract: ci.script-contracts#contracts.quality-scripts
+      providerMapping: fixed-quality-toolchain-preparation
     - id: ci-quality-adapter
       status: pending-release
       actionPath: actions/ci-quality-adapter
@@ -397,9 +430,6 @@ registry:
         - id: release-publication-caller
           source: workflows/release/release-publication-caller.yml
           destination: .github/workflows/release-publication-caller.yml
-        - id: release-publication
-          source: workflows/release/release-publication.yml
-          destination: .github/workflows/release-publication.yml
       assets:
         copyable: []
         requiredExtensions:
@@ -421,12 +451,6 @@ registry:
         selection: standard-or-owner
     - id: package-publication
       workflowAssets:
-        - id: package-publication
-          source: workflows/package/package-publication.yml
-          destination: .github/workflows/package-publication.yml
-        - id: package-preparation
-          source: workflows/package/package-preparation.yml
-          destination: .github/workflows/package-preparation.yml
         - id: package-publication-request
           source: workflows/package/package-publication-request.yml
           destination: .github/workflows/package-publication-request.yml

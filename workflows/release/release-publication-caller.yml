@@ -67,8 +67,24 @@ jobs:
     permissions:
       actions: read
       contents: write
-    uses: ./.github/workflows/release-publication.yml
+    uses: a3-suite/a3-ci-github/.github/workflows/ci-release-publication.yml@<release-publication-workflow-sha>
     with:
+      sha256sum-version: <sha256sum-version>
+      runner: <versioned-runner>
+      language-profile: <language-profile>
+      platform-manifest: <platform-manifest>
+      toolchain-version: <toolchain-version>
+      uv-version: <uv-version>
+      cargo-audit-version: <cargo-audit-version>
+      gh-version: <gh-version>
+      jq-version: <jq-version>
+      release-implementation: <release-implementation>
+      standard-bundle-id: <standard-bundle-id>
+      adapter-descriptor: <adapter-descriptor>
+      cargo-manifest-path: <cargo-manifest-path>
+      cargo-lock-path: <cargo-lock-path>
+      release-binary-name: <release-binary-name>
+      release-asset-prefix: <release-asset-prefix>
       request_run_id: ${{ needs.validate-request.outputs.request_run_id }}
       publication_request_run_id: ${{ github.event.workflow_run.id }}
       supplemental_release_asset_enabled: <supplemental-release-asset-enabled>

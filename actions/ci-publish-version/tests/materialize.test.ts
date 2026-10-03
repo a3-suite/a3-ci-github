@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import test from 'node:test';
+import { test } from 'vitest';
 import { materializePublishVersion } from '../src/materialize.js';
 
 const captureFailure = (operation: () => unknown): unknown => {

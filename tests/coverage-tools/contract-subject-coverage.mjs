@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULT_DEFINITION = path.join(SCRIPT_ROOT, 'tests/contract-subject-execution.json');
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -64,7 +64,7 @@ export const parseLcov = (text) => {
   return {
     files,
     metrics: {
-      C0: unavailableMetric('Node LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.'),
+      C0: unavailableMetric('LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.'),
       C1: availableMetric(branches.hit, branches.total),
       line: availableMetric(lines.hit, lines.total),
     },
@@ -93,6 +93,9 @@ const validateSegment = (segment, subjectId, root) => {
     assert(['source', 'dist', 'repository-scripts'].includes(segment.coverage.scope), `${subjectId}/${segment.id}: invalid coverage scope`);
     assert(Array.isArray(segment.coverage.include) && segment.coverage.include.length > 0, `${subjectId}/${segment.id}: coverage include is required`);
     assert(Array.isArray(segment.coverage.exclude), `${subjectId}/${segment.id}: coverage exclude is required`);
+    if (segment.coverage.aggregateGroup !== undefined) {
+      assert(typeof segment.coverage.aggregateGroup === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(segment.coverage.aggregateGroup), `${subjectId}/${segment.id}: invalid aggregate group`);
+    }
   } else if (typeof segment.coverage.reason !== 'string') {
     throw new Error(`${subjectId}/${segment.id}: disabled coverage requires reason`);
   }
@@ -129,22 +132,25 @@ export const loadDefinition = (definitionPath = DEFAULT_DEFINITION, root = SCRIP
   return validateDefinition(definition, root);
 };
 
-const commandForSegment = (segment, reportPath) => {
-  const args = [];
+const commandForSegment = (segment, reportPath, root, dryRun = false) => {
   if (segment.coverage?.enabled) {
-    args.push('--experimental-test-coverage');
-    for (const include of segment.coverage.include) args.push(`--test-coverage-include=${include}`);
-    for (const exclude of segment.coverage.exclude) args.push(`--test-coverage-exclude=${exclude}`);
-    args.push('--test-reporter=lcov', `--test-reporter-destination=${reportPath}`);
+    const config = { root, cwd: path.join(root, segment.cwd), typescript: Boolean(segment.typescript),
+      tests: segment.tests, include: segment.coverage.include, exclude: segment.coverage.exclude,
+      lcovPath: reportPath };
+    return { command: process.execPath, args: [path.join(SCRIPT_ROOT, 'tests/coverage-tools/measure-coverage.mjs'), JSON.stringify(config)] };
   }
-  if (segment.typescript) args.push('--import=tsx');
-  args.push('--test', ...segment.tests);
-  return { command: process.execPath, args };
+  const configPath = `${reportPath}.vitest.config.mjs`;
+  if (!dryRun) {
+    mkdirSync(path.dirname(configPath), { recursive: true });
+    const config = { root, test: { globals: false, include: segment.tests.map((file) => path.resolve(root, segment.cwd, file)), pool: 'forks', maxWorkers: 1, testTimeout: 60000, coverage: { enabled: false } } };
+    writeFileSync(configPath, `export default ${JSON.stringify(config)};\n`);
+  }
+  return { command: process.execPath, args: [path.join(SCRIPT_ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--config', configPath] };
 };
 
 const run = (command, args, cwd) => spawnSync(command, args, { cwd, encoding: 'utf8' });
 
-const executeSubject = (subject, root, reportRoot, dryRun) => {
+export const collectSubjectCoverage = (subject, root, reportRoot, dryRun = false) => {
   if (subject.build) {
     const buildCwd = path.join(root, subject.build.cwd);
     if (dryRun) console.log(JSON.stringify({ subjectId: subject.subjectId, build: { cwd: subject.build.cwd, command: subject.build.command } }));
@@ -162,8 +168,8 @@ const executeSubject = (subject, root, reportRoot, dryRun) => {
     }
     const cwd = path.join(root, segment.cwd);
     const reportPath = path.join(reportRoot, subject.subjectId.replaceAll('.', '_'), `${segment.id}.lcov`);
-    if (segment.coverage?.enabled) mkdirSync(path.dirname(reportPath), { recursive: true });
-    const { command, args } = commandForSegment(segment, reportPath);
+    if (segment.coverage?.enabled && !dryRun) mkdirSync(path.dirname(reportPath), { recursive: true });
+    const { command, args } = commandForSegment(segment, reportPath, root, dryRun);
     if (dryRun) {
       segments.push({ id: segment.id, level: segment.level, status: 'planned', cwd: segment.cwd, command: [command, ...args], coverageScope: segment.coverage?.scope ?? null });
       continue;
@@ -192,12 +198,8 @@ const executeSubject = (subject, root, reportRoot, dryRun) => {
   return { subjectId: subject.subjectId, segments };
 };
 
-// The aggregate threshold is acquired by running a subject's unit and integration segments
-// together in a single process, so Node reports one LCOV branch set for that group with
-// stable, comparable branch counters. This collector sums the per-file BRH/BRF and LH/LF
-// counters (the same metric semantics as the segment report) across groups and fails closed
-// when the same source artifact is observed by more than one group, because LCOV branch
-// numbering is process-dependent and must not be merged across instrumentation contexts.
+// Each group is acquired with the same AST counter semantics as individual segments.
+// Independent group totals cannot be summed when they include the same source file.
 export const aggregateCoverageMaps = (coverageMaps, root) => {
   const byScope = new Map();
   const ownerByFile = new Map();
@@ -247,7 +249,7 @@ export const aggregateCoverageMaps = (coverageMaps, root) => {
       scope,
       levels: [...bucket.levels].sort(),
       metrics: {
-        C0: unavailableMetric('Node LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.'),
+        C0: unavailableMetric('LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.'),
         C1: withPercentage(sum('C1')),
         line: withPercentage(sum('line')),
       },
@@ -262,37 +264,36 @@ export const aggregateCoverageMaps = (coverageMaps, root) => {
 
 export const collectAggregateCoverage = (subjects, root, reportRoot) => {
   const maps = [];
+  const groups = new Map();
   for (const subject of subjects) {
-    const byScope = new Map();
     for (const segment of subject.segments) {
       if (segment.status === 'excluded' || !segment.coverage?.enabled) continue;
       if (!['unit', 'integration'].includes(segment.level)) continue;
       const scope = segment.coverage.scope;
-      const group = byScope.get(scope) ?? [];
-      group.push(segment);
-      byScope.set(scope, group);
+      const identity = segment.coverage.aggregateGroup ?? subject.subjectId;
+      const groupId = `${identity}/${scope}`;
+      const group = groups.get(groupId) ?? { identity, scope, segments: [] };
+      group.segments.push(segment);
+      groups.set(groupId, group);
     }
-    for (const [scope, group] of byScope) {
-      const cwd = path.join(root, group[0].cwd);
-      const tests = [...new Set(group.flatMap((segment) => segment.tests))];
-      const include = [...new Set(group.flatMap((segment) => segment.coverage.include))];
-      const exclude = [...new Set(group.flatMap((segment) => segment.coverage.exclude))];
-      const groupId = `${subject.subjectId}/${scope}`;
-      const lcovPath = path.join(reportRoot, 'aggregate', subject.subjectId.replaceAll('.', '_'), `${scope}.lcov`);
-      mkdirSync(path.dirname(lcovPath), { recursive: true });
-      const args = ['--experimental-test-coverage'];
-      for (const pattern of include) args.push(`--test-coverage-include=${pattern}`);
-      for (const pattern of exclude) args.push(`--test-coverage-exclude=${pattern}`);
-      args.push('--test-reporter=lcov', `--test-reporter-destination=${lcovPath}`);
-      if (group.some((segment) => segment.typescript === true)) args.push('--import=tsx');
-      args.push('--test', ...tests);
-      const result = run(process.execPath, args, cwd);
-      if (result.status !== 0) {
-        throw new Error(`${groupId}: aggregate coverage run failed\n${result.stderr || result.stdout}`);
-      }
-      const coverage = parseLcov(readFileSync(lcovPath, 'utf8'));
-      maps.push({ groupId, levels: group.map((segment) => segment.level), scope, cwd, files: coverage.files });
+  }
+  for (const [groupId, { identity, scope, segments: group }] of groups) {
+    const cwd = path.join(root, group[0].cwd);
+    const resolvePaths = (segment, paths) => paths.map((entry) => path.relative(cwd, path.resolve(root, segment.cwd, entry)).split(path.sep).join('/'));
+    const tests = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.tests)))];
+    const include = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.include)))];
+    const exclude = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.exclude)))];
+    const lcovPath = path.join(reportRoot, 'aggregate', identity.replaceAll('.', '_'), `${scope}.lcov`);
+    mkdirSync(path.dirname(lcovPath), { recursive: true });
+    const { command, args } = commandForSegment({ cwd: group[0].cwd, tests,
+      typescript: group.some((segment) => segment.typescript === true),
+      coverage: { enabled: true, include, exclude } }, lcovPath, root);
+    const result = run(command, args, cwd);
+    if (result.status !== 0) {
+      throw new Error(`${groupId}: aggregate coverage run failed\n${result.stderr || result.stdout}`);
     }
+    const coverage = parseLcov(readFileSync(lcovPath, 'utf8'));
+    maps.push({ groupId, levels: group.map((segment) => segment.level), scope, cwd, files: coverage.files });
   }
   return aggregateCoverageMaps(maps, root);
 };
@@ -322,7 +323,7 @@ const main = () => {
   const subjects = options.subject ? definition.subjects.filter((subject) => subject.subjectId === options.subject) : definition.subjects;
   if (subjects.length === 0) throw new Error(`unknown contract subject: ${options.subject}`);
   const reportRoot = path.join(SCRIPT_ROOT, 'tests/tmp/coverage/contract-subject');
-  const results = subjects.map((subject) => executeSubject(subject, SCRIPT_ROOT, reportRoot, options.dryRun));
+  const results = subjects.map((subject) => collectSubjectCoverage(subject, SCRIPT_ROOT, reportRoot, options.dryRun));
   if (options.dryRun) return;
   const coverageAggregate = collectAggregateCoverage(subjects, SCRIPT_ROOT, reportRoot);
   const reportPath = path.join(SCRIPT_ROOT, definition.report.output);

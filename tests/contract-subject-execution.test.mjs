@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { aggregateCoverageMaps, loadDefinition, parseLcov, validateDefinition } from '../runtime/contract-subject-coverage.mjs';
+import { aggregateCoverageMaps, loadDefinition, parseLcov, validateDefinition } from './coverage-tools/contract-subject-coverage.mjs';
 
 // integration_id: repository-contract-subject-execution
 test('project execution definition resolves every declared contract subject', () => {
@@ -16,6 +16,7 @@ test('project execution definition resolves every declared contract subject', ()
   const materialization = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.preset-materialization');
   const presetAssurance = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.preset-assurance');
   const workflow = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.quality-workflow');
+  const packageWorkflow = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.package-publication-workflow');
   const managedSource = definition.subjects.find((subject) => subject.subjectId === 'subject.repository.managed-source-integrity');
   const actionDistribution = definition.subjects.find((subject) => subject.subjectId === 'subject.repository.action-distribution');
   // Assert
@@ -23,12 +24,20 @@ test('project execution definition resolves every declared contract subject', ()
     platform.segments.map((segment) => [segment.id, segment.level, segment.status ?? 'active']),
     [
       ['unit-source', 'unit', 'active'],
+      ['integration-source-entrypoint', 'integration', 'active'],
       ['integration-bundle', 'integration', 'active'],
       ['e2e', 'e2e', 'excluded'],
     ],
   );
   assert.deepEqual(platform.segments[0].coverage.include, ['src/**/*.ts']);
-  assert.deepEqual(platform.segments[1].coverage.include, ['dist/**/*.js']);
+  assert.deepEqual(platform.segments[2].coverage.include, ['dist/**/*.js']);
+  for (const subject of definition.subjects) {
+    for (const segment of subject.segments.filter((entry) => entry.coverage?.scope === 'dist')) {
+      assert.equal(segment.coverage.enabled, false, `${subject.subjectId}/${segment.id}`);
+      assert.match(segment.coverage.reason, /source-only/);
+      if (segment.status !== 'excluded') assert.ok(segment.tests.length > 0);
+    }
+  }
   assert.equal(definition.report.unit, 'contract-subject-and-execution-segment');
   assert.equal(composite.segments[1].coverage.enabled, false);
   assert.match(composite.segments[1].coverage.reason, /shell implementation/);
@@ -42,7 +51,15 @@ test('project execution definition resolves every declared contract subject', ()
     'tests/standard-quality-bundles.test.mjs',
     'tests/reusable-quality-workflow.test.mjs',
   ]);
-  assert.deepEqual(workflow.segments[1].tests, ['tests/workflow-contracts.test.mjs']);
+  for (const subject of [workflow, packageWorkflow]) {
+    const segment = subject.segments.find((entry) => entry.id === 'integration-contract');
+    assert.equal(segment.cwd, 'runtime/preset');
+    assert.equal(segment.typescript, true);
+    assert.deepEqual(segment.tests, [
+      '../../tests/workflow-contracts.test.mjs',
+      'tests/reusable-quality-workflow.test.mjs',
+    ]);
+  }
   assert.deepEqual(managedSource.segments[1].tests, [
     'tests/repository-managed-source-integrity.test.mjs',
     'tests/contract-subject-execution.test.mjs',
@@ -88,7 +105,7 @@ test('LCOV report is reduced to separate C0, C1, and line metrics', () => {
       total: null,
       percentage: null,
       acquisitionStatus: 'unavailable',
-      unavailableReason: 'Node LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.',
+      unavailableReason: 'LCOV exposes function counts, not statement counts; line coverage is not substituted for C0.',
     },
     C1: { covered: 5, total: 6, percentage: 83.33, acquisitionStatus: 'available', unavailableReason: null },
     line: { covered: 8, total: 10, percentage: 80, acquisitionStatus: 'available', unavailableReason: null },
@@ -170,4 +187,59 @@ test('definition rejects an active segment without an execution test', () => {
   try { validateDefinition(invalid); } catch (error) { failure = error; }
   // Assert
   assert.match(String(failure), /tests are required/);
+});
+
+// integration_id: repository-contract-subject-execution
+test('Action source entrypoint observations belong to their own integration segment', () => {
+  // Arrange
+  const definition = loadDefinition();
+  const entrypoints = definition.subjects.flatMap((subject) => subject.segments
+    .filter((segment) => segment.id === 'integration-source-entrypoint')
+    .map((segment) => ({ subject, segment })));
+  // Act
+  const observations = entrypoints.map(({ subject, segment }) => ({
+    cwd: segment.cwd,
+    expectedCwd: `actions/ci-${subject.subjectId.slice('subject.ci.'.length)}`,
+    level: segment.level,
+    scope: segment.coverage.scope,
+    tests: segment.tests,
+    include: segment.coverage.include,
+  }));
+  // Assert
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const actionRoots = globSync('actions/*/tests/entrypoint.test.ts', { cwd: projectRoot })
+    .map((file) => path.dirname(path.dirname(file))).sort();
+  assert.deepEqual(observations.map((observation) => observation.cwd).sort(), actionRoots);
+  for (const observation of observations) {
+    assert.equal(observation.cwd, observation.expectedCwd);
+    assert.equal(observation.level, 'integration');
+    assert.equal(observation.scope, 'source');
+    assert.deepEqual(observation.tests, ['tests/entrypoint.test.ts']);
+    assert.deepEqual(observation.include, ['src/index.ts']);
+  }
+});
+
+// integration_id: repository-contract-subject-execution
+test('source execution inventory has one instrumentation owner per file', () => {
+  // Arrange
+  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const definition = loadDefinition();
+  // Act
+  const maps = definition.subjects.flatMap((subject) => subject.segments
+    .filter((segment) => segment.status !== 'excluded' && segment.coverage?.enabled
+      && segment.coverage.scope === 'source' && ['unit', 'integration'].includes(segment.level))
+    .map((segment) => {
+      const cwd = path.resolve(projectRoot, segment.cwd);
+      const excluded = new Set(globSync(segment.coverage.exclude, { cwd }));
+      return {
+        groupId: `${segment.coverage.aggregateGroup ?? subject.subjectId}/source`,
+        levels: [segment.level],
+        scope: 'source',
+        cwd,
+        files: globSync(segment.coverage.include, { cwd }).filter((file) => !excluded.has(file))
+          .map((sourceFile) => ({ sourceFile, branches: { hit: 0, total: 0 }, lines: { hit: 0, total: 0 } })),
+      };
+    }));
+  // Assert
+  assert.doesNotThrow(() => aggregateCoverageMaps(maps, projectRoot));
 });

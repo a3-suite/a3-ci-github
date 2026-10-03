@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { SOURCE_ROOT, add, map, parseYaml, strings } from './ci-preset-assets.ts';
-import type { ValueMap } from './ci-preset-assets.ts';
+import { SOURCE_ROOT, parseYaml } from './preset-registry.ts';
+import { add } from './validation-report.ts';
+import { map, strings } from './preset-model.ts';
+import type { ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
 import { effectivePermissions, on, permissionRank, uses } from './workflow-validation.ts';
 
@@ -80,8 +82,10 @@ const validateCaller = (
 ): void => {
   for (const [jobName, jobValue] of Object.entries(map(caller.jobs))) {
     const job = map(jobValue);
-    if (typeof job.uses !== 'string' || !job.uses.startsWith('./.github/workflows/')) continue;
-    const targetPath = job.uses.slice(2);
+    if (typeof job.uses !== 'string') continue;
+    const remote = job.uses.match(/^a3-suite\/a3-ci-github\/\.github\/workflows\/ci-(release|package)-publication\.yml@/);
+    if (!remote && !job.uses.startsWith('./.github/workflows/')) continue;
+    const targetPath = remote ? `.github/workflows/${remote[1]}-publication.yml` : job.uses.slice(2);
     const target = workflows.get(targetPath);
     if (!target) continue;
     const required = workflowCallRequired(target);
@@ -99,6 +103,17 @@ const validateCaller = (
         settingLocation: callerPath,
       });
     }
+    const definitions = map(map(map(target.on).workflow_call).inputs);
+    for (const [name, value] of Object.entries(map(job.with))) {
+      if (!(name in definitions) || !(typeof value === map(definitions[name]).type
+        || typeof value === 'string' && /^\$\{\{.*\}\}$/.test(value))) add(report.mismatches, {
+        path: `${callerPath}:jobs.${jobName}.with.${name}`, message: 'reusable workflow input is undeclared or has the wrong type', settingLocation: callerPath,
+      });
+    }
+    const secretDefinitions = map(map(map(target.on).workflow_call).secrets);
+    for (const name of Object.keys(map(job.secrets))) if (!(name in secretDefinitions)) add(report.mismatches, {
+      path: `${callerPath}:jobs.${jobName}.secrets.${name}`, message: 'reusable workflow secret is undeclared', settingLocation: callerPath,
+    });
     const callerPermissions = effectivePermissions(caller, job);
     for (const targetJob of Object.values(map(target.jobs)).map(map)) {
       for (const [permission, level] of Object.entries(effectivePermissions(target, targetJob))) {
@@ -375,7 +390,7 @@ const validatePublicationControlSurface = (
     'supplemental_release_asset_enabled',
     'supplemental_release_asset_owner_contract',
   ];
-  if (JSON.stringify(requiredInputs) !== JSON.stringify(expectedInputs)) add(report.mismatches, {
+  if (expectedInputs.some((name) => !requiredInputs.includes(name))) add(report.mismatches, {
     path: `${publicationPath}:on.workflow_call.inputs`,
     message: 'trusted publication requires request run IDs and the supplemental asset selection',
     settingLocation: publicationPath,

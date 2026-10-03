@@ -133,6 +133,7 @@ export const prepareDistributionRelease = (options: {
   });
   const presetDefinitions = Array.isArray(map(presetRegistry.registry).presets)
     ? (map(presetRegistry.registry).presets as unknown[]).map(map) : [];
+  const workflowDependencies = map(distributionRegistry.workflowDependencies);
   const workflowIds = new Set<string>();
   for (const preset of presetDefinitions) {
     const workflows = [
@@ -146,13 +147,16 @@ export const prepareDistributionRelease = (options: {
       assets.push({
         id,
         application: 'copy',
-        dependencies: [],
+        dependencies: strings(workflowDependencies[id]),
         files: [{
           sourcePath: normalizeRelative(String(workflow.source ?? '')),
           destination: normalizeRelative(String(workflow.destination ?? '')),
         }],
       });
     }
+  }
+  for (const id of Object.keys(workflowDependencies)) {
+    if (!workflowIds.has(id)) throw new Error(`distribution-workflow-unknown:${id}`);
   }
   const assetIds = new Set<string>();
   for (const asset of assets) {

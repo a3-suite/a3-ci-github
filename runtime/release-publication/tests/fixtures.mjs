@@ -9,7 +9,7 @@ export const fixture = (t) => {
   const parent = fileURLToPath(new URL('../../../tests/tmp/', import.meta.url));
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'release-publication-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const put = (relative, value) => {
     const filename = path.join(root, relative);
     fs.mkdirSync(path.dirname(filename), { recursive: true });

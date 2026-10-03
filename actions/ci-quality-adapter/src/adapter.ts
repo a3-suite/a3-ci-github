@@ -43,9 +43,8 @@ const command = (value: unknown, fallbackId: string, taken: Set<string>): Comman
   taken.add(id);
   return { id, command: text(value.command, 'command'), ...(value.args === undefined ? {} : { args: strings(value.args, 'args') }) };
 };
-const commands = (value: unknown, field: string, optional: boolean, taken: Set<string>): CommandSpec[] => {
-  if (value === undefined && optional) return [];
-  if (!Array.isArray(value) || (!optional && value.length === 0)) throw new Error(`quality-adapter-${field}-invalid`);
+const commands = (value: unknown, field: string, taken: Set<string>): CommandSpec[] => {
+  if (!Array.isArray(value) || value.length === 0) throw new Error(`quality-adapter-${field}-invalid`);
   return value.map((item, index) => command(item, `${field}-${index}`, taken));
 };
 const hasSkillPath = (value: string): boolean => /(?:^|[\s/'"`])(?:\.\.?\/)?skills\//.test(value);
@@ -81,7 +80,7 @@ export const parseAdapterBundle = (content: string): AdapterBundle => {
     executionBoundary: 'read-only', sourceCheckout: 'fixed-source', copyable: value.copyable, owner: text(value.owner, 'owner'), assets,
     projectSettings: { requiredFiles: strings(value.projectSettings.requiredFiles, 'required-files', true), requiredScripts: strings(value.projectSettings.requiredScripts, 'required-scripts', true), requiredEnvironmentPaths: strings(value.projectSettings.requiredEnvironmentPaths, 'required-environment-paths', true) },
     toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: command(value.toolchain.verify, 'toolchain-verify', commandIds) },
-    preparation: commands(value.preparation, 'preparation', false, commandIds), commands: commands(value.commands, 'commands', false, commandIds),
+    preparation: commands(value.preparation, 'preparation', commandIds), commands: commands(value.commands, 'commands', commandIds),
   };
   if (bundle.contract !== 'quality-scripts') throw new Error('quality-adapter-contract-invalid');
   const ids = new Set<string>();

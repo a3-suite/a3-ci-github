@@ -7,7 +7,7 @@
   "scripts": {
     "build": "ncc build src/index.ts --minify",
     "lint": "tsc --noEmit",
-    "test": "npm run build && tsx --test tests/*.test.ts"
+    "test": "npm run build && node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-gh-provisioner/tests/"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

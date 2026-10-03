@@ -21,5 +21,8 @@ test_maps:
     case_id: bundle-boundary
     tests:
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
-        symbol: authority bundle emits verified outputs and suppresses outputs on rejection
+        symbol: "source entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection"
+        check_refs: [authority]
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection"
         check_refs: [authority]

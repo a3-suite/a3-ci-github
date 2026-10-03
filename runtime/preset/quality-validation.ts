@@ -4,14 +4,17 @@ import type { Platform } from '../platform/platform-manifest-core.mjs';
 import { validateActionAvailability } from './action-availability.ts';
 import path from 'node:path';
 import { validatePlatformManifest as validatePlatformManifestContent } from './validate-platform-manifest.ts';
-import { adapterBundleAssets, add, installedPresetWorkflows, map, parseYaml, standardQualityBundles, strings, valueAtPath } from './ci-preset-assets.ts';
-import type { Preset, ValueMap, WorkflowAsset } from './ci-preset-assets.ts';
+import { adapterBundleAssets, installedPresetWorkflows } from './ci-preset-assets.ts';
+import { add } from './validation-report.ts';
+import { map, standardQualityBundles, strings, valueAtPath } from './preset-model.ts';
+import { parseYaml } from './preset-registry.ts';
+import type { Preset, ValueMap, WorkflowAsset } from './preset-model.ts';
 import type { InspectionContext } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside } from './workflow-assets.ts';
 import { descriptorValues, validateDescriptor } from './descriptor-validation.ts';
 import { uses } from './workflow-validation.ts';
 import { standardQualityBundle } from '../adapter/standard-quality-bundles.ts';
-import { resolveQualityWorkflow } from './ci-preset-assets.ts';
+import { resolvePublicationWorkflow, resolveQualityWorkflow } from './ci-preset-assets.ts';
 
 const validateQualityPreset = (
   context: InspectionContext,
@@ -20,9 +23,10 @@ const validateQualityPreset = (
   const { root, registry } = context;
   if (!preset.qualityAdapter) return;
   const primary = preset.workflowAssets.find((asset) => asset.id === preset.id)
+    ?? preset.workflowAssets.find((asset) => asset.id === `${preset.id}-caller`)
     ?? preset.workflowAssets[0];
   for (const installed of installedPresetWorkflows(root, preset)) {
-    const workflow = resolveQualityWorkflow(installed.workflow, registry, context.report);
+    const workflow = resolvePublicationWorkflow(resolveQualityWorkflow(installed.workflow, registry, context.report), registry, context.report);
     const declared = descriptorValues(workflow).length > 0
       || map(workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined
       || map(workflow.env).CI_STANDARD_BUNDLE_ID !== undefined;
@@ -92,7 +96,7 @@ const validateQualityWorkflow = (
     return;
   }
   const unique = [...new Set(values)];
-  if (values.length === 0) {
+  if (values.length === 0 || values.every((value) => value === '')) {
     add(report.missingSettings, {
       path: `${workflowPath}:env.CI_ADAPTER_DESCRIPTOR`,
       message: 'quality adapter descriptor is missing',
@@ -142,7 +146,8 @@ const validatePlatformManifest = (
 ): void => {
   if (preset.id !== 'release-publication') return;
   const { root, registry, parsed, report } = context;
-  const workflowPath = preset.workflowAssets.find((asset) => asset.id === preset.id)?.destination;
+  const workflowPath = preset.workflowAssets.find((asset) => asset.id === preset.id)?.destination
+    ?? (preset.workflowAssets.some((asset) => asset.id === `${preset.id}-caller`) ? `.github/workflows/${preset.id}.yml` : undefined);
   const workflow = workflowPath ? parsed.get(workflowPath) : undefined;
   if (!workflow || !workflowPath) return;
   const configured = map(workflow.env).CI_PLATFORM_MANIFEST;
@@ -237,7 +242,8 @@ const validateStandardImplementation = (
   const contract = preset.standardImplementation;
   if (!contract) return;
   const { registry, parsed, report } = context;
-  const workflowPath = preset.workflowAssets.find((asset) => asset.id === preset.id)?.destination;
+  const workflowPath = preset.workflowAssets.find((asset) => asset.id === preset.id)?.destination
+    ?? (preset.workflowAssets.some((asset) => asset.id === `${preset.id}-caller`) ? `.github/workflows/${preset.id}.yml` : undefined);
   const workflow = workflowPath ? parsed.get(workflowPath) : undefined;
   if (!workflow || !workflowPath) return;
   const selectionEnv = contract.selectionEnv ?? '';
@@ -383,11 +389,8 @@ const validateConditionalExtensions = (
       continue;
     }
     if (!selected) continue;
-    const publicationWorkflow = preset.workflowAssets.find((asset) => asset.id === preset.id);
-    const publicationText = publicationWorkflow
-      && fs.existsSync(path.join(root, publicationWorkflow.destination))
-      ? fs.readFileSync(path.join(root, publicationWorkflow.destination), 'utf8')
-      : '';
+    const publication = parsed.get(`.github/workflows/${preset.id}.yml`);
+    const publicationText = publication ? JSON.stringify(publication) : '';
     const reachable = new Set(findWorkflowAssetReferences(root, publicationText));
     for (const entrypoint of registered.entrypoints ?? []) {
       if (!reachable.has(entrypoint)) add(report.mismatches, {
@@ -420,6 +423,7 @@ const validateActionCoverage = (
 ): void => {
   const { registry, report } = context;
   const installedWorkflowIds = new Set(assets.map((asset) => asset.id));
+  if (context.parsed.has(`.github/workflows/${preset.id}.yml`)) installedWorkflowIds.add(preset.id);
   validateActionAvailability(context.root, preset.id, installedWorkflowIds, context.parsed, registry, report);
   const expectedActions = new Set(registry.actionTargets
     .filter((target) => target.workflows.some((workflow) => installedWorkflowIds.has(workflow)))

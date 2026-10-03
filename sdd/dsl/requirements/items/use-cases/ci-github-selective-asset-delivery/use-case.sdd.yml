@@ -23,7 +23,7 @@ main_success_scenario:
   - summary: 設定解決とadapter materializeを既存ownerへ委譲し、asset lock、lint、preflight、consumer契約テストを順に実行する
 success_outcomes:
   - 選択した配布assetだけがfull source revision、manifest digest、receipt、planおよびtransactionから追跡できる
-  - 通常CI実行はproject-local distributionを参照せず、配置済みworkflow、固定SHA Action、project-owned設定で成立する
+  - 通常CI実行は導入・検証用のproject-local distributionを参照せず、配置済みcaller・request workflow、固定SHAのprovider再利用workflowとAction、project-owned設定で成立する
   - 更新失敗時は旧distributionを保持し、今回transactionの変更を復旧できる
 failure_outcomes:
   - manifest、source、size、digest、依存閉包またはredirect境界が不正ならconsumer管理資産を変更しない

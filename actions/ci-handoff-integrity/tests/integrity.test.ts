@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { validateHandoffDescriptor, validateHandoffIntegrity } from '../src/integrity.js';
 
 // integration_id: ci-handoff-integrity-source

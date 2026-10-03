@@ -7,8 +7,8 @@
   "scripts": {
     "build": "ncc build src/index.ts --minify",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
-    "test:contract": "tsx --test tests/action-contract.test.ts tests/entrypoint.test.ts"
+    "test": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-publisher/tests/",
+    "test:contract": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-publisher/tests/action-contract.test.ts actions/ci-release-publisher/tests/entrypoint.test.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

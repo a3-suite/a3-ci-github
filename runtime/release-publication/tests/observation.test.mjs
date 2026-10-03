@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import fs from 'node:fs';
 import { fixture, remoteClient } from './fixtures.mjs';
 import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly } from '../observation.ts';

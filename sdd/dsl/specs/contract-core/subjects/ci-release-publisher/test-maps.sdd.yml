@@ -6,7 +6,12 @@ test_maps:
     case_id: bundle-publish
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: publisher bundle writes once by immutable ID and emits evidence paths
+        symbol: "source entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
         check_refs:
           - receipt
           - readback
@@ -23,8 +28,12 @@ test_maps:
     case_id: bundle-rejection
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: publisher bundle rejects missing credential and path injection without
-          outputs
+        symbol: "source entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
         check_refs:
           - rejection
           - no-outputs

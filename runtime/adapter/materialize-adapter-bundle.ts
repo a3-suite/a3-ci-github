@@ -331,7 +331,7 @@ const copyWithoutOverwrite = (source: string, destination: string): 'copied' | '
 };
 
 export type MaterializeAdapterBundleOptions = {
-  sourceRoot: string;
+  sourceRoot?: string;
   inventoryPath: string;
   bundleId: string;
   targetRoot: string;
@@ -347,7 +347,6 @@ export type MaterializeAdapterBundleReport = {
 };
 
 export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions): MaterializeAdapterBundleReport => {
-  const sourceRoot = path.resolve(options.sourceRoot);
   const targetRoot = path.resolve(options.targetRoot);
   const inventoryPath = resolveInside(REPOSITORY_ROOT, options.inventoryPath);
   const inventory = parseYaml(inventoryPath);
@@ -366,6 +365,8 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourceRevision: standard.sourceRevision, sha256: standard.sha256 } };
   }
   if (bundle.delivery !== undefined) throw new Error('adapter-materializer-delivery-invalid');
+  if (!options.sourceRoot) throw new Error('adapter-materializer-source-root-required');
+  const sourceRoot = path.resolve(options.sourceRoot);
   const descriptorSource = resolveResource(sourceRoot, bundle.source);
   const descriptor = parseDescriptor(descriptorSource);
   if (descriptor.id !== bundle.id) throw new Error(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`);
@@ -445,15 +446,15 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
 };
 
 const parseArgs = (args: string[]): MaterializeAdapterBundleOptions & { output?: string } => {
-  if (args.length < 8 || args.length > 10) {
-    throw new Error('usage: materialize-adapter-bundle.ts --source-root ROOT --inventory PATH --bundle ID --target-root ROOT [--output PATH]');
+  if (args.length < 6 || args.length > 10) {
+    throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
   }
   const options: Partial<MaterializeAdapterBundleOptions> & { output?: string } = {};
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
     if (!value || !['--source-root', '--inventory', '--bundle', '--target-root', '--output'].includes(flag)) {
-      throw new Error('usage: materialize-adapter-bundle.ts --source-root ROOT --inventory PATH --bundle ID --target-root ROOT [--output PATH]');
+      throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
     }
     if (flag === '--source-root') options.sourceRoot = value;
     if (flag === '--inventory') options.inventoryPath = value;
@@ -461,8 +462,8 @@ const parseArgs = (args: string[]): MaterializeAdapterBundleOptions & { output?:
     if (flag === '--target-root') options.targetRoot = value;
     if (flag === '--output') options.output = value;
   }
-  if (!options.sourceRoot || !options.inventoryPath || !options.bundleId || !options.targetRoot) {
-    throw new Error('usage: materialize-adapter-bundle.ts --source-root ROOT --inventory PATH --bundle ID --target-root ROOT [--output PATH]');
+  if (!options.inventoryPath || !options.bundleId || !options.targetRoot) {
+    throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
   }
   return options as MaterializeAdapterBundleOptions & { output?: string };
 };

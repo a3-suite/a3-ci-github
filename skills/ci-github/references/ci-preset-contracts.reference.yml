@@ -82,14 +82,14 @@ presets:
       - format、lint、test、security、structure の結果
       - profile、toolchain、変更範囲、trust mode の evidence
       - log、summary、必要な検証 artifact
-      - platform 品質検証の結果 record（platform id、execution-context、adapter、解決済み設定 digest、commonOutput.status、evidence を結合する。実行前に期待 platform record 集合を確定する）
+      - platform 品質検証の matrix 実行と集約結果（実行前に選択 platform 集合を確定する。各 platform の実施状況と evidence は既存の CI run、job、matrix、log から追跡する）
     stopConditions:
       - source identity、profile、toolchain、adapter が解決できない。
       - untrusted source に secret、write 権限、信頼済み runner を渡そうとする。
       - required check が skip / cancel され、未実施を成功として扱おうとする。
       - 選択した platform id が project 宣言の platform 集合に無い、または重複している。
-      - 期待 record が欠落したまま、または platform 選択が空のまま aggregate が success になる。
-      - 対象外または未実施が、適用条件と理由を欠いたまま期待 record 集合から除外され、または成功として扱われる。
+      - 選択した platform の検証が欠落、失敗、中断または未実施のまま、または platform 選択が空のまま aggregate check が success になる。
+      - 対象外または未実施が、適用条件と理由を欠いたまま選択 platform 集合から除外され、または検証成功として扱われる。
       - platform 非対応コマンドを宣言なしに省略し、その platform の検証結果を省略する。
       - platform 検証を含む required check の workflow 自体が起動していない事実を成功として扱う。
   - id: release-request

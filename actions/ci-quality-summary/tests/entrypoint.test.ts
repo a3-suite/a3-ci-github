@@ -4,11 +4,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import test from 'node:test';
+import { describe, test } from 'vitest';
 
 
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
-const bundledEntrypoint = path.join(root, 'dist/index.js');
+const bundledEntrypoint = entrypointArgs;
 
 const runBundled = (
   input: unknown,
@@ -36,7 +40,7 @@ const runBundled = (
   env['INPUT_SUMMARY-JSON'] = JSON.stringify(input);
   env['INPUT_EVIDENCE-PATH'] = evidencePath;
   if (includeSummaryPath) env.GITHUB_STEP_SUMMARY = summaryPath;
-  const result = spawnSync(process.execPath, [bundledEntrypoint], {
+  const result = spawnSync(process.execPath, [...bundledEntrypoint], {
     cwd: root,
     env,
     encoding: 'utf8',
@@ -68,7 +72,7 @@ const successInput = {
 
 // contract_id: contract.ci-quality-summary.outputs
 // integration_id: ci-quality-summary-contract-entrypoint
-test('bundled entrypoint writes matching evidence and outputs', () => {
+test('entrypoint writes matching evidence and outputs', () => {
   // Arrange
   const input = successInput;
   // Act
@@ -91,7 +95,7 @@ test('bundled entrypoint writes matching evidence and outputs', () => {
 
 // contract_id: contract.ci-quality-summary.outputs
 // integration_id: ci-quality-summary-contract-entrypoint
-test('bundled entrypoint normalizes a raw GitHub job result', () => {
+test('entrypoint normalizes a raw GitHub job result', () => {
   const run = runBundled({ jobs: [{
     unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'run',
   }] });
@@ -106,7 +110,7 @@ test('bundled entrypoint normalizes a raw GitHub job result', () => {
 
 // contract_id: contract.ci-quality-summary.outputs
 // integration_id: ci-quality-summary-contract-entrypoint
-test('bundled entrypoint rejects a missing summary path', () => {
+test('entrypoint rejects a missing summary path', () => {
   // Arrange
   // Act
   const missingPath = runBundled(successInput, false);
@@ -120,7 +124,7 @@ test('bundled entrypoint rejects a missing summary path', () => {
 });
 
 // integration_id: ci-quality-summary-entrypoint-regression
-test('bundled entrypoint fails unresolved and invalid path relationships', () => {
+test('entrypoint fails unresolved and invalid path relationships', () => {
   // Arrange
   const unresolvedInput = {
     jobs: [{
@@ -147,4 +151,6 @@ test('bundled entrypoint fails unresolved and invalid path relationships', () =>
     fs.rmSync(samePath.tempRoot, { recursive: true, force: true });
     fs.rmSync(hardlink.tempRoot, { recursive: true, force: true });
   }
+});
+
 });

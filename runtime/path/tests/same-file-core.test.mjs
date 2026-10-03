@@ -1,48 +1,51 @@
 import assert from 'node:assert/strict';
-import { after, test } from 'node:test';
-import { existsSync, linkSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { test } from 'vitest';
+import { fileURLToPath } from 'node:url';
 
 import { pathsReferToSameFile } from '../same-file-core.mjs';
 
-const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), 'a3-path-core-'));
-after(() => {
-  rmSync(temporaryRoot, { recursive: true, force: true });
-  assert.equal(existsSync(temporaryRoot), false);
+// evidence_role: supplemental
+// test_level: unit
+// target_id: pathsReferToSameFile(left, right, invalidCode)
+// Invalid caller codes are a local precondition; Action entrypoints cover file aliases.
+test('requires an explicit error code before filesystem access', () => {
+  // Arrange
+  const codes = [undefined, ''];
+  // Act
+  const failures = codes.map((code) => {
+    try { pathsReferToSameFile('left', 'right', code); } catch (error) { return error; }
+    return undefined;
+  });
+  // Assert
+  for (const failure of failures) {
+    assert.ok(failure instanceof Error);
+    assert.equal(failure.message, 'same-file-invalid-code');
+  }
 });
-const invalidCode = 'same-file-test-invalid';
 
-test('treats the same resolved path as one file', () => {
-  const file = path.join(temporaryRoot, 'same.txt');
-  writeFileSync(file, 'same');
-  assert.equal(pathsReferToSameFile(file, file, invalidCode), true);
-  assert.equal(pathsReferToSameFile(file, path.join(temporaryRoot, '.', 'same.txt'), invalidCode), true);
-});
-
-test('distinguishes different and non-existent paths', () => {
-  const left = path.join(temporaryRoot, 'left.txt');
-  const right = path.join(temporaryRoot, 'right.txt');
+// evidence_role: supplemental
+// test_level: integration
+// integration_id: shared-file-identity-regression
+// Different existing files exercise the inode comparison that fresh Action outputs do not.
+test('distinguishes existing and missing files without a false alias', (t) => {
+  // Arrange
+  const parent = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../tests/tmp');
+  mkdirSync(parent, { recursive: true });
+  const root = mkdtempSync(path.join(parent, 'file-identity-'));
+  t.onTestFinished(() => rmSync(root, { recursive: true, force: true }));
+  const left = path.join(root, 'left.txt');
+  const right = path.join(root, 'right.txt');
   writeFileSync(left, 'left');
   writeFileSync(right, 'right');
-  assert.equal(pathsReferToSameFile(left, right, invalidCode), false);
-  assert.equal(pathsReferToSameFile(
-    path.join(temporaryRoot, 'missing-a.txt'),
-    path.join(temporaryRoot, 'missing-b.txt'),
-    invalidCode,
-  ), false);
-  assert.equal(pathsReferToSameFile(left, path.join(temporaryRoot, 'missing.txt'), invalidCode), false);
-});
-
-test('treats hard links to one inode as the same file', () => {
-  const original = path.join(temporaryRoot, 'original.txt');
-  const hardlink = path.join(temporaryRoot, 'hardlink.txt');
-  writeFileSync(original, 'hardlink');
-  linkSync(original, hardlink);
-  assert.equal(pathsReferToSameFile(original, hardlink, invalidCode), true);
-});
-
-test('requires an explicit error code', () => {
-  assert.throws(() => pathsReferToSameFile('left', 'right'), /same-file-invalid-code/);
-  assert.throws(() => pathsReferToSameFile('left', 'right', ''), /same-file-invalid-code/);
+  const pairs = [
+    [left, right],
+    [path.join(root, 'missing-a.txt'), path.join(root, 'missing-b.txt')],
+    [left, path.join(root, 'missing.txt')],
+  ];
+  // Act
+  const sameFile = pairs.map(([first, second]) => pathsReferToSameFile(first, second, 'same-file-test-invalid'));
+  // Assert
+  assert.deepEqual(sameFile, [false, false, false]);
 });

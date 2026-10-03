@@ -48,7 +48,7 @@ canonical の `release-request` は tag adapter のみを提供する（manual m
 
 ## adapter bundle の選択
 
-`quality-gate`では、`ci.script-assets` inventoryの`adapterBundles`から`languageProfiles`が一致するbundle IDを選ぶ。配置は`ci`スキルのmaterialization契約と導入ガイドに従い、descriptorを実行契約の正本とする。
+`quality-gate`では、`ci.script-assets` inventoryの`adapterBundles`から`languageProfiles`が一致するbundle IDを選ぶ。標準Action経路とdescriptor配置経路の選択・配置は、`references/ci-adapter-bundles.reference.yml` の `profilePolicy` と `copyContract` を参照する。導入手順は `references/configure-ci-preset.guide.md` に従う。
 
 一致する標準bundleがない場合だけ、`ci`スキルのadapter契約を満たすproject-owned descriptorを用意する。Releaseとpackageの実装はadapter bundleへ含めず、registryの`requiredExtensions`へ接続する。
 

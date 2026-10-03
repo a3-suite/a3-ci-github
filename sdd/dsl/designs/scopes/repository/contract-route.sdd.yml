@@ -149,6 +149,7 @@ routes:
       contract_id: contract.ci-release-notes-binding.outputs
     hops:
       - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-release-notes-input-resolution
     contract_ref:
       subject_ref: subject.ci.release-notes-input-resolution
@@ -167,6 +168,7 @@ routes:
       contract_id: contract.ci-release-publication-control.outputs
     hops:
       - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-package-publication-request
     contract_ref:
       subject_ref: subject.ci.package-publication-request

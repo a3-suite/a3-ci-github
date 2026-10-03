@@ -7,8 +7,8 @@ import type { ObservationOptionsType, ReadOnlyClientType } from '../../../runtim
 import type { AssetType, ReleaseIdentityType, ReceiptType } from '../../../runtime/release-publication/schema';
 import { validateEvidence } from '../../../runtime/release-publication/schema';
 import { LIMITS, fail, readBytes, readRecord, equal, sha256, safePath, hashFile, record, text, writeNewJson } from '../../../runtime/release-publication/io';
-import { parseFutureRfc3339 } from '../../ci-release-publication-control/src/control';
-import { validateReleaseNotesBinding } from '../../ci-release-notes-binding/src/binding';
+import { parseFutureRfc3339 } from '../../../runtime/release-publication/control';
+import { validateReleaseNotesBinding } from '../../../runtime/release-publication/notes-binding';
 
 export type PublisherOptionsType = ObservationOptionsType & { beforePath: string; outputRoot: string };
 export type PublisherClientType = ReadOnlyClientType & {

@@ -66,7 +66,7 @@ jobs:
     needs: validate-request
     permissions:
       contents: read
-    uses: ./.github/workflows/package-preparation.yml
+    uses: a3-suite/a3-ci-github/.github/workflows/ci-package-preparation.yml@<package-preparation-workflow-sha>
     with:
       source_sha: ${{ needs.validate-request.outputs.source_sha }}
       version: ${{ needs.validate-request.outputs.version }}
@@ -80,8 +80,11 @@ jobs:
       actions: read
       contents: read
       packages: write
-    uses: ./.github/workflows/package-publication.yml
+    uses: a3-suite/a3-ci-github/.github/workflows/ci-package-publication.yml@<package-publication-workflow-sha>
     with:
+      runner: <versioned-runner>
+      gh-version: <gh-version>
+      jq-version: <jq-version>
       package_handoff_run_id: ${{ needs.prepare.outputs.handoff_run_id }}
       source_sha: ${{ needs.validate-request.outputs.source_sha }}
       version: ${{ needs.prepare.outputs.publish_version }}
