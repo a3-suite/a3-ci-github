@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
+import yaml from 'yaml';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { runInNewContext } from 'node:vm';
@@ -11,7 +11,6 @@ import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapsho
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
-const yaml = createRequire(import.meta.url)(path.join(root, 'runtime/preset/node_modules/yaml'));
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
