@@ -5,11 +5,9 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseFlagArguments } from './cli-args.ts';
 import { validateCiPreset } from './validate-ci-preset-core.ts';
-export {
-  canonicalSourcePath,
-  collectProviderStaticValidationConfigPaths,
-  isSafeProviderConfigPath,
-} from './ci-preset-assets.ts';
+export { canonicalSourcePath } from './ci-preset-assets.ts';
+export { collectProviderStaticValidationConfigPaths } from './preset-registry.ts';
+export { isSafeProviderConfigPath } from './preset-model.ts';
 
 export { validateCiPreset };
 

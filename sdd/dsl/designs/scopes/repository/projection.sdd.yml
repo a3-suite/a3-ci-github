@@ -6,8 +6,24 @@ mappings:
     element_id: actions-root
   - component_id: workflow-sources
     element_id: workflows-root
+  - component_id: workflow-sources
+    element_id: quality-reusable-workflow
+  - component_id: workflow-sources
+    element_id: quality-platforms-reusable-workflow
+  - component_id: workflow-sources
+    element_id: package-preparation-reusable-workflow
+  - component_id: workflow-sources
+    element_id: release-publication-reusable-workflow
+  - component_id: workflow-sources
+    element_id: package-publication-reusable-workflow
   - component_id: runtime-implementations
     element_id: runtime-root
+  - component_id: runtime-implementations
+    element_id: preset-model
+  - component_id: runtime-implementations
+    element_id: preset-registry
+  - component_id: runtime-implementations
+    element_id: preset-project-assets
   - component_id: selective-distribution
     element_id: distribution-runtime-root
   - component_id: provider-static-validation

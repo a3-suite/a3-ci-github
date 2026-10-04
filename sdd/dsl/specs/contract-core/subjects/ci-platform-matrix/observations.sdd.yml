@@ -13,6 +13,12 @@ observations:
         - selector: matrix
           kind: observation_field
           meaning: Compact JSON object containing the validated platform entries under include.
+        - selector: quality-matrix
+          kind: observation_field
+          meaning: Compact JSON include matrix of platform_id and runner in supplied selection order, present only for a valid supplied selection.
+        - selector: expected-platforms
+          kind: observation_field
+          meaning: Comma-separated selected IDs in selection order, present only for a valid supplied selection.
   - id: observation.ci-platform-matrix.result
     summary: The Action exposes its step outcome to the caller.
     boundary:
@@ -27,3 +33,6 @@ observations:
         - selector: matrix-output-state
           kind: observation_field
           meaning: Present when a matrix output was emitted and absent otherwise.
+        - selector: quality-output-state
+          kind: observation_field
+          meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.

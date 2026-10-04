@@ -30,6 +30,7 @@
 3. CI workflow runtime の依存を確認する。
    - `references/ci-runtime-boundary.reference.md` の禁止事項に反していないか確認する。
    - `a3-lint` / `a3-suite` / その他 `a3-*` コマンドを workflow step や `.ci/scripts/` から呼んでいないか確認する。
+   - consumerのGit管理対象、導入・保守時だけの取得、CI実行中の取得を区別する。配布・copy境界は `references/distribute-ci-assets.guide.md` を参照し、各checkout、tool取得、依存準備、handoff取得が選択した到達経路で実際に必要かを入力・利用先と照合する。委譲先で供給済みの資材や未選択経路だけが使う資材を重複取得せず、trust gateやhandoff検証に必要な取得は維持する。
 4. runner trust policy を確認する。
    - 選択した provider の trust policy profile に従って runner と check 境界、および該当する control が選ばれているか確認する。
    - runner/host の版指定と self-hosted image の identity を選択した provider の version policy profile に照らして確認する。

@@ -13,7 +13,7 @@ requirements:
       key: common-processing-action-reuse
     priority: must
     fit_criteria:
-      - Action 化する処理は cross-project reusable、provider-write-free、bounded I/O、fail-closed の全条件を満たす
+      - Action 化する処理は cross-project reusable、bounded I/O、fail-closed の全条件を満たし、provider write は registry が限定承認した専用 Release publisher のみ許可する
       - 対象処理は固定 SHA の Action から実行でき、利用 project に同じ実装 script または runtime を複製しない
       - workflow は job 境界、permissions、credential 注入を保持し、owner は policy と credential route を保持する
       - Release publication の request、provenance、approval を provider-write-free に検証できる

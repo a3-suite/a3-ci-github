@@ -82,12 +82,14 @@ export const validateHandoffIntegrity = (handoffRoot: string, descriptorPath: st
   if (descriptor.version !== expected.version) throw new Error('handoff-version-mismatch');
   if (descriptor.target_identity !== expected.targetIdentity) throw new Error('handoff-target-identity-mismatch');
   const manifestResult = validateHandoffDescriptor(handoffRoot, descriptor.manifest);
-  const manifest = parseManifest(fs.readFileSync(manifestResult.absolutePath, 'utf8'));
+  const manifestBytes = fs.readFileSync(manifestResult.absolutePath);
+  const manifest = parseManifest(manifestBytes.toString('utf8'));
   for (const entry of manifest) {
     const artifact = validateHandoffDescriptor(handoffRoot, entry.path);
     const digest = crypto.createHash('sha256').update(fs.readFileSync(artifact.absolutePath)).digest('hex');
     if (digest !== entry.sha256) throw new Error('handoff-manifest-checksum-mismatch');
   }
-  const manifestDigest = crypto.createHash('sha256').update(fs.readFileSync(manifestResult.absolutePath)).digest('hex');
+  if (!manifestBytes.equals(fs.readFileSync(manifestResult.absolutePath))) throw new Error('handoff-manifest-checksum-mismatch');
+  const manifestDigest = crypto.createHash('sha256').update(manifestBytes).digest('hex');
   return { descriptor: descriptorResult.descriptor, manifest: manifestResult.descriptor, manifestDigest, entries: manifest.length };
 };

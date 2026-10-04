@@ -30,7 +30,7 @@ const compositeReferences = (root, actionPath) => {
   return references.map((reference) => path.relative(root, reference));
 };
 
-export const collectActions = (root) => {
+export const collectActionMetadata = (root) => {
   const actionsRoot = path.join(root, 'actions');
   const entries = readdirSync(actionsRoot, { withFileTypes: true });
   const actions = entries
@@ -38,37 +38,39 @@ export const collectActions = (root) => {
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => {
       const actionPath = path.join(actionsRoot, entry.name);
-      for (const file of ['action.yml', 'README.md']) {
-        if (!existsSync(path.join(actionPath, file))) throw new Error(`Action ${entry.name} is missing ${file}`);
-      }
       const runtime = runtimeFor(actionPath);
       const bundled = runtime.startsWith('node');
       if (!bundled && runtime !== 'composite') throw new Error(`Action ${entry.name} uses unsupported runtime ${runtime}`);
-      for (const file of bundled ? bundledFiles : []) {
-        if (!existsSync(path.join(actionPath, file))) throw new Error(`Action ${entry.name} is missing ${file}`);
-      }
       return {
         name: entry.name,
         path: actionPath,
         runtime,
         distPath: bundled ? path.relative(root, path.join(actionPath, 'dist')) : null,
-        referencedPaths: bundled ? [] : compositeReferences(root, actionPath),
       };
     });
   if (actions.length === 0) throw new Error('No Action directories were found');
   return actions;
 };
 
+export const collectActions = (root) => collectActionMetadata(root).map((action) => {
+  for (const file of ['action.yml', 'README.md', ...(action.distPath ? bundledFiles : [])]) {
+    if (!existsSync(path.join(action.path, file))) throw new Error(`Action ${action.name} is missing ${file}`);
+  }
+  return { ...action, referencedPaths: action.distPath ? [] : compositeReferences(root, action.path) };
+});
+
+export const collectScriptBundleMetadata = (root) => [{
+  name: 'rust-release-platform-manifest',
+  path: path.join(root, 'runtime/rust-release'),
+  distPath: 'runtime/rust-release/dist',
+}];
+
 export const collectScriptBundles = (root) => {
   const scriptPath = path.join(root, 'runtime/rust-release');
   for (const file of ['package.json', 'src/verify-platform-manifest.mjs', 'dist/index.mjs']) {
     if (!existsSync(path.join(scriptPath, file))) throw new Error(`Rust release scripts are missing ${file}`);
   }
-  return [{
-    name: 'rust-release-platform-manifest',
-    path: scriptPath,
-    distPath: path.relative(root, path.join(scriptPath, 'dist')),
-  }];
+  return collectScriptBundleMetadata(root);
 };
 
 export const buildPlan = (root, actions, scriptBundles = []) => [

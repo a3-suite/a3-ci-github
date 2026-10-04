@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
-import { runControl, type ControlInput } from './control.js';
+import { runControl, type ControlInput } from '../../../runtime/release-publication/control.js';
 
-const names = ['release-request-run-id', 'request-workflow-run-id', 'request-head-sha', 'release-identity', 'release-notes', 'approval-id', 'approval-expires-at', 'approval-body-sha256', 'publication-request-run-id', 'release-request-tag-workflow-name', 'release-request-tag-workflow-path'] as const;
+const names = ['release-request-run-id', 'request-workflow-run-id', 'request-head-sha', 'release-identity', 'release-version', 'target-identity', 'release-notes', 'approval-id', 'approval-expires-at', 'approval-body-sha256', 'publication-request-run-id', 'release-request-tag-workflow-name', 'release-request-tag-workflow-path'] as const;
 const camel = (name: string): string => name.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
 
 export const run = (): void => {

@@ -5,11 +5,11 @@ contracts:
   - id: contract.ci-release-request-handoff.outputs
     summary: Valid request inputs produce a request handoff and digest path.
     conditions:
-      - id: tag-ref-present
-        input_predicate:
-          kind: input
-          term: input.github-ref-name
-          op: present
+      - id: request-handoff-input-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-request-handoff-valid
+          op: available
       - id: request-handoff-rejected
         environment_predicate:
           kind: environment-ref
@@ -17,7 +17,7 @@ contracts:
           op: available
     guarantees:
       - id: request-handoff-output-produced
-        when: tag-ref-present
+        when: request-handoff-input-valid
         observation_ref: observation.ci-release-request-handoff.outputs
         claim:
           kind: observable-result

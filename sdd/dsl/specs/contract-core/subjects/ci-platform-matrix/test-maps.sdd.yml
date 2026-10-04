@@ -6,19 +6,63 @@ test_maps:
     case_id: valid-platform-manifest
     tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
-        symbol: bundled entrypoint emits the validated matrix
+        symbol: "source entrypoint > entrypoint emits the validated matrix"
+        check_refs:
+          - check-platform-matrix-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint emits the validated matrix"
         check_refs:
           - check-platform-matrix-output
   - verification_id: verification.ci-platform-matrix.outputs
     case_id: invalid-platform-manifest
     tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
-        symbol: bundled entrypoint fails closed for an unsupported runner
+        symbol: "source entrypoint > entrypoint fails closed for an unsupported runner"
         check_refs:
           - check-invalid-platform-manifest-failure
           - check-invalid-platform-manifest-no-output
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects an oversized manifest before parsing
+        symbol: "dist entrypoint > entrypoint fails closed for an unsupported runner"
         check_refs:
           - check-invalid-platform-manifest-failure
           - check-invalid-platform-manifest-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint rejects an oversized manifest before parsing"
+        check_refs:
+          - check-invalid-platform-manifest-failure
+          - check-invalid-platform-manifest-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects an oversized manifest before parsing"
+        check_refs:
+          - check-invalid-platform-manifest-failure
+          - check-invalid-platform-manifest-no-output
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: valid-quality-selection
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix"
+        check_refs:
+          - check-selected-full-matrix
+          - check-ordered-quality-matrix
+          - check-ordered-expected-platforms
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix"
+        check_refs:
+          - check-selected-full-matrix
+          - check-ordered-quality-matrix
+          - check-ordered-expected-platforms
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: invalid-quality-selection
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint fails without any outputs for invalid selection"
+        check_refs:
+          - check-invalid-selection-failure
+          - check-invalid-selection-no-matrix
+          - check-invalid-selection-no-quality-outputs
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint fails without any outputs for invalid selection"
+        check_refs:
+          - check-invalid-selection-failure
+          - check-invalid-selection-no-matrix
+          - check-invalid-selection-no-quality-outputs

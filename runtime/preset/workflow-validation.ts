@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FULL_SHA, minuteTimestamp } from './ci-asset-lock.ts';
-import { SKILL_ROOT, add, canonicalSourcePath, inactiveConditionalEntrypoints, isMap, map, parseYaml, strings } from './ci-preset-assets.ts';
-import type { Finding, ManagedAsset, Preset, RegistryData, TriggerExtensionRule, ValueMap, WorkflowAsset } from './ci-preset-assets.ts';
+import { SKILL_ROOT, parseYaml } from './preset-registry.ts';
+import { add } from './validation-report.ts';
+import { canonicalSourcePath, inactiveConditionalEntrypoints, resolveQualityWorkflow, resolvePublicationWorkflow } from './ci-preset-assets.ts';
+import { isMap, map, strings, publicationBinding } from './preset-model.ts';
+import type { Finding, ManagedAsset, Preset, RegistryData, TriggerExtensionRule, ValueMap, WorkflowAsset } from './preset-model.ts';
 import type { InspectionContext, Report } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside, realPathIsInside, sha256 } from './workflow-assets.ts';
 
@@ -183,93 +186,64 @@ const validateCanonicalWorkflow = (
   return canonical;
 };
 
-const validateWorkflowIdentity = (
+const validatePublicationControl = (
   asset: WorkflowAsset,
   text: string,
   workflow: ValueMap,
   canonical: ValueMap | undefined,
   report: Report,
 ): void => {
-  if (!canonical) return;
-  const canonicalJobs = map(canonical.jobs);
-  const identityJobs = Object.entries(canonicalJobs).filter(([, value]) => {
-    const candidateSteps = map(value).steps;
-    const steps = Array.isArray(candidateSteps) ? candidateSteps : [];
-    return map(steps[0]).id === 'workflow-identity';
-  });
-  if (identityJobs.length === 0) return;
+  const controlJobs = asset.id === 'release-publication'
+    ? ['authority', 'quality', 'assemble', 'publish']
+    : asset.id === 'package-publication' ? ['publish'] : [];
+  if (!canonical || controlJobs.length === 0) return;
   if (text.includes('<trusted-control-sha>')) add(report.mismatches, {
     path: `${asset.destination}:trusted-control-sha`,
     message: 'legacy trusted control SHA input is forbidden',
     settingLocation: asset.destination,
   });
-  for (const [jobName, canonicalJobValue] of identityJobs) {
+  const entryJob = asset.id === 'release-publication' ? 'authority' : 'publish';
+  for (const jobName of controlJobs) {
     const job = map(map(workflow.jobs)[jobName]);
-    const candidateCanonicalSteps = map(canonicalJobValue).steps;
-    const canonicalSteps = Array.isArray(candidateCanonicalSteps) ? candidateCanonicalSteps : [];
-    const expectedEnv = map(map(canonicalSteps[0]).env);
+    const canonicalJob = map(map(canonical.jobs)[jobName]);
     const jobPath = `${asset.destination}:jobs.${jobName}`;
     if ('container' in job || 'services' in job) add(report.mismatches, {
       path: jobPath,
-      message: 'workflow identity gate cannot precede a job container or service',
+      message: 'publication control cannot execute in a job container or service',
       settingLocation: asset.destination,
     });
     const steps = Array.isArray(job.steps) ? job.steps.map(map) : [];
-    const gate = steps[0] ?? {};
-    const expectedGate = map(canonicalSteps[0]);
-    if (gate.id !== 'workflow-identity') {
-      add(report.mismatches, {
-        path: `${jobPath}.steps.0`,
-        message: 'workflow identity gate must be the first step',
-        settingLocation: asset.destination,
-      });
-      continue;
-    }
-    if (typeof expectedGate.uses === 'string') {
-      if (gate.uses !== expectedGate.uses) add(report.mismatches, {
-        path: `${jobPath}.steps.0.uses`,
-        message: 'workflow identity Action binding is missing or incorrect',
-        settingLocation: asset.destination,
-      });
-      const actualInputs = map(gate.with);
-      for (const [name, value] of Object.entries(map(expectedGate.with))) {
-        if (actualInputs[name] !== value) add(report.mismatches, {
-          path: `${jobPath}.steps.0.with.${name}`,
-          message: 'workflow identity Action input is missing or incorrect',
-          settingLocation: asset.destination,
-        });
-      }
+    const canonicalSteps = Array.isArray(canonicalJob.steps) ? canonicalJob.steps.map(map) : [];
+    const differences: Finding[] = [];
+    if (jobName === entryJob) {
+      compareCanonicalValue(canonicalSteps[0], steps[0], `${jobPath}.steps.0`, differences, new Set());
     } else {
-      if (typeof gate.run !== 'string') add(report.mismatches, {
-        path: `${jobPath}.steps.0`,
-        message: 'workflow identity inline gate must execute its verification script',
-        settingLocation: asset.destination,
-      });
-      const env = map(gate.env);
-      for (const [name, value] of Object.entries(expectedEnv)) {
-        if (env[name] !== value) add(report.mismatches, {
-          path: `${jobPath}.steps.0.env.${name}`,
-          message: 'workflow identity context binding is missing or incorrect',
-          settingLocation: asset.destination,
-        });
+      // The entry job owns admission; downstream control must retain its success dependency.
+      for (const field of ['needs', 'if']) {
+        compareCanonicalValue(canonicalJob[field], job[field], `${jobPath}.${field}`, differences, new Set());
       }
     }
     const checkoutIndex = steps.findIndex((step) =>
       typeof step.uses === 'string'
       && step.uses.startsWith('actions/checkout@')
-      && map(step.with).ref === '${{ steps.workflow-identity.outputs.sha }}');
-    if (checkoutIndex < 0) {
-      add(report.mismatches, {
-        path: `${jobPath}.steps`,
-        message: 'trusted control checkout must use the verified workflow identity SHA',
-        settingLocation: asset.destination,
-      });
-      continue;
+      && map(step.with).repository === '${{ github.repository }}'
+      && map(step.with).ref === '${{ github.workflow_sha }}');
+    const canonicalCheckoutIndex = canonicalSteps.findIndex((step) =>
+      typeof step.uses === 'string'
+      && step.uses.startsWith('actions/checkout@')
+      && map(step.with).ref === '${{ github.workflow_sha }}');
+    if (checkoutIndex < 0) add(report.mismatches, {
+      path: `${jobPath}.steps`,
+      message: 'trusted control checkout must use the consumer repository and github.workflow_sha',
+      settingLocation: asset.destination,
+    });
+    else {
+      compareCanonicalValue(canonicalSteps[canonicalCheckoutIndex], steps[checkoutIndex], `${jobPath}.steps.${checkoutIndex}`, differences, new Set());
+      compareCanonicalValue(canonicalSteps[canonicalCheckoutIndex + 1], steps[checkoutIndex + 1], `${jobPath}.steps.${checkoutIndex + 1}`, differences, new Set());
     }
-    const verification = steps[checkoutIndex + 1] ?? {};
-    if (typeof verification.run !== 'string') add(report.mismatches, {
-      path: `${jobPath}.steps.${checkoutIndex + 1}`,
-      message: 'trusted control checkout must be followed immediately by a verification step',
+    for (const difference of differences) add(report.mismatches, {
+      ...difference,
+      message: `publication control drift: ${difference.message}`,
       settingLocation: asset.destination,
     });
   }
@@ -580,6 +554,23 @@ const validateCommon = (
       settingLocation: displayPath,
     });
   }
+  for (const job of Object.values(map(workflow.jobs))) {
+    for (const step of Array.isArray(map(job).steps) ? map(job).steps as unknown[] : []) {
+      const value = map(step);
+      if (typeof value.uses !== 'string' || !value.uses.startsWith(`${registry.actionRepository}/actions/ci-quality-toolchain@`)) continue;
+      const expected = {
+        'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}',
+        'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}',
+        'uv-version': '${{ env.CI_UV_VERSION }}',
+        'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}',
+      };
+      const inputs = map(value.with);
+      if (Object.keys(inputs).length !== Object.keys(expected).length
+        || Object.entries(expected).some(([name, expression]) => inputs[name] !== expression)) add(report.mismatches, {
+        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its four explicit workflow settings', settingLocation: displayPath,
+      });
+    }
+  }
   for (const reference of findWorkflowAssetReferences(root, text, excludedReferences)) {
     try {
       const absolute = inside(root, reference);
@@ -675,6 +666,59 @@ const effectivePermissions = (workflow: ValueMap, job: ValueMap): ValueMap =>
     ? map(job.permissions)
     : map(workflow.permissions);
 
+const inspectPackagePreparation = (
+  context: InspectionContext, asset: WorkflowAsset, workflow: ValueMap, observedActions: Set<string>,
+): void => {
+  if (asset.id !== 'package-publication-caller') return;
+  const { root, registry, report, actionByPath } = context;
+  const binding = registry.packagePreparationReusableWorkflow;
+  if (!binding) {
+    add(report.mismatches, { path: asset.destination, message: 'package preparation binding is missing' });
+    return;
+  }
+  const call = map(map(workflow.jobs).prepare);
+  const expectedRef = binding.status === 'available' ? binding.exactRef : binding.referencePlaceholder;
+  if (call.uses !== `${registry.actionRepository}/${binding.source}@${expectedRef}`) add(report.mismatches, {
+    path: `${asset.destination}:jobs.prepare.uses`, message: 'package preparation reusable workflow ref does not match the registry',
+  });
+  if (binding.status !== 'available') add(report.missingSettings, {
+    path: `${asset.destination}:jobs.prepare.uses`, message: 'package preparation reusable workflow is pending-release; deployment is forbidden',
+  });
+  const source = path.resolve(SKILL_ROOT, binding.source);
+  if (!source.startsWith(`${SKILL_ROOT}${path.sep}`) || !fs.existsSync(source) || !realPathIsInside(SKILL_ROOT, source)) {
+    add(report.mismatches, { path: binding.source, message: 'fixed package preparation workflow source is missing or outside the provider root' });
+    return;
+  }
+  const callee = map(parseYaml(fs.readFileSync(source, 'utf8'), binding.source, report));
+  const definitions = map(map(on(callee).workflow_call).inputs);
+  for (const [name, value] of Object.entries(map(call.with))) {
+    if (!(name in definitions) || typeof value !== map(definitions[name]).type) add(report.mismatches, {
+      path: `${asset.destination}:jobs.prepare.with.${name}`, message: 'package preparation input is undeclared or has the wrong type',
+    });
+  }
+  for (const [name, definition] of Object.entries(definitions)) {
+    if (map(definition).required === true && !(name in map(call.with))) add(report.missingSettings, {
+      path: `${asset.destination}:jobs.prepare.with.${name}`, message: 'required package preparation input is missing',
+    });
+  }
+  validateCommon(root, `${asset.destination}:prepare`, JSON.stringify(callee), callee, report, registry);
+  for (const value of actionUses(callee)) {
+    if (!value.startsWith(`${registry.actionRepository}/`)) continue;
+    const separator = value.lastIndexOf('@');
+    const target = actionByPath.get(value.slice(0, separator));
+    if (!target || !target.workflows.includes('package-preparation')) add(report.mismatches, {
+      path: binding.source, message: 'package preparation Action is not registered or mapped',
+    });
+    else {
+      observedActions.add(target.id);
+      const ref = target.status === 'pending-release' ? registry.pendingActionRef : registry.actionExactRef;
+      if (value.slice(separator + 1) !== ref) add(report.mismatches, {
+        path: binding.source, message: 'package preparation Action ref does not match the registry',
+      });
+    }
+  }
+};
+
 const inspectWorkflowAsset = (
   context: InspectionContext,
   preset: Preset,
@@ -704,7 +748,7 @@ const inspectWorkflowAsset = (
   const workflow = map(parseYaml(text, asset.destination, report));
   parsed.set(asset.destination, workflow);
   const canonical = validateCanonicalWorkflow(asset, workflow, registry, report);
-  validateWorkflowIdentity(asset, text, workflow, canonical, report);
+  validatePublicationControl(asset, text, workflow, canonical, report);
   validateCommon(
     root,
     asset.destination,
@@ -715,8 +759,84 @@ const inspectWorkflowAsset = (
     inactiveConditionalEntrypoints(root, registry, preset),
   );
   validateTrigger(preset.id, asset.id, workflow, asset.destination, report);
-  for (const value of uses(workflow).filter((item) =>
-    item.startsWith(`${registry.actionRepository}/`))) {
+  inspectPackagePreparation(context, asset, workflow, observedActions);
+  const publication = publicationBinding(asset.id, registry);
+  const execution = resolvePublicationWorkflow(resolveQualityWorkflow(workflow, registry, report), registry, report);
+  const executionId = publication ? asset.id.replace(/-caller$/, '') : asset.id;
+  if (publication) {
+    const call = map(map(workflow.jobs).publish);
+    const expectedRef = publication.status === 'available' ? publication.exactRef : publication.referencePlaceholder;
+    if (call.uses !== `${registry.actionRepository}/${publication.source}@${expectedRef}`) add(report.mismatches, {
+      path: `${asset.destination}:jobs.publish.uses`, message: 'publication reusable workflow ref does not match the registry', settingLocation: asset.destination,
+    });
+    if (publication.status !== 'available') add(report.missingSettings, {
+      path: `${asset.destination}:jobs.publish.uses`, message: 'publication reusable workflow is pending-release; deployment is forbidden', settingLocation: asset.destination,
+    });
+    if (execution !== workflow) {
+      const definitions = map(map(map(execution.on).workflow_call).inputs);
+      const runtimeInputs = new Set(executionId === 'release-publication'
+        ? ['request_run_id', 'publication_request_run_id']
+        : ['package_handoff_run_id', 'source_sha', 'version', 'target_identity', 'package_artifact_id']);
+      for (const [name, value] of Object.entries(map(call.with))) {
+        if (!(name in definitions) || !(typeof value === map(definitions[name]).type
+          || runtimeInputs.has(name) && typeof value === 'string' && /^\$\{\{.*\}\}$/.test(value))) add(report.mismatches, {
+          path: `${asset.destination}:jobs.publish.with.${name}`, message: 'publication reusable workflow input is undeclared or has the wrong type', settingLocation: asset.destination,
+        });
+        if (!runtimeInputs.has(name) && typeof value === 'string' && value.includes('${{')) add(report.mismatches, {
+          path: `${asset.destination}:jobs.publish.with.${name}`, message: 'publication owner configuration must be static', settingLocation: asset.destination,
+        });
+      }
+      const runner = map(call.with).runner;
+      if (typeof runner !== 'string' || runner === '' || runner.endsWith('-latest') || runner.includes('${{')) add(report.mismatches, {
+        path: `${asset.destination}:jobs.publish.with.runner`, message: 'publication runner must be a static versioned label', settingLocation: asset.destination,
+      });
+      const virtualAsset = { id: executionId, destination: `.github/workflows/${executionId}.yml`, source: publication.source };
+      parsed.set(virtualAsset.destination, execution);
+      const provider = map(parseYaml(fs.readFileSync(canonicalSourcePath(publication.source, SKILL_ROOT), 'utf8'), publication.source, report));
+      validatePublicationControl(virtualAsset, JSON.stringify(execution), execution, provider, report);
+      validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry,
+        inactiveConditionalEntrypoints(root, registry, preset));
+    }
+  }
+  const binding = asset.id === 'quality-gate' ? registry.qualityReusableWorkflow
+    : asset.id === 'quality-gate-platforms' ? registry.qualityPlatformsReusableWorkflow : undefined;
+  if (binding) {
+    const jobId = asset.id === 'quality-gate-platforms' ? 'platforms' : 'quality';
+    const label = asset.id === 'quality-gate-platforms' ? 'platform' : 'quality';
+    const call = map(map(workflow.jobs)[jobId]);
+    const expectedRef = binding.status === 'available' ? binding.exactRef : binding.referencePlaceholder;
+    if (call.uses !== `${registry.actionRepository}/${binding.source}@${expectedRef}`) add(report.mismatches, {
+      path: `${asset.destination}:jobs.${jobId}.uses`, message: `${label} reusable workflow ref does not match the registry`, settingLocation: asset.destination,
+    });
+    if (binding.status !== 'available') add(report.missingSettings, {
+      path: `${asset.destination}:jobs.${jobId}.uses`, message: `${label} reusable workflow is pending-release; deployment is forbidden`, settingLocation: asset.destination,
+    });
+    const runner = map(call.with).runner;
+    if (typeof runner !== 'string' || runner === '' || runner.endsWith('-latest') || runner.includes('${{')) add(report.mismatches, {
+      path: `${asset.destination}:jobs.${jobId}.with.runner`, message: `${label} runner must be a static versioned label`, settingLocation: asset.destination,
+    });
+    if (asset.id === 'quality-gate') {
+      const jqVersion = map(call.with)['jq-version'];
+      if (jqVersion !== undefined && jqVersion !== ''
+        && (typeof jqVersion !== 'string' || !/^\d+\.\d+(?:\.\d+)?$/.test(jqVersion))) add(report.mismatches, {
+        path: `${asset.destination}:jobs.quality.with.jq-version`,
+        message: 'quality jq version must be empty or an exact version',
+        settingLocation: asset.destination,
+      });
+    }
+    if (execution !== workflow) {
+      const definitions = map(map(map(execution.on).workflow_call).inputs);
+      for (const [name, value] of Object.entries(map(call.with))) if (!(name in definitions) || typeof value !== map(definitions[name]).type) add(report.mismatches, {
+        path: `${asset.destination}:jobs.${jobId}.with.${name}`, message: `${label} reusable workflow input is undeclared or has the wrong type`, settingLocation: asset.destination,
+      });
+      for (const [name, definition] of Object.entries(definitions)) if (map(definition).required === true && !(name in map(call.with))) add(report.missingSettings, {
+        path: `${asset.destination}:jobs.${jobId}.with.${name}`, message: `required ${label} reusable workflow input is missing`, settingLocation: asset.destination,
+      });
+      validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry);
+    }
+  }
+  for (const value of new Set([...actionUses(workflow), ...actionUses(execution)].filter((item) =>
+    item.startsWith(`${registry.actionRepository}/`)))) {
     const separator = value.lastIndexOf('@');
     const actionName = separator < 0 ? value : value.slice(0, separator);
     const ref = separator < 0 ? '' : value.slice(separator + 1);
@@ -730,20 +850,21 @@ const inspectWorkflowAsset = (
       continue;
     }
     observedActions.add(target.id);
-    if (ref !== registry.actionExactRef) add(report.mismatches, {
+    const expectedRef = target.status === 'pending-release' ? registry.pendingActionRef : registry.actionExactRef;
+    if (ref !== expectedRef) add(report.mismatches, {
       path: `${asset.destination}:uses.${actionName}`,
       message: 'a3 Action ref does not match the registry',
       settingLocation: asset.destination,
     });
-    if (!target.workflows.includes(asset.id)) add(report.mismatches, {
+    if (!target.workflows.includes(actionUses(workflow).includes(value) ? asset.id : executionId)) add(report.mismatches, {
       path: `${asset.destination}:uses.${actionName}`,
       message: 'a3 Action is not mapped to this workflow',
       settingLocation: asset.destination,
     });
   }
-  for (const [jobName, jobValue] of Object.entries(map(workflow.jobs))) {
+  for (const [jobName, jobValue] of Object.entries(map(execution.jobs))) {
     const job = map(jobValue);
-    const writePermissions = Object.entries(effectivePermissions(workflow, job))
+    const writePermissions = Object.entries(effectivePermissions(execution, job))
       .filter(([, level]) => level === 'write')
       .map(([permission]) => permission);
     if (writePermissions.length === 0) continue;
@@ -755,7 +876,7 @@ const inspectWorkflowAsset = (
       const actionName = separator < 0 ? step.uses : step.uses.slice(0, separator);
       const target = actionByPath.get(actionName);
       if (!target) continue;
-      const privilegedJob = `${asset.id}/${jobName}`;
+      const privilegedJob = `${executionId}/${jobName}`;
       if (!target.privilegedJobs.includes(privilegedJob)) add(report.mismatches, {
         path: `${asset.destination}:jobs.${jobName}.steps.${stepIndex}.uses`,
         message: `a3 Action is not allowlisted for write permissions: ${writePermissions.join(', ')}`,
@@ -772,4 +893,31 @@ const inspectWorkflowAsset = (
   }
 };
 
-export { validateCopiedAssetContent, validateAssetLock, walk, on, uses, actionUses, localWorkflows, validateNoProjectRuntime, validateProviderActionPinCompanion, validateCommon, permissionRank, effectivePermissions, inspectWorkflowAsset };
+const remapPublicationDiagnostics = (parsed: Map<string, ValueMap>, registry: RegistryData, report: Report): void => {
+  for (const kind of ['release', 'package']) {
+    const callerPath = `.github/workflows/${kind}-publication-caller.yml`;
+    const caller = parsed.get(callerPath);
+    const binding = publicationBinding(`${kind}-publication-caller`, registry);
+    if (!caller || !binding || !parsed.has(`.github/workflows/${kind}-publication.yml`)) continue;
+    const source = canonicalSourcePath(binding.source, SKILL_ROOT);
+    const provider = map(parseYaml(fs.readFileSync(source, 'utf8'), binding.source));
+    const envInputs = new Map(Object.entries(map(provider.env)).flatMap(([key, value]) => {
+      const match = typeof value === 'string' ? value.match(/^\$\{\{ inputs\.([a-z0-9-]+) \}\}$/) : undefined;
+      return match ? [[key, match[1]] as const] : [];
+    }));
+    const virtualPath = `.github/workflows/${kind}-publication.yml`;
+    for (const finding of [...report.missingSettings, ...report.mismatches]) {
+      for (const prefix of [virtualPath, callerPath]) {
+        if (!finding.path.startsWith(`${prefix}:env.`)) continue;
+        const envKey = finding.path.slice(`${prefix}:env.`.length);
+        const input = envInputs.get(envKey);
+        if (input) finding.path = `${callerPath}:jobs.publish.with.${input}`;
+      }
+      if (finding.path.startsWith(`${virtualPath}:`)) finding.path =
+        `${callerPath}:jobs.publish.uses:provider.${finding.path.slice(virtualPath.length + 1)}`;
+      if (finding.settingLocation === virtualPath) finding.settingLocation = callerPath;
+    }
+  }
+};
+
+export { validateCopiedAssetContent, validateAssetLock, walk, on, uses, actionUses, localWorkflows, validateNoProjectRuntime, validateProviderActionPinCompanion, validateCommon, permissionRank, effectivePermissions, inspectWorkflowAsset, remapPublicationDiagnostics };

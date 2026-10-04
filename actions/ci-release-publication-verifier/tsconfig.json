@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.action.json",
+  "compilerOptions": { "resolveJsonModule": true },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "../../runtime/release-publication/**/*.ts"]
+}

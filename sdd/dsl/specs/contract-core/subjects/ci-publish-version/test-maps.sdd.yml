@@ -6,13 +6,21 @@ test_maps:
     case_id: valid-version-plan
     tests:
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
-        symbol: bundled entrypoint publishes an exact version
+        symbol: "source entrypoint > entrypoint publishes an exact version"
+        check_refs:
+          - check-publish-version-output
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint publishes an exact version"
         check_refs:
           - check-publish-version-output
   - verification_id: verification.ci-publish-version.outputs
     case_id: invalid-plan-rejected
     tests:
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
-        symbol: bundled entrypoint fails invalid plan input
+        symbol: "source entrypoint > entrypoint fails invalid plan input"
+        check_refs:
+          - check-publish-version-failure
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint fails invalid plan input"
         check_refs:
           - check-publish-version-failure

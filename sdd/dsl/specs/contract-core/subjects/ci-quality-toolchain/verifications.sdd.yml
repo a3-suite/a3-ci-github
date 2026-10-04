@@ -1,0 +1,25 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.quality-toolchain
+verifications:
+  - id: verification.ci-quality-toolchain.preparation
+    contract_id: contract.ci-quality-toolchain.preparation
+    cases:
+      - id: selected-quality-toolchain
+        intent_id: quality-toolchain-selection-verified
+        input: {language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0}
+        checks:
+          - id: check-selected-quality-toolchain
+            guarantee_ref: selected-quality-toolchain-ready
+      - id: invalid-quality-toolchain
+        intent_id: quality-toolchain-failure-verified
+        input: {language-profile: unsupported, toolchain-version: latest}
+        checks:
+          - id: check-invalid-quality-toolchain
+            guarantee_ref: invalid-or-failed-quality-toolchain-stops
+      - id: failed-quality-toolchain-setup
+        intent_id: quality-toolchain-failure-verified
+        input: {language-profile: rust, rustup-exit-code: 13}
+        checks:
+          - id: check-failed-quality-toolchain-setup
+            guarantee_ref: invalid-or-failed-quality-toolchain-stops

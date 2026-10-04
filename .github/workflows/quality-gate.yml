@@ -27,26 +27,36 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Verify bundled Action distributions
         shell: bash
         run: node runtime/repository/check-action-dist.mjs
 
       - name: Test bundled Action distribution gate
         shell: bash
-        run: node --test tests/action-dist-gate.test.mjs
+        run: npm test -- tests/action-dist-gate.test.mjs
 
       - name: Validate contract-subject execution definition
         shell: bash
-        run: node runtime/contract-subject-coverage.mjs --check
+        run: node tests/coverage-tools/contract-subject-coverage.mjs --check
 
       - name: Test contract-subject coverage reporter
         shell: bash
-        run: node --test tests/contract-subject-execution.test.mjs
+        run: |
+          npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
+          npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
 
       - name: Test workflow and repository capability contracts
         shell: bash
         run: >-
-          node --test
+          npm test --
           tests/workflow-contracts.test.mjs
           runtime/preset/tests/preset-assurance-contract.test.mjs
           tests/repository-managed-source-integrity.test.mjs
@@ -58,12 +68,12 @@ jobs:
 
       - name: Test README Action catalog gate
         shell: bash
-        run: node --test tests/action-index-gate.test.mjs
+        run: npm test -- tests/action-index-gate.test.mjs
 
       - name: Test repository Release delivery
         shell: bash
         run: >-
-          node --test
+          npm test --
           runtime/repository/tests/update-release-aliases.test.mjs
           runtime/repository/tests/manage-distribution-release.test.mjs
 
@@ -72,47 +82,55 @@ jobs:
         run: |
           npm --prefix runtime/preset ci --no-audit --no-fund
           CI_FIXED_RUNTIME_ROOT=runtime/preset \
-            runtime/preset/node_modules/.bin/tsx --test \
+            npm test -- \
             runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
-            runtime/adapter/tests/cli-runtime.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
-            runtime/preset/tests/preset-validation-contract.test.mjs
+            runtime/preset/tests/preset-validation-contract.test.mjs \
+            runtime/preset/tests/action-availability.test.mjs \
+            runtime/preset/tests/publication-validation.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
-            node --test tests/public-cli-lifecycle.test.mjs
-          node --test runtime/distribution/tests/selective-distribution.test.mjs
+            npm test -- tests/public-cli-lifecycle.test.mjs
+          npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 
       - name: Test shared GitHub toolchain verifier
         shell: bash
-        run: node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        run: npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 
       - name: Test shared path identity core
         shell: bash
-        run: node --test runtime/path/tests/same-file-core.test.mjs
+        run: npm test -- runtime/path/tests/same-file-core.test.mjs
 
       - name: Test shared platform manifest core
         shell: bash
-        run: node --test runtime/platform/tests/platform-manifest-core.test.mjs
+        run: npm test -- runtime/platform/tests/platform-manifest-core.test.mjs
 
       - name: Test shared Vitest summary core
         shell: bash
-        run: node --test runtime/vitest/tests/vitest-summary-core.test.mjs
+        run: npm test -- runtime/vitest/tests/vitest-summary-core.test.mjs
 
       - name: Test Vitest summary CLI and conformance
         shell: bash
         env:
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
         run: |
-          node --test \
+          npm test -- \
             runtime/adapter/tests/vitest-test-summary.test.mjs \
             runtime/adapter/tests/vitest-summary-conformance.test.mjs
 
-      - name: Test GitHub toolchain verifier Action contract
+      - name: Test quality toolchain Action contracts
         shell: bash
-        run: node --test actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+        run: >-
+          npm test --
+          actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+          actions/ci-quality-toolchain/tests/action-contract.test.mjs
 
       - name: Verify all bundled Action sources
         shell: bash
         run: node runtime/repository/verify-action-packages.mjs
+
+      - name: Test Action source and runtime boundary gates
+        shell: bash
+        run: npm test -- tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs
 
       - name: Provision jq 1.7.1
         uses: ./actions/ci-jq-provisioner
@@ -132,12 +150,12 @@ jobs:
 
       - name: Test shared Rust release scripts
         shell: bash
-        run: node --test runtime/rust-release/tests/rust-release-scripts.test.mjs
+        run: npm test -- runtime/rust-release/tests/rust-release-scripts.test.mjs
 
       - name: Test Rust release Action contracts
         shell: bash
         run: >-
-          node --test
+          npm test --
           actions/ci-rust-source-gate/tests/action-contract.test.mjs
           actions/ci-rust-release-build/tests/action-contract.test.mjs
 
@@ -428,9 +446,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Test Windows Rust release contracts
         shell: pwsh
-        run: node --test --test-name-pattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+        run: npm test -- --testNamePattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
 
   contract:
     name: CI Action contract / hosted

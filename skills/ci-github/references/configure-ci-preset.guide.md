@@ -12,12 +12,12 @@
 
 | 種類 | 設定場所 | 内容 |
 | --- | --- | --- |
-| workflow 構成 | `.github/workflows/` | trigger、runner、固定 Action SHA、既定値 |
+| workflow 構成 | `.github/workflows/` | trigger、runner、固定 Action／Reusable Workflow SHA、固有入力 |
 | 非秘匿の環境・運用値 | GitHub Variables（下記の必要性判定で必須または条件付きとなる場合だけ） | environment選択、運用ポリシー |
 | toolchain・tool version | projectのversion設定またはworkflow初期パラメータ | 言語runtime、uv、cargo-audit、gh、jq、sha256sum |
 | 秘匿値 | GitHub Secrets | registry token など |
 | 実行ごとの入力 | `workflow_dispatch.inputs` | 例外的な request または手動 publication request の非秘匿入力 |
-| quality adapter | `.ci/adapters/*.yml` | language command、toolchain、必要 project file |
+| quality adapter | workflowの標準bundle ID、または独自 `.ci/adapters/*.yml` | 選択とproject固有設定。標準commandは固定Actionが供給 |
 | project policy | `.ci/platform-manifest.yml`、`.ci/package-policy.yml` など | platform、artifact、公開先 |
 | project 実装 | `.ci/scripts/`、`.ci/trusted/` | registry の `requiredExtensions` |
 | 配布同一性 | `.ci/ci-assets.lock.json` | 配布元 full commit SHA、canonical／配置済み SHA-256、分単位の生成日時 |
@@ -26,7 +26,7 @@
 
 `.ci/` のファイル数は揃えず、実行経路と責務を揃える。
 
-- `.ci/adapters/` は `quality-gate` または `release-publication` の quality job が実行する quality adapter descriptor を置く。
+- `.ci/adapters/` は独自または従来の配置経路のdescriptorだけを置く。標準Action bundleは配置しない。
 - Release／Package の authority、build、assemble、publish は、適用可能な provider registry の固定 SHA Action binding を第一候補とする。project-owned の `.ci/scripts/`／`.ci/trusted/` entrypoint は、選択済み binding が充足しない登録済み `requiredExtensions` に対応する場合だけ接続し、未選択の代替分岐として保持しない。
 - workflow から到達しない stage 別 descriptor、汎用 runner、選択結果だけを記録する manifest は追加しない。`.ci/ci-assets.lock.json` は設定や選択結果ではなく、配布同一性の検証入力だけを保持する。
 - platform ごとの packaging や検証を分割する必要がある場合は、project 実装として分割を維持し、`.ci/README.md` に理由と owner を記録する。
@@ -36,8 +36,7 @@
 またはコピー時に置換する workflow 初期パラメータへ固定する。job の環境変数は値の受け渡しであり、
 版の正本にはしない。
 privileged reusable workflow は `runner-trust-policy.reference.md#privileged-workflow-の-trusted-ci-control` の
-workflow identity 契約に従い、caller と called workflow の同一 SHA を job 内で検証する。別の control SHA を
-`vars`、`secrets`、workflow input に置かない。
+workflow identity 契約に従う。
 具体的なキー、既定値、接続先は、コピーした workflow の初期パラメータ、`vars`、`secrets`、`inputs` を正本とする。
 
 ### Variables の必要性を実行経路ごとに判定する
@@ -70,18 +69,19 @@ CI が検証するのは承認済み入力の同一性と搬送経路であり�
 `CI_TOOLCHAIN_VERSION`、`CI_GH_VERSION`、`CI_JQ_VERSION`、`CI_SHA256SUM_VERSION` などの版情報は
 workflow 初期パラメータまたは project の version 設定で固定し、Variable へ移さない。README に記録する場合も、
 値の複製ではなく、採用した経路・必要性の理由・owner・正本への導線だけを残す。
-`CI_JQ_VERSION` は公式 Release に取得物と checksum がある exact 版を指定する。canonical workflow が
+jqを使用する経路では `CI_JQ_VERSION` に公式 Release の取得物と checksum がある exact 版を指定する。canonical workflow が
 固定 SHA の provider Action で jq を供給してから verifier で検証するため、project 固有の install 処理は不要である。
 `CI_GH_VERSION` も公式 Release に取得物と checksum がある exact 版を指定する。canonical workflow が jq の直後に
 固定 SHA の provider Action で gh を供給してから verifier で検証するため、project 固有の install 処理は不要である。
-`CI_SHA256SUM_VERSION` は release-request-tag と release-publication の verifier が参照する。versioned runner label が
+`CI_SHA256SUM_VERSION` は release-publication の verifier が参照する。versioned runner label が
 提供する coreutils の版に一致させ、runner image の更新で版が変わった場合は project の CI owner が値を更新して
 verifier 実行で再検証する。package-publication は `gh-jq` のため対象外である。
 
 ### `.ci/README.md` の責務
 
 `.ci/README.md` は、すべての適用済み project に必須で置く。設定の正本にはせず、
-project 固有差分がある場合は差分が必要な理由と正本への導線を記録する。差分がない場合も、
+project 固有差分がある場合は、標準の preset / flow をそのまま採用できない理由と正本への導線を記録する。
+理由は、標準のどの契約・機能・前提が project の要件を満たせないのかが読み取れる粒度で書く。差分がない場合も、
 採用した preset / flow と「project 固有差分なし」を明記する。影響する preset または flow と、
 workflow の実値、adapter descriptor、project policy、`requiredExtension` のうち該当する正本を示す。
 owner、検証手順、撤去条件も記録する。
@@ -89,9 +89,9 @@ owner、検証手順、撤去条件も記録する。
 記載項目は、固定項目、オプション項目、自由記述に分類する。標準からずれない project は固定項目だけで完了とし、
 標準の説明を補足文として繰り返さない。空の項目や未記入のテンプレートを完了扱いにしない。
 
-- 固定項目（必須）: 目的と対象、採用 preset / flow、project 固有差分の有無、owner、正本・検証導線、検証証跡、更新・撤去条件。
+- 固定項目（必須）: 目的と対象、採用 preset / flow、project 固有差分の有無、標準で成立しない理由（差分がない場合は「なし」）、owner、正本・検証導線、検証証跡、更新・撤去条件。
 - オプション項目（該当時のみ）: 例外経路、配置資産の責務、追加の検証証跡。該当しない項目の見出しは置かない。
-- 自由記述（標準からの差異がある場合のみ）: 差異の背景、追加条件、handoff 先など。正本の decision、停止条件、共有契約、実値、command、workflow 構造を再定義しない。
+- 自由記述（標準からの差異がある場合のみ）: 追加条件、handoff 先など。正本の decision、停止条件、共有契約、実値、command、workflow 構造を再定義しない。
 
 root `README.md` に platform、artifact、Release flow などの利用者向け事実を記載する場合は、project policy / manifest と照合する。
 root README は利用者向けの入口であり、CI契約の正本にはしない。値が正本と異なる場合はREADMEの補足で済ませず、正本との不一致として扱う。
@@ -107,6 +107,7 @@ root README は利用者向けの入口であり、CI契約の正本にはしな
 
 ### project 固有差分
 - 差分種別: なし / placeholder / trigger extension / policy data / requiredExtension / adapter
+- 標準で成立しない理由:
 - owner:
 - 正本・検証導線:
 - 検証証跡:
@@ -127,8 +128,11 @@ trusted CI assets の初期解決は provider profile の canonical state であ
 
 ## 自由記述（標準からの差異がある場合のみ）
 
-- 差異の背景、追加条件、handoff 先など:
+- 追加条件、handoff 先など:
 ```
+
+差分種別が「なし」以外のときは、「標準で成立しない理由」へ標準では満たせない要件と標準側の制約を書く。
+差分がない場合は「なし」と記入し、標準の説明を繰り返さない。
 
 `例外経路` は `ci-workflow-use-cases.reference.yml` の `exceptions` にある exception ID を記録する。
 例外の decision、停止条件、共有契約は正本を参照し、README へ複製しない。trigger extension、
@@ -142,15 +146,16 @@ trusted CI assets の初期解決は provider profile の canonical state であ
 
 ## privileged workflow identity
 
-privileged reusable workflow は、各対象 job の最初の step で caller と called workflow が default branch の同一 SHA
-から実行されていることを確認する。検証済み SHA で trusted control を checkout し、直後に checkout HEAD を照合する。
+privileged reusable workflow は entry job の最初の step で default branch の workflow_run caller を検証する。
+trusted control は consumer の `github.repository` と `github.workflow_sha` で checkout し、直後に HEAD を照合する。
+provider callee の固定参照 SHA と consumer の SHA が一致することは要求しない。
 このため導入者が trusted control SHA を事前計算する二段階 bootstrap は不要である。
 
-導入時は caller、called workflow、必要な control asset を単一の検証対象として配置する。main へ反映する前に
+導入時は caller、固定参照する provider workflow、必要な consumer control asset を単一の検証対象として確認する。main へ反映する前に
 git-branch-strategy の `mainIntegrationSafety` に従い、newly reachable commit 全件と最終 tree が releaseable であることを
 確認する。GitHub が検証時と異なる commit または tree を生成する merge 方法は使用せず、main が進んだ場合は再検証する。
 
-canonical publication は default branch の同一 SHA を検証するため、feature branch では canonical publication 全体の hosted 証拠にならない。
+canonical publication は consumer の default branch caller を検証するため、feature branch では canonical publication 全体の hosted 証拠にならない。
 main 反映前の hosted 証拠を必須にする場合は、同じ tree と SHA を default branch に置く隔離 staging repository で確認する。
 それ以外は feature branch の静的検証・契約テストと、default branch でのみ取得できる runtime 証拠を区別し、未取得の証拠を成功扱いしない。
 この制約を避けるために publication の workflow identity 検証を弱めない。
@@ -179,10 +184,10 @@ repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-s
 
 | プリセット | コピーする workflow | project が設定する値 | project が実装するもの |
 | --- | --- | --- | --- |
-| `quality-gate` | `quality-gate.yml`（platform 別検証は任意の `quality-gate-platforms.yml`） | language profile、toolchain、runner、Action SHA、adapter descriptor 名、platform 選択を使う場合は `.ci/platform-manifest.yml` と `.ci/quality-platforms.yml` | 標準 bundle がない場合の quality adapter |
+| `quality-gate` | `quality-gate.yml`（platform 別検証は任意の `quality-gate-platforms.yml`） | language profile、toolchain、runner、Action SHA、標準bundle IDまたは独自descriptor名、platform 選択を使う場合は `.ci/platform-manifest.yml` と `.ci/quality-platforms.yml` | 標準 bundle がない場合の quality adapter |
 | `release-request` | tag request | tag pattern、runner、Action SHA | なし |
-| `release-publication` | request、caller、reusable publicationの3 workflow全て | request handoff、notes handoff、tool versions、`.ci/platform-manifest.yml`、release implementation、quality adapter、言語・製品設定 | 選択した登録済み実装が充足しない authority、assemble、publish extension |
-| `package-publication` | 4 workflow 全て | runner、Action SHA、tool versions、registry secret、package policy | build と publish extension |
+| `release-publication` | request、caller の2 workflow | request handoff、notes handoff、tool versions、`.ci/platform-manifest.yml`、release implementation、quality adapter、言語・製品設定 | 選択した登録済み実装が充足しない authority、assemble、publish extension |
+| `package-publication` | request、caller の2 workflow | runner、Action SHA、tool versions、registry secret、package policy | build と publish extension |
 
 標準導入では、一つの repository に同じプリセットの canonical workflow を一組だけ置く。
 Release は `tag-preparation + manual-publication` を一つの標準 flow とし、tag request の完了から publish job へ自動連鎖させない。
@@ -193,15 +198,15 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 1. `ci-github` スキルで用途に対応するプリセットを選ぶ。
 2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchし、planと明示承認を経てcanonical workflowを配置する。
 3. registry から選択した preset の copyable asset、固定 SHA Action binding、その依存閉包、残る `requiredExtensions` を解決し、copyable assetを配置する。固定本数や platform 数から必要ファイルを推測しない。
-4. quality は adapter descriptor、Release と package は選択した Action binding と残る `requiredExtensions` を workflow から直接接続する。依存閉包に属する copyable asset は改変しない。
+4. quality は標準bundle IDまたは独自descriptor、Release と package は選択した Action binding と残る `requiredExtensions` を workflow から直接接続する。依存閉包に属する copyable asset は改変しない。
 5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
-6. workflow の placeholder だけを project の値へ置換し、外部 Action は `workflow-version-policy.reference.md` の「Action と版情報の扱い」に従って registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin を設定する。あわせて registry の `providerActions.pinCompanion` が宣言する `.ci/provider-action-pins.yml` を生成して配置する。job、step、permissions、trust 境界、summary 経路は直接変更しない。
+6. workflow の placeholder だけを project の値へ置換し、外部 Action は `workflow-version-policy.reference.md` の「Action と版情報の扱い」に従って registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin を設定する。consumer workflow 自身が外部 provider Action を直接使用する場合は、registry の `providerActions.pinCompanion` が宣言する `.ci/provider-action-pins.yml` を生成して配置する。主品質・platform品質callerだけを採用する場合、callee内部のpinは配布元が管理するため、このcompanionは不要。job、step、permissions、trust 境界、summary 経路は直接変更しない。
 7. workflow 初期パラメータ、必要な Variables、Secrets、workflow input の値を上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
-8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、owner、正本への導線、検証導線、更新・撤去条件を記録する。
+8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証導線、更新・撤去条件を記録する。
 9. 配布元 revision の full commit SHA を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。生成日時はUTCの分単位に正規化され、版識別には使わない。
 10. CI向けa3-lintルールとactionlintで単一workflowの一般規則を検証する。actionlint 設定は `.github/actionlint.yaml`（project-owned、内容非固定）を registry の `provider.staticValidation` に従って扱う。
 11. `references/validate-ci-preset.guide.md` に従い、canonical workflowとの構造照合と配布同一性を含むpreflightを実行する。
-12. project-owned adapter と project の契約テストを作業 tree で先に成立させる。配布元の feature branch を push して immutable な full commit SHA を得た後、導入先の feature branch でその SHA を固定し、lock を再生成して preflight と契約テストを確認する。hosted 証拠は前述の default branch 制約に従い、既存の非公開・非書込み検証経路または隔離 staging repository で取得できる範囲だけを記録する。
+12. 選択した経路で必要な project-owned adapter と project の契約テストを作業 tree で先に成立させる。導入先では手順2で取得・検証した exact Release の full commit SHA を固定し、lock、preflight、契約テストを確認する。未公開 binding の利用可能性は registry に従い、導入完了扱いにしない。hosted 証拠は前述の default branch 制約に従い、既存の非公開・非書込み検証経路または隔離 staging repository で取得できる範囲だけを記録する。
 
 既存ファイルを暗黙に上書きしない。差分を提示して owner が採用範囲を決めた後に配置し、
 配置後はコピー先を設定の正本として読み返し、preflight時だけregistryのsourceと照合する。
@@ -211,8 +216,12 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 次は、標準 adapter bundle がある Rust、Python、TypeScript に共通する手順である。
 既存の配置先ファイルがある場合は先に差分を確認し、`cp` で上書きしない。
 
+主qualityの `jobs.quality.with.jq-version` は、adapterやproject scriptsがjqを使う場合だけexact版を指定し、使わない場合は空文字にする。providerは空値ならjq取得・検証を省略する。必要性はproject ownerが判断し、標準bundle名から自動判定しない。
+
+主workflowは薄いcallerを配置する。固有値は `jobs.quality.with` へ設定し、共通jobはproviderの `.github/workflows/ci-quality.yml` が実行する。calleeはconsumerのworkflow directoryへコピーしない。入力定義と受渡しはcalleeの `workflow_call.inputs` と `env`、固定参照と利用可能性はregistryの `qualityReusableWorkflow` を参照する。callerに残る `summary` は既存の集約check identityと失敗伝播のために必要であり、共通品質jobを再実装しない。実際のrequired check名の互換性はHostedで受け入れるまで未確認とする。
+
 1. `ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
-   entryを選ぶ。entryの`id`を`{bundle-id}`、`targetDescriptor`をworkflowに設定するdescriptor名として使う。
+   entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に設定し、`adapter-descriptor` は空にする。従来のdescriptor経路では標準IDを空にする。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `ci-adapter-bundles.reference.yml` を参照する。
 
 2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchし、planの
    `create`／`reuse`／`update`と競合なしを確認してから、plan digestを明示してapplyする。
@@ -220,23 +229,21 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
    `runtime/preset/`固定依存定義から`references/validate-ci-preset.guide.md`のremediation手順で
    `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。
 
-3. remediation 手順で準備・検証した `ci_github_local_runtime` を使い、選択した bundle をmaterializeする。
+3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`distribute-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
 
    ```bash
    ci_github_local_runtime="{project-root}/.a3-skills/ci-github/runtime"
    CI_FIXED_RUNTIME_ROOT="$ci_github_local_runtime" \
      "$ci_github_local_runtime/node_modules/.bin/tsx" \
      "{ci-github-source-root}/runtime/adapter/materialize-adapter-bundle.ts" \
-     --source-root "{skill-collection-root}" \
      --inventory "skills/ci-github/references/ci-script-assets.reference.yml" \
      --bundle "{bundle-id}" \
      --target-root "{project-root}"
    ```
 
-   成功時は `ci.adapter-materializer.v1` のJSONが出力される。既存ファイルと内容が異なる場合は
-   `adapter-materializer-destination-conflict` で停止するため、差分を確認してから採否を決める。
+   成功時は `ci.adapter-materializer.v1` のJSONが出力される。標準経路は `files: []` と固定生成元identityを含むbindingを返し、consumerへファイルを追加しない。独自配置経路の衝突は従来どおり停止する。
 
-4. descriptor の `projectSettings.requiredFiles` と `requiredScripts` を確認し、project側に不足する
+4. 固定標準bundleまたは独自descriptorの `projectSettings` を確認し、project側に不足する
    ファイルまたはコマンドだけを追加する。標準bundleのコマンド自体はproject側で再定義しない。
 
 5. 配置したworkflowを検索し、未解決値と設定先を確定する。
@@ -249,11 +256,11 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
    `<...>`はworkflow内で置換する。tool version の placeholder は固定値で置換し、`vars.`へ変換しない。
    `vars.`はGitHub Variables、`secrets.`はGitHub Secrets、
    `workflow_dispatch.inputs`は実行ごとの入力として設定する。選択した言語で使用しない
-   `uv`または`cargo-audit`のversion placeholderは空文字へ置換する。
+   `uv`または`cargo-audit`のversion placeholderは空文字へ置換する。主qualityでjqを使わない場合は `<optional-jq-version>` も空文字へ置換する。
 
 6. `CI_LANGUAGE_PROFILE`、`CI_TOOLCHAIN_VERSION`と選択した言語で必要なtool versionを
    projectのversion設定またはworkflow初期パラメータへ固定する。
-   workflowに残るrunner、保護branch、descriptor名、外部Actionのplaceholderも確定する。
+   workflowに残るrunner、保護branch、標準bundle IDまたは独自descriptor名、外部Actionのplaceholderも確定する。標準bundle APIは正式Releaseのexact tagとfull SHAが確認されるまで導入しない。
    trusted CI assets の採用済み marker は base の `.ci/ci-assets.lock.json` であり、workflow に flag はない。
 
    merge queueを使う場合は`on.merge_group`を空のevent設定として追加する。定期実行を使う場合は
@@ -278,17 +285,17 @@ platform 固有の runtime、artifact、installer の検証が必要な project 
 
 1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`。runner は registry の allowlist 内の versioned label）。
 2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。
-3. `workflows/quality/quality-gate-platforms.yml` を `.github/workflows/quality-gate-platforms.yml` へコピーし、placeholder を置換する。platform workflow のみの配置は停止する。companion のみの先行配置は後続導入のために許容する。
+3. `workflows/quality/quality-gate-platforms.yml` の薄いcallerを `.github/workflows/quality-gate-platforms.yml` へ配置し、`jobs.platforms.with` のplaceholderを置換する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。
-5. required check には固定名の `quality-gate-platforms / summary` を登録する。集約は期待 platform の欠落、未実施、runner 異常を成功に読み替えない。platform 検証を採用する project は、base `quality-gate` の required check とは別に、この固定名 check を追加する。
+5. callerの `platform-summary` は `quality-gate-platforms / summary` の固定名で、calleeの失敗・中断・未実施・結果欠落を成功に読み替えない。provider側は期待platformの欠落、docs-only時の対象外記録、matrix結果を集約する。Hostedでrequired check名と失敗伝播を受け入れるまで利用可能扱いにせず、受入後にbase `quality-gate` のrequired checkと別に登録する。
 6. `.ci/README.md` の差分記録に、platform 別検証の採用と platform 選択の正本を残す。
 
 ## Release・packageプリセットの導入差分
 
-`release-request` は tag variant をコピーし、新しい annotated tag の push から不変 request handoff だけを作成する。共通処理は固定SHAのActionに含まれるため、project wrapperを追加しない。tag event handoff が欠落または失敗した場合は公開を停止し、別経路で補完しない。
+`release-request` は tag variant をコピーし、新しい annotated tag の push から不変 request handoff だけを作成する。共通処理は固定SHAのActionに含まれるため、project wrapperを追加しない。tag解決とhandoff生成はAction内のNode runtimeで実行するため、この経路ではgh・jq・sha256sumの版設定や準備を要求しない。tag event handoff が欠落または失敗した場合は公開を停止し、別経路で補完しない。
 旧 manual variant を配置済みの project は `.github/workflows/release-request.yml` を撤去してから配布同一性 lock を再生成する。
 
-`release-publication` の処理順、入力境界、notes handoff の生成元、caller の検証責務は `references/implement-release-asset-publication-workflow.guide.md` に従う。本ガイドでは、同プリセットの3 workflowを一組で配置し、前節の設定場所および「release workflow の project 設定」へ値を割り当てる。
+`release-publication` の処理順、入力境界、notes handoff の生成元、caller の検証責務は `references/implement-release-asset-publication-workflow.guide.md` に従う。本ガイドでは、同プリセットの request と caller を配置し、前節の設定場所および「release workflow の project 設定」へ値を割り当てる。
 
 補助Release assetを選択しないprojectは、callerの`<supplemental-release-asset-enabled>`を
 booleanの`false`、`<supplemental-release-asset-owner-contract>`をYAML文字列`__unset__`へ置換する。この場合は
@@ -338,7 +345,7 @@ consumer が渡すのは値だけであり、`--version` の出力形式や受�
 | `id`、`preset` | registry の canonical destination に配置した workflow |
 | `languageProfile` | workflow 初期パラメータ |
 | `toolchain` | project の version 設定または workflow 初期パラメータ |
-| `adapter`、`adapterBundleDescriptor` | quality workflow の `CI_ADAPTER_DESCRIPTOR` と descriptor |
+| `adapter`、`adapterBundleDescriptor` | quality workflowの標準bundle選択、または独自descriptor |
 | `providerConfig.workflowFile` | registry の canonical destination |
 | `requiredCallerInputs`、`requiredCallerSecrets` | reusable workflow の `workflow_call` と caller の `with`／`secrets` |
 | `requiredRequestInputs` | request workflow の `workflow_dispatch.inputs` |
@@ -353,3 +360,15 @@ trigger variant を owner が決めてから移行する。
 - workflow、descriptor、policy、Variables、Secrets の正本が一意である。
 - preflight と provider の静的検証が成功している。
 - hosted、権限、secret、remote readback の未確認事項は成功扱いされていない。
+
+package 準備の提供側 workflow、固定参照と公開状態は preset registry の
+`packagePreparationReusableWorkflow` に従う。提供側 workflow は導入先へコピーせず、
+owner の build／publication adapter は維持する。`pending-release` の間は適用しない。
+
+### 共通 Release・Package 公開 workflow の参照
+
+Release・Package 公開 callee は consumer へコピーせず、caller の `jobs.publish.uses` から provider を固定参照する。固定参照と公開状態は preset registry の `releasePublicationReusableWorkflow`／`packagePublicationReusableWorkflow`、設定入力は provider の `workflow_call.inputs` を正本とする。設定は caller の `jobs.publish.with` に静的な owner 値として置く。Releaseのrequest run IDとPackageの検証済みhandoff identity以外の設定を実行時リクエストから取得しない。`pending-release` の間は導入しない。
+
+旧構成からは既存 callee の設定を caller 入力へ移し、plan の差分確認と承認を経て caller を切り替える。旧 callee の削除は所有と参照がないことを確認して別途承認する。提供元 SHA と consumer の `github.workflow_sha` は別の値であり、control checkout は後者と `github.repository` を使用する。
+
+Packageのregistry secretはcallerの `jobs.publish.secrets` から明示注入し、consumerのowner publisherを呼ぶ。準備calleeの固定参照は `packagePreparationReusableWorkflow` の既存契約を維持する。

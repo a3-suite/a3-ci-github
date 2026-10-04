@@ -19,6 +19,9 @@ observations:
         - selector: files
           kind: observation_field
           meaning: Canonical source, destination, and copy or reuse action for each materialized file.
+        - selector: binding
+          kind: observation_field
+          meaning: Fixed standard Action bundle identity and owner source revision and digest when no project files are copied.
         - selector: diagnostic
           kind: observation_field
           meaning: Stable thrown diagnostic for an invalid source or conflicting destination.

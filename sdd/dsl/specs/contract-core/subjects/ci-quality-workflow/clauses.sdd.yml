@@ -3,8 +3,13 @@ name: contract-clauses
 subject_ref: subject.ci.quality-workflow
 contracts:
   - id: contract.ci-quality-workflow.execution
-    summary: The canonical quality workflow orders trusted source resolution before adapter execution and aggregates every applicable result in a failure-visible summary.
+    summary: The main and optional platform quality callers pass explicit project settings to fixed reusable workflows, which order trusted source resolution before adapter execution and aggregate every applicable result. Each caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Deployment remains forbidden until fixed publication of the workflows and their dependencies and Hosted required-check acceptance.
     conditions:
+      - id: ci-quality-workflow-caller-selected
+        input_predicate:
+          kind: input
+          term: input.caller-source
+          op: present
       - id: ci-quality-workflow-canonical-source-available
         input_predicate:
           kind: input
@@ -21,6 +26,15 @@ contracts:
           term: input.optional-platform-canonical-source
           op: present
     guarantees:
+      - id: ci-quality-workflow-reusable-binding-observed
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: reusable-binding
       - id: ci-quality-workflow-success-observed
         when: ci-quality-workflow-canonical-source-available
         observation_ref: observation.ci-quality-workflow.result
@@ -49,6 +63,9 @@ contracts:
             kind: observation_field
             value: optional-platform-chain
     verification_intents:
+      - id: ci-quality-workflow-reusable-binding-intent
+        goal: Verify explicit typed inputs, read permissions, a registered fixed reusable target, no consumer callee copy, and an always-run caller summary. Local evidence does not establish Hosted check-name compatibility.
+        guarantee_refs: [ci-quality-workflow-reusable-binding-observed]
       - id: ci-quality-workflow-success-intent
         goal: Verify trusted source resolution precedes adapter execution and the aggregate decision follows the applicable execution jobs.
         guarantee_refs:
@@ -58,6 +75,6 @@ contracts:
         guarantee_refs:
           - ci-quality-workflow-failure-observed
       - id: ci-quality-workflow-platform-intent
-        goal: Verify the optional platform source preserves trusted asset resolution, selected matrix execution, and aggregate platform evidence.
+        goal: Verify the optional platform caller passes explicit typed project inputs to its registered fixed source without copying the callee, preserves trusted asset resolution, selected matrix execution, docs-only platform records and aggregate evidence, and rejects invalid settings and unpublished dependencies through preflight. Local evidence does not establish Hosted check-name compatibility.
         guarantee_refs:
           - ci-quality-workflow-platform-chain-observed

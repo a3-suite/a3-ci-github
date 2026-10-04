@@ -30,6 +30,62 @@ elements:
     area_kinds: [implementation, verification]
     source_control: managed
     placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: quality-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-quality.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer の主品質 caller が固定参照する共通品質 workflow source を所有する
+  - element_id: preset-model
+    element_kind: file
+    path: runtime/preset/preset-model.ts
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: presetの型と副作用のない値操作を所有し、registry・適用先の読み込みに依存しない
+  - element_id: preset-registry
+    element_kind: file
+    path: runtime/preset/preset-registry.ts
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: providerの固定registryとYAMLの読み込み・解釈を所有し、適用先資材の調査に依存しない
+  - element_id: preset-project-assets
+    element_kind: file
+    path: runtime/preset/ci-preset-assets.ts
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: 解釈済みregistryに基づく適用先workflow・管理資材の検出とsource解決を所有する
+  - element_id: quality-platforms-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-quality-platforms.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer の platform 品質 caller が固定参照する共通 matrix 品質 workflow source を所有する
+  - element_id: package-preparation-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-package-preparation.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer が固定参照する package 準備 workflow を所有し、owner build adapter は consumer に保持する
+  - element_id: release-publication-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-release-publication.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer caller が固定参照する Release 公開 workflow を所有し、owner 設定と固有 adapter は consumer に保持する
+  - element_id: package-publication-reusable-workflow
+    element_kind: file
+    path: .github/workflows/ci-package-publication.yml
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: consumer caller が固定参照する Package 公開 workflow を所有し、owner registry credential と固有 publisher は consumer に保持する
   - element_id: distribution-runtime-root
     element_kind: directory
     path: runtime/distribution
@@ -85,4 +141,4 @@ elements:
     primary_area_kind: delivery
     area_kinds: [delivery]
     source_control: managed
-    placement_purpose: このリポジトリ自身の検証・公開 workflow を所有する
+    placement_purpose: このリポジトリ自身の検証・公開 workflow と固定参照される reusable workflow の配置先を所有する

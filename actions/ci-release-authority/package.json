@@ -1,0 +1,19 @@
+{
+  "name": "@a3-suite/ci-release-authority",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Read-only owner-bound Release authority validation",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts --minify",
+    "lint": "tsc --noEmit",
+    "test": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-authority/tests/",
+    "test:contract": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-authority/tests/action-contract.test.ts actions/ci-release-authority/tests/entrypoint.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@vercel/ncc": "0.38.4",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}

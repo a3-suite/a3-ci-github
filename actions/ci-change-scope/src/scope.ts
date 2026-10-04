@@ -8,7 +8,7 @@ const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]
 
 const patternToRegex = (pattern: string): RegExp => {
   const escaped = escapeRegex(normalizePath(pattern));
-  const wildcard = escaped.replace(/\\\*\\\*/g, '.*').replace(/\\\*/g, '[^/]*');
+  const wildcard = escaped.replace(/\\\*\\\*/g, '[\\s\\S]*').replace(/\\\*/g, '[^/]*');
   return new RegExp(`^${wildcard}$`);
 };
 
@@ -19,10 +19,10 @@ export const createDocsOnlyMatcher = (patterns: string[]): ((value: string) => b
     if (normalized.startsWith('**/')) result.push(patternToRegex(normalized.slice(3)));
     return result;
   });
-  return (value: string): boolean => regexes.some((regex) => regex.test(normalizePath(value)));
+  return (value: string): boolean => regexes.some((regex) => regex.test(value));
 };
 
-export const parseChangedFiles = (value: string): string[] => value.split('\n').map((line) => line.trim()).filter(Boolean);
+export const parseChangedFiles = (value: string): string[] => value.split('\0').filter(Boolean);
 
 export const classifyPaths = (files: string[], matcher: (value: string) => boolean): { docsFiles: string[]; otherFiles: string[] } => {
   const docsFiles: string[] = [];
@@ -53,5 +53,5 @@ export const detectChangeScope = (baseSha: string, headSha: string, matcher: (va
 
 export const runGitDiff = (base: string, head: string): string => {
   if (!isCommitSha(base) || !isCommitSha(head)) throw new Error('change-scope-sha-invalid');
-  return execFileSync('git', ['diff', '--name-only', base, head], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  return execFileSync('git', ['diff', '--name-only', '-z', base, head], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 };

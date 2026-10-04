@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test, describe, expect } from 'vitest';
 
 import {
   PlatformManifestSemanticError,
@@ -13,35 +12,25 @@ const platform = (overrides = {}) => ({
   ...overrides,
 });
 
-// target_id: validatePlatformManifestValue
-test('platform manifest core returns a validated platform list', () => {
-  // Arrange
-  const manifest = { platforms: [platform()] };
-  // Act
-  const result = validatePlatformManifestValue(manifest);
-  // Assert
-  assert.deepEqual(result, [platform()]);
-});
-
-// target_id: validatePlatformManifestValue
-test('platform manifest core rejects shape runner and identity drift', () => {
-  const cases = [
-    [{ unexpected: [] }, 'root-invalid'],
-    [{ platforms: [] }, 'platforms-empty'],
-    [{ platforms: [{ ...platform(), extra: true }] }, 'platform-shape-invalid'],
-    [{ platforms: [platform({ id: 'INVALID' })] }, 'platform-id-invalid'],
-    [{ platforms: [platform({ runner: 'ubuntu-latest' })] }, 'platform-runner-invalid'],
-    [{ platforms: [platform({ target: '../escape' })] }, 'platform-target-invalid'],
-    [{ platforms: [platform(), platform({ target: 'other-target' })] }, 'platform-id-invalid'],
-    [{ platforms: [platform(), platform({ id: 'other' })] }, 'platform-target-invalid'],
-  ];
-  // Arrange
-  for (const [manifest, expectedCode] of cases) {
-    let failure;
-    // Act
-    try { validatePlatformManifestValue(manifest); } catch (error) { failure = error; }
-    // Assert
-    assert.ok(failure instanceof PlatformManifestSemanticError);
-    assert.equal(failure.code, expectedCode);
+describe("platform-manifest-core", () => {
+  for (const [label, entry, code] of [
+    ['invalid ID syntax', platform({ id: 'INVALID' }), 'platform-id-invalid'],
+    ['target path traversal', platform({ target: '../escape' }), 'platform-target-invalid'],
+  ]) {
+    // evidence_role: supplemental
+    // test_level: unit
+    // target_id: validatePlatformManifestValue(manifest)
+    // These syntax boundaries supplement the Action's shape, duplicate and runner cases.
+    test(`platform manifest core reports a typed failure for ${label}`, () => {
+      // Arrange
+      const manifest = { platforms: [entry] };
+      let failure;
+      // Act
+      try { validatePlatformManifestValue(manifest); } catch (error) { failure = error; }
+      // Assert
+      expect(failure instanceof PlatformManifestSemanticError).toBeTruthy();
+      expect(failure.code).toBe(code);
+      expect(failure.index).toBe(0);
+    });
   }
 });

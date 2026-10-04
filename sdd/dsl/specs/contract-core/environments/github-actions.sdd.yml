@@ -53,10 +53,36 @@ boundaries:
     direction: output
     externality: caller-owned
 runtime_contexts:
+  - id: runtime-context.annotated-tag-resolution-valid
+    summary: Repository and tag inputs are valid, credentials permit access to the configured provider, and its tag records identify an annotated tag and referenced commit with canonical SHAs.
+  - id: runtime-context.publish-version-plan-valid
+    summary: The readable owner-approved plan conforms to the declared exact or ciGenerated version-plan input contract, with complete matching template components and a safe materialized version.
+  - id: runtime-context.release-request-handoff-valid
+    summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
+  - id: runtime-context.release-notes-input-resolution-valid
+    summary: Safe input paths identify nonempty notes and approval files, and the writable normalized destination has neither notes nor approval files already present.
+  - id: runtime-context.supplemental-phase-valid
+    summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory.
+  - id: runtime-context.supplemental-phase-invalid
+    summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, the owner fails or produces no nonempty output, or read-only inputs change.
+  - id: runtime-context.release-assembly-valid
+    summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed.
+  - id: runtime-context.release-assembly-invalid
+    summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists.
+  - id: runtime-context.release-pre-observation-valid
+    summary: GitHub credentials establish draft visibility and complete GET-only inventory observes no Release for the bound tag, source and handoff identity.
+  - id: runtime-context.release-post-verification-valid
+    summary: Owner receipt and readback satisfy the evidence schema and all authority/handoff/digest bindings, and independent GET-only observations match the immutable create-result Release ID, tag/source, published state, body and exact asset/checksum inventory.
+  - id: runtime-context.release-observation-invalid
+    summary: Credentials or remote visibility are insufficient, a Release already exists before create, remote knowledge is incomplete, or owner evidence or independent post-create observations do not match their schema, identity or digest bindings.
   - id: runtime-context.platform-manifest-valid
-    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract.
+    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted.
   - id: runtime-context.platform-manifest-invalid
     summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
+  - id: runtime-context.quality-platform-selection-valid
+    summary: The manifest and supplied quality selection are available and satisfy the ci-platform-matrix input contract, including unique declared IDs in selection order.
+  - id: runtime-context.quality-platform-selection-invalid
+    summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid
@@ -141,3 +167,11 @@ runtime_contexts:
     summary: The Vitest report reports a failed test count or an explicit failure flag.
   - id: runtime-context.vitest-report-insufficient
     summary: The Vitest report is missing, has an invalid result structure, has incomplete or inconsistent counts, or contains no tests, and reports no explicit failure.
+  - id: runtime-context.release-publisher-valid
+    summary: Owner-approved notes, future expiry, authority and validated handoff agree; injected GitHub token has observed suitability, complete absence and successful bounded provider responses.
+  - id: runtime-context.release-publisher-invalid
+    summary: Inputs are missing or mismatched, approval is expired, source moves, inventory or provider suitability is unknown, a Release already exists, or create/upload/finalize/readback fails.
+  - id: runtime-context.release-authority-valid
+    summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with known provider suitability.
+  - id: runtime-context.release-authority-invalid
+    summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.

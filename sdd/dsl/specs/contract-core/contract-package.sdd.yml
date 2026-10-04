@@ -2,6 +2,12 @@ version: 1
 name: contract-package
 package_id: a3-ci-github-contracts
 subject_scopes:
+  - subject_id: subject.ci.quality-toolchain
+    path: subjects/ci-quality-toolchain/
+  - subject_id: subject.ci.release-authority
+    path: subjects/ci-release-authority/
+  - subject_id: subject.ci.release-publisher
+    path: subjects/ci-release-publisher/
   - subject_id: subject.repository.action-distribution
     path: subjects/repository-action-distribution/
   - subject_id: subject.ci.github-toolchain-verifier
@@ -22,6 +28,12 @@ subject_scopes:
     path: subjects/ci-platform-matrix/
   - subject_id: subject.ci.handoff-integrity
     path: subjects/ci-handoff-integrity/
+  - subject_id: subject.ci.release-supplemental-asset
+    path: subjects/ci-release-supplemental-asset/
+  - subject_id: subject.ci.release-assembly
+    path: subjects/ci-release-assembly/
+  - subject_id: subject.ci.release-publication-verifier
+    path: subjects/ci-release-publication-verifier/
   - subject_id: subject.ci.quality-summary
     path: subjects/ci-quality-summary/
   - subject_id: subject.ci.release-notes-binding

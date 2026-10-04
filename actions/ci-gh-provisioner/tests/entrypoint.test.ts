@@ -1,15 +1,18 @@
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { test } from 'node:test';
+import { describe, test, expect } from 'vitest';
 
-test('bundled Action rejects an invalid version as provisioning failure', () => {
-  const actionRoot = process.cwd();
+import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+
+describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+  const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
+test('Action rejects an invalid version as provisioning failure', () => {
+  const actionRoot = path.resolve(__dirname, '..');
   const action = readFileSync(path.join(actionRoot, 'action.yml'), 'utf8');
-  assert.match(action, /^  using: node24$/m);
-  assert.match(action, /^  main: dist\/index\.js$/m);
-  const result = spawnSync(process.execPath, [path.join(actionRoot, 'dist/index.js')], {
+  expect(action).toMatch(/^  using: node24$/m);
+  expect(action).toMatch(/^  main: dist\/index\.js$/m);
+  const result = spawnSync(process.execPath, [...entrypointArgs], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -21,6 +24,8 @@ test('bundled Action rejects an invalid version as provisioning failure', () => 
       GITHUB_ACTIONS: 'true',
     },
   });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /gh-provision-failed: invalid exact version/);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/gh-provision-failed: invalid exact version/);
+});
+
 });

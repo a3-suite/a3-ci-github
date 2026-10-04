@@ -1,0 +1,31 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-authority
+verifications:
+  - id: verification.ci-release-authority.outputs
+    contract_id: contract.ci-release-authority.outputs
+    cases:
+      - id: verified-inputs
+        intent_id: coherent-authority
+        input:
+          decision: explicit
+          provenance: complete
+        checks:
+          - id: authority
+            guarantee_ref: authority-file
+      - id: invalid-bindings
+        intent_id: fail-closed
+        input:
+          binding: missing-changed-expired-or-unknown
+        checks:
+          - id: failure
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs
+      - id: bundle-boundary
+        intent_id: coherent-authority
+        input:
+          invocation: bundled-action
+        checks:
+          - id: authority
+            guarantee_ref: authority-file

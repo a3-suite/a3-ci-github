@@ -26,13 +26,44 @@ x
 x
 ### project 固有差分
 差分種別: なし
+標準で成立しない理由: なし
 owner: x
 正本・検証導線: x
 検証証跡: x
 更新・撤去条件: x
 `;
+const nonstandardReadme = `${readme
+  .replace('差分種別: なし', '差分種別: trigger extension')
+  .replace('標準で成立しない理由: なし', '標準で成立しない理由: 標準 trigger では対象イベントを表現できないため')}
+## 自由記述（標準からの差異がある場合のみ）
+- 追加条件: x
+`;
 
 const rules = [
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runtime_unsupported',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: node20\n  main: dist/index.js\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: node24\n  main: dist/index.js\n'],
+    falsePositive: ['config/action.yml', 'runs:\n  using: node20\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_main_not_dist',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: node24\n  main: src/index.ts\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: "node24"\n  main: "dist/index.js"\n'],
+    falsePositive: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: echo node\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runner_node_review',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: |\n        node script.mjs\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: bash script.sh\n'],
+    falsePositive: ['actions/example/action.yml', 'description: node example\nruns:\n  using: composite\n  steps:\n    - run: |\n        # node example\n        echo "node script.mjs"\n'],
+  },
+  {
+    file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runner_node_review',
+    invalid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: "node script.mjs"\n'],
+    valid: ['actions/example/action.yml', 'runs:\n  using: composite\n  steps:\n    - run: echo safe\n'],
+    falsePositive: ['.github/workflows/example.yml', 'runs:\n  using: composite\n  steps:\n    - run: node script.mjs\n'],
+  },
   {
     file: 'ci_github_runtime_no_a3_cli.lua',
     lang: 'yaml',
@@ -110,6 +141,38 @@ const rules = [
     lang: 'markdown',
     code: 'ci_github_ci_readme_owner_missing',
     invalid: ['.ci/README.md', readme.replace('owner: x\n', '')],
+    valid: ['.ci/README.md', readme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', nonstandardReadme.replace('標準で成立しない理由: 標準 trigger では対象イベントを表現できないため\n', '')],
+    valid: ['.ci/README.md', nonstandardReadme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', nonstandardReadme.replace('標準で成立しない理由: 標準 trigger では対象イベントを表現できないため', '標準で成立しない理由: なし')],
+    valid: ['.ci/README.md', nonstandardReadme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', readme.replace('標準で成立しない理由: なし', '標準で成立しない理由: 標準 trigger では対象イベントを表現できないため')],
+    valid: ['.ci/README.md', readme],
+    falsePositive: ['README.md', ''],
+  },
+  {
+    file: 'ci_github_ci_readme_contract.lua',
+    lang: 'markdown',
+    code: 'ci_github_ci_readme_nonstandard_reason_missing',
+    invalid: ['.ci/README.md', readme.replace('標準で成立しない理由: なし\n', '')],
     valid: ['.ci/README.md', readme],
     falsePositive: ['README.md', ''],
   },

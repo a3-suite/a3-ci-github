@@ -1,0 +1,42 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-authority
+observations:
+  - id: observation.ci-release-authority.outputs
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: authority-path
+          kind: observation_field
+          meaning: New authority handoff binds explicit version and target, verified runs and fixed tag/source, separately approved notes, owner receiving workflow digest and configuration snapshot.
+        - selector: source_sha
+          kind: observation_field
+          meaning: Verified annotated tag commit SHA.
+        - selector: version
+          kind: observation_field
+          meaning: Explicit owner version bound to the publication request.
+        - selector: target_identity
+          kind: observation_field
+          meaning: Explicit opaque owner publication target.
+        - selector: approval-id
+          kind: observation_field
+          meaning: Verified notes approval ID.
+        - selector: body-sha256
+          kind: observation_field
+          meaning: Digest of separately approved Release notes body.
+  - id: observation.ci-release-authority.result
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Validation fails on missing, inconsistent or unknown local or remote inputs without provider writes.
+        - selector: successful-output-state
+          kind: observation_field
+          meaning: Successful outputs are absent on rejection.

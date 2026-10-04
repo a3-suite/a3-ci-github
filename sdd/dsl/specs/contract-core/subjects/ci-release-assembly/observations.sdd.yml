@@ -1,0 +1,32 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-assembly
+observations:
+  - id: observation.ci-release-assembly.outputs
+    summary: Successful assembly exposes the verified handoff and its sorted asset inventory digest.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Success only after complete validation and handoff creation.
+        - selector: release-handoff
+          kind: observation_field
+          meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
+        - selector: asset-digest
+          kind: observation_field
+          meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
+  - id: observation.ci-release-assembly.result
+    summary: Invalid or mismatching inputs fail without successful Action outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failed step outcome when assembly is rejected.

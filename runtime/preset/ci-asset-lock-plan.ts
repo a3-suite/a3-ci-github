@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { writeAssetLock, type AssetLock } from './ci-asset-lock.ts';
-import { loadRegistry, managedAssets, selectPresets } from './ci-preset-assets.ts';
+import { loadRegistry } from './preset-registry.ts';
+import { managedAssets, selectPresets } from './ci-preset-assets.ts';
 import type { Report } from './validation-report.ts';
 import { createReport } from './validation-report.ts';
 import { inside, sha256 } from './workflow-assets.ts';

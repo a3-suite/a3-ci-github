@@ -1,0 +1,84 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-publisher
+contracts:
+  - id: contract.ci-release-publisher.outputs
+    summary: Only the registry-approved GitHub token binding may create a previously
+      absent Release, upload validated assets and finalize by create-result
+      immutable ID. Validate approved notes, expiry,
+      authority/handoff/pre-observation, reobserve provider suitability and
+      complete absence immediately before create, and stop on mismatches,
+      unknown results or partial failure without retries, overwrite, deletion or
+      successful outputs. Emit schema-valid receipt/readback paths after
+      readback; independent verifier owns publication success.
+    conditions:
+      - id: valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-publisher-valid
+          op: available
+      - id: invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-publisher-invalid
+          op: available
+    guarantees:
+      - id: receipt-file
+        when: valid
+        observation_ref: observation.ci-release-publisher.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: receipt-path
+      - id: readback-file
+        when: valid
+        observation_ref: observation.ci-release-publisher.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: readback-path
+      - id: rejected
+        when: invalid
+        observation_ref: observation.ci-release-publisher.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: no-success-outputs
+        when: invalid
+        observation_ref: observation.ci-release-publisher.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: successful-output-state
+            right:
+              kind: value_set
+              values:
+                - absent
+    verification_intents:
+      - id: publish-evidence
+        goal: Publish once by immutable ID and emit evidence accepted by independent
+          read-only verification.
+        guarantee_refs:
+          - receipt-file
+          - readback-file
+      - id: fail-closed
+        goal: Reject invalid local or remote bindings and uncertain/partial provider
+          results without success evidence or recovery writes.
+        guarantee_refs:
+          - rejected
+          - no-success-outputs

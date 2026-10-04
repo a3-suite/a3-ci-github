@@ -6,13 +6,13 @@ test_maps:
     case_id: ci-release-request-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: release request workflow binds annotated tags without release publication permission
+        symbol: "workflow-contracts > release-request-workflow-contract > release request workflow binds annotated tags without release publication permission"
         check_refs:
           - check-ci-release-request-workflow-success
   - verification_id: verification.ci-release-request-workflow.handoff
     case_id: ci-release-request-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: release request workflow reports handoff failure in its summary
+        symbol: "workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary"
         check_refs:
           - check-ci-release-request-workflow-failure

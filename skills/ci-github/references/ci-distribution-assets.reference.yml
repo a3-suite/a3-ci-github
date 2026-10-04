@@ -50,11 +50,16 @@ assets:
       - runtime/preset/ci-asset-lock-plan.ts
       - runtime/preset/ci-asset-lock.ts
       - runtime/preset/ci-preset-assets.ts
+      - runtime/preset/preset-model.ts
+      - runtime/preset/preset-registry.ts
       - runtime/preset/cli-args.ts
       - runtime/preset/descriptor-validation.ts
       - runtime/preset/generate-ci-asset-lock.ts
       - runtime/preset/publication-validation.ts
       - runtime/preset/quality-validation.ts
+      - runtime/adapter/standard-quality-bundles.ts
+      - runtime/adapter/standard-quality-bundles.generated.ts
+      - runtime/preset/action-availability.ts
       - runtime/preset/semantic-candidates.ts
       - runtime/preset/validate-ci-preset-core.ts
       - runtime/preset/validate-ci-preset.ts
@@ -64,12 +69,36 @@ assets:
       - runtime/preset/workflow-validation.ts
       - runtime/platform/platform-manifest-core.d.mts
       - runtime/platform/platform-manifest-core.mjs
+      - runtime/platform/platform-selection-core.ts
+  - id: runtime.quality-workflow
+    application: local-reference
+    dependencies: [runtime.preset]
+    sourcePaths: [.github/workflows/ci-quality.yml]
+  - id: runtime.quality-platforms-workflow
+    application: local-reference
+    dependencies: [runtime.preset]
+    sourcePaths: [.github/workflows/ci-quality-platforms.yml]
+  - id: runtime.release-publication-workflow
+    application: local-reference
+    dependencies: [runtime.preset]
+    sourcePaths:
+      - .github/workflows/ci-release-publication.yml
+      - skills/ci-github/references/release-publication-evidence.reference.yml
+      - runtime/release-publication/evidence.schema.json
+  - id: runtime.package-publication-workflow
+    application: local-reference
+    dependencies: [runtime.preset]
+    sourcePaths:
+      - .github/workflows/ci-package-publication.yml
+      - .github/workflows/ci-package-preparation.yml
   - id: runtime.adapter-materializer
     application: local-reference
-    dependencies: [registry.ci-github]
+    dependencies: [runtime.preset]
     sourcePaths:
       - runtime/adapter/cli-runtime.ts
       - runtime/adapter/materialize-adapter-bundle.ts
+      - runtime/adapter/standard-quality-bundles.ts
+      - runtime/adapter/standard-quality-bundles.generated.ts
       - runtime/path/same-file-core.d.mts
       - runtime/path/same-file-core.mjs
   - id: runtime.vitest-summary
@@ -84,13 +113,18 @@ assets:
   - id: skill.ci-github
     application: skill-deploy-source
     sourceTree: skills/ci-github
+workflowDependencies:
+  workflow.quality-gate: [runtime.quality-workflow]
+  workflow.quality-gate-platforms: [runtime.quality-platforms-workflow]
+  workflow.release-publication-caller: [runtime.release-publication-workflow]
+  workflow.package-publication-caller: [runtime.package-publication-workflow]
 presets:
   - id: quality-gate
-    requiredAssets: [runtime.preset, runtime.adapter-materializer, lint.github-actions]
+    requiredAssets: [runtime.preset, lint.github-actions]
   - id: release-request
     requiredAssets: [runtime.preset, lint.github-actions]
   - id: release-publication
-    requiredAssets: [runtime.preset, runtime.adapter-materializer, lint.github-actions]
+    requiredAssets: [runtime.preset, lint.github-actions]
   - id: package-publication
     requiredAssets: [runtime.preset, lint.github-actions]
 selectionRules:

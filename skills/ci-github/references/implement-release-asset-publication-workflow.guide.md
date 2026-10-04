@@ -83,13 +83,10 @@
    - Release assets workflowからpackage registryへ暗黙に二重publishしない。
 
 ## project-local実装点
-- release requestのevent / ref / source SHA記録
-- release tag identityを含むrelease authority contextのcollector / verifier
-- platform別build command
-- asset集合、version、実行可能性、checksumのvalidator
-- asset manifestと一時handoffの構成
-- GitHub Releaseの存在確認と非上書きcreate command
-- 公開 source の provider 適合の観測（source 確定後と write 直前）と provider 操作単位の失敗診断
+
+実装義務はprovider registryの `registry.presets` と `actionization.standardImplementations`、bindingの利用可能性は `actionization.targets` を確認する。選択した標準bindingが充足する処理をproject-local scriptとして再実装しない。request記録、platform matrix、build、assembly、read-only観測などの接続はcanonical workflowを参照する。
+
+標準Release入力の受領契約は `ci-script-contracts.reference.yml` の `standardReleaseInput` を参照する。対応する標準profileでは共通read-only authority Actionを使い、個別authority scriptを要求しない。入力未解決または非標準ownerだけproject-owned extensionへ接続する。公開writeは選択した標準bindingが充足する場合に専用Actionへ委譲し、非標準owner経路だけproject-owned adapterを要求する。適用profileと充足extensionはregistryを参照する。対応する入力・出力と責務は `ci-script-contracts.reference.yml`、provider writeのmappingは `release-publication-evidence.reference.yml` を参照する。未公開bindingは導入完了扱いにしない。
 
 ## 停止条件
 - requestのtag refとsource SHA、`git.release-flow`のtag、target commit、version、tag object SHA、tag object typeの対応を証明できない。

@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-publication-verifier
+  summary: Independently observe Release absence and verify owner publication evidence through read-only GitHub requests.

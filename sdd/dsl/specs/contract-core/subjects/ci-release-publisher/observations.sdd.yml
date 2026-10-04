@@ -1,0 +1,36 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-publisher
+observations:
+  - id: observation.ci-release-publisher.outputs
+    summary: Evidence paths alone do not establish final publication success.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: receipt-path
+          kind: observation_field
+          meaning: New schema-valid receipt bound to authority, handoff, original
+            pre-observation, asset digest and immutable create-result ID.
+        - selector: readback-path
+          kind: observation_field
+          meaning: New schema-valid remote readback of exact published body, assets,
+            source and unique Release ID; independently verified by the next
+            Action.
+  - id: observation.ci-release-publisher.result
+    summary: Invalid inputs, unknown remote state or any partial write failure stops
+      without successful outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failed step on rejection or uncertain write result.
+        - selector: successful-output-state
+          kind: observation_field
+          meaning: Successful evidence outputs are absent on failure.

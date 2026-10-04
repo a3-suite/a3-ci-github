@@ -1,6 +1,20 @@
 version: 2
 name: contract-route
 routes:
+  - route_id: action-contracts-release-authority
+    contract_ref:
+      subject_ref: subject.ci.release-authority
+      contract_id: contract.ci-release-authority.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-release-publisher
+    contract_ref:
+      subject_ref: subject.ci.release-publisher
+      contract_id: contract.ci-release-publisher.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: repository-action-distribution-integrity
     contract_ref:
       subject_ref: subject.repository.action-distribution
@@ -96,6 +110,27 @@ routes:
       contract_id: contract.ci-handoff-integrity.outputs
     hops:
       - component_id: action-contracts
+  - route_id: action-contracts-release-supplemental-asset
+    contract_ref:
+      subject_ref: subject.ci.release-supplemental-asset
+      contract_id: contract.ci-release-supplemental-asset.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-release-assembly
+    contract_ref:
+      subject_ref: subject.ci.release-assembly
+      contract_id: contract.ci-release-assembly.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
+  - route_id: action-contracts-release-publication-verifier
+    contract_ref:
+      subject_ref: subject.ci.release-publication-verifier
+      contract_id: contract.ci-release-publication-verifier.outputs
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-publish-version
     contract_ref:
       subject_ref: subject.ci.publish-version
@@ -114,6 +149,7 @@ routes:
       contract_id: contract.ci-release-notes-binding.outputs
     hops:
       - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-release-notes-input-resolution
     contract_ref:
       subject_ref: subject.ci.release-notes-input-resolution
@@ -132,6 +168,7 @@ routes:
       contract_id: contract.ci-release-publication-control.outputs
     hops:
       - component_id: action-contracts
+      - component_id: runtime-implementations
   - route_id: action-contracts-package-publication-request
     contract_ref:
       subject_ref: subject.ci.package-publication-request

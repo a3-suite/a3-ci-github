@@ -112,9 +112,9 @@ assets:
     kind: trusted-control
     status: required
     scope: workflow
-    entrypoints: [.ci/trusted/ci-release-assemble.sh]
+    entrypoints: []
     copyable: false
-    owner: project-owner
+    owner: provider-binding
   - id: release-publication-adapter
     useCases: [release-remote-publish-readback]
     kind: provider-adapter
@@ -152,14 +152,17 @@ assets:
         path: materialization
 adapterBundles:
   - id: rust-cargo-quality
+    delivery: action
     languageProfiles: [rust]
     source: {skill: rust, path: assets/ci/adapter-bundles/rust-quality.yml}
     targetDescriptor: .ci/adapters/rust-quality.yml
   - id: python-uv-quality
+    delivery: action
     languageProfiles: [python]
     source: {skill: python, path: assets/ci/adapter-bundles/python-quality.yml}
     targetDescriptor: .ci/adapters/python-quality.yml
   - id: typescript-npm-quality
+    delivery: action
     languageProfiles: [typescript]
     source: {skill: typescript, path: assets/ci/adapter-bundles/typescript-quality.yml}
     targetDescriptor: .ci/adapters/typescript-quality.yml

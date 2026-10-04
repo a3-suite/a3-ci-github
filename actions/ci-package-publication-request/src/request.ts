@@ -29,7 +29,7 @@ const validate = (fields: RequestFields): RequestFields => {
 export const createRequest = (requestPath: string, fields: RequestFields): RequestFields => {
   const value = validate(fields);
   fs.mkdirSync(path.dirname(requestPath), { recursive: true });
-  fs.writeFileSync(requestPath, `${JSON.stringify({ schema: 'ci.package-publication-request.v1', ...value })}\n`, 'utf8');
+  fs.writeFileSync(requestPath, `${JSON.stringify({ schema: 'ci.package-publication-request.v1', ...value })}\n`, { encoding: 'utf8', flag: 'wx' });
   return value;
 };
 

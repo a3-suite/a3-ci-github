@@ -1,0 +1,41 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.release-publication-verifier
+observations:
+  - id: observation.ci-release-publication-verifier.outputs
+    summary: Operation-specific outputs expose independently verified publication evidence, never an owner write status alone.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: status
+          kind: observation_field
+          meaning: Success only after the selected read-only verification completes.
+        - selector: observation-path
+          kind: observation_field
+          meaning: New pre-create observation file, produced only by observe-before.
+        - selector: observation-digest
+          kind: observation_field
+          meaning: SHA-256 of exact pre-create observation bytes, produced only by observe-before.
+        - selector: release-remote-identity
+          kind: observation_field
+          meaning: Immutable create-result Release object ID independently verified by verify-after.
+        - selector: publish-receipt
+          kind: observation_field
+          meaning: Compact schema-validated receipt bound to authority, handoff, asset digest and pre-observation.
+        - selector: readback-evidence
+          kind: observation_field
+          meaning: Compact readback independently matched to Release ID, tag/source, non-draft state, body and exact asset/checksum bytes.
+  - id: observation.ci-release-publication-verifier.result
+    summary: Missing credentials, unknown remote state or mismatching evidence fails without successful outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Failed step outcome when remote observation or evidence verification is rejected.

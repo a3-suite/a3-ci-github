@@ -1,0 +1,93 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-publication-verifier
+verifications:
+  - id: verification.ci-release-publication-verifier.outputs
+    contract_id: contract.ci-release-publication-verifier.outputs
+    cases:
+      - id: bundled-pre-observation
+        intent_id: observe-absence
+        input:
+          operation: observe-before
+          handoff-root: handoff
+          observation-path: before.json
+        checks:
+          - id: status
+            guarantee_ref: observation-status
+          - id: path
+            guarantee_ref: observation-file
+          - id: digest
+            guarantee_ref: observation-digest
+      - id: bundled-post-verification
+        intent_id: verify-publication
+        input:
+          operation: verify-after
+          receipt-path: receipt.json
+          readback-path: readback.json
+        checks:
+          - id: status
+            guarantee_ref: verification-status
+          - id: release-id
+            guarantee_ref: immutable-release-id
+          - id: receipt
+            guarantee_ref: bound-receipt
+          - id: readback
+            guarantee_ref: independent-readback
+      - id: output-line-injection
+        intent_id: fail-closed
+        input:
+          operation: observe-before
+          observation-path: "before.json\nstatus=success"
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected
+      - id: missing-credentials
+        intent_id: fail-closed
+        input:
+          operation: observe-before
+          credential: absent
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected
+      - id: independent-readback
+        intent_id: verify-publication
+        input:
+          operation: verify-after
+        checks:
+          - id: release-id
+            guarantee_ref: immutable-release-id
+          - id: readback
+            guarantee_ref: independent-readback
+      - id: existing-release
+        intent_id: fail-closed
+        input:
+          operation: observe-before
+          remote-release: existing-draft
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected
+      - id: incomplete-pagination
+        intent_id: fail-closed
+        input:
+          operation: observe-before
+          remote-inventory: incomplete-at-page-limit
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected
+      - id: missing-after-reobservation
+        intent_id: fail-closed
+        input:
+          operation: verify-after
+          remote-inventory: absent-after-bounded-reobservation
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected
+      - id: mismatching-bindings
+        intent_id: fail-closed
+        input:
+          operation: verify-after
+          receipt-path: mismatching-receipt.json
+          readback-path: mismatching-readback.json
+        checks:
+          - id: rejection
+            guarantee_ref: verification-rejected

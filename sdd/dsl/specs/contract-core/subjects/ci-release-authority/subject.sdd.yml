@@ -1,0 +1,5 @@
+version: 1
+name: contract-subject
+subject:
+  id: subject.ci.release-authority
+  summary: Verify existing owner Release decisions through a read-only common authority binding without choosing owner policy or executing source code.

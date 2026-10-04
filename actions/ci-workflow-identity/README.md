@@ -2,6 +2,8 @@
 
 `ci-workflow-identity` は、reusable workflow を呼び出した snapshot が default branch 上の同一 commit であることを検証し、検証済みの workflow commit SHA を出力します。権限、job 境界、公開処理、用途固有の公開判断は所有しません。
 
+既存consumerとの互換性のため公開契約を維持しています。標準publication経路では使用しません。現行の信頼境界は [runner trust policy](../../skills/ci-github/references/runner-trust-policy.reference.md) を参照してください。
+
 ## 入力
 
 | input | 必須 | 内容 |

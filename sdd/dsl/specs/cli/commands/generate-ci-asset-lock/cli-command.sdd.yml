@@ -13,7 +13,7 @@ command:
         - option_id: repo-root
           presence: optional
         - option_id: skill-collection-root
-          presence: required
+          presence: optional
         - option_id: source-revision
           presence: required
   option_groups:
@@ -24,4 +24,4 @@ command:
         - skill-collection-root
         - source-revision
   help:
-    usage: tsx runtime/preset/generate-ci-asset-lock.ts [--repo-root <PATH>] --skill-collection-root <PATH> --source-revision <SHA>
+    usage: tsx runtime/preset/generate-ci-asset-lock.ts [--repo-root <PATH>] [--skill-collection-root <PATH>] --source-revision <SHA>

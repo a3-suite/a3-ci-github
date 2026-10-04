@@ -1,0 +1,50 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-supplemental-asset
+contracts:
+  - id: contract.ci-release-supplemental-asset.outputs
+    summary: Validate the authority-bound selected snapshot, fixed checkout, safe phase inputs and unclaimed output before executing the selected executable owner adapter whose bytes match the fixed source Git blob, with the v2 argument vector. Recheck identity, authority, snapshot, adapter and build input bytes after execution. Success requires owner exit zero and a new nonempty directory. Installer construction, evidence generation and semantic verification remain owner responsibilities; this is not an execution sandbox or a provider publication operation.
+    conditions:
+      - id: supplemental-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.supplemental-phase-valid
+          op: available
+      - id: supplemental-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.supplemental-phase-invalid
+          op: available
+    guarantees:
+      - id: phase-success
+        when: supplemental-valid
+        observation_ref: observation.ci-release-supplemental-asset.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: status}
+            right: {kind: value_set, values: [success]}
+      - id: phase-output
+        when: supplemental-valid
+        observation_ref: observation.ci-release-supplemental-asset.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: output-directory}
+      - id: phase-rejected
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: outcome}
+            right: {kind: value_set, values: [failure]}
+    verification_intents:
+      - id: bound-phase
+        goal: Both v2 phases receive the exact ordered path arguments and return the new output only after successful common checks.
+        guarantee_refs: [phase-success, phase-output]
+      - id: fail-closed
+        goal: Reject unsafe, unselected, mismatched or mutated inputs and failed or missing owner output without successful Action outputs.
+        guarantee_refs: [phase-rejected]

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { MAX_MANIFEST_BYTES, resolvePlatformMatrix } from './matrix.js';
+import { MAX_MANIFEST_BYTES, resolvePlatformMatrix, resolveQualityMatrix } from './matrix.js';
 
 const readManifest = (manifestPath: string): string => {
   if (!manifestPath || /[\0\r\n]/.test(manifestPath)) {
@@ -19,7 +19,15 @@ export const run = (): void => {
       throw new Error('platform-matrix-output-path-invalid');
     }
     const matrix = resolvePlatformMatrix(readManifest(manifestPath));
-    fs.appendFileSync(outputPath, `matrix=${JSON.stringify(matrix)}\n`, 'utf8');
+    const selectionPath = process.env['INPUT_SELECTION-PATH'] ?? '';
+    let outputs = `matrix=${JSON.stringify(matrix)}\n`;
+    if (selectionPath !== '') {
+      if (/[\0\r\n]/.test(selectionPath)) throw new Error('platform-matrix-selection-path-invalid');
+      if (!fs.statSync(selectionPath).isFile()) throw new Error('platform-matrix-selection-not-file');
+      const quality = resolveQualityMatrix(matrix, fs.readFileSync(selectionPath, 'utf8'));
+      outputs += `quality-matrix=${JSON.stringify(quality.matrix)}\nexpected-platforms=${quality.expectedPlatforms}\n`;
+    }
+    fs.appendFileSync(outputPath, outputs, 'utf8');
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
