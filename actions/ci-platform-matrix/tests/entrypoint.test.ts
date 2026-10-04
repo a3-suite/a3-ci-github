@@ -1,8 +1,7 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -42,11 +41,11 @@ test('entrypoint emits the validated matrix', () => {
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-24.04\n    target: x86_64-unknown-linux-gnu\n');
   // Assert
-  assert.equal(run.result.status, 0);
+  expect(run.result.status).toBe(0);
   const output = fs.readFileSync(run.outputPath, 'utf8');
-  assert.match(output, /^matrix=/);
-  assert.match(output, /x86_64-unknown-linux-gnu/);
-  assert.equal(output.trim().split('\n').length, 1);
+  expect(output).toMatch(/^matrix=/);
+  expect(output).toMatch(/x86_64-unknown-linux-gnu/);
+  expect(output.trim().split('\n').length).toBe(1);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
 });
 
@@ -57,9 +56,9 @@ test('entrypoint fails closed for an unsupported runner', () => {
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-latest\n    target: x86_64-unknown-linux-gnu\n');
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.equal(fs.readFileSync(run.outputPath, 'utf8'), '');
-  assert.match(`${run.result.stdout}\n${run.result.stderr}`, /platform-matrix-platform-0-runner-invalid/);
+  expect(run.result.status).not.toBe(0);
+  expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
+  expect(`${run.result.stdout}\n${run.result.stderr}`).toMatch(/platform-matrix-platform-0-runner-invalid/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
 });
 
@@ -70,9 +69,9 @@ test('entrypoint rejects an oversized manifest before parsing', () => {
   // Act
   const run = runBundled(`platforms:\n${' '.repeat(64 * 1024)}`);
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.equal(fs.readFileSync(run.outputPath, 'utf8'), '');
-  assert.match(run.result.stderr, /platform-matrix-manifest-too-large/);
+  expect(run.result.status).not.toBe(0);
+  expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
+  expect(run.result.stderr).toMatch(/platform-matrix-manifest-too-large/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
 });
 
@@ -88,15 +87,15 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
     target: aarch64-apple-darwin
 `, 'platforms: [{id: macos-arm64}, {id: linux-x64}]');
   try {
-    assert.equal(run.result.status, 0, run.result.stderr);
+    expect(run.result.status, run.result.stderr).toBe(0);
     const outputs = Object.fromEntries(fs.readFileSync(run.outputPath, 'utf8').trim().split('\n')
       .map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-    assert.deepEqual(JSON.parse(outputs.matrix).include.map((entry: { id: string }) => entry.id), ['linux-x64', 'macos-arm64']);
-    assert.deepEqual(JSON.parse(outputs['quality-matrix']), { include: [
+    expect(JSON.parse(outputs.matrix).include.map((entry: { id: string }) => entry.id)).toStrictEqual(['linux-x64', 'macos-arm64']);
+    expect(JSON.parse(outputs['quality-matrix'])).toStrictEqual({ include: [
       { platform_id: 'macos-arm64', runner: 'macos-14' },
       { platform_id: 'linux-x64', runner: 'ubuntu-24.04' },
     ] });
-    assert.equal(outputs['expected-platforms'], 'macos-arm64,linux-x64');
+    expect(outputs['expected-platforms']).toBe('macos-arm64,linux-x64');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
@@ -105,9 +104,9 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
 test('entrypoint fails without any outputs for invalid selection', () => {
   const run = runBundled('platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]', 'platforms: [{id: unknown}]');
   try {
-    assert.notEqual(run.result.status, 0);
-    assert.match(run.result.stderr, /not declared/);
-    assert.equal(fs.readFileSync(run.outputPath, 'utf8'), '');
+    expect(run.result.status).not.toBe(0);
+    expect(run.result.stderr).toMatch(/not declared/);
+    expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 

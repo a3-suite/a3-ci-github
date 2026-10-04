@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { createInstrumenter } from 'istanbul-lib-instrument';
+import { assertSourceCoverageFiles, loadDefinition, selectUnitIntegrationTests } from './contract-subject-coverage.mjs';
 const require = createRequire(import.meta.url);
 const { createCoverageMap } = require('istanbul-lib-coverage');
 const { createContext } = require('istanbul-lib-report');
@@ -12,7 +13,7 @@ const reports = require('istanbul-reports');
 const baseConfig = (await import('../../vitest.config.mjs')).default;
 const config = process.argv[2] ? JSON.parse(process.argv[2]) : {
   root: baseConfig.root, cwd: baseConfig.root, typescript: true,
-  tests: globSync(baseConfig.test.include, { cwd: baseConfig.root }),
+  tests: selectUnitIntegrationTests(loadDefinition(), globSync(baseConfig.test.include, { cwd: baseConfig.root }), baseConfig.root),
   include: baseConfig.test.coverage.include, exclude: baseConfig.test.coverage.exclude,
   lcovPath: path.join(baseConfig.root, 'tests/tmp/coverage/vitest/lcov.info'),
 };
@@ -24,6 +25,7 @@ const files = [...new Set(globSync(includes, { exclude: excludes }).map((filenam
   return /\.(?:[cm]?[jt]s)$/.test(filename) && !/\.d\.[cm]?ts$/.test(filename);
 });
 assert(files.length, 'coverage include resolves to no source files');
+assertSourceCoverageFiles(config.root, files);
 const directory = path.dirname(config.lcovPath);
 mkdirSync(directory, { recursive: true });
 const runDirectory = mkdtempSync(path.join(directory, 'acquisition-'));

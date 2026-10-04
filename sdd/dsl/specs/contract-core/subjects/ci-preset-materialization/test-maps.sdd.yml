@@ -6,35 +6,35 @@ test_maps:
     case_id: ci-preset-materialization-success
     tests:
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: materializer separates repository-owned assets from external skill resources
+        symbol: "materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned assets from external skill resources"
         check_refs:
           - check-ci-preset-materialization-success
       - path: tests/public-cli-lifecycle.test.mjs
-        symbol: public materializer CLI copies reuses and protects consumer adapter files
+        symbol: "contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files"
         check_refs:
           - check-ci-preset-materialization-success
       - path: tests/public-cli-lifecycle.test.mjs
-        symbol: public materializer CLI executes a symlinked entrypoint
+        symbol: "contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI executes a symlinked entrypoint"
         check_refs:
           - check-ci-preset-materialization-success
       - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
-        symbol: registered standard quality bundles require no consumer copies and preserve consumer files
+        symbol: "adapter-bundle-materialization-contract > registered standard quality bundles require no consumer copies and preserve consumer files"
         check_refs:
           - check-ci-preset-materialization-success
   - verification_id: verification.ci-preset-materialization.application
     case_id: ci-preset-materialization-failure
     tests:
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: materializer rejects invalid custom bundle inputs before copying consumer assets
+        symbol: "contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejects invalid custom bundle inputs before copying consumer assets"
         check_refs: [check-ci-preset-materialization-failure]
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: materializer validates delegated project scripts without copying shared implementations
+        symbol: "contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer validates delegated project scripts without copying shared implementations"
         check_refs: [check-ci-preset-materialization-failure]
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: materializer separates repository-owned assets from external skill resources
+        symbol: "materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned assets from external skill resources"
         check_refs:
           - check-ci-preset-materialization-failure
       - path: tests/public-cli-lifecycle.test.mjs
-        symbol: public materializer CLI copies reuses and protects consumer adapter files
+        symbol: "contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files"
         check_refs:
           - check-ci-preset-materialization-failure

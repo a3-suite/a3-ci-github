@@ -14,7 +14,7 @@ actors:
 goal: 承認、source、workflow identity、assetおよび公開結果を同じrelease identityへ拘束して公開する
 preconditions:
   - immutableなrelease request handoffと承認済みrelease notesが存在する
-  - publication request、caller、reusable publication workflowが同じdefault branch revisionに配置されている
+  - publication requestとcallerが適用プロジェクトのdefault branchに配置され、callerがproviderのreusable publication workflowを固定revisionで参照している
 trigger: Release管理者が承認済みnotesを指定してpublication requestを実行する
 main_success_scenario:
   - summary: publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する

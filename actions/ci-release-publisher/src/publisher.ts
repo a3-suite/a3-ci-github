@@ -58,9 +58,9 @@ export const publishRelease = async (options: PublisherOptionsType, client: Publ
     remoteId(uploaded.id);
   }
   await observeAssets(current.identity, id, current.assembly, client);
-  approvedBody(options, current.identity);
   await verifySuitability(current.identity, client);
   await verifyCreatedRelease(current.identity, id, client);
+  approvedBody(options, current.identity);
   const finalized = await client.finalize(current.identity, id);
   if (!record(finalized) || remoteId(finalized.id) !== id || finalized.tag_name !== current.identity.tag || finalized.draft !== false || finalized.body !== body) fail('finalize-result-invalid');
   const receipt = validateEvidence('receipt', { schema_version: '1', kind: 'ci-github-release-publish-receipt', identity: current.identity,

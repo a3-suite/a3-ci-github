@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
-import { LIMITS, fail, record, equal, hex, assetName, safePath, readBytes, readRecord, hashFile, sha256, writeNewJson } from './io';
+import { LIMITS, fail, record, equal, hex, assetName, safePath, readBytes, readRecord, parseJson, hashFile, sha256, writeNewJson } from './io';
 import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } from './schema';
 import type { AssemblyType } from './schema';
 import { validateSnapshot } from './snapshot';
@@ -87,18 +87,22 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
       exactKeys(asset, ['path', 'sha256', 'checksum_path', 'owner_evidence_path', 'owner_evidence_sha256', 'provenance_path', 'verification_path']);
       addAsset(supplementalRoot, asset);
       const evidencePath = safePath(supplementalRoot, asset.owner_evidence_path);
-      if (sha256(readBytes(evidencePath)) !== hex(asset.owner_evidence_sha256)) fail('supplemental-asset-evidence-mismatch');
+      const evidenceDigest = sha256(readBytes(evidencePath));
+      if (evidenceDigest !== hex(asset.owner_evidence_sha256)) fail('supplemental-asset-evidence-mismatch');
       const provenanceDigest = sha256(readBytes(safePath(supplementalRoot, asset.provenance_path)));
-      const attestation = readRecord(safePath(supplementalRoot, asset.verification_path));
+      const verificationBytes = readBytes(safePath(supplementalRoot, asset.verification_path));
+      const attestation = parseJson(verificationBytes);
+      if (!record(attestation)) fail('json-object-invalid');
       exactKeys(attestation, ['status', 'owner_contract', 'source_sha', 'asset_sha256', 'owner_evidence_sha256', 'provenance_sha256']);
       if (attestation.status !== 'success' || attestation.owner_contract !== manifest.owner_contract || attestation.source_sha !== identity.source_sha
         || attestation.asset_sha256 !== asset.sha256 || attestation.owner_evidence_sha256 !== asset.owner_evidence_sha256
         || attestation.provenance_sha256 !== provenanceDigest) fail('supplemental-asset-evidence-mismatch');
       for (const key of ['path', 'checksum_path', 'owner_evidence_path', 'provenance_path', 'verification_path']) allowed.add(assetName(asset[key]));
-      for (const key of ['owner_evidence_path', 'provenance_path', 'verification_path']) {
+      const evidenceDigests = { owner_evidence_path: evidenceDigest, provenance_path: provenanceDigest, verification_path: sha256(verificationBytes) };
+      for (const [key, digest] of Object.entries(evidenceDigests)) {
         assetName(asset[key]);
         const name = `evidence-${files.length}-${asset[key]}`;
-        metadata.push({ filename: safePath(supplementalRoot, asset[key]), name, sha256: sha256(readBytes(safePath(supplementalRoot, asset[key]))) });
+        metadata.push({ filename: safePath(supplementalRoot, asset[key]), name, sha256: digest });
       }
     }
     equal(fs.readdirSync(supplementalRoot).sort(), [...allowed].sort(), 'unexpected-supplemental-asset');

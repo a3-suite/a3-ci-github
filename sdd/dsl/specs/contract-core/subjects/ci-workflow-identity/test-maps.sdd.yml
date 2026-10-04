@@ -6,7 +6,7 @@ test_maps:
     case_id: default-branch-reusable-call
     tests:
       - path: actions/ci-workflow-identity/tests/identity.test.ts
-        symbol: returns the verified snapshot sha for a default-branch reusable call
+        symbol: "verifyWorkflowIdentity(WorkflowIdentityInput) > returns the verified snapshot sha for a default-branch reusable call"
         check_refs:
           - check-verified-snapshot-sha
       - path: actions/ci-workflow-identity/tests/entrypoint.test.ts
@@ -32,6 +32,6 @@ test_maps:
     case_id: non-default-branch-call
     tests:
       - path: actions/ci-workflow-identity/tests/identity.test.ts
-        symbol: rejects a caller ref that is not the default-branch snapshot
+        symbol: "verifyWorkflowIdentity(WorkflowIdentityInput) > rejects a caller ref that is not the default-branch snapshot"
         check_refs:
           - check-non-default-branch-failure

@@ -6,26 +6,26 @@ test_maps:
     case_id: matching-rust-release-processing
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: release build binds exact toolchain and a unique manifest platform before building
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
         check_refs:
           - check-rust-release-processing-outcome
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: Unix package and verification bind archive, checksum, manifest, and source without overwrite
-        check_refs:
-          - check-rust-release-processing-outcome
-          - check-rust-release-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: Unix package failure leaves no final or temporary output directory
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite"
         check_refs:
           - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: Unix package preserves an output directory created immediately before publication
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package failure leaves no final or temporary output directory"
         check_refs:
           - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: Unix package removes its claimed output when publication fails
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package preserves an output directory created immediately before publication"
+        check_refs:
+          - check-rust-release-processing-outcome
+          - check-rust-release-final-output-safe
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package removes its claimed output when publication fails"
         check_refs:
           - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
@@ -33,11 +33,11 @@ test_maps:
     case_id: rejected-rust-release-processing
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: release build binds exact toolchain and a unique manifest platform before building
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
         check_refs:
           - check-rust-release-processing-failure
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: Unix package and verification bind archive, checksum, manifest, and source without overwrite
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite"
         check_refs:
           - check-rust-release-processing-failure
           - check-rust-release-rejected-final-output-safe
@@ -45,20 +45,20 @@ test_maps:
     case_id: version-report-rejected
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
-        symbol: release build binds exact toolchain and a unique manifest platform before building
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
         check_refs:
           - check-rust-release-version-diagnostic
   - verification_id: verification.ci-rust-release-build.outputs
     case_id: matching-authority-bound-build-inputs
     tests:
       - path: actions/ci-rust-release-build/tests/action-contract.test.mjs
-        symbol: composite release build exposes completed only after script success
+        symbol: "contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success"
         check_refs:
           - check-completed-output
   - verification_id: verification.ci-rust-release-build.outputs
     case_id: mismatching-authority-bound-build-inputs
     tests:
       - path: actions/ci-rust-release-build/tests/action-contract.test.mjs
-        symbol: composite release build exposes completed only after script success
+        symbol: "contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success"
         check_refs:
           - check-release-build-failure

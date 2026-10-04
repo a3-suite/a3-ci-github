@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { fixture, source, repository } from './fixture';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -25,11 +24,11 @@ test('authority entrypoint emits verified outputs and suppresses outputs on reje
         TEST_RESPONSES: responses, 'INPUT_ROOT-DIRECTORY': f.root, 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory,
         'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_PUBLICATION-REQUEST-RUN-ID': '22', 'INPUT_GITHUB-TOKEN': invalid ? '' : 'synthetic-secret' };
       const result = spawnSync(process.execPath, ['--import', preload, ...entrypointArgs], { env, encoding: 'utf8' });
-      assert.equal(result.status, invalid ? 1 : 0, result.stderr);
-      assert.equal(result.stderr.includes('synthetic-secret'), false);
+      expect(result.status, result.stderr).toBe(invalid ? 1 : 0);
+      expect(result.stderr.includes('synthetic-secret')).toBe(false);
       const bytes = fs.readFileSync(output, 'utf8');
-      if (invalid) { assert.equal(bytes, ''); assert.equal(fs.existsSync(f.options.outputDirectory), false); }
-      else { assert.ok(bytes.includes(`source_sha=${source}\n`)); assert.ok(bytes.includes('version=1.2.3\n')); }
+      if (invalid) { expect(bytes).toBe(''); expect(fs.existsSync(f.options.outputDirectory)).toBe(false); }
+      else { expect(bytes.includes(`source_sha=${source}\n`)).toBeTruthy(); expect(bytes.includes('version=1.2.3\n')).toBeTruthy(); }
     } finally { fs.rmSync(f.root, { recursive: true }); }
   }
 });

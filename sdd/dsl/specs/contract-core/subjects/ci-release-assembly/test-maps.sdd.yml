@@ -33,17 +33,17 @@ test_maps:
     case_id: build-validation
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: assembly produces a bound handoff and rejects invalid build inputs
+        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
         check_refs: [handoff, digest]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: supplemental-binding
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: supplemental evidence binds opaque owner records and rejects mismatches
+        symbol: "contract.ci-release-assembly.outputs > release-supplemental-evidence-binding > supplemental evidence binds opaque owner records and rejects mismatches"
         check_refs: [handoff]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: unsafe-build-inputs
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "assembly fails closed: source"
+        symbol: "assembly > assembly > assembly fails closed: source"
         check_refs: [rejection]

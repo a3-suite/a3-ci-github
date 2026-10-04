@@ -1,16 +1,15 @@
-import { strict as assert } from 'node:assert';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
-const outputValue = (raw: string, name: string): string => { const match = raw.match(new RegExp(`${name}<<[^\\n]+\\n([\\s\\S]*?)\\n[^\\n]+`)); assert.ok(match); return match[1]; };
+const outputValue = (raw: string, name: string): string => { const match = raw.match(new RegExp(`${name}<<[^\\n]+\\n([\\s\\S]*?)\\n[^\\n]+`)); expect(match).toBeTruthy(); return match![1]; };
 // contract_id: contract.ci.vitest-summary.outputs
 // integration_id: ci-vitest-summary-contract-entrypoint
 test('entrypoint writes a Vitest summary', () => {
@@ -22,13 +21,13 @@ test('entrypoint writes a Vitest summary', () => {
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
   try {
-    assert.equal(result.status, 0, result.stderr);
+    expect(result.status, result.stderr).toBe(0);
     const outputs = fs.readFileSync(output, 'utf8');
-    assert.equal(outputValue(outputs, 'status'), 'passed');
-    assert.equal(outputValue(outputs, 'collection'), 'complete');
+    expect(outputValue(outputs, 'status')).toBe('passed');
+    expect(outputValue(outputs, 'collection')).toBe('complete');
     const markdown = fs.readFileSync(summary, 'utf8');
-    assert.match(markdown, /unit テスト結果/);
-    assert.equal(outputValue(outputs, 'digest'), `sha256:${createHash('sha256').update(markdown, 'utf8').digest('hex')}`);
+    expect(markdown).toMatch(/unit テスト結果/);
+    expect(outputValue(outputs, 'digest')).toBe(`sha256:${createHash('sha256').update(markdown, 'utf8').digest('hex')}`);
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
@@ -43,9 +42,9 @@ test('entrypoint rejects a summary path that aliases the input report without mo
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
   try {
-    assert.notEqual(result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'failed');
-    assert.equal(fs.readFileSync(report, 'utf8'), original);
+    expect(result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(output, 'utf8'), 'status')).toBe('failed');
+    expect(fs.readFileSync(report, 'utf8')).toBe(original);
   } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
@@ -58,7 +57,7 @@ test('entrypoint keeps malformed report shapes unresolved', () => {
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  try { assert.equal(result.status, 0, result.stderr); assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  try { expect(result.status, result.stderr).toBe(0); expect(outputValue(fs.readFileSync(output, 'utf8'), 'status')).toBe('unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
 // integration_id: ci-vitest-summary-entrypoint-regression
@@ -70,7 +69,7 @@ test('entrypoint keeps assertion-level malformation unresolved', () => {
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  try { assert.equal(result.status, 0, result.stderr); assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  try { expect(result.status, result.stderr).toBe(0); expect(outputValue(fs.readFileSync(output, 'utf8'), 'status')).toBe('unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
 // integration_id: ci-vitest-summary-entrypoint-regression
@@ -82,7 +81,7 @@ test('entrypoint keeps malformed report elements unresolved', () => {
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  try { assert.equal(result.status, 0, result.stderr); assert.equal(outputValue(fs.readFileSync(output, 'utf8'), 'status'), 'unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+  try { expect(result.status, result.stderr).toBe(0); expect(outputValue(fs.readFileSync(output, 'utf8'), 'status')).toBe('unresolved'); } finally { fs.rmSync(temp, { recursive: true, force: true }); }
 });
 
 });

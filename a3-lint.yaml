@@ -40,6 +40,28 @@ project:
         - yaml
       frameworks:
         - any
+    - id: skill-vitest
+      root: ${skills_root}/vitest/assets/a3-lint/rules
+      lib_dir: ${skills_root}/vitest/assets/a3-lint/shared
+      include:
+        - '**/*.lua'
+        - '**/*.yml'
+        - '**/*.yaml'
+      languages:
+        - javascript
+        - typescript
+      frameworks:
+        - vitest
+    - id: skill-vitest-template
+      root: ${skills_root}/vitest/assets/a3-lint/semantic-extension
+      lib_dir: ${skills_root}/vitest/assets/a3-lint/shared
+      include:
+        - '**/*.lua'
+      languages:
+        - javascript
+        - typescript
+      frameworks:
+        - vitest
     - id: skill-ci-github-markdown
       root: lint-rules/a3-lint
       include:
@@ -52,6 +74,6 @@ project:
 # 対象言語が typescript/javascript/yaml/markdown にまたがるため既定 lang は固定せず、
 # 実行対象の言語ごとに --lang を明示して a3-lint を実行する。
 run_defaults:
-  framework: any
+  framework: vitest
   format: json
   fail_on: warning

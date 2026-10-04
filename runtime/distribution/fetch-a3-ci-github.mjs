@@ -255,9 +255,27 @@ export const fetchDistribution = async ({
   ensureDirectoryInside(projectRoot, stateRoot, 'distribution-state-root-outside-project');
   const stagingRoot = path.join(stateRoot, `.staging-${randomUUID()}`);
   writeExclusiveDirectory(stagingRoot);
+  const distributionRoot = path.join(stateRoot, 'distributions', manifest.sourceRevision);
+  const fetchLock = path.join(distributionRoot, '.fetch.lock');
+  let fetchLockHandle;
   try {
+    assertResolvedInside(projectRoot, distributionRoot, 'distribution-local-root-outside-project');
+    const reusableFiles = new Set();
+    if (!sourceRoot && fs.existsSync(distributionRoot)) {
+      try {
+        fetchLockHandle = fs.openSync(fetchLock, 'wx');
+      } catch {
+        throw new Error('distribution-fetch-locked');
+      }
+      const existingReceipt = loadFetchedDistribution(projectRoot, manifest.sourceRevision).receipt;
+      if (existingReceipt.manifestSha256 !== sha256(manifestBytes)) {
+        throw new Error('distribution-existing-root-conflict');
+      }
+      for (const sourcePath of existingReceipt.files) reusableFiles.add(sourcePath);
+    }
     for (const file of files) {
       const sourcePath = normalizeRelative(file.sourcePath);
+      if (reusableFiles.has(sourcePath)) continue;
       let bytes;
       if (sourceRoot) {
         const resolvedSourceRoot = path.resolve(sourceRoot);
@@ -290,52 +308,53 @@ export const fetchDistribution = async ({
     };
     fs.writeFileSync(path.join(stagingRoot, 'manifest.json'), manifestBytes, { flag: 'wx' });
     fs.writeFileSync(path.join(stagingRoot, 'receipt.json'), jsonBytes(receipt), { flag: 'wx' });
-    const distributionRoot = path.join(stateRoot, 'distributions', manifest.sourceRevision);
     ensureDirectoryInside(projectRoot, path.dirname(distributionRoot), 'distribution-local-root-outside-project');
     assertResolvedInside(projectRoot, distributionRoot, 'distribution-local-root-outside-project');
     if (fs.existsSync(distributionRoot)) {
-      const fetchLock = path.join(distributionRoot, '.fetch.lock');
-      let fetchLockHandle;
-      try {
-        fetchLockHandle = fs.openSync(fetchLock, 'wx');
-      } catch {
-        throw new Error('distribution-fetch-locked');
-      }
-      try {
-        const existingReceipt = loadFetchedDistribution(projectRoot, manifest.sourceRevision).receipt;
-        if (existingReceipt.manifestSha256 !== receipt.manifestSha256) {
-          throw new Error('distribution-existing-root-conflict');
+      if (fetchLockHandle === undefined) {
+        try {
+          fetchLockHandle = fs.openSync(fetchLock, 'wx');
+        } catch {
+          throw new Error('distribution-fetch-locked');
         }
-        for (const file of files) {
-          const existing = inside(distributionRoot, file.sourcePath);
-          assertResolvedInside(distributionRoot, existing, `distribution-local-file-outside-root:${file.sourcePath}`);
-          if (fs.existsSync(existing)) {
-            if (sha256(fs.readFileSync(existing)) !== manifest.files[file.sourcePath].sha256) {
-              throw new Error(`distribution-existing-file-conflict:${file.sourcePath}`);
-            }
-            continue;
+      }
+      const existingReceipt = loadFetchedDistribution(projectRoot, manifest.sourceRevision).receipt;
+      if (existingReceipt.manifestSha256 !== receipt.manifestSha256) {
+        throw new Error('distribution-existing-root-conflict');
+      }
+      for (const file of files) {
+        const existing = inside(distributionRoot, file.sourcePath);
+        assertResolvedInside(distributionRoot, existing, `distribution-local-file-outside-root:${file.sourcePath}`);
+        if (fs.existsSync(existing)) {
+          if (sha256(fs.readFileSync(existing)) !== manifest.files[file.sourcePath].sha256) {
+            throw new Error(`distribution-existing-file-conflict:${file.sourcePath}`);
           }
-          const staged = inside(stagingRoot, file.sourcePath);
-          fs.mkdirSync(path.dirname(existing), { recursive: true });
-          fs.copyFileSync(staged, existing, fs.constants.COPYFILE_EXCL);
+          continue;
         }
-        const mergedReceipt = {
-          ...receipt,
-          selectedPresets: [...new Set([...existingReceipt.selectedPresets, ...receipt.selectedPresets])].sort(),
-          selectedAssets: [...new Set([...existingReceipt.selectedAssets, ...receipt.selectedAssets])].sort(),
-          files: [...new Set([...existingReceipt.files, ...receipt.files])].sort(),
-        };
-        atomicWrite(path.join(distributionRoot, 'receipt.json'), jsonBytes(mergedReceipt));
-        return { ...mergedReceipt, distributionRoot, action: 'merged' };
-      } finally {
-        if (fetchLockHandle !== undefined) fs.closeSync(fetchLockHandle);
-        fs.rmSync(fetchLock, { force: true });
+        const staged = inside(stagingRoot, file.sourcePath);
+        fs.mkdirSync(path.dirname(existing), { recursive: true });
+        fs.copyFileSync(staged, existing, fs.constants.COPYFILE_EXCL);
       }
+      const mergedReceipt = {
+        ...receipt,
+        selectedPresets: [...new Set([...existingReceipt.selectedPresets, ...receipt.selectedPresets])].sort(),
+        selectedAssets: [...new Set([...existingReceipt.selectedAssets, ...receipt.selectedAssets])].sort(),
+        files: [...new Set([...existingReceipt.files, ...receipt.files])].sort(),
+      };
+      atomicWrite(path.join(distributionRoot, 'receipt.json'), jsonBytes(mergedReceipt));
+      return { ...mergedReceipt, distributionRoot, action: 'merged' };
     }
     fs.renameSync(stagingRoot, distributionRoot);
     return { ...receipt, distributionRoot, action: 'fetched' };
   } finally {
-    if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true });
+    try {
+      if (fetchLockHandle !== undefined) {
+        fs.closeSync(fetchLockHandle);
+        fs.rmSync(fetchLock, { force: true });
+      }
+    } finally {
+      if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true });
+    }
   }
 };
 
@@ -495,23 +514,30 @@ const persistTransaction = (transactionRoot, transaction) => {
   atomicWrite(transactionPath, jsonBytes(transaction));
 };
 
+const validateRollbackEntry = (projectRoot, transactionRoot, entry) => {
+  const destination = inside(projectRoot, entry.destination);
+  assertResolvedInside(projectRoot, destination, `distribution-destination-outside-root:${entry.destination}`);
+  const currentSha256 = digestIfFile(destination);
+  if (currentSha256 !== entry.afterSha256 && currentSha256 !== entry.beforeSha256) {
+    throw new Error(`distribution-rollback-destination-changed:${entry.destination}`);
+  }
+  let beforeBytes = null;
+  if (entry.beforeSha256 !== null) {
+    const backup = inside(transactionRoot, `before/${entry.destination}`);
+    assertResolvedInside(transactionRoot, backup, `distribution-backup-outside-transaction:${entry.destination}`);
+    regularFile(backup, `distribution-backup-missing:${entry.destination}`);
+    beforeBytes = fs.readFileSync(backup);
+    if (sha256(beforeBytes) !== entry.beforeSha256) {
+      throw new Error(`distribution-backup-integrity-mismatch:${entry.destination}`);
+    }
+  }
+  return { destination, currentSha256, beforeBytes };
+};
+
 const validateRollbackInputs = (projectRoot, transactionRoot, transaction) => {
   for (const entry of transaction.actions) {
     if (['pending', 'not-applied'].includes(entry.state)) continue;
-    const destination = inside(projectRoot, entry.destination);
-    assertResolvedInside(projectRoot, destination, `distribution-destination-outside-root:${entry.destination}`);
-    const currentSha256 = digestIfFile(destination);
-    if (currentSha256 !== entry.afterSha256 && currentSha256 !== entry.beforeSha256) {
-      throw new Error(`distribution-rollback-destination-changed:${entry.destination}`);
-    }
-    if (entry.beforeSha256 !== null) {
-      const backup = inside(transactionRoot, `before/${entry.destination}`);
-      assertResolvedInside(transactionRoot, backup, `distribution-backup-outside-transaction:${entry.destination}`);
-      regularFile(backup, `distribution-backup-missing:${entry.destination}`);
-      if (sha256(fs.readFileSync(backup)) !== entry.beforeSha256) {
-        throw new Error(`distribution-backup-integrity-mismatch:${entry.destination}`);
-      }
-    }
+    validateRollbackEntry(projectRoot, transactionRoot, entry);
   }
 };
 
@@ -526,8 +552,7 @@ const restoreTransaction = (projectRoot, transactionRoot, transaction) => {
         persistTransaction(transactionRoot, transaction);
         continue;
       }
-      const destination = inside(projectRoot, entry.destination);
-      const currentSha256 = digestIfFile(destination);
+      const { destination, currentSha256, beforeBytes } = validateRollbackEntry(projectRoot, transactionRoot, entry);
       if (currentSha256 === entry.beforeSha256) {
         entry.state = 'restored';
         persistTransaction(transactionRoot, transaction);
@@ -536,8 +561,7 @@ const restoreTransaction = (projectRoot, transactionRoot, transaction) => {
       if (entry.beforeSha256 === null) {
         fs.rmSync(destination, { force: true });
       } else {
-        const backup = inside(transactionRoot, `before/${entry.destination}`);
-        atomicWrite(destination, fs.readFileSync(backup));
+        atomicWrite(destination, beforeBytes);
       }
       entry.state = 'restored';
       persistTransaction(transactionRoot, transaction);
@@ -655,7 +679,7 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       planDigest: plan.planDigest,
       transactionId,
       status: 'applied',
-      nextSteps: ['resolve-settings', 'materialize-adapters', 'generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests'],
+      nextSteps: ['resolve-settings', 'generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests'],
     };
   } catch (error) {
     if (transactionRoot && transaction && fs.existsSync(path.join(transactionRoot, 'transaction.json'))) {
@@ -699,6 +723,14 @@ export const rollbackDistributionTransaction = ({ projectRoot, transactionId }) 
 
 const parseCli = (argv) => {
   const command = argv[0];
+  const commandFlags = {
+    fetch: ['--repo-root', '--manifest', '--manifest-url', '--preset', '--asset', '--source-root'],
+    verify: ['--repo-root', '--source-revision'],
+    plan: ['--repo-root', '--source-revision', '--preset', '--asset'],
+    apply: ['--repo-root', '--plan', '--approve'],
+    rollback: ['--repo-root', '--transaction'],
+  };
+  if (!Object.hasOwn(commandFlags, command)) throw new Error('distribution-command-unknown');
   const result = { command, presets: [], assets: [], projectRoot: '.', sourceRevision: '', planPath: '', approvalDigest: '', transactionId: '', manifestPath: '', manifestUrl: '', sourceRoot: '' };
   const repeatable = new Set(['--preset', '--asset']);
   const values = {
@@ -709,7 +741,7 @@ const parseCli = (argv) => {
   for (let index = 1; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (!Object.hasOwn(values, flag) || !value || value.startsWith('--')) throw new Error(`distribution-cli-argument-invalid:${flag}`);
+    if (!commandFlags[command].includes(flag) || !value || value.startsWith('--')) throw new Error(`distribution-cli-argument-invalid:${flag}`);
     if (repeatable.has(flag)) result[values[flag]].push(value);
     else result[values[flag]] = value;
   }

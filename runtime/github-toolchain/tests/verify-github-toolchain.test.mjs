@@ -1,9 +1,8 @@
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test } from 'vitest';
+import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 const script = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'verify-github-toolchain.sh');
@@ -47,68 +46,72 @@ const run = (bin, mode, overrides = {}) => spawnSync('/bin/bash', [script, mode]
   },
 });
 
-// contract_id: contract.ci-github-toolchain-verifier.processing
-// integration_id: ci-github-toolchain-script
-test('accepts every supported verification mode', () => withToolchain((bin) => {
-  // Arrange
-  const modes = ['jq', 'gh-jq', 'jq-sha256', 'gh-jq-sha256'];
-  // Act
-  const results = modes.map((mode) => run(bin, mode));
-  // Assert
-  results.forEach((result, index) => assert.equal(result.status, 0, modes[index]));
-}));
+describe("contract.ci-github-toolchain-verifier.processing", () => {
+  describe("ci-github-toolchain-script", () => {
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // integration_id: ci-github-toolchain-script
+    test('accepts every supported verification mode', () => withToolchain((bin) => {
+      // Arrange
+      const modes = ['jq', 'gh-jq', 'jq-sha256', 'gh-jq-sha256'];
+      // Act
+      const results = modes.map((mode) => run(bin, mode));
+      // Assert
+      results.forEach((result, index) => expect(result.status, modes[index]).toBe(0));
+    }));
 
-// contract_id: contract.ci-github-toolchain-verifier.processing
-// integration_id: ci-github-toolchain-script
-test('rejects an unsupported mode', () => withToolchain((bin) => {
-  // Arrange
-  const mode = 'all';
-  // Act
-  const result = run(bin, mode);
-  // Assert
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /github-toolchain-mode-invalid/);
-}));
-
-// contract_id: contract.ci-github-toolchain-verifier.processing
-// integration_id: ci-github-toolchain-script
-test('rejects an unavailable selected command', () => {
-  const cases = [
-    ['jq', 'jq', 'jq-required'],
-    ['gh-jq', 'gh', 'github-cli-required'],
-    ['jq-sha256', 'sha256sum', 'sha256sum-required'],
-  ];
-  for (const [mode, command, diagnostic] of cases) {
-    // Arrange
-    withToolchain((bin) => {
-      rmSync(path.join(bin, command));
-
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // integration_id: ci-github-toolchain-script
+    test('rejects an unsupported mode', () => withToolchain((bin) => {
+      // Arrange
+      const mode = 'all';
       // Act
       const result = run(bin, mode);
-
       // Assert
-      assert.equal(result.status, 1, `${mode} should reject a missing ${command}`);
-      assert.match(result.stderr, new RegExp(diagnostic));
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/github-toolchain-mode-invalid/);
+    }));
+
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // integration_id: ci-github-toolchain-script
+    test('rejects an unavailable selected command', () => {
+      const cases = [
+        ['jq', 'jq', 'jq-required'],
+        ['gh-jq', 'gh', 'github-cli-required'],
+        ['jq-sha256', 'sha256sum', 'sha256sum-required'],
+      ];
+      for (const [mode, command, diagnostic] of cases) {
+        // Arrange
+        withToolchain((bin) => {
+          rmSync(path.join(bin, command));
+
+          // Act
+          const result = run(bin, mode);
+
+          // Assert
+          expect(result.status, `${mode} should reject a missing ${command}`).toBe(1);
+          expect(result.stderr).toMatch(new RegExp(diagnostic));
+        });
+      }
     });
-  }
+
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // integration_id: ci-github-toolchain-script
+    test('requires an exact version for every selected command', () => withToolchain((bin) => {
+      // Arrange
+      const missingVersion = { CI_GH_VERSION: '' };
+      // Act
+      const missing = run(bin, 'gh-jq', missingVersion);
+      // Assert
+      expect(missing.status).toBe(1);
+      expect(missing.stderr).toMatch(/gh-version-required/);
+
+      // Arrange
+      const mismatchedVersion = { CI_JQ_VERSION: '1.6' };
+      // Act
+      const mismatch = run(bin, 'jq-sha256', mismatchedVersion);
+      // Assert
+      expect(mismatch.status).toBe(1);
+      expect(mismatch.stderr).toMatch(/jq-version-mismatch: expected=1.6 actual=1.7/);
+    }));
+  });
 });
-
-// contract_id: contract.ci-github-toolchain-verifier.processing
-// integration_id: ci-github-toolchain-script
-test('requires an exact version for every selected command', () => withToolchain((bin) => {
-  // Arrange
-  const missingVersion = { CI_GH_VERSION: '' };
-  // Act
-  const missing = run(bin, 'gh-jq', missingVersion);
-  // Assert
-  assert.equal(missing.status, 1);
-  assert.match(missing.stderr, /gh-version-required/);
-
-  // Arrange
-  const mismatchedVersion = { CI_JQ_VERSION: '1.6' };
-  // Act
-  const mismatch = run(bin, 'jq-sha256', mismatchedVersion);
-  // Assert
-  assert.equal(mismatch.status, 1);
-  assert.match(mismatch.stderr, /jq-version-mismatch: expected=1.6 actual=1.7/);
-}));

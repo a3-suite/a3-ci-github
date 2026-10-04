@@ -1,10 +1,9 @@
-import { strict as assert } from 'node:assert';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -25,8 +24,8 @@ test('entrypoint creates and verifies a publication request', () => {
   const created = spawnSync(process.execPath, [...entrypoint], { env, encoding: 'utf8' });
 
   // Assert
-  assert.equal(created.status, 0);
-  assert.ok(fs.existsSync(path.join(root, 'release-publication-request/request.json')));
+  expect(created.status).toBe(0);
+  expect(fs.existsSync(path.join(root, 'release-publication-request/request.json'))).toBeTruthy();
 
   // Arrange
   fs.writeFileSync(output, '');
@@ -35,9 +34,21 @@ test('entrypoint creates and verifies a publication request', () => {
   const verified = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify-publication-request' }, encoding: 'utf8' });
 
   // Assert
-  assert.equal(verified.status, 0);
-  assert.match(fs.readFileSync(output, 'utf8'), /status<<[^\n]+\nsuccess\n/);
-  assert.match(fs.readFileSync(output, 'utf8'), /request-run-id<<[^\n]+\n11\n/);
+  expect(verified.status).toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nsuccess\n/);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/request-run-id<<[^\n]+\n11\n/);
+
+  // Arrange
+  const files = ['release-publication-request/request.json', 'release-publication-request/request.json.sha256', 'release-notes-handoff/release-notes.json', 'release-notes-handoff/release-notes-approval.json'];
+  const saved = files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'));
+  fs.writeFileSync(output, '');
+  // Act
+  const replay = spawnSync(process.execPath, [...entrypoint], { env: { ...env, 'INPUT_APPROVAL-ID': 'replacement-approval' }, encoding: 'utf8' });
+  // Assert
+  expect(replay.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  expect(fs.readFileSync(output, 'utf8')).not.toMatch(/request-run-id<</);
+  expect(files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'))).toStrictEqual(saved);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -58,8 +69,8 @@ test('entrypoint rejects a changed approval ID', () => {
   const result = spawnSync(process.execPath, [...entrypoint], { env, encoding: 'utf8' });
 
   // Assert
-  assert.notEqual(result.status, 0);
-  assert.match(fs.readFileSync(output, 'utf8'), /failed/);
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

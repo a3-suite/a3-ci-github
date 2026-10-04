@@ -1,10 +1,9 @@
-import { strict as assert } from 'node:assert';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -38,12 +37,15 @@ const runBundled = (handoffRoot: string, sourceSha: string) => {
 test('entrypoint validates a handoff', () => {
   // Arrange
   const handoffRoot = createHandoff();
+  const manifestDigest = crypto.createHash('sha256').update(fs.readFileSync(path.join(handoffRoot, 'manifest.json'))).digest('hex');
   // Act
   const run = runBundled(handoffRoot, 'source');
   // Assert
-  assert.equal(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /status<</);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /success/);
+  expect(run.result.status).toBe(0);
+  const outputs = fs.readFileSync(run.output, 'utf8');
+  for (const [key, value] of Object.entries({ status: 'success', descriptor: 'handoff.json', manifest: 'manifest.json', 'manifest-digest': manifestDigest, entries: '1' })) {
+    expect(outputs.match(new RegExp(`^${key}<<([^\\n]+)\\n([^\\n]+)\\n\\1$`, 'm'))?.[2]).toBe(value);
+  }
   fs.rmSync(handoffRoot, { recursive: true, force: true });
 });
 
@@ -54,8 +56,10 @@ test('entrypoint fails an identity mismatch', () => {
   // Act
   const run = runBundled(handoffRoot, 'other');
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /failed/);
+  expect(run.result.status).not.toBe(0);
+  const outputs = fs.readFileSync(run.output, 'utf8');
+  expect(outputs.match(/^status<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2]).toBe('failed');
+  expect(outputs).not.toMatch(/^(descriptor|manifest|manifest-digest|entries)<</m);
   fs.rmSync(handoffRoot, { recursive: true, force: true });
 });
 

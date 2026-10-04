@@ -1,9 +1,8 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -23,10 +22,21 @@ test('entrypoint writes a tag handoff', () => {
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  assert.equal(result.status, 0);
+  expect(result.status).toBe(0);
   const outputs = fs.readFileSync(output, 'utf8');
-  assert.equal(outputs.match(/^request-path<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2], path.join(handoff, 'release-request.json'));
-  assert.ok(fs.existsSync(path.join(handoff, 'release-request.json')));
+  expect(outputs.match(/^request-path<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2]).toBe(path.join(handoff, 'release-request.json'));
+  expect(fs.existsSync(path.join(handoff, 'release-request.json'))).toBeTruthy();
+
+  // Arrange
+  const files = ['release-request.json', 'release-request.json.sha256'];
+  const saved = files.map((file) => fs.readFileSync(path.join(handoff, file), 'utf8'));
+  fs.writeFileSync(output, '');
+  // Act
+  const replay = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env: { ...env, 'INPUT_TAG-SOURCE-SHA': 'c'.repeat(40) }, encoding: 'utf8' });
+  // Assert
+  expect(replay.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(files.map((file) => fs.readFileSync(path.join(handoff, file), 'utf8'))).toStrictEqual(saved);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -44,10 +54,10 @@ test('entrypoint rejects a tag ref mismatch', () => {
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
 
   // Assert
-  assert.notEqual(result.status, 0);
-  assert.equal(fs.readFileSync(output, 'utf8'), '');
-  assert.equal(fs.existsSync(path.join(handoff, 'release-request.json')), false);
-  assert.equal(fs.existsSync(path.join(handoff, 'release-request.json.sha256')), false);
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(fs.existsSync(path.join(handoff, 'release-request.json'))).toBe(false);
+  expect(fs.existsSync(path.join(handoff, 'release-request.json.sha256'))).toBe(false);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 

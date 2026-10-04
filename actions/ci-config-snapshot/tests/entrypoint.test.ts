@@ -1,9 +1,9 @@
-import { strict as assert } from 'node:assert';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -28,13 +28,20 @@ test('entrypoint writes snapshot and outputs', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
   const snapshot = path.join(tempRoot, 'snapshot.json');
   const output = path.join(tempRoot, 'outputs');
+  const sources = { MODE: 'runtime' };
+  const values = { MODE: 'dry-run' };
+  const digest = crypto.createHash('sha256').update(JSON.stringify({ sources, values })).digest('hex');
   // Act
   const run = runBundled(snapshot, output, { preset: { MODE: 'release' }, runtime: { MODE: 'dry-run' } });
   // Assert
-  assert.equal(run.result.status, 0);
-  assert.equal(fs.readFileSync(output, 'utf8').match(/^status<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2], 'success');
-  assert.equal(JSON.parse(fs.readFileSync(snapshot, 'utf8')).values.MODE, 'dry-run');
-  assert.match(fs.readFileSync(output, 'utf8'), /config_snapshot_digest=/);
+  expect(run.result.status).toBe(0);
+  expect(JSON.parse(fs.readFileSync(snapshot, 'utf8'))).toStrictEqual({ schema: 'ci.config-snapshot.v1', values, sources, digest });
+  const outputs = fs.readFileSync(output, 'utf8');
+  for (const [key, value] of Object.entries({ status: 'success', 'snapshot-path': snapshot, digest })) {
+    expect(outputs.match(new RegExp(`^${key}<<([^\\n]+)\\n([^\\n]+)\\n\\1$`, 'm'))?.[2]).toBe(value);
+  }
+  expect(outputs.match(/^config_snapshot_path=(.*)$/m)?.[1]).toBe(snapshot);
+  expect(outputs.match(/^config_snapshot_digest=(.*)$/m)?.[1]).toBe(digest);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -46,8 +53,8 @@ test('entrypoint rejects snapshot and output collisions', () => {
   // Act
   const run = runBundled(snapshot, snapshot, { preset: { MODE: 'release' } });
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /status<</);
+  expect(run.result.status).not.toBe(0);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status<</);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -60,8 +67,10 @@ test('entrypoint rejects a snapshot colliding with GITHUB_OUTPUT', () => {
   // Act
   const run = runBundled(snapshot, explicitOutput, { preset: { MODE: 'release' } }, snapshot);
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /failed/);
+  expect(run.result.status).not.toBe(0);
+  const outputs = fs.readFileSync(run.output, 'utf8');
+  expect(outputs.match(/^status<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2]).toBe('failed');
+  expect(outputs).not.toMatch(/^(snapshot-path|digest)<<|^config_snapshot_(path|digest)=/m);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 

@@ -1,9 +1,8 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -34,13 +33,13 @@ test('entrypoint emits status and result path', () => {
       const saved = fs.readFileSync(run.resultPath, 'utf8');
       const payload = JSON.parse(saved);
       const expectedStatus = exitCode === 0 ? 'success' : 'failed';
-      assert.equal(run.result.status, exitCode === 0 ? 0 : 1);
-      assert.equal(payload.status, expectedStatus);
-      assert.equal(payload.results.at(-1).exitCode, exitCode);
-      assert.match(fs.readFileSync(run.output, 'utf8'), new RegExp(`status.*${expectedStatus}`, 's'));
-      assert.ok(fs.readFileSync(run.output, 'utf8').includes(run.resultPath));
-      assert.equal(run.result.stdout.split(saved).length - 1, 1, 'saved result must be logged exactly once');
-      if (exitCode !== 0) assert.ok(run.result.stdout.indexOf(saved) < run.result.stdout.indexOf('::error::quality-adapter-failed'));
+      expect(run.result.status).toBe(exitCode === 0 ? 0 : 1);
+      expect(payload.status).toBe(expectedStatus);
+      expect(payload.results.at(-1).exitCode).toBe(exitCode);
+      expect(fs.readFileSync(run.output, 'utf8')).toMatch(new RegExp(`status.*${expectedStatus}`, 's'));
+      expect(fs.readFileSync(run.output, 'utf8').includes(run.resultPath)).toBeTruthy();
+      expect(run.result.stdout.split(saved).length - 1, 'saved result must be logged exactly once').toBe(1);
+      if (exitCode !== 0) expect(run.result.stdout.indexOf(saved) < run.result.stdout.indexOf('::error::quality-adapter-failed')).toBeTruthy();
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   }
 });
@@ -51,9 +50,9 @@ test('entrypoint rejects simultaneous standard ID and descriptor before executio
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
     const run = runAction(root, descriptor(), { 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality' });
-    assert.notEqual(run.result.status, 0);
-    assert.match(`${run.result.stdout}${run.result.stderr}`, /quality-adapter-bundle-selection-invalid/);
-    assert.equal(fs.existsSync(run.resultPath), false);
+    expect(run.result.status).not.toBe(0);
+    expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-bundle-selection-invalid/);
+    expect(fs.existsSync(run.resultPath)).toBe(false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -63,9 +62,9 @@ test('entrypoint rejects an unknown standard ID without a descriptor fallback', 
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
     const run = runAction(root, descriptor(), { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': '../unknown' });
-    assert.notEqual(run.result.status, 0);
-    assert.match(`${run.result.stdout}${run.result.stderr}`, /quality-adapter-standard-bundle-unknown/);
-    assert.equal(fs.existsSync(run.resultPath), false);
+    expect(run.result.status).not.toBe(0);
+    expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-bundle-unknown/);
+    expect(fs.existsSync(run.resultPath)).toBe(false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -86,13 +85,13 @@ test('entrypoint executes the embedded standard without reading a project descri
       'INPUT_LANGUAGE-PROFILE': 'typescript', 'INPUT_REQUIRE-TRUSTED-PROJECT-SCRIPTS': 'true',
       'INPUT_TRUSTED-PROJECT-ROOT': root, PATH: `${bin}${path.delimiter}${process.env.PATH}`,
     });
-    assert.equal(run.result.status, 0, run.result.stdout + run.result.stderr);
+    expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
     const result = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
-    assert.equal(result.adapter, 'typescript-npm-quality');
-    assert.equal(result.status, 'success');
-    assert.deepEqual(result.results.map((entry: { id: string }) => entry.id), ['toolchain-verify', 'dependency-restore', 'format', 'lint', 'typecheck', 'test', 'security', 'structure']);
-    assert.equal(fs.readFileSync(commands, 'utf8').trim().split('\n').length, 7);
-    assert.equal(fs.existsSync(path.join(root, '.ci/adapters')), false);
+    expect(result.adapter).toBe('typescript-npm-quality');
+    expect(result.status).toBe('success');
+    expect(result.results.map((entry: { id: string }) => entry.id)).toStrictEqual(['toolchain-verify', 'dependency-restore', 'format', 'lint', 'typecheck', 'test', 'security', 'structure']);
+    expect(fs.readFileSync(commands, 'utf8').trim().split('\n').length).toBe(7);
+    expect(fs.existsSync(path.join(root, '.ci/adapters'))).toBe(false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -106,11 +105,11 @@ test('entrypoint rejects a non-read-only descriptor', () => {
   const result = run.result;
 
   // Assert
-  assert.notEqual(result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /status.*failed/s);
-  assert.equal(fs.existsSync(run.resultPath), false);
-  assert.doesNotMatch(result.stdout, /\"schema\": \"ci\.adapter-runner\.v1\"/);
-  assert.match(`${result.stdout}${result.stderr}`, /quality-adapter-execution-boundary-invalid/);
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*failed/s);
+  expect(fs.existsSync(run.resultPath)).toBe(false);
+  expect(result.stdout).not.toMatch(/\"schema\": \"ci\.adapter-runner\.v1\"/);
+  expect(`${result.stdout}${result.stderr}`).toMatch(/quality-adapter-execution-boundary-invalid/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

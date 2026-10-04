@@ -63,13 +63,17 @@ const createRequest = (input: ControlInput): ControlResult => {
   const request = { schema: decision ? 'ci.release-publication-request.v2' : 'ci.release-publication-request.v1', ...decision, workflowRunId, workflowHeadSha, releaseRequestRunId, releaseIdentity, releaseNotesBodySha256: bodySha256, approvalId, approvalExpiresAt };
   const requestDir = rootPath(input, 'release-publication-request');
   const notesDir = rootPath(input, 'release-notes-handoff');
+  const json = `${JSON.stringify(request)}\n`;
+  const files = [
+    [path.join(requestDir, 'request.json'), json],
+    [path.join(requestDir, 'request.json.sha256'), `${sha256(json)}  request.json\n`],
+    [path.join(notesDir, 'release-notes.json'), `${JSON.stringify({ schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: releaseIdentity, body: releaseNotes, body_sha256: bodySha256 })}\n`],
+    [path.join(notesDir, 'release-notes-approval.json'), `${JSON.stringify({ schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: releaseIdentity, body_sha256: bodySha256, approval_id: approvalId })}\n`],
+  ];
+  if (files.some(([file]) => fs.lstatSync(file, { throwIfNoEntry: false }))) throw new Error('release-publication-output-already-exists');
   fs.mkdirSync(requestDir, { recursive: true });
   fs.mkdirSync(notesDir, { recursive: true });
-  const json = `${JSON.stringify(request)}\n`;
-  fs.writeFileSync(path.join(requestDir, 'request.json'), json);
-  fs.writeFileSync(path.join(requestDir, 'request.json.sha256'), `${sha256(json)}  request.json\n`);
-  fs.writeFileSync(path.join(notesDir, 'release-notes.json'), `${JSON.stringify({ schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: releaseIdentity, body: releaseNotes, body_sha256: bodySha256 })}\n`);
-  fs.writeFileSync(path.join(notesDir, 'release-notes-approval.json'), `${JSON.stringify({ schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: releaseIdentity, body_sha256: bodySha256, approval_id: approvalId })}\n`);
+  for (const [file, content] of files) fs.writeFileSync(file, content, { encoding: 'utf8', flag: 'wx' });
   return {};
 };
 

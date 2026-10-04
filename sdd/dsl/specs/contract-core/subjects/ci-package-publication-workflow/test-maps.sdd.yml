@@ -6,17 +6,17 @@ test_maps:
     case_id: ci-package-publication-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: package workflows separate preparation request validation and publication
+        symbol: "workflow-contracts > package-publication-workflow-contract > package workflows separate preparation request validation and publication"
         check_refs:
           - check-ci-package-publication-workflow-success
       - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
-        symbol: package preparation fixed source preflight rejects drift and retains owner adapters without callee copies
+        symbol: "contract.ci-package-publication-workflow.publication > package-preparation-reusable-preflight > package preparation fixed source preflight rejects drift and retains owner adapters without callee copies"
         check_refs:
           - check-ci-package-publication-workflow-success
   - verification_id: verification.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: package workflows preserve failed and unknown outcomes
+        symbol: "workflow-contracts > package-publication-workflow-contract > package workflows preserve failed and unknown outcomes"
         check_refs:
           - check-ci-package-publication-workflow-failure

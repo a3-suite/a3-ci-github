@@ -39,10 +39,11 @@ jobs:
         shell: bash
         env:
           PUBLISH_VERSION: ${{ inputs.version }}
+          PUBLISH_VERSION_JSON: ${{ toJSON(inputs.version) }}
         run: |
           set -euo pipefail
           test -n "$PUBLISH_VERSION"
-          printf '{"strategy":"exact","publishVersion":"%s"}\n' "$PUBLISH_VERSION" > version-plan.json
+          printf '{"strategy":"exact","publishVersion":%s}\n' "$PUBLISH_VERSION_JSON" > version-plan.json
       - id: version
         uses: a3-suite/a3-ci-github/actions/ci-publish-version@312c534de67720de060689d78ada17da9c84c4e2
         with:

@@ -106,7 +106,7 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 3. `generate-ci-asset-lock.ts`で`.ci/ci-assets.lock.json`を生成する。
 4. a3-lintとactionlintを実行する。
 5. `validate-ci-preset.guide.md`のpreflightを実行する。
-6. project-owned adapterとconsumer契約テストを実行する。
+6. project-owned adapterがある場合はその確認を行い、consumer契約テストは常に実行する。
 7. GitHub上でしか確認できない契約だけhosted evidenceを取得する。
 
 通常のCI実行はproject-local distributionを参照しない。

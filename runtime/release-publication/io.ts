@@ -41,10 +41,10 @@ export const readBytes = (filename: string, maximum: number = LIMITS.jsonBytes):
   if (stat.size === 0 || stat.size > maximum) fail('input-size-invalid');
   return fs.readFileSync(filename);
 };
-export const readJson = (filename: string): unknown => {
-  const bytes = readBytes(filename);
+export const parseJson = (bytes: Buffer): unknown => {
   try { return JSON.parse(bytes.toString('utf8')); } catch { return fail('json-invalid'); }
 };
+export const readJson = (filename: string): unknown => parseJson(readBytes(filename));
 export const hashFile = (filename: string, maximum: number = LIMITS.assetBytes, allowEmpty = false): string => {
   const stat = fs.lstatSync(filename);
   if (!stat.isFile() || stat.isSymbolicLink() || (!allowEmpty && stat.size === 0) || stat.size > maximum) fail('asset-size-or-kind-invalid');

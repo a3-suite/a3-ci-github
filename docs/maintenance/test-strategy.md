@@ -84,3 +84,5 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 新しいE2Eは、統合テストでは観測できない公開経路がある場合だけ追加します。追加前に、owner contract、`flow_id`、外部副作用、実行頻度、fixtureの後処理を確定します。
 
 リポジトリ保守テストのrunnerはルートのVitest設定です。契約対象別実行定義のテスト参照とレベル境界は維持します。カバレッジ除外は `vitest.config.mjs` と契約対象別実行定義で管理します。カバレッジ取得は保守専用の標準Istanbul計測をVitestへ接続し、子プロセス・workerも同じカウンタで集計します。標準V8 providerのautoAttachSubprocessは未実行関数の誤計数を再現したため採用しません。
+
+`npm test` はE2Eを含む通常のテスト集合を実行します。`npm run test:coverage` は同じ集合から契約対象別実行定義のE2Eを分離し、unit/integrationと契約対象外のリポジトリ保守テストをソース計測へ含めます。同じファイルをE2Eと計測対象レベルへ重複登録した場合は、ファイル単位で分離できないため計測を停止します。

@@ -1,10 +1,9 @@
-import { strict as assert } from 'node:assert';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -38,9 +37,9 @@ test('entrypoint validates an approved notes binding', () => {
   // Act
   const run = runBundled(tempRoot, 'v1.2.3');
   // Assert
-  assert.equal(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /status<</);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /success/);
+  expect(run.result.status).toBe(0);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status<</);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/success/);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -51,8 +50,8 @@ test('entrypoint fails an identity mismatch', () => {
   // Act
   const run = runBundled(tempRoot, 'v1.2.4');
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.match(fs.readFileSync(run.output, 'utf8'), /failed/);
+  expect(run.result.status).not.toBe(0);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/failed/);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 

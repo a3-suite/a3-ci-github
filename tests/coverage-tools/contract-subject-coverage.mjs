@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { collectActionMetadata, collectScriptBundleMetadata } from '../../runtime/repository/check-action-dist.mjs';
 
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULT_DEFINITION = path.join(SCRIPT_ROOT, 'tests/contract-subject-execution.json');
@@ -12,6 +13,20 @@ const isRelativePath = (value) => typeof value === 'string' && value.length > 0 
 const isInside = (root, candidate) => {
   const relative = path.relative(root, candidate);
   return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`));
+};
+
+export const assertSourceCoverageFiles = (root, files) => {
+  const distributions = [
+    ...(existsSync(path.join(root, 'actions')) ? collectActionMetadata(root) : []),
+    ...(existsSync(path.join(root, 'runtime/rust-release')) ? collectScriptBundleMetadata(root) : []),
+  ].filter((asset) => asset.distPath).map((asset) => {
+    const directory = path.resolve(root, asset.distPath);
+    return existsSync(directory) ? realpathSync(directory) : directory;
+  });
+  for (const filename of files) {
+    const resolved = existsSync(filename) ? realpathSync(filename) : path.resolve(filename);
+    assert(!distributions.some((directory) => isInside(directory, resolved)), `source-only coverage rejects generated distribution: ${filename}`);
+  }
 };
 
 const ratio = (hit, total) => (total === 0 ? null : Number(((hit / total) * 100).toFixed(2)));
@@ -90,7 +105,7 @@ const validateSegment = (segment, subjectId, root) => {
   }
   assert(isObject(segment.coverage), `${subjectId}/${segment.id}: coverage is required`);
   if (segment.coverage.enabled) {
-    assert(['source', 'dist', 'repository-scripts'].includes(segment.coverage.scope), `${subjectId}/${segment.id}: invalid coverage scope`);
+    assert(['source', 'repository-scripts'].includes(segment.coverage.scope), `${subjectId}/${segment.id}: source-only coverage requires source or repository-scripts scope`);
     assert(Array.isArray(segment.coverage.include) && segment.coverage.include.length > 0, `${subjectId}/${segment.id}: coverage include is required`);
     assert(Array.isArray(segment.coverage.exclude), `${subjectId}/${segment.id}: coverage exclude is required`);
     if (segment.coverage.aggregateGroup !== undefined) {
@@ -130,6 +145,27 @@ export const validateDefinition = (definition, root = SCRIPT_ROOT) => {
 export const loadDefinition = (definitionPath = DEFAULT_DEFINITION, root = SCRIPT_ROOT) => {
   const definition = JSON.parse(readFileSync(definitionPath, 'utf8'));
   return validateDefinition(definition, root);
+};
+
+export const selectUnitIntegrationTests = (definition, discoveredTests, root = SCRIPT_ROOT) => {
+  const levelsByTest = new Map();
+  for (const subject of definition.subjects) {
+    for (const segment of subject.segments) {
+      if (segment.status === 'excluded') continue;
+      for (const test of segment.tests) {
+        const filename = path.resolve(root, segment.cwd, test);
+        const levels = levelsByTest.get(filename) ?? new Set();
+        levels.add(segment.level);
+        levelsByTest.set(filename, levels);
+      }
+    }
+  }
+  return discoveredTests.filter((test) => {
+    const levels = levelsByTest.get(path.resolve(root, test));
+    assert(!levels?.has('e2e') || levels.size === 1, `test file mixes E2E with measured levels: ${test}`);
+    // Repository maintenance tests outside contract subjects remain in the root measurement.
+    return !levels?.has('e2e');
+  });
 };
 
 const commandForSegment = (segment, reportPath, root, dryRun = false) => {
@@ -205,6 +241,8 @@ export const aggregateCoverageMaps = (coverageMaps, root) => {
   const ownerByFile = new Map();
   for (const map of coverageMaps) {
     if (!map || !Array.isArray(map.files)) continue;
+    assert(['source', 'repository-scripts'].includes(map.scope), 'source-only coverage aggregate requires source or repository-scripts scope');
+    assertSourceCoverageFiles(root, map.files.map((file) => path.resolve(map.cwd, file.sourceFile)));
     const bucket = byScope.get(map.scope) ?? { levels: new Set(), files: new Map() };
     for (const level of map.levels ?? []) bucket.levels.add(level);
     for (const file of map.files) {

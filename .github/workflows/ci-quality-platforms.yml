@@ -97,12 +97,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch comparison commit
+        shell: bash
+        env:
+          CI_DIFF_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || '' }}
+        run: |
+          if [[ "$CI_DIFF_BASE_SHA" =~ ^[0-9a-fA-F]{40}$ && ! "$CI_DIFF_BASE_SHA" =~ ^0+$ ]]; then
+            if ! git cat-file -e "$CI_DIFF_BASE_SHA^{commit}" 2>/dev/null; then
+              git fetch --no-tags --depth=1 origin "$CI_DIFF_BASE_SHA" ||
+                echo "Comparison commit unavailable; change-scope will continue full CI." >&2
+            fi
+          fi
       - name: Resolve change scope
         id: change-scope
         uses: a3-suite/a3-ci-github/actions/ci-change-scope@312c534de67720de060689d78ada17da9c84c4e2
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-          head-sha: ${{ github.sha }}
+          head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           event-name: ${{ github.event_name }}
           pr-base-sha: ${{ github.event.pull_request.base.sha || '' }}
           before-sha: ${{ github.event.before || '' }}

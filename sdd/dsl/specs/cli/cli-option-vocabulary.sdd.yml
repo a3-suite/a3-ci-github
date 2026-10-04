@@ -21,7 +21,7 @@ options:
     long: --preset
     kind: value
     value_name: ID
-    summary: Limit validation to one selected preset
+    summary: Select a registered CI preset
     repeatable: true
   - id: output
     long: --output
@@ -32,7 +32,7 @@ options:
     long: --source-revision
     kind: value
     value_name: SHA
-    summary: Full distribution commit SHA recorded in the CI asset lock
+    summary: Full source commit SHA identifying the canonical CI assets
   - id: source-root
     long: --source-root
     kind: value

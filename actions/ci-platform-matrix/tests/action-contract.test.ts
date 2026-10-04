@@ -1,28 +1,29 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
-import { test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { parse } from 'yaml';
 
-// integration_id: ci-platform-matrix-action-contract
-test('action.yml exposes the platform matrix contract', () => {
-  // Arrange
-  const root = path.resolve(__dirname, '..');
-  // Act
-  const action = parse(fs.readFileSync(path.join(root, 'action.yml'), 'utf8')) as any;
-  // Assert
-  assert.equal(action.name, 'ci-platform-matrix');
-  assert.deepEqual(Object.keys(action.inputs), ['manifest-path', 'selection-path']);
-  assert.equal(action.inputs['manifest-path'].required, true);
-  assert.match(action.inputs['manifest-path'].description, /only root key is a non-empty platforms list/);
-  assert.match(action.inputs['manifest-path'].description, /\[a-z0-9\]\[a-z0-9-\]\*/);
-  assert.match(action.inputs['manifest-path'].description, /ubuntu-24\.04, macos-14, or windows-2022/);
-  assert.match(action.inputs['manifest-path'].description, /id and target values must each be unique/);
-  assert.deepEqual(Object.keys(action.outputs), ['matrix', 'quality-matrix', 'expected-platforms']);
-  assert.match(action.outputs.matrix.description, /failures do not produce this output/);
-  assert.equal(action.inputs['selection-path'].required, false);
-  assert.match(action.outputs['quality-matrix'].description, /platform_id and runner in selection order/);
-  assert.match(action.outputs['expected-platforms'].description, /Comma-separated selected platform IDs/);
-  assert.equal(action.runs.using, 'node24');
-  assert.equal(action.runs.main, 'dist/index.js');
+describe('ci-platform-matrix-action-contract', () => {
+  // integration_id: ci-platform-matrix-action-contract
+  test('action.yml exposes the platform matrix contract', () => {
+    // Arrange
+    const root = path.resolve(__dirname, '..');
+    // Act
+    const action = parse(fs.readFileSync(path.join(root, 'action.yml'), 'utf8')) as any;
+    // Assert
+    expect(action.name).toBe('ci-platform-matrix');
+    expect(Object.keys(action.inputs)).toStrictEqual(['manifest-path', 'selection-path']);
+    expect(action.inputs['manifest-path'].required).toBe(true);
+    expect(action.inputs['manifest-path'].description).toMatch(/only root key is a non-empty platforms list/);
+    expect(action.inputs['manifest-path'].description).toMatch(/\[a-z0-9\]\[a-z0-9-\]\*/);
+    expect(action.inputs['manifest-path'].description).toMatch(/ubuntu-24\.04, macos-14, or windows-2022/);
+    expect(action.inputs['manifest-path'].description).toMatch(/id and target values must each be unique/);
+    expect(Object.keys(action.outputs)).toStrictEqual(['matrix', 'quality-matrix', 'expected-platforms']);
+    expect(action.outputs.matrix.description).toMatch(/failures do not produce this output/);
+    expect(action.inputs['selection-path'].required).toBe(false);
+    expect(action.outputs['quality-matrix'].description).toMatch(/platform_id and runner in selection order/);
+    expect(action.outputs['expected-platforms'].description).toMatch(/Comma-separated selected platform IDs/);
+    expect(action.runs.using).toBe('node24');
+    expect(action.runs.main).toBe('dist/index.js');
+  });
 });

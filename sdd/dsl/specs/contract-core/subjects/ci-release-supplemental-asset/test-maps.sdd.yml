@@ -48,7 +48,7 @@ test_maps:
         symbol: "dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics"
         check_refs: [refusal]
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental source preserves owner shebang failure semantics
+        symbol: "supplemental-phase-source > supplemental source preserves owner shebang failure semantics"
         check_refs: [refusal]
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: input-mutation

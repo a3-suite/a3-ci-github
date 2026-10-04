@@ -1,4 +1,3 @@
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
   cpSync,
@@ -11,7 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import { test } from 'vitest';
+import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -40,7 +39,7 @@ const withFixture = (prefix, callback) => {
     callback(root);
   } finally {
     rmSync(root, { recursive: true, force: true });
-    assert.equal(existsSync(root), false);
+    expect(existsSync(root)).toBe(false);
   }
 };
 
@@ -80,127 +79,135 @@ const generateAssetLock = (consumerRoot, skillArguments) => execute(tsxPath, [
   '--source-revision', 'c'.repeat(40),
 ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
 
-// evidence_role: contract
-// test_level: e2e
-// flow_id: consumer-preset-asset-lock-cli
-// contract_id: contract.ci-preset-assurance.asset-lock
-test('public asset lock CLI records source revision and managed assets', () => {
-  for (const includeExternalRoot of [false, true]) {
-    withFixture('a3-ci-github-asset-lock-e2e-', (consumerRoot) => {
-      // Arrange
-      const skillArguments = preparePresetFixture(consumerRoot, includeExternalRoot);
-      // Act
-      const result = generateAssetLock(consumerRoot, skillArguments);
-      // Assert
-      assert.equal(result.status, 0, result.stderr);
-      const lock = JSON.parse(result.stdout);
-      assert.equal(lock.sourceRevision, 'c'.repeat(40));
-      assert.ok(lock.assets.length > 0);
+describe("contract.ci-preset-assurance.asset-lock", () => {
+  describe("consumer-preset-asset-lock-cli", () => {
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-preset-asset-lock-cli
+    // contract_id: contract.ci-preset-assurance.asset-lock
+    test('public asset lock CLI records source revision and managed assets', () => {
+      for (const includeExternalRoot of [false, true]) {
+        withFixture('a3-ci-github-asset-lock-e2e-', (consumerRoot) => {
+          // Arrange
+          const skillArguments = preparePresetFixture(consumerRoot, includeExternalRoot);
+          // Act
+          const result = generateAssetLock(consumerRoot, skillArguments);
+          // Assert
+          expect(result.status, result.stderr).toBe(0);
+          const lock = JSON.parse(result.stdout);
+          expect(lock.sourceRevision).toBe('c'.repeat(40));
+          expect(lock.assets.length > 0).toBeTruthy();
+        });
+      }
     });
-  }
+  });
 });
 
-// evidence_role: contract
-// test_level: e2e
-// flow_id: consumer-preset-assurance-cli
-// contract_id: contract.ci-preset-assurance.verification
-test('public preset validation CLI preserves the consumer tree in read-only mode', () => {
-  for (const includeExternalRoot of [false, true]) {
-    withFixture('a3-ci-github-preset-e2e-', (consumerRoot) => {
-      // Arrange
-      const skillArguments = preparePresetFixture(consumerRoot, includeExternalRoot);
-      const lockResult = generateAssetLock(consumerRoot, skillArguments);
-      assert.equal(lockResult.status, 0, lockResult.stderr);
-      prepareBootstrapRuntime(consumerRoot);
-      const before = snapshotTree(consumerRoot);
-      // Act
-      const validationResult = execute(process.execPath, [
-        path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
-        '--audit-mode', 'read-only',
-        '--repo-root', consumerRoot,
-        ...skillArguments,
-        '--preset', 'release-request',
-      ]);
-      // Assert
-      assert.equal(validationResult.status, 0, validationResult.stderr);
-      const report = JSON.parse(validationResult.stdout);
-      assert.equal(report.status, 'success');
-      assert.deepEqual(report.inspectedPresets, ['release-request']);
-      assert.ok(report.evidence.length > 0);
-      assert.equal(report.semanticReviewRequired, true);
-      assert.deepEqual(snapshotTree(consumerRoot), before);
+describe("contract.ci-preset-assurance.verification", () => {
+  describe("consumer-preset-assurance-cli", () => {
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-preset-assurance-cli
+    // contract_id: contract.ci-preset-assurance.verification
+    test('public preset validation CLI preserves the consumer tree in read-only mode', () => {
+      for (const includeExternalRoot of [false, true]) {
+        withFixture('a3-ci-github-preset-e2e-', (consumerRoot) => {
+          // Arrange
+          const skillArguments = preparePresetFixture(consumerRoot, includeExternalRoot);
+          const lockResult = generateAssetLock(consumerRoot, skillArguments);
+          expect(lockResult.status, lockResult.stderr).toBe(0);
+          prepareBootstrapRuntime(consumerRoot);
+          const before = snapshotTree(consumerRoot);
+          // Act
+          const validationResult = execute(process.execPath, [
+            path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
+            '--audit-mode', 'read-only',
+            '--repo-root', consumerRoot,
+            ...skillArguments,
+            '--preset', 'release-request',
+          ]);
+          // Assert
+          expect(validationResult.status, validationResult.stderr).toBe(0);
+          const report = JSON.parse(validationResult.stdout);
+          expect(report.status).toBe('success');
+          expect(report.inspectedPresets).toStrictEqual(['release-request']);
+          expect(report.evidence.length > 0).toBeTruthy();
+          expect(report.semanticReviewRequired).toBe(true);
+          expect(snapshotTree(consumerRoot)).toStrictEqual(before);
+        });
+      }
     });
-  }
-});
 
-// evidence_role: contract
-// test_level: e2e
-// flow_id: consumer-preset-assurance-cli
-// contract_id: contract.ci-preset-assurance.verification
-test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
-  withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {
-    // Arrange
-    const skillCollectionRoot = path.join(consumerRoot, 'skills');
-    mkdirSync(skillCollectionRoot);
-    writeReleaseRequestFixture({ repositoryRoot, root: consumerRoot, model });
-    const lockResult = execute(tsxPath, [
-      path.join(repositoryRoot, 'runtime/preset/generate-ci-asset-lock.ts'),
-      '--repo-root', consumerRoot,
-      '--skill-collection-root', skillCollectionRoot,
-      '--source-revision', 'c'.repeat(40),
-    ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
-    assert.equal(lockResult.status, 0, lockResult.stderr);
-    prepareBootstrapRuntime(consumerRoot);
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-preset-assurance-cli
+    // contract_id: contract.ci-preset-assurance.verification
+    test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
+      withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {
+        // Arrange
+        const skillCollectionRoot = path.join(consumerRoot, 'skills');
+        mkdirSync(skillCollectionRoot);
+        writeReleaseRequestFixture({ repositoryRoot, root: consumerRoot, model });
+        const lockResult = execute(tsxPath, [
+          path.join(repositoryRoot, 'runtime/preset/generate-ci-asset-lock.ts'),
+          '--repo-root', consumerRoot,
+          '--skill-collection-root', skillCollectionRoot,
+          '--source-revision', 'c'.repeat(40),
+        ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
+        expect(lockResult.status, lockResult.stderr).toBe(0);
+        prepareBootstrapRuntime(consumerRoot);
 
-    const preload = path.join(consumerRoot, 'fail-cleanup.mjs');
-    const cleanupTargetRecord = path.join(consumerRoot, 'cleanup-target');
-    writeFileSync(preload, [
-      "import fs from 'node:fs';",
-      "const original = fs.rmSync.bind(fs);",
-      "fs.rmSync = (target, options) => {",
-      "  if (String(target).includes('a3-ci-github-')) {",
-      "    fs.writeFileSync(process.env.CLEANUP_TARGET_RECORD, String(target));",
-      "    throw new Error('injected cleanup failure');",
-      "  }",
-      "  return original(target, options);",
-      "};",
-      '',
-    ].join('\n'));
-    const command = [
-      '--import', preload,
-      path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
-      '--audit-mode', 'read-only',
-      '--repo-root', consumerRoot,
-      '--skill-collection-root', skillCollectionRoot,
-      '--preset', 'release-request',
-    ];
-    const environment = { ...process.env, CLEANUP_TARGET_RECORD: cleanupTargetRecord };
-    const cleanupLeakedState = () => {
-      const target = readFileSync(cleanupTargetRecord, 'utf8');
-      rmSync(target, { recursive: true, force: true });
-      rmSync(cleanupTargetRecord, { force: true });
-    };
+        const preload = path.join(consumerRoot, 'fail-cleanup.mjs');
+        const cleanupTargetRecord = path.join(consumerRoot, 'cleanup-target');
+        writeFileSync(preload, [
+          "import fs from 'node:fs';",
+          "const original = fs.rmSync.bind(fs);",
+          "fs.rmSync = (target, options) => {",
+          "  if (String(target).includes('a3-ci-github-')) {",
+          "    fs.writeFileSync(process.env.CLEANUP_TARGET_RECORD, String(target));",
+          "    throw new Error('injected cleanup failure');",
+          "  }",
+          "  return original(target, options);",
+          "};",
+          '',
+        ].join('\n'));
+        const command = [
+          '--import', preload,
+          path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
+          '--audit-mode', 'read-only',
+          '--repo-root', consumerRoot,
+          '--skill-collection-root', skillCollectionRoot,
+          '--preset', 'release-request',
+        ];
+        const environment = { ...process.env, CLEANUP_TARGET_RECORD: cleanupTargetRecord };
+        const cleanupLeakedState = () => {
+          const target = readFileSync(cleanupTargetRecord, 'utf8');
+          rmSync(target, { recursive: true, force: true });
+          rmSync(cleanupTargetRecord, { force: true });
+        };
 
-    // Act
-    const successfulValidation = execute(process.execPath, command, { env: environment });
-    // Assert
-    assert.equal(successfulValidation.status, 2);
-    assert.equal(successfulValidation.stdout, '');
-    assert.equal(JSON.parse(successfulValidation.stderr.trim()).reason, 'tool-state-cleanup-failed');
-    cleanupLeakedState();
+        // Act
+        const successfulValidation = execute(process.execPath, command, { env: environment });
+        // Assert
+        expect(successfulValidation.status).toBe(2);
+        expect(successfulValidation.stdout).toBe('');
+        expect(JSON.parse(successfulValidation.stderr.trim()).reason).toBe('tool-state-cleanup-failed');
+        cleanupLeakedState();
 
-    // Arrange
-    writeFileSync(
-      path.join(consumerRoot, '.github/workflows/release-request-tag.yml'),
-      'name: drifted\n',
-    );
-    // Act
-    const failedValidation = execute(process.execPath, command, { env: environment });
-    // Assert
-    assert.equal(failedValidation.status, 1);
-    assert.equal(JSON.parse(failedValidation.stdout).status, 'failed');
-    assert.equal(JSON.parse(failedValidation.stderr.trim()).reason, 'tool-state-cleanup-failed');
-    cleanupLeakedState();
+        // Arrange
+        writeFileSync(
+          path.join(consumerRoot, '.github/workflows/release-request-tag.yml'),
+          'name: drifted\n',
+        );
+        // Act
+        const failedValidation = execute(process.execPath, command, { env: environment });
+        // Assert
+        expect(failedValidation.status).toBe(1);
+        expect(JSON.parse(failedValidation.stdout).status).toBe('failed');
+        expect(JSON.parse(failedValidation.stderr.trim()).reason).toBe('tool-state-cleanup-failed');
+        cleanupLeakedState();
+      });
+    });
   });
 });
 
@@ -242,68 +249,66 @@ const prepareMaterializer = (fixtureRoot) => {
   return { command, targetRoot, options };
 };
 
-// evidence_role: contract
-// test_level: e2e
-// flow_id: consumer-adapter-materialization-cli
-// contract_id: contract.ci-preset-materialization.application
-test('public materializer CLI copies reuses and protects consumer adapter files', () => {
-  withFixture('a3-ci-github-materializer-e2e-', (fixtureRoot) => {
-    // Arrange
-    const { command, targetRoot, options } = prepareMaterializer(fixtureRoot);
+describe("contract.ci-preset-materialization.application", () => {
+  describe("consumer-adapter-materialization-cli", () => {
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-adapter-materialization-cli
+    // contract_id: contract.ci-preset-materialization.application
+    test('public materializer CLI copies reuses and protects consumer adapter files', () => {
+      withFixture('a3-ci-github-materializer-e2e-', (fixtureRoot) => {
+        // Arrange
+        const { command, targetRoot, options } = prepareMaterializer(fixtureRoot);
 
-    // Act
-    const first = execute(tsxPath, command, options);
-    // Assert
-    assert.equal(first.status, 0, first.stderr);
-    assert.deepEqual(JSON.parse(first.stdout).files.map((entry) => entry.action), ['copied', 'copied']);
-    assert.equal(
-      readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8'),
-      readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'),
-    );
-    const descriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
-    assert.equal(JSON.parse(readFileSync(descriptor, 'utf8')).id, 'test-bundle');
-    const materialized = snapshotTree(targetRoot);
+        // Act
+        const first = execute(tsxPath, command, options);
+        // Assert
+        expect(first.status, first.stderr).toBe(0);
+        expect(JSON.parse(first.stdout).files.map((entry) => entry.action)).toStrictEqual(['copied', 'copied']);
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'));
+        const descriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
+        expect(JSON.parse(readFileSync(descriptor, 'utf8')).id).toBe('test-bundle');
+        const materialized = snapshotTree(targetRoot);
 
-    // Act
-    const second = execute(tsxPath, command, options);
-    // Assert
-    assert.equal(second.status, 0, second.stderr);
-    assert.deepEqual(JSON.parse(second.stdout).files.map((entry) => entry.action), ['reused', 'reused']);
-    assert.deepEqual(snapshotTree(targetRoot), materialized);
+        // Act
+        const second = execute(tsxPath, command, options);
+        // Assert
+        expect(second.status, second.stderr).toBe(0);
+        expect(JSON.parse(second.stdout).files.map((entry) => entry.action)).toStrictEqual(['reused', 'reused']);
+        expect(snapshotTree(targetRoot)).toStrictEqual(materialized);
 
-    // Arrange
-    writeFileSync(descriptor, '{"id":"conflict"}\n');
-    const beforeConflict = snapshotTree(targetRoot);
-    // Act
-    const conflict = execute(tsxPath, command, options);
-    // Assert
-    assert.equal(conflict.status, 1);
-    assert.match(conflict.stderr, /adapter-materializer-destination-conflict/);
-    assert.deepEqual(snapshotTree(targetRoot), beforeConflict);
-  });
-});
+        // Arrange
+        writeFileSync(descriptor, '{"id":"conflict"}\n');
+        const beforeConflict = snapshotTree(targetRoot);
+        // Act
+        const conflict = execute(tsxPath, command, options);
+        // Assert
+        expect(conflict.status).toBe(1);
+        expect(conflict.stderr).toMatch(/adapter-materializer-destination-conflict/);
+        expect(snapshotTree(targetRoot)).toStrictEqual(beforeConflict);
+      });
+    });
 
-// evidence_role: contract
-// test_level: e2e
-// flow_id: consumer-adapter-materialization-cli
-// contract_id: contract.ci-preset-materialization.application
-test('public materializer CLI executes a symlinked entrypoint', () => {
-  withFixture('a3-ci-github-materializer-symlink-', (fixtureRoot) => {
-    // Arrange
-    const { command, targetRoot, options } = prepareMaterializer(fixtureRoot);
-    const entrypoint = path.join(fixtureRoot, 'materializer.ts');
-    symlinkSync(command[0], entrypoint);
-    // Act
-    const result = execute(tsxPath, [entrypoint, ...command.slice(1)], options);
-    // Assert
-    assert.equal(result.status, 0, result.stderr);
-    const report = JSON.parse(result.stdout);
-    assert.equal(report.schema, 'ci.adapter-materializer.v1');
-    assert.deepEqual(report.files.map((entry) => entry.action), ['copied', 'copied']);
-    assert.equal(
-      readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8'),
-      readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'),
-    );
-    assert.equal(JSON.parse(readFileSync(path.join(targetRoot, '.ci/adapters/test-bundle.json'), 'utf8')).id, 'test-bundle');
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-adapter-materialization-cli
+    // contract_id: contract.ci-preset-materialization.application
+    test('public materializer CLI executes a symlinked entrypoint', () => {
+      withFixture('a3-ci-github-materializer-symlink-', (fixtureRoot) => {
+        // Arrange
+        const { command, targetRoot, options } = prepareMaterializer(fixtureRoot);
+        const entrypoint = path.join(fixtureRoot, 'materializer.ts');
+        symlinkSync(command[0], entrypoint);
+        // Act
+        const result = execute(tsxPath, [entrypoint, ...command.slice(1)], options);
+        // Assert
+        expect(result.status, result.stderr).toBe(0);
+        const report = JSON.parse(result.stdout);
+        expect(report.schema).toBe('ci.adapter-materializer.v1');
+        expect(report.files.map((entry) => entry.action)).toStrictEqual(['copied', 'copied']);
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'));
+        expect(JSON.parse(readFileSync(path.join(targetRoot, '.ci/adapters/test-bundle.json'), 'utf8')).id).toBe('test-bundle');
+      });
+    });
   });
 });

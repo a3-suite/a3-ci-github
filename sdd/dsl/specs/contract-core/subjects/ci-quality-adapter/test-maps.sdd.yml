@@ -52,6 +52,6 @@ test_maps:
     case_id: toolchain-version-report-rejected
     tests:
       - path: actions/ci-quality-adapter/tests/adapter.test.ts
-        symbol: rejects a missing or mismatched toolchain version token with the stable diagnostic
+        symbol: "ci-quality-adapter-source > rejects a missing or mismatched toolchain version token with the stable diagnostic"
         check_refs:
           - check-quality-adapter-toolchain-version-diagnostic

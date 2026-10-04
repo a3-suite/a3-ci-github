@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import assert from 'node:assert/strict';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
@@ -41,14 +40,14 @@ globalThis.fetch = async (url, init) => {
   const output = f.put('github-output', '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
   const beforeResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
-  assert.equal(beforeResult.status, 0, beforeResult.stderr);
+  expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
-  assert.match(beforeOutputs, /^status=success\n/);
-  assert.ok(beforeOutputs.includes(`observation-path=${beforePath}\n`));
-  assert.ok(beforeOutputs.includes(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`));
-  assert.equal(beforeOutputs.includes('release-remote-identity='), false);
-  assert.equal(beforeOutputs.includes('publish-receipt='), false);
-  assert.equal(beforeOutputs.includes('readback-evidence='), false);
+  expect(beforeOutputs).toMatch(/^status=success\n/);
+  expect(beforeOutputs.includes(`observation-path=${beforePath}\n`)).toBeTruthy();
+  expect(beforeOutputs.includes(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`)).toBeTruthy();
+  expect(beforeOutputs.includes('release-remote-identity=')).toBe(false);
+  expect(beforeOutputs.includes('publish-receipt=')).toBe(false);
+  expect(beforeOutputs.includes('readback-evidence=')).toBe(false);
   const handoffDigest = hash(fs.readFileSync(path.join(f.options.outputRoot, 'handoff.json')));
   const receipt = { schema_version: '1', kind: 'ci-github-release-publish-receipt', identity: assembly.identity, handoff_digest: handoffDigest, asset_digest: assembly.asset_digest, release_id: '42', pre_observation_sha256: hash(fs.readFileSync(beforePath)) };
   const readback = { schema_version: '1', kind: 'ci-github-release-readback', identity: assembly.identity, handoff_digest: handoffDigest, asset_digest: assembly.asset_digest, release_id: '42', draft: false, assets: assembly.assets, inventory: { ...JSON.parse(fs.readFileSync(beforePath, 'utf8')), phase: 'post-create', release_ids: ['42'] } };
@@ -56,15 +55,15 @@ globalThis.fetch = async (url, init) => {
   const readbackPath = f.put('readback.json', readback);
   fs.writeFileSync(output, '');
   const afterResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
-  assert.equal(afterResult.status, 0, afterResult.stderr);
+  expect(afterResult.status, afterResult.stderr).toBe(0);
   const outputs = fs.readFileSync(output, 'utf8');
-  assert.match(outputs, /^status=success\n/);
-  assert.equal(outputs.includes('observation-path='), false);
-  assert.equal(outputs.includes('observation-digest='), false);
-  assert.match(outputs, /release-remote-identity=42\n/);
-  assert.match(outputs, /publish-receipt=\{/);
-  assert.match(outputs, /readback-evidence=\{/);
-  assert.equal(outputs.includes('synthetic-secret'), false);
+  expect(outputs).toMatch(/^status=success\n/);
+  expect(outputs.includes('observation-path=')).toBe(false);
+  expect(outputs.includes('observation-digest=')).toBe(false);
+  expect(outputs).toMatch(/release-remote-identity=42\n/);
+  expect(outputs).toMatch(/publish-receipt=\{/);
+  expect(outputs).toMatch(/readback-evidence=\{/);
+  expect(outputs.includes('synthetic-secret')).toBe(false);
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
@@ -81,10 +80,10 @@ test('publication entrypoint rejects output path line injection before remote ob
       'INPUT_OBSERVATION-PATH': `${path.join(f.root, 'before.json')}\nstatus=success`,
     }, encoding: 'utf8', cwd: f.root,
   });
-  assert.equal(result.status, 1);
-  assert.equal(fs.readFileSync(output, 'utf8'), '');
-  assert.equal(fs.existsSync(path.join(f.root, 'before.json')), false);
-  assert.match(result.stderr, /input-invalid:observation-path/);
+  expect(result.status).toBe(1);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
+  expect(result.stderr).toMatch(/input-invalid:observation-path/);
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
@@ -94,9 +93,9 @@ test('publication entrypoint refuses missing credentials without success evidenc
   f.assemble();
   const output = f.put('github-output', '');
   const result = spawnSync(process.execPath, [...bundle], { env: { ...process.env, GH_TOKEN: '', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json') }, encoding: 'utf8', cwd: f.root });
-  assert.equal(result.status, 1);
-  assert.equal(fs.readFileSync(output, 'utf8'), '');
-  assert.match(result.stderr, /credential-missing/);
+  expect(result.status).toBe(1);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(result.stderr).toMatch(/credential-missing/);
 });
 
 });

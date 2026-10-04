@@ -1,9 +1,8 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -35,9 +34,9 @@ test('entrypoint publishes a materialized version', () => {
   // Act
   const run = runBundled({ strategy: 'ciGenerated', template: '{baseVersion}-dev.{build}', components: { baseVersion: '1.2.3', build: '42' } });
   // Assert
-  assert.equal(run.result.status, 0);
-  assert.match(run.output, /status<<.*success/s);
-  assert.match(run.output, /publish-version<<.*1\.2\.3-dev\.42/s);
+  expect(run.result.status).toBe(0);
+  expect(run.output).toMatch(/status<<.*success/s);
+  expect(run.output).toMatch(/publish-version<<.*1\.2\.3-dev\.42/s);
 });
 
 // contract_id: contract.ci-publish-version.outputs
@@ -47,9 +46,9 @@ test('entrypoint publishes an exact version', () => {
   // Act
   const run = runBundled({ strategy: 'exact', publishVersion: '1.2.3' });
   // Assert
-  assert.equal(run.result.status, 0);
-  assert.match(run.output, /status<<.*success/s);
-  assert.match(run.output, /publish-version<<.*1\.2\.3/s);
+  expect(run.result.status).toBe(0);
+  expect(run.output).toMatch(/status<<.*success/s);
+  expect(run.output).toMatch(/publish-version<<.*1\.2\.3/s);
 });
 
 // integration_id: ci-publish-version-entrypoint-regression
@@ -58,9 +57,9 @@ test('entrypoint fails invalid plan input', () => {
   // Act
   const run = runBundled({ strategy: 'ciGenerated', template: '{baseVersion}', components: {} });
   // Assert
-  assert.notEqual(run.result.status, 0);
-  assert.match(run.output, /status<<.*failed/s);
-  assert.doesNotMatch(run.output, /^publish-version(?:=|<<)/m);
+  expect(run.result.status).not.toBe(0);
+  expect(run.output).toMatch(/status<<.*failed/s);
+  expect(run.output).not.toMatch(/^publish-version(?:=|<<)/m);
 });
 
 });

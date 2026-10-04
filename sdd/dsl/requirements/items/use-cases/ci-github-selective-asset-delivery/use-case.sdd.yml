@@ -13,7 +13,6 @@ preconditions:
   - 利用project rootと適用するpresetまたはassetが明示されている
 trigger: 利用projectがa3-ci-githubの資材を新規取得、追加取得、更新または復旧する
 main_success_scenario:
-  - summary: repository Release workflowが検証済みexact tagから3つのbootstrap assetを生成・公開し、remote byte readback後にaliasを更新する
   - summary: Release manifestとfetch CLIの完全性を確認し、発行者信頼境界とchecksum検証を区別する
   - summary: presetまたはassetを選び、registry由来の必須依存閉包と外部owner境界を確認する
   - summary: full commit SHA固定URLから選択fileだけをstagingへ取得し、sizeとSHA-256を検証する

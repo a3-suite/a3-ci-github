@@ -6,41 +6,41 @@ test_maps:
     case_id: matching-exact-toolchain-processing
     tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: accepts every supported verification mode
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > accepts every supported verification mode"
         check_refs:
           - check-exact-toolchain-processing-success
   - verification_id: verification.ci-github-toolchain-verifier.processing
     case_id: mismatching-exact-toolchain-processing
     tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: rejects an unsupported mode
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects an unsupported mode"
         check_refs:
           - check-invalid-toolchain-processing-failure
   - verification_id: verification.ci-github-toolchain-verifier.processing
     case_id: unavailable-toolchain-processing
     tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: rejects an unavailable selected command
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects an unavailable selected command"
         check_refs:
           - check-unavailable-toolchain-processing-failure
   - verification_id: verification.ci-github-toolchain-verifier.processing
     case_id: version-mismatch-toolchain-processing
     tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: requires an exact version for every selected command
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command"
         check_refs:
           - check-version-mismatch-toolchain-processing-failure
   - verification_id: verification.ci-github-toolchain-verifier.outputs
     case_id: matching-selected-tool-versions
     tests:
       - path: actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
-        symbol: composite run exposes verified only after exact toolchain verification
+        symbol: "contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification"
         check_refs:
           - check-verified-output
   - verification_id: verification.ci-github-toolchain-verifier.outputs
     case_id: mismatching-selected-tool-version
     tests:
       - path: actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
-        symbol: composite run exposes verified only after exact toolchain verification
+        symbol: "contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification"
         check_refs:
           - check-verification-failure

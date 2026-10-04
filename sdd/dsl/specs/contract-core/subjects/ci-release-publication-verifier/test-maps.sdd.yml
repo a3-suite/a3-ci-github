@@ -42,29 +42,29 @@ test_maps:
     case_id: independent-readback
     tests:
       - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: publication evidence matches independent immutable ID readback
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-evidence > publication evidence matches independent immutable ID readback"
         check_refs: [release-id, readback]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: existing-release
     tests:
       - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: pre-create refuses existing releases including drafts
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-rejection > pre-create refuses existing releases including drafts"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: incomplete-pagination
     tests:
       - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: read-only transport refuses an inventory that never completes within the page limit
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-transport > read-only transport refuses an inventory that never completes within the page limit"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: missing-after-reobservation
     tests:
       - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: publication verification refuses an inventory still absent after bounded reobservation
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-rejection > publication verification refuses an inventory still absent after bounded reobservation"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: mismatching-bindings
     tests:
       - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: receipt and readback missing or mismatching bindings are rejected
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-receipt-binding > receipt and readback missing or mismatching bindings are rejected"
         check_refs: [rejection]

@@ -1,10 +1,10 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -22,8 +22,8 @@ test('entrypoint fails when the token is missing', () => {
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  assert.notEqual(result.status, 0);
-  assert.equal(fs.readFileSync(output, 'utf8'), '');
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
   fs.rmSync(path.dirname(output), { recursive: true, force: true });
 });
 
@@ -46,7 +46,7 @@ test('entrypoint resolves an annotated tag to its commit', async () => {
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
-  assert.ok(address && typeof address !== 'string');
+  expect(address && typeof address !== 'string').toBeTruthy();
   const outputDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-tag-resolver-'));
   const output = path.join(outputDirectory, 'output');
   fs.writeFileSync(output, '', 'utf8');
@@ -57,7 +57,7 @@ test('entrypoint resolves an annotated tag to its commit', async () => {
     INPUT_REPOSITORY: 'owner/repo',
     INPUT_TAG: 'v1.2.3',
     'INPUT_GITHUB-TOKEN': 'token',
-    GITHUB_API_URL: `http://127.0.0.1:${address.port}`,
+    GITHUB_API_URL: `http://127.0.0.1:${(address as AddressInfo).port}`,
   } as Record<string, string>;
   // Act
   const result = await new Promise<{ status: number | null; stderr: string }>((resolve, reject) => {
@@ -70,13 +70,13 @@ test('entrypoint resolves an annotated tag to its commit', async () => {
   });
   await new Promise<void>((resolve) => server.close(() => resolve()));
   // Assert
-  assert.equal(result.status, 0, result.stderr);
+  expect(result.status, result.stderr).toBe(0);
   const contents = fs.readFileSync(output, 'utf8');
-  assert.match(contents, /tag-object-sha/);
-  assert.match(contents, /a{40}/);
-  assert.match(contents, /tag-object-type/);
-  assert.match(contents, /source-sha/);
-  assert.match(contents, /b{40}/);
+  expect(contents).toMatch(/tag-object-sha/);
+  expect(contents).toMatch(/a{40}/);
+  expect(contents).toMatch(/tag-object-type/);
+  expect(contents).toMatch(/source-sha/);
+  expect(contents).toMatch(/b{40}/);
   fs.rmSync(outputDirectory, { recursive: true, force: true });
 });
 

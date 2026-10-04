@@ -1,8 +1,7 @@
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -40,29 +39,29 @@ const runAction = (overrides: Record<string, string> = {}) => {
 test('entrypoint exposes the verified workflow snapshot sha', () => {
   // Arrange
   const action = readFileSync(path.join(actionRoot, 'action.yml'), 'utf8');
-  assert.match(action, /^  using: node24$/m);
-  assert.match(action, /^  main: dist\/index\.js$/m);
+  expect(action).toMatch(/^  using: node24$/m);
+  expect(action).toMatch(/^  main: dist\/index\.js$/m);
   // Act
   const result = runAction();
   // Assert
-  assert.equal(result.status, 0);
-  assert.equal(readFileSync(result.outputPath, 'utf8'), `sha=${SHA}\n`);
+  expect(result.status).toBe(0);
+  expect(readFileSync(result.outputPath, 'utf8')).toBe(`sha=${SHA}\n`);
 });
 
 test('entrypoint rejects a mismatched workflow snapshot', () => {
   // Act
   const result = runAction({ 'INPUT_CALLED-WORKFLOW-SHA': 'cc747e69c63a52dc2a3db336ce269a4df6303ffe' });
   // Assert
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /ci-workflow-identity-sha-mismatch/);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/ci-workflow-identity-sha-mismatch/);
 });
 
 test('entrypoint stays idle outside GitHub Actions', () => {
   // Act
   const result = runAction({ GITHUB_ACTIONS: '' });
   // Assert
-  assert.equal(result.status, 0);
-  assert.equal(readFileSync(result.outputPath, 'utf8'), '');
+  expect(result.status).toBe(0);
+  expect(readFileSync(result.outputPath, 'utf8')).toBe('');
 });
 
 test('entrypoint rejects a missing or unsafe GITHUB_OUTPUT path', () => {
@@ -70,10 +69,10 @@ test('entrypoint rejects a missing or unsafe GITHUB_OUTPUT path', () => {
   const missing = runAction({ GITHUB_OUTPUT: '' });
   const unsafe = runAction({ GITHUB_OUTPUT: 'safe\nunsafe' });
   // Assert
-  assert.equal(missing.status, 1);
-  assert.match(missing.stderr, /ci-workflow-identity-output-missing/);
-  assert.equal(unsafe.status, 1);
-  assert.match(unsafe.stderr, /ci-workflow-identity-output-invalid/);
+  expect(missing.status).toBe(1);
+  expect(missing.stderr).toMatch(/ci-workflow-identity-output-missing/);
+  expect(unsafe.status).toBe(1);
+  expect(unsafe.stderr).toMatch(/ci-workflow-identity-output-invalid/);
 });
 
 });

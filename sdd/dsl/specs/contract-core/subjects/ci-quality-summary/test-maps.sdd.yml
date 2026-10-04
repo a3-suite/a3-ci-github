@@ -50,13 +50,13 @@ test_maps:
     case_id: excluded-rows-ignored-in-aggregation
     tests:
       - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: excludes intentionally-not-applicable rows from aggregation
+        symbol: "renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation"
         check_refs:
           - check-quality-summary-excluded-status
   - verification_id: verification.ci-quality-summary.outputs
     case_id: all-excluded-rows-rejected
     tests:
       - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: rejects an input where every row is excluded
+        symbol: "renderQualitySummary(QualitySummaryInput) > rejects an input where every row is excluded"
         check_refs:
           - check-quality-summary-all-excluded-failure

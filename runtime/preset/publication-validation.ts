@@ -333,6 +333,42 @@ const validateReleaseCallerWorkflow = (
   return publishWith;
 };
 
+const authoritySnapshotBinding = /^\$\{\{\s*(env|inputs)\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/;
+
+const parseAuthoritySnapshotSources = (sourcesJson: unknown): ValueMap | undefined => {
+  if (typeof sourcesJson !== 'string') return undefined;
+  let json = '';
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < sourcesJson.length; index += 1) {
+    const character = sourcesJson[index];
+    if (!inString && sourcesJson.startsWith('${{', index)) {
+      // Preserve binding identity; GitHub evaluates the JSON encoding at execution time.
+      const expression = /^\$\{\{\s*toJSON\(\s*((?:env|inputs)\.[A-Za-z][A-Za-z0-9_]*)\s*\)\s*\}\}/.exec(sourcesJson.slice(index));
+      if (!expression || !json.trimEnd().endsWith(':')) return undefined;
+      json += JSON.stringify(`\${{ ${expression[1]} }}`);
+      index += expression[0].length - 1;
+      continue;
+    }
+    json += character;
+    if (inString && escaped) escaped = false;
+    else if (inString && character === '\\') escaped = true;
+    else if (character === '"') inString = !inString;
+  }
+  try {
+    const sources: unknown = JSON.parse(json);
+    if (!sources || typeof sources !== 'object' || Array.isArray(sources)) return undefined;
+    for (const values of Object.values(sources)) {
+      if (!values || typeof values !== 'object' || Array.isArray(values)) return undefined;
+      if (Object.values(values).some(value => typeof value === 'string'
+        && value.includes('${{') && !authoritySnapshotBinding.test(value))) return undefined;
+    }
+    return map(sources);
+  } catch {
+    return undefined;
+  }
+};
+
 const resolveAuthoritySnapshotValues = (
   publicationPath: string,
   callerPath: string,
@@ -346,18 +382,15 @@ const resolveAuthoritySnapshotValues = (
       let resolved = value;
       let path = `${publicationPath}:jobs.authority.steps.config.with.sources-json.${source}.${key}`;
       let settingLocation = publicationPath;
-      const envMatch = typeof value === 'string'
-        ? /^\$\{\{\s*env\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/.exec(value)
+      const binding = typeof value === 'string'
+        ? authoritySnapshotBinding.exec(value)
         : undefined;
-      const inputMatch = typeof value === 'string'
-        ? /^\$\{\{\s*inputs\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/.exec(value)
-        : undefined;
-      if (envMatch) {
-        resolved = publicationEnv[envMatch[1]];
-        path = `${publicationPath}:env.${envMatch[1]}`;
-      } else if (inputMatch) {
-        resolved = publishWith[inputMatch[1]];
-        path = `${callerPath}:jobs.publish.with.${inputMatch[1]}`;
+      if (binding?.[1] === 'env') {
+        resolved = publicationEnv[binding[2]];
+        path = `${publicationPath}:env.${binding[2]}`;
+      } else if (binding?.[1] === 'inputs') {
+        resolved = publishWith[binding[2]];
+        path = `${callerPath}:jobs.publish.with.${binding[2]}`;
         settingLocation = callerPath;
       }
       const runtimeValue = typeof resolved === 'string'
@@ -442,20 +475,17 @@ const validatePublicationControlSurface = (
   });
   const configSnapshotStep = authoritySteps.find((step) => step.id === 'config');
   const sourcesJson = map(configSnapshotStep?.with)['sources-json'];
-  let snapshotSources: ValueMap = {};
-  let workflowSnapshot: ValueMap = {};
-  if (typeof sourcesJson === 'string') {
-    try {
-      snapshotSources = map(JSON.parse(sourcesJson));
-      workflowSnapshot = map(snapshotSources.workflow);
-    } catch {
-      workflowSnapshot = {};
-    }
-  }
+  const snapshotSources = parseAuthoritySnapshotSources(sourcesJson);
+  if (!snapshotSources) add(report.mismatches, {
+    path: `${publicationPath}:jobs.authority.steps.config.with.sources-json`,
+    message: 'ci-config-snapshot sources-json must be a JSON object with supported static env/input bindings',
+    settingLocation: publicationPath,
+  });
+  const workflowSnapshot = map(snapshotSources?.workflow);
   resolveAuthoritySnapshotValues(
     publicationPath,
     callerPath,
-    snapshotSources,
+    snapshotSources ?? {},
     publishWith,
     map(publication.env),
     report,

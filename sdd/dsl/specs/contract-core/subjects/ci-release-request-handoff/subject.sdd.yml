@@ -2,4 +2,4 @@ version: 1
 name: contract-subject
 subject:
   id: subject.ci.release-request-handoff
-  summary: Write an immutable release request handoff and its release notes inputs.
+  summary: Write an immutable annotated-tag release request handoff.

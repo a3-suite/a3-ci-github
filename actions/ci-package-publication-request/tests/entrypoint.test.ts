@@ -1,9 +1,8 @@
-import { strict as assert } from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -24,8 +23,8 @@ test('entrypoint creates and verifies a request', () => {
   const result = spawnSync(process.execPath, [...entrypoint], { env, encoding: 'utf8' });
 
   // Assert
-  assert.equal(result.status, 0);
-  assert.equal(JSON.parse(fs.readFileSync(request, 'utf8')).sourceSha, 'a'.repeat(40));
+  expect(result.status).toBe(0);
+  expect(JSON.parse(fs.readFileSync(request, 'utf8')).sourceSha).toBe('a'.repeat(40));
 
   // Arrange
   fs.writeFileSync(output, '');
@@ -34,9 +33,20 @@ test('entrypoint creates and verifies a request', () => {
   const verified = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify', 'INPUT_EXPECTED-SOURCE-SHA': 'a'.repeat(40) }, encoding: 'utf8' });
 
   // Assert
-  assert.equal(verified.status, 0);
-  assert.match(fs.readFileSync(output, 'utf8'), /status<<[^\n]+\nsuccess\n/);
-  assert.match(fs.readFileSync(output, 'utf8'), new RegExp(`source-sha<<[^\\n]+\\n${'a'.repeat(40)}\\n`));
+  expect(verified.status).toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nsuccess\n/);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(new RegExp(`source-sha<<[^\\n]+\\n${'a'.repeat(40)}\\n`));
+
+  // Arrange
+  const saved = fs.readFileSync(request, 'utf8');
+  fs.writeFileSync(output, '');
+  // Act
+  const replay = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_VERSION: '9.9.9' }, encoding: 'utf8' });
+  // Assert
+  expect(replay.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  expect(fs.readFileSync(output, 'utf8')).not.toMatch(/(?:source-sha|request-path)<</);
+  expect(fs.readFileSync(request, 'utf8')).toBe(saved);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -58,8 +68,8 @@ test('entrypoint rejects a source SHA mismatch', () => {
   const result = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify', 'INPUT_EXPECTED-SOURCE-SHA': 'b'.repeat(40) }, encoding: 'utf8' });
 
   // Assert
-  assert.notEqual(result.status, 0);
-  assert.match(fs.readFileSync(output, 'utf8'), /failed/);
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

@@ -1,10 +1,9 @@
-import { strict as assert } from 'node:assert';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
 
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -56,8 +55,8 @@ const runBundled = (
 
 const outputValue = (output: string, name: string): string => {
   const match = output.match(new RegExp(`${name}<<[^\\n]+\\n([\\s\\S]*?)\\n[^\\n]+`));
-  assert.ok(match, `missing output: ${name}`);
-  return match[1];
+  expect(match, `missing output: ${name}`).toBeTruthy();
+  return match![1];
 };
 
 const successInput = {
@@ -79,15 +78,12 @@ test('entrypoint writes matching evidence and outputs', () => {
   const run = runBundled(input, true, 'nested');
   try {
     // Assert
-    assert.equal(run.result.status, 0);
+    expect(run.result.status).toBe(0);
     const evidence = fs.readFileSync(run.evidencePath, 'utf8');
-    assert.equal(evidence, fs.readFileSync(run.summaryPath, 'utf8'));
-    assert.equal(
-      outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'digest'),
-      `sha256:${createHash('sha256').update(evidence, 'utf8').digest('hex')}`,
-    );
-    assert.equal(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status'), 'success');
-    assert.equal(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'evidence-path'), run.evidencePath);
+    expect(evidence).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'digest')).toBe(`sha256:${createHash('sha256').update(evidence, 'utf8').digest('hex')}`);
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'evidence-path')).toBe(run.evidencePath);
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }
@@ -100,9 +96,9 @@ test('entrypoint normalizes a raw GitHub job result', () => {
     unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'run',
   }] });
   try {
-    assert.notEqual(run.result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status'), 'failed');
-    assert.match(fs.readFileSync(run.evidencePath, 'utf8'), /job result: failure/);
+    expect(run.result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
+    expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/job result: failure/);
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }
@@ -116,8 +112,8 @@ test('entrypoint rejects a missing summary path', () => {
   const missingPath = runBundled(successInput, false);
   try {
     // Assert
-    assert.notEqual(missingPath.result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(missingPath.outputPath, 'utf8'), 'status'), 'failed');
+    expect(missingPath.result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(missingPath.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
     fs.rmSync(missingPath.tempRoot, { recursive: true, force: true });
   }
@@ -140,12 +136,12 @@ test('entrypoint fails unresolved and invalid path relationships', () => {
   const hardlink = runBundled(successInput, true, 'hardlink');
   try {
     // Assert
-    assert.notEqual(unresolved.result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(unresolved.outputPath, 'utf8'), 'status'), 'unresolved');
-    assert.notEqual(samePath.result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(samePath.outputPath, 'utf8'), 'status'), 'failed');
-    assert.notEqual(hardlink.result.status, 0);
-    assert.equal(outputValue(fs.readFileSync(hardlink.outputPath, 'utf8'), 'status'), 'failed');
+    expect(unresolved.result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(unresolved.outputPath, 'utf8'), 'status')).toBe('unresolved');
+    expect(samePath.result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(samePath.outputPath, 'utf8'), 'status')).toBe('failed');
+    expect(hardlink.result.status).not.toBe(0);
+    expect(outputValue(fs.readFileSync(hardlink.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
     fs.rmSync(unresolved.tempRoot, { recursive: true, force: true });
     fs.rmSync(samePath.tempRoot, { recursive: true, force: true });

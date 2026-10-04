@@ -1,9 +1,8 @@
-import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { accessSync, chmodSync, constants, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test } from 'vitest';
+import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -12,7 +11,7 @@ const script = path.resolve(root, '../../runtime/github-toolchain/verify-github-
 
 const runBlock = () => {
   const match = action.match(/^      run: \|\n((?: {8}.*\n?)+)/m);
-  assert.ok(match, 'action.yml must contain a composite run block');
+  expect(match, 'action.yml must contain a composite run block').toBeTruthy();
   return match[1].replace(/^ {8}/gm, '');
 };
 
@@ -51,43 +50,51 @@ const runComposite = ({ fixture, output }, overrides = {}) => spawnSync('/bin/ba
   },
 });
 
-// integration_id: ci-github-toolchain-verifier-action-regression
-test('action.yml exposes a thin composite contract for the shared script', () => {
-  // Arrange
-  const actionPath = path.join(root, 'action.yml');
-  // Act
-  const action = readFileSync(actionPath, 'utf8');
-  // Assert
-  assert.match(action, /^name: ci-github-toolchain-verifier$/m);
-  assert.match(action, /^  using: composite$/m);
-  for (const input of ['mode', 'gh-version', 'jq-version', 'sha256sum-version']) {
-    assert.match(action, new RegExp(`^  ${input}:$`, 'm'));
-  }
-  assert.match(action, /^  verified:$/m);
-  assert.match(action, /^    value: \$\{\{ steps\.verify\.outputs\.verified \}\}$/m);
-  assert.match(action, /runtime\/github-toolchain\/verify-github-toolchain\.sh/);
-  assert.match(action, /^        VERIFY_MODE: \$\{\{ inputs\.mode \}\}$/m);
-  assert.match(action, /verify-github-toolchain\.sh\" \"\$VERIFY_MODE\"/);
-  accessSync(script, constants.R_OK | constants.X_OK);
+describe("ci-github-toolchain-verifier action contract", () => {
+  describe("ci-github-toolchain-verifier-action-regression", () => {
+    // integration_id: ci-github-toolchain-verifier-action-regression
+    test('action.yml exposes a thin composite contract for the shared script', () => {
+      // Arrange
+      const actionPath = path.join(root, 'action.yml');
+      // Act
+      const action = readFileSync(actionPath, 'utf8');
+      // Assert
+      expect(action).toMatch(/^name: ci-github-toolchain-verifier$/m);
+      expect(action).toMatch(/^  using: composite$/m);
+      for (const input of ['mode', 'gh-version', 'jq-version', 'sha256sum-version']) {
+        expect(action).toMatch(new RegExp(`^  ${input}:$`, 'm'));
+      }
+      expect(action).toMatch(/^  verified:$/m);
+      expect(action).toMatch(/^    value: \$\{\{ steps\.verify\.outputs\.verified \}\}$/m);
+      expect(action).toMatch(/runtime\/github-toolchain\/verify-github-toolchain\.sh/);
+      expect(action).toMatch(/^        VERIFY_MODE: \$\{\{ inputs\.mode \}\}$/m);
+      expect(action).toMatch(/verify-github-toolchain\.sh\" \"\$VERIFY_MODE\"/);
+      accessSync(script, constants.R_OK | constants.X_OK);
+    });
+  });
 });
 
-// contract_id: contract.ci-github-toolchain-verifier.outputs
-// integration_id: ci-github-toolchain-verifier-action
-test('composite run exposes verified only after exact toolchain verification', () => withCompositeFixture((fixture) => {
-  // Arrange
-  const successInput = fixture;
-  // Act
-  const success = runComposite(successInput);
-  // Assert
-  assert.equal(success.status, 0, success.stderr);
-  assert.equal(readFileSync(fixture.output, 'utf8'), 'verified=true\n');
+describe("contract.ci-github-toolchain-verifier.outputs", () => {
+  describe("ci-github-toolchain-verifier-action", () => {
+    // contract_id: contract.ci-github-toolchain-verifier.outputs
+    // integration_id: ci-github-toolchain-verifier-action
+    test('composite run exposes verified only after exact toolchain verification', () => withCompositeFixture((fixture) => {
+      // Arrange
+      const successInput = fixture;
+      // Act
+      const success = runComposite(successInput);
+      // Assert
+      expect(success.status, success.stderr).toBe(0);
+      expect(readFileSync(fixture.output, 'utf8')).toBe('verified=true\n');
 
-  // Arrange
-  writeFileSync(fixture.output, '');
-  // Act
-  const failure = runComposite(fixture, { CI_JQ_VERSION: '1.6' });
-  // Assert
-  assert.equal(failure.status, 1);
-  assert.match(failure.stderr, /jq-version-mismatch/);
-  assert.equal(readFileSync(fixture.output, 'utf8'), '');
-}));
+      // Arrange
+      writeFileSync(fixture.output, '');
+      // Act
+      const failure = runComposite(fixture, { CI_JQ_VERSION: '1.6' });
+      // Assert
+      expect(failure.status).toBe(1);
+      expect(failure.stderr).toMatch(/jq-version-mismatch/);
+      expect(readFileSync(fixture.output, 'utf8')).toBe('');
+    }));
+  });
+});
