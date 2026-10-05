@@ -1,0 +1,38 @@
+name: ci-release-assembly
+description: Assemble verified Release assets without executing source or writing to a provider.
+inputs:
+  repository:
+    required: true
+    description: Expected owner/repository identity.
+  authority-path:
+    required: true
+    description: Trusted authority JSON containing the publication identity projection.
+  snapshot-path:
+    required: true
+    description: Authority-bound ci.config-snapshot.v1 JSON.
+  platform-manifest-path:
+    required: true
+    description: Authority-bound platform manifest bytes, at most 64 KiB.
+  platform-matrix:
+    required: true
+    description: Validated ci-platform-matrix output from the authority job.
+  build-root:
+    required: true
+    description: Directory containing exactly one release-build-ID directory per platform.
+  supplemental-root:
+    required: false
+    default: ''
+    description: Owner-verified supplemental handoff, required only when selected in the snapshot.
+  output-directory:
+    required: true
+    description: New directory for the handoff; existing paths are never overwritten.
+outputs:
+  status:
+    description: success, produced only after complete validation and assembly.
+  release-handoff:
+    description: Verified release handoff directory.
+  asset-digest:
+    description: SHA-256 of the sorted publication asset inventory.
+runs:
+  using: node24
+  main: dist/index.js

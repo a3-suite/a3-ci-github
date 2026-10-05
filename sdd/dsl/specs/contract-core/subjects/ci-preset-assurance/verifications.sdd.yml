@@ -24,6 +24,60 @@ verifications:
         checks:
           - id: check.ci-preset-assurance.read-only-output-rejected
             guarantee_ref: ci-preset-assurance-read-only-output-rejected
+      - id: pending-publication-actions
+        intent_id: pending-action-blocked
+        input:
+          selected-pending-action: ci-release-assembly
+          preset: release-publication
+        checks:
+          - id: availability
+            guarantee_ref: unavailable-action-reported
+      - id: pending-quality-platform-action
+        intent_id: pending-action-blocked
+        input:
+          selected-pending-action: ci-platform-matrix
+          preset: quality-gate
+          optional-workflow: quality-gate-platforms
+        checks:
+          - id: quality-platform-availability
+            guarantee_ref: unavailable-action-reported
+      - id: pending-release-publisher
+        intent_id: pending-action-blocked
+        input:
+          selected-pending-action: ci-release-publisher
+          preset: release-publication
+        checks:
+          - id: publisher-availability
+            guarantee_ref: unavailable-action-reported
+      - id: standard-publisher-drift
+        intent_id: ci-preset-assurance-drift-intent
+        input:
+          applied-preset-drift: standard-publisher-condition-credential-input-or-local-fallback
+        checks:
+          - id: publisher-drift
+            guarantee_ref: ci-preset-assurance-drift-fails
+      - id: standard-authority-drift
+        intent_id: ci-preset-assurance-drift-intent
+        input:
+          applied-preset-drift: standard-authority-condition-credential-input-or-missing-owner-decision
+        checks:
+          - id: authority-drift
+            guarantee_ref: ci-preset-assurance-drift-fails
+      - id: supplemental-phase-drift
+        intent_id: supplemental-phase-checked
+        input:
+          supplemental-phase-drift: bypass-or-argument-mismatch-or-failure-suppression
+        checks:
+          - id: phase-mismatch
+            guarantee_ref: supplemental-phase-drift-reported
+      - id: retired-assembly
+        intent_id: retired-assembly-blocked
+        input:
+          retired-assembly-file-or-invocation: .ci/trusted/ci-release-assemble.sh
+          preset: release-publication
+        checks:
+          - id: fallback-rejection
+            guarantee_ref: retired-assembly-reported
       - id: case.ci-preset-assurance.valid-preset-succeeds
         intent_id: ci-preset-assurance-valid-intent
         input:

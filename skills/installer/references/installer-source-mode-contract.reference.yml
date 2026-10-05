@@ -1,0 +1,133 @@
+schemaVersion: "1"
+kind: installer-source-mode-contract
+id: installer.source-mode-contract
+title: インストーラ source mode 契約
+summary: >-
+  installer の online / offline source mode ごとの manifest source、artifact source、
+  network 可否、fallback 禁止、audit reference の条件を定義する公開正本。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - source mode allowed values
+    - manifest and artifact source matrix
+    - local artifact path policy
+    - network fallback policy
+usage:
+  whenToRead:
+    - execution request の source mode 条件を確認するとき
+    - offline install の manifest / artifact 取得境界を監査するとき
+    - source mode に対応する fixture coverage を確認するとき
+  consumers:
+    - human
+    - agent
+    - installer-implementation
+    - audit
+sourceModes:
+  online:
+    description: "Manifest と artifact を固定入力に基づき online source から取得できる mode。"
+    operationModeRelation:
+      mustBeSeparateFromOperationMode: true
+      allowedOperationModes:
+        - install
+        - upgrade
+        - repair
+        - dry-run
+    manifestSource:
+      allowed:
+        - localManifestPath
+        - manifestUrl
+      requiredChecksum: true
+      networkRead: "allowed-for-manifest-url"
+    artifactSource:
+      allowed:
+        - manifestArtifactUrl
+        - manifestPackageCoordinate
+      localArtifactPath:
+        status: forbidden
+        failureFixture: online local artifact path reject
+      networkRead: "allowed-for-fixed-source-only"
+    fallback:
+      networkFallback: forbidden
+      registryFallback: forbidden
+      urlFallback: forbidden
+    audit:
+      mustRecordSourceMode: true
+      localArtifactReference: absent
+  offline:
+    description: "事前取得済みの local manifest と local artifact だけを使う mode。"
+    operationModeRelation:
+      mustBeSeparateFromOperationMode: true
+      allowedOperationModes:
+        - install
+        - upgrade
+        - repair
+        - dry-run
+    manifestSource:
+      allowed:
+        - localManifestPath
+      forbidden:
+        - manifestUrl
+      requiredChecksum: true
+      networkRead: forbidden
+      failureFixture: offline manifest URL reject
+    artifactSource:
+      allowed:
+        - localArtifactPath
+      required:
+        - localArtifactPath
+      localArtifactPath:
+        status: required
+        mustNotContain:
+          - token
+          - secret
+          - authHeader
+          - envValue
+        failureFixtures:
+          missing: offline local artifact path missing
+          sensitiveValue: local artifact path secret reject
+      networkRead: forbidden
+    fallback:
+      networkFallback: forbidden
+      registryFallback: forbidden
+      urlFallback: forbidden
+    audit:
+      mustRecordSourceMode: true
+      localArtifactReference: secret-free-required
+invariants:
+  - id: source-mode-required
+    rule: "source mode は online または offline のいずれかに実行前に確定する。固定済み manifest URL と checksum を埋め込んだ単体スクリプトでは、組立時に固定した online を引数なし実行の選択として扱ってよい。"
+    confirmingFixtures:
+      - online source mode verified input
+      - offline source mode verified input
+    violationFixtures:
+      - source mode missing
+      - source mode unknown
+  - id: online-fixed-source-only
+    rule: "online source mode は固定 manifest source と固定 artifact source だけを使い、local artifact path や fallback へ切り替えない。"
+    confirmingFixtures:
+      - online source mode verified input
+    violationFixtures:
+      - online local artifact path reject
+      - fallback registry reject
+  - id: offline-no-network
+    rule: "offline source mode は manifest / artifact の network read と fallback を行わない。"
+    confirmingFixtures:
+      - offline source mode verified input
+    violationFixtures:
+      - offline manifest URL reject
+      - offline local artifact path missing
+      - offline stale artifact reject
+  - id: online-no-local-artifact
+    rule: "online source mode は local artifact path を受け取らない。"
+    confirmingFixtures:
+      - online source mode verified input
+    violationFixtures:
+      - online local artifact path reject
+  - id: no-source-mode-override
+    rule: "source mode や local artifact path は manifest の artifact URL、checksum、runtime requirement、placement を置き換えない。"
+    confirmingFixtures:
+      - online source mode verified input
+      - offline source mode verified input
+    violationFixtures:
+      - execution request source mode override reject

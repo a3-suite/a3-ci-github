@@ -45,10 +45,10 @@
 
 4. `.ci/README.md` の保守状態を確認する。
 
-   - README はすべての適用先 project に存在し、採用 preset / flow、差分または差分なし、owner、正本への導線、検証証跡、更新・撤去条件が記録されていることを確認する。project 固有差分がない場合も省略しない。
+   - README はすべての適用先 project に存在し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証証跡、更新・撤去条件が記録されていることを確認する。project 固有差分がない場合も省略しない。
    - README がない、空欄だけ、または導線が切れている場合は対象契約違反として `statusClassification` へ渡す。変更を含む依頼では導入ガイドのテンプレートから作成・更新して再確認する。読み取り専用監査では不足を報告し、監査者が無断で変更しない。
    - README の decision、停止条件、共有契約が正本と異なる場合は、README の修正ではなく正本との不一致として扱う。
-   - 固定項目は常に記載し、オプション項目は該当時だけ記載する。標準からの差異がない場合、補足の自由記述は不要とする。差異がある場合は、差異の理由、owner、正本・検証導線を追跡できることを確認する。
+   - 固定項目は常に記載し、オプション項目は該当時だけ記載する。標準からの差異がない場合、補足の自由記述は不要とする。差異がある場合は、標準で成立しない理由、owner、正本・検証導線を追跡できることを確認する。
    - `ci-audit-subjects.reference.yml` の `repository-root-readme` に必要な入力として、workflow、provider registry、policy、manifest、hosted / remote 証拠を準備する。この手順では委譲せず、手順5の意味監査へ渡す。
    - `repository-ci-documentation.discovery` を適用して候補と個別扱いを確定する。適用対象は手順5の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
    - 共通検証で確定した `installer-distribution` の適用判定を手順5の意味監査へ渡し、GitHub Actions 固有の適用条件を追加しない。

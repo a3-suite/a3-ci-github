@@ -1,0 +1,22 @@
+{
+  "name": "@a3-suite/ci-release-assembly",
+  "private": true,
+  "version": "0.2.0",
+  "description": "GitHub Action for provider-write-free Release assembly",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts --minify",
+    "lint": "tsc --noEmit",
+    "test": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-assembly/tests/",
+    "test:contract": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-assembly/tests/action-contract.test.ts actions/ci-release-assembly/tests/entrypoint.test.ts"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@vercel/ncc": "0.38.4",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}

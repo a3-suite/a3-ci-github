@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ci.github-release-evidence.v1",
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "tag", "tag_object_sha", "source_sha", "version", "target_identity", "body_sha256"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "maxLength": 200},
+        "tag": {"type": "string", "pattern": "^[^\\s\\x00-\\x1f]+$", "maxLength": 200},
+        "tag_object_sha": {"$ref": "#/$defs/sourceSha"},
+        "source_sha": {"$ref": "#/$defs/sourceSha"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 100, "pattern": "^[^\\s\\x00-\\x1f]+$"},
+        "target_identity": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\x00-\\x1f]+$"},
+        "body_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "sourceSha": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "remoteId": {"type": "string", "pattern": "^[1-9][0-9]{0,19}$"},
+    "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,199}$"},
+    "asset": {
+      "type": "object", "additionalProperties": false, "required": ["name", "sha256", "size"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"}, "sha256": {"$ref": "#/$defs/digest"},
+        "size": {"type": "integer", "minimum": 1, "maximum": 2147483648}
+      }
+    },
+    "assets": {"type": "array", "minItems": 1, "maxItems": 256, "items": {"$ref": "#/$defs/asset"}},
+    "assembly": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "kind", "identity", "assets", "asset_digest", "manifest_sha256"],
+      "properties": {
+        "schema_version": {"const": "1"}, "kind": {"const": "ci-github-release-assembly"},
+        "identity": {"$ref": "#/$defs/identity"}, "assets": {"$ref": "#/$defs/assets"},
+        "asset_digest": {"$ref": "#/$defs/digest"}, "manifest_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "kind", "identity", "handoff_digest", "phase", "complete", "visibility", "release_ids"],
+      "properties": {
+        "schema_version": {"const": "1"}, "kind": {"const": "ci-github-release-observation"},
+        "identity": {"$ref": "#/$defs/identity"}, "handoff_digest": {"$ref": "#/$defs/digest"},
+        "phase": {"enum": ["pre-create", "post-create"]}, "complete": {"const": true},
+        "visibility": {"const": "public-and-non-public"},
+        "release_ids": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/$defs/remoteId"}}
+      }
+    },
+    "receipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "kind", "identity", "handoff_digest", "asset_digest", "release_id", "pre_observation_sha256"],
+      "properties": {
+        "schema_version": {"const": "1"}, "kind": {"const": "ci-github-release-publish-receipt"},
+        "identity": {"$ref": "#/$defs/identity"}, "handoff_digest": {"$ref": "#/$defs/digest"},
+        "asset_digest": {"$ref": "#/$defs/digest"}, "release_id": {"$ref": "#/$defs/remoteId"},
+        "pre_observation_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "readback": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "kind", "identity", "handoff_digest", "asset_digest", "release_id", "draft", "assets", "inventory"],
+      "properties": {
+        "schema_version": {"const": "1"}, "kind": {"const": "ci-github-release-readback"},
+        "identity": {"$ref": "#/$defs/identity"}, "handoff_digest": {"$ref": "#/$defs/digest"},
+        "asset_digest": {"$ref": "#/$defs/digest"}, "release_id": {"$ref": "#/$defs/remoteId"},
+        "draft": {"const": false}, "assets": {"$ref": "#/$defs/assets"},
+        "inventory": {"$ref": "#/$defs/observation"}
+      }
+    }
+  }
+}

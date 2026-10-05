@@ -1,7 +1,7 @@
 return {
   rule_id = "ci-github-ci-readme-contract",
   description = "Require .ci/README.md to follow the CI configuration documentation contract",
-  hint = "CI README は固定項目を満たし、標準差分がある場合だけ自由記述を追加してください。",
+  hint = "CI README は固定項目を満たし、標準差分がある場合は標準で成立しない理由と自由記述を追加してください。",
   languages = { "markdown" },
   targets = { "both" },
   frameworks = { "any" },
@@ -173,6 +173,7 @@ return {
     local field_lines = {}
     local field_names = {
       "差分種別",
+      "標準で成立しない理由",
       "owner",
       "正本・検証導線",
       "検証証跡",
@@ -193,6 +194,7 @@ return {
 
     local required_fields = {
       { "差分種別", "ci_github_ci_readme_difference_type_missing" },
+      { "標準で成立しない理由", "ci_github_ci_readme_nonstandard_reason_missing" },
       { "owner", "ci_github_ci_readme_owner_missing" },
       { "正本・検証導線", "ci_github_ci_readme_source_link_missing" },
       { "検証証跡", "ci_github_ci_readme_evidence_missing" },
@@ -206,6 +208,7 @@ return {
     end
 
     local difference_type = trimmed(field_values["差分種別"] or "")
+    local nonstandard_reason = trimmed(field_values["標準で成立しない理由"] or "")
     local optional_start = heading(2, "オプション項目（該当時のみ）")
     if optional_start ~= nil then
       local optional_end = section_end(optional_start, 2)
@@ -223,6 +226,11 @@ return {
 
     local free_start = heading(2, "自由記述（標準からの差異がある場合のみ）")
     local has_difference = difference_type ~= "" and difference_type ~= "なし"
+    if has_difference and nonstandard_reason == "なし" then
+      report(field_lines["標準で成立しない理由"] or field_lines["差分種別"] or fixed_start or 1, "ci_github_ci_readme_nonstandard_reason_missing", "CI README must explain why the standard preset or flow does not fit")
+    elseif not has_difference and difference_type ~= "" and nonempty(nonstandard_reason) and nonstandard_reason ~= "なし" then
+      report(field_lines["標準で成立しない理由"] or field_lines["差分種別"] or fixed_start or 1, "ci_github_ci_readme_nonstandard_reason_missing", "CI README must record the non-standard reason as 'なし' when no project difference exists")
+    end
     if has_difference and free_start == nil then
       report(field_lines["差分種別"] or fixed_start or 1, "ci_github_ci_readme_free_section_missing", "CI README must describe a non-standard difference in the free-text section")
     elseif not has_difference and free_start ~= nil then

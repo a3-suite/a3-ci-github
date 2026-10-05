@@ -19,9 +19,12 @@
 | canonical workflow | trigger、permissions、job、`needs`、trust、summary の宣言構造 | GitHub Hosted runner 上の代表 flow |
 | preset runtime | registry、実 filesystem、lock digest、read-only、source root 分離 | 公開 CLI を別 process で起動する consumer flow |
 | repository runtime | local bare Git、subprocess、成果物、失敗時の非破壊性 | stateful な Hosted delivery flow がある場合だけ追加 |
+| installer runtime | Vitest の provider regression から Python builder・組立profile・利用可能なOS実行経路へ委譲。Action／CLI境界は supplemental Action の統合テストで確認 | Linux共通回帰、Windows・macOS ARM64 native回帰と配布Action／CLI境界はrepository CI。Release handoffの組立・整合性・破損拒否も検証。Windows／macOSからLinuxへのartifact搬送は整合性Actionで確認。製品の公開・readbackは別受入 |
 | a3-lint rule | 実 a3-lint runtime に対する正常、違反、誤検知 fixture | repository lint の受入実行を smoke とし、rule ごとの E2E は作らない |
 | SDD・契約実行定義 | owner validator、route、test map、path、subject 集合 | 公開利用フローではないため原則追加しない |
 | Skill・文書 | reference、catalog、command、リンクの整合 | エージェント応答を不安定な E2E として固定しない |
+
+Actionの入口テストは同じ観点を`source`と`dist`のsuiteで実行します。保守用の`tests/support/action-entrypoint.ts`が既存のAction開発依存からソース実行用loaderを解決します。ソース計測は`src/index.ts`と共有runtimeの分岐を対象とし、`dist`の成功をソースのhitへ読み替えません。配布物の動作確認とソースの未カバー分析を別々に維持します。
 
 ## 自動化済み E2E
 
@@ -53,14 +56,14 @@ Quality 以外は専用 fixture repository または承認済み test target を
 ```sh
 npm --prefix runtime/preset ci --no-audit --no-fund
 CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
-  node --test tests/public-cli-lifecycle.test.mjs
+  npm test -- tests/public-cli-lifecycle.test.mjs
 ```
 
 契約対象別定義を検証します。
 
 ```sh
-node runtime/contract-subject-coverage.mjs --check
-node --test tests/contract-subject-execution.test.mjs
+node tests/coverage-tools/contract-subject-coverage.mjs --check
+npm test -- tests/contract-subject-execution.test.mjs
 ```
 
 SDD 正本は CI runtime へ `a3-*` を持ち込まず、ローカル保守・リリース前受入として workspace ルートから検証します。手順と生成状態の扱いは [DEVELOPMENT.md](../../DEVELOPMENT.md) を参照してください。
@@ -80,3 +83,9 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 ## 追加判断
 
 新しいE2Eは、統合テストでは観測できない公開経路がある場合だけ追加します。追加前に、owner contract、`flow_id`、外部副作用、実行頻度、fixtureの後処理を確定します。
+
+リポジトリ保守テストのrunnerはルートのVitest設定です。契約対象別実行定義のテスト参照とレベル境界は維持します。カバレッジ除外は `vitest.config.mjs` と契約対象別実行定義で管理します。カバレッジ取得は保守専用の標準Istanbul計測をVitestへ接続し、子プロセス・workerも同じカウンタで集計します。標準V8 providerのautoAttachSubprocessは未実行関数の誤計数を再現したため採用しません。
+
+`npm test` はE2Eを含む通常のテスト集合を実行します。`npm run test:coverage` は同じ集合から契約対象別実行定義のE2Eを分離し、unit/integrationと契約対象外のリポジトリ保守テストをソース計測へ含めます。同じファイルをE2Eと計測対象レベルへ重複登録した場合は、ファイル単位で分離できないため計測を停止します。
+
+上記のIstanbul計測はJavaScript／TypeScriptソースだけを測ります。installer の Python ソースは `npm run test:coverage:installer` で子プロセスを含めて別計測します。Python の statement／branch と JS／TS の C0／C1 は合算しません。対象・実行前提・証跡は [installer 保守](installer-maintenance.md) を参照してください。

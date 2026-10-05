@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "installer.manifest.v2",
+  "releaseVersion": "2.8.0",
+  "targetPlatformId": "windows-x86_64",
+  "source": {
+    "kind": "npm",
+    "registry": "https://npm.pkg.github.com",
+    "owner": "example-org",
+    "repository": "example-web",
+    "fixedReference": "@example-org/example-web@2.8.0"
+  },
+  "package": {
+    "registryUrl": "https://npm.pkg.github.com",
+    "packageName": "@example-org/example-web",
+    "version": "2.8.0"
+  },
+  "artifact": {
+    "url": "https://npm.pkg.github.com/download/@example-org/example-web/2.8.0/example-org-example-web-2.8.0.tgz",
+    "fileName": "example-org-example-web-2.8.0.tgz",
+    "checksum": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "runtime": {
+    "kind": "node",
+    "requiredVersion": "20",
+    "packageManager": "npm",
+    "packageManagerVersion": "10.8.0"
+  },
+  "placement": {
+    "managedRoot": "C:\\ProgramData\\ExampleWeb",
+    "targetPath": "C:\\ProgramData\\ExampleWeb\\app"
+  },
+  "activation": {
+    "strategy": "in-place"
+  },
+  "concurrency": {
+    "lockPath": "C:\\ProgramData\\ExampleWeb\\install.lock"
+  },
+  "state": {
+    "installStatePath": "C:\\ProgramData\\ExampleWeb\\state\\install-state.json"
+  },
+  "executionPolicy": {
+    "lifecycleHookPolicy": "deny"
+  },
+  "compatibility": {
+    "requiredInstallerVersion": "1.2.0"
+  }
+}

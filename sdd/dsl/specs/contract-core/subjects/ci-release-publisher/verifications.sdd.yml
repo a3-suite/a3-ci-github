@@ -1,0 +1,64 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-publisher
+verifications:
+  - id: verification.ci-release-publisher.outputs
+    contract_id: contract.ci-release-publisher.outputs
+    cases:
+      - id: bundle-publish
+        intent_id: publish-evidence
+        input:
+          invocation: bundle
+          handoff: validated
+        checks:
+          - id: receipt
+            guarantee_ref: receipt-file
+          - id: readback
+            guarantee_ref: readback-file
+      - id: independent-evidence
+        intent_id: publish-evidence
+        input:
+          provider: fake
+          handoff: validated
+        checks:
+          - id: receipt
+            guarantee_ref: receipt-file
+          - id: readback
+            guarantee_ref: readback-file
+      - id: bundle-rejection
+        intent_id: fail-closed
+        input:
+          scenario: missing-credential-or-invalid-output-path
+        checks:
+          - id: rejection
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs
+      - id: invalid-local-bindings
+        intent_id: fail-closed
+        input:
+          approval: expired-or-mismatching
+          handoff: tampered
+        checks:
+          - id: rejection
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs
+      - id: remote-rejection
+        intent_id: fail-closed
+        input:
+          remote: moved-source-existing-draft-or-unsupported
+        checks:
+          - id: rejection
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs
+      - id: partial-failure
+        intent_id: fail-closed
+        input:
+          provider: uncertain-create-upload-finalize-or-readback
+        checks:
+          - id: rejection
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs

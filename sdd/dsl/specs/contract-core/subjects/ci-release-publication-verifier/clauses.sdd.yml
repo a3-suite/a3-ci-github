@@ -1,0 +1,117 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-publication-verifier
+contracts:
+  - id: contract.ci-release-publication-verifier.outputs
+    summary: Observe-before requires authoritative draft visibility and complete Release absence. Verify-after binds schema-validated owner receipt and readback to authority, handoff, asset inventory and immutable create-result Release ID, then independently checks remote tag/source, body, non-draft state and exact asset/checksum bytes. Requests are GET-only; observation does not replace owner immediate pre-write reobservation or non-overwrite create.
+    conditions:
+      - id: observation-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-pre-observation-valid
+          op: available
+      - id: verification-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-post-verification-valid
+          op: available
+      - id: verification-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-observation-invalid
+          op: available
+    guarantees:
+      - id: observation-status
+        when: observation-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values: [success]
+      - id: observation-file
+        when: observation-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: observation-path
+      - id: observation-digest
+        when: observation-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: observation-digest
+      - id: verification-status
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values: [success]
+      - id: immutable-release-id
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: release-remote-identity
+      - id: bound-receipt
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: publish-receipt
+      - id: independent-readback
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: readback-evidence
+      - id: verification-rejected
+        when: verification-invalid
+        observation_ref: observation.ci-release-publication-verifier.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values: [failure]
+    verification_intents:
+      - id: observe-absence
+        goal: Read-only absence observation emits only pre-create outputs bound to authority and handoff.
+        guarantee_refs: [observation-status, observation-file, observation-digest]
+      - id: verify-publication
+        goal: Independent GET-only immutable-ID verification emits only post-create outputs when all owner and remote evidence agrees.
+        guarantee_refs: [verification-status, immutable-release-id, bound-receipt, independent-readback]
+      - id: fail-closed
+        goal: Reject unavailable credentials, incomplete remote knowledge, existing Release or mismatching receipt/readback without success evidence.
+        guarantee_refs: [verification-rejected]

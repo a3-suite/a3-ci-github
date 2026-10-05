@@ -40,6 +40,29 @@ node fetch-a3-ci-github.mjs fetch \
   --repo-root "{project-root}"
 ```
 
+標準presetにはmaterializerを含めない。設定検査・binding確認または独自adapter配置で必要になった場合だけ、同じexact manifestで選択presetに追加する。同一revisionの取得済み資材は検証後に併合され、既存ファイルを保持する。
+
+```bash
+node fetch-a3-ci-github.mjs fetch \
+  --manifest-url "{exact-manifest-url}" \
+  --preset quality-gate \
+  --asset runtime.adapter-materializer \
+  --repo-root "{project-root}"
+```
+
+optional platform品質はcallerと検証用calleeソースを明示選択する。fetchとplanの両方に同じ選択を渡す。
+
+```bash
+node fetch-a3-ci-github.mjs fetch \
+  --manifest-url "{exact-manifest-url}" \
+  --preset quality-gate \
+  --asset workflow.quality-gate-platforms \
+  --asset runtime.quality-platforms-workflow \
+  --repo-root "{project-root}"
+```
+
+calleeソースは選択したworkflowの依存閉包だけ取得し、distribution内でpreflightが参照する。consumerへのcopy対象には含めない。依存assetのIDと構成は配布registryを正本とする。
+
 repository保守またはoffline再構成では、同じsnapshotのlocal manifestとsource rootを明示できる。通常consumer導入でbranch checkoutへ置き換えない。
 
 取得済みdistributionを別の操作で利用する前に、receiptに記録された全fileを再検証できる。
@@ -79,11 +102,11 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 ## 適用後
 
 1. workflow placeholder、Action pin、runner、tool version、Variable、Secret参照をprojectの正本へ接続する。
-2. 必要なexternal skill identityとdigestを確認し、既存materializerでadapterを生成する。
+2. 標準bundleの配置は不要。独自adapter配置またはbinding検査が必要な場合だけmaterializerを追加取得し、`configure-ci-preset.guide.md`の準備済みruntimeで実行する。external skillを利用する場合はそのidentityとdigestも確認する。
 3. `generate-ci-asset-lock.ts`で`.ci/ci-assets.lock.json`を生成する。
 4. a3-lintとactionlintを実行する。
 5. `validate-ci-preset.guide.md`のpreflightを実行する。
-6. project-owned adapterとconsumer契約テストを実行する。
+6. project-owned adapterがある場合はその確認を行い、consumer契約テストは常に実行する。
 7. GitHub上でしか確認できない契約だけhosted evidenceを取得する。
 
 通常のCI実行はproject-local distributionを参照しない。

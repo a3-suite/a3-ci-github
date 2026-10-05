@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.platform-matrix
 contracts:
   - id: contract.ci-platform-matrix.outputs
-    summary: A valid platform manifest produces a deterministic matrix output.
+    summary: A valid manifest preserves the full build matrix; a valid optional quality selection additionally produces ordered quality matrix and expected platform outputs.
     conditions:
       - id: platform-manifest-valid
         environment_predicate:
@@ -14,6 +14,16 @@ contracts:
         environment_predicate:
           kind: environment-ref
           target_ref: runtime-context.platform-manifest-invalid
+          op: available
+      - id: quality-platform-selection-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-platform-selection-valid
+          op: available
+      - id: quality-platform-selection-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-platform-selection-invalid
           op: available
     guarantees:
       - id: platform-matrix-produced
@@ -53,6 +63,75 @@ contracts:
               kind: value_set
               values:
                 - absent
+      - id: selected-full-matrix-produced
+        when: quality-platform-selection-valid
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: matrix
+      - id: ordered-quality-matrix-produced
+        when: quality-platform-selection-valid
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: quality-matrix
+      - id: ordered-expected-platforms-produced
+        when: quality-platform-selection-valid
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: expected-platforms
+      - id: invalid-selection-fails
+        when: quality-platform-selection-invalid
+        observation_ref: observation.ci-platform-matrix.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
+      - id: invalid-selection-has-no-matrix
+        when: quality-platform-selection-invalid
+        observation_ref: observation.ci-platform-matrix.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: matrix-output-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: invalid-selection-has-no-quality-outputs
+        when: quality-platform-selection-invalid
+        observation_ref: observation.ci-platform-matrix.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-output-state
+            right:
+              kind: value_set
+              values:
+                - absent
     verification_intents:
       - id: platform-matrix-output-set
         goal: A valid manifest produces its validated include matrix.
@@ -63,3 +142,15 @@ contracts:
         guarantee_refs:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
+      - id: quality-selection-output-set
+        goal: A valid selection retains the full manifest matrix and produces platform_id/runner and comma-separated expected IDs in selection order.
+        guarantee_refs:
+          - selected-full-matrix-produced
+          - ordered-quality-matrix-produced
+          - ordered-expected-platforms-produced
+      - id: invalid-quality-selection-rejected
+        goal: An invalid supplied selection fails without emitting any successful outputs.
+        guarantee_refs:
+          - invalid-selection-fails
+          - invalid-selection-has-no-matrix
+          - invalid-selection-has-no-quality-outputs

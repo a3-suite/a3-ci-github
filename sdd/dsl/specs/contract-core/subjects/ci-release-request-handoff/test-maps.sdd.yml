@@ -6,13 +6,21 @@ test_maps:
     case_id: tag-request-handoff
     tests:
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: bundled entrypoint writes a tag handoff
+        symbol: "source entrypoint > entrypoint writes a tag handoff"
+        check_refs:
+          - check-request-handoff-output
+      - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint writes a tag handoff"
         check_refs:
           - check-request-handoff-output
   - verification_id: verification.ci-release-request-handoff.outputs
     case_id: tag-ref-mismatch-rejected
     tests:
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects a tag ref mismatch
+        symbol: "source entrypoint > entrypoint rejects a tag ref mismatch"
+        check_refs:
+          - check-request-handoff-failure
+      - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects a tag ref mismatch"
         check_refs:
           - check-request-handoff-failure

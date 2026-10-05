@@ -1,0 +1,111 @@
+version: 1
+name: contract-verifications
+subject_ref: subject.ci.release-supplemental-asset
+verifications:
+  - id: verification.ci-release-supplemental-asset.outputs
+    contract_id: contract.ci-release-supplemental-asset.outputs
+    cases:
+      - id: platform-phase
+        intent_id: bound-phase
+        input: {operation: build-platform}
+        checks:
+          - {id: success, guarantee_ref: phase-success}
+          - {id: output, guarantee_ref: phase-output}
+      - id: assembly-phase
+        intent_id: bound-phase
+        input: {operation: assemble, supplemental-build-root: supplemental-build}
+        checks:
+          - {id: success, guarantee_ref: phase-success}
+          - {id: output, guarantee_ref: phase-output}
+      - id: unselected-binding
+        intent_id: fail-closed
+        input: {enabled: false}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: injected-output
+        intent_id: fail-closed
+        input: {output-directory: "output\nstatus=success"}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: owner-failure
+        intent_id: fail-closed
+        input: {owner-exit: 23}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: input-mutation
+        intent_id: fail-closed
+        input: {owner-mutates: standard-build-input}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: unsafe-phase-path
+        intent_id: fail-closed
+        input: {path: ../escape, operation: unsupported}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: identity-selection
+        intent_id: fail-closed
+        input: {binding: mismatched-source-or-snapshot-or-owner-adapter}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: missing-output
+        intent_id: fail-closed
+        input: {owner-output: missing-or-empty}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-installer
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-declaration-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-candidate-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-local-cli
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-provider-profile-refusal
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          profile: unsupported
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-platform-subset
+        intent_id: bound-phase
+        input: {implementation: standard-installer, release-targets: selected-and-unselected}
+        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
+      - id: standard-platform-binding
+        intent_id: fail-closed
+        input: {implementation: standard-installer, platform-binding: mismatched-id-or-target}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-platform-authority
+        intent_id: fail-closed
+        input: {implementation: standard-installer, platform-manifest: authority-checksum-mismatch}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-platform-mutation
+        intent_id: fail-closed
+        input: {implementation: standard-installer, provider-mutates: platform-manifest}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-checksum-bytes
+        intent_id: fail-closed
+        input: {implementation: standard-installer, checksum: noncanonical-bytes}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]

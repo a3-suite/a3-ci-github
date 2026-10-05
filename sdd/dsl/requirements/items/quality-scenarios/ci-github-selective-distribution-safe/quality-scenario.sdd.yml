@@ -3,9 +3,9 @@ name: quality-scenario
 quality_scenario_id: ci-github-selective-distribution-safe
 summary: 選択配布が改変、欠落、競合、並行操作または通信失敗時にconsumer管理資産を保護する
 quality_attribute: reliability
-stimulus: CI管理者が固定Releaseからpresetまたはassetを取得・適用・更新・復旧する
+stimulus: Repository保守者が固定revisionの配布bootstrapを公開する、またはCI管理者が固定Releaseからpresetまたはassetを取得・適用・更新・復旧する
 environment: GitHub Releaseとfull SHA Raw source、または同一repository snapshotを利用できる導入・保守環境
-response: 検証済みの完全な選択閉包だけをstagingから公開し、承認済みplan以外の変更を拒否または復旧する
+response: 配布資材の公開・取得を完全性検証後にだけ成功として受け入れ、承認済みplan以外のconsumer変更を拒否または復旧する
 response_measure:
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開またはconsumer管理資産変更を成功扱いにしない
   - GitHub Releaseの3 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない

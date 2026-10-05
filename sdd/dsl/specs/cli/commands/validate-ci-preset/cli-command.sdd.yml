@@ -15,7 +15,7 @@ command:
         - option_id: repo-root
           presence: required
         - option_id: skill-collection-root
-          presence: required
+          presence: optional
         - option_id: preset
           presence: optional
     - id: remediation
@@ -26,7 +26,7 @@ command:
         - option_id: repo-root
           presence: required
         - option_id: skill-collection-root
-          presence: required
+          presence: optional
         - option_id: preset
           presence: optional
         - option_id: output
@@ -42,5 +42,5 @@ command:
         - output
   help:
     usage_lines:
-      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode read-only --repo-root <PATH> --skill-collection-root <PATH> [--preset <ID>]
-      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode remediation --repo-root <PATH> --skill-collection-root <PATH> [--preset <ID>] [--output <PATH>]
+      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode read-only --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>]
+      - node runtime/preset/run-validate-ci-preset.mjs --audit-mode remediation --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>] [--output <PATH>]

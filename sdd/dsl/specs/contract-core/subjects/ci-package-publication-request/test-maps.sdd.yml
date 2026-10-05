@@ -6,7 +6,12 @@ test_maps:
     case_id: package-request-round-trip
     tests:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: bundled entrypoint creates and verifies a request
+        symbol: "source entrypoint > entrypoint creates and verifies a request"
+        check_refs:
+          - check-package-request-status
+          - check-package-request-source
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint creates and verifies a request"
         check_refs:
           - check-package-request-status
           - check-package-request-source
@@ -14,6 +19,10 @@ test_maps:
     case_id: source-sha-mismatch-rejected
     tests:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects a source SHA mismatch
+        symbol: "source entrypoint > entrypoint rejects a source SHA mismatch"
+        check_refs:
+          - check-package-request-failure-status
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects a source SHA mismatch"
         check_refs:
           - check-package-request-failure-status

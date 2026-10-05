@@ -1,0 +1,66 @@
+version: 1
+name: contract-test-maps
+subject_ref: subject.ci.release-publisher
+test_maps:
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: bundle-publish
+    tests:
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        check_refs:
+          - receipt
+          - readback
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: independent-evidence
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher creates once and emits evidence accepted by independent verifier"
+        check_refs:
+          - receipt
+          - readback
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: bundle-rejection
+    tests:
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
+        check_refs:
+          - rejection
+          - no-outputs
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: invalid-local-bindings
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher rejects invalid approval, handoff and pre-observation before writes"
+        check_refs:
+          - rejection
+          - no-outputs
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: remote-rejection
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher rejects moved source, existing draft and unsupported provider before create"
+        check_refs:
+          - rejection
+          - no-outputs
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: partial-failure
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher transport bounds write operations and sanitizes uncertain provider results"
+        check_refs:
+          - rejection

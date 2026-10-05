@@ -21,7 +21,7 @@ options:
     long: --preset
     kind: value
     value_name: ID
-    summary: Limit validation to one selected preset
+    summary: Select a registered CI preset
     repeatable: true
   - id: output
     long: --output
@@ -32,7 +32,7 @@ options:
     long: --source-revision
     kind: value
     value_name: SHA
-    summary: Full distribution commit SHA recorded in the CI asset lock
+    summary: Full source commit SHA identifying the canonical CI assets
   - id: source-root
     long: --source-root
     kind: value
@@ -99,3 +99,34 @@ options:
     kind: value
     value_name: TAG
     summary: Exact vX.Y.Z Release tag bound to VERSION and source revision
+  - id: operation
+    long: --operation
+    kind: value
+    value_name: PHASE
+    summary: Select build-platform or assemble
+  - id: authority-path
+    long: --authority-path
+    kind: value
+    value_name: PATH
+    summary: Workspace-relative fixed authority context
+  - id: snapshot-path
+    long: --snapshot-path
+    kind: value
+    value_name: PATH
+    summary: Workspace-relative authority-bound config snapshot
+  - id: standard-build-root
+    long: --standard-build-root
+    kind: value
+    value_name: PATH
+    summary: Workspace-relative standard platform or downloaded build directory
+  - id: supplemental-build-root
+    long: --supplemental-build-root
+    kind: value
+    value_name: PATH
+    summary: Workspace-relative downloaded supplemental platform root, required for
+      assemble
+  - id: provider-revision
+    long: --provider-revision
+    kind: value
+    value_name: SHA
+    summary: Full provider SHA from the fixed distribution manifest

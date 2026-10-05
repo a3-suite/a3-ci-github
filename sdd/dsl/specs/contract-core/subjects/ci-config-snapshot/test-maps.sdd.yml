@@ -6,13 +6,21 @@ test_maps:
     case_id: valid-config-sources
     tests:
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: bundled entrypoint writes snapshot and outputs
+        symbol: "source entrypoint > entrypoint writes snapshot and outputs"
+        check_refs:
+          - check-config-snapshot-status
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint writes snapshot and outputs"
         check_refs:
           - check-config-snapshot-status
   - verification_id: verification.ci-config-snapshot.outputs
     case_id: command-file-collision-rejected
     tests:
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
+        symbol: "source entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT"
+        check_refs:
+          - check-config-snapshot-failure-status
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT"
         check_refs:
           - check-config-snapshot-failure-status

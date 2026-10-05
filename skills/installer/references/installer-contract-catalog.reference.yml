@@ -1,0 +1,76 @@
+schemaVersion: "1"
+kind: installer-contract-catalog
+id: installer.contract-catalog
+title: インストーラ契約 ID catalog
+summary: >-
+  installer の横断監査で使う contract ID の正本。coverage matrix は本 catalog の ID だけを参照する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - installer contract id namespace
+    - contract id role classification
+usage:
+  whenToRead:
+    - coverage matrix の contractIds を追加または監査するとき
+    - 契約 reference の責務境界を確認するとき
+  consumers:
+    - human
+    - agent
+    - audit
+contractIds:
+  - id: installer.use-case-contract
+    role: use-case-selection-contract
+    owns:
+      - standard target platform id namespace
+      - source kind to use case mapping
+      - use case sample mapping
+      - shared wrapper delivery contract
+  - id: installer.manifest-contract
+    role: release-input-contract
+    owns:
+      - release manifest responsibility
+      - runtime prerequisite boundary
+      - placement and activation input boundary
+  - id: installer.execution-request-contract
+    role: operation-input-contract
+    owns:
+      - operation mode boundary
+      - source mode selection boundary
+      - execution-time option boundary
+  - id: installer.source-mode-contract
+    role: source-selection-contract
+    owns:
+      - online source mode
+      - offline source mode
+      - network and local artifact source boundary
+  - id: installer.asset-assembly-evidence-contract
+    role: asset-assembly-evidence-contract
+    owns:
+      - assembled installer asset identity
+      - assembled asset checksum and manifest checksum evidence
+      - assembled asset provenance and verification result boundary
+  - id: installer.state-machine
+    role: state-transition-contract
+    owns:
+      - installer state transition
+      - side-effect boundary by phase
+      - failure residual state boundary
+  - id: installer.audit-log-contract
+    role: audit-log-contract
+    owns:
+      - audit log responsibility
+      - audit log policy
+      - audit log and state separation
+  - id: installer.audit-event-contract
+    role: audit-event-contract
+    owns:
+      - audit event payload
+      - install.begin and install.result identity
+      - secret-free local artifact reference
+  - id: installer.fixture-baseline
+    role: fixture-baseline-contract
+    owns:
+      - fixture heading namespace
+      - fixture input expectation residual state
+      - runtime overlay fixture baseline

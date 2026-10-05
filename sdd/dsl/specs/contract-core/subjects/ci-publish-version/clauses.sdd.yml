@@ -5,11 +5,11 @@ contracts:
   - id: contract.ci-publish-version.outputs
     summary: An owner-approved version plan produces a publish-version output.
     conditions:
-      - id: version-plan-input-present
-        input_predicate:
-          kind: input
-          term: input.version-plan-json
-          op: present
+      - id: version-plan-input-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.publish-version-plan-valid
+          op: available
       - id: publish-version-plan-rejected
         environment_predicate:
           kind: environment-ref
@@ -17,7 +17,7 @@ contracts:
           op: available
     guarantees:
       - id: publish-version-output-produced
-        when: version-plan-input-present
+        when: version-plan-input-valid
         observation_ref: observation.ci-publish-version.outputs
         claim:
           kind: observable-result

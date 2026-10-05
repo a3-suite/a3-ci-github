@@ -1,0 +1,60 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.release-authority
+contracts:
+  - id: contract.ci-release-authority.outputs
+    summary: Accept explicit owner inputs from the existing authorized publication request, verify provenance, owner receiving workflow digest, tag/source, notes approval, expiry, snapshot and provider source/workflow compatibility before build; record publish credential write capability as not observed, and emit a coherent authority handoff using GET-only observations. Do not infer version, choose policy or credentials, execute source/owner code, or replace the write-time reobservation and independent verifier.
+    conditions:
+      - id: valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-authority-valid
+          op: available
+      - id: invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-authority-invalid
+          op: available
+    guarantees:
+      - id: authority-file
+        when: valid
+        observation_ref: observation.ci-release-authority.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: authority-path
+      - id: rejected
+        when: invalid
+        observation_ref: observation.ci-release-authority.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values: [failure]
+      - id: no-success-outputs
+        when: invalid
+        observation_ref: observation.ci-release-authority.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: successful-output-state
+            right:
+              kind: value_set
+              values: [absent]
+    verification_intents:
+      - id: coherent-authority
+        goal: Generate verified authority and downstream notes/request/snapshot artifacts from explicit owner inputs.
+        guarantee_refs: [authority-file]
+      - id: fail-closed
+        goal: Reject inconsistent, expired or unknown inputs without successful outputs or provider writes.
+        guarantee_refs: [rejected, no-success-outputs]

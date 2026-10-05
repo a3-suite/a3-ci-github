@@ -1,0 +1,16 @@
+{
+  "name": "a3-ci-github-maintenance",
+  "private": true,
+  "engines": {
+    "node": "^24.0.0 || >=26.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "node tests/coverage-tools/measure-coverage.mjs",
+    "test:coverage:installer": "node tests/coverage-tools/measure-installer-coverage.mjs"
+  },
+  "devDependencies": {
+    "vitest": "5.0.3",
+    "yaml": "2.9.1"
+  }
+}

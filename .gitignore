@@ -2,6 +2,11 @@
 **/node_modules/
 **/*.tsbuildinfo
 
+# Python が生成するローカル実行キャッシュ
+__pycache__/
+*.pyc
+*.pyo
+
 # OS が生成するローカルメタデータ
 .DS_Store
 

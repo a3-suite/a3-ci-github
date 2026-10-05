@@ -6,13 +6,21 @@ test_maps:
     case_id: tag-notes-resolution
     tests:
       - path: actions/ci-release-notes-input-resolution/tests/entrypoint.test.ts
-        symbol: bundled entrypoint resolves an external tag handoff
+        symbol: "source entrypoint > entrypoint resolves an external tag handoff"
+        check_refs:
+          - check-notes-resolution-output
+      - path: actions/ci-release-notes-input-resolution/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint resolves an external tag handoff"
         check_refs:
           - check-notes-resolution-output
   - verification_id: verification.ci-release-notes-input-resolution.outputs
     case_id: existing-normalized-handoff-rejected
     tests:
       - path: actions/ci-release-notes-input-resolution/tests/entrypoint.test.ts
-        symbol: bundled entrypoint rejects an existing normalized handoff
+        symbol: "source entrypoint > entrypoint rejects an existing normalized handoff"
+        check_refs:
+          - check-notes-resolution-failure
+      - path: actions/ci-release-notes-input-resolution/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects an existing normalized handoff"
         check_refs:
           - check-notes-resolution-failure

@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { SOURCE_ROOT, add, map, parseYaml, strings } from './ci-preset-assets.ts';
-import type { ValueMap } from './ci-preset-assets.ts';
+import { SOURCE_ROOT, parseYaml } from './preset-registry.ts';
+import { add } from './validation-report.ts';
+import { map, strings } from './preset-model.ts';
+import type { ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
 import { effectivePermissions, on, permissionRank, uses } from './workflow-validation.ts';
 
@@ -10,11 +12,11 @@ const CI_SCRIPT_CONTRACT_PATH = path.resolve(
   'skills/ci-github/references/ci-script-contracts.reference.yml',
 );
 
-const supplementalAdapterCommand = (
+const supplementalAdapterInputs = (
   phaseName: string,
   argumentValues: Record<string, string>,
   report: Report,
-): string | undefined => {
+): ValueMap | undefined => {
   if (!fs.existsSync(CI_SCRIPT_CONTRACT_PATH)) {
     add(report.missingSettings, {
       path: CI_SCRIPT_CONTRACT_PATH,
@@ -43,12 +45,27 @@ const supplementalAdapterCommand = (
     });
     return undefined;
   }
-  return [
-    '.ci/scripts/ci-release-supplemental-asset.sh',
-    subcommand,
-    ...resolvedArguments,
-  ].join(' ');
+  const inputMapping: Record<string, string> = {
+    'authority-context-path': 'authority-path', 'config-snapshot-path': 'snapshot-path',
+    'standard-platform-build-directory': 'standard-build-root', 'standard-platform-build-root': 'standard-build-root',
+    'supplemental-platform-build-root': 'supplemental-build-root',
+    'supplemental-platform-output-directory': 'output-directory', 'output-directory': 'output-directory',
+  };
+  if (argumentsFromContract.some((argument) => !inputMapping[argument])) {
+    add(report.mismatches, { path: CI_SCRIPT_CONTRACT_PATH, message: 'supplemental adapter arguments have no GitHub Action mapping' });
+    return undefined;
+  }
+  return { operation: subcommand, ...Object.fromEntries(argumentsFromContract.map((argument, index) => [inputMapping[argument], resolvedArguments[index]])) };
 };
+
+const supplementalActionMatches = (step: ValueMap | undefined, inputs: ValueMap | undefined): boolean => Boolean(
+  step && inputs && typeof step.uses === 'string'
+  && step.uses.startsWith('a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@')
+  && map(step.env).A3_INSTALLER_PROVIDER_REVISION === step.uses.split('@').at(-1)
+  && step.run === undefined && step.shell === undefined
+  && (step['continue-on-error'] === undefined || step['continue-on-error'] === false)
+  && JSON.stringify(Object.entries(map(step.with)).sort()) === JSON.stringify(Object.entries(inputs).sort()),
+);
 
 const workflowCallRequired = (workflow: ValueMap): { inputs: string[]; secrets: string[] } => {
   const call = map(on(workflow).workflow_call);
@@ -66,8 +83,10 @@ const validateCaller = (
 ): void => {
   for (const [jobName, jobValue] of Object.entries(map(caller.jobs))) {
     const job = map(jobValue);
-    if (typeof job.uses !== 'string' || !job.uses.startsWith('./.github/workflows/')) continue;
-    const targetPath = job.uses.slice(2);
+    if (typeof job.uses !== 'string') continue;
+    const remote = job.uses.match(/^a3-suite\/a3-ci-github\/\.github\/workflows\/ci-(release|package)-publication\.yml@/);
+    if (!remote && !job.uses.startsWith('./.github/workflows/')) continue;
+    const targetPath = remote ? `.github/workflows/${remote[1]}-publication.yml` : job.uses.slice(2);
     const target = workflows.get(targetPath);
     if (!target) continue;
     const required = workflowCallRequired(target);
@@ -85,6 +104,17 @@ const validateCaller = (
         settingLocation: callerPath,
       });
     }
+    const definitions = map(map(map(target.on).workflow_call).inputs);
+    for (const [name, value] of Object.entries(map(job.with))) {
+      if (!(name in definitions) || !(typeof value === map(definitions[name]).type
+        || typeof value === 'string' && /^\$\{\{.*\}\}$/.test(value))) add(report.mismatches, {
+        path: `${callerPath}:jobs.${jobName}.with.${name}`, message: 'reusable workflow input is undeclared or has the wrong type', settingLocation: callerPath,
+      });
+    }
+    const secretDefinitions = map(map(map(target.on).workflow_call).secrets);
+    for (const name of Object.keys(map(job.secrets))) if (!(name in secretDefinitions)) add(report.mismatches, {
+      path: `${callerPath}:jobs.${jobName}.secrets.${name}`, message: 'reusable workflow secret is undeclared', settingLocation: callerPath,
+    });
     const callerPermissions = effectivePermissions(caller, job);
     for (const targetJob of Object.values(map(target.jobs)).map(map)) {
       for (const [permission, level] of Object.entries(effectivePermissions(target, targetJob))) {
@@ -197,6 +227,17 @@ const validateReleaseRequestWorkflow = (
   report: Report,
 ): void => {
   const requestInputs = map(map(on(request).workflow_dispatch).inputs);
+  const requestSteps = map(map(request.jobs).request).steps;
+  const producer = Array.isArray(requestSteps)
+    ? requestSteps.map(map).find((step) => map(step.with).operation === 'create-request') : undefined;
+  for (const [field, input] of [['release_version', 'release-version'], ['target_identity', 'target-identity']]) {
+    if (map(requestInputs[field]).required !== true
+      || map(producer?.with)[input] !== '${{ inputs.' + field + ' }}') add(report.mismatches, {
+      path: `${requestPath}:on.workflow_dispatch.inputs.${field}`,
+      message: 'standard Release request must bind explicit owner version and target',
+      settingLocation: requestPath,
+    });
+  }
   if (Object.prototype.hasOwnProperty.call(requestInputs, 'notes_handoff_run_id')) add(report.mismatches, {
     path: `${requestPath}:on.workflow_dispatch.inputs.notes_handoff_run_id`,
     message: 'release notes handoff run ID must not be supplied by the operator',
@@ -220,6 +261,18 @@ const validateSupplementalOwnerContract = (
   report: Report,
 ): void => {
   const supplementalAssetEnabled = publishWith.supplemental_release_asset_enabled;
+  const implementation = publishWith.supplemental_release_asset_implementation ?? 'owner-adapter';
+  const configPath = publishWith.supplemental_release_asset_config_path ?? '__unset__';
+  if (!['owner-adapter', 'standard-installer'].includes(String(implementation))
+    || (implementation === 'standard-installer' && (supplementalAssetEnabled !== true
+      || publishWith.supplemental_release_asset_owner_contract !== 'installer.asset-assembly-evidence-contract'
+      || typeof configPath !== 'string' || !configPath || configPath === '__unset__' || /[\0\r\n]/.test(configPath)
+      || configPath.startsWith('/') || configPath.includes('\\') || configPath.split('/').some(part => !part || part === '.' || part === '..')))
+    || (implementation === 'owner-adapter' && configPath !== '__unset__')) add(report.mismatches, {
+      path: `${callerPath}:jobs.publish.with.supplemental_release_asset_implementation`,
+      message: 'supplemental implementation, enabled selection, owner contract and declaration path must agree',
+      settingLocation: callerPath,
+    });
   const supplementalAssetOwnerContract = publishWith.supplemental_release_asset_owner_contract;
   const ownerContractPath = `${callerPath}:jobs.publish.with.supplemental_release_asset_owner_contract`;
   if (supplementalAssetEnabled === true) {
@@ -293,6 +346,42 @@ const validateReleaseCallerWorkflow = (
   return publishWith;
 };
 
+const authoritySnapshotBinding = /^\$\{\{\s*(env|inputs)\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/;
+
+const parseAuthoritySnapshotSources = (sourcesJson: unknown): ValueMap | undefined => {
+  if (typeof sourcesJson !== 'string') return undefined;
+  let json = '';
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < sourcesJson.length; index += 1) {
+    const character = sourcesJson[index];
+    if (!inString && sourcesJson.startsWith('${{', index)) {
+      // Preserve binding identity; GitHub evaluates the JSON encoding at execution time.
+      const expression = /^\$\{\{\s*toJSON\(\s*((?:env|inputs)\.[A-Za-z][A-Za-z0-9_]*)\s*\)\s*\}\}/.exec(sourcesJson.slice(index));
+      if (!expression || !json.trimEnd().endsWith(':')) return undefined;
+      json += JSON.stringify(`\${{ ${expression[1]} }}`);
+      index += expression[0].length - 1;
+      continue;
+    }
+    json += character;
+    if (inString && escaped) escaped = false;
+    else if (inString && character === '\\') escaped = true;
+    else if (character === '"') inString = !inString;
+  }
+  try {
+    const sources: unknown = JSON.parse(json);
+    if (!sources || typeof sources !== 'object' || Array.isArray(sources)) return undefined;
+    for (const values of Object.values(sources)) {
+      if (!values || typeof values !== 'object' || Array.isArray(values)) return undefined;
+      if (Object.values(values).some(value => typeof value === 'string'
+        && value.includes('${{') && !authoritySnapshotBinding.test(value))) return undefined;
+    }
+    return map(sources);
+  } catch {
+    return undefined;
+  }
+};
+
 const resolveAuthoritySnapshotValues = (
   publicationPath: string,
   callerPath: string,
@@ -306,18 +395,15 @@ const resolveAuthoritySnapshotValues = (
       let resolved = value;
       let path = `${publicationPath}:jobs.authority.steps.config.with.sources-json.${source}.${key}`;
       let settingLocation = publicationPath;
-      const envMatch = typeof value === 'string'
-        ? /^\$\{\{\s*env\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/.exec(value)
+      const binding = typeof value === 'string'
+        ? authoritySnapshotBinding.exec(value)
         : undefined;
-      const inputMatch = typeof value === 'string'
-        ? /^\$\{\{\s*inputs\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/.exec(value)
-        : undefined;
-      if (envMatch) {
-        resolved = publicationEnv[envMatch[1]];
-        path = `${publicationPath}:env.${envMatch[1]}`;
-      } else if (inputMatch) {
-        resolved = publishWith[inputMatch[1]];
-        path = `${callerPath}:jobs.publish.with.${inputMatch[1]}`;
+      if (binding?.[1] === 'env') {
+        resolved = publicationEnv[binding[2]];
+        path = `${publicationPath}:env.${binding[2]}`;
+      } else if (binding?.[1] === 'inputs') {
+        resolved = publishWith[binding[2]] ?? ({ supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__' } as Record<string, string>)[binding[2]];
+        path = `${callerPath}:jobs.publish.with.${binding[2]}`;
         settingLocation = callerPath;
       }
       const runtimeValue = typeof resolved === 'string'
@@ -350,7 +436,7 @@ const validatePublicationControlSurface = (
     'supplemental_release_asset_enabled',
     'supplemental_release_asset_owner_contract',
   ];
-  if (JSON.stringify(requiredInputs) !== JSON.stringify(expectedInputs)) add(report.mismatches, {
+  if (expectedInputs.some((name) => !requiredInputs.includes(name))) add(report.mismatches, {
     path: `${publicationPath}:on.workflow_call.inputs`,
     message: 'trusted publication requires request run IDs and the supplemental asset selection',
     settingLocation: publicationPath,
@@ -382,22 +468,37 @@ const validatePublicationControlSurface = (
   const publicationJobs = map(publication.jobs);
   const authorityJob = map(publicationJobs.authority);
   const authoritySteps = Array.isArray(authorityJob.steps) ? authorityJob.steps.map(map) : [];
+  const standardAuthority = authoritySteps.find((step) => step.id === 'authority');
+  const expectedAuthorityInputs = {
+    'root-directory': '.',
+    'snapshot-path': '${{ env.CI_CONFIG_SNAPSHOT_PATH }}',
+    'output-directory': 'authority',
+    'release-request-run-id': '${{ inputs.request_run_id }}',
+    'publication-request-run-id': '${{ inputs.publication_request_run_id }}',
+    'github-token': '${{ github.token }}',
+  };
+  if (!standardAuthority || typeof standardAuthority.uses !== 'string'
+    || !standardAuthority.uses.includes('/actions/ci-release-authority@')
+    || standardAuthority.if !== "env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'"
+    || standardAuthority.run !== undefined || standardAuthority['continue-on-error'] !== undefined
+    || Object.entries(expectedAuthorityInputs).some(([key, value]) => map(standardAuthority.with)[key] !== value)) add(report.mismatches, {
+    path: `${publicationPath}:jobs.authority.steps.authority`,
+    message: 'standard Release authority must use the common read-only Action with bound inputs',
+    settingLocation: publicationPath,
+  });
   const configSnapshotStep = authoritySteps.find((step) => step.id === 'config');
   const sourcesJson = map(configSnapshotStep?.with)['sources-json'];
-  let snapshotSources: ValueMap = {};
-  let workflowSnapshot: ValueMap = {};
-  if (typeof sourcesJson === 'string') {
-    try {
-      snapshotSources = map(JSON.parse(sourcesJson));
-      workflowSnapshot = map(snapshotSources.workflow);
-    } catch {
-      workflowSnapshot = {};
-    }
-  }
+  const snapshotSources = parseAuthoritySnapshotSources(sourcesJson);
+  if (!snapshotSources) add(report.mismatches, {
+    path: `${publicationPath}:jobs.authority.steps.config.with.sources-json`,
+    message: 'ci-config-snapshot sources-json must be a JSON object with supported static env/input bindings',
+    settingLocation: publicationPath,
+  });
+  const workflowSnapshot = map(snapshotSources?.workflow);
   resolveAuthoritySnapshotValues(
     publicationPath,
     callerPath,
-    snapshotSources,
+    snapshotSources ?? {},
     publishWith,
     map(publication.env),
     report,
@@ -409,6 +510,8 @@ const validatePublicationControlSurface = (
     CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT:
       '${{ inputs.supplemental_release_asset_owner_contract }}',
     CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER: '.ci/scripts/ci-release-supplemental-asset.sh',
+    CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: '${{ inputs.supplemental_release_asset_implementation }}',
+    CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '${{ inputs.supplemental_release_asset_config_path }}',
   };
   for (const [key, value] of Object.entries(expectedSupplementalAssetSnapshot)) {
     if (workflowSnapshot[key] !== value) add(report.mismatches, {
@@ -428,15 +531,14 @@ const validateSupplementalBuildStep = (
   const supplementalPlatformVerification = buildSteps.find(
     (step) => step.name === 'Build and verify supplemental Release asset platform',
   );
-  const supplementalPlatformCommand = supplementalAdapterCommand('buildPlatform', {
+  const supplementalPlatformInputs = supplementalAdapterInputs('buildPlatform', {
     'authority-context-path': 'authority/authority.json',
     'config-snapshot-path': 'authority/config-snapshot.json',
     'standard-platform-build-directory': 'build/${{ matrix.id }}',
     'supplemental-platform-output-directory': 'supplemental-build/${{ matrix.id }}',
   }, report);
   if (supplementalPlatformVerification?.if !== 'inputs.supplemental_release_asset_enabled'
-    || supplementalPlatformVerification?.shell !== 'bash'
-    || supplementalPlatformVerification?.run !== supplementalPlatformCommand) add(report.mismatches, {
+    || !supplementalActionMatches(supplementalPlatformVerification, supplementalPlatformInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.build.steps.Build and verify supplemental Release asset platform`,
     message: 'supplemental asset platform build must use the current adapter interface',
     settingLocation: publicationPath,
@@ -453,15 +555,16 @@ const validateSupplementalAssemblyStep = (
   const supplementalAssembly = supplementalAssetSteps.find(
     (step) => step.name === 'Build and verify supplemental Release asset',
   );
-  const supplementalAssemblyCommand = supplementalAdapterCommand('assemble', {
+  const supplementalAssemblyInputs = supplementalAdapterInputs('assemble', {
     'authority-context-path': 'authority/authority.json',
     'config-snapshot-path': 'authority/config-snapshot.json',
     'standard-platform-build-root': 'build',
     'supplemental-platform-build-root': 'supplemental-build',
     'output-directory': 'supplemental-asset',
   }, report);
-  if (supplementalAssembly?.shell !== 'bash'
-    || supplementalAssembly?.run !== supplementalAssemblyCommand) add(report.mismatches, {
+  if (supplementalAssetJob.if !== 'inputs.supplemental_release_asset_enabled'
+    || supplementalAssembly?.if !== undefined
+    || !supplementalActionMatches(supplementalAssembly, supplementalAssemblyInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.supplemental-asset.steps.Build and verify supplemental Release asset`,
     message: 'supplemental asset assembly must use the current adapter interface',
     settingLocation: publicationPath,

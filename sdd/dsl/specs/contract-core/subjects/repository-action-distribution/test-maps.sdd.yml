@@ -6,71 +6,75 @@ test_maps:
     case_id: maintained-distribution-inputs
     tests:
       - path: tests/action-dist-gate.test.mjs
-        symbol: build plan installs, rebuilds, and compares every Action dist
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > build plan installs, rebuilds, and compares every Action dist"
         check_refs:
           - check-distribution-plan-produced
       - path: tests/action-dist-gate.test.mjs
-        symbol: collects and rebuilds the Rust release script bundle
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > collects and rebuilds the Rust release script bundle"
         check_refs:
           - check-distribution-plan-produced
   - verification_id: verification.repository-action-distribution.integrity
     case_id: inconsistent-distribution-state
     tests:
       - path: tests/action-dist-gate.test.mjs
-        symbol: fails when a build leaves an untracked dist file
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > fails when a build leaves an untracked dist file"
         check_refs:
           - check-inconsistent-distribution-rejected
       - path: tests/action-dist-gate.test.mjs
-        symbol: fails when a Composite Action references an untracked script
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > fails when a Composite Action references an untracked script"
         check_refs:
           - check-inconsistent-distribution-rejected
   - verification_id: verification.repository-action-distribution.integrity
     case_id: maintained-action-catalog
     tests:
       - path: tests/action-index-gate.test.mjs
-        symbol: preserves curated rows and appends newly discovered actions
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions"
         check_refs:
           - check-action-catalog-projected
       - path: tests/action-index-gate.test.mjs
-        symbol: removes rows for deleted actions
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > removes rows for deleted actions"
+        check_refs:
+          - check-action-catalog-projected
+      - path: tests/action-index-gate.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > catalog projection preserves section boundaries and is idempotent with generated markers"
         check_refs:
           - check-action-catalog-projected
   - verification_id: verification.repository-action-distribution.integrity
     case_id: maintained-action-contract-coverage
     tests:
       - path: tests/action-dist-gate.test.mjs
-        symbol: every Action has contract coverage for its public outputs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > every Action has contract coverage for its public outputs"
         check_refs:
           - check-action-contract-coverage
   - verification_id: verification.repository-action-distribution.integrity
     case_id: maintained-action-source-verification
     tests:
       - path: tests/action-package-verification.test.mjs
-        symbol: derives typecheck and no-rebuild test steps for every bundled Action
+        symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > derives typecheck and no-rebuild test steps for every bundled Action"
         check_refs:
           - check-action-source-verification-plan
       - path: tests/action-package-verification.test.mjs
-        symbol: connects shared provisioner core tests without another install or build
+        symbol: "action-package-verification > action-package-verification > connects shared provisioner and publication tests without another install or build"
         check_refs:
           - check-action-source-verification-plan
   - verification_id: verification.repository-action-distribution.integrity
     case_id: matching-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.test.mjs
-        symbol: release alias updater creates annotated major and minor aliases idempotently
+        symbol: "repository-release-alias-update > release alias updater creates annotated major and minor aliases idempotently"
         check_refs:
           - check-release-version-confirmed
   - verification_id: verification.repository-action-distribution.integrity
     case_id: invalid-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.test.mjs
-        symbol: release alias updater rejects missing and invalid repository VERSION
+        symbol: "repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION"
         check_refs:
           - check-invalid-release-version-rejected
   - verification_id: verification.repository-action-distribution.integrity
     case_id: mismatched-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.test.mjs
-        symbol: release alias updater rejects a tag that differs from repository VERSION
+        symbol: "repository-release-alias-update > release alias updater rejects a tag that differs from repository VERSION"
         check_refs:
           - check-mismatched-release-version-rejected

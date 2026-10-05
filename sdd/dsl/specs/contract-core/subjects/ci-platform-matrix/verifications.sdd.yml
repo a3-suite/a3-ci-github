@@ -21,3 +21,27 @@ verifications:
             guarantee_ref: invalid-platform-manifest-fails
           - id: check-invalid-platform-manifest-no-output
             guarantee_ref: invalid-platform-manifest-has-no-output
+      - id: valid-quality-selection
+        intent_id: quality-selection-output-set
+        input:
+          manifest-path: .ci/platform-manifest.yml
+          selection-path: .ci/quality-platforms.yml
+        checks:
+          - id: check-selected-full-matrix
+            guarantee_ref: selected-full-matrix-produced
+          - id: check-ordered-quality-matrix
+            guarantee_ref: ordered-quality-matrix-produced
+          - id: check-ordered-expected-platforms
+            guarantee_ref: ordered-expected-platforms-produced
+      - id: invalid-quality-selection
+        intent_id: invalid-quality-selection-rejected
+        input:
+          manifest-path: .ci/platform-manifest.yml
+          selection-path: .ci/invalid-quality-platforms.yml
+        checks:
+          - id: check-invalid-selection-failure
+            guarantee_ref: invalid-selection-fails
+          - id: check-invalid-selection-no-matrix
+            guarantee_ref: invalid-selection-has-no-matrix
+          - id: check-invalid-selection-no-quality-outputs
+            guarantee_ref: invalid-selection-has-no-quality-outputs

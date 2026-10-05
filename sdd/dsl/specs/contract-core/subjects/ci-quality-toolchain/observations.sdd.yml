@@ -1,0 +1,15 @@
+version: 1
+name: contract-observations
+subject_ref: subject.ci.quality-toolchain
+observations:
+  - id: observation.ci-quality-toolchain.result
+    summary: Selected preparation succeeds or stops on invalid inputs or a failed setup step.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: outcome
+          kind: observation_field
+          meaning: Success only after all selected preparation steps succeed; failure on invalid input or setup failure.

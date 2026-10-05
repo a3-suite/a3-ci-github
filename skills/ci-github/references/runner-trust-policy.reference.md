@@ -73,10 +73,11 @@
 - fork PR では head fallback を許可せず、base の資産だけを使用する。
 
 ### privileged workflow の trusted CI control
-- 本契約は `github.workflow_ref` / `github.workflow_sha` と `job.workflow_repository` / `job.workflow_file_path` / `job.workflow_ref` / `job.workflow_sha` を提供する GitHub.com を対象とする。GHES では同等の identity 契約を確認できない限り導入を停止する。
-- reusable workflow の各 privileged job は、最初の step で caller と called workflow が default branch の同一 SHA であることを検証する。repository、workflow path、ref、40桁 SHA の全要素を fail closed で照合し、検証前に他の Action や project-local code を実行しない。検証には registry に登録された固定 SHA の `ci-workflow-identity` Action を使う。
-- identity gate が出力した SHA を trusted CI control の checkout ref とし、checkout 直後に `git rev-parse HEAD` がその SHA と一致することを確認する。別入力の control SHA や mutable ref へ fallback しない。
-- identity gate は workflow orchestration 自身を検証する最小の独立 step とし、job isolation のため各 privileged job で同じ境界を検証する。provider registry で exact commit SHA の binding を固定し、read-only の `ci-workflow-identity` だけを gate として実行する。Action は workflow 自身を checkout・実行せず、検証済み SHA を返す。検証より前に他の Action、checkout、project-local code を実行しない。
+- 本契約は caller の `github.workflow_ref` / `github.workflow_sha` を提供する GitHub.com を対象とする。GHES では同等の context 契約を確認できない限り導入を停止する。
+- 標準 Release は `authority` job、標準 Package は `publish` job の最初の step で publication entry を検証する。event は `workflow_run`、caller ref は consumer repository の所定 caller path と default branch の組合せ、control SHA は40桁の小文字hexに fail closed で照合する。入口検証より前に他の Action、checkout、project-local code を実行しない。
+- Release の後続 control job は `authority` の成功に依存し、独自の実行条件で失敗・skip・cancel を迂回しない。入口の成功を job output の control SHA で伝搬させず、各 control checkout は `repository: github.repository` と `ref: github.workflow_sha` を直接使い、直後に HEAD をその SHA と照合する。source SHA、別入力、mutable ref へ fallback しない。
+- caller から local `./.github/workflows/` 参照で呼ぶ callee は GitHub の同一commit保証を使い、caller/callee の SHA equality を重ねて検証しない。preflight は固定した local callee path、入口検証、成功依存、control checkout と直後の HEAD 照合を検査し、control job の container / services を許可しない。外部 provider 参照へ変更する場合は repository / workflow path / full commit SHA を固定し、その接続を別途受け入れる。consumer と provider の SHA equality は要求しない。
+- 公開 `ci-workflow-identity` Action の入力・出力契約は維持するが、標準 publication 経路では使わない。workflow の保護と権限設定を trust の前提とし、変更可能な workflow 内の自己検証だけを信頼根拠にしない。
 - `workflow_dispatch` などの手動起動権限や tag push は、選択された ref やその ref 内の CI assets の信頼根拠として扱わない。
 - publish、deploy などの権限付き処理では、workflow orchestration 自体も trusted CI control に含める。event ref 上の workflow に publish 権限を与えず、権限を持たない request workflow と、default branch 上の `workflow_run` で起動する privileged workflow を分離する。
 - project-local trusted CI control を実行する job だけが、その control を監査済み commit SHA の snapshot から checkout する。checkout したファイルを実行または参照しない job へ trust marker として追加しない。
@@ -117,9 +118,9 @@
 - [ ] marker が無く対象資産も無い初回導入でだけ same-repo head を使用している
 - [ ] marker が無く対象資産がある不整合を fail にしている
 - [ ] fork PR で head fallback を許可していない
-- [ ] privileged reusable workflow の各対象 job が最初の step で caller / called workflow の repository、path、default-branch ref、同一 SHA を検証している
-- [ ] identity gate の SHA で trusted control を checkout し、直後に checkout HEAD を照合している
-- [ ] GitHub.com 以外では同等の workflow identity 契約を確認できない限り停止している
+- [ ] 標準 publication の入口、callee 参照、後続 job の成功依存が本章の trusted CI control 契約に従っている
+- [ ] trusted control の checkout と直後の HEAD 照合が本章の trusted CI control 契約に従っている
+- [ ] GitHub.com 以外では同等の caller context 契約を確認できない限り停止している
 - [ ] 権限付き workflow で request identity を検証し、操作対象sourceを実行していない
 - [ ] event ref 上の request workflow が source checkout、policy、authority 判定、publish 権限を持っていない
 - [ ] privileged workflow の orchestration が default branch または監査済み commit SHA から実行されている

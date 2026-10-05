@@ -1,0 +1,141 @@
+name: package-publication
+
+on:
+  workflow_call:
+    inputs:
+      package_handoff_run_id:
+        description: Run ID that produced the verified package handoff
+        required: true
+        type: string
+      source_sha:
+        description: Immutable source SHA bound to the package handoff
+        required: true
+        type: string
+      version:
+        description: Concrete package version bound to the handoff
+        required: true
+        type: string
+      target_identity:
+        description: Package target identity bound to the handoff
+        required: true
+        type: string
+      package_artifact_id:
+        description: Artifact ID returned by the package handoff upload
+        required: true
+        type: string
+      runner:
+        description: Static versioned runner label selected by the owner caller
+        required: true
+        type: string
+      gh-version:
+        required: true
+        type: string
+      jq-version:
+        required: true
+        type: string
+    secrets:
+      PACKAGE_REGISTRY_TOKEN:
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}
+  cancel-in-progress: false
+  queue: max
+
+env:
+  CI_GH_VERSION: ${{ inputs.gh-version }}
+  CI_JQ_VERSION: ${{ inputs.jq-version }}
+
+jobs:
+  publish:
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    env:
+      CI_SOURCE_SHA: ${{ inputs.source_sha }}
+      CI_VERSION: ${{ inputs.version }}
+      CI_TARGET_IDENTITY: ${{ inputs.target_identity }}
+    steps:
+      - name: Verify publication entry
+        id: publication-entry
+        shell: bash
+        env:
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          CALLER_EVENT: ${{ github.event_name }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          test "$CALLER_EVENT" = workflow_run
+          test -n "$REPOSITORY"
+          test -n "$DEFAULT_BRANCH"
+          test "$CALLER_WORKFLOW_REF" = "$REPOSITORY/.github/workflows/package-publication-caller.yml@refs/heads/$DEFAULT_BRANCH"
+          [[ "$CONTROL_SHA" =~ ^[a-f0-9]{40}$ ]]
+      # Package source is untrusted; only the caller workflow snapshot supplies control code.
+      - uses: actions/checkout@<commit-sha>
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.workflow_sha }}
+      - name: Verify trusted control checkout
+        shell: bash
+        env:
+          CONTROL_SHA: ${{ github.workflow_sha }}
+        run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
+      - name: Provision fixed jq
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
+        with:
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - name: Provision fixed gh
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@312c534de67720de060689d78ada17da9c84c4e2
+        with:
+          gh-version: ${{ env.CI_GH_VERSION }}
+      - name: Verify fixed GitHub tools
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@312c534de67720de060689d78ada17da9c84c4e2
+        with:
+          mode: gh-jq
+          gh-version: ${{ env.CI_GH_VERSION }}
+          jq-version: ${{ env.CI_JQ_VERSION }}
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          artifact-ids: ${{ inputs.package_artifact_id }}
+          path: package-handoff
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.package_handoff_run_id }}
+      - name: Validate package handoff integrity
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@312c534de67720de060689d78ada17da9c84c4e2
+        with:
+          handoff-root: package-handoff
+          descriptor: handoff.json
+          source-sha: ${{ env.CI_SOURCE_SHA }}
+          version: ${{ env.CI_VERSION }}
+          target-identity: ${{ env.CI_TARGET_IDENTITY }}
+      - name: Publish verified package handoff
+        env:
+          PACKAGE_REGISTRY_TOKEN: ${{ secrets.PACKAGE_REGISTRY_TOKEN }}
+          CI_GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PACKAGE_REGISTRY_TOKEN"
+          .ci/trusted/ci-package-publish.sh package-handoff
+
+  summary:
+    needs: publish
+    if: always()
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish job result: ${{ needs.publish.result }}"}]}

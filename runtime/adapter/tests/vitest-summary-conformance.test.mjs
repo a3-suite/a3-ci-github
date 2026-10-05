@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, test } from 'node:test';
+import { afterAll as after, test, describe, expect } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,7 +14,7 @@ const tsxPath = path.join(runtimeRoot, 'node_modules/.bin/tsx');
 const temporaryRoot = mkdtempSync(path.join(os.tmpdir(), 'a3-vitest-conformance-'));
 after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
-  assert.equal(existsSync(temporaryRoot), false);
+  expect(existsSync(temporaryRoot)).toBe(false);
 });
 
 const outputValue = (raw, name) => {
@@ -32,7 +31,7 @@ const runAction = (reportPath) => {
     env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath, 'INPUT_REPORT-JSON': reportPath, 'INPUT_LABEL': 'unit' },
     encoding: 'utf8',
   });
-  assert.equal(result.status, 0, result.stderr);
+  expect(result.status, result.stderr).toBe(0);
   const outputs = readFileSync(outputPath, 'utf8');
   return { status: outputValue(outputs, 'status'), collection: outputValue(outputs, 'collection') };
 };
@@ -42,7 +41,7 @@ const runCli = (reportPath) => {
     cwd: repositoryRoot,
     encoding: 'utf8',
   });
-  assert.equal(result.status, 0, result.stderr);
+  expect(result.status, result.stderr).toBe(0);
   return {
     outcome: result.stdout.match(/^- 判定: (成功|失敗|判定不能)$/m)?.[1],
     collection: result.stdout.match(/^- 収集: (完了|一部取得|取得不可)$/m)?.[1],
@@ -121,16 +120,18 @@ const cases = [
   },
 ];
 
-for (const testCase of cases) {
-  test(testCase.title, () => {
-    const reportPath = path.join(temporaryRoot, `${testCase.name}.json`);
-    writeFileSync(reportPath, JSON.stringify(testCase.report));
-    const action = runAction(reportPath);
-    const cli = runCli(reportPath);
-    assert.deepEqual(action, { status: testCase.status, collection: testCase.collection });
-    assert.deepEqual(cli, {
-      outcome: outcomes[testCase.status],
-      collection: collections[testCase.collection],
+describe("vitest-summary-conformance", () => {
+  for (const testCase of cases) {
+    test(testCase.title, () => {
+      const reportPath = path.join(temporaryRoot, `${testCase.name}.json`);
+      writeFileSync(reportPath, JSON.stringify(testCase.report));
+      const action = runAction(reportPath);
+      const cli = runCli(reportPath);
+      expect(action).toStrictEqual({ status: testCase.status, collection: testCase.collection });
+      expect(cli).toStrictEqual({
+        outcome: outcomes[testCase.status],
+        collection: collections[testCase.collection],
+      });
     });
-  });
-}
+  }
+});

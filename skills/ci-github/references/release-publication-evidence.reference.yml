@@ -1,0 +1,63 @@
+schemaVersion: "1"
+kind: ci-github-release-evidence
+id: ci.github-release-evidence
+title: GitHub Release publication evidence mapping
+summary: GitHub Releaseの公開判断と書込結果を結ぶ証跡の表現とAction間の対応を定義する。
+placementRole: public_reference
+usage:
+  whenToRead: Release公開handoffと独立readbackの証跡を実装または検証するとき。
+  consumers: [ci-github]
+authority:
+  role: authoritative-definition
+  owns: [GitHub-specific evidence representation and Action workflow mapping]
+  excludes: [provider-neutral publication meaning, owner policy, credential route, installer evidence semantics]
+meaningContracts:
+  - ci.script-contracts#contracts.release-supplemental-asset-build-scripts
+  - ci.script-contracts#contracts.release-assembly-scripts
+  - ci.script-contracts#contracts.release-publication-scripts
+  - ci.release-asset-publication-contract
+schema:
+  repositoryPath: runtime/release-publication/evidence.schema.json
+  id: ci.github-release-evidence.v1
+  definitions:
+    authorityProjection: identity
+    assembly: assembly
+    preAndPostObservation: observation
+    publishReceipt: receipt
+    readbackEvidence: readback
+binding:
+  authority: publication projection must match authority source_sha, version and target_identity and the workflow repository
+  assembly: asset inventory digest and exact manifest bytes bind the generated handoff
+  preCreate: repository, annotated tag object, source, version, target, approved body digest and handoff digest
+  createResult: selected write binding produces the immutable Release object ID; tag lookup must not substitute it
+  postCreate: receipt, independently observed readback and inventory share the create-result ID and pre-create binding
+ownerWrite:
+  extension: release-publication-adapter
+  remainsRequired: non-standard-owner-route
+  invocationArguments: [authority-path, release-handoff-root, pre-observation-path, new-write-output-directory]
+  outputs: [receipt.json, readback.json]
+  responsibilities: [pre-write-suitability-reobservation, pre-write-identity-and-absence-reobservation, non-overwrite-create, upload, finalize, partial-publication-failure]
+  forbidden: [automatic-credential-fallback, automatic-overwrite, partial-as-success]
+workflowMapping:
+  assemble: ci-release-assembly
+  beforeWrite: ci-release-publication-verifier.observe-before
+  write: ci.github-preset-assets#actionization.standardImplementations
+  afterWrite: ci-release-publication-verifier.verify-after
+  ownerFallback: non-standard-owner-route-only
+  successOutputs: verifier-only
+observationCredential:
+  source: workflow-injected-GH_TOKEN
+  operations: GET-only
+  visibilityRequirement: repository-permissions-push-confirmed-for-draft-visibility
+  unknown: fail-closed
+supplemental:
+  phaseInvocation: actions/ci-release-supplemental-asset/README.md
+  interface: actions/ci-release-assembly/README.md
+  ownerRecordInterpretation: opaque-exact-bytes
+  verificationAuthority: same-run-owner-adapter-with-artifact-id-bound-handoff
+  commonGuarantee: per-asset-record-digest-provenance-and-owner-verification-binding
+  meaningVerification: installer-or-owner
+availability:
+  source: ci.github-preset-assets#actionization
+  pendingRelease: preflight-rejects-deployment
+  exactRefActivation: separate-approved-release-step

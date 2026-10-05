@@ -27,26 +27,36 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Verify bundled Action distributions
         shell: bash
         run: node runtime/repository/check-action-dist.mjs
 
       - name: Test bundled Action distribution gate
         shell: bash
-        run: node --test tests/action-dist-gate.test.mjs
+        run: npm test -- tests/action-dist-gate.test.mjs
 
       - name: Validate contract-subject execution definition
         shell: bash
-        run: node runtime/contract-subject-coverage.mjs --check
+        run: node tests/coverage-tools/contract-subject-coverage.mjs --check
 
       - name: Test contract-subject coverage reporter
         shell: bash
-        run: node --test tests/contract-subject-execution.test.mjs
+        run: |
+          npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
+          npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
 
       - name: Test workflow and repository capability contracts
         shell: bash
         run: >-
-          node --test
+          npm test --
           tests/workflow-contracts.test.mjs
           runtime/preset/tests/preset-assurance-contract.test.mjs
           tests/repository-managed-source-integrity.test.mjs
@@ -58,12 +68,12 @@ jobs:
 
       - name: Test README Action catalog gate
         shell: bash
-        run: node --test tests/action-index-gate.test.mjs
+        run: npm test -- tests/action-index-gate.test.mjs
 
       - name: Test repository Release delivery
         shell: bash
         run: >-
-          node --test
+          npm test --
           runtime/repository/tests/update-release-aliases.test.mjs
           runtime/repository/tests/manage-distribution-release.test.mjs
 
@@ -72,47 +82,55 @@ jobs:
         run: |
           npm --prefix runtime/preset ci --no-audit --no-fund
           CI_FIXED_RUNTIME_ROOT=runtime/preset \
-            runtime/preset/node_modules/.bin/tsx --test \
+            npm test -- \
             runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
-            runtime/adapter/tests/cli-runtime.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
-            runtime/preset/tests/preset-validation-contract.test.mjs
+            runtime/preset/tests/preset-validation-contract.test.mjs \
+            runtime/preset/tests/action-availability.test.mjs \
+            runtime/preset/tests/publication-validation.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
-            node --test tests/public-cli-lifecycle.test.mjs
-          node --test runtime/distribution/tests/selective-distribution.test.mjs
+            npm test -- tests/public-cli-lifecycle.test.mjs
+          npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 
       - name: Test shared GitHub toolchain verifier
         shell: bash
-        run: node --test runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        run: npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 
       - name: Test shared path identity core
         shell: bash
-        run: node --test runtime/path/tests/same-file-core.test.mjs
+        run: npm test -- runtime/path/tests/same-file-core.test.mjs
 
       - name: Test shared platform manifest core
         shell: bash
-        run: node --test runtime/platform/tests/platform-manifest-core.test.mjs
+        run: npm test -- runtime/platform/tests/platform-manifest-core.test.mjs
 
       - name: Test shared Vitest summary core
         shell: bash
-        run: node --test runtime/vitest/tests/vitest-summary-core.test.mjs
+        run: npm test -- runtime/vitest/tests/vitest-summary-core.test.mjs
 
       - name: Test Vitest summary CLI and conformance
         shell: bash
         env:
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
         run: |
-          node --test \
+          npm test -- \
             runtime/adapter/tests/vitest-test-summary.test.mjs \
             runtime/adapter/tests/vitest-summary-conformance.test.mjs
 
-      - name: Test GitHub toolchain verifier Action contract
+      - name: Test quality toolchain Action contracts
         shell: bash
-        run: node --test actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+        run: >-
+          npm test --
+          actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+          actions/ci-quality-toolchain/tests/action-contract.test.mjs
 
       - name: Verify all bundled Action sources
         shell: bash
         run: node runtime/repository/verify-action-packages.mjs
+
+      - name: Test Action source and runtime boundary gates
+        shell: bash
+        run: npm test -- tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs
 
       - name: Provision jq 1.7.1
         uses: ./actions/ci-jq-provisioner
@@ -132,12 +150,12 @@ jobs:
 
       - name: Test shared Rust release scripts
         shell: bash
-        run: node --test runtime/rust-release/tests/rust-release-scripts.test.mjs
+        run: npm test -- runtime/rust-release/tests/rust-release-scripts.test.mjs
 
       - name: Test Rust release Action contracts
         shell: bash
         run: >-
-          node --test
+          npm test --
           actions/ci-rust-source-gate/tests/action-contract.test.mjs
           actions/ci-rust-release-build/tests/action-contract.test.mjs
 
@@ -421,6 +439,21 @@ jobs:
           test "$STATUS" = passed
           test "$COLLECTION" = complete
 
+      - name: Set up Python source coverage tool
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        with:
+          version: '0.11.15'
+
+      - name: Measure installer Python source coverage
+        run: npm run test:coverage:installer
+
+      - name: Preserve installer source coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-python-source-coverage
+          path: tests/tmp/coverage/installer/run-*/coverage.json
+          if-no-files-found: error
+
   rust-windows:
     name: Rust release contract / Windows
     runs-on: windows-2025
@@ -428,21 +461,154 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Test Windows Rust release contracts
         shell: pwsh
-        run: node --test --test-name-pattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+        run: npm test -- --testNamePattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+
+  installer-windows:
+    name: Installer contract / Windows
+    outputs:
+      source-sha: ${{ steps.installer-handoff.outputs.source-sha }}
+    runs-on: windows-2025
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up installer verification Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Set up installer boundary test Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test distributed installer Action and CLI
+        id: installer-handoff
+        env:
+          CI_INSTALLER_ACCEPTANCE_OUTPUT: tests/tmp/installer-acceptance
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+
+      - name: Upload verified installer release handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-handoff-${{ runner.os }}
+          path: tests/tmp/installer-acceptance
+          if-no-files-found: error
+
+      - name: Test installer builder on Windows
+        shell: pwsh
+        run: python -m unittest discover -s runtime/installer/tests -p test_build_installer.py -v
+
+      - name: Test native Windows installer safety
+        shell: pwsh
+        run: python -m unittest discover -s runtime/installer/tests -p test_runtime_installer.py -k test_windows -v
+
+  installer-macos:
+    name: Installer contract / macOS ARM64
+    outputs:
+      source-sha: ${{ steps.installer-handoff.outputs.source-sha }}
+    runs-on: macos-14
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Require native ARM64 runner
+        run: test "$(uname -m)" = arm64
+
+      - name: Set up installer verification Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Set up installer boundary test Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test distributed installer Action and CLI
+        id: installer-handoff
+        env:
+          CI_INSTALLER_ACCEPTANCE_OUTPUT: tests/tmp/installer-acceptance
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+
+      - name: Upload verified installer release handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-handoff-${{ runner.os }}
+          path: tests/tmp/installer-acceptance
+          if-no-files-found: error
+
+      - name: Test installer provider and native macOS safety
+        run: python3 -m unittest discover -s runtime/installer/tests -p 'test_*.py' -v
+
+  installer-handoff:
+    name: Installer handoff / ${{ matrix.platform }}
+    needs: [installer-windows, installer-macos]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows
+            producer: installer-windows
+          - platform: macOS
+            producer: installer-macos
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Download installer release handoff
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: installer-handoff-${{ matrix.platform }}
+          path: tests/tmp/installer-acceptance
+
+      - name: Verify transported installer release handoff
+        uses: ./actions/ci-handoff-integrity
+        with:
+          handoff-root: tests/tmp/installer-acceptance
+          descriptor: handoff.json
+          source-sha: ${{ needs[matrix.producer].outputs.source-sha }}
+          version: '1.0.0'
+          target-identity: fixture/tool
 
   contract:
     name: CI Action contract / hosted
     if: always()
-    needs: [contract-linux, rust-windows]
+    needs: [contract-linux, rust-windows, installer-windows, installer-macos, installer-handoff]
     runs-on: ubuntu-24.04
     steps:
-      - name: Require Linux and Windows contract evidence
+      - name: Require all platform contract evidence
         env:
           LINUX_RESULT: ${{ needs.contract-linux.result }}
           WINDOWS_RESULT: ${{ needs.rust-windows.result }}
+          INSTALLER_WINDOWS_RESULT: ${{ needs.installer-windows.result }}
+          INSTALLER_MACOS_RESULT: ${{ needs.installer-macos.result }}
+          INSTALLER_HANDOFF_RESULT: ${{ needs.installer-handoff.result }}
         shell: bash
         run: |
           test "$LINUX_RESULT" = success
           test "$WINDOWS_RESULT" = success
+          test "$INSTALLER_WINDOWS_RESULT" = success
+          test "$INSTALLER_MACOS_RESULT" = success
+          test "$INSTALLER_HANDOFF_RESULT" = success

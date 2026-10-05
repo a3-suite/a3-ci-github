@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import * as core from '@actions/core';
-import { validateReleaseNotesBinding } from './binding.js';
+import { validateReleaseNotesBinding } from '../../../runtime/release-publication/notes-binding.js';
 
 export const run = (): void => {
   try {

@@ -43,6 +43,16 @@ tagIdentity:
   dereferencedCommitSha: source_sha
   branchPolicyEvaluation: forbidden
   unknownResult: fail-closed
+releaseDecisionInput:
+  sourceContract: git.release-flow
+  receivingArtifact: ci.release-publication-request.v2
+  fields: [releaseVersion, releaseIdentity, targetIdentity, releaseRequestRunId]
+  publicationAuthorization: verified-default-branch-workflow-dispatch
+  provenanceBinding: [publication-request-run, release-request-run, source-sha, annotated-tag]
+  integrity: artifact-sidecar-and-owner-receiving-workflow-digest
+  versionInference: forbidden
+  notesApprovalScope: body-only
+  ownerPolicyEvaluation: forbidden
 releaseNotesInput:
   sourceContract: git.release-flow
   sourceField: body
@@ -116,6 +126,9 @@ providerPublicationSuitability:
   observation:
     source: provider-remote-state
     earlyCheck: after-source-resolution
+    earlyScope: [repository-state, source-default-workflow-compatibility]
+    earlyWriteCapability: not-observed
+    preWriteScope: [source-default-workflow-compatibility, selected-credential-write-capability]
     preWriteRecheck: required
     earlyCheckIsPermanentEvidence: false
   credentialRoute:

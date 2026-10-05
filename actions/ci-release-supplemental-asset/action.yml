@@ -1,0 +1,33 @@
+name: ci-release-supplemental-asset
+description: Execute authority-bound standard installer assembly or an owner adapter using the v2 phase interface.
+inputs:
+  operation:
+    required: true
+    description: build-platform or assemble; installer semantics remain owner-owned.
+  source-root:
+    required: false
+    default: '.'
+    description: Fixed source checkout containing the selected adapter and phase paths.
+  authority-path:
+    required: true
+    description: Workspace-relative authority context JSON path.
+  snapshot-path:
+    required: true
+    description: Workspace-relative authority-bound config snapshot JSON path.
+  standard-build-root:
+    required: true
+    description: Workspace-relative standard platform directory for build-platform or downloaded build root for assemble.
+  supplemental-build-root:
+    required: false
+    description: Workspace-relative downloaded supplemental build root, required only for assemble.
+  output-directory:
+    required: true
+    description: Workspace-relative new phase output directory, disjoint from the read-only inputs.
+outputs:
+  status:
+    description: success only after the owner exits zero, input preservation checks pass and new output exists.
+  output-directory:
+    description: Requested new owner-produced output directory; not installer semantic certification.
+runs:
+  using: node24
+  main: dist/index.js

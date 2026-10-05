@@ -1,0 +1,43 @@
+version: 1
+name: contract-clauses
+subject_ref: subject.ci.quality-toolchain
+contracts:
+  - id: contract.ci-quality-toolchain.preparation
+    summary: Prepare only the selected fixed language toolchain, preserve Node npm cache and Rust environment setup, and leave source identity, permissions and quality commands to the workflow and adapter.
+    conditions:
+      - id: quality-toolchain-preparation-succeeds
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-toolchain-preparation-succeeds
+          op: available
+      - id: quality-toolchain-preparation-fails
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-toolchain-preparation-fails
+          op: available
+    guarantees:
+      - id: selected-quality-toolchain-ready
+        when: quality-toolchain-preparation-succeeds
+        observation_ref: observation.ci-quality-toolchain.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: outcome}
+            right: {kind: value_set, values: [success]}
+      - id: invalid-or-failed-quality-toolchain-stops
+        when: quality-toolchain-preparation-fails
+        observation_ref: observation.ci-quality-toolchain.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: outcome}
+            right: {kind: value_set, values: [failure]}
+    verification_intents:
+      - id: quality-toolchain-selection-verified
+        goal: Validate inputs before setup, select only the requested language dependencies with fixed Action pins, and retain pinned command arguments and Rust environment setup.
+        guarantee_refs: [selected-quality-toolchain-ready]
+      - id: quality-toolchain-failure-verified
+        goal: Reject unsupported profiles, missing or nonfixed selected versions before setup, and propagate setup failures.
+        guarantee_refs: [invalid-or-failed-quality-toolchain-stops]

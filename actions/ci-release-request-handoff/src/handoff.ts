@@ -35,13 +35,8 @@ const sha = (value: string, error: string): string => {
   return value;
 };
 
-const writeJson = (filePath: string, value: unknown): void => {
-  fs.writeFileSync(filePath, `${JSON.stringify(value)}\n`, 'utf8');
-};
-
 export const writeReleaseRequestHandoff = (input: HandoffInput): HandoffResult => {
   const outputDirectory = safePath(input.outputDirectory);
-  fs.mkdirSync(outputDirectory, { recursive: true });
   const tagSourceSha = sha(required(input.tagSourceSha, 'tag-source-sha-required'), 'tag-source-sha-invalid');
   const tagObjectSha = sha(required(input.tagObjectSha, 'tag-object-sha-required'), 'tag-object-sha-invalid');
   const requestPath = path.join(outputDirectory, 'release-request.json');
@@ -57,9 +52,12 @@ export const writeReleaseRequestHandoff = (input: HandoffInput): HandoffResult =
     request_run_id: requestRunId,
     request_actor: required(input.requestActor, 'request-actor-required'),
   };
-  writeJson(requestPath, { schema: 'ci.release-request.v1', event: 'tag', ref: githubRef, tag, version: null, version_resolution: 'authority', ...common });
   const requestDigestPath = `${requestPath}.sha256`;
-  const requestDigest = crypto.createHash('sha256').update(fs.readFileSync(requestPath)).digest('hex');
-  fs.writeFileSync(requestDigestPath, `${requestDigest}  release-request.json\n`, 'utf8');
+  if ([requestPath, requestDigestPath].some((file) => fs.lstatSync(file, { throwIfNoEntry: false }))) throw new Error('release-request-output-already-exists');
+  const json = `${JSON.stringify({ schema: 'ci.release-request.v1', event: 'tag', ref: githubRef, tag, version: null, version_resolution: 'authority', ...common })}\n`;
+  const requestDigest = crypto.createHash('sha256').update(json).digest('hex');
+  fs.mkdirSync(outputDirectory, { recursive: true });
+  fs.writeFileSync(requestPath, json, { encoding: 'utf8', flag: 'wx' });
+  fs.writeFileSync(requestDigestPath, `${requestDigest}  release-request.json\n`, { encoding: 'utf8', flag: 'wx' });
   return { requestPath, requestDigestPath };
 };

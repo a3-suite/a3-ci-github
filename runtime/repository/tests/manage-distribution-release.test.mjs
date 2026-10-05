@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, test } from 'node:test';
+import { afterAll as after, test, describe, expect } from 'vitest';
 import {
   chmodSync,
   existsSync,
@@ -159,65 +158,69 @@ const execute = (operation, assetDirectory, binaryRoot, stateRoot, extraEnv = {}
   },
 );
 
-// contract_id: contract.ci-selective-distribution.publication
-// integration_id: repository-selective-distribution-release
-test('distribution Release publication is idempotent and readback rejects changed remote bytes', () => {
-  const assetDirectory = prepareAssets();
-  const binaryRoot = prepareFakeGh();
-  const stateRoot = path.join(temporaryRoot, 'release-state');
-  mkdirSync(stateRoot);
+describe("contract.ci-selective-distribution.publication", () => {
+  describe("repository-selective-distribution-release", () => {
+    // contract_id: contract.ci-selective-distribution.publication
+    // integration_id: repository-selective-distribution-release
+    test('distribution Release publication is idempotent and readback rejects changed remote bytes', () => {
+      const assetDirectory = prepareAssets();
+      const binaryRoot = prepareFakeGh();
+      const stateRoot = path.join(temporaryRoot, 'release-state');
+      mkdirSync(stateRoot);
 
-  const apiFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
-    GH_FAIL_ENDPOINT: '/git/ref/tags/',
+      const apiFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
+        GH_FAIL_ENDPOINT: '/git/ref/tags/',
+      });
+      expect(apiFailure.status).toBe(1);
+      expect(apiFailure.stderr).toMatch(/API observation failed/);
+      expect(existsSync(path.join(stateRoot, 'tag'))).toBe(false);
+
+      const changedTag = execute('publish', assetDirectory, binaryRoot, stateRoot, {
+        REMOTE_TAG_OBJECT: 'c'.repeat(40),
+      });
+      expect(changedTag.status).toBe(1);
+      expect(changedTag.stderr).toMatch(/tag object changed/);
+      expect(existsSync(path.join(stateRoot, 'tag'))).toBe(false);
+
+      const snapshotFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
+        GH_FAIL_ENDPOINT: '@tsv',
+      });
+      expect(snapshotFailure.status).toBe(1);
+      expect(snapshotFailure.stderr).toMatch(/API observation failed/);
+      expect(existsSync(path.join(stateRoot, 'uploads'))).toBe(false);
+
+      const published = execute('publish', assetDirectory, binaryRoot, stateRoot);
+      expect(published.status, published.stderr).toBe(0);
+      expect(published.stdout).toMatch(/"readbackStatus":"verified"/);
+      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+
+      const repeated = execute('publish', assetDirectory, binaryRoot, stateRoot);
+      expect(repeated.status, repeated.stderr).toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+
+      const readback = execute('readback', assetDirectory, binaryRoot, stateRoot);
+      expect(readback.status, readback.stderr).toBe(0);
+      expect(readback.stdout).toMatch(/"operation":"readback"/);
+
+      const raced = execute('readback', assetDirectory, binaryRoot, stateRoot, {
+        GH_RACE_AFTER_READBACK: 'true',
+      });
+      expect(raced.status).toBe(1);
+      expect(raced.stderr).toMatch(/asset identity changed during readback/);
+      rmSync(path.join(stateRoot, 'race'));
+
+      const unmanagedAsset = path.join(stateRoot, 'assets/unmanaged.zip');
+      writeFileSync(unmanagedAsset, 'unmanaged\n');
+      const unmanaged = execute('readback', assetDirectory, binaryRoot, stateRoot);
+      expect(unmanaged.status).toBe(1);
+      expect(unmanaged.stderr).toMatch(/unmanaged asset/);
+      rmSync(unmanagedAsset);
+
+      writeFileSync(path.join(stateRoot, 'assets/fetch-a3-ci-github.mjs'), 'changed\n');
+      const changed = execute('readback', assetDirectory, binaryRoot, stateRoot);
+      expect(changed.status).toBe(1);
+      expect(changed.stderr).toMatch(/readback differs from prepared bytes/);
+      expect(readFileSync(path.join(assetDirectory, 'fetch-a3-ci-github.mjs'), 'utf8')).toBe('console.log("fetch");\n');
+    });
   });
-  assert.equal(apiFailure.status, 1);
-  assert.match(apiFailure.stderr, /API observation failed/);
-  assert.equal(existsSync(path.join(stateRoot, 'tag')), false);
-
-  const changedTag = execute('publish', assetDirectory, binaryRoot, stateRoot, {
-    REMOTE_TAG_OBJECT: 'c'.repeat(40),
-  });
-  assert.equal(changedTag.status, 1);
-  assert.match(changedTag.stderr, /tag object changed/);
-  assert.equal(existsSync(path.join(stateRoot, 'tag')), false);
-
-  const snapshotFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
-    GH_FAIL_ENDPOINT: '@tsv',
-  });
-  assert.equal(snapshotFailure.status, 1);
-  assert.match(snapshotFailure.stderr, /API observation failed/);
-  assert.equal(existsSync(path.join(stateRoot, 'uploads')), false);
-
-  const published = execute('publish', assetDirectory, binaryRoot, stateRoot);
-  assert.equal(published.status, 0, published.stderr);
-  assert.match(published.stdout, /"readbackStatus":"verified"/);
-  assert.equal(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length, 3);
-
-  const repeated = execute('publish', assetDirectory, binaryRoot, stateRoot);
-  assert.equal(repeated.status, 0, repeated.stderr);
-  assert.equal(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length, 3);
-
-  const readback = execute('readback', assetDirectory, binaryRoot, stateRoot);
-  assert.equal(readback.status, 0, readback.stderr);
-  assert.match(readback.stdout, /"operation":"readback"/);
-
-  const raced = execute('readback', assetDirectory, binaryRoot, stateRoot, {
-    GH_RACE_AFTER_READBACK: 'true',
-  });
-  assert.equal(raced.status, 1);
-  assert.match(raced.stderr, /asset identity changed during readback/);
-  rmSync(path.join(stateRoot, 'race'));
-
-  const unmanagedAsset = path.join(stateRoot, 'assets/unmanaged.zip');
-  writeFileSync(unmanagedAsset, 'unmanaged\n');
-  const unmanaged = execute('readback', assetDirectory, binaryRoot, stateRoot);
-  assert.equal(unmanaged.status, 1);
-  assert.match(unmanaged.stderr, /unmanaged asset/);
-  rmSync(unmanagedAsset);
-
-  writeFileSync(path.join(stateRoot, 'assets/fetch-a3-ci-github.mjs'), 'changed\n');
-  const changed = execute('readback', assetDirectory, binaryRoot, stateRoot);
-  assert.equal(changed.status, 1);
-  assert.match(changed.stderr, /readback differs from prepared bytes/);
-  assert.equal(readFileSync(path.join(assetDirectory, 'fetch-a3-ci-github.mjs'), 'utf8'), 'console.log("fetch");\n');
 });

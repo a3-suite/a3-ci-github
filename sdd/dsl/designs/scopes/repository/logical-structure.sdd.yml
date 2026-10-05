@@ -9,7 +9,7 @@ components:
     responsibility: quality、Release、package publication の canonical workflow source を提供する
     kind_ref: application-service
   - component_id: runtime-implementations
-    responsibility: workflow の配置・preflight、Action の共有処理、hosted delivery から呼び出す単独検証可能な repository 処理を提供する
+    responsibility: workflow の配置・preflight、Action の共有処理、hosted delivery から呼び出す単独検証可能な repository 処理と、製品宣言からの共通installer組立・検証・証跡生成を提供する
     kind_ref: application-service
   - component_id: selective-distribution
     responsibility: registryから選択配布manifestを生成し、必要資材の検証済み取得、canonical workflowの差分計画、承認済みcopyおよびtransaction復旧を提供する
@@ -21,7 +21,7 @@ components:
     responsibility: AIエージェントへ設計・導入・検証・監査・復旧の入口を提供する
     kind_ref: docs-surface
   - component_id: repository-maintainer-guidance
-    responsibility: repository保守者へproject-localな公開スキル配備の判断境界と汎用デプロイ機能への委譲入口を提供する
+    responsibility: repository保守者へproject-localな資材監査・コミット前検証・公開Agent Skill配備の判断境界と、共通機能への委譲入口を提供する
     kind_ref: docs-surface
   - component_id: sdd-specifications
     responsibility: 要求・仕様・設計を接続する SDD 正本を管理する

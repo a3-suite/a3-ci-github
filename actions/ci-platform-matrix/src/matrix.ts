@@ -4,6 +4,7 @@ import {
   validatePlatformManifestValue,
 } from '../../../runtime/platform/platform-manifest-core.mjs';
 import type { Platform } from '../../../runtime/platform/platform-manifest-core.mjs';
+import { resolveQualityPlatforms } from '../../../runtime/platform/platform-selection-core.js';
 
 export type { Platform };
 export type PlatformMatrix = { include: Platform[] };
@@ -35,4 +36,10 @@ export const resolvePlatformMatrix = (manifestText: string): PlatformMatrix => {
   } catch (error) {
     throw actionError(error);
   }
+};
+
+export const resolveQualityMatrix = (matrix: PlatformMatrix, selectionText: string) => {
+  const selection = parse(selectionText, { maxAliasCount: 100, uniqueKeys: true }) as unknown;
+  const include = resolveQualityPlatforms(matrix.include, selection);
+  return { matrix: { include }, expectedPlatforms: include.map((entry) => entry.platform_id).join(',') };
 };

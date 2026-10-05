@@ -42,8 +42,13 @@ profilePolicy:
     一致する bundle がない profile は、project owner が用途、command、toolchain、evidence、停止条件を定義し、
     adapter descriptor の契約適合を確認できる場合だけ project-owned adapter として利用する。
   unknownHandling: adapter、profile、provider、asset の実体を観測できない場合は bundle 選択を確定しない。監査では観測不能の事実を audit status の分類 owner へ渡す。
+  standardDelivery: >-
+    inventory の delivery=action は固定 ci-quality-adapter に同梱する標準bundleを表す。
+    CI_STANDARD_BUNDLE_ID と Action の standard-bundle-id で選択し、CI_ADAPTER_DESCRIPTOR は空にする。
+    provider は言語ownerのGit objectから生成したrevisionとdigestを検証する。言語commandの正本は変更しない。
+    独自descriptorまたは従来の配置経路では CI_STANDARD_BUNDLE_ID を空にし、bundle-path を使用する。
   trustedQualitySource: >-
-    quality workflow は標準では base ref から取得した descriptor を使用し、source checkout の adapter を実行制御に使わない。
+    標準Action bundleは固定Actionの内包資材から解決する。descriptor配置経路はbase refのdescriptorを使用し、source checkout の adapter を実行制御に使わない。
     base に lock が無い初回導入では、provider profile が定める canonical bootstrap に限り same-repo head の descriptor と
     trusted project root を使用する。bootstrap の判定と終了条件は provider profile が所有する。
     runner と runtime は provider binding の固定参照と trust 契約に従う。
@@ -53,7 +58,7 @@ copyContract:
   runtimeRule: >-
     配布元の source は `ci.script-assets` の source inventory を選択する時だけ解決する。コピー先には配布元スキルの配置ディレクトリが
     存在しないため、配置後の workflow、script、descriptor は destination と project-local の入力だけを参照する。
-  bundleDescriptor: source descriptor を project の `.ci/adapters/` 配下へ materializer が配置する。配置済み descriptor は target-only 形式とする。
+  bundleDescriptor: delivery=action はdescriptorを配置せず固定Actionの参照bindingを返す。それ以外はsource descriptorをprojectの `.ci/adapters/` 配下へ配置する。配置済みdescriptorはtarget-only形式とする。
   entrypoints: bundle の stable asset ID を source inventory で解決し、descriptor の destination へコピーする。destination の存在、衝突、symlink による root 外到達を preflight で検証する。
   runtime: materializer の runtime と lockfile は導入用の隔離 tool state に固定し、対象 project へ配置しない。配置後の descriptor を実行する runtime は provider binding の契約に委譲する。
   configuration: secret、token、credential、承認済み本文を bundle descriptor に保存しない。
@@ -61,4 +66,4 @@ materialization:
   scriptId: ci-adapter-bundle-materializer
   input: source root、ci.script-assets inventory、bundle ID、target project root
   collisionPolicy: 同一内容は再利用し、異なる既存ファイルは停止する。
-  output: target project 内の `.ci/` 配下へ配置したファイルと検証結果
+  output: ci.adapter-materializer.v1。配置経路はdescriptorとfiles、標準Action経路は空のdescriptorとfiles、およびbinding(action、standardBundleId、sourceRevision、sha256)を返す。標準経路の既存outputは上書きせず停止する。

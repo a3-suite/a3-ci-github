@@ -6,7 +6,7 @@ permissions、matrix適用は所有しません。
 
 ## 入出力
 
-`manifest-path`へplatform manifestを指定します。入力制約と`matrix` outputの生成条件は
+`manifest-path`へplatform manifestを指定します。品質platformを選ぶ場合は任意の`selection-path`を指定します。`matrix`は全manifestのまま維持し、品質jobは`quality-matrix`、summaryは`expected-platforms`を使用します。入力制約と各outputの生成条件は
 [`action.yml`](action.yml)を正本とします。
 
 ```yaml

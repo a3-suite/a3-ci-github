@@ -19,7 +19,7 @@ main_success_scenario:
   - summary: 配布元revisionと配置済みassetを結ぶlockを生成し、静的検証とpreflightを実行する
   - summary: 採用preset、project固有差分、owner、検証証跡および更新・撤去条件を利用projectへ記録する
 success_outcomes:
-  - 利用projectは配布元のcanonical workflow原本と導入・検証runtimeを実行時参照せず、配置済みworkflowとproject設定から固定SHA Actionおよびproject-owned extensionへ接続して選択したCIを実行できる
+  - 通常CIは導入・検証用のproject-local distributionを参照せず、配置済みcaller・request workflowから固定SHAのprovider再利用workflowとAction、project-owned設定およびextensionへ接続して実行できる
   - canonical asset、project固有差分、Action pin、lockおよび検証結果を一意に追跡できる
 failure_outcomes:
   - 未解決placeholder、asset不一致、未登録Action、必要extension不足または既存資産との競合があれば適用完了にしない

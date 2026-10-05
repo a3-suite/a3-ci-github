@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.package-publication-workflow
 contracts:
   - id: contract.ci-package-publication-workflow.publication
-    summary: The canonical package workflows order source and version request validation, package preparation, handoff validation, privileged registry publication, and registry readback.
+    summary: The canonical package workflows order source and version request validation, fixed-reference provider-owned package preparation using the consumer-owned build adapter without copying its workflow, handoff validation, fixed-reference provider-owned publication using explicit owner settings and the consumer-owned publisher without copying its workflow, and registry readback.
     conditions:
       - id: ci-package-publication-workflow-canonical-source-available
         input_predicate:
@@ -36,7 +36,7 @@ contracts:
             value: failure-summary
     verification_intents:
       - id: ci-package-publication-workflow-success-intent
-        goal: Verify request and workflow identity validation precede preparation, and handoff validation precedes credential-bearing publication and registry readback.
+        goal: Verify preparation and publication fixed-reference availability, typed inputs, explicit registry secret and permissions fail closed; request validation precedes preparation, and the default-branch workflow_run caller entry, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and registry readback.
         guarantee_refs:
           - ci-package-publication-workflow-success-observed
       - id: ci-package-publication-workflow-failure-intent

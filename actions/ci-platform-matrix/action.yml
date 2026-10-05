@@ -8,11 +8,26 @@ inputs:
       platforms list. Every entry must contain only id, runner, and target. id must match
       [a-z0-9][a-z0-9-]*, target must match [A-Za-z0-9][A-Za-z0-9._+-]*, runner must be
       ubuntu-24.04, macos-14, or windows-2022, and id and target values must each be unique.
+  selection-path:
+    required: false
+    description: >-
+      Optional regular YAML file containing only a non-empty platforms list of entries with
+      only an id. IDs must be unique and declared in the manifest; selection order is preserved.
+      Duplicate YAML keys are rejected and YAML alias expansion is limited to 100 (manifest: 20).
+      Omit or leave empty for manifest-only behavior.
 outputs:
   matrix:
     description: >-
       Compact JSON object containing the validated include matrix. Set only after every entry
       passes validation; failures do not produce this output.
+  quality-matrix:
+    description: >-
+      Compact JSON include matrix of platform_id and runner in selection order. Set only when
+      selection-path is supplied and all inputs pass validation; otherwise absent.
+  expected-platforms:
+    description: >-
+      Comma-separated selected platform IDs in selection order. Set only when selection-path
+      is supplied and all inputs pass validation; otherwise absent.
 runs:
   using: node24
   main: dist/index.js

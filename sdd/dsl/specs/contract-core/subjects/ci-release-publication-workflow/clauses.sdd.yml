@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-publication-workflow
 contracts:
   - id: contract.ci-release-publication-workflow.publication
-    summary: The canonical release workflows order unprivileged request creation, trusted request and identity validation, handoff production, privileged publication, and publication readback.
+    summary: The canonical release workflows order unprivileged request creation, trusted request and publication entry validation, handoff production, privileged publication, and publication readback.
     conditions:
       - id: ci-release-publication-workflow-canonical-source-available
         input_predicate:
@@ -36,7 +36,7 @@ contracts:
             value: failure-summary
     verification_intents:
       - id: ci-release-publication-workflow-success-intent
-        goal: Verify request, identity, and handoff validation precede credential-bearing publication, which precedes publication readback.
+        goal: Verify the provider publication workflow is called through a registered full SHA with typed static owner configuration, default-branch workflow_run caller entry, authority success dependencies, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and readback.
         guarantee_refs:
           - ci-release-publication-workflow-success-observed
       - id: ci-release-publication-workflow-failure-intent

@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, test } from 'node:test';
+import { afterAll as after, test, describe, expect } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -14,7 +13,7 @@ const temporaryRoot = path.join(sharedTemporaryRoot, `release-alias-${process.pi
 mkdirSync(temporaryRoot, { recursive: true });
 after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
-  assert.equal(existsSync(temporaryRoot), false);
+  expect(existsSync(temporaryRoot)).toBe(false);
   if (!sharedTemporaryRootExisted) {
     try {
       rmdirSync(sharedTemporaryRoot);
@@ -31,7 +30,7 @@ const execute = (command, args, options = {}) => spawnSync(command, args, {
 });
 const successful = (command, args, options = {}) => {
   const result = execute(command, args, options);
-  assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stderr || result.stdout}`);
+  expect(result.status, `${command} ${args.join(' ')}\n${result.stderr || result.stdout}`).toBe(0);
   return result.stdout.trim();
 };
 const git = (cwd, ...args) => successful('git', args, { cwd });
@@ -72,150 +71,154 @@ const updateAliases = (work, tag, sha) => updateAliasesAt(work, tag, sha);
 const remoteTagObject = (work, tag) => git(work, 'ls-remote', '--refs', 'origin', `refs/tags/${tag}`).split(/\s+/)[0] ?? '';
 const remoteTagSource = (work, tag) => git(work, 'ls-remote', 'origin', `refs/tags/${tag}^{}`).split(/\s+/)[0] ?? '';
 
-test('repository VERSION is a release SemVer', () => {
-  const version = readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim();
-  assert.match(version, /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
+describe("update-release-aliases", () => {
+  test('repository VERSION is a release SemVer', () => {
+    const version = readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim();
+    expect(version).toMatch(/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
+  });
 });
 
-// integration_id: repository-release-alias-update
-test('release workflow delegates alias mutation to the executable repository runtime', () => {
-  const workflow = readFileSync(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8');
-  const marker = '      - name: Update major and minor aliases\n';
-  const start = workflow.indexOf(marker);
-  assert.notEqual(start, -1);
-  const nextJob = workflow.indexOf('\n\n  ', start);
-  const updateStep = workflow.slice(start, nextJob === -1 ? undefined : nextJob);
-  assert.match(updateStep, /^          RELEASE_TAG: \$\{\{ github\.ref_name \}\}$/m);
-  assert.match(updateStep, /^          RELEASE_SHA: \$\{\{ github\.sha \}\}$/m);
-  assert.match(updateStep, /^        shell: bash$/m);
-  assert.match(updateStep, /^        run: runtime\/repository\/update-release-aliases\.sh$/m);
-  assert.doesNotMatch(updateStep, /^        run: \|/m);
-  assert.notEqual(statSync(scriptPath).mode & 0o111, 0);
-});
+describe("repository-release-alias-update", () => {
+  // integration_id: repository-release-alias-update
+  test('release workflow delegates alias mutation to the executable repository runtime', () => {
+    const workflow = readFileSync(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8');
+    const marker = '      - name: Update major and minor aliases\n';
+    const start = workflow.indexOf(marker);
+    expect(start).not.toBe(-1);
+    const nextJob = workflow.indexOf('\n\n  ', start);
+    const updateStep = workflow.slice(start, nextJob === -1 ? undefined : nextJob);
+    expect(updateStep).toMatch(/^          RELEASE_TAG: \$\{\{ github\.ref_name \}\}$/m);
+    expect(updateStep).toMatch(/^          RELEASE_SHA: \$\{\{ github\.sha \}\}$/m);
+    expect(updateStep).toMatch(/^        shell: bash$/m);
+    expect(updateStep).toMatch(/^        run: runtime\/repository\/update-release-aliases\.sh$/m);
+    expect(updateStep).not.toMatch(/^        run: \|/m);
+    expect(statSync(scriptPath).mode & 0o111).not.toBe(0);
+  });
 
-// integration_id: repository-release-alias-update
-test('release source validation performs no alias mutation', () => {
-  const { work } = createRepository();
-  const sourceSha = git(work, 'rev-parse', 'HEAD');
-  pushReleaseTag(work, 'v1.2.3', sourceSha);
+  // integration_id: repository-release-alias-update
+  test('release source validation performs no alias mutation', () => {
+    const { work } = createRepository();
+    const sourceSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
 
-  const validated = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
-  assert.equal(validated.status, 0, validated.stderr);
-  assert.match(validated.stdout, /Validated release source/);
-  assert.equal(remoteTagObject(work, 'v1'), '');
-  assert.equal(remoteTagObject(work, 'v1.2'), '');
-});
+    const validated = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+    expect(validated.status, validated.stderr).toBe(0);
+    expect(validated.stdout).toMatch(/Validated release source/);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+    expect(remoteTagObject(work, 'v1.2')).toBe('');
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater creates annotated major and minor aliases idempotently', () => {
-  const { work } = createRepository();
-  const sourceSha = git(work, 'rev-parse', 'HEAD');
-  pushReleaseTag(work, 'v1.2.3', sourceSha);
+  // integration_id: repository-release-alias-update
+  test('release alias updater creates annotated major and minor aliases idempotently', () => {
+    const { work } = createRepository();
+    const sourceSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
 
-  const first = updateAliases(work, 'v1.2.3', sourceSha);
-  assert.equal(first.status, 0, first.stderr);
-  for (const alias of ['v1', 'v1.2']) {
-    assert.notEqual(remoteTagObject(work, alias), sourceSha);
-    assert.equal(remoteTagSource(work, alias), sourceSha);
-  }
+    const first = updateAliases(work, 'v1.2.3', sourceSha);
+    expect(first.status, first.stderr).toBe(0);
+    for (const alias of ['v1', 'v1.2']) {
+      expect(remoteTagObject(work, alias)).not.toBe(sourceSha);
+      expect(remoteTagSource(work, alias)).toBe(sourceSha);
+    }
 
-  const second = updateAliases(work, 'v1.2.3', sourceSha);
-  assert.equal(second.status, 0, second.stderr);
-  assert.match(second.stdout, /already points|already at least as new/);
-});
+    const second = updateAliases(work, 'v1.2.3', sourceSha);
+    expect(second.status, second.stderr).toBe(0);
+    expect(second.stdout).toMatch(/already points|already at least as new/);
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater never regresses an alias to an older release', () => {
-  const { work } = createRepository();
-  const firstSha = git(work, 'rev-parse', 'HEAD');
-  pushReleaseTag(work, 'v1.2.3', firstSha);
-  assert.equal(updateAliases(work, 'v1.2.3', firstSha).status, 0);
+  // integration_id: repository-release-alias-update
+  test('release alias updater never regresses an alias to an older release', () => {
+    const { work } = createRepository();
+    const firstSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', firstSha);
+    expect(updateAliases(work, 'v1.2.3', firstSha).status).toBe(0);
 
-  const newerSha = appendCommit(work, 'newer', '1.3.0');
-  git(work, 'push', 'origin', 'main');
-  pushReleaseTag(work, 'v1.3.0', newerSha);
-  assert.equal(updateAliases(work, 'v1.3.0', newerSha).status, 0);
-  assert.equal(remoteTagSource(work, 'v1'), newerSha);
+    const newerSha = appendCommit(work, 'newer', '1.3.0');
+    git(work, 'push', 'origin', 'main');
+    pushReleaseTag(work, 'v1.3.0', newerSha);
+    expect(updateAliases(work, 'v1.3.0', newerSha).status).toBe(0);
+    expect(remoteTagSource(work, 'v1')).toBe(newerSha);
 
-  const older = updateAliases(work, 'v1.2.3', firstSha);
-  assert.equal(older.status, 0, older.stderr);
-  assert.equal(remoteTagSource(work, 'v1'), newerSha);
-  assert.equal(remoteTagSource(work, 'v1.2'), firstSha);
-});
+    const older = updateAliases(work, 'v1.2.3', firstSha);
+    expect(older.status, older.stderr).toBe(0);
+    expect(remoteTagSource(work, 'v1')).toBe(newerSha);
+    expect(remoteTagSource(work, 'v1.2')).toBe(firstSha);
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater rejects missing and invalid repository VERSION', () => {
-  const missing = createRepository();
-  rmSync(path.join(missing.work, 'VERSION'));
-  git(missing.work, 'add', '-A', 'VERSION');
-  git(missing.work, 'commit', '-m', 'remove version');
-  const missingSha = git(missing.work, 'rev-parse', 'HEAD');
-  git(missing.work, 'push', 'origin', 'main');
-  pushReleaseTag(missing.work, 'v1.2.3', missingSha);
-  const missingResult = updateAliases(missing.work, 'v1.2.3', missingSha);
-  assert.equal(missingResult.status, 1);
-  assert.match(missingResult.stderr, /must contain VERSION/);
-  assert.equal(remoteTagObject(missing.work, 'v1'), '');
+  // integration_id: repository-release-alias-update
+  test('release alias updater rejects missing and invalid repository VERSION', () => {
+    const missing = createRepository();
+    rmSync(path.join(missing.work, 'VERSION'));
+    git(missing.work, 'add', '-A', 'VERSION');
+    git(missing.work, 'commit', '-m', 'remove version');
+    const missingSha = git(missing.work, 'rev-parse', 'HEAD');
+    git(missing.work, 'push', 'origin', 'main');
+    pushReleaseTag(missing.work, 'v1.2.3', missingSha);
+    const missingResult = updateAliases(missing.work, 'v1.2.3', missingSha);
+    expect(missingResult.status).toBe(1);
+    expect(missingResult.stderr).toMatch(/must contain VERSION/);
+    expect(remoteTagObject(missing.work, 'v1')).toBe('');
 
-  const invalid = createRepository('01.2.3');
-  const invalidSha = git(invalid.work, 'rev-parse', 'HEAD');
-  pushReleaseTag(invalid.work, 'v1.2.3', invalidSha);
-  const invalidResult = updateAliases(invalid.work, 'v1.2.3', invalidSha);
-  assert.equal(invalidResult.status, 1);
-  assert.match(invalidResult.stderr, /VERSION must be a release SemVer/);
-  assert.equal(remoteTagObject(invalid.work, 'v1'), '');
-});
+    const invalid = createRepository('01.2.3');
+    const invalidSha = git(invalid.work, 'rev-parse', 'HEAD');
+    pushReleaseTag(invalid.work, 'v1.2.3', invalidSha);
+    const invalidResult = updateAliases(invalid.work, 'v1.2.3', invalidSha);
+    expect(invalidResult.status).toBe(1);
+    expect(invalidResult.stderr).toMatch(/VERSION must be a release SemVer/);
+    expect(remoteTagObject(invalid.work, 'v1')).toBe('');
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater rejects a tag that differs from repository VERSION', () => {
-  const { work } = createRepository('1.2.4');
-  const sourceSha = git(work, 'rev-parse', 'HEAD');
-  pushReleaseTag(work, 'v1.2.3', sourceSha);
+  // integration_id: repository-release-alias-update
+  test('release alias updater rejects a tag that differs from repository VERSION', () => {
+    const { work } = createRepository('1.2.4');
+    const sourceSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
 
-  const mismatch = updateAliases(work, 'v1.2.3', sourceSha);
-  assert.equal(mismatch.status, 1);
-  assert.match(mismatch.stderr, /does not match repository VERSION/);
-  assert.equal(remoteTagObject(work, 'v1'), '');
-  assert.equal(remoteTagObject(work, 'v1.2'), '');
-});
+    const mismatch = updateAliases(work, 'v1.2.3', sourceSha);
+    expect(mismatch.status).toBe(1);
+    expect(mismatch.stderr).toMatch(/does not match repository VERSION/);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+    expect(remoteTagObject(work, 'v1.2')).toBe('');
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater rejects invalid identity and bare repositories before remote mutation', () => {
-  const { origin, work } = createRepository();
-  const sourceSha = git(work, 'rev-parse', 'HEAD');
-  pushReleaseTag(work, 'v1.2.3', sourceSha);
+  // integration_id: repository-release-alias-update
+  test('release alias updater rejects invalid identity and bare repositories before remote mutation', () => {
+    const { origin, work } = createRepository();
+    const sourceSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
 
-  const invalidTag = updateAliases(work, 'release-1.2.3', sourceSha);
-  assert.equal(invalidTag.status, 1);
-  assert.match(invalidTag.stderr, /release tag must match vX\.Y\.Z/);
+    const invalidTag = updateAliases(work, 'release-1.2.3', sourceSha);
+    expect(invalidTag.status).toBe(1);
+    expect(invalidTag.stderr).toMatch(/release tag must match vX\.Y\.Z/);
 
-  const mismatchedSha = updateAliases(work, 'v1.2.3', '0'.repeat(40));
-  assert.equal(mismatchedSha.status, 1);
-  assert.match(mismatchedSha.stderr, /tag source does not match/);
+    const mismatchedSha = updateAliases(work, 'v1.2.3', '0'.repeat(40));
+    expect(mismatchedSha.status).toBe(1);
+    expect(mismatchedSha.stderr).toMatch(/tag source does not match/);
 
-  const bareRepository = updateAliasesAt(origin, 'v1.2.3', sourceSha);
-  assert.equal(bareRepository.status, 1);
-  assert.match(bareRepository.stderr, /requires a Git work tree/);
-  assert.equal(remoteTagObject(work, 'v1'), '');
-  assert.equal(remoteTagObject(work, 'v1.2'), '');
-});
+    const bareRepository = updateAliasesAt(origin, 'v1.2.3', sourceSha);
+    expect(bareRepository.status).toBe(1);
+    expect(bareRepository.stderr).toMatch(/requires a Git work tree/);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+    expect(remoteTagObject(work, 'v1.2')).toBe('');
+  });
 
-// integration_id: repository-release-alias-update
-test('release alias updater rejects lightweight and unintegrated release tags', () => {
-  const lightweight = createRepository();
-  const mainSha = git(lightweight.work, 'rev-parse', 'HEAD');
-  pushReleaseTag(lightweight.work, 'v1.2.3', mainSha, false);
-  const lightweightResult = updateAliases(lightweight.work, 'v1.2.3', mainSha);
-  assert.equal(lightweightResult.status, 1);
-  assert.match(lightweightResult.stderr, /release tag must be annotated/);
+  // integration_id: repository-release-alias-update
+  test('release alias updater rejects lightweight and unintegrated release tags', () => {
+    const lightweight = createRepository();
+    const mainSha = git(lightweight.work, 'rev-parse', 'HEAD');
+    pushReleaseTag(lightweight.work, 'v1.2.3', mainSha, false);
+    const lightweightResult = updateAliases(lightweight.work, 'v1.2.3', mainSha);
+    expect(lightweightResult.status).toBe(1);
+    expect(lightweightResult.stderr).toMatch(/release tag must be annotated/);
 
-  const unintegrated = createRepository();
-  git(unintegrated.work, 'checkout', '-b', 'release-candidate');
-  const candidateSha = appendCommit(unintegrated.work, 'candidate', '2.0.0');
-  pushReleaseTag(unintegrated.work, 'v2.0.0', candidateSha);
-  const unintegratedResult = updateAliases(unintegrated.work, 'v2.0.0', candidateSha);
-  assert.equal(unintegratedResult.status, 1);
-  assert.match(unintegratedResult.stderr, /not integrated into main/);
-  assert.equal(remoteTagObject(unintegrated.work, 'v2'), '');
-  assert.equal(remoteTagObject(unintegrated.work, 'v2.0'), '');
+    const unintegrated = createRepository();
+    git(unintegrated.work, 'checkout', '-b', 'release-candidate');
+    const candidateSha = appendCommit(unintegrated.work, 'candidate', '2.0.0');
+    pushReleaseTag(unintegrated.work, 'v2.0.0', candidateSha);
+    const unintegratedResult = updateAliases(unintegrated.work, 'v2.0.0', candidateSha);
+    expect(unintegratedResult.status).toBe(1);
+    expect(unintegratedResult.stderr).toMatch(/not integrated into main/);
+    expect(remoteTagObject(unintegrated.work, 'v2')).toBe('');
+    expect(remoteTagObject(unintegrated.work, 'v2.0')).toBe('');
+  });
 });

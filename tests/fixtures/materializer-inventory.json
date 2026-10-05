@@ -5,6 +5,11 @@
       "kind": "external-tool",
       "source": { "path": "runtime/adapter/vitest-test-summary.ts" },
       "copyable": true
+    },
+    {
+      "id": "action-owned-extension",
+      "entrypoints": [],
+      "copyable": false
     }
   ],
   "adapterBundles": [

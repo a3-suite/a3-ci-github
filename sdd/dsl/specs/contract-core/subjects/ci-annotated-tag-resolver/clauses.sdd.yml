@@ -5,11 +5,11 @@ contracts:
   - id: contract.ci-annotated-tag-resolver.outputs
     summary: A valid annotated tag produces tag object and source commit outputs.
     conditions:
-      - id: tag-input-present
-        input_predicate:
-          kind: input
-          term: input.tag
-          op: present
+      - id: tag-resolution-input-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.annotated-tag-resolution-valid
+          op: available
       - id: tag-resolution-rejected
         environment_predicate:
           kind: environment-ref
@@ -17,7 +17,7 @@ contracts:
           op: available
     guarantees:
       - id: tag-resolution-outputs-produced
-        when: tag-input-present
+        when: tag-resolution-input-valid
         observation_ref: observation.ci-annotated-tag-resolver.outputs
         claim:
           kind: observable-result

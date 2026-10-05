@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "installer.manifest.v2",
+  "releaseVersion": "1.4.2",
+  "targetPlatformId": "linux-x86_64",
+  "source": {
+    "kind": "github-release",
+    "owner": "example-org",
+    "repository": "example-agent",
+    "fixedReference": "v1.4.2"
+  },
+  "artifact": {
+    "url": "https://github.com/example-org/example-agent/releases/download/v1.4.2/example-agent_1.4.2_linux_x86_64.tar.gz",
+    "fileName": "example-agent_1.4.2_linux_x86_64.tar.gz",
+    "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "placement": {
+    "managedRoot": "/opt/example-agent",
+    "releasePath": "/opt/example-agent/releases/1.4.2",
+    "currentLink": "/opt/example-agent/current"
+  },
+  "activation": {
+    "strategy": "active-pointer"
+  },
+  "concurrency": {
+    "lockPath": "/opt/example-agent/install.lock"
+  },
+  "state": {
+    "installStatePath": "/opt/example-agent/state/install-state.json"
+  },
+  "compatibility": {
+    "requiredInstallerVersion": "1.2.0"
+  },
+  "provenance": {
+    "sourceTag": "v1.4.2",
+    "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+    "ciRunId": "1234567890"
+  }
+}
