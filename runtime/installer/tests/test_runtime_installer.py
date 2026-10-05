@@ -1805,6 +1805,18 @@ class RuntimeInstallerTest(unittest.TestCase):
             with self.subTest(accepted=accepted), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve()
                 output, artifact = self._per_user_windows_bundle(root, system_wide=True)
+                script_path = output / "installer.ps1"
+                script = script_path.read_text(encoding="utf-8")
+                boundary_error = "throw 'launcher path is outside the allowed base'"
+                self.assertEqual(script.count(boundary_error), 1)
+                diagnostic_error = (
+                    "throw ('launcher path is outside the allowed base: ' + "
+                    "(@{ launcher = $launcher; allowedBase = $launcherBase; "
+                    "programFiles = $env:ProgramFiles } | ConvertTo-Json -Compress))"
+                )
+                script_path.write_text(
+                    script.replace(boundary_error, diagnostic_error), encoding="utf-8"
+                )
                 program_files = root / ("Program Files" if accepted else "other-base")
                 environment = dict(os.environ, ProgramFiles=str(program_files))
                 completed = self._run(
