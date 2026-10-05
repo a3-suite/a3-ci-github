@@ -146,3 +146,9 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects platform mutation during provider execution
         check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-checksum-bytes
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects noncanonical checksum bytes in both phases
+        check_refs: [refusal]

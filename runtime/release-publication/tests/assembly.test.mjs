@@ -25,6 +25,22 @@ describe("contract.ci-release-assembly.outputs", () => {
 
     // contract_id: contract.ci-release-assembly.outputs
     // integration_id: release-assembly-contract
+    test('asset digest preserves producer bytes and ignores JSON key order', (t) => {
+      const f = fixture(t);
+      const result = f.assemble();
+      const originalDigest = sha256(Buffer.from(JSON.stringify(result.assets)));
+      expect(result.asset_digest).toBe(originalDigest);
+      const reordered = { ...result, assets: result.assets.map(({ name, sha256: digest, size }) => ({ size, sha256: digest, name })) };
+      f.put('handoff/assembly.json', reordered);
+      expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.asset_digest).toBe(originalDigest);
+      for (const [field, value] of [['name', 'changed.tar.gz'], ['sha256', '0'.repeat(64)], ['size', result.assets[0].size + 1]]) {
+        f.put('handoff/assembly.json', { ...result, assets: result.assets.map((asset, index) => index === 0 ? { ...asset, [field]: value } : asset) });
+        expect(() => loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot })).toThrow(/asset-set-mismatch/);
+      }
+    });
+
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: release-assembly-contract
     test('assembly accepts PowerShell package output and rejects altered checksum records', { skip: !hasPwsh }, (t) => {
       const platform = { id: 'windows-x64', runner: 'windows-2022', target: 'x86_64-pc-windows-msvc' };
       const f = fixture(t, platform);

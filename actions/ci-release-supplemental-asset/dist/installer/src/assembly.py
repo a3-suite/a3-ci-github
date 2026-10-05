@@ -13,6 +13,8 @@ import tempfile
 from pathlib import Path
 from types import ModuleType
 
+from builder_common import _checksum_bytes
+
 ROOT = Path(__file__).resolve().parent
 OWNER_CONTRACT = "installer.asset-assembly-evidence-contract"
 POSIX_SHELL = "/bin/sh"
@@ -172,7 +174,7 @@ def platform_record(request: dict, config: dict, output: Path, scratch: Path) ->
     exact(asset, {"path", "sha256", "checksum_path"})
     archive = standard / name(asset["path"])
     checksum_path = name(asset["checksum_path"])
-    if checksum_path != archive.name + ".sha256" or digest(archive) != asset["sha256"] or (standard / checksum_path).read_text() != f"{asset['sha256']}  {archive.name}\n":
+    if checksum_path != archive.name + ".sha256" or digest(archive) != asset["sha256"] or (standard / checksum_path).read_bytes() != _checksum_bytes(asset["sha256"], archive.name):
         raise ValueError("installer-artifact-checksum-invalid")
     if {p.name for p in standard.iterdir()} != {archive.name, checksum_path, "asset-manifest.json"}:
         raise ValueError("installer-build-assets-invalid")
@@ -220,7 +222,7 @@ def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, P
         asset = obj(build["assets"][0])
         exact(asset, {"path", "sha256", "checksum_path"})
         archive_name = name(asset["path"])
-        if asset["checksum_path"] != archive_name + ".sha256" or (standard / (archive_name + ".sha256")).read_text() != f"{asset['sha256']}  {archive_name}\n" or {p.name for p in standard.iterdir()} != {"asset-manifest.json", archive_name, archive_name + ".sha256"}:
+        if asset["checksum_path"] != archive_name + ".sha256" or (standard / (archive_name + ".sha256")).read_bytes() != _checksum_bytes(asset["sha256"], archive_name) or {p.name for p in standard.iterdir()} != {"asset-manifest.json", archive_name, archive_name + ".sha256"}:
             raise ValueError("installer-build-assets-invalid")
         if record["artifactName"] != asset["path"] or record["artifactChecksum"] != asset["sha256"] or digest(standard / name(asset["path"])) != asset["sha256"]:
             raise ValueError("installer-artifact-checksum-invalid")
@@ -262,7 +264,7 @@ def publish_record(request: dict, output: Path, asset: Path, owner_evidence: dic
     asset_name = name(asset.name)
     shutil.copyfile(asset, output / asset_name)
     checksum = digest(output / asset_name)
-    (output / (asset_name + ".sha256")).write_text(f"{checksum}  {asset_name}\n", encoding="utf-8")
+    (output / (asset_name + ".sha256")).write_bytes(_checksum_bytes(checksum, asset_name))
     evidence_name = asset_name + ".owner.json"
     evidence = {"installerEvidence": owner_evidence, "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"]))}
     write_json(output / evidence_name, evidence)

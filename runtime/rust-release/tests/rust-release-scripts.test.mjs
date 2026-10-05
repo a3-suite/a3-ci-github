@@ -317,6 +317,19 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(manifest.assets.length).toBe(1);
 
       // Arrange
+      const checksumPath = path.join(output, manifest.assets[0].checksum_path);
+      const expectedChecksum = `${manifest.assets[0].sha256}  ${manifest.assets[0].path}\n`;
+      expect(readFileSync(checksumPath)).toStrictEqual(Buffer.from(expectedChecksum));
+      for (const malformed of [expectedChecksum.replace(/\n$/, '\r\n'), `\uFEFF${expectedChecksum}`, expectedChecksum.trimEnd(), `${expectedChecksum}\n`, expectedChecksum.replace(/\n$/, '\0\n'), expectedChecksum.replace(/^[a-f0-9]{64}/, '0'.repeat(64))]) {
+        writeFileSync(checksumPath, malformed);
+        // Act
+        const rejected = run(path.join(scriptRoot, 'verify-release-asset-unix.sh'), verifyArgs);
+        // Assert
+        expect(rejected.status).not.toBe(0);
+      }
+      writeFileSync(checksumPath, expectedChecksum);
+
+      // Arrange
       const archive = path.join(output, manifest.assets[0].path);
       const originalArchive = readFileSync(archive);
       // Act
@@ -498,6 +511,20 @@ describe("rust-release-scripts", () => {
       ]);
       // Assert
       expect(verified.status, verified.stderr).toBe(0);
+      // Arrange
+      const manifest = JSON.parse(readFileSync(path.join(output, 'asset-manifest.json'), 'utf8'));
+      const checksumPath = path.join(output, manifest.assets[0].checksum_path);
+      const expectedChecksum = `${manifest.assets[0].sha256}  ${manifest.assets[0].path}\n`;
+      expect(readFileSync(checksumPath)).toStrictEqual(Buffer.from(expectedChecksum));
+      for (const malformed of [expectedChecksum.replace(/\n$/, '\r\n'), `\uFEFF${expectedChecksum}`, expectedChecksum.trimEnd(), `${expectedChecksum}\n`, expectedChecksum.replace(/\n$/, '\0\n'), expectedChecksum.replace(/^[a-f0-9]{64}/, '0'.repeat(64))]) {
+        writeFileSync(checksumPath, malformed);
+        // Act
+        const rejected = run('pwsh', ['-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'verify-release-asset.ps1'), ...common.slice(1)]);
+        // Assert
+        expect(rejected.status).not.toBe(0);
+      }
+      writeFileSync(checksumPath, expectedChecksum);
+
     }));
   });
 });

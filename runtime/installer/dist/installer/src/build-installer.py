@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 from builder_common import (
     AssemblyError,
+    _checksum_bytes,
     _normalize_source_bytes,
     _read_json_object,
     _read_regular_file,
@@ -647,7 +648,7 @@ def assemble_candidate(
 
     asset_checksum = _sha256(asset_path.read_bytes())
     checksum_path = output_dir / f"{asset_name}.sha256"
-    checksum_path.write_text(f"{asset_checksum}  {asset_name}\n", encoding="utf-8")
+    checksum_path.write_bytes(_checksum_bytes(asset_checksum, asset_name))
     candidate_path = output_dir / CANDIDATE_RECORD_NAME
     _write_json(
         candidate_path,
@@ -835,9 +836,7 @@ def finalize_evidence(
     )
     evidence_checksum = _sha256(evidence_bytes)
     evidence_checksum_path = output_dir / f"{EVIDENCE_RECORD_NAME}.sha256"
-    evidence_checksum_path.write_text(
-        f"{evidence_checksum}  {evidence_path.name}\n", encoding="utf-8"
-    )
+    evidence_checksum_path.write_bytes(_checksum_bytes(evidence_checksum, evidence_path.name))
     return {
         "asset": asset_path.name,
         "asset_checksum": asset_checksum,

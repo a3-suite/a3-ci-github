@@ -100,6 +100,9 @@ describe('standard installer', () => {
       expect(() => validateHandoffIntegrity(transported, 'handoff.json', expected)).toThrow('handoff-manifest-checksum-mismatch');
       const handoff = JSON.parse(fs.readFileSync(path.join(f.root, 'handoff/supplemental-manifest.json'), 'utf8'));
       expect(handoff.assets.map((asset: { path: string }) => asset.path)).toEqual([assetName, `manifest-${target}.json`]);
+      for (const asset of handoff.assets) {
+        expect(fs.readFileSync(path.join(f.root, 'handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
+      }
       expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.readdirSync(path.join(f.root, 'installer')).sort()).toEqual(['assembly.json', 'product.json']);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
@@ -133,6 +136,31 @@ describe('standard installer', () => {
         fs.writeFileSync(path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, 'asset-manifest.json'), JSON.stringify({ ...build, ...changes }));
         expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
         expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+      }
+    });
+    test('rejects noncanonical checksum bytes in both phases', (t) => {
+      // Arrange
+      const f = fixture(t);
+      const checksumPath = path.join(f.root, 'standard', `${archiveName}.sha256`);
+      const expected = fs.readFileSync(checksumPath, 'utf8');
+      const malformed = [expected.replace(/\n$/, '\r\n'), `\uFEFF${expected}`, expected.trimEnd(), `${expected}\n`, expected.replace(/\n$/, '\0\n'), expected.replace(/^[a-f0-9]{64}/, '0'.repeat(64))];
+      for (const bytes of malformed) {
+        fs.writeFileSync(checksumPath, bytes);
+        // Act / Assert
+        expect(() => runSupplemental(f.options)).toThrow('standard-installer-failed');
+        expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
+        fs.rmdirSync(path.join(f.root, 'platform-output'));
+      }
+      fs.writeFileSync(checksumPath, expected);
+      runSupplemental(f.options);
+      const assembled = prepareAssembly(f);
+      const transportedChecksum = path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, `${archiveName}.sha256`);
+      for (const bytes of malformed) {
+        fs.writeFileSync(transportedChecksum, bytes);
+        // Act / Assert
+        expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
+        expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+        fs.rmdirSync(path.join(f.root, 'handoff'));
       }
     });
     test('rejects platform authority drift before execution', (t) => {

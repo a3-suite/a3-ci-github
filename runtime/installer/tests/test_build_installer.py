@@ -111,10 +111,8 @@ class BuildInstallerContractTest(unittest.TestCase):
             self.assertEqual(evidence["source_revision"], SOURCE_REVISION)
             self.assertEqual(evidence["asset_checksum"], expected_asset_checksum)
             self.assertEqual(
-                (first_output / "example-installer.sh.sha256").read_text(
-                    encoding="utf-8"
-                ),
-                f"{first_asset_checksum}  example-installer.sh\n",
+                (first_output / "example-installer.sh.sha256").read_bytes(),
+                f"{first_asset_checksum}  example-installer.sh\n".encode("utf-8"),
             )
             self.assertEqual(
                 evidence["verification_result"]["asset_checksum"],
@@ -146,10 +144,8 @@ class BuildInstallerContractTest(unittest.TestCase):
             )
             evidence_checksum = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
             self.assertEqual(
-                (first_output / "installer-asset-evidence.json.sha256").read_text(
-                    encoding="utf-8"
-                ),
-                f"{evidence_checksum}  installer-asset-evidence.json\n",
+                (first_output / "installer-asset-evidence.json.sha256").read_bytes(),
+                f"{evidence_checksum}  installer-asset-evidence.json\n".encode("utf-8"),
             )
 
     def test_assemble_is_independent_of_source_line_endings(self) -> None:

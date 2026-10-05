@@ -68,7 +68,7 @@ class StandardAssemblyTest(unittest.TestCase):
             standard.mkdir(parents=True)
             shutil.copyfile(artifact, standard / artifact.name)
             checksum = assembly.digest(artifact)
-            (standard / (artifact.name + ".sha256")).write_text(f"{checksum}  {artifact.name}\n")
+            (standard / (artifact.name + ".sha256")).write_bytes(f"{checksum}  {artifact.name}\n".encode("utf-8"))
             build = {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": release_id, "platform_target": triple, "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]}
             (standard / "asset-manifest.json").write_text(json.dumps(build))
             supplemental = root / "supplemental"
@@ -219,7 +219,7 @@ class StandardAssemblyTest(unittest.TestCase):
                 standard.mkdir()
                 shutil.copyfile(artifact, standard / artifact.name)
                 checksum = assembly.digest(artifact)
-                (standard / (artifact.name + ".sha256")).write_text(f"{checksum}  {artifact.name}\n")
+                (standard / (artifact.name + ".sha256")).write_bytes(f"{checksum}  {artifact.name}\n".encode("utf-8"))
                 assembly.write_json(standard / "asset-manifest.json", {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": binding["id"], "platform_target": binding["target"], "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]})
                 output = supplemental_root / ("supplemental-build-" + binding["id"])
                 output.mkdir()

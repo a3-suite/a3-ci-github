@@ -107,3 +107,7 @@ def _write_json(path: Path, payload: dict[str, object]) -> bytes:
     encoded = _json_bytes(payload)
     path.write_bytes(encoded)
     return encoded
+
+
+def _checksum_bytes(digest: str, filename: str) -> bytes:
+    return f"{digest}  {filename}\n".encode("utf-8")

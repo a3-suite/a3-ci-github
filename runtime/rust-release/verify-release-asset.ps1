@@ -16,8 +16,9 @@ if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) { throw 'release 
 if (-not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) { throw 'release checksum missing' }
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'release asset manifest missing' }
 $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash.ToLowerInvariant()
-$checksumRecord = (Get-Content -LiteralPath $checksumPath -Raw).TrimEnd([char[]]"`r`n")
-if ($checksumRecord -cne "$actual  $archiveName") { throw 'release checksum binding mismatch' }
+$checksumRecord = [Convert]::ToBase64String([IO.File]::ReadAllBytes($checksumPath))
+$expectedChecksum = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$actual  $archiveName`n"))
+if ($checksumRecord -cne $expectedChecksum) { throw 'release checksum binding mismatch' }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $archivePath))
 try {
