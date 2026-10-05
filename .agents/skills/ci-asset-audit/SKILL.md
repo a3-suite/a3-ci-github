@@ -1,6 +1,6 @@
 ---
 name: ci-asset-audit
-description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化や配置変更後の取り残しを監査するときに使う。
+description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化・配置変更・Release公開後の取り残しを監査するときに使う。
 ---
 
 # ci-asset-audit / SKILL
@@ -37,6 +37,7 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 契約と検証証拠 | contract package: `{project-root}/sdd/dsl/specs/contract-core/contract-package.sdd.yml`、契約対象の実行定義: `{project-root}/tests/contract-subject-execution.json` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |
 | installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
+| Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: `{project-root}/.agents/skills/skills-deploy/SKILL.md`。固定参照と利用可能条件は上記preset registry・version policyから解決 |
 
 実体は上記から到達する `actions/`、`workflows/`、provider reusable workflow、`runtime/`、公開・ローカルSkill、lint、テスト、文書を照合する。registryからの到達だけで棚卸しを終えず、対象ディレクトリの実在資材との逆照合で未登録・互換用・保守用資材も区別する。
 
@@ -75,9 +76,11 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 
 - **無駄と複雑度**: consumerとproviderの両側で、実際の利用経路に接続しない実装・設定・環境変数・依存、委譲先と重複する準備・検証・後処理、不要なwrapper・分岐・fallbackを確認する。参照箇所だけでなく委譲先と固定refの能力を照合し、必要な互換性経路や信頼境界を区別する。各候補は、削除または単純化しても維持すべき契約・失敗伝播・証拠と、減る保守・設定・取得・実行負担を示す。
 
+- **公開後の利用可能化と配備**: 対象Releaseのtagとpeeled full SHA、公開資材、registryの固定参照・利用可能状態、公開Skillの説明と配備実体を照合する。公開済みなのに旧参照や`pending-release`が残る場合は、各経路のactivation条件と証拠に照らして、意図的な固定・受入待ちと更新漏れを区別する。履歴上のversionや参照を一律に最新版へ変更する判断はしない。Release公開・資材readback・必要なHosted受入・registryの利用可能化・Skill配備を別の達成状態として示し、Release workflowや公開手順から後続更新・検証への導線が欠けていないか確認する。provider自身のCI成功をconsumer接続や各calleeのHosted受入の証拠に代用せず、未達条件があれば自動的に`available`と判断しない。配備比較は明示されたrootと対象Skillの範囲で行い、更新差分・不足・staleを分ける。公開refや配備先が監査範囲外・未指定・未取得なら該当段階を未確認とし、ローカル正本の整合だけで配布・配備まで完了としない。
+
 対称性の差は、契約・owner・権限・公開先・trigger・互換性に基づく必要な差と、説明できない欠落・粒度不一致・移行の取り残しに分ける。対称性を理由に固有責務や信頼境界を消さない。
 
-六項目それぞれについて、確認範囲と根拠を添えた結論を毎回報告する。構造は正本と実体の対応、ルールは参照した正本と実際の適用・検証範囲を示す。削減・共通化の候補がない場合も理由を示す。対称性の問題がない場合は比較した対応関係と必要な差を示す。証拠不足や指定範囲外は未確認として示し、「候補なし」「問題なし」で代用しない。
+七項目それぞれについて、確認範囲と根拠を添えた結論を毎回報告する。構造は正本と実体の対応、ルールは参照した正本と実際の適用・検証範囲を示す。削減・共通化の候補がない場合も理由を示す。対称性の問題がない場合は比較した対応関係と必要な差を示す。証拠不足や指定範囲外は未確認として示し、「候補なし」「問題なし」で代用しない。
 
 検証資材の評価では、subject／test-mapの保証とテストが実際に観測する境界を照合する。provider内部の回帰をActionの公開出力保証へ直接算入せず、テストの収集成功を実行・契約達成の証拠にしない。計測は保守方針に従う元ソースの対象・分母・子プロセス経路を確認し、生成済み配布物の動作検証と分ける。言語別の計測値を合算して品質判定せず、未実行OSやskipは未確認として残す。計測設定・手順は本スキルへ複製しない。
 

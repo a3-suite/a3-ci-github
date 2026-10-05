@@ -11,6 +11,7 @@ import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapsho
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
+const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
@@ -247,7 +248,7 @@ describe("workflow-contracts", () => {
       ]);
       includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
         /^        id: quality-adapter$/m,
-        /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
         /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
       ]);
       const untrusted = jobBlock(workflow, 'untrusted-pr');
@@ -260,7 +261,7 @@ describe("workflow-contracts", () => {
         /^          path: \.ci-base$/m,
       ]);
       includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-        /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
         /^          standard-bundle-id: \$\{\{ env\.CI_STANDARD_BUNDLE_ID \}\}$/m,
       ]);
       const summary = jobBlock(workflow, 'summary');
@@ -374,7 +375,7 @@ describe("workflow-contracts", () => {
         /pull_request\.base\.sha/,
         /matrix: .*steps\.resolve\.outputs\['quality-matrix'\]/,
         /expected: .*steps\.resolve\.outputs\['expected-platforms'\]/,
-        /uses: a3-suite\/a3-ci-github\/actions\/ci-platform-matrix@<release-publication-action-sha>/,
+        new RegExp(`uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@${actionRef}`),
         /manifest-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_PLATFORM_MANIFEST/,
         /selection-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_QUALITY_PLATFORM_SELECTION/,
         /bootstrap is limited to same-repository pull requests/,
@@ -590,7 +591,7 @@ describe("workflow-contracts", () => {
       assertNeeds(buildJob, ['authority', 'source-gate', 'quality']);
       includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
         /^        if: inputs\.supplemental_release_asset_enabled$/m,
-        /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
         /^          operation: build-platform$/m,
         /^          standard-build-root: build\/\$\{\{ matrix\.id \}\}$/m,
         /^          output-directory: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
@@ -620,7 +621,7 @@ describe("workflow-contracts", () => {
         /^          path: supplemental-build$/m,
       ]);
       includesAll(stepContaining(supplementalAssetJob, '- name: Build and verify supplemental Release asset'), [
-        /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
         /^          operation: assemble$/m,
         /^          standard-build-root: build$/m,
         /^          supplemental-build-root: supplemental-build$/m,
@@ -635,7 +636,7 @@ describe("workflow-contracts", () => {
       expect(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish')).toBeTruthy();
       expect(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence')).toBeTruthy();
       expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/GH_TOKEN|CI_GITHUB_TOKEN/);
-      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, /ci-release-publisher@<release-publication-action-sha>/, /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
+      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, new RegExp(`ci-release-publisher@${actionRef}`), /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
       expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh|CI_GITHUB_TOKEN/);
       includesAll(stepContaining(publicationJob, '- id: publish_owner'), [/if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'/, /ci-release-publish\.sh/]);
       const publicationSummary = jobBlock(publication, 'summary');
@@ -962,7 +963,7 @@ describe("workflow-contracts", () => {
         const job = workflow.jobs[jobId];
         const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
         expect(call.length, file).toBe(1);
-        expect(call[0].uses).toBe('a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>');
+        expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
         expect(Object.keys(call[0].with).sort()).toStrictEqual(Object.keys(contract.inputs).sort());
         expect(call[0].with).toStrictEqual({ 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}' });
         expect(call[0].if).toBe(file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);

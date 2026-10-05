@@ -37,6 +37,21 @@ Node で実装した共通処理を、bundle 作成を省くためだけに Comp
 
 workflow は job・permissions・credential 注入・stage 順序を所有します。Action は project policy や credential route を選択しません。provider-write-free Action の中に publish write を混在させません。
 
+## 固定参照の更新順序
+
+このrepositoryでは、Action実装、providerの再利用workflow、consumerへ配置するcallerを別の固定参照として扱います。公開refと利用可能条件の正本はpreset registryです。
+
+以下は外部の固定SHAを使う接続の更新順序です。repository自身のCIで使う`uses: ./actions/...`は同一checkoutの検証であり、Actionと検証用workflowを同じコミットで更新できます。
+
+1. **Action実装を確定する。** Actionとbundleへ入る共有runtimeを変更した場合は、source検証とdist同一性を確認し、実行に必要な生成物・依存を含めて先にコミット・pushします。公開経路で統合・公開された後、そのexact release tagのpeeled full SHAをAction接続先として確定します。squash等でSHAが変わった場合は、作業branchのSHAを公開SHAとして使いません。
+2. **workflowからActionへ接続する。** canonical workflowのAction参照、installer等のprovider revision、registryのAction bindingを確定済み公開SHAへ揃えます。参照先のActionがそのworkflowで必要な入力・出力・能力を持つことを確認します。Action実装を変更せず既存の公開済みActionを使う場合は、新しいActionコミットは不要です。
+3. **再利用workflow自身を確定する。** 修正したprovider calleeを検証してコミット・pushし、受入対象のfull SHAを確定します。Hosted受入は実際のcalleeをそのSHAで呼び出して行います。正式な利用可能化ではregistryが要求するexact release tagとの対応も確認し、統合・公開でSHAが変わった場合は最終参照に対応する受入証拠を確認します。
+4. **callerとregistryを切り替える。** 再利用workflowのactivation条件を満たした後、その確定SHAをregistryとcallerのworkflow参照へ設定します。ActionのSHAとworkflowのSHAが同じであることは前提にしません。canonical mapping・preflight・配布閉包の検証後、接続側の変更をコミットします。
+
+一つのコミットへ自己参照する将来SHAは書き込めません。新しいAction実装と、その未確定SHAを使うworkflow接続を同じコミットで確定したことにしません。未公開資材の準備コミットでは、対応する導入経路をregistryのpending状態とplaceholderで明示し、consumerへ利用可能として配備しません。必要なHosted受入が未完了のworkflowも受入待ちとして残します。
+
+公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
+
 ## runtime の利用形態
 
 `runtime/` の配置だけで実行前提を一律に決めません。
