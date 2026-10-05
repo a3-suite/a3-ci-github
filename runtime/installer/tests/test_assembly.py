@@ -31,6 +31,21 @@ class StandardAssemblyTest(unittest.TestCase):
                     with self.assertRaises((ValueError, TypeError)):
                         assembly.config_for({"configPath": str(config_path)})
 
+    def test_native_bindings_use_targets_and_preserve_release_subsets(self) -> None:
+        platforms = [
+            {"id": "linux-release", "target": "x86_64-unknown-linux-gnu"},
+            {"id": "macos-release", "target": "aarch64-apple-darwin"},
+            {"id": "windows-release", "target": "x86_64-pc-windows-msvc"},
+            {"id": "unselected", "target": "aarch64-unknown-linux-musl"},
+        ]
+        for native, expected_id in [("linux-x86_64", "linux-release"), ("macos-arm64", "macos-release"), ("windows-x86_64", "windows-release")]:
+            with self.subTest(native=native):
+                config = {"platforms": {native: {}}}
+                self.assertEqual(assembly.platform_bindings({"releasePlatforms": platforms}, config)[native]["id"], expected_id)
+                for entries in [[], [{"id": "unsupported", "target": "unsupported"}], platforms + [{"id": "ambiguous", "target": next(p["target"] for p in platforms if p["id"] == expected_id)}]]:
+                    with self.subTest(entries=entries), self.assertRaisesRegex(ValueError, "installer-platform-binding-invalid"):
+                        assembly.platform_bindings({"releasePlatforms": entries}, config)
+
     @unittest.skipIf(sys.platform == "win32", "Unix archive fixture; Windows has native boundary CI")
     def test_native_provider_boundary_rejects_transport_drift(self) -> None:
         """Run the native profile and reject altered records before emitting a handoff."""
@@ -43,24 +58,27 @@ class StandardAssemblyTest(unittest.TestCase):
             bundle, _, _ = runtime._bundle(root, artifact)
             manifest = json.loads(next(bundle.glob("manifest-*.json")).read_text())
             target = manifest["targetPlatformId"]
+            release_id = "release-native"
+            triple = "aarch64-apple-darwin" if sys.platform == "darwin" else "x86_64-unknown-linux-gnu"
+            release_platforms = [{"id": release_id, "target": triple, "runner": "macos-14" if sys.platform == "darwin" else "ubuntu-24.04"}]
             (root / "product.json").write_text(json.dumps(manifest))
             config = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native", "verificationProfile": "native-offline-dry-run-v1", "platforms": {target: {"manifest": "product.json", "assetName": "install.sh"}}}
             (root / "assembly.json").write_text(json.dumps(config))
-            standard = root / "standard" / ("release-build-" + target)
+            standard = root / "standard" / ("release-build-" + release_id)
             standard.mkdir(parents=True)
             shutil.copyfile(artifact, standard / artifact.name)
             checksum = assembly.digest(artifact)
             (standard / (artifact.name + ".sha256")).write_text(f"{checksum}  {artifact.name}\n")
-            build = {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": target, "platform_target": "fixture", "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]}
+            build = {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": release_id, "platform_target": triple, "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]}
             (standard / "asset-manifest.json").write_text(json.dumps(build))
             supplemental = root / "supplemental"
             supplemental.mkdir()
-            output = supplemental / ("supplemental-build-" + target)
-            request = {"sourceRoot": str(root), "configPath": str(root / "assembly.json"), "authority": {"source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "tag": "v1.0.0", "publication": {"repository": "example-org/example-app"}}, "assemblyId": "assembly-1", "providerRevision": "a" * 40, "standardBuildRoot": str(standard), "outputDirectory": str(output), "operation": "build-platform"}
+            output = supplemental / ("supplemental-build-" + release_id)
+            request = {"releasePlatforms": release_platforms, "sourceRoot": str(root), "configPath": str(root / "assembly.json"), "authority": {"source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "tag": "v1.0.0", "publication": {"repository": "example-org/example-app"}}, "assemblyId": "assembly-1", "providerRevision": "a" * 40, "standardBuildRoot": str(standard), "outputDirectory": str(output), "operation": "build-platform"}
             result = self._run_provider(request)
             self.assertEqual(result.returncode, 0, result.stderr)
             build_path = standard / "asset-manifest.json"
-            for index, (field, value) in enumerate([("version", "2.0.0"), ("assets", []), ("assets", [{**build["assets"][0], "sha256": "0" * 64}])]):
+            for index, (field, value) in enumerate([("version", "2.0.0"), ("platform_id", "other-release"), ("platform_target", "unsupported"), ("assets", []), ("assets", [{**build["assets"][0], "sha256": "0" * 64}])]):
                 with self.subTest(build_field=field, index=index):
                     changed = {**build, field: value}
                     build_path.write_text(json.dumps(changed))
@@ -83,6 +101,9 @@ class StandardAssemblyTest(unittest.TestCase):
             self.assertFalse((root / "managed").exists())
             cases = [
                 (output / "platform-record.json", "sourceSha", "b" * 40),
+                (output / "platform-record.json", "platformId", "other-release"),
+                (output / "platform-record.json", "platformTarget", "unsupported"),
+                (output / "platform-record.json", "nativePlatformId", "windows-x86_64"),
                 (output / "platform-record.json", "files", {}),
                 (output / "platform-record.json", "artifactChecksum", "0" * 64),
                 (output / "candidate/installer-verification-evidence.json", "status", "failed"),
@@ -187,18 +208,20 @@ class StandardAssemblyTest(unittest.TestCase):
             platforms = {target: {"manifest": "product.json", "assetName": f"install-{target}.sh"} for target in ["linux-x86_64", "macos-arm64"]}
             config = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native-shared", "verificationProfile": "shared-exact-payload-v1", "platforms": platforms, "sharedWrapper": {"assetName": "install.sh", "deliveryUrls": {target: f"https://github.com/example-org/example-app/releases/download/v1.0.0/{entry['assetName']}" for target, entry in platforms.items()}}}
             (root / "assembly.json").write_text(json.dumps(config))
+            release_platforms = [{"id": "release-linux", "target": "x86_64-unknown-linux-gnu"}, {"id": "release-macos", "target": "aarch64-apple-darwin"}]
             standard_root, supplemental_root = root / "standard", root / "supplemental"
             standard_root.mkdir()
             supplemental_root.mkdir()
-            request = {"sourceRoot": str(root), "configPath": str(root / "assembly.json"), "authority": {"source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "tag": "v1.0.0", "publication": {"repository": "example-org/example-app"}}, "assemblyId": "assembly-1", "providerRevision": "a" * 40}
+            request = {"releasePlatforms": release_platforms, "sourceRoot": str(root), "configPath": str(root / "assembly.json"), "authority": {"source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "tag": "v1.0.0", "publication": {"repository": "example-org/example-app"}}, "assemblyId": "assembly-1", "providerRevision": "a" * 40}
             for target in platforms:
-                standard = standard_root / ("release-build-" + target)
+                binding = next(entry for entry in release_platforms if (entry["id"] == "release-linux") == (target == "linux-x86_64"))
+                standard = standard_root / ("release-build-" + binding["id"])
                 standard.mkdir()
                 shutil.copyfile(artifact, standard / artifact.name)
                 checksum = assembly.digest(artifact)
                 (standard / (artifact.name + ".sha256")).write_text(f"{checksum}  {artifact.name}\n")
-                assembly.write_json(standard / "asset-manifest.json", {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": target, "platform_target": "fixture", "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]})
-                output = supplemental_root / ("supplemental-build-" + target)
+                assembly.write_json(standard / "asset-manifest.json", {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": binding["id"], "platform_target": binding["target"], "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]})
+                output = supplemental_root / ("supplemental-build-" + binding["id"])
                 output.mkdir()
                 scratch = root / ("scratch-" + target)
                 scratch.mkdir()

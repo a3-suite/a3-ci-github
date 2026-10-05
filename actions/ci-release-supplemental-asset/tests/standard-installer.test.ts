@@ -13,7 +13,7 @@ import { runInstallerCli } from '../../../runtime/installer/cli';
 const repository = path.resolve(__dirname, '../../..');
 const python = process.platform === 'win32' ? 'python' : 'python3';
 const target = process.platform === 'win32' ? 'windows-x86_64' : process.platform === 'darwin' ? 'macos-arm64' : 'linux-x86_64';
-const platform = { id: target, runner: process.platform === 'win32' ? 'windows-2022' : process.platform === 'darwin' ? 'macos-14' : 'ubuntu-24.04', target: process.platform === 'win32' ? 'x86_64-pc-windows-msvc' : process.platform === 'darwin' ? 'aarch64-apple-darwin' : 'x86_64-unknown-linux-gnu' };
+const platform = { id: `release-${process.platform}`, runner: process.platform === 'win32' ? 'windows-2022' : process.platform === 'darwin' ? 'macos-14' : 'ubuntu-24.04', target: process.platform === 'win32' ? 'x86_64-pc-windows-msvc' : process.platform === 'darwin' ? 'aarch64-apple-darwin' : 'x86_64-unknown-linux-gnu' };
 const archiveName = process.platform === 'win32' ? 'tool.zip' : 'tool.tar.gz';
 const assetName = process.platform === 'win32' ? `install-${target}.ps1` : `install-${target}.sh`;
 const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v1'): { root: string; options: SupplementalOptionsType; configure: (changes?: Record<string, string>) => void } => {
@@ -44,7 +44,7 @@ const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v
   execFileSync(python, ['-c', archiveScript, archive]);
   const checksum = sha256(fs.readFileSync(archive));
   fs.writeFileSync(`${archive}.sha256`, `${checksum}  ${archiveName}\n`);
-  fs.writeFileSync(path.join(root, 'standard/asset-manifest.json'), JSON.stringify({ schema_version: '1', kind: 'ci-release-build-manifest', source_sha: sourceSha, version: '1.0.0', platform_id: target, platform_target: platform.target, assets: [{ path: archiveName, sha256: checksum, checksum_path: `${archiveName}.sha256` }] }));
+  fs.writeFileSync(path.join(root, 'standard/asset-manifest.json'), JSON.stringify({ schema_version: '1', kind: 'ci-release-build-manifest', source_sha: sourceSha, version: '1.0.0', platform_id: platform.id, platform_target: platform.target, assets: [{ path: archiveName, sha256: checksum, checksum_path: `${archiveName}.sha256` }] }));
   fs.writeFileSync(path.join(root, 'platform.yml'), `platforms:\n  - id: ${platform.id}\n    runner: ${platform.runner}\n    target: ${platform.target}\n`);
   const configure = (changes: Record<string, string> = {}): void => {
     const values = { CI_PLATFORM_MANIFEST: 'platform.yml', CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'true', CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT: 'ci.release-asset-publication-contract#supplementalAsset', CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract', CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer', CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'installer/assembly.json', ...changes };
@@ -59,9 +59,9 @@ const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v
 
 const prepareAssembly = (f: ReturnType<typeof fixture>): SupplementalOptionsType => {
   fs.mkdirSync(path.join(f.root, 'standard-download'));
-  fs.renameSync(path.join(f.root, 'standard'), path.join(f.root, `standard-download/release-build-${target}`));
+  fs.renameSync(path.join(f.root, 'standard'), path.join(f.root, `standard-download/release-build-${platform.id}`));
   fs.mkdirSync(path.join(f.root, 'supplemental-download'));
-  fs.renameSync(path.join(f.root, 'platform-output'), path.join(f.root, `supplemental-download/supplemental-build-${target}`));
+  fs.renameSync(path.join(f.root, 'platform-output'), path.join(f.root, `supplemental-download/supplemental-build-${platform.id}`));
   return { ...f.options, operation: 'assemble', standardBuildRoot: 'standard-download', supplementalBuildRoot: 'supplemental-download', outputDirectory: 'handoff' };
 };
 
@@ -104,6 +104,59 @@ describe('standard installer', () => {
       expect(fs.readdirSync(path.join(f.root, 'installer')).sort()).toEqual(['assembly.json', 'product.json']);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
+    test('keeps unselected release targets outside native selection', (t) => {
+      // Arrange
+      const f = fixture(t);
+      fs.appendFileSync(path.join(f.root, 'platform.yml'), '  - id: other-architecture\n    runner: ubuntu-24.04\n    target: aarch64-unknown-linux-musl\n');
+      f.configure();
+      // Act
+      runSupplemental(f.options);
+      runSupplemental(prepareAssembly(f));
+      // Assert
+      expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(true);
+    });
+    test('rejects release id or target mismatches in both phases', (t) => {
+      // Arrange
+      const cases = [{ platform_id: 'wrong-release' }, { platform_target: 'unsupported-target' }];
+      for (const changes of cases) {
+        const f = fixture(t);
+        const buildPath = path.join(f.root, 'standard/asset-manifest.json');
+        const build = JSON.parse(fs.readFileSync(buildPath, 'utf8'));
+        fs.writeFileSync(buildPath, JSON.stringify({ ...build, ...changes }));
+        // Act / Assert
+        expect(() => runSupplemental(f.options)).toThrow('standard-installer-failed');
+        expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
+        fs.writeFileSync(buildPath, JSON.stringify(build));
+        fs.rmdirSync(path.join(f.root, 'platform-output'));
+        runSupplemental(f.options);
+        const assembled = prepareAssembly(f);
+        fs.writeFileSync(path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, 'asset-manifest.json'), JSON.stringify({ ...build, ...changes }));
+        expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
+        expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+      }
+    });
+    test('rejects platform authority drift before execution', (t) => {
+      // Arrange
+      const f = fixture(t);
+      fs.appendFileSync(path.join(f.root, 'platform.yml'), '\n');
+      // Act
+      const attempt = (): void => runSupplemental(f.options);
+      // Assert
+      expect(attempt).toThrow('platform-mismatch');
+      expect(fs.existsSync(path.join(f.root, 'platform-output'))).toBe(false);
+    });
+    test('rejects platform mutation during provider execution', (t) => {
+      // Arrange
+      const f = fixture(t);
+      const installerRoot = path.join(f.root, 'injected-provider');
+      fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), 'import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/r["authority"]["platform_manifest"]\np.write_bytes(p.read_bytes()+b"\\n")\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n');
+      // Act
+      const attempt = (): void => runSupplemental({ ...f.options, installerRoot });
+      // Assert
+      expect(attempt).toThrow('platform-mismatch');
+      expect(fs.existsSync(path.join(f.root, 'platform-output/supplemental-manifest.json'))).toBe(false);
+    });
     test('rejects changed product declaration before generating output', (t) => {
       // Arrange
       const f = fixture(t);
@@ -119,7 +172,7 @@ describe('standard installer', () => {
       const f = fixture(t);
       runSupplemental(f.options);
       const options = prepareAssembly(f);
-      const directory = path.join(f.root, `supplemental-download/supplemental-build-${target}`);
+      const directory = path.join(f.root, `supplemental-download/supplemental-build-${platform.id}`);
       const candidate = path.join(directory, 'candidate', assetName);
       fs.appendFileSync(candidate, '\n# tampered\n');
       const recordPath = path.join(directory, 'platform-record.json');

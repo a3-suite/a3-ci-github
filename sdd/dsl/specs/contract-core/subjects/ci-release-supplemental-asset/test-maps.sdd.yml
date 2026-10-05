@@ -122,3 +122,27 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects unsupported provider profile without successful Action output or generated assets
         check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-platform-subset
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > keeps unselected release targets outside native selection
+        check_refs: [success, output]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-platform-binding
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects release id or target mismatches in both phases
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-platform-authority
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects platform authority drift before execution
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-platform-mutation
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects platform mutation during provider execution
+        check_refs: [refusal]

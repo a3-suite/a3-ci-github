@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readRecord, safePath, sha256, text } from './io';
+import { parse } from 'yaml';
+import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
+import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text } from './io';
 import { validateSnapshot } from './snapshot';
 import { supplementalSelection } from './selection';
 
@@ -107,9 +109,25 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
     .some((input) => input !== undefined && overlaps(fs.existsSync(input) ? fs.realpathSync(input) : input, output))) fail('path-overlap');
   if (supplemental && (ancestorIdentities(standard, root).includes(fileIdentity(supplemental))
     || ancestorIdentities(supplemental, root).includes(fileIdentity(standard)))) fail('path-overlap');
+  const platformPath = standardInstaller
+    ? safePath(root, relativePath(text(authority.platform_manifest, 'platform-mismatch'))) : undefined;
+  let releasePlatforms: ReturnType<typeof validatePlatformManifestValue> | undefined;
+  if (platformPath) {
+    const bytes = readBytes(platformPath, 65536);
+    if (config.CI_PLATFORM_MANIFEST !== authority.platform_manifest
+      || sha256(bytes) !== authority.platform_manifest_sha256) fail('platform-mismatch');
+    releasePlatforms = validatePlatformManifestValue(parse(bytes.toString('utf8'), { maxAliasCount: 20, uniqueKeys: true }));
+  }
+  const platformDigest = (): string | undefined => {
+    if (!platformPath) return undefined;
+    const digest = hashFile(safePath(root, relativePath(authority.platform_manifest as string)), 65536);
+    if (digest !== authority.platform_manifest_sha256) fail('platform-mismatch');
+    return digest;
+  };
   const fingerprint = (): unknown => {
     if (fs.realpathSync(root) !== root) fail('root-invalid');
     return {
+      platform: platformDigest(),
       source: checkoutSha(root), authority: hashFile(safePath(root, options.authorityPath), LIMITS.jsonBytes),
       snapshot: hashFile(safePath(root, options.snapshotPath), LIMITS.jsonBytes), adapter: hashFile(safePath(root, adapterRelative)),
       standard: treeDigest(safePath(root, options.standardBuildRoot, true)),
@@ -152,7 +170,7 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
       execFileSync(process.platform === 'win32' ? 'python' : 'python3', [runner], {
         cwd: root, env: environment, stdio: ['pipe', 'ignore', 'pipe'], maxBuffer: LIMITS.jsonBytes,
         input: JSON.stringify({ operation: options.operation, sourceRoot: root, configPath: adapter,
-          authority, standardBuildRoot: standard, supplementalBuildRoot: supplemental, outputDirectory: output,
+          authority, releasePlatforms, standardBuildRoot: standard, supplementalBuildRoot: supplemental, outputDirectory: output,
           providerRevision, assemblyId: process.env.GITHUB_RUN_ID ?? `local-${authority.config_snapshot_digest}` }),
       });
     } catch { fail('standard-installer-failed'); }

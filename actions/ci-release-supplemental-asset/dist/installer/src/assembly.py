@@ -15,7 +15,13 @@ from types import ModuleType
 
 ROOT = Path(__file__).resolve().parent
 OWNER_CONTRACT = "installer.asset-assembly-evidence-contract"
-PLATFORMS = {"linux-x86_64", "macos-arm64", "windows-x86_64"}
+POSIX_SHELL = "/bin/sh"
+NATIVE_TARGETS = {
+    "x86_64-unknown-linux-gnu": "linux-x86_64",
+    "aarch64-apple-darwin": "macos-arm64",
+    "x86_64-pc-windows-msvc": "windows-x86_64",
+}
+PLATFORMS = set(NATIVE_TARGETS.values())
 
 
 def load_builder(name: str) -> ModuleType:
@@ -97,13 +103,23 @@ def config_for(request: dict) -> dict:
     return config
 
 
+def platform_bindings(request: dict, config: dict) -> dict[str, dict]:
+    bindings = {}
+    for native in config["platforms"]:
+        candidates = [entry for entry in request["releasePlatforms"] if NATIVE_TARGETS.get(entry["target"]) == native]
+        if len(candidates) != 1:
+            raise ValueError("installer-platform-binding-invalid")
+        bindings[native] = candidates[0]
+    return bindings
+
+
 def generated(value: object, expected: str, marker: str) -> str:
     if value not in {marker, expected}:
         raise ValueError("installer-generated-value-conflict")
     return expected
 
 
-def manifest_for(request: dict, entry: dict, build: dict) -> dict:
+def manifest_for(request: dict, entry: dict, build: dict, native: str) -> dict:
     manifest = read_json(Path(request["sourceRoot"]) / entry["manifest"])
     authority = request["authority"]
     publication = obj(authority["publication"])
@@ -111,7 +127,7 @@ def manifest_for(request: dict, entry: dict, build: dict) -> dict:
     asset = obj(build["assets"][0])
     version, tag = authority["version"], authority["tag"]
     manifest["releaseVersion"] = generated(manifest["releaseVersion"], version, "<release-version>")
-    manifest["targetPlatformId"] = generated(manifest["targetPlatformId"], build["platform_id"], "<target-platform-id>")
+    manifest["targetPlatformId"] = generated(manifest["targetPlatformId"], native, "<target-platform-id>")
     source = obj(manifest["source"])
     exact(source, {"kind", "owner", "repository", "fixedReference"})
     if source["kind"] != "github-release":
@@ -144,9 +160,11 @@ def platform_record(request: dict, config: dict, output: Path, scratch: Path) ->
     build = read_json(standard / "asset-manifest.json")
     exact(build, {"schema_version", "kind", "source_sha", "version", "platform_id", "platform_target", "assets"})
     authority = request["authority"]
-    target = build["platform_id"]
+    bindings = platform_bindings(request, config)
+    target = NATIVE_TARGETS.get(build["platform_target"])
+    binding = bindings.get(target)
     native_target = {("Linux", "x86_64"): "linux-x86_64", ("Darwin", "arm64"): "macos-arm64", ("Windows", "AMD64"): "windows-x86_64"}.get((platform.system(), platform.machine()))
-    if build["schema_version"] != "1" or build["kind"] != "ci-release-build-manifest" or build["source_sha"] != authority["source_sha"] or build["version"] != authority["version"] or target != native_target or target not in config["platforms"]:
+    if build["schema_version"] != "1" or build["kind"] != "ci-release-build-manifest" or build["source_sha"] != authority["source_sha"] or build["version"] != authority["version"] or target != native_target or binding is None or build["platform_id"] != binding["id"] or build["platform_target"] != binding["target"]:
         raise ValueError("installer-build-identity-invalid")
     if not isinstance(build["assets"], list) or len(build["assets"]) != 1:
         raise ValueError("installer-build-assets-invalid")
@@ -159,7 +177,7 @@ def platform_record(request: dict, config: dict, output: Path, scratch: Path) ->
     if {p.name for p in standard.iterdir()} != {archive.name, checksum_path, "asset-manifest.json"}:
         raise ValueError("installer-build-assets-invalid")
     entry = config["platforms"][target]
-    manifest = manifest_for(request, entry, build)
+    manifest = manifest_for(request, entry, build, target)
     manifest_path = scratch / "manifest.json"
     write_json(manifest_path, manifest)
     builder = load_builder("build-installer")
@@ -171,19 +189,21 @@ def platform_record(request: dict, config: dict, output: Path, scratch: Path) ->
     verification_path = scratch / "verification.json"
     write_json(verification_path, verification)
     builder.finalize_evidence(output_dir=candidate, verification_evidence_path=verification_path)
-    write_json(output / "platform-record.json", {"schema": "installer.platform.v1", "platformId": target, "sourceSha": authority["source_sha"], "version": authority["version"], "assemblyId": request["assemblyId"], "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"])), "assetName": entry["assetName"], "artifactName": archive.name, "artifactChecksum": asset["sha256"], "files": {p.name: digest(p) for p in candidate.iterdir()}})
+    write_json(output / "platform-record.json", {"schema": "installer.platform.v1", "platformId": binding["id"], "platformTarget": binding["target"], "nativePlatformId": target, "sourceSha": authority["source_sha"], "version": authority["version"], "assemblyId": request["assemblyId"], "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"])), "assetName": entry["assetName"], "artifactName": archive.name, "artifactChecksum": asset["sha256"], "files": {p.name: digest(p) for p in candidate.iterdir()}})
 
 
 def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, Path]:
     root = Path(request["supplementalBuildRoot"])
-    if {p.name for p in root.iterdir()} != {"supplemental-build-" + key for key in config["platforms"]}:
+    bindings = platform_bindings(request, config)
+    if {p.name for p in root.iterdir()} != {"supplemental-build-" + binding["id"] for binding in bindings.values()}:
         raise ValueError("installer-platform-set-invalid")
     candidates = {}
     authority = request["authority"]
     for target, entry in config["platforms"].items():
-        directory = root / ("supplemental-build-" + target)
+        binding = bindings[target]
+        directory = root / ("supplemental-build-" + binding["id"])
         record = read_json(directory / "platform-record.json")
-        if any(record.get(key) != value for key, value in {"schema": "installer.platform.v1", "platformId": target, "sourceSha": authority["source_sha"], "version": authority["version"], "assemblyId": request["assemblyId"], "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"])), "assetName": entry["assetName"]}.items()):
+        if any(record.get(key) != value for key, value in {"schema": "installer.platform.v1", "platformId": binding["id"], "platformTarget": binding["target"], "nativePlatformId": target, "sourceSha": authority["source_sha"], "version": authority["version"], "assemblyId": request["assemblyId"], "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"])), "assetName": entry["assetName"]}.items()):
             raise ValueError("installer-platform-evidence-invalid")
         candidate = directory / "candidate"
         if record["files"] != {p.name: digest(p) for p in candidate.iterdir()}:
@@ -192,10 +212,10 @@ def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, P
         verification = read_json(candidate / "installer-verification-evidence.json")
         if verification.get("status") != "passed" or verification.get("suite") != "native-offline-dry-run-v1" or evidence.get("asset_checksum") != "sha256:" + digest(candidate / entry["assetName"]):
             raise ValueError("installer-platform-evidence-invalid")
-        standard = Path(request["standardBuildRoot"]) / ("release-build-" + target)
+        standard = Path(request["standardBuildRoot"]) / ("release-build-" + bindings[target]["id"])
         build = read_json(standard / "asset-manifest.json")
         exact(build, {"schema_version", "kind", "source_sha", "version", "platform_id", "platform_target", "assets"})
-        if build["schema_version"] != "1" or build["kind"] != "ci-release-build-manifest" or build["source_sha"] != authority["source_sha"] or build["version"] != authority["version"] or build["platform_id"] != target or len(build["assets"]) != 1:
+        if build["schema_version"] != "1" or build["kind"] != "ci-release-build-manifest" or build["source_sha"] != authority["source_sha"] or build["version"] != authority["version"] or build["platform_id"] != binding["id"] or build["platform_target"] != binding["target"] or len(build["assets"]) != 1:
             raise ValueError("installer-build-identity-invalid")
         asset = obj(build["assets"][0])
         exact(asset, {"path", "sha256", "checksum_path"})
@@ -206,7 +226,7 @@ def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, P
             raise ValueError("installer-artifact-checksum-invalid")
         # Rebuild from this provider: matching supplied hashes does not prove ownership.
         expected_manifest = scratch / f"{target}.json"
-        write_json(expected_manifest, manifest_for(request, entry, build))
+        write_json(expected_manifest, manifest_for(request, entry, build, target))
         rebuilt = scratch / target
         builder = load_builder("build-installer")
         builder.assemble_candidate(source_dir=ROOT / "platform", manifest_path=expected_manifest, output_dir=rebuilt, asset_name=entry["assetName"], source_revision=authority["source_sha"], assembly_id=request["assemblyId"])
@@ -225,11 +245,12 @@ def verify_wrapper(request: dict, config: dict, wrapper: Path, candidates: dict[
     curl.write_text("#!" + sys.executable + "\nimport json,os,shutil,sys\nm=json.loads(os.environ['INSTALLER_TEST_DELIVERY'])\na=sys.argv[1:]\nurl=a[-1]\nif url not in m: sys.exit(9)\nshutil.copyfile(m[url],a[a.index('--output')+1])\n")
     curl.chmod(0o700)
     uname = harness / "uname"
-    uname.write_text('#!/bin/sh\ncase "$1" in -s) printf "%s\\n" "$INSTALLER_TEST_OS" ;; -m) printf "%s\\n" "$INSTALLER_TEST_ARCH" ;; *) exit 9 ;; esac\n')
+    uname.write_text('#!' + POSIX_SHELL + '\ncase "$1" in -s) printf "%s\\n" "$INSTALLER_TEST_OS" ;; -m) printf "%s\\n" "$INSTALLER_TEST_ARCH" ;; *) exit 9 ;; esac\n')
     uname.chmod(0o700)
+    bindings = platform_bindings(request, config)
     delivery = {url: str(candidates[target] / config["platforms"][target]["assetName"]) for target, url in config["sharedWrapper"]["deliveryUrls"].items()}
     for target, candidate in candidates.items():
-        standard = Path(request["standardBuildRoot"]) / ("release-build-" + target)
+        standard = Path(request["standardBuildRoot"]) / ("release-build-" + bindings[target]["id"])
         build = read_json(standard / "asset-manifest.json")
         env = {**os.environ, "PATH": str(harness) + os.pathsep + os.environ["PATH"], "INSTALLER_TEST_DELIVERY": json.dumps(delivery), "INSTALLER_TEST_OS": "Linux" if target == "linux-x86_64" else "Darwin", "INSTALLER_TEST_ARCH": "x86_64" if target == "linux-x86_64" else "arm64", "INSTALLER_MODE": "dry-run", "INSTALLER_SOURCE": "offline", "INSTALLER_MANIFEST": str(candidate / f"manifest-{target}.json"), "INSTALLER_ARTIFACT": str(standard / name(build["assets"][0]["path"])), "INSTALLER_JSON": "1", "INSTALLER_SMOKE_HELP": "0"}
         result = subprocess.run(["sh", str(wrapper)], env=env, capture_output=True, text=True, check=True)

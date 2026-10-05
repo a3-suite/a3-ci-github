@@ -89,3 +89,19 @@ verifications:
         checks:
           - id: refusal
             guarantee_ref: phase-rejected
+      - id: standard-platform-subset
+        intent_id: bound-phase
+        input: {implementation: standard-installer, release-targets: selected-and-unselected}
+        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
+      - id: standard-platform-binding
+        intent_id: fail-closed
+        input: {implementation: standard-installer, platform-binding: mismatched-id-or-target}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-platform-authority
+        intent_id: fail-closed
+        input: {implementation: standard-installer, platform-manifest: authority-checksum-mismatch}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-platform-mutation
+        intent_id: fail-closed
+        input: {implementation: standard-installer, provider-mutates: platform-manifest}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]

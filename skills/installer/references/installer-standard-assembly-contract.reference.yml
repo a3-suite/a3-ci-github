@@ -15,12 +15,22 @@ fields:
   schemaVersion: 固定schema識別子
   useCase: github-release-native または github-release-native-shared
   verificationProfile: useCaseに対応するprofileの明示選択
-  platforms: platform idをkey、manifestとassetNameだけを持つobjectをvalueとする
+  platforms: installer native idをkey、manifestとassetNameだけを持つobjectをvalueとする
   sharedWrapper: shared useCaseだけで必須。assetNameと各platformの固定HTTPS deliveryUrlsを持つ
 unknownFields: reject
 platforms:
   native: [linux-x86_64, macos-arm64, windows-x86_64]
   shared: [linux-x86_64, macos-arm64]
+releasePlatformBinding:
+  source: authorityに束縛されたRelease platform manifestのidとtarget
+  supportedTargets:
+    linux-x86_64: x86_64-unknown-linux-gnu
+    macos-arm64: aarch64-apple-darwin
+    windows-x86_64: x86_64-pc-windows-msvc
+  selection: 宣言した各native idに対応するRelease対象が一意に必要。未選択のRelease対象は制限しない
+  releaseId: buildディレクトリと標準build・platform証跡の照合に使用する
+  nativeId: 製品宣言と生成manifestのtargetPlatformId、実行時OS・CPU照合に使用する
+  rejection: 選択対象の未解決・曖昧さ、buildのidまたはtarget不一致、native runner不一致を拒否する
 profiles:
   native-offline-dry-run-v1:
     useCase: github-release-native
@@ -37,6 +47,7 @@ ownership:
   localDownloads: 固定配布CLIをGit管理外へ取得。source cloneと依存restoreは不要
 bindings:
   - 製品宣言とmanifestはauthority.source_shaのGit blobと一致する
+  - Release platform manifestはauthorityのpath・checksumに一致し、両phaseの実行前後で変更されない
   - release identityとartifact checksumはauthorityと標準buildから導出する
   - 候補・verification・final evidenceは固定provider・source・manifest・asset・assembly idに結び付ける
   - assembleで固定providerから候補を再構成して照合する
