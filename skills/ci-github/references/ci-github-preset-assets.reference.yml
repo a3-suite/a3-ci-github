@@ -123,8 +123,8 @@ actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.1.0
-    exactRef: "312c534de67720de060689d78ada17da9c84c4e2"
+    releaseTag: v0.2.0
+    exactRef: "a5623636a4fc5f628459a5b126e72632f43f89cf"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available
@@ -268,7 +268,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-notes-input-resolution-scripts
       providerMapping: release-notes-handoff-resolution
     - id: ci-platform-matrix
-      status: pending-release
+      status: available
       actionPath: actions/ci-platform-matrix
       workflows: [quality-gate-platforms, release-publication]
       trust: read-only
@@ -276,7 +276,7 @@ actionization:
       ciContract: ci.script-contracts#commonContract
       providerMapping: platform-build-matrix
     - id: ci-quality-toolchain
-      status: pending-release
+      status: available
       actionPath: actions/ci-quality-toolchain
       workflows: [quality-gate, quality-gate-platforms, release-publication]
       trust: read-only
@@ -284,7 +284,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.quality-scripts
       providerMapping: fixed-quality-toolchain-preparation
     - id: ci-quality-adapter
-      status: pending-release
+      status: available
       actionPath: actions/ci-quality-adapter
       workflows: [quality-gate, quality-gate-platforms, release-publication]
       trust: read-only
@@ -292,7 +292,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.quality-scripts
       providerMapping: quality-adapter-execution
     - id: ci-release-publication-control
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-publication-control
       workflows: [release-publication-request, release-publication-caller, release-publication]
       trust: read-only
@@ -300,7 +300,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-publication-request-and-provenance-control
     - id: ci-release-supplemental-asset
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-supplemental-asset
       workflows: [release-publication]
       trust: read-only
@@ -308,7 +308,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-supplemental-asset-build-scripts
       providerMapping: owner-supplemental-v2-phase-invocation
     - id: ci-release-assembly
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-assembly
       workflows: [release-publication]
       trust: read-only
@@ -316,7 +316,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-assembly-scripts
       providerMapping: release-assembly
     - id: ci-release-publication-verifier
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-publication-verifier
       workflows: [release-publication]
       trust: read-only
@@ -324,7 +324,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-observation-receipt-and-readback-verification
     - id: ci-release-authority
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-authority
       workflows: [release-publication]
       trust: read-only
@@ -332,7 +332,7 @@ actionization:
       ciContract: ci.script-contracts#contracts.release-authority-scripts
       providerMapping: explicit-owner-release-authority
     - id: ci-release-publisher
-      status: pending-release
+      status: available
       actionPath: actions/ci-release-publisher
       workflows: [release-publication]
       trust: bounded-release-write

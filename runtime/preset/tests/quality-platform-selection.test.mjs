@@ -92,6 +92,9 @@ describe("quality-platform-selection", () => {
       const registryReport = { missingSettings: [], mismatches: [] };
       const registry = loadRegistry(registryReport);
       expect(registryReport).toStrictEqual({ missingSettings: [], mismatches: [] });
+      for (const id of ['ci-platform-matrix', 'ci-quality-adapter']) {
+        registry.actionTargets.find(target => target.id === id).status = 'pending-release';
+      }
       for (const [workflowIds, pending] of [
         [new Set(['quality-gate']), false],
         [new Set(['quality-gate', 'quality-gate-platforms']), true],
