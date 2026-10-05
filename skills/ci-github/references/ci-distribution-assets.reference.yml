@@ -5,6 +5,9 @@ title: Selective CI asset distribution registry
 summary: >-
   固定revisionから必要なCI資材だけを取得するため、配布単位、依存閉包、取得後の適用境界を定義する。
 placementRole: public_reference
+usage:
+  whenToRead: 固定revisionから必要なCI資材を選択して取得するとき。
+  consumers: [ci-github, installer]
 authority:
   role: authoritative-definition
   owns:
@@ -113,6 +116,21 @@ assets:
   - id: skill.ci-github
     application: skill-deploy-source
     sourceTree: skills/ci-github
+  - id: runtime.installer
+    application: local-reference
+    sourcePaths:
+      - runtime/installer/run-installer.mjs
+      - runtime/installer/dist/index.js
+      - runtime/installer/dist/installer/src/assembly.py
+      - runtime/installer/dist/installer/src/build-installer.py
+      - runtime/installer/dist/installer/src/build-shared-wrapper.py
+      - runtime/installer/dist/installer/src/builder_common.py
+      - runtime/installer/dist/installer/src/platform/install.sh
+      - runtime/installer/dist/installer/src/platform/install.ps1
+      - runtime/installer/dist/installer/src/wrapper/install.sh
+  - id: skill.installer
+    application: skill-deploy-source
+    sourceTree: skills/installer
 workflowDependencies:
   workflow.quality-gate: [runtime.quality-workflow]
   workflow.quality-gate-platforms: [runtime.quality-platforms-workflow]

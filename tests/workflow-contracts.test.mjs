@@ -573,6 +573,8 @@ describe("workflow-contracts", () => {
             const values = Object.fromEntries(runtimeKeys.map(key => [`env.${key}`, 'sample']));
             values['inputs.supplemental_release_asset_owner_contract'] = 'owner';
             values['inputs.supplemental_release_asset_enabled'] = enabled;
+            values['inputs.supplemental_release_asset_implementation'] = 'owner-adapter';
+            values['inputs.supplemental_release_asset_config_path'] = '__unset__';
             values[expression] = value;
             const rendered = sourcesTemplate.replace(/\$\{\{\s*(toJSON\((?:env|inputs)\.[A-Za-z_]+\)|(?:env|inputs)\.[A-Za-z_]+)\s*\}\}/g, (_, entry) =>
               entry.startsWith('toJSON(') ? JSON.stringify(values[entry.slice(7, -1)]) : String(values[entry]));
@@ -751,6 +753,9 @@ describe("workflow-contracts", () => {
       const workflow = read('.github/workflows/quality-gate.yml');
       const linux = jobBlock(workflow, 'contract-linux');
       const windows = jobBlock(workflow, 'rust-windows');
+      const installerWindows = jobBlock(workflow, 'installer-windows');
+      const installerMacos = jobBlock(workflow, 'installer-macos');
+      const installerHandoff = jobBlock(workflow, 'installer-handoff');
       const aggregate = jobBlock(workflow, 'contract');
       expect(linux).toMatch(/^    name: CI Action contract \/ Linux$/m);
       includesAll(windows, [
@@ -758,12 +763,47 @@ describe("workflow-contracts", () => {
         /^    runs-on: windows-2025$/m,
         /--testNamePattern="PowerShell\|Windows"/,
       ]);
-      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'rust-windows']));
+      includesAll(installerWindows, [
+        /^    name: Installer contract \/ Windows$/m,
+        /^    runs-on: windows-2025$/m,
+        /actions\/setup-python@[0-9a-f]{40}/,
+        /python-version: '3\.12'/,
+        /python -m unittest discover -s runtime\/installer\/tests -p test_build_installer\.py -v/,
+        /python -m unittest discover -s runtime\/installer\/tests -p test_runtime_installer\.py -k test_windows -v/,
+      ]);
+      for (const native of [installerWindows, installerMacos]) {
+        expect(native).toContain('npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
+        expect(native).toContain('npm ci --ignore-scripts --no-audit --no-fund');
+      }
+      includesAll(installerMacos, [
+        /^    runs-on: macos-14$/m,
+        /test "\$\(uname -m\)" = arm64/,
+        /python3 -m unittest discover -s runtime\/installer\/tests -p 'test_\*\.py' -v/,
+      ]);
+      includesAll(linux, [
+        /npm run test:coverage:installer/,
+        /name: installer-python-source-coverage/,
+        /path: tests\/tmp\/coverage\/installer\/run-\*\/coverage\.json/,
+        /if-no-files-found: error/,
+      ]);
+      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
+      includesAll(installerHandoff, [
+        /needs: \[installer-windows, installer-macos\]/,
+        /producer: installer-windows/,
+        /producer: installer-macos/,
+        /uses: \.\/actions\/ci-handoff-integrity/,
+        /source-sha: \$\{\{ needs\[matrix\.producer\]\.outputs\.source-sha \}\}/,
+      ]);
       includesAll(aggregate, [
         /^    name: CI Action contract \/ hosted$/m,
         /^    if: always\(\)$/m,
         /test "\$LINUX_RESULT" = success/,
         /test "\$WINDOWS_RESULT" = success/,
+        /test "\$INSTALLER_WINDOWS_RESULT" = success/,
+        /test "\$INSTALLER_MACOS_RESULT" = success/,
+        /test "\$INSTALLER_HANDOFF_RESULT" = success/,
+        /INSTALLER_MACOS_RESULT: \$\{\{ needs\.installer-macos\.result \}\}/,
+        /INSTALLER_WINDOWS_RESULT: \$\{\{ needs\.installer-windows\.result \}\}/,
       ]);
     });
 

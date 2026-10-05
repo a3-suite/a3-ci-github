@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { supplementalSelection } from '../../../runtime/release-publication/selection';
 
 type ConfigValues = Record<string, string>;
 type ConfigSources = { runtime?: ConfigValues; workflow?: ConfigValues; preset?: ConfigValues };
@@ -51,6 +52,7 @@ export const resolveConfigSnapshot = (input: unknown): ConfigSnapshot => {
       }
     }
   }
+  supplementalSelection(values);
   const digest = crypto.createHash('sha256').update(stableJson({ sources, values }), 'utf8').digest('hex');
   return { schema: 'ci.config-snapshot.v1', values, sources, digest };
 };

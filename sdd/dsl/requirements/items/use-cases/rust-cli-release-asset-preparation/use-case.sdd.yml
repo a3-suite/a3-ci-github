@@ -21,6 +21,7 @@ main_success_scenario:
   - summary: authorityに拘束されたtoolchainとtargetでrelease binaryをbuildし、報告versionを検証する
   - summary: archive、checksum、asset manifestを新しい出力先へ生成する
   - summary: asset、source、version、platform identityおよびchecksumを相互に検証する
+  - summary: 標準installerが選択された場合は固定製品宣言から提供元の共通処理で組立・exact候補検証・証跡生成を行い、共通sourceやadapterを利用側へコピーしない
   - summary: 検証済みassetとidentityを後続処理が再検証できるhandoffとして返す
 success_outcomes:
   - asset、version、source、toolchain、platformおよびchecksumが同じ検証結果で一致する
@@ -42,3 +43,5 @@ related_contracts:
       contract_id: contract.ci-rust-release-build.processing
   - contract_ref:
       contract_id: contract.ci-rust-release-build.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-supplemental-asset.outputs

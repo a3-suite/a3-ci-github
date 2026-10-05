@@ -1,0 +1,98 @@
+schemaVersion: "1"
+kind: installer-audit-event-contract
+id: installer.audit-event-contract
+title: インストーラ audit event 契約
+summary: >-
+  installer audit log の install.begin / install.result payload、event 間一致条件、
+  secret-free local artifact reference の扱いを定義する公開正本。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - audit event type contract
+    - audit event payload matrix
+    - begin/result consistency rules
+    - audit event rule fixture references
+usage:
+  whenToRead:
+    - audit log の event payload を設計するとき
+    - install.begin と install.result の対応を監査するとき
+    - audit event rule に対応する fixture を確認するとき
+  consumers:
+    - human
+    - agent
+    - installer-implementation
+    - audit
+identityFields:
+  - operationMode
+  - sourceMode
+  - manifestChecksum
+  - artifactChecksum
+  - releaseVersion
+eventTypes:
+  install.begin:
+    timing: "managed root、handoff state、activation state、service、install state を変更する前"
+    requiredFields:
+      - eventType
+      - operationMode
+      - sourceMode
+      - manifestChecksum
+      - artifactChecksum
+      - releaseVersion
+    optionalFields:
+      - requestedBy
+      - requestedAt
+      - reason
+      - localArtifactReference
+      - auditLogPolicy
+    forbiddenFields:
+      - token
+      - secret
+      - authHeader
+      - envValue
+      - rawLocalArtifactPathWithSensitiveValue
+  install.result:
+    timing: "terminal result を返す前"
+    resultValues:
+      - success
+      - failure
+      - dry-run
+    requiredFields:
+      - eventType
+      - operationMode
+      - sourceMode
+      - manifestChecksum
+      - artifactChecksum
+      - releaseVersion
+      - result
+    optionalFields:
+      - requestedBy
+      - requestedAt
+      - reason
+      - localArtifactReference
+      - auditLogPolicy
+      - failureReason
+    forbiddenFields:
+      - token
+      - secret
+      - authHeader
+      - envValue
+      - rawLocalArtifactPathWithSensitiveValue
+sourceModePayload:
+  online:
+    localArtifactReference: absent
+  offline:
+    localArtifactReference: secret-free-required
+consistencyRules:
+  - id: begin-result-identity-match
+    rule: "install.begin と install.result を両方記録する場合、identityFields は一致する。"
+    violationFixture: audit begin result mismatch reject
+  - id: result-has-begin
+    rule: "install.result は対応する install.begin なしに成功証跡として扱わない。"
+    violationFixture: audit result without begin reject
+  - id: required-begin-before-commit
+    rule: "required audit log で install.begin を commit phase 前に追記できない場合、install は失敗する。"
+    violationFixture: required audit log write failure
+  - id: post-commit-result-failure
+    rule: "commit phase 後の install.result 追記失敗は verified install / handoff を巻き戻さず audit log failure として報告する。"
+    confirmingFixture: post-commit audit result failure

@@ -2,7 +2,11 @@ schemaVersion: "1"
 kind: ci-github-release-evidence
 id: ci.github-release-evidence
 title: GitHub Release publication evidence mapping
+summary: GitHub Releaseの公開判断と書込結果を結ぶ証跡の表現とAction間の対応を定義する。
 placementRole: public_reference
+usage:
+  whenToRead: Release公開handoffと独立readbackの証跡を実装または検証するとき。
+  consumers: [ci-github]
 authority:
   role: authoritative-definition
   owns: [GitHub-specific evidence representation and Action workflow mapping]

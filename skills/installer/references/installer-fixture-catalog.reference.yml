@@ -1,0 +1,505 @@
+schemaVersion: "1"
+kind: installer-fixture-catalog
+id: installer.fixture-catalog
+title: インストーラ fixture catalog
+summary: >-
+  installer fixture baseline の見出し ID、期待結果、coverage 上の主責務を定義する公開正本。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - fixture id namespace
+    - fixture expected outcome classification
+    - fixture primary invariant classification
+usage:
+  whenToRead:
+    - fixture の期待結果を監査するとき
+    - coverage matrix の fixture 参照を追加または分類するとき
+    - 重複 fixture の primary / secondary invariant を確認するとき
+  consumers:
+    - human
+    - agent
+    - audit
+outcomeValues:
+  - success
+  - reject
+  - warning
+  - failure-report
+coverageRoleValues:
+  - confirms
+  - detects-violation
+fixtureIds:
+  - id: common installer conformance
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: project-override-boundary
+  - id: avoidable project override reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: project-override-boundary
+  - id: project override justification gap
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: project-override-boundary
+  - id: launcher parent traversal reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: placement-profile-boundary
+  - id: system-wide launcher accept
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: placement-profile-boundary
+  - id: fixed github release native asset
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: use-case-and-platform-selection
+    secondaryInvariants:
+      - verified-placement-assets
+  - id: target platform missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: use-case-and-platform-selection
+  - id: target platform unknown
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: use-case-and-platform-selection
+  - id: success install
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: verified-input-consistency
+  - id: success external handoff
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: activation-strategy-boundary
+  - id: success result with audit log
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: bounded project override
+    expectedOutcome: warning
+    coverageRole: confirms
+    primaryInvariant: project-override-boundary
+  - id: checksum mismatch
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-input-consistency
+  - id: unknown manifest field
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: schema range reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: TLS disabled reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: production insecure URL reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: unallowed source boundary reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: fallback registry reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: cache without checksum reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: offline source mode verified input
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: source-mode-boundary
+  - id: online source mode verified input
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: source-mode-boundary
+  - id: remote manifest re-fetch mismatch
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-input-consistency
+  - id: offline manifest URL reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: offline stale artifact reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: unsafe config syntax reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: configuration-and-recovery-boundary
+  - id: project-specific shell source exception
+    expectedOutcome: warning
+    coverageRole: confirms
+    primaryInvariant: project-override-boundary
+    secondaryInvariants:
+      - configuration-and-recovery-boundary
+  - id: shell source exception evidence gap
+    expectedOutcome: warning
+    coverageRole: detects-violation
+    primaryInvariant: project-override-boundary
+    secondaryInvariants:
+      - configuration-and-recovery-boundary
+  - id: arbitrary env source reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: configuration-and-recovery-boundary
+    secondaryInvariants:
+      - no-secret-persistence
+  - id: unsafe archive entry
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: managed root too broad reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: placement outside managed root reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: broad ownership change reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: SBOM checksum mismatch
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: shared asset checksum mismatch
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: required installer version reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: runtime installer field reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: runtime-prerequisite-boundary
+  - id: manifest operation mode reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: manifest out-of-scope operation reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: manifest source build reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+    secondaryInvariants:
+      - verified-placement-assets
+  - id: manifest lifecycle hook implicit execution reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: production install state path missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: manifest-schema-and-source-boundary
+  - id: activation strategy missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: activation strategy unknown
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: external handoff state path missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: source archive no build
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: verified-placement-assets
+    secondaryInvariants:
+      - manifest-schema-and-source-boundary
+  - id: operation mode missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: operation-mode-and-dry-run-boundary
+  - id: source mode missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: source mode unknown
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: offline local artifact path missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: local artifact path secret reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+    secondaryInvariants:
+      - no-secret-persistence
+  - id: online local artifact path reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: manifest checksum mismatch in request
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-input-consistency
+  - id: execution request override reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-input-consistency
+  - id: execution request source mode override reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: source-mode-boundary
+  - id: dry-run flag conflict
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: operation-mode-and-dry-run-boundary
+  - id: runtime missing
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: runtime-prerequisite-boundary
+  - id: lock conflict
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: runtime-prerequisite-boundary
+  - id: secret persistence check
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: no-secret-persistence
+  - id: test timeout evidence gap
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: test-evidence-boundary
+  - id: idempotent reinstall
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: verified-input-consistency
+  - id: conflicting same version
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: health rollback
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: rollback plan resource separation
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: activation-strategy-boundary
+  - id: active pointer switch
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: activation-strategy-boundary
+  - id: in-place reflect rollback
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: activation-strategy-boundary
+  - id: external orchestrated handoff
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: activation-strategy-boundary
+  - id: health retry rollback
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: rollback failed
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: activation-strategy-boundary
+  - id: install state includes installer version
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: handoff state includes installer version
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: provenance recorded
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: assembled asset evidence recorded
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: asset-assembly-evidence-boundary
+  - id: assembled asset evidence gap
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: asset-assembly-evidence-boundary
+  - id: audit log excludes secrets
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: no-secret-persistence
+    secondaryInvariants:
+      - state-and-audit-separation
+  - id: audit log records source mode
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: audit begin result mismatch reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: state-and-audit-separation
+  - id: audit result without begin reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: state-and-audit-separation
+  - id: audit log used as state source reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: state-and-audit-separation
+  - id: required audit log write failure
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: state-and-audit-separation
+  - id: best-effort audit log warning
+    expectedOutcome: warning
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: post-commit audit result failure
+    expectedOutcome: warning
+    coverageRole: confirms
+    primaryInvariant: state-and-audit-separation
+  - id: config schema compatibility check
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: configuration-and-recovery-boundary
+  - id: roll forward policy check
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: configuration-and-recovery-boundary
+  - id: dry-run no write
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: operation-mode-and-dry-run-boundary
+  - id: dry-run flag omitted
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: operation-mode-and-dry-run-boundary
+  - id: service manager boundary reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script handoff
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script audit pass
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script evidence gap
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script blocker candidate
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script forbidden runtime operation reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: runtime script service supervision reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: service-runtime-boundary
+  - id: fixed maven coordinate
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: runtime-prerequisite-boundary
+    secondaryInvariants:
+      - use-case-and-platform-selection
+      - verified-placement-assets
+  - id: maven source boundary reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: maven moving metadata reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: java version insufficient
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: runtime-prerequisite-boundary
+  - id: fixed npm artifact
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: runtime-prerequisite-boundary
+    secondaryInvariants:
+      - use-case-and-platform-selection
+      - verified-placement-assets
+  - id: frozen dependency install
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: verified-placement-assets
+  - id: package manager version mismatch
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: runtime-prerequisite-boundary
+  - id: npm credential non-persistence
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: no-secret-persistence
+  - id: npm credential persistence reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: no-secret-persistence
+  - id: lifecycle hook policy
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: verified-placement-assets
+  - id: fixed shared wrapper asset
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: shared-wrapper-delivery-boundary
+  - id: delivery url reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: shared-wrapper-delivery-boundary
+  - id: unknown platform reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: shared-wrapper-delivery-boundary
+  - id: posix sh compatibility
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: pipe-execution-safety-boundary
+  - id: pipe truncation no side effect
+    expectedOutcome: failure-report
+    coverageRole: detects-violation
+    primaryInvariant: pipe-execution-safety-boundary
+  - id: per-user profile default
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: placement-profile-boundary
+  - id: system-wide profile selected
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: placement-profile-boundary
+  - id: launcher outside managed root
+    expectedOutcome: success
+    coverageRole: confirms
+    primaryInvariant: placement-profile-boundary
+  - id: launcher base reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: placement-profile-boundary
+  - id: launcher collision reject
+    expectedOutcome: reject
+    coverageRole: detects-violation
+    primaryInvariant: placement-profile-boundary

@@ -73,6 +73,8 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
   if (!existsSync(path.join(root, 'node_modules/vitest')) || releaseTests.some((file) => !existsSync(file))) {
     throw new Error('shared release publication verification dependencies are missing');
   }
+  const installerTest = path.join(root, 'runtime/installer/tests/common-regression.test.mjs');
+  if (!existsSync(installerTest)) throw new Error('shared installer verification dependencies are missing');
   return [{
     command: nodePath,
     args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), testPath],
@@ -84,6 +86,12 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
     args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...releaseTests],
     cwd: releaseRoot,
     action: 'shared-release-publication',
+    phase: 'test',
+  }, {
+    command: nodePath,
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), installerTest],
+    cwd: root,
+    action: 'shared-installer',
     phase: 'test',
   }];
 };

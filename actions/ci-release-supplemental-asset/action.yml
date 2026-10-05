@@ -1,5 +1,5 @@
 name: ci-release-supplemental-asset
-description: Invoke an authority-bound owner supplemental asset adapter using the v2 phase interface.
+description: Execute authority-bound standard installer assembly or an owner adapter using the v2 phase interface.
 inputs:
   operation:
     required: true

@@ -1,0 +1,355 @@
+schemaVersion: "1"
+kind: installer-contract-coverage
+id: installer.contract-coverage
+title: インストーラ契約 coverage matrix
+summary: >-
+  installer の主要契約 invariant、audit evidence boundary、fixture baseline を対応付ける公開正本。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - contract invariant to fixture coverage mapping
+    - core safety invariant definition
+    - project override classification definition
+    - audit evidence boundary to fixture coverage mapping
+    - cross-reference audit checklist
+usage:
+  whenToRead:
+    - 監査で fixture 漏れを確認するとき
+    - 契約を追加したときに positive / negative fixture の対応を確認するとき
+    - fixture と契約 surface の横断整合を確認するとき
+  consumers:
+    - human
+    - agent
+    - audit
+coverageScope:
+  contractCatalogId: installer.contract-catalog
+  fixtureCatalogId: installer.fixture-catalog
+  fixtureBaselineCoverage: complete
+  coverageClassValues:
+    - installer-invariant
+    - audit-evidence-boundary
+    - asset-assembly-evidence-boundary
+  coverageClassMeaning:
+    installer-invariant: installer 成果物の入力、状態遷移、副作用、runtime 境界、secret 境界に対する契約 invariant。
+    audit-evidence-boundary: installer 成果物そのものではなく、監査時に必要な fixture 完走性と残存状態証跡の境界。
+    asset-assembly-evidence-boundary: 組立済み installer asset を公開候補として扱う前に必要な identity、checksum、provenance、検証結果の証跡境界。
+  fixtureReferencePolicy:
+    allFixtureBaselineEntriesMustAppearInCoverage: true
+    fixtureNamesUseBaselineHeadings: true
+    duplicateFixtureReferencesAllowed: true
+    duplicateFixturePrimaryInvariantMustBeDefinedInFixtureCatalog: true
+  confirmingFixtureMeaning: "invariant が満たされることを確認する fixture。fixture 自体の expected outcome は fixture catalog で定義する。"
+  violationFixtureMeaning: "invariant が壊れたときに検出できることを確認する fixture。fixture 自体の expected outcome は fixture catalog で定義する。"
+coreSafetyInvariant:
+  id: core-safety-invariant
+  definition: >-
+    project override があっても緩和しない installer の中核安全条件。
+  requirements:
+    - 検証済み入力と実行入力が一致している
+    - 未検証入力を実行しない
+    - 検証前に破壊的副作用を起こさない
+    - secret を永続化せず、実行可能入力として露出しない
+    - 既存データとユーザー管理設定を既定で保護する
+    - 所有権変更は managed root 内に閉じる。root 外の書き込みは manifest contract の launcher 安全不変条件に従う launcher と必要な親ディレクトリ作成だけに限定する
+    - privileged execution と user-editable file の境界を保つ
+projectOverrideClassification:
+  id: project-override-classification
+  definition: >-
+    共通契約と適用可能な starter の構成・共通動作への準拠を既定とする。
+    製品固有値や契約で許可された adapter の適合で準拠できる場合は共通実装を使い、
+    独自方式を例外として許容しない。標準経路では満たせない必須制約とその根拠を
+    検証できた範囲だけ project override を許容する。
+    既存の個別実装や project SSOT に例外が記載されていることだけでは正当化しない。
+  requiredEvidence:
+    - 必須制約の必要性と、製品固有値や許可 adapter の適合でも標準経路では満たせないことを確認できる根拠
+    - 適用範囲
+    - 残存リスク
+    - 検証方法
+    - rollback または recovery
+    - 責任者
+  classes:
+    - class: accepted project detail
+      condition: 共通契約と適用可能な starter の構成・共通動作を変えず、許可された配置値、命名、adapter、release 方針などを適合させた project 固有の詳細である
+      severity: none
+      reportingDisposition: finding なし。境界説明や証跡粒度に改善余地がある場合だけ minor finding とする
+    - class: bounded override
+      condition: project SSOT の requiredEvidence を証跡へ照合し、必須制約の必要性と標準経路では満たせないことを確認済みで、core safety invariant を壊さない
+      severity: none
+      reportingDisposition: 標準経路との差分を warning audit note として表示する。境界説明や証跡粒度に改善余地がある場合だけ minor finding とする
+    - class: project-specific exception
+      condition: 共通契約または適用可能な starter の構成・共通動作への非準拠差分があり、準拠可能・必須制約の必要性や非準拠の根拠が不成立・requiredEvidence 不足のいずれかに該当し、core safety invariant への到達可能な違反は確認できない
+      severity: major
+    - class: invariant violation
+      condition: core safety invariant への到達可能な違反がある
+      severity: blocker
+coverage:
+  - invariant: use-case-and-platform-selection
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.use-case-contract
+      - installer.manifest-contract
+    confirmingFixtures:
+      - fixed github release native asset
+      - fixed maven coordinate
+      - fixed npm artifact
+      - fixed shared wrapper asset
+    violationFixtures:
+      - target platform missing
+      - target platform unknown
+  - invariant: verified-input-consistency
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.execution-request-contract
+    confirmingFixtures:
+      - success install
+      - idempotent reinstall
+    violationFixtures:
+      - checksum mismatch
+      - remote manifest re-fetch mismatch
+      - manifest checksum mismatch in request
+      - execution request override reject
+  - invariant: project-override-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.execution-request-contract
+      - installer.state-machine
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - bounded project override
+      - common installer conformance
+      - project-specific shell source exception
+    violationFixtures:
+      - avoidable project override reject
+      - project override justification gap
+      - arbitrary env source reject
+      - shell source exception evidence gap
+      - checksum mismatch
+      - secret persistence check
+  - invariant: manifest-schema-and-source-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+    confirmingFixtures:
+      - source archive no build
+    violationFixtures:
+      - unknown manifest field
+      - schema range reject
+      - TLS disabled reject
+      - production insecure URL reject
+      - unallowed source boundary reject
+      - required installer version reject
+      - manifest operation mode reject
+      - manifest out-of-scope operation reject
+      - manifest source build reject
+      - production install state path missing
+      - managed root too broad reject
+      - placement outside managed root reject
+  - invariant: source-mode-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.source-mode-contract
+      - installer.execution-request-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - online source mode verified input
+      - offline source mode verified input
+    violationFixtures:
+      - source mode missing
+      - source mode unknown
+      - fallback registry reject
+      - offline manifest URL reject
+      - offline local artifact path missing
+      - online local artifact path reject
+      - offline stale artifact reject
+      - local artifact path secret reject
+      - execution request source mode override reject
+  - invariant: operation-mode-and-dry-run-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.execution-request-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - dry-run no write
+      - dry-run flag omitted
+    violationFixtures:
+      - operation mode missing
+      - dry-run flag conflict
+  - invariant: runtime-prerequisite-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - fixed maven coordinate
+      - fixed npm artifact
+    violationFixtures:
+      - runtime installer field reject
+      - runtime missing
+      - lock conflict
+      - java version insufficient
+      - package manager version mismatch
+  - invariant: state-and-audit-separation
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.audit-log-contract
+      - installer.audit-event-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - success result with audit log
+      - audit log records source mode
+      - install state includes installer version
+      - handoff state includes installer version
+      - provenance recorded
+      - best-effort audit log warning
+      - post-commit audit result failure
+    violationFixtures:
+      - audit log excludes secrets
+      - audit log used as state source reject
+      - audit begin result mismatch reject
+      - audit result without begin reject
+      - required audit log write failure
+  - invariant: asset-assembly-evidence-boundary
+    coverageClass: asset-assembly-evidence-boundary
+    contractIds:
+      - installer.asset-assembly-evidence-contract
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - assembled asset evidence recorded
+    violationFixtures:
+      - assembled asset evidence gap
+  - invariant: no-secret-persistence
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.execution-request-contract
+      - installer.audit-event-contract
+    confirmingFixtures:
+      - npm credential non-persistence
+    violationFixtures:
+      - secret persistence check
+      - audit log excludes secrets
+      - local artifact path secret reject
+      - arbitrary env source reject
+      - npm credential persistence reject
+  - invariant: activation-strategy-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - success external handoff
+      - rollback plan resource separation
+      - active pointer switch
+      - in-place reflect rollback
+      - external orchestrated handoff
+    violationFixtures:
+      - conflicting same version
+      - activation strategy missing
+      - activation strategy unknown
+      - external handoff state path missing
+      - health rollback
+      - health retry rollback
+      - rollback failed
+  - invariant: verified-placement-assets
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - source archive no build
+      - fixed github release native asset
+      - fixed maven coordinate
+      - fixed npm artifact
+      - frozen dependency install
+    violationFixtures:
+      - cache without checksum reject
+      - unsafe archive entry
+      - SBOM checksum mismatch
+      - shared asset checksum mismatch
+      - manifest source build reject
+      - manifest lifecycle hook implicit execution reject
+      - maven source boundary reject
+      - maven moving metadata reject
+      - lifecycle hook policy
+  - invariant: configuration-and-recovery-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.state-machine
+    confirmingFixtures:
+      - config schema compatibility check
+      - roll forward policy check
+      - project-specific shell source exception
+    violationFixtures:
+      - unsafe config syntax reject
+      - shell source exception evidence gap
+      - arbitrary env source reject
+  - invariant: service-runtime-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.state-machine
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - runtime script handoff
+      - runtime script audit pass
+    violationFixtures:
+      - service manager boundary reject
+      - broad ownership change reject
+      - runtime script evidence gap
+      - runtime script blocker candidate
+      - runtime script forbidden runtime operation reject
+      - runtime script service supervision reject
+  - invariant: test-evidence-boundary
+    coverageClass: audit-evidence-boundary
+    contractIds:
+      - installer.fixture-baseline
+    confirmingReason: >-
+      fixture が timeout / hang せず完走し、期待結果、残存 state、lock、service state、managed root、audit log の確認可否を証跡として残せることを確認する。
+    violationFixtures:
+      - test timeout evidence gap
+  - invariant: shared-wrapper-delivery-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.use-case-contract
+      - installer.manifest-contract
+      - installer.asset-assembly-evidence-contract
+    confirmingFixtures:
+      - fixed shared wrapper asset
+    violationFixtures:
+      - delivery url reject
+      - unknown platform reject
+  - invariant: pipe-execution-safety-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.use-case-contract
+      - installer.state-machine
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - posix sh compatibility
+    violationFixtures:
+      - pipe truncation no side effect
+  - invariant: placement-profile-boundary
+    coverageClass: installer-invariant
+    contractIds:
+      - installer.manifest-contract
+      - installer.state-machine
+      - installer.fixture-baseline
+    confirmingFixtures:
+      - per-user profile default
+      - system-wide profile selected
+      - launcher outside managed root
+      - system-wide launcher accept
+    violationFixtures:
+      - launcher base reject
+      - launcher collision reject
+      - launcher parent traversal reject
+completionRule:
+  requiredForNewInvariant:
+    - contractIds
+    - confirmingFixtureOrReason
+    - violationFixtureOrReason
+  auditFailureCondition: "coverage entry に contractIds、confirming fixture または理由、violation fixture または理由が無い場合、fixture baseline の見出しが coverage に含まれない場合、contractIds が contract catalog に存在しない場合、または fixture が fixture catalog に存在しない場合は監査指摘とする。"

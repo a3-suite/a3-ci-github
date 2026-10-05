@@ -19,6 +19,8 @@ mappings:
   - component_id: runtime-implementations
     element_id: runtime-root
   - component_id: runtime-implementations
+    element_id: installer-runtime
+  - component_id: runtime-implementations
     element_id: preset-model
   - component_id: runtime-implementations
     element_id: preset-registry

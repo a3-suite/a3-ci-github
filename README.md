@@ -6,7 +6,7 @@ GitHub Actions 向けの CI 契約、canonical workflow、再利用可能な Act
 
 ## 公開面
 
-- Agent Skill: `skills/ci-github/`
+- Agent Skill: `skills/ci-github/` と `skills/installer/`
 - GitHub Actions: `actions/<action-name>/`
 - canonical workflow sourceとAction binding: [preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)
 - 選択配布registry: `skills/ci-github/references/ci-distribution-assets.reference.yml`

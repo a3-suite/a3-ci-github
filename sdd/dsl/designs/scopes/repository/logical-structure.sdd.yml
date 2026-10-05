@@ -9,7 +9,7 @@ components:
     responsibility: quality、Release、package publication の canonical workflow source を提供する
     kind_ref: application-service
   - component_id: runtime-implementations
-    responsibility: workflow の配置・preflight、Action の共有処理、hosted delivery から呼び出す単独検証可能な repository 処理を提供する
+    responsibility: workflow の配置・preflight、Action の共有処理、hosted delivery から呼び出す単独検証可能な repository 処理と、製品宣言からの共通installer組立・検証・証跡生成を提供する
     kind_ref: application-service
   - component_id: selective-distribution
     responsibility: registryから選択配布manifestを生成し、必要資材の検証済み取得、canonical workflowの差分計画、承認済みcopyおよびtransaction復旧を提供する

@@ -46,6 +46,7 @@ export const collectActionMetadata = (root) => {
         path: actionPath,
         runtime,
         distPath: bundled ? path.relative(root, path.join(actionPath, 'dist')) : null,
+        companionDistPaths: entry.name === 'ci-release-supplemental-asset' ? ['runtime/installer/dist'] : [],
       };
     });
   if (actions.length === 0) throw new Error('No Action directories were found');
@@ -88,7 +89,7 @@ export const buildPlan = (root, actions, scriptBundles = []) => [
       'diff',
       '--exit-code',
       '--',
-      ...actions.filter((action) => action.distPath).map((action) => action.distPath),
+      ...actions.filter((action) => action.distPath).flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]),
       ...scriptBundles.map((bundle) => bundle.distPath),
     ],
     cwd: root,
@@ -101,7 +102,7 @@ export const runPlan = (plan, execute = execFileSync) => {
 
 export const assertNoUntrackedDist = (root, actions, scriptBundles = [], execute = execFileSync) => {
   const distPaths = [
-    ...actions.filter((action) => action.distPath).map((action) => action.distPath),
+    ...actions.filter((action) => action.distPath).flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]),
     ...scriptBundles.map((bundle) => bundle.distPath),
   ];
   const output = execute(

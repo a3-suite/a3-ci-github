@@ -61,6 +61,7 @@ const supplementalAdapterInputs = (
 const supplementalActionMatches = (step: ValueMap | undefined, inputs: ValueMap | undefined): boolean => Boolean(
   step && inputs && typeof step.uses === 'string'
   && step.uses.startsWith('a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@')
+  && map(step.env).A3_INSTALLER_PROVIDER_REVISION === step.uses.split('@').at(-1)
   && step.run === undefined && step.shell === undefined
   && (step['continue-on-error'] === undefined || step['continue-on-error'] === false)
   && JSON.stringify(Object.entries(map(step.with)).sort()) === JSON.stringify(Object.entries(inputs).sort()),
@@ -260,6 +261,18 @@ const validateSupplementalOwnerContract = (
   report: Report,
 ): void => {
   const supplementalAssetEnabled = publishWith.supplemental_release_asset_enabled;
+  const implementation = publishWith.supplemental_release_asset_implementation ?? 'owner-adapter';
+  const configPath = publishWith.supplemental_release_asset_config_path ?? '__unset__';
+  if (!['owner-adapter', 'standard-installer'].includes(String(implementation))
+    || (implementation === 'standard-installer' && (supplementalAssetEnabled !== true
+      || publishWith.supplemental_release_asset_owner_contract !== 'installer.asset-assembly-evidence-contract'
+      || typeof configPath !== 'string' || !configPath || configPath === '__unset__' || /[\0\r\n]/.test(configPath)
+      || configPath.startsWith('/') || configPath.includes('\\') || configPath.split('/').some(part => !part || part === '.' || part === '..')))
+    || (implementation === 'owner-adapter' && configPath !== '__unset__')) add(report.mismatches, {
+      path: `${callerPath}:jobs.publish.with.supplemental_release_asset_implementation`,
+      message: 'supplemental implementation, enabled selection, owner contract and declaration path must agree',
+      settingLocation: callerPath,
+    });
   const supplementalAssetOwnerContract = publishWith.supplemental_release_asset_owner_contract;
   const ownerContractPath = `${callerPath}:jobs.publish.with.supplemental_release_asset_owner_contract`;
   if (supplementalAssetEnabled === true) {
@@ -389,7 +402,7 @@ const resolveAuthoritySnapshotValues = (
         resolved = publicationEnv[binding[2]];
         path = `${publicationPath}:env.${binding[2]}`;
       } else if (binding?.[1] === 'inputs') {
-        resolved = publishWith[binding[2]];
+        resolved = publishWith[binding[2]] ?? ({ supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__' } as Record<string, string>)[binding[2]];
         path = `${callerPath}:jobs.publish.with.${binding[2]}`;
         settingLocation = callerPath;
       }
@@ -497,6 +510,8 @@ const validatePublicationControlSurface = (
     CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT:
       '${{ inputs.supplemental_release_asset_owner_contract }}',
     CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER: '.ci/scripts/ci-release-supplemental-asset.sh',
+    CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: '${{ inputs.supplemental_release_asset_implementation }}',
+    CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '${{ inputs.supplemental_release_asset_config_path }}',
   };
   for (const [key, value] of Object.entries(expectedSupplementalAssetSnapshot)) {
     if (workflowSnapshot[key] !== value) add(report.mismatches, {

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "installer.assembly.v1",
+  "useCase": "github-release-native",
+  "verificationProfile": "native-offline-dry-run-v1",
+  "platforms": {
+    "linux-x86_64": {
+      "manifest": "installer/linux.json",
+      "assetName": "install-linux-x86_64.sh"
+    }
+  }
+}

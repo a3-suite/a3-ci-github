@@ -1,0 +1,45 @@
+schemaVersion: "1"
+kind: installer-standard-assembly-contract
+id: installer.standard-assembly-contract
+title: 標準installer組立契約
+summary: 製品宣言だけを利用側で保持し、固定providerが実候補を検証して証跡を確定する標準経路を定義する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns: [standard declaration fields, verification profile semantics, provider and product ownership boundary]
+usage:
+  whenToRead: [標準installerの製品宣言と検証profileを選ぶとき]
+  consumers: [human, agent, validator]
+schema: installer.assembly.v1
+fields:
+  schemaVersion: 固定schema識別子
+  useCase: github-release-native または github-release-native-shared
+  verificationProfile: useCaseに対応するprofileの明示選択
+  platforms: platform idをkey、manifestとassetNameだけを持つobjectをvalueとする
+  sharedWrapper: shared useCaseだけで必須。assetNameと各platformの固定HTTPS deliveryUrlsを持つ
+unknownFields: reject
+platforms:
+  native: [linux-x86_64, macos-arm64, windows-x86_64]
+  shared: [linux-x86_64, macos-arm64]
+profiles:
+  native-offline-dry-run-v1:
+    useCase: github-release-native
+    execution: 対象native runnerで実候補を実manifest・実archiveと共にoffline dry-run実行する
+  shared-exact-payload-v1:
+    useCase: github-release-native-shared
+    execution: 各native候補の上記検証に加え、実wrapperと実payloadを固定delivery test doubleで検証する
+    excludes: test doubleからのWindows対応または他OS native実行の推認
+ownership:
+  provider: 共通runtime・builder・共通テスト・実候補検証と証跡生成
+  project: 製品宣言・manifestの製品固有値・検証profile選択・公開判断・製品要求の受入
+  forbiddenProjectCopies: [common runtime, builder, common fixtures, common tests, standard assembly adapter]
+  ciDownloads: 固定Action同梱runtimeを利用。Agent Skillは不要
+  localDownloads: 固定配布CLIをGit管理外へ取得。source cloneと依存restoreは不要
+bindings:
+  - 製品宣言とmanifestはauthority.source_shaのGit blobと一致する
+  - release identityとartifact checksumはauthorityと標準buildから導出する
+  - 候補・verification・final evidenceは固定provider・source・manifest・asset・assembly idに結び付ける
+  - assembleで固定providerから候補を再構成して照合する
+  - profile失敗時はfinal evidenceとsupplemental handoffを生成しない
+guaranteeLimit: profileはinstall/upgrade/rollback全受入、hosted公開、全OS実機受入を保証しない
+unsupported: [Windows shared wrapper, Maven execution engine, npm execution engine]

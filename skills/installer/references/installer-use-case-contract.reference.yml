@@ -1,0 +1,168 @@
+schemaVersion: "1"
+kind: installer-use-case-contract
+id: installer.use-case-contract
+title: インストーラ use case 契約
+summary: standard target platform の選択、GitHub Release native asset、Maven Jar、 npm
+  package の入力差分、および固定 HTTPS URL から pipe 実行する共有 wrapper の delivery 契約を定義する公開正本。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns:
+    - standard target platform id namespace
+    - installer use case id namespace
+    - source kind to use case mapping
+    - use case sample mapping
+    - use case distribution asset mapping
+usage:
+  whenToRead:
+    - installer の取得形態と target platform を決めるとき
+    - use case 別の manifest sample を選ぶとき
+  consumers:
+    - human
+    - agent
+    - validator
+samplePathBase: skill-root
+sampleSemantics:
+  usage: copy-and-adapt
+  executableInstaller: false
+  manifestChecksum: matches-sample-content
+  replaceBeforeUse:
+    - source identity
+    - artifact identity and checksum
+    - placement and state paths
+    - audit values
+platformSelection:
+  manifestField: targetPlatformId
+  required: true
+  selectionTiming: before-manifest-finalization
+  executionRequestOverride: forbidden
+  schemaCompatibility:
+    newManifestSchemaExample: installer.manifest.v2
+    existingSchemaAction: versioned-migration
+    silentReinterpretation: forbidden
+  standardCandidates:
+    - id: linux-x86_64
+      operatingSystem: linux
+      architecture: x86_64
+    - id: macos-arm64
+      operatingSystem: macos
+      architecture: arm64
+    - id: windows-x86_64
+      operatingSystem: windows
+      architecture: x86_64
+delivery:
+  sharedWrapper:
+    description: 固定 HTTPS URL から pipe 実行する共有 wrapper 配信。wrapper は platform を実行時に検出し、
+      検証済み platform installer を選んで実行する。
+    commandTemplates:
+      unix: curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | sh
+      windows: "owner extension only: standard Windows shared wrapper is not provided"
+    requirements:
+      - fixed-https-wrapper-url
+      - posix-sh-compatible-unix-wrapper
+      - verified-platform-installer-before-execution
+      - no-destructive-side-effect-before-verification
+      - nondefault-modes-via-environment
+useCases:
+  - id: github-release-native
+    sourceKind: github-release
+    artifactPlatformScope: target-specific
+    runtimePrerequisite: forbidden
+    supportedTargetPlatformIds:
+      - linux-x86_64
+      - macos-arm64
+      - windows-x86_64
+    requiredManifestFields:
+      - targetPlatformId
+      - source.fixedReference
+      - artifact.fileName
+      - artifact.checksum
+    forbiddenManifestFields:
+      - runtime
+    sample:
+      targetPlatformId: linux-x86_64
+      manifestPath: assets/examples/github-release-native/manifest.example.json
+      executionRequestPath: assets/examples/github-release-native/execution-request.example.json
+    distributionAsset:
+      usage: fixed-provider-runtime
+      executableInstaller: true
+      assemblyContractPath: references/installer-standard-assembly-contract.reference.yml
+      manifestTemplatePath: assets/examples/native-manifest.template.json
+    confirmingFixture: fixed github release native asset
+  - id: maven-jar
+    sourceKind: maven
+    artifactPlatformScope: shared
+    runtimePrerequisite: required
+    runtimeKind: java
+    supportedTargetPlatformIds:
+      - linux-x86_64
+      - macos-arm64
+      - windows-x86_64
+    requiredManifestFields:
+      - targetPlatformId
+      - package.repositoryUrl
+      - package.groupId
+      - package.artifactId
+      - package.version
+      - artifact.checksum
+      - runtime.kind
+      - runtime.requiredVersion
+    sample:
+      targetPlatformId: macos-arm64
+      manifestPath: assets/examples/maven-jar/manifest.example.json
+      executionRequestPath: assets/examples/maven-jar/execution-request.example.json
+    confirmingFixture: fixed maven coordinate
+  - id: npm-package
+    sourceKind: npm
+    artifactPlatformScope: shared
+    runtimePrerequisite: required
+    runtimeKind: node
+    supportedTargetPlatformIds:
+      - linux-x86_64
+      - macos-arm64
+      - windows-x86_64
+    requiredManifestFields:
+      - targetPlatformId
+      - package.registryUrl
+      - package.packageName
+      - package.version
+      - artifact.checksum
+      - runtime.kind
+      - runtime.requiredVersion
+      - runtime.packageManager
+      - runtime.packageManagerVersion
+      - executionPolicy.lifecycleHookPolicy
+    sample:
+      targetPlatformId: windows-x86_64
+      manifestPath: assets/examples/npm-package/manifest.example.json
+      executionRequestPath: assets/examples/npm-package/execution-request.example.json
+    confirmingFixture: fixed npm artifact
+  - id: github-release-native-shared
+    sourceKind: github-release
+    artifactPlatformScope: target-specific
+    runtimePrerequisite: forbidden
+    wrapperPlatformScope: shared
+    deliveryMode: sharedWrapper
+    supportedTargetPlatformIds:
+      - linux-x86_64
+      - macos-arm64
+    requiredManifestFields:
+      - targetPlatformId
+      - source.fixedReference
+      - artifact.fileName
+      - artifact.checksum
+    forbiddenManifestFields:
+      - runtime
+    sample:
+      targetPlatformId: linux-x86_64
+      manifestPath: assets/examples/github-release-native-shared/manifest.example.json
+      executionRequestPath: assets/examples/github-release-native-shared/execution-request.example.json
+    distributionAsset:
+      usage: fixed-provider-runtime
+      executableInstaller: true
+      assemblyContractPath: references/installer-standard-assembly-contract.reference.yml
+      manifestTemplatePath: assets/examples/native-manifest.template.json
+    confirmingFixture: fixed shared wrapper asset
+violationFixtures:
+  - target platform missing
+  - target platform unknown

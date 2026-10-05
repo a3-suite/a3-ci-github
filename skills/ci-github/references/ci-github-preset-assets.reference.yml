@@ -442,6 +442,9 @@ registry:
           - id: release-supplemental-asset-adapter
             workflowAsset: release-publication-caller
             selectorPath: jobs.publish.with.supplemental_release_asset_enabled
+            unless:
+              selectorPath: jobs.publish.with.supplemental_release_asset_implementation
+              value: standard-installer
       standardImplementation:
         source: actionization.standardImplementations
         selectionEnv: CI_RELEASE_IMPLEMENTATION

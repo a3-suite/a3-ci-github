@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""staged の ci-github スキルを配備先へ反映し、配備整合を検証する。"""
+"""staged の公開スキルを配備先へ反映し、配備整合を検証する。"""
 
 from __future__ import annotations
 
@@ -11,7 +10,7 @@ from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = Path(os.environ.get("A3_REPO_ROOT", SCRIPT_PATH.parents[4])).resolve()
-SKILL_ROOT = Path("skills/ci-github")
+SKILL_ROOT = Path("skills")
 DESTINATION_ENV = "A3_CI_GITHUB_SKILL_DEPLOY_ROOT"
 CLI_ENV = "A3_PROJECT_SKILL_DEPLOY_CLI"
 CLI_RELATIVE = Path("project-skill-deploy/scripts/deploy_project_skills.py")
@@ -39,7 +38,12 @@ def git_paths(*args: str) -> list[Path]:
 def is_deployable(path: Path) -> bool:
     if path != SKILL_ROOT and SKILL_ROOT not in path.parents:
         return False
-    relative = path.relative_to(SKILL_ROOT) if path != SKILL_ROOT else Path()
+    if len(path.parts) < 3:
+        return False
+    root = Path(*path.parts[:2])
+    if path.name != "SKILL.md" and not (REPO_ROOT / root / "SKILL.md").is_file():
+        return False
+    relative = path.relative_to(root)
     if any(part in EXCLUDED_PARTS for part in relative.parts):
         return False
     return path.suffix not in EXCLUDED_SUFFIXES
@@ -76,15 +80,8 @@ def deployable_staged_changes() -> list[tuple[str, Path]]:
 
 
 def index_has_skill_root() -> bool:
-    return bool(
-        git_paths(
-            "ls-files",
-            "--cached",
-            "-z",
-            "--",
-            f"{SKILL_ROOT.as_posix()}/SKILL.md",
-        )
-    )
+    changed_roots = {Path(*path.parts[:2]) for _, path in deployable_staged_changes()}
+    return all(git_paths("ls-files", "--cached", "-z", "--", f"{root.as_posix()}/SKILL.md") for root in changed_roots)
 
 
 def unstaged_overlaps() -> list[str]:
@@ -143,7 +140,7 @@ def parse_plan(stdout: str) -> dict[str, object]:
     except json.JSONDecodeError as error:
         raise RuntimeError(f"deploy CLI returned invalid JSON: {error}") from error
     if not isinstance(payload, dict):
-        raise RuntimeError("deploy CLI returned a non-object JSON payload")
+        raise TypeError("deploy CLI returned a non-object JSON payload")
     return payload
 
 
@@ -164,13 +161,13 @@ def main() -> int:
         if not deployable_staged_changes():
             print(
                 "skill-deploy-parity: 非適用 "
-                "(staged changes do not include deployable skills/ci-github files)"
+                "(staged changes do not include deployable public skill files)"
             )
             return 0
         if not index_has_skill_root():
             print(
                 "skill-deploy-parity: STOP: "
-                "staged snapshot no longer contains skills/ci-github/SKILL.md",
+                "staged snapshot no longer contains a changed public skill SKILL.md",
                 file=sys.stderr,
             )
             return 1
@@ -257,7 +254,7 @@ def main() -> int:
             f"(auto-deployed updates={len(updates)}, deletions=0)"
         )
         return 0
-    except Exception as error:
+    except (OSError, RuntimeError, ValueError, TypeError, subprocess.SubprocessError) as error:
         print(f"skill-deploy-parity: ERROR: {error}", file=sys.stderr)
         return 2
 

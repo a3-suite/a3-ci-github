@@ -49,6 +49,8 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 既存 `.mjs` の全面移行は要求しません。release-publication の JSON 形式は `runtime/release-publication/evidence.schema.json` を正本とし、実装型の witness と required field の回帰を `runtime/release-publication/tests/schema.test.ts` で確認します。
 
+installer の候補組立・実候補検証は既存 Python builder と一体で保守する例外です。Node の入力・出力境界は TypeScript 標準に従います。例外理由、追加実行前提と同等の検証は [installer 保守](installer-maintenance.md) を参照してください。
+
 既存 `ci-github-runtime-no-a3-cli` の対象は consumer の workflow と `.ci/` 内の対応 script です。repository の保守用 CLI 実行まで禁止する規則ではありません。対象範囲・検出パターンは rule asset が所有します。
 
 ## Action lint

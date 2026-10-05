@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { isMap, map, strings, valueAtPath, normalizeAsset, standardQualityBundles } from './preset-model.ts';
+import { isMap, map, strings, valueAtPath, conditionalExtensionSelected, normalizeAsset, standardQualityBundles } from './preset-model.ts';
 import type { ValueMap, ResourceSource, AdapterBundle, AdapterBundleAsset, Preset, RegistryData, DiagnosticReport, StandardImplementation, ManagedAsset } from './preset-model.ts';
 import { SOURCE_ROOT, SKILL_ROOT, parseYaml } from './preset-registry.ts';
 import { add } from './validation-report.ts';
@@ -98,7 +98,7 @@ export const inactiveConditionalEntrypoints = (
     const workflowPath = path.join(root, workflowAsset.destination);
     if (!fs.existsSync(workflowPath)) continue;
     const workflow = parseYaml(fs.readFileSync(workflowPath, 'utf8'), workflowAsset.destination);
-    if (valueAtPath(workflow, extension.selectorPath) !== false) continue;
+    if (conditionalExtensionSelected(workflow, extension) !== false) continue;
     for (const entrypoint of registered.entrypoints ?? []) result.add(entrypoint);
   }
   return result;

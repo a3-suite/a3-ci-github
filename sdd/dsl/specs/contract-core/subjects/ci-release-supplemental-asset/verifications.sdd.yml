@@ -45,3 +45,47 @@ verifications:
         intent_id: fail-closed
         input: {owner-output: missing-or-empty}
         checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-installer
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-declaration-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-candidate-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-local-cli
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-provider-profile-refusal
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          profile: unsupported
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected

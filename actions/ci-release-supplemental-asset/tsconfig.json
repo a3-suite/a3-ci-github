@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.action.json",
-  "include": ["src/**/*.ts", "tests/**/*.ts", "../../runtime/release-publication/supplemental.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/io.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "../../runtime/installer/cli.ts", "../../runtime/release-publication/supplemental.ts", "../../runtime/release-publication/snapshot.ts", "../../runtime/release-publication/io.ts"]
 }

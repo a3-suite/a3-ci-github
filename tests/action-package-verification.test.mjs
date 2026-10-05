@@ -48,7 +48,7 @@ describe("action-package-verification", () => {
       expect(plan[1].args).toStrictEqual([path.join(selectedRoot, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(selectedRoot, 'vitest.config.mjs'), path.join(actionRoot, 'tests/core.test.ts')]);
     });
 
-    test('connects shared provisioner and publication tests without another install or build', () => {
+    test('connects shared provisioner, publication and installer tests without another install or build', () => {
       const plan = sharedRuntimeVerificationPlan(root, '/node');
       expect(plan).toStrictEqual([{
         command: '/node',
@@ -61,6 +61,12 @@ describe("action-package-verification", () => {
         args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs'].map((file) => path.join(root, 'runtime/release-publication/tests', file))],
         cwd: path.join(root, 'actions/ci-release-assembly'),
         action: 'shared-release-publication',
+        phase: 'test',
+      }, {
+        command: '/node',
+        args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), path.join(root, 'runtime/installer/tests/common-regression.test.mjs')],
+        cwd: root,
+        action: 'shared-installer',
         phase: 'test',
       }]);
     });

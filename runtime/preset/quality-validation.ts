@@ -1,3 +1,4 @@
+import { conditionalExtensionSelected } from './preset-model.ts';
 import fs from 'node:fs';
 import { PlatformSelectionError, resolveQualityPlatforms } from '../platform/platform-selection-core.ts';
 import type { Platform } from '../platform/platform-manifest-core.mjs';
@@ -388,7 +389,7 @@ const validateConditionalExtensions = (
       });
       continue;
     }
-    if (!selected) continue;
+    if (!conditionalExtensionSelected(workflow, extension)) continue;
     const publication = parsed.get(`.github/workflows/${preset.id}.yml`);
     const publicationText = publication ? JSON.stringify(publication) : '';
     const reachable = new Set(findWorkflowAssetReferences(root, publicationText));

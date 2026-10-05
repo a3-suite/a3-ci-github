@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { runSupplemental } from '../../../runtime/release-publication/supplemental';
 import { fail, releaseErrorMessage } from '../../../runtime/release-publication/io';
 
@@ -18,6 +19,7 @@ export const run = (): void => {
       authorityPath: input('authority-path'), snapshotPath: input('snapshot-path'),
       standardBuildRoot: input('standard-build-root'), supplementalBuildRoot: input('supplemental-build-root', false),
       outputDirectory,
+      installerRoot: fs.existsSync(path.join(__dirname, 'installer')) ? path.join(__dirname, 'installer') : path.resolve(__dirname, '../../../runtime/installer'),
     });
     fs.appendFileSync(outputPath, `status=success\noutput-directory=${outputDirectory}\n`, 'utf8');
   } catch (error: unknown) {

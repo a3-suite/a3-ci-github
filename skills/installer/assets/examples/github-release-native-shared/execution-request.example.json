@@ -1,0 +1,16 @@
+{
+  "manifest": {
+    "path": "/var/tmp/example-agent/manifest.json",
+    "checksum": "sha256:02e5aacde112ff756c264c28c0f4822f024e003542d376a8687bba26a78a395a"
+  },
+  "execution": {
+    "operationMode": "install",
+    "sourceMode": "online",
+    "instanceId": "default"
+  },
+  "audit": {
+    "requestedBy": "release-operator",
+    "requestedAt": "2026-09-22T10:00:00Z",
+    "reason": "native release installation"
+  }
+}

@@ -34,7 +34,7 @@
    - source gate は authority と checkout の identity だけを検証し、format、lint、test は quality job が trusted control の runner、runtime、adapter descriptor から実行する。
    - quality の failure、skip、cancel は build を開始させない。
 4. 書込権限を持たないbuild / validate jobでrelease資材を作る。
-   - 採用済み installer asset の組立を担当する adapter（補助資材の場合は supplemental asset adapter）は、本スキルの workflow 設計で installer スキルへ委譲して解決した契約に接続する。このガイドから直接着手した場合も adapter を決める前に同じ委譲を行い、委譲先の契約または owner 契約が未解決なら構成しない。
+   - 採用済み installer asset の組立を担当する 標準runtimeまたは非標準adapterは、本スキルの workflow 設計で installer スキルへ委譲して解決した契約に接続する。このガイドから直接着手した場合も adapter を決める前に同じ委譲を行い、委譲先の契約または owner 契約が未解決なら構成しない。
    - build / validate jobは`contents: read`とし、`contents: write`、release token、署名用秘密鍵を持たせない。
    - trusted CI controlと操作対象sourceのcheckout pathを分離する。
    - 操作対象sourceは検証済みrequestのsource SHAへ固定する。

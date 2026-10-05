@@ -83,3 +83,42 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source rejects missing and empty owner output
         check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-installer
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > executes standard mode from the distributed Action and reports verified output
+        check_refs:
+          - success
+          - output
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-declaration-mutation
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects changed product declaration
+          before generating output
+        check_refs:
+          - refusal
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-candidate-mutation
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects modified candidate even if
+          supplied file hashes match
+        check_refs:
+          - refusal
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-local-cli
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > executes packaged local CLI with the
+          same fixed boundary
+        check_refs:
+          - success
+          - output
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-provider-profile-refusal
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects unsupported provider profile without successful Action output or generated assets
+        check_refs: [refusal]
