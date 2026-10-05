@@ -1,14 +1,14 @@
-# ci-github スキルデプロイコンテキスト
+# 公開スキルデプロイコンテキスト
 
 ## 固定する入力
 
 | 入力 | 値 |
 | --- | --- |
 | source root | `{project-root}/skills` |
-| selectable skill | `ci-github` |
-| canonical source | `{project-root}/skills/ci-github` |
+| selectable skill | source rootでSKILL.mdを持つ公開root（ci-github / installer） |
+| canonical source | `{project-root}/skills/{skill-name}` |
 | destination root | 利用者が明示した外部スキルルート |
-| destination skill root | `{destination-root}/ci-github` |
+| destination skill root | `{destination-root}/{skill-name}` |
 
 `{project-root}` と `{destination-root}` は実行前に絶対パスへ解決する。配備先を環境や過去の配置から推測しない。
 
@@ -17,7 +17,7 @@
 - 配備ファイル集合は canonical source の現在の通常ファイルから導出し、別の一覧を正本として保持しない。
 - `_build` などの予約領域、symlink、非通常ファイル、source と destination の重複判定は `project-skill-deploy` の契約へ委譲する。
 - `workflows/`、`actions/`、`runtime/`、`lint-rules/` は repository-owned であり、Agent Skill の配備対象に含めない。
-- 配備先の既存 `ci-github` は直接編集せず、canonical source から再反映する。
+- 配備先の既存公開スキル は直接編集せず、canonical source から再反映する。
 
 ## 委譲境界
 
@@ -47,7 +47,11 @@
 
 ### 反映
 
-- 許可された管理対象について、`{destination-root}/ci-github` のファイル集合と内容が canonical source に一致する。
+- 許可された管理対象について、`{destination-root}/{skill-name}` のファイル集合と内容が canonical source に一致する。
 - 未許可の stale と管理外候補は一致条件から除外し、未処理理由とともに報告されている。
 - 外部書き込みと削除の実施有無、対象、件数を分けて報告できる。
 - repository-owned の実装資産が Agent Skill 配備先へ複製されていない。
+
+## installer所有元の切替
+
+正式な固定runtime提供と新スキルの配備を確認してからa3-promptsの旧installer rootを撤去する。同名SKILL.mdの案内stubは残さない。切替中は旧側のinstaller配備を止め、通常配備による上書きとpruneを避ける。外部配備と旧資材削除は、それぞれ具体的対象への承認を得て実施する。

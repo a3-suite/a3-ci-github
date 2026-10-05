@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "installer.manifest.v2",
+  "releaseVersion": "1.4.2",
+  "targetPlatformId": "macos-arm64",
+  "source": {
+    "kind": "maven",
+    "registry": "https://maven.pkg.github.com/example-org/example-app",
+    "owner": "example-org",
+    "repository": "example-app",
+    "fixedReference": "com.example:example-app:1.4.2"
+  },
+  "package": {
+    "repositoryUrl": "https://maven.pkg.github.com/example-org/example-app",
+    "groupId": "com.example",
+    "artifactId": "example-app",
+    "version": "1.4.2"
+  },
+  "artifact": {
+    "url": "https://maven.pkg.github.com/example-org/example-app/com/example/example-app/1.4.2/example-app-1.4.2.jar",
+    "fileName": "example-app-1.4.2.jar",
+    "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "runtime": {
+    "kind": "java",
+    "requiredVersion": "17"
+  },
+  "placement": {
+    "managedRoot": "/Library/Application Support/ExampleApp",
+    "releasePath": "/Library/Application Support/ExampleApp/releases/1.4.2",
+    "currentLink": "/Library/Application Support/ExampleApp/current"
+  },
+  "activation": {
+    "strategy": "active-pointer"
+  },
+  "concurrency": {
+    "lockPath": "/Library/Application Support/ExampleApp/install.lock"
+  },
+  "state": {
+    "installStatePath": "/Library/Application Support/ExampleApp/state/install-state.json"
+  },
+  "compatibility": {
+    "requiredInstallerVersion": "1.2.0"
+  }
+}

@@ -19,13 +19,15 @@
 - 選択配布単位と依存閉包: `skills/ci-github/references/ci-distribution-assets.reference.yml`
 - 選択配布manifest生成・取得・適用・復旧: `runtime/distribution/`
 - 配置・検証処理: `runtime/`
-- Agent Skill の起動条件と操作導線: `skills/ci-github/`
+- Agent Skill の起動条件と操作導線: `skills/`
 - repository保守用のproject-local Agent Skill: `.agents/skills/`
 - provider再利用calleeと、このリポジトリ自身のCI: `.github/workflows/`
 
 スキル文書へ workflow、Action、runtime の実装を複製しません。適用先へ配置するcaller・request workflowのsourceは`workflows/`に置き、個々のcanonical sourceとbindingは上記registryを参照します。
 
-`skills/ci-github/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
+`skills/ci-github/references/` と `skills/installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
+
+installer の実装・配布生成・テストは `runtime/installer/` で保守します。公開スキルの配備は実装の配布を代替しません。配置、言語の例外理由、検証と配布生成の手順は [installer 保守](docs/maintenance/installer-maintenance.md) を参照してください。
 
 ## 依存グラフの扱い
 
@@ -59,7 +61,7 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 ## コミットゲート
 
-コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、公開 Agent Skill `ci-github` の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。
+コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、`skills/` 配下の公開 Agent Skill の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。
 
 ```sh
 export A3_CI_GITHUB_SKILL_DEPLOY_ROOT=<external-skills-root>

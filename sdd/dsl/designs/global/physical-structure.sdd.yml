@@ -30,6 +30,13 @@ elements:
     area_kinds: [implementation, verification]
     source_control: managed
     placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: installer-runtime
+    element_kind: directory
+    path: runtime/installer
+    primary_area_kind: implementation
+    area_kinds: [implementation, verification]
+    source_control: managed
+    placement_purpose: src配下で共通installer組立・exact候補検証・証跡生成のsourceを保守し、testsでprovider回帰を検証、同じsourceからActionとCLIのdistを生成する。製品宣言以外の共通実装を利用側に要求しない
   - element_id: quality-reusable-workflow
     element_kind: file
     path: .github/workflows/ci-quality.yml
@@ -102,7 +109,7 @@ elements:
     placement_purpose: GitHub Actions 資産に対する provider 固有の静的検証ルールを所有し、実 runtime 回帰は tests から検証する
   - element_id: skills-root
     element_kind: directory
-    path: skills/ci-github
+    path: skills
     primary_area_kind: documentation
     area_kinds: [documentation]
     source_control: managed

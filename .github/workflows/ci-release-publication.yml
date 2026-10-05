@@ -19,6 +19,16 @@ on:
         description: Static owner contract ID, or __unset__ when disabled
         required: true
         type: string
+      supplemental_release_asset_implementation:
+        description: owner-adapter or standard-installer; selected by the trusted caller
+        required: false
+        default: owner-adapter
+        type: string
+      supplemental_release_asset_config_path:
+        description: Fixed-source installer declaration path; __unset__ outside standard mode
+        required: false
+        default: __unset__
+        type: string
       sha256sum-version:
         required: true
         type: string
@@ -246,7 +256,7 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@312c534de67720de060689d78ada17da9c84c4e2
         with:
           sources-json: >-
-            {"runtime":{"CI_LANGUAGE_PROFILE":${{ toJSON(env.CI_LANGUAGE_PROFILE) }},"CI_TOOLCHAIN_VERSION":${{ toJSON(env.CI_TOOLCHAIN_VERSION) }},"CI_PLATFORM_MANIFEST":${{ toJSON(env.CI_PLATFORM_MANIFEST) }},"CI_RELEASE_IMPLEMENTATION":${{ toJSON(env.CI_RELEASE_IMPLEMENTATION) }},"CI_RELEASE_OWNER_CONTRACT":${{ toJSON(env.CI_RELEASE_OWNER_CONTRACT) }},"CI_CARGO_MANIFEST_PATH":${{ toJSON(env.CI_CARGO_MANIFEST_PATH) }},"CI_CARGO_LOCK_PATH":${{ toJSON(env.CI_CARGO_LOCK_PATH) }},"CI_RELEASE_BINARY_NAME":${{ toJSON(env.CI_RELEASE_BINARY_NAME) }},"CI_RELEASE_ASSET_PREFIX":${{ toJSON(env.CI_RELEASE_ASSET_PREFIX) }}},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":${{ toJSON(inputs.supplemental_release_asset_owner_contract) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh"},"preset":{}}
+            {"runtime":{"CI_LANGUAGE_PROFILE":${{ toJSON(env.CI_LANGUAGE_PROFILE) }},"CI_TOOLCHAIN_VERSION":${{ toJSON(env.CI_TOOLCHAIN_VERSION) }},"CI_PLATFORM_MANIFEST":${{ toJSON(env.CI_PLATFORM_MANIFEST) }},"CI_RELEASE_IMPLEMENTATION":${{ toJSON(env.CI_RELEASE_IMPLEMENTATION) }},"CI_RELEASE_OWNER_CONTRACT":${{ toJSON(env.CI_RELEASE_OWNER_CONTRACT) }},"CI_CARGO_MANIFEST_PATH":${{ toJSON(env.CI_CARGO_MANIFEST_PATH) }},"CI_CARGO_LOCK_PATH":${{ toJSON(env.CI_CARGO_LOCK_PATH) }},"CI_RELEASE_BINARY_NAME":${{ toJSON(env.CI_RELEASE_BINARY_NAME) }},"CI_RELEASE_ASSET_PREFIX":${{ toJSON(env.CI_RELEASE_ASSET_PREFIX) }}},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":${{ toJSON(inputs.supplemental_release_asset_owner_contract) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh","CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION":${{ toJSON(inputs.supplemental_release_asset_implementation) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH":${{ toJSON(inputs.supplemental_release_asset_config_path) }}},"preset":{}}
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
       - name: Validate release notes binding
         if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'
@@ -433,6 +443,8 @@ jobs:
       - name: Build and verify supplemental Release asset platform
         if: inputs.supplemental_release_asset_enabled
         uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@<release-publication-action-sha>
+        env:
+          A3_INSTALLER_PROVIDER_REVISION: <release-publication-action-sha>
         with:
           operation: build-platform
           authority-path: authority/authority.json
@@ -477,6 +489,8 @@ jobs:
           run-id: ${{ github.run_id }}
       - name: Build and verify supplemental Release asset
         uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@<release-publication-action-sha>
+        env:
+          A3_INSTALLER_PROVIDER_REVISION: <release-publication-action-sha>
         with:
           operation: assemble
           authority-path: authority/authority.json

@@ -47,3 +47,9 @@ test_maps:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "assembly > assembly > assembly fails closed: source"
         check_refs: [rejection]
+  - verification_id: verification.ci-release-assembly.outputs
+    case_id: canonical-asset-digest
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order"
+        check_refs: [digest]

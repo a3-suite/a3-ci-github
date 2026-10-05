@@ -1,0 +1,16 @@
+{
+  "manifest": {
+    "path": "C:\\ProgramData\\ExampleWeb\\input\\manifest.json",
+    "checksum": "sha256:844ce3a3473cc00ee4468c06019ecbed7d68dc75c8ad9b965a96042c28b7d610"
+  },
+  "execution": {
+    "operationMode": "upgrade",
+    "sourceMode": "online",
+    "instanceId": "default"
+  },
+  "audit": {
+    "requestedBy": "release-operator",
+    "requestedAt": "2026-09-22T10:10:00Z",
+    "reason": "npm package installation"
+  }
+}

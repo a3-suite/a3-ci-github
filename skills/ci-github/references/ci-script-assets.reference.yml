@@ -94,7 +94,7 @@ assets:
     useCases: [release-supplemental-asset-build]
     kind: project-adapter
     status: required
-    requiredWhen: supplemental-release-asset-selected
+    requiredWhen: supplemental-release-asset-selected-and-owner-adapter-implementation
     scope: workflow
     entrypoints: [.ci/scripts/ci-release-supplemental-asset.sh]
     copyable: false

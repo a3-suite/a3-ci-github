@@ -301,16 +301,17 @@ platform 固有の runtime、artifact、installer の検証が必要な project 
 booleanの`false`、`<supplemental-release-asset-owner-contract>`をYAML文字列`__unset__`へ置換する。この場合は
 補助adapterを配置せず、assembleは共通のauthorityとconfig snapshotだけを受け取り、補助handoffを
 受け取らない。固定SHAの`ci-config-snapshot`は空値を拒否するため、無効値を空文字へ戻さない。
-選択するprojectだけが、補助adapter、
-補助handoffを受け取れるassemble実装、owner契約の証跡recordとdigestを先に同じ受入単位で用意し、
-owner契約IDを静的に設定してから値を`true`へ切り替える。installer assetでは契約ID
-`installer.asset-assembly-evidence-contract`を設定し、同契約が要求する証跡recordを生成する。
-補助adapterは `ci-github` スキルの `ci-script-contracts.reference.yml` にある
-`release-supplemental-asset-build-scripts.adapterInterface` を実装する。従来の3引数呼出しは互換ではないため、
-adapter、project側の契約テスト、canonical workflowを一つの受入単位で更新し、workflowを有効化する前に契約テストを成功させる。
-選択値とowner契約IDはworkflowの静的初期パラメータとし、Repository Variable、Secret、
-ファイル存在から解決しない。補助adapterとassemble実装は、workflowから渡される
-`authority/config-snapshot.json`のowner契約IDを使用し、別の設定元から再解決しない。
+選択するprojectは実装選択を静的に固定する。標準installerは
+`supplemental_release_asset_implementation: standard-installer` と
+`supplemental_release_asset_config_path: installer/assembly.json` を指定し、owner契約IDを
+`installer.asset-assembly-evidence-contract` にする。製品宣言とmanifestだけを管理し、
+共通builder・runtime・fixture・テスト・補助adapterをコピーしない。profileと製品宣言の詳細は
+installerスキルの標準組立ガイドへ委譲する。
+
+非標準のowner adapterは既定の `owner-adapter` とconfig path `__unset__` を使い、
+`release-supplemental-asset-build-scripts.adapterInterface` を実装する。選択値と契約IDは
+Repository Variable、Secret、ファイル存在から解決しない。両経路ともauthorityに結び付いた
+snapshotの選択だけを使い、既存outputや入力の変更を拒否する。
 
 `release-publication` と `package-publication` はworkflowのコピーだけでは完成しない。registryの
 選択した固定 SHA Action binding、残る`requiredExtensions`、有効な`conditionalExtensions`を

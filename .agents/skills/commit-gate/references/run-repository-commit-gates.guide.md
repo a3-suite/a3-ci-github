@@ -12,7 +12,7 @@
 
 | `gate_id` | 定義節 | 適用条件 | 実行入口 | status 写像 |
 | --- | --- | --- | --- | --- |
-| `skill-deploy-parity` | スキル配備整合ゲート | staged snapshot に `skills/ci-github/` 配下の配備対象変更が含まれる | スキル配備整合ゲートの「実行」 | スキル配備整合ゲートの「終了条件」 |
+| `skill-deploy-parity` | スキル配備整合ゲート | staged snapshot に `skills/` の公開root配下の配備対象変更が含まれる | スキル配備整合ゲートの「実行」 | スキル配備整合ゲートの「終了条件」 |
 
 ## 共通 git への返却
 - 本書のゲート一覧を期待する `gate_id` 集合とし、各ゲートについて適用判定を行う。非適用を含む各判定結果を1件ずつ返す。
@@ -32,7 +32,7 @@
 ## スキル配備整合ゲート
 
 ### 適用条件
-- staged snapshot に `skills/ci-github/` 配下の配備対象変更が含まれる場合に適用する。
+- staged snapshot に `skills/` の公開root配下の配備対象変更が含まれる場合に適用する。
 - 配備対象外は `_build/`、`__pycache__/`、`.git/`、`*.pyc`、`*.pyo` とする。
 - 対象 skill root は staged snapshot から解決し、作業ディレクトリや過去の配置から推測しない。
 
@@ -56,7 +56,7 @@ python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
 - 反映する変更は staged snapshot と一致する作業ツリーの内容に限る。対象 root に未ステージ差分がある場合は実行しない。
 
 ### 停止条件
-- staged snapshot から対象 skill root を解決できない、または `skills/ci-github/SKILL.md` が index に存在しない。
+- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。
 - 対象 root に未ステージ差分または未追跡ファイルがある。
 - 配備先に削除候補、明示 prune 対象、または category replacement root がある。
 - 自動反映後も配備先に差分が残る。

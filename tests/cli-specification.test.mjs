@@ -23,6 +23,7 @@ describe("repository-cli-specification", () => {
       /id: materialize-adapter-bundle/,
       /id: manage-ci-distribution/,
       /id: generate-ci-distribution-release/,
+      /id: assemble-standard-installer/,
     ]) {
       expect(manifest).toMatch(pattern);
     }
@@ -44,6 +45,7 @@ describe("repository-cli-specification", () => {
       read('runtime/adapter/materialize-adapter-bundle.ts'),
       read('runtime/distribution/fetch-a3-ci-github.mjs'),
       read('runtime/distribution/generate-distribution-release.ts'),
+      read('runtime/installer/cli.ts'),
     ].join('\n');
     const declared = [...vocabulary.matchAll(/^\s+long:\s+(--\S+)$/gm)].map((match) => match[1]);
     // Assert
@@ -52,8 +54,9 @@ describe("repository-cli-specification", () => {
       '--manifest-url', '--output', '--output-directory', '--plan', '--preset', '--release-tag',
       '--repo-root', '--repository-root', '--skill-collection-root', '--source-revision',
       '--source-root', '--target-root', '--transaction',
+      '--operation', '--authority-path', '--snapshot-path', '--standard-build-root', '--supplemental-build-root', '--provider-revision',
     ].sort());
-    for (const flag of declared) expect(implementations.includes(`'${flag}'`), flag).toBe(true);
+    for (const flag of declared) expect(implementations.includes(`'${flag}'`) || read('runtime/installer/cli.ts').includes(`'${flag.slice(2)}'`), flag).toBe(true);
     expect(vocabulary).toMatch(/resolving a relative path from the process working directory/);
   });
 

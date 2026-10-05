@@ -1,6 +1,6 @@
 ---
 name: ci-asset-audit
-description: a3-ci-github のworkflow・Action・runtime・構成・ドキュメント資材を棚卸し、consumerとproviderの責務、配布・実行経路、構造・ルールの妥当性、方向性や対称性、不要な実装・複雑度、共通化後の取り残しを監査するときに使う。
+description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化や配置変更後の取り残しを監査するときに使う。
 ---
 
 # ci-asset-audit / SKILL
@@ -27,6 +27,7 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 
 | 確認すること | 入口 |
 |---|---|
+| repositoryの保守配置・実装方式・検証面 | `{project-root}/DEVELOPMENT.md`、`{project-root}/docs/maintenance/action-construction.md`、`{project-root}/docs/maintenance/test-strategy.md` |
 | preset、consumer配置、Action binding、標準実装 | preset registry: `{project-root}/skills/ci-github/references/ci-github-preset-assets.reference.yml` |
 | 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/references/ci-distribution-assets.reference.yml` |
 | adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/references/ci-script-assets.reference.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
@@ -35,8 +36,11 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | CLI入力条件 | CLI manifest: `{project-root}/sdd/dsl/specs/cli/cli-command-manifest.sdd.yml`から各commandを解決 |
 | 契約と検証証拠 | contract package: `{project-root}/sdd/dsl/specs/contract-core/contract-package.sdd.yml`、契約対象の実行定義: `{project-root}/tests/contract-subject-execution.json` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |
+| installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
 
 実体は上記から到達する `actions/`、`workflows/`、provider reusable workflow、`runtime/`、公開・ローカルSkill、lint、テスト、文書を照合する。registryからの到達だけで棚卸しを終えず、対象ディレクトリの実在資材との逆照合で未登録・互換用・保守用資材も区別する。
+
+公開Skillの知識・契約・例とrepository機能の実装・構築・テストを区別する。installerはrepository機能として保守し、公開Skillの配備をAction／CLI実装の配布と同一視しない。Skill自身の保守資材の配置は `skill-maintenance` を参照するが、repository機能の資材を一律にSkillの `_build/` へ移す理由にしない。公開例をテスト入力として読む参照は実装依存と区別し、内部fixtureへの複製を前提にしない。
 
 ## 監査の進め方
 
@@ -53,10 +57,10 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 所有と配置 | consumer固有の公開判断・設定とproviderの共通処理が分かれているか。参照用資材をconsumerが管理する実装に混ぜていないか |
 | 取得とcopy | 選択したpresetの依存閉包に必要な資材だけを取得するか。取得とGitへコミットするcopyを混同していないか。任意資材が一律必須になっていないか |
 | 実行入口 | CLI、wrapper、callee、Action、内部関数で必須入力・能力・失敗処理が一致するか。標準経路が使わない外部skillやtoolchainを入口が要求していないか |
-| 共通化後の移行 | 処理をproviderへ移した後も旧helper、コピー前提、配置本数、検証条件、テスト入力が残っていないか。固定refの実装と作業ツリーの実装を同一視していないか |
+| 共通化・配置変更後の移行 | 処理をproviderへ移した後も旧helper、コピー前提、配置本数、検証条件、テスト入力が残っていないか。source→build→Action／CLI配布物→registry→実行入口の閉包を追い、古いpathや未生成資材がないか。固定refの実装と作業ツリーの実装を同一視していないか |
 | 対称性 | quality／Release／Packageの対応する役割、同等のCLI／Action、標準／拡張の経路で責務と処理の粒度が揃うか。入力・出力、検証、成功・失敗伝播、後処理、配置・依存、文書・テストの片側だけに欠落や旧前提がないか |
 | 説明と互換性 | 標準経路、任意拡張、互換性用の用途が利用者向け入口でも分かるか。契約の維持と標準での不使用を区別できるか |
-| 検証と公開 | 選択資材・入力省略・拒否条件が契約証拠に接続しているか。静的検査、ローカル受入、公開ref、Hosted実行のどこまで確認したかを区別できるか |
+| 検証と公開 | 選択資材・入力省略・拒否条件が、その契約の観測点を通る証拠に接続しているか。補助回帰、テスト収集、静的検査、ローカル受入、公開ref、native OS・Hosted実行を区別できるか |
 
 SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口にownerを解決する。構造の詳細は `structure-review`、順序・失敗伝播の詳細は `sequence-review` を必要な経路だけに適用する。
 
@@ -67,13 +71,15 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 - **対称性**: 比較する資材・経路の対応関係と比較単位を先に決める。同じ役割の処理は責務・粒度・入力出力・検証・失敗伝播・後処理・配置依存・証拠の対応を照合する。request→caller→calleeのように役割が異なる段階は、同じ処理を持つかではなく、責務の受渡しに欠落・重複がないかを確認する。
 
 - **構造**: 正本の論理責務と物理配置・実依存を照合し、名前と責務、公開入口と内部処理、sourceと生成・配布物の対応を確認する。各層・分割・wrapperが独立した責務や境界を提供するかを確認し、ファイル数や層数だけで良否を決めない。
-- **ルール**: 適用する規則の正本・owner・対象・選択条件・例外と実際の検査箇所を対応付ける。実装が従うかに加え、規則自体が現在の目的・実行経路・信頼境界に妥当かを確認する。未使用前提の必須化、同じ規則の再定義、矛盾する判定、古い例外、検査対象漏れ・誤適用・実装追認のテストを探す。lint成功や既存テスト成功だけを規則の妥当性の根拠にしない。
+- **ルール**: 適用する規則の正本・owner・対象・選択条件・例外と実際の検査箇所を対応付ける。実装が従うかに加え、規則自体が現在の目的・実行経路・信頼境界に妥当かを確認する。未使用前提の必須化、同じ規則の再定義、矛盾する判定、古い例外、検査対象漏れ・誤適用・実装追認のテストを探す。型検査・lint・生成物同一性・回帰が通常の検証経路から対象へ届くかを確認し、監査時だけの個別実行で検査漏れを補った状態を区別する。言語・runtimeの例外は保守方針の理由と実行前提に照合する。lint成功や既存テスト成功だけを規則の妥当性の根拠にしない。
 
 - **無駄と複雑度**: consumerとproviderの両側で、実際の利用経路に接続しない実装・設定・環境変数・依存、委譲先と重複する準備・検証・後処理、不要なwrapper・分岐・fallbackを確認する。参照箇所だけでなく委譲先と固定refの能力を照合し、必要な互換性経路や信頼境界を区別する。各候補は、削除または単純化しても維持すべき契約・失敗伝播・証拠と、減る保守・設定・取得・実行負担を示す。
 
 対称性の差は、契約・owner・権限・公開先・trigger・互換性に基づく必要な差と、説明できない欠落・粒度不一致・移行の取り残しに分ける。対称性を理由に固有責務や信頼境界を消さない。
 
 六項目それぞれについて、確認範囲と根拠を添えた結論を毎回報告する。構造は正本と実体の対応、ルールは参照した正本と実際の適用・検証範囲を示す。削減・共通化の候補がない場合も理由を示す。対称性の問題がない場合は比較した対応関係と必要な差を示す。証拠不足や指定範囲外は未確認として示し、「候補なし」「問題なし」で代用しない。
+
+検証資材の評価では、subject／test-mapの保証とテストが実際に観測する境界を照合する。provider内部の回帰をActionの公開出力保証へ直接算入せず、テストの収集成功を実行・契約達成の証拠にしない。計測は保守方針に従う元ソースの対象・分母・子プロセス経路を確認し、生成済み配布物の動作検証と分ける。言語別の計測値を合算して品質判定せず、未実行OSやskipは未確認として残す。計測設定・手順は本スキルへ複製しない。
 
 ## 判断と報告
 
@@ -91,4 +97,4 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 ## 注意
 
 - consumer repositoryの調査、Hosted実行、公開refの検証は、その範囲を依頼された場合の追加証拠。ローカルの成功から結果を補完しない。
-- このローカルSkillはrepository保守用であり、consumerに配布するCI資材や公開`ci-github` Skillの実装ではない。
+- このローカルSkillはrepository保守用であり、consumerに配布するCI資材や公開Skillの実装ではない。

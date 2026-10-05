@@ -191,11 +191,9 @@
       "build": {
         "cwd": "actions/ci-release-supplemental-asset",
         "command": [
-          "node",
-          "node_modules/@vercel/ncc/dist/ncc/cli.js",
-          "build",
-          "src/index.ts",
-          "--minify"
+          "npm",
+          "run",
+          "build"
         ]
       },
       "segments": [
@@ -227,7 +225,9 @@
           "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
           "tests": [
-            "tests/phase.test.ts"
+            "tests/phase.test.ts",
+            "tests/standard-installer.test.ts",
+            "../../runtime/installer/tests/common-regression.test.mjs"
           ],
           "typescript": true,
           "coverage": {
@@ -236,7 +236,9 @@
             "include": [
               "../../runtime/release-publication/supplemental.ts",
               "../../runtime/release-publication/snapshot.ts",
-              "../../runtime/release-publication/io.ts"
+              "../../runtime/release-publication/io.ts",
+              "../../runtime/release-publication/selection.ts",
+              "../../runtime/installer/cli.ts"
             ],
             "exclude": [
               "tests/**",

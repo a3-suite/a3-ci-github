@@ -1,12 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readRecord, safePath, sha256, text } from './io';
+import { parse } from 'yaml';
+import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
+import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text } from './io';
 import { validateSnapshot } from './snapshot';
+import { supplementalSelection } from './selection';
 
 export type SupplementalOptionsType = {
   operation: string; sourceRoot: string; authorityPath: string; snapshotPath: string;
   standardBuildRoot: string; supplementalBuildRoot?: string; outputDirectory: string;
+  installerRoot?: string; providerRevision?: string;
 };
 
 const relativePath = (value: string): string => {
@@ -74,9 +78,11 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
   const sourceSha = hex(authority.source_sha, 40);
   text(authority.version, 'version-invalid');
   if (checkoutSha(root) !== sourceSha) fail('source-identity-mismatch');
-  const adapterRelative = relativePath(text(config.CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER, 'owner-adapter-missing'));
+  const selection = supplementalSelection(config);
+  const standardInstaller = selection.implementation === 'standard-installer';
+  const adapterRelative = relativePath(text(standardInstaller ? selection.configPath : config.CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER, 'owner-adapter-missing'));
   const adapter = safePath(root, adapterRelative);
-  fs.accessSync(adapter, fs.constants.X_OK);
+  if (!standardInstaller) fs.accessSync(adapter, fs.constants.X_OK);
   let committedAdapter: Buffer;
   try { committedAdapter = execFileSync('git', ['-C', root, 'show', `${sourceSha}:${adapterRelative}`], { maxBuffer: LIMITS.jsonBytes, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch { return fail('owner-adapter-source-mismatch'); }
@@ -103,15 +109,48 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
     .some((input) => input !== undefined && overlaps(fs.existsSync(input) ? fs.realpathSync(input) : input, output))) fail('path-overlap');
   if (supplemental && (ancestorIdentities(standard, root).includes(fileIdentity(supplemental))
     || ancestorIdentities(supplemental, root).includes(fileIdentity(standard)))) fail('path-overlap');
+  const platformPath = standardInstaller
+    ? safePath(root, relativePath(text(authority.platform_manifest, 'platform-mismatch'))) : undefined;
+  let releasePlatforms: ReturnType<typeof validatePlatformManifestValue> | undefined;
+  if (platformPath) {
+    const bytes = readBytes(platformPath, 65536);
+    if (config.CI_PLATFORM_MANIFEST !== authority.platform_manifest
+      || sha256(bytes) !== authority.platform_manifest_sha256) fail('platform-mismatch');
+    releasePlatforms = validatePlatformManifestValue(parse(bytes.toString('utf8'), { maxAliasCount: 20, uniqueKeys: true }));
+  }
+  const platformDigest = (): string | undefined => {
+    if (!platformPath) return undefined;
+    const digest = hashFile(safePath(root, relativePath(authority.platform_manifest as string)), 65536);
+    if (digest !== authority.platform_manifest_sha256) fail('platform-mismatch');
+    return digest;
+  };
   const fingerprint = (): unknown => {
     if (fs.realpathSync(root) !== root) fail('root-invalid');
     return {
+      platform: platformDigest(),
       source: checkoutSha(root), authority: hashFile(safePath(root, options.authorityPath), LIMITS.jsonBytes),
       snapshot: hashFile(safePath(root, options.snapshotPath), LIMITS.jsonBytes), adapter: hashFile(safePath(root, adapterRelative)),
       standard: treeDigest(safePath(root, options.standardBuildRoot, true)),
       supplemental: options.supplementalBuildRoot ? treeDigest(safePath(root, options.supplementalBuildRoot, true)) : undefined,
     };
   };
+  const manifestInputs: string[] = [];
+  if (standardInstaller) {
+    const declaration = readRecord(adapter);
+    const platforms = declaration.platforms;
+    if (!platforms || typeof platforms !== 'object' || Array.isArray(platforms)) fail('installer-config-invalid');
+    for (const value of Object.values(platforms)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) fail('installer-config-invalid');
+      const relative = relativePath(text((value as Record<string, unknown>).manifest, 'installer-config-invalid'));
+      const filename = safePath(root, relative);
+      let bytes: Buffer;
+      try { bytes = execFileSync('git', ['-C', root, 'show', `${sourceSha}:${relative}`], { maxBuffer: LIMITS.jsonBytes, stdio: ['ignore', 'pipe', 'ignore'] }); }
+      catch { return fail('installer-declaration-source-mismatch'); }
+      if (sha256(bytes) !== hashFile(filename, LIMITS.jsonBytes)) fail('installer-declaration-source-mismatch');
+      manifestInputs.push(filename);
+    }
+  }
+  const declarationBefore = manifestInputs.map((filename) => hashFile(filename, LIMITS.jsonBytes));
   const before = fingerprint();
   const args = [options.operation, options.authorityPath, options.snapshotPath, options.standardBuildRoot,
     ...(options.supplementalBuildRoot ? [options.supplementalBuildRoot] : []), options.outputDirectory];
@@ -119,8 +158,27 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
   const environment = { ...process.env };
   for (const name of ['GITHUB_OUTPUT', 'GITHUB_STATE', 'GITHUB_ENV', 'GITHUB_PATH', 'GITHUB_STEP_SUMMARY']) delete environment[name];
   // Preserve v2 shebang/argv semantics through Bash, including native Windows Git Bash.
-  try { execFileSync('bash', ['--noprofile', '--norc', '-c', 'exec "$@"', 'supplemental-owner', adapter.split(path.sep).join('/'), ...args], { cwd: root, env: environment, stdio: 'ignore' }); }
-  catch { fail('owner-adapter-failed'); }
+  if (standardInstaller) {
+    const installerRoot = path.resolve(text(options.installerRoot, 'installer-runtime-missing'));
+    const providerRevision = hex(options.providerRevision ?? process.env.A3_INSTALLER_PROVIDER_REVISION, 40);
+    const runner = path.join(installerRoot, 'src/assembly.py');
+    if (!fs.statSync(runner).isFile()) fail('installer-runtime-missing');
+    environment.PYTHONDONTWRITEBYTECODE = '1';
+    delete environment.GH_TOKEN;
+    delete environment.GITHUB_TOKEN;
+    try {
+      execFileSync(process.platform === 'win32' ? 'python' : 'python3', [runner], {
+        cwd: root, env: environment, stdio: ['pipe', 'ignore', 'pipe'], maxBuffer: LIMITS.jsonBytes,
+        input: JSON.stringify({ operation: options.operation, sourceRoot: root, configPath: adapter,
+          authority, releasePlatforms, standardBuildRoot: standard, supplementalBuildRoot: supplemental, outputDirectory: output,
+          providerRevision, assemblyId: process.env.GITHUB_RUN_ID ?? `local-${authority.config_snapshot_digest}` }),
+      });
+    } catch { fail('standard-installer-failed'); }
+  } else {
+    try { execFileSync('bash', ['--noprofile', '--norc', '-c', 'exec "$@"', 'supplemental-owner', adapter.split(path.sep).join('/'), ...args], { cwd: root, env: environment, stdio: 'ignore' }); }
+    catch { fail('owner-adapter-failed'); }
+  }
+  equal(declarationBefore, manifestInputs.map((filename) => hashFile(filename, LIMITS.jsonBytes)), 'build-input-mutated');
   equal(before, fingerprint(), 'build-input-mutated');
   const created = safePath(root, options.outputDirectory, true);
   if (!fs.readdirSync(created).length) fail('supplemental-asset-missing');

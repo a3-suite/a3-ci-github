@@ -74,7 +74,7 @@ export const sortedAssets = (assets: unknown): AssetType[] => {
   if (new Set(sorted.map((asset) => asset.name)).size !== sorted.length) fail('asset-name-collision');
   return sorted;
 };
-export const assetDigest = (assets: unknown): string => sha256(Buffer.from(JSON.stringify(sortedAssets(assets))));
+export const assetDigest = (assets: unknown): string => sha256(Buffer.from(JSON.stringify(sortedAssets(assets).map(({ name, sha256: digest, size }) => ({ name, sha256: digest, size })))));
 export const identityFromAuthority = (authority: Record<string, unknown>, repository: string): ReleaseIdentityType => {
   const identity = validateEvidence('identity', authority.publication);
   if (identity.repository !== repository || identity.source_sha !== authority.source_sha

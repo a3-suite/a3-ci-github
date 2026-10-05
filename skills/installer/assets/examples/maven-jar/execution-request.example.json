@@ -1,0 +1,16 @@
+{
+  "manifest": {
+    "path": "/private/tmp/example-app/manifest.json",
+    "checksum": "sha256:1aeffa32a733b66f51351079cd87cd9fc872ada291c1400a9988cd11782256ff"
+  },
+  "execution": {
+    "operationMode": "upgrade",
+    "sourceMode": "online",
+    "instanceId": "default"
+  },
+  "audit": {
+    "requestedBy": "release-operator",
+    "requestedAt": "2026-09-22T10:05:00Z",
+    "reason": "Maven release installation"
+  }
+}

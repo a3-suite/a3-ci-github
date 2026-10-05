@@ -18,8 +18,7 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   archive_digest=$(shasum -a 256 "$output_dir/$archive_name" | awk '{print $1}')
 fi
-checksum_record=$(<"$output_dir/$archive_name.sha256")
-test "$checksum_record" = "$archive_digest  $archive_name"
+printf '%s  %s\n' "$archive_digest" "$archive_name" | cmp -s - "$output_dir/$archive_name.sha256"
 test "$(tar -tzf "$output_dir/$archive_name")" = "$binary_name"
 jq -e \
   --arg source_sha "$source_sha" \

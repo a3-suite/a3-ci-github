@@ -127,7 +127,7 @@ contracts:
     stopConditions: [source-sha-mismatch, profile-mismatch, toolchain-mismatch, platform-id-missing-or-duplicated, runner-not-allowed, target-missing-or-duplicated, build-adapter-missing, output-already-exists, artifact-missing, artifact-verification-failed]
   - id: release-supplemental-asset-build-scripts
     publicationContract: ci.release-asset-publication-contract#supplementalAsset
-    input: [authority-context, config-snapshot, fixed-source-sha, owner-selected-supplemental-asset-contract, supplemental-asset-build-adapter]
+    input: [authority-context, config-snapshot, fixed-source-sha, owner-selected-supplemental-asset-contract, snapshot-bound-implementation-selection, standard-installer-declaration-or-owner-adapter]
     output: [supplemental-release-asset-handoff, asset-identity-checksum-provenance-verification-evidence, owner-contract-evidence-record, owner-contract-evidence-record-digest]
     adapterInterface:
       version: "2"
@@ -147,7 +147,12 @@ contracts:
       compatibility:
         legacyThreeArgumentInvocation: unsupported
         adoption: adapter-contract-test-and-workflow-in-one-acceptance-unit
-    boundary: write 権限を要求せず、固定 source と owner が選択した契約適合 adapter だけを実行する。asset の意味と証跡生成方法は owner 契約、公開に必要な証跡集合と選択境界は publicationContract を正本とする。
+    standardInstaller:
+      implementation: standard-installer
+      declaration: snapshot-bound-config-path
+      ownerContract: installer.asset-assembly-evidence-contract
+      semantics: installerスキルの標準組立契約を参照し、製品宣言だけから固定providerが実候補検証と証跡を生成する。利用側adapterは不要。
+    boundary: write 権限を要求せず、固定 source と owner が選択した標準runtimeまたは契約適合 adapter だけを実行する。asset の意味と証跡生成方法は owner 契約、公開に必要な証跡集合と選択境界は publicationContract を正本とする。
     outputPolicy: 既存 output directory または同名 asset を削除・上書きせず停止する。
     stopConditions: [supplemental-asset-not-selected, supplemental-asset-contract-missing, supplemental-asset-build-adapter-missing, authority-contract-binding-mismatch, source-or-version-mismatch, standard-platform-build-mutated, output-already-exists, supplemental-asset-missing, checksum-mismatch, provenance-missing, verification-evidence-missing-or-failed, owner-contract-evidence-missing-or-mismatched]
   - id: release-assembly-scripts

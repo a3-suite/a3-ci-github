@@ -57,3 +57,10 @@ verifications:
         checks:
           - id: rejection
             guarantee_ref: assembly-rejected
+      - id: canonical-asset-digest
+        intent_id: bound-assembly
+        input:
+          build-root: build
+        checks:
+          - id: digest
+            guarantee_ref: bound-asset-digest

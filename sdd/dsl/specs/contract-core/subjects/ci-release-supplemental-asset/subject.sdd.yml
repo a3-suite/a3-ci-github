@@ -2,4 +2,4 @@ version: 1
 name: contract-subject
 subject:
   id: subject.ci.release-supplemental-asset
-  summary: Invoke the selected owner supplemental adapter through authority-bound v2 phases without publishing or interpreting installer evidence.
+  summary: Prepare supplemental assets through authority-bound phases using either the selected owner adapter or the provider standard installer. Owner-adapter mode preserves owner verification responsibility; standard-installer mode assembles and verifies exact candidates and generates bound evidence. Neither mode publishes assets.

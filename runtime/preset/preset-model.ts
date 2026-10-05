@@ -9,6 +9,7 @@ export type ConditionalExtension = {
   id: string;
   workflowAsset: string;
   selectorPath: string;
+  unless?: { selectorPath: string; value: string };
 };
 export type Preset = {
   id: string;
@@ -139,3 +140,9 @@ export const publicationBinding = (workflowId: string, registry: RegistryData): 
   workflowId === 'release-publication-caller' ? registry.releasePublicationReusableWorkflow
     : workflowId === 'package-publication-caller' ? registry.packagePublicationReusableWorkflow : undefined;
 
+
+export const conditionalExtensionSelected = (workflow: unknown, extension: ConditionalExtension): unknown => {
+  const selected = valueAtPath(workflow, extension.selectorPath);
+  return selected === true && extension.unless
+    && valueAtPath(workflow, extension.unless.selectorPath) === extension.unless.value ? false : selected;
+};

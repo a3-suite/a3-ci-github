@@ -1,0 +1,63 @@
+version: 1
+name: cli-command
+command:
+  id: assemble-standard-installer
+  path:
+    - node
+    - runtime/installer/run-installer.mjs
+  summary: Assemble and verify exact standard installer candidates with the fixed
+    provider runtime
+  usage_targets:
+    - id: build-platform
+      summary: Verify the exact native platform candidate before evidence finalization
+      option_bindings:
+        - option_id: operation
+          presence: required
+        - option_id: source-root
+          presence: required
+        - option_id: authority-path
+          presence: required
+        - option_id: snapshot-path
+          presence: required
+        - option_id: standard-build-root
+          presence: required
+        - option_id: output-directory
+          presence: required
+        - option_id: provider-revision
+          presence: required
+    - id: assemble
+      summary: Verify transported candidates and emit supplemental handoff
+      option_bindings:
+        - option_id: operation
+          presence: required
+        - option_id: source-root
+          presence: required
+        - option_id: authority-path
+          presence: required
+        - option_id: snapshot-path
+          presence: required
+        - option_id: standard-build-root
+          presence: required
+        - option_id: output-directory
+          presence: required
+        - option_id: provider-revision
+          presence: required
+        - option_id: supplemental-build-root
+          presence: required
+  option_groups:
+    - id: assembly
+      title: Fixed assembly inputs
+      options:
+        - operation
+        - source-root
+        - authority-path
+        - snapshot-path
+        - standard-build-root
+        - output-directory
+        - provider-revision
+        - supplemental-build-root
+  help:
+    usage: node runtime/installer/run-installer.mjs --operation
+      <build-platform|assemble> --source-root PATH --authority-path PATH
+      --snapshot-path PATH --standard-build-root PATH [--supplemental-build-root
+      PATH] --output-directory PATH --provider-revision SHA

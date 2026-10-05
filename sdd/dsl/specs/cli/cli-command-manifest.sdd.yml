@@ -11,3 +11,5 @@ commands:
     path: commands/manage-ci-distribution/cli-command.sdd.yml
   - id: generate-ci-distribution-release
     path: commands/generate-ci-distribution-release/cli-command.sdd.yml
+  - id: assemble-standard-installer
+    path: commands/assemble-standard-installer/cli-command.sdd.yml

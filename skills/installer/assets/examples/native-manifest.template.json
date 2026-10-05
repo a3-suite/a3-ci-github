@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "installer.manifest.v2",
+  "releaseVersion": "<release-version>",
+  "targetPlatformId": "<target-platform-id>",
+  "source": {
+    "kind": "github-release",
+    "owner": "<repository-owner>",
+    "repository": "<repository-name>",
+    "fixedReference": "<release-tag>"
+  },
+  "artifact": {
+    "url": "<fixed-release-asset-url>",
+    "fileName": "<artifact-file-name>",
+    "checksum": "sha256:<artifact-sha256>"
+  },
+  "placement": {
+    "managedRoot": "<managed-root>",
+    "releasePath": "<release-path>",
+    "currentLink": "<current-link-or-pointer>"
+  },
+  "activation": {
+    "strategy": "<activation-strategy>"
+  },
+  "concurrency": {
+    "lockPath": "<lock-path>"
+  },
+  "state": {
+    "installStatePath": "<install-state-path>"
+  },
+  "compatibility": {
+    "requiredInstallerVersion": "<installer-version>"
+  },
+  "provenance": {
+    "sourceTag": "<release-tag>",
+    "sourceCommit": "<source-commit-sha>",
+    "ciRunId": "<ci-run-or-assembly-id>"
+  }
+}

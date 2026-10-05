@@ -26,6 +26,7 @@ describe("action-dist-gate", () => {
       for (const action of actions) {
         expect(['node24', 'composite'].includes(action.runtime)).toBeTruthy();
         if (action.runtime === 'node24') expect(action.distPath).toBe(`actions/${action.name}/dist`);
+        if (action.name === 'ci-release-supplemental-asset') expect(action.companionDistPaths).toStrictEqual(['runtime/installer/dist']);
         if (action.runtime === 'composite') {
           expect(action.distPath).toBe(null);
           if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual([]);
@@ -65,7 +66,7 @@ describe("contract.repository-action-distribution.integrity", () => {
     test('build plan installs, rebuilds, and compares every Action dist', () => {
       // Arrange
       const actions = [
-        { name: 'first', path: '/workspace/actions/first', distPath: 'actions/first/dist' },
+        { name: 'first', path: '/workspace/actions/first', distPath: 'actions/first/dist', companionDistPaths: ['runtime/installer/dist'] },
         { name: 'second', path: '/workspace/actions/second', distPath: null },
       ];
       // Act
@@ -74,7 +75,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(plan).toStrictEqual([
         { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/workspace/actions/first' },
         { command: 'npm', args: ['run', 'build'], cwd: '/workspace/actions/first' },
-        { command: 'git', args: ['diff', '--exit-code', '--', 'actions/first/dist'], cwd: '/workspace' },
+        { command: 'git', args: ['diff', '--exit-code', '--', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace' },
       ]);
     });
 
@@ -104,8 +105,11 @@ describe("contract.repository-action-distribution.integrity", () => {
     // integration_id: repository-action-distribution-gates
     test('fails when a build leaves an untracked dist file', () => {
       // Arrange
-      const actions = [{ distPath: 'actions/first/dist' }];
-      const execute = () => 'actions/first/dist/extra.js\n';
+      const actions = [{ distPath: 'actions/first/dist', companionDistPaths: ['runtime/installer/dist'] }];
+      const execute = (command, args) => {
+        expect(args).toContain('runtime/installer/dist');
+        return 'runtime/installer/dist/extra.js\n';
+      };
       let failure;
       // Act
       try { assertNoUntrackedDist('/workspace', actions, [], execute); } catch (error) { failure = error; }

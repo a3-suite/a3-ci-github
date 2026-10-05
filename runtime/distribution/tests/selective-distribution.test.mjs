@@ -33,6 +33,9 @@ for (const relative of [
   '.github/workflows/ci-release-publication.yml',
   '.github/workflows/ci-package-publication.yml',
   'skills/ci-github',
+  'skills/installer',
+  'runtime/installer',
+  'runtime/release-publication/selection.ts',
   'workflows',
   'runtime/preset',
   'runtime/platform',
@@ -48,7 +51,7 @@ for (const relative of [
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.cpSync(source, destination, {
     recursive: true,
-    filter: (candidate) => !candidate.split(path.sep).includes('node_modules'),
+    filter: (candidate) => !candidate.split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)) || candidate === source,
   });
 }
 const runFixtureGit = (args) => {

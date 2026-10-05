@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stringify } from 'yaml';
 import { loadRegistry } from '../preset-registry.ts';
-import { resolvePublicationWorkflow } from '../ci-preset-assets.ts';
+import { resolvePublicationWorkflow, inactiveConditionalEntrypoints } from '../ci-preset-assets.ts';
 import { inspectWorkflowAsset } from '../workflow-validation.ts';
 import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { validateQualityPreset } from '../quality-validation.ts';
@@ -417,6 +417,40 @@ describe("publication-validation", () => {
       const full = validateCiPresetInternal({ repoRoot: root, presets: ['package-publication'] }, false);
       expect(full.missingSettings.some(item => item.message.includes('publication reusable workflow is pending-release'))).toBeTruthy();
       expect([...full.mismatches, ...full.missingSettings].some(item => item.path.startsWith('.github/workflows/package-publication.yml:'))).toBe(false);
+    });
+  });
+});
+
+
+describe('standard installer preflight', () => {
+  describe('selection', () => {
+    test('accepts declarative standard selection without an owner adapter and rejects provider drift', (t) => {
+      // Arrange
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const parent = path.join(repository, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const root = fs.mkdtempSync(path.join(parent, 'installer-preflight-'));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      const workflows = model();
+      const caller = workflows.get('.github/workflows/release-publication-caller.yml');
+      Object.assign(caller.jobs.publish.with, { supplemental_release_asset_enabled: true, supplemental_release_asset_owner_contract: 'installer.asset-assembly-evidence-contract', supplemental_release_asset_implementation: 'standard-installer', supplemental_release_asset_config_path: 'installer/assembly.json' });
+      fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.github/workflows/release-publication-caller.yml'), stringify(caller));
+      const registry = loadRegistry(createReport());
+      const preset = registry.presets.find(value => value.id === 'release-publication');
+      // Act
+      const report = inspect(workflows);
+      const inactive = inactiveConditionalEntrypoints(root, registry, preset);
+      // Assert
+      expect(report.mismatches).toEqual([]);
+      expect(inactive.has('.ci/scripts/ci-release-supplemental-asset.sh')).toBe(true);
+      for (const job of ['build', 'supplemental-asset']) {
+        const selected = phase(workflows, job);
+        const original = selected.env.A3_INSTALLER_PROVIDER_REVISION;
+        selected.env.A3_INSTALLER_PROVIDER_REVISION = 'other';
+        expect(inspect(workflows).mismatches.length).toBeGreaterThan(0);
+        selected.env.A3_INSTALLER_PROVIDER_REVISION = original;
+      }
     });
   });
 });

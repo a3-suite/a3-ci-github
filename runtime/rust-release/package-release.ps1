@@ -28,7 +28,7 @@ try {
   $archivePath = Join-Path $staging $archiveName
   Compress-Archive -LiteralPath $BinaryPath -DestinationPath $archivePath
   $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash.ToLowerInvariant()
-  Set-Content -LiteralPath "$archivePath.sha256" -Value "$hash  $archiveName" -NoNewline
+  [IO.File]::WriteAllText("$archivePath.sha256", "$hash  $archiveName`n", [Text.UTF8Encoding]::new($false))
   $manifest = [ordered]@{
     schema_version = '1'
     kind = 'ci-release-build-manifest'
