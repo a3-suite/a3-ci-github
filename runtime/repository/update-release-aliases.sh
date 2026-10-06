@@ -38,8 +38,24 @@ repository_version="$(git show "$source_sha:VERSION" 2>/dev/null)" \
 [[ "v$repository_version" == "$release_tag" ]] \
   || fail "release tag version does not match repository VERSION: $release_tag != v$repository_version"
 
-git fetch --no-tags origin main
-if ! git merge-base --is-ancestor "$source_sha" origin/main; then
+git fetch --no-tags origin refs/heads/main
+main_sha="$(git rev-parse --verify 'FETCH_HEAD^{commit}')" || fail "cannot resolve fetched main snapshot"
+main_tree="$(git rev-parse --verify "$main_sha^{tree}")" || fail "cannot resolve main tree"
+
+integrated_into_main() {
+  local target_sha="$1" role="$2" target_tree ancestry_status
+  target_tree="$(git rev-parse --verify "$target_sha^{tree}")" || fail "cannot resolve $role tree"
+  if git merge-base --is-ancestor "$target_sha" "$main_sha"; then
+    echo "Integration evidence: role=$role method=ancestry target=$target_sha target_tree=$target_tree main=$main_sha main_tree=$main_tree"
+  else
+    ancestry_status=$?
+    [[ "$ancestry_status" == 1 ]] || fail "cannot determine $role ancestry"
+    [[ "$target_tree" == "$main_tree" ]] || return 1
+    echo "Integration evidence: role=$role method=tree-equality target=$target_sha target_tree=$target_tree main=$main_sha main_tree=$main_tree"
+  fi
+}
+
+if ! integrated_into_main "$source_sha" source; then
   # Only the canonical next-patch hotfix may precede main integration.
   (( release_patch > 0 )) || fail "release tag source is not integrated into main"
   hotfix_ref="refs/heads/hotfix/$repository_version"
@@ -52,8 +68,8 @@ if ! git merge-base --is-ancestor "$source_sha" origin/main; then
   [[ "$(git cat-file -t "$base_tag")" == tag ]] || fail "hotfix base tag must be annotated"
   base_sha="$(git rev-parse "${base_tag}^{commit}")"
   [[ "$(git show "$base_sha:VERSION")" == "$base_version" ]] || fail "hotfix base VERSION does not match its tag"
-  [[ "$(git show origin/main:VERSION)" == "$base_version" ]] || fail "hotfix base is not the current stable main version"
-  git merge-base --is-ancestor "$base_sha" origin/main || fail "hotfix base is not integrated into main"
+  [[ "$(git show "$main_sha:VERSION")" == "$base_version" ]] || fail "hotfix base is not the current stable main version"
+  integrated_into_main "$base_sha" base || fail "hotfix base is not integrated into main"
   git merge-base --is-ancestor "$base_sha" "$source_sha" || fail "hotfix source does not descend from its base"
 fi
 
