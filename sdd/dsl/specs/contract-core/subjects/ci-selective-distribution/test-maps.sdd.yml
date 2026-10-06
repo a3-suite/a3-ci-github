@@ -104,6 +104,51 @@ test_maps:
         symbol: "contract.ci-selective-distribution.publication > repository-selective-distribution-release > repository release publishes and reads back the exact selective distribution asset set before aliases"
         check_refs:
           - check-selective-distribution-publication
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base"
+        check_refs:
+          - check-selective-distribution-publication
+          - check-selective-distribution-publication-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > release tags reject development VERSION even when integrated into main"
+        check_refs:
+          - check-selective-distribution-publication-failure
+  - verification_id: verification.ci-selective-distribution.publication
+    case_id: selective-distribution-release-integration
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > published hotfix squash integration permits the next patch and preserves immutable tags and newer aliases"
+        check_refs:
+          - check-selective-distribution-release-integration
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > ordinary release accepts only the current main tip tree and refuses historical squash trees"
+        check_refs:
+          - check-selective-distribution-release-integration
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > squash integrated base rejects a same-version main with different content"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > squash integrated base rejects a same-version main with different mode"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > tree-equivalent main does not authorize an unrelated next hotfix source"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > integration evidence acquisition failure stops publication at main"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > integration evidence acquisition failure stops publication at tree"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
+      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        symbol: "repository-release-alias-update > integration evidence acquisition failure stops publication at ancestry"
+        check_refs:
+          - check-selective-distribution-release-integration-failure
   - verification_id: verification.ci-selective-distribution.application
     case_id: selective-distribution-application
     tests:

@@ -57,7 +57,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate request identity
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           operation: verify
           expected-source-sha: ${{ github.event.workflow_run.head_sha }}
@@ -103,7 +103,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           summary-json: >-
             {"jobs":[{"unit":"validate-request","execution":"trusted package publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"prepare","execution":"trusted package preparation","rawResult":"${{ needs.prepare.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"prepare result: ${{ needs.prepare.result }}"},{"unit":"publish","execution":"trusted package publication","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}

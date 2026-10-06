@@ -14,8 +14,8 @@
 - CI workflow runtime は、Agent Skills がインストール済み、選択可能、または参照可能であることを前提にしない。
 - provider の workflow runtime と project-local CI script から `a3-lint` / `a3-suite` / その他 `a3-*` コマンドを直接実行しない。
 - a3 系 CLI は CI の実行時依存にしない。
-- a3 系 CLI が必要に見える検証は、project-local script、対象言語の標準ツール、または監査済み Action に置き換える。
-- スキル由来の資材が必要な場合は、CI 開始前に対象リポジトリの project-local CI 実行資産として配置し、CI workflow runtime からスキル保管場所を参照しない。
+- a3 系 CLI が必要に見える検証は、標準 Action / reusable workflow を優先し、対象言語の標準ツールで成立するか確認する。project-local script は標準では成立しない project 固有の差分に限定する。
+- 共通資材を導入先へ不要にコピー・Git管理させない。CI 内で固定版・完全性を確認して取得する資材は、Git管理する project 固有sourceと区別する。CI workflow runtime からスキル保管場所を参照しない。
 
 ### workflow 外解析
 - CI 結果の解析は workflow provider 外で実施できる。

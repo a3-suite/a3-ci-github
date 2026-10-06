@@ -1,8 +1,8 @@
 return {
   rule_id = "ci-github-runtime-no-a3-cli",
-  description = "Forbid known a3 CLI invocations in CI workflows and scripts",
-  hint = "CI runtime から a3-* CLI を呼び出さず、project-local の検証資材を使用してください。",
-  languages = { "yaml", "javascript", "typescript" },
+  description = "Forbid known a3 CLI invocations in CI JavaScript and TypeScript scripts",
+  hint = "CI runtime から a3-* CLI を呼び出さず、標準 Action / reusable workflow を優先し、project 固有の差分だけを個別実装してください。",
+  languages = { "javascript", "typescript" },
   targets = { "both" },
   frameworks = { "any" },
   category = "semantic",
@@ -55,26 +55,30 @@ return {
       return ""
     end
 
-    local function is_workflow(path)
-      return path:match("/%.github/workflows/") ~= nil
-        and path:match("%.ya?ml$") ~= nil
-    end
-
     local function is_script(path)
-      return (path:match("/%.ci/scripts/") ~= nil
-        or path:match("/%.ci/provider/") ~= nil
-        or path:match("/%.ci/trusted/") ~= nil)
-        and path:match("%.[jt]s$") ~= nil
+      return (("/" .. path):match("/%.ci/scripts/") ~= nil
+        or ("/" .. path):match("/%.ci/provider/") ~= nil
+        or ("/" .. path):match("/%.ci/trusted/") ~= nil)
+        and (path:match("%.[jt]s$") ~= nil or path:match("%.mjs$") ~= nil)
     end
 
     local function diagnostic(line, message)
+      local text = ""
+      local index = 0
+      for raw_line in (source_text() .. "\n"):gmatch("([^\n]*)\n") do
+        index = index + 1
+        if index == line then
+          text = raw_line
+          break
+        end
+      end
       return {
         message = message,
         code = "ci_github_runtime_a3_cli_forbidden",
         start_line = line,
         start_col = 1,
         end_line = line,
-        end_col = #message + 1,
+        end_col = #text + 1,
       }
     end
 
@@ -170,9 +174,8 @@ return {
     end
 
     local path = target_path()
-    local workflow = is_workflow(path)
     local script = is_script(path)
-    if not workflow and not script then
+    if not script then
       return {}
     end
 
@@ -194,52 +197,6 @@ return {
       return diagnostics
     end
 
-    local scalar_indent = nil
-    local line_number = 0
-    for raw_line in (source_text() .. "\n"):gmatch("([^\n]*)\n") do
-      line_number = line_number + 1
-      local line = raw_line:gsub("%s+#.*$", "")
-      local leading = line:match("^(%s*)") or ""
-      local trimmed = line:match("^%s*(.-)%s*$") or ""
-      local in_scalar = false
-      if scalar_indent ~= nil then
-        if trimmed == "" or #leading > scalar_indent then
-          in_scalar = true
-        else
-          scalar_indent = nil
-        end
-      end
-      if workflow then
-        local function invokes_cli(value)
-          value = value:gsub("^[\"']", ""):gsub("[\"']$", "")
-          return value:match("^%s*a3%-lint[%s;&|]") ~= nil
-            or value:match("^%s*a3%-suite[%s;&|]") ~= nil
-            or value:match("[;&|]%s*a3%-lint[%s;&|]") ~= nil
-            or value:match("[;&|]%s*a3%-suite[%s;&|]") ~= nil
-            or value:match("^%s*a3%-lint%s*$") ~= nil
-            or value:match("^%s*a3%-suite%s*$") ~= nil
-        end
-
-        if in_scalar then
-          if invokes_cli(line) then
-            table.insert(diagnostics, diagnostic(line_number, "CI runtime must not invoke a3-* CLI"))
-          end
-        else
-          local run_indent, run_value = line:match("^(%s*)%-%s*[%\"']?run[%\"']?:%s*(.-)%s*$")
-          if run_indent == nil then
-            run_indent, run_value = line:match("^(%s*)[%\"']?run[%\"']?:%s*(.-)%s*$")
-          end
-          if run_indent ~= nil then
-            local scalar = run_value:match("^[|>][+-]?%s*$") ~= nil
-            if scalar then
-              scalar_indent = #run_indent
-            elseif invokes_cli(run_value) then
-              table.insert(diagnostics, diagnostic(line_number, "CI runtime must not invoke a3-* CLI"))
-            end
-          end
-        end
-      end
-    end
     return diagnostics
   end,
 }

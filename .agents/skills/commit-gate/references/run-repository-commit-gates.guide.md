@@ -12,6 +12,8 @@
 
 | `gate_id` | 定義節 | 適用条件 | 実行入口 | status 写像 |
 | --- | --- | --- | --- | --- |
+| `provider-references` | provider固定参照ゲート | staged snapshotに`.github/workflows/`、`actions/`、provider pin registry、または本ゲート実装の変更が含まれる | provider固定参照ゲートの「実行」 | provider固定参照ゲートの「終了条件」 |
+| `fixed-reference-order` | 固定参照更新順序ゲート | staged snapshotにAction、Actionへ組み込む共有runtime、canonical workflow、provider callee、またはpreset registryの実装・接続・公開参照変更が含まれる | 固定参照更新順序ゲートの「確認（手動）」 | 固定参照更新順序ゲートの「終了条件」 |
 | `skill-deploy-parity` | スキル配備整合ゲート | staged snapshot に `skills/` の公開root配下の配備対象変更が含まれる | スキル配備整合ゲートの「実行」 | スキル配備整合ゲートの「終了条件」 |
 
 ## 共通 git への返却
@@ -21,13 +23,48 @@
 - `commit author`、コミットメッセージ、push の有無、最終承認表示は git スキルが所有する。
 
 ## ゲート実行順序
-1. スキル配備整合ゲートの適用条件を確認する。
-2. 適用条件を満たす場合はスキル配備整合ゲートを実行する。
+1. provider固定参照ゲートを実行し、続いて固定参照更新順序ゲートの適用条件を確認し、該当する場合は手動確認する。
+2. スキル配備整合ゲートの適用条件を確認し、該当する場合は実行する。
 3. 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
+
+## provider固定参照ゲート
+
+### 実行
+
+検証依存を復元したrepository rootから実行する。入力はindexの同一snapshotであり、未ステージのworkflowを検査結果へ混ぜない。
+
+```sh
+node runtime/repository/check-provider-references.mjs --staged
+```
+
+実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。
+
+### 終了条件
+
+- 適用条件に該当しなければ`非適用`。
+- 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
+- pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
+
+## 固定参照更新順序ゲート
+
+### 確認（手動）
+- 更新順序の正本は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)。手順を本ゲートへ複製しない。
+- staged snapshotの変更を実装準備、公開済みActionへの接続、再利用workflowの受入準備、callerの利用可能化に分類し、正本の順序に照合する。
+- 利用可能として接続する参照は、registryとcanonical sourceの一致、固定SHAの実体と必要な契約、要求される公開・受入証拠を確認する。作業ツリーの実装や別SHAの成功を接続先の証拠に読み替えない。
+- 準備段階で残したpending状態・placeholderと、後続の公開・受入・切替が必要な箇所を確認結果へ明示する。未公開という理由だけで準備コミットを停止しない。
+
+### 終了条件
+- 適用条件を満たさない場合は`非適用`。
+- 正本の順序と接続先の証拠が整合する、またはpending状態を維持した準備コミットとして整合する場合は`PASS`。
+- 将来SHAの自己参照、未確定・不適合な実装への利用可能な接続、registryとcanonical sourceの参照不一致、必要なactivation条件未達の利用可能化は`STOP`。
+- 必要な正本・参照先・証拠を確認できなければ`判定不能`。未確認の段階を成功として補完しない。
+
+### 再実行条件
+- staged snapshot、参照先SHA、または根拠にした公開・Hosted受入状態が変わった場合は結果を失効させ、影響範囲を再確認する。
 
 ## 直前実行証拠の共通採用条件
 - 共通採用条件は git スキルのコミットフローに委譲し、本書では再定義しない。
-- 本書では、スキル配備整合証拠に固有の追加条件だけを定義する。
+- 本書では、各ゲートに固有の追加条件だけを定義する。
 
 ## スキル配備整合ゲート
 

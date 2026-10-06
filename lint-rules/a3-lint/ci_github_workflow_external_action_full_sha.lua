@@ -15,107 +15,32 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "fact:yaml_structure:v1",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      required_runtime_capability = "fact:yaml_structure:v1",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
+    required_capability_gaps = { "fact:yaml_structure:v1" },
     dsl_gap_evidence = "required_runtime_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
-    local function path()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.path) == "string" then
-        return target.path:gsub("\\", "/")
-      end
-      return (ctx ~= nil and (ctx.path or ctx.file) or ""):gsub("\\", "/")
-    end
-
-    local function source()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.text) == "string" then
-        return target.text
-      end
-      if ctx ~= nil and type(ctx.source) == "function" then
-        local ok, value = pcall(ctx.source)
-        if ok and type(value) == "string" then
-          return value
-        end
-      end
-      return ""
-    end
-
-    local workflow = path():match("/%.github/workflows/") ~= nil
-      and path():match("%.ya?ml$") ~= nil
-    if not workflow then
-      return {}
-    end
-
-    local function valid_commit_sha(reference)
-      return #reference == 40 and reference:match("^[0-9a-f]+$") ~= nil
-    end
-
+    local yaml = require("ci_github_yaml")
+    local context = yaml.context(ctx)
     local diagnostics = {}
-    local scalar_indent = nil
-    local function report(raw_line, line_number, value)
-      value = value:gsub("%s+#.*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
-      if value:match("^[\"'].*[\"']$") then
-        value = value:sub(2, -2)
-      end
-      if not value:match("^%./") and not value:match("^docker://") then
-        local reference = value:match("@([^@]+)$")
-        if reference == nil or not valid_commit_sha(reference) then
-          table.insert(diagnostics, {
-            message = "external Action must use a full lowercase commit SHA",
-            code = "ci_github_workflow_external_action_not_full_sha",
-            start_line = line_number,
-            start_col = 1,
-            end_line = line_number,
-            end_col = #raw_line + 1,
-          })
-        end
-      end
+    local function report(node, code, message)
+      table.insert(diagnostics, yaml.diagnostic(context, node, "ci_github_workflow_" .. code, message))
     end
-
-    local line_number = 0
-    for raw_line in (source() .. "\n"):gmatch("([^\n]*)\n") do
-      line_number = line_number + 1
-      local line = raw_line:gsub("%s+#.*$", "")
-      local leading = line:match("^(%s*)") or ""
-      local trimmed = line:match("^%s*(.-)%s*$") or ""
-      local in_scalar = false
-      if scalar_indent ~= nil then
-        if trimmed == "" or #leading > scalar_indent then
-          in_scalar = true
-        else
-          scalar_indent = nil
-        end
-      end
-      if not in_scalar then
-        local run_line = line:match("^%s*%-%s*[%\"']?run[%\"']?:") ~= nil
-          or line:match("^%s*[%\"']?run[%\"']?:") ~= nil
-        local run_indent = line:match("^(%s*)%-%s*[%\"']?run[%\"']?:%s*([|>][+-]?)%s*$")
-          or line:match("^(%s*)[%\"']?run[%\"']?:%s*([|>][+-]?)%s*$")
-        if run_indent ~= nil then
-          scalar_indent = #run_indent
-        end
-
-        if not run_line then
-          local uses = line:match("^%s*%-%s*[%\"']?uses[%\"']?:%s*(.-)%s*$")
-            or line:match("^%s*[%\"']?uses[%\"']?:%s*(.-)%s*$")
-          if uses ~= nil and not uses:match("^[{]") then
-            report(raw_line, line_number, uses)
-          end
-          for flow_value in line:gmatch("[{,]%s*[%\"']?uses[%\"']?%s*:%s*([^,}]+)") do
-            report(raw_line, line_number, flow_value)
-          end
-        end
+    local candidates = yaml.steps(context)
+    for _, job in ipairs(yaml.jobs(context)) do table.insert(candidates, job) end
+    for _, node in ipairs(candidates) do
+      local uses = yaml.field(node, "uses")
+      local value = yaml.value(uses)
+      if value and not value:match("^%./") and not value:match("^docker://") then
+        local sha = value:match("@([^@]+)$")
+        if not sha or #sha ~= 40 or not sha:match("^[0-9a-f]+$") then report(uses, "external_action_not_full_sha", "external Action must use a full lowercase commit SHA") end
       end
     end
     return diagnostics

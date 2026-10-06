@@ -1,0 +1,63 @@
+config_version: 1
+project:
+  rule_sets:
+    - id: skill-ci-github
+      root: lint-rules/a3-lint
+      lib_dir: lint-rules/a3-lint/shared
+      include:
+        - "**/ci_github_workflow_*.lua"
+        - "**/*.yml"
+        - "**/*.yaml"
+      languages:
+        - yaml
+      frameworks:
+        - any
+    - id: provider-workflows
+      root: lint-rules/a3-lint
+      lib_dir: lint-rules/a3-lint/shared
+      include:
+        - "**/ci_github_workflow_external_action_full_sha.lua"
+        - "**/ci_github_workflow_immutable_image.lua"
+        - "**/ci_github_workflow_no_moving_runner.lua"
+        - "**/ci_github_workflow_no_privileged_cancel.lua"
+        - "**/ci_github_workflow_no_untrusted_run_expression.lua"
+      languages:
+        - yaml
+      frameworks:
+        - any
+    - id: repository-workflows
+      root: lint-rules/a3-lint
+      lib_dir: lint-rules/a3-lint/shared
+      include:
+        - "**/ci_github_workflow_external_action_full_sha.lua"
+        - "**/ci_github_workflow_immutable_image.lua"
+        - "**/ci_github_workflow_no_moving_runner.lua"
+        - "**/ci_github_workflow_no_privileged_cancel.lua"
+        - "**/ci_github_workflow_no_untrusted_run_expression.lua"
+        - "**/ci_github_workflow_no_untrusted_runner_selector.lua"
+      languages:
+        - yaml
+      frameworks:
+        - any
+    - id: repository-actions
+      root: lint-rules/repository
+      lib_dir: lint-rules/a3-lint/shared
+      include:
+        - "**/*.lua"
+      languages:
+        - yaml
+      frameworks:
+        - any
+    - id: skill-ci-github-markdown
+      root: lint-rules/a3-lint
+      lib_dir: lint-rules/a3-lint/shared
+      include:
+        - "**/ci_github_ci_readme_contract.lua"
+      languages:
+        - markdown
+      frameworks:
+        - any
+run_defaults:
+  framework: any
+  format: json
+  fail_on: warning

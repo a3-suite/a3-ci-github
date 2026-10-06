@@ -13,7 +13,7 @@ const filesUnder = (directory, relative = '') => readdirSync(path.join(directory
 describe("repository-managed-source-integrity", () => {
   // integration_id: repository-managed-source-integrity
   test('managed source inventory resolves every canonical repository asset', () => {
-    for (const relative of ['actions', 'workflows', 'runtime', 'lint-rules/a3-lint', 'skills/ci-github', 'sdd', 'tests']) {
+    for (const relative of ['actions', 'workflows', 'runtime', 'lint-rules/a3-lint', 'lint-rules/repository', 'skills/ci-github', 'sdd', 'tests']) {
       expect(existsSync(path.join(root, relative)), relative).toBe(true);
     }
     const registry = readFileSync(path.join(root, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'), 'utf8');

@@ -21,7 +21,15 @@ describe("preset-action-availability-contract", () => {
     validateActionAvailability(f.root, 'release-request', new Set(['release-request']), new Map(), f.registry, f.report);
     expect(f.report.missingSettings).toStrictEqual([]);
     validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, f.report);
-    expect(f.report.missingSettings.map((item) => item.path).sort()).toStrictEqual(['release-publication:actions.ci-platform-matrix', 'release-publication:actions.ci-quality-adapter', 'release-publication:actions.ci-quality-toolchain', 'release-publication:actions.ci-release-assembly', 'release-publication:actions.ci-release-authority', 'release-publication:actions.ci-release-publication-control', 'release-publication:actions.ci-release-publication-verifier', 'release-publication:actions.ci-release-publisher', 'release-publication:actions.ci-release-supplemental-asset']);
+    expect(f.report.missingSettings).toStrictEqual([]);
+    for (const id of ['ci-release-assembly', 'ci-release-publisher']) {
+      f.registry.actionTargets.find(target => target.id === id).status = 'pending-release';
+    }
+    validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, f.report);
+    expect(f.report.missingSettings.map(item => item.path)).toStrictEqual([
+      'release-publication:actions.ci-release-assembly',
+      'release-publication:actions.ci-release-publisher',
+    ]);
   });
 });
 

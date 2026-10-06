@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
+import { checkProviderReferences, checkRepository } from '../runtime/repository/check-provider-references.mjs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { runInNewContext } from 'node:vm';
@@ -11,6 +12,7 @@ import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapsho
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
+const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
@@ -247,7 +249,7 @@ describe("workflow-contracts", () => {
       ]);
       includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
         /^        id: quality-adapter$/m,
-        /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
         /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
       ]);
       const untrusted = jobBlock(workflow, 'untrusted-pr');
@@ -260,7 +262,7 @@ describe("workflow-contracts", () => {
         /^          path: \.ci-base$/m,
       ]);
       includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-        /^        uses: a3-suite\/a3-ci-github\/actions\/ci-quality-adapter@<release-publication-action-sha>$/m,
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
         /^          standard-bundle-id: \$\{\{ env\.CI_STANDARD_BUNDLE_ID \}\}$/m,
       ]);
       const summary = jobBlock(workflow, 'summary');
@@ -374,7 +376,7 @@ describe("workflow-contracts", () => {
         /pull_request\.base\.sha/,
         /matrix: .*steps\.resolve\.outputs\['quality-matrix'\]/,
         /expected: .*steps\.resolve\.outputs\['expected-platforms'\]/,
-        /uses: a3-suite\/a3-ci-github\/actions\/ci-platform-matrix@<release-publication-action-sha>/,
+        new RegExp(`uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@${actionRef}`),
         /manifest-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_PLATFORM_MANIFEST/,
         /selection-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_QUALITY_PLATFORM_SELECTION/,
         /bootstrap is limited to same-repository pull requests/,
@@ -417,6 +419,8 @@ describe("contract.ci-selective-distribution.publication", () => {
     test('repository release publishes and reads back the exact selective distribution asset set before aliases', () => {
       const workflow = read('.github/workflows/release.yml');
       expect(workflow).toMatch(/^permissions: \{\}$/m);
+      expect(workflow).toMatch(/workflow_dispatch:/);
+      expect(workflow).not.toMatch(/^  push:/m);
       const prepare = jobBlock(workflow, 'prepare-distribution');
       includesAll(prepare, [
         /contents: read/,
@@ -441,6 +445,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /EXPECTED_TAG_OBJECT: \$\{\{ needs\.prepare-distribution\.outputs\.tag_object \}\}/,
       ]);
       expect(publish).not.toMatch(/--clobber|--force/);
+      expect(publish).toContain('APPROVED_RELEASE_NOTES: ${{ inputs.release-notes }}');
       const readback = jobBlock(workflow, 'readback-distribution');
       assertNeeds(readback, ['prepare-distribution', 'publish-distribution']);
       includesAll(readback, [
@@ -449,7 +454,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /GH_TOKEN: \$\{\{ github\.token \}\}/,
       ]);
       const aliases = jobBlock(workflow, 'update-aliases');
-      assertNeeds(aliases, ['readback-distribution']);
+      assertNeeds(aliases, ['prepare-distribution', 'readback-distribution']);
       expect(aliases).toMatch(/runtime\/repository\/update-release-aliases\.sh/);
       const summary = jobBlock(workflow, 'summary');
       assertNeeds(summary, [
@@ -590,7 +595,7 @@ describe("workflow-contracts", () => {
       assertNeeds(buildJob, ['authority', 'source-gate', 'quality']);
       includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
         /^        if: inputs\.supplemental_release_asset_enabled$/m,
-        /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
         /^          operation: build-platform$/m,
         /^          standard-build-root: build\/\$\{\{ matrix\.id \}\}$/m,
         /^          output-directory: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
@@ -620,7 +625,7 @@ describe("workflow-contracts", () => {
         /^          path: supplemental-build$/m,
       ]);
       includesAll(stepContaining(supplementalAssetJob, '- name: Build and verify supplemental Release asset'), [
-        /actions\/ci-release-supplemental-asset@<release-publication-action-sha>/,
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
         /^          operation: assemble$/m,
         /^          standard-build-root: build$/m,
         /^          supplemental-build-root: supplemental-build$/m,
@@ -635,7 +640,7 @@ describe("workflow-contracts", () => {
       expect(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish')).toBeTruthy();
       expect(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence')).toBeTruthy();
       expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/GH_TOKEN|CI_GITHUB_TOKEN/);
-      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, /ci-release-publisher@<release-publication-action-sha>/, /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
+      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, new RegExp(`ci-release-publisher@${actionRef}`), /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
       expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh|CI_GITHUB_TOKEN/);
       includesAll(stepContaining(publicationJob, '- id: publish_owner'), [/if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'/, /ci-release-publish\.sh/]);
       const publicationSummary = jobBlock(publication, 'summary');
@@ -809,17 +814,228 @@ describe("workflow-contracts", () => {
 
     // integration_id: repository-quality-delivery-regression
     test('repository workflow provider actions use registry-approved pins', () => {
-      const registry = read('skills/ci-github/references/ci-github-preset-assets.reference.yml');
-      for (const relative of ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml']) {
-        const workflow = read(relative);
-        const external = [...workflow.matchAll(/uses: ([a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+)@([0-9a-f]{40})/g)]
-          .map(([, action, sha]) => ({ action, sha }));
-        expect(external.length > 0, `${relative} must pin external provider actions`).toBeTruthy();
-        for (const { action, sha } of external) {
-          const escaped = action.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          expect(registry, `${relative} uses ${action}@${sha} without a matching registry approval`).toMatch(new RegExp(`\\baction: ${escaped}\\b[^\\n]*\\bcommitSha: ${sha}\\b`));
+      const entries = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).providerActions.entries;
+      const approved = new Map(entries.map((entry) => [entry.action, entry.commitSha]));
+      for (const relative of ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml', 'actions/ci-quality-toolchain/action.yml']) {
+        expect(checkProviderReferences(read(relative), relative, approved)).toEqual([]);
+      }
+      const sha = approved.get('actions/checkout');
+      const workflow = (uses) => yaml.stringify({ jobs: { verify: { steps: [{ uses }] } } });
+      for (const reference of ['actions/checkout@<commit-sha>', 'actions/checkout@v7', `actions/checkout@${'f'.repeat(40)}`, 42]) {
+        expect(checkProviderReferences(workflow(reference), '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
+      }
+      expect(checkProviderReferences(workflow(`actions/checkout@${sha}`), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
+      expect(checkProviderReferences('jobs: {call: {uses: owner/repo/.github/workflows/check.yml@main}}', '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
+      expect(checkProviderReferences('runs: {using: composite, steps: [{uses: actions/checkout@main}]}', 'actions/example/action.yml', approved)).toHaveLength(1);
+      expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
+      expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
+      expect(checkRepository(root).diagnostics).toEqual([]);
+      const lintProfiles = yaml.parse(read('a3-lint.repository.yaml')).project.rule_sets;
+      const profile = (id) => lintProfiles.find((entry) => entry.id === id);
+      expect(lintProfiles.every((entry) => !entry.root.includes('${') && entry.lib_dir === 'lint-rules/a3-lint/shared')).toBe(true);
+      const externalProfiles = yaml.parse(read('a3-lint.yaml')).project.rule_sets;
+      expect(externalProfiles.every((entry) => entry.root.startsWith('${skills_root}/'))).toBe(true);
+      expect(externalProfiles.some((entry) => lintProfiles.some((own) => own.id === entry.id))).toBe(false);
+      const lintScript = read('runtime/repository/lint-repository.sh');
+      expect(JSON.parse(read('package.json')).scripts['lint:repository']).toBe('bash runtime/repository/lint-repository.sh');
+      for (const command of ['--config a3-lint.repository.yaml', '--only-rule-set provider-workflows', '--only-rule-set repository-workflows', '--only-rule-set repository-actions', 'node tests/a3-lint-rule-regression.mjs', 'npm test -- tests/workflow-contracts.test.mjs']) expect(lintScript).toContain(command);
+      expect(lintScript).toContain('set -euo pipefail');
+      for (const forbidden of ['--version', '--download', 'releases/download', 'curl ', '0.7.0', '0.8.0']) expect(lintScript).not.toContain(forbidden);
+      expect(lintScript).toContain('assert.equal(report.checked_targets, Number(process.argv[1])');
+      expect(lintScript).toContain('assert.deepEqual(report.runtime_errors, [])');
+
+      expect(profile('skill-ci-github').include).toContain('**/ci_github_workflow_*.lua');
+      for (const id of ['provider-workflows', 'repository-workflows']) {
+        expect(profile(id).root).toBe('lint-rules/a3-lint');
+        for (const rule of ['external_action_full_sha', 'immutable_image', 'no_moving_runner', 'no_privileged_cancel', 'no_untrusted_run_expression']) {
+          expect(profile(id).include).toContain(`**/ci_github_workflow_${rule}.lua`);
+        }
+        expect(profile(id).include).not.toContain('**/ci_github_workflow_name_matches_file.lua');
+        expect(profile(id).include).not.toContain('**/ci_github_workflow_no_long_inline_script.lua');
+      }
+      expect(profile('repository-workflows').include).toContain('**/ci_github_workflow_no_untrusted_runner_selector.lua');
+      const assertProviderRunners = (name, document) => {
+        for (const [jobId, job] of Object.entries(document.jobs)) {
+          const matrixJob = (name === 'ci-quality-platforms' && jobId === 'platform')
+            || (name === 'ci-release-publication' && jobId === 'build');
+          const expected = name === 'ci-package-preparation' ? 'ubuntu-24.04'
+            : matrixJob ? '${{ matrix.runner }}' : '${{ inputs.runner }}';
+          expect(job['runs-on']).toBe(expected);
+          if (expected === '${{ inputs.runner }}') {
+            expect(document.on.workflow_call.inputs.runner.type).toBe('string');
+            expect(document.on.workflow_call.inputs.runner.required).toBe(true);
+          }
+        }
+      };
+      for (const name of ['ci-quality', 'ci-quality-platforms', 'ci-package-preparation', 'ci-release-publication', 'ci-package-publication']) {
+        const document = yaml.parse(read(`.github/workflows/${name}.yml`));
+        assertProviderRunners(name, document);
+        for (const selector of ['${{ github.event.pull_request.head.ref }}', '${{ inputs.other }}']) {
+          const copy = structuredClone(document);
+          Object.values(copy.jobs)[0]['runs-on'] = selector;
+          expect(() => assertProviderRunners(name, copy)).toThrow();
+        }
+        const addedJob = structuredClone(document);
+        addedJob.jobs.injected = { 'runs-on': '${{ github.head_ref }}', steps: [] };
+        expect(() => assertProviderRunners(name, addedJob)).toThrow();
+      }
+      const generation = yaml.parse(read('.github/workflows/release.yml')).jobs['prepare-distribution'].steps
+        .find((step) => step.name === 'Generate selective distribution Release assets');
+      expect(generation.env).toEqual({ DISTRIBUTION_SOURCE_SHA: '${{ steps.release-identity.outputs.source_sha }}', DISTRIBUTION_RELEASE_TAG: '${{ inputs.release-tag }}' });
+      expect(generation.run).toContain('--source-revision "$DISTRIBUTION_SOURCE_SHA"');
+      expect(generation.run).toContain('--release-tag "$DISTRIBUTION_RELEASE_TAG"');
+      expect(generation.run).not.toContain('${{');
+      const assertRequiredGate = (document, release) => {
+        const jobId = release ? 'prepare-distribution' : 'contract-linux';
+        const job = document.jobs[jobId];
+        expect(job).toBeDefined();
+        expect(job.if).toBeUndefined();
+        expect(job['continue-on-error'] ?? false).toBe(false);
+        const gates = job.steps.map((step, index) => ({ step, index }))
+          .filter(({ step }) => (release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']).includes(step.run?.trim()));
+        expect(gates.map(({ step }) => step.run.trim()).sort()).toEqual((release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']).sort());
+        expect(job.steps.some((step) => step.run?.includes('lint:repository'))).toBe(false);
+        for (const { step } of gates) {
+          expect(step.if).toBeUndefined();
+          expect(step['continue-on-error'] ?? false).toBe(false);
+        }
+        const index = Math.max(...gates.map((gate) => gate.index));
+        const protectedCommand = release ? 'runtime/distribution/generate-distribution-release.ts' : 'tests/workflow-contracts.test.mjs';
+        const protectedIndex = job.steps.findIndex((entry) => entry.run?.includes(protectedCommand));
+        expect(protectedIndex).toBeGreaterThan(index);
+        if (release) {
+          const publish = document.jobs['publish-distribution'];
+          expect([publish.needs].flat()).toContain('prepare-distribution');
+          expect(publish.if).toBeUndefined();
+          expect(publish['continue-on-error'] ?? false).toBe(false);
+        }
+      };
+      for (const [relative, release] of [['.github/workflows/quality-gate.yml', false], ['.github/workflows/release.yml', true]]) {
+        const document = yaml.parse(read(relative));
+        assertRequiredGate(document, release);
+        const jobId = release ? 'prepare-distribution' : 'contract-linux';
+        for (const gateCommand of release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']) {
+          const gateIndex = document.jobs[jobId].steps.findIndex((step) => step.run === gateCommand);
+          const mutations = [
+            (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),
+            (copy) => { copy.jobs[jobId].steps[gateIndex].if = false; },
+            (copy) => { copy.jobs[jobId].steps[gateIndex]['continue-on-error'] = true; },
+            (copy) => { copy.jobs[jobId]['continue-on-error'] = true; },
+            (copy) => { copy.jobs[jobId].if = false; },
+            (copy) => { copy.jobs[jobId].steps[gateIndex].run += ' || true'; },
+            (copy) => copy.jobs[jobId].steps.push(...copy.jobs[jobId].steps.splice(gateIndex, 1)),
+            ...(release ? [
+              (copy) => { copy.jobs['publish-distribution'].needs = []; },
+              (copy) => { copy.jobs['publish-distribution'].if = 'always()'; },
+              (copy) => { copy.jobs['publish-distribution']['continue-on-error'] = true; },
+            ] : []),
+          ];
+          for (const mutate of mutations) {
+            const copy = structuredClone(document);
+            mutate(copy);
+            expect(() => assertRequiredGate(copy, release)).toThrow();
+          }
         }
       }
+      mkdirSync(path.join(root, 'tmp'), { recursive: true });
+      const failureRoot = mkdtempSync(path.join(root, 'tmp/repository-lint-failure-'));
+      try {
+        const binary = path.join(failureRoot, 'fake-lint');
+        const calls = path.join(failureRoot, 'calls');
+        writeFileSync(binary, `#!${process.execPath}\nimport { appendFileSync } from 'node:fs';\nappendFileSync(process.env.LINT_CALLS, process.argv.slice(2).join(' ') + '\\n');\nif (process.argv[2] === '--version') console.log(process.env.LINT_VERSION ?? 'a3-lint 0.8.0');\nelse console.log(process.env.LINT_REPORT);\nprocess.exitCode = Number(process.argv[2] === '--version' ? process.env.LINT_VERSION_EXIT ?? 0 : process.env.LINT_LINT_EXIT ?? 0);\n`, { mode: 0o755 });
+        const report = { checked_targets: 5, diagnostics: [], runtime_errors: [], trace: { execution: [{ kind: 'rule_executed' }] } };
+        const cases = [
+          { LINT_LINT_EXIT: '1' },
+          { LINT_REPORT: '{' },
+          { LINT_REPORT: JSON.stringify({ ...report, checked_targets: 0 }) },
+          { LINT_REPORT: JSON.stringify({ ...report, diagnostics: [{ code: 'violation' }] }) },
+          { LINT_REPORT: JSON.stringify({ ...report, runtime_errors: [{ code: 'runtime-precondition-failure' }] }) },
+          { LINT_REPORT: JSON.stringify({ ...report, trace: { execution: [] } }) },
+          { A3_LINT_BIN: path.join(failureRoot, 'missing-lint') },
+        ];
+        for (const environment of cases) {
+          writeFileSync(calls, '');
+          const result = spawnSync('bash', ['runtime/repository/lint-repository.sh'], { cwd: root, encoding: 'utf8',
+            env: { ...process.env, A3_LINT_BIN: binary, LINT_CALLS: calls, LINT_REPORT: JSON.stringify(report), ...environment } });
+          expect(result.status).not.toBe(0);
+          expect(readFileSync(calls, 'utf8').trim().split('\n').length, JSON.stringify(environment) + readFileSync(calls, 'utf8')).toBeLessThanOrEqual(2);
+          expect(result.stdout).not.toContain('a3-lint fixture groups passed');
+          expect(readFileSync(calls, 'utf8')).not.toContain('--version');
+        }
+      } finally { rmSync(failureRoot, { recursive: true, force: true }); }
+      const fixture = mkdtempSync(path.join(root, 'tmp/provider-reference-stage-'));
+      const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe' });
+      try {
+        git('init');
+        const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
+        mkdirSync(path.join(fixture, path.dirname(registryPath)), { recursive: true });
+        writeFileSync(path.join(fixture, registryPath), read(registryPath));
+        mkdirSync(path.join(fixture, '.github/workflows'), { recursive: true });
+        const callees = ['ci-quality', 'ci-quality-platforms', 'ci-package-preparation', 'ci-release-publication', 'ci-package-publication'];
+        for (const name of callees) writeFileSync(path.join(fixture, `.github/workflows/${name}.yml`), workflow(`actions/checkout@${sha}`));
+        git('add', '.');
+        writeFileSync(path.join(fixture, '.github/workflows/ci-quality.yml'), workflow('actions/checkout@<commit-sha>'));
+        expect(checkRepository(fixture, true).diagnostics).toEqual([]);
+        git('add', '.');
+        expect(checkRepository(fixture, true).diagnostics).toHaveLength(1);
+        mkdirSync(path.join(fixture, 'actions'));
+        const cli = (...args) => spawnSync(process.execPath,
+          [path.join(root, 'runtime/repository/check-provider-references.mjs'), ...args],
+          { cwd: fixture, encoding: 'utf8' });
+        // Act
+        const rejectedReference = cli();
+        // Assert
+        expect(rejectedReference.status).toBe(1);
+        expect(JSON.parse(rejectedReference.stdout).diagnostics).toHaveLength(1);
+        expect(rejectedReference.stderr).toBe('');
+        // Arrange
+        writeFileSync(path.join(fixture, '.github/workflows/ci-quality.yml'), workflow(`actions/checkout@${sha}`));
+        const validRegistry = read(registryPath);
+        const duplicate = yaml.parse(validRegistry);
+        duplicate.providerActions.entries.push(duplicate.providerActions.entries[0]);
+        const invalidPin = yaml.parse(validRegistry);
+        invalidPin.providerActions.entries[0].commitSha = 'main';
+        const registryCases = [
+          ['YAML syntax', 'providerActions: [', /Invalid provider registry YAML/],
+          ['duplicate action', yaml.stringify(duplicate), /Invalid provider pin registry/],
+          ['invalid SHA', yaml.stringify(invalidPin), /Invalid provider pin registry/],
+        ];
+        for (const [label, content, diagnostic] of registryCases) {
+          writeFileSync(path.join(fixture, registryPath), content);
+          // Act
+          const result = cli();
+          // Assert
+          expect(() => checkRepository(fixture), label).toThrow(diagnostic);
+          expect(result.status, label).toBe(2);
+          expect(result.stdout, label).toBe('');
+          expect(result.stderr, label).toMatch(diagnostic);
+        }
+        // Arrange
+        writeFileSync(path.join(fixture, registryPath), validRegistry);
+        const missingCallee = path.join(fixture, '.github/workflows/ci-quality.yml');
+        rmSync(missingCallee);
+        // Act
+        const missing = cli();
+        // Assert
+        expect(missing.status).toBe(2);
+        expect(missing.stdout).toBe('');
+        expect(missing.stderr).toMatch(/Missing provider callee: ci-quality/);
+        // Arrange
+        writeFileSync(missingCallee, workflow(`actions/checkout@${sha}`));
+        // Act
+        const accepted = cli();
+        const unknownArgument = cli('--invalid');
+        // Assert
+        expect(accepted.status, accepted.stderr).toBe(0);
+        expect(JSON.parse(accepted.stdout).diagnostics).toEqual([]);
+        expect(unknownArgument.status).toBe(2);
+        expect(unknownArgument.stdout).toBe('');
+        expect(unknownArgument.stderr).toMatch(/Usage:/);
+      } finally {
+        rmSync(fixture, { recursive: true, force: true });
+        expect(existsSync(fixture)).toBe(false);
+      }
+
     });
 
     // integration_id: repository-quality-delivery-regression
@@ -962,7 +1178,7 @@ describe("workflow-contracts", () => {
         const job = workflow.jobs[jobId];
         const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
         expect(call.length, file).toBe(1);
-        expect(call[0].uses).toBe('a3-suite/a3-ci-github/actions/ci-quality-toolchain@<release-publication-action-sha>');
+        expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
         expect(Object.keys(call[0].with).sort()).toStrictEqual(Object.keys(contract.inputs).sort());
         expect(call[0].with).toStrictEqual({ 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}' });
         expect(call[0].if).toBe(file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);

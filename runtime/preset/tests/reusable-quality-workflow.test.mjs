@@ -57,7 +57,7 @@ describe("contract.ci-quality-workflow.execution", () => {
         expect(report.missingSettings.some((entry) => entry.message.includes('quality reusable workflow is pending-release'))).toBeTruthy();
         expect(observed.has('ci-quality-adapter')).toBeTruthy();
         expect(observed.has('ci-quality-toolchain')).toBeTruthy();
-        expect(report.missingSettings.some((entry) => entry.path.endsWith('actions.ci-quality-toolchain'))).toBeTruthy();
+        expect(report.missingSettings.some((entry) => entry.path.endsWith('actions.ci-quality-toolchain'))).toBe(false);
         expect(observed.has('ci-change-scope')).toBeTruthy();
         expect(observed.has('ci-quality-summary')).toBeTruthy();
         expect(report.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA'), JSON.stringify(report)).toBeTruthy();
@@ -152,7 +152,7 @@ describe("contract.ci-quality-workflow.execution", () => {
         };
         const { report, observed } = inspect(original);
         expect(report.missingSettings.some((entry) => entry.message.includes('platform reusable workflow is pending-release'))).toBeTruthy();
-        expect(report.missingSettings.some((entry) => entry.path === 'quality-gate:actions.ci-platform-matrix')).toBeTruthy();
+        expect(report.missingSettings.some((entry) => entry.path === 'quality-gate:actions.ci-platform-matrix')).toBe(false);
         for (const id of ['ci-platform-matrix', 'ci-quality-adapter', 'ci-quality-toolchain', 'ci-change-scope', 'ci-quality-summary']) expect(observed.has(id), id).toBeTruthy();
         expect(report.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA'), JSON.stringify(report)).toBeTruthy();
         expect(managedAssets(root, registry, [preset]).map((entry) => entry.path)).toStrictEqual([asset.destination]);

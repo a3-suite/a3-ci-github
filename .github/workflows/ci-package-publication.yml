@@ -77,7 +77,7 @@ jobs:
           test "$CALLER_WORKFLOW_REF" = "$REPOSITORY/.github/workflows/package-publication-caller.yml@refs/heads/$DEFAULT_BRANCH"
           [[ "$CONTROL_SHA" =~ ^[a-f0-9]{40}$ ]]
       # Package source is untrusted; only the caller workflow snapshot supplies control code.
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -87,20 +87,20 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ inputs.package_artifact_id }}
           path: package-handoff
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -135,7 +135,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@312c534de67720de060689d78ada17da9c84c4e2
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a5623636a4fc5f628459a5b126e72632f43f89cf
         with:
           summary-json: >-
             {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish job result: ${{ needs.publish.result }}"}]}
