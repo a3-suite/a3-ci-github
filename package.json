@@ -7,7 +7,9 @@
   "scripts": {
     "test": "vitest run",
     "test:coverage": "node tests/coverage-tools/measure-coverage.mjs",
-    "test:coverage:installer": "node tests/coverage-tools/measure-installer-coverage.mjs"
+    "test:coverage:installer": "node tests/coverage-tools/measure-installer-coverage.mjs",
+    "lint:provider": "node runtime/repository/check-provider-references.mjs",
+    "lint:repository": "bash runtime/repository/lint-repository.sh"
   },
   "devDependencies": {
     "vitest": "5.0.3",

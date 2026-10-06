@@ -12,6 +12,7 @@
 
 | `gate_id` | 定義節 | 適用条件 | 実行入口 | status 写像 |
 | --- | --- | --- | --- | --- |
+| `provider-references` | provider固定参照ゲート | staged snapshotに`.github/workflows/`、`actions/`、provider pin registry、または本ゲート実装の変更が含まれる | provider固定参照ゲートの「実行」 | provider固定参照ゲートの「終了条件」 |
 | `fixed-reference-order` | 固定参照更新順序ゲート | staged snapshotにAction、Actionへ組み込む共有runtime、canonical workflow、provider callee、またはpreset registryの実装・接続・公開参照変更が含まれる | 固定参照更新順序ゲートの「確認（手動）」 | 固定参照更新順序ゲートの「終了条件」 |
 | `skill-deploy-parity` | スキル配備整合ゲート | staged snapshot に `skills/` の公開root配下の配備対象変更が含まれる | スキル配備整合ゲートの「実行」 | スキル配備整合ゲートの「終了条件」 |
 
@@ -22,9 +23,27 @@
 - `commit author`、コミットメッセージ、push の有無、最終承認表示は git スキルが所有する。
 
 ## ゲート実行順序
-1. 固定参照更新順序ゲートの適用条件を確認し、該当する場合は手動確認する。
+1. provider固定参照ゲートを実行し、続いて固定参照更新順序ゲートの適用条件を確認し、該当する場合は手動確認する。
 2. スキル配備整合ゲートの適用条件を確認し、該当する場合は実行する。
 3. 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
+
+## provider固定参照ゲート
+
+### 実行
+
+検証依存を復元したrepository rootから実行する。入力はindexの同一snapshotであり、未ステージのworkflowを検査結果へ混ぜない。
+
+```sh
+node runtime/repository/check-provider-references.mjs --staged
+```
+
+実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。
+
+### 終了条件
+
+- 適用条件に該当しなければ`非適用`。
+- 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
+- pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
 
 ## 固定参照更新順序ゲート
 

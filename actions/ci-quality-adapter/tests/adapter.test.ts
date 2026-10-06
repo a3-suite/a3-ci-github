@@ -289,7 +289,9 @@ describe('ci-quality-adapter-source', () => {
   // integration_id: ci-quality-adapter-source
   test('rejects invalid adapter execution inputs', () => {
     // Arrange
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-invalid-execution-'));
+    const temporaryRoot = path.resolve(__dirname, '../../../tmp');
+    fs.mkdirSync(temporaryRoot, { recursive: true });
+    const root = fs.mkdtempSync(path.join(temporaryRoot, 'ci-adapter-invalid-execution-'));
     const bundlePath = path.join(root, 'adapter.yml');
     fs.writeFileSync(bundlePath, descriptor);
     const bundle = loadAdapterBundle(bundlePath);
@@ -307,6 +309,50 @@ describe('ci-quality-adapter-source', () => {
     // Assert
     expect(failures.length).toBe(cases.length);
     failures.forEach((failure, index) => expect(String(failure)).toMatch(cases[index][1]));
-    fs.rmSync(root, { recursive: true, force: true });
+    const marker = path.join(root, 'commands-started');
+    const command = (id: string, version = false) => ({ id, command: process.execPath,
+      args: ['-e', `require('node:fs').appendFileSync(${JSON.stringify(marker)}, ${JSON.stringify(id + '\n')});${version ? 'console.log(process.version)' : ''}`] });
+    const pathBundle = { ...bundle,
+      projectSettings: { ...bundle.projectSettings, requiredEnvironmentPaths: ['CI_OWNER_CONFIG'] },
+      toolchain: { ...bundle.toolchain, verify: command('verify', true) },
+      preparation: [command('prepare')], commands: [command('quality')],
+    };
+    const config = path.join(root, 'owner.yml');
+    const outside = fs.mkdtempSync(path.join(root, '../ci-adapter-outside-'));
+    try {
+      fs.writeFileSync(config, 'owner configuration');
+      fs.writeFileSync(path.join(outside, 'outside.yml'), 'outside');
+      fs.symlinkSync(path.join(outside, 'outside.yml'), path.join(root, 'linked.yml'));
+      const invalidPaths = [
+        [undefined, /environment-path-invalid/],
+        [config, /environment-path-invalid/],
+        ['absent.yml', /environment-path-missing/],
+        ['linked.yml', /environment-path-outside-root/],
+      ] as const;
+      for (const [value, diagnostic] of invalidPaths) {
+        // Arrange
+        const options = { sourceRoot: root, toolchainVersion: process.version.slice(1),
+          requireTrustedProjectScripts: false, environment: { CI_OWNER_CONFIG: value } };
+        // Act
+        const execute = () => executeAdapter(pathBundle, options);
+        // Assert
+        expect(execute).toThrow(diagnostic);
+        expect(fs.existsSync(marker)).toBe(false);
+      }
+      // Arrange
+      const options = { sourceRoot: root, toolchainVersion: process.version.slice(1),
+        requireTrustedProjectScripts: false, environment: { CI_OWNER_CONFIG: 'owner.yml' } };
+      // Act
+      const accepted = executeAdapter(pathBundle, options);
+      // Assert
+      expect(accepted.status).toBe('success');
+      expect(fs.readFileSync(marker, 'utf8')).toBe('verify\nprepare\nquality\n');
+      expect(fs.readFileSync(config, 'utf8')).toBe('owner configuration');
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+      fs.rmSync(root, { recursive: true, force: true });
+      expect(fs.existsSync(outside)).toBe(false);
+      expect(fs.existsSync(root)).toBe(false);
+    }
   });
 });

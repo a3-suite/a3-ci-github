@@ -21,6 +21,25 @@ describe("contract.ci-release-assembly.outputs", () => {
       expect(result.identity.source_sha).toBe(f.identity.source_sha);
       expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.asset_digest).toBe(result.asset_digest);
       expect(f.assemble).toThrow(/EEXIST/);
+      const digest = sha256(fs.readFileSync(path.join(f.options.buildRoot, 'release-build-linux', f.name)));
+      const checksumPath = path.join(f.options.buildRoot, 'release-build-linux', `${f.name}.sha256`);
+      const records = [
+        ['missing-lf', `${digest}  ${f.name}`],
+        ['crlf', `${digest}  ${f.name}\r\n`],
+        ['bom', `\uFEFF${digest}  ${f.name}\n`],
+        ['single-space', `${digest} ${f.name}\n`],
+        ['wrong-digest', `${'0'.repeat(64)}  ${f.name}\n`],
+      ];
+      for (const [label, record] of records) {
+        // Arrange
+        fs.writeFileSync(checksumPath, record);
+        f.options.outputRoot = path.join(f.root, label);
+        // Act
+        const assemble = () => f.assemble();
+        // Assert
+        expect(assemble, label).toThrow(/checksum-mismatch/);
+        expect(fs.existsSync(f.options.outputRoot), label).toBe(false);
+      }
     });
 
     // contract_id: contract.ci-release-assembly.outputs

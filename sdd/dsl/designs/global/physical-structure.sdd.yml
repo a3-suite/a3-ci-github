@@ -106,7 +106,7 @@ elements:
     primary_area_kind: verification
     area_kinds: [verification]
     source_control: managed
-    placement_purpose: GitHub Actions 資産に対する provider 固有の静的検証ルールを所有し、実 runtime 回帰は tests から検証する
+    placement_purpose: a3-lint配下に導入先向け共通ルールとshared配下の構造参照helper、repository配下に非配布の構築規約を所有し、実runtime回帰はtestsから検証する
   - element_id: skills-root
     element_kind: directory
     path: skills

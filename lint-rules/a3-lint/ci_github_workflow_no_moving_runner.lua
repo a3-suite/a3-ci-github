@@ -15,64 +15,28 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "fact:yaml_structure:v1",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      required_runtime_capability = "fact:yaml_structure:v1",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
+    required_capability_gaps = { "fact:yaml_structure:v1" },
     dsl_gap_evidence = "required_runtime_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
-    local function path()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.path) == "string" then
-        return target.path:gsub("\\", "/")
-      end
-      return (ctx ~= nil and (ctx.path or ctx.file) or ""):gsub("\\", "/")
-    end
-
-    local function source()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.text) == "string" then
-        return target.text
-      end
-      if ctx ~= nil and type(ctx.source) == "function" then
-        local ok, value = pcall(ctx.source)
-        if ok and type(value) == "string" then
-          return value
-        end
-      end
-      return ""
-    end
-
-    local workflow = path():match("/%.github/workflows/") ~= nil
-      and path():match("%.ya?ml$") ~= nil
-    if not workflow then
-      return {}
-    end
-
+    local yaml = require("ci_github_yaml")
+    local context = yaml.context(ctx)
     local diagnostics = {}
-    local line_number = 0
-    for raw_line in (source() .. "\n"):gmatch("([^\n]*)\n") do
-      line_number = line_number + 1
-      local line = raw_line:gsub("#.*$", "")
-      if line:match("^%s*runs%-on:%s*\"?ubuntu%-latest")
-        or line:match("^%s*runs%-on:%s*\"?windows%-latest")
-        or line:match("^%s*runs%-on:%s*\"?macos%-latest") then
-        table.insert(diagnostics, {
-          message = "moving runner label is forbidden",
-          code = "ci_github_workflow_moving_runner",
-          start_line = line_number,
-          start_col = 1,
-          end_line = line_number,
-          end_col = #raw_line + 1,
-        })
+    local function report(node, code, message)
+      table.insert(diagnostics, yaml.diagnostic(context, node, "ci_github_workflow_" .. code, message))
+    end
+    for _, job in ipairs(yaml.jobs(context)) do
+      for _, node in ipairs(yaml.runner_labels(job)) do
+        local value = yaml.value(node)
+        if value == "ubuntu-latest" or value == "windows-latest" or value == "macos-latest" then report(node, "moving_runner", "moving runner label is forbidden") end
       end
     end
     return diagnostics

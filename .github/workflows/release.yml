@@ -57,19 +57,31 @@ jobs:
           cache: npm
           cache-dependency-path: runtime/preset/package-lock.json
 
+      - name: Install repository validation dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Validate provider references before distribution generation
+        run: npm run lint:provider
+
+      - name: Validate workflow contracts before distribution generation
+        run: npm test -- tests/workflow-contracts.test.mjs
+
       - name: Install distribution builder dependencies
         shell: bash
         run: npm --prefix runtime/preset ci --no-audit --no-fund
 
       - name: Generate selective distribution Release assets
         shell: bash
+        env:
+          DISTRIBUTION_SOURCE_SHA: ${{ github.sha }}
+          DISTRIBUTION_RELEASE_TAG: ${{ github.ref_name }}
         run: >-
           runtime/preset/node_modules/.bin/tsx
           runtime/distribution/generate-distribution-release.ts
           --repository-root .
           --output-directory release-distribution
-          --source-revision "${{ github.sha }}"
-          --release-tag "${{ github.ref_name }}"
+          --source-revision "$DISTRIBUTION_SOURCE_SHA"
+          --release-tag "$DISTRIBUTION_RELEASE_TAG"
 
       - name: Verify selective distribution asset set
         shell: bash
