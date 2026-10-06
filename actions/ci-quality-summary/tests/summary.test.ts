@@ -63,6 +63,23 @@ describe('renderQualitySummary(QualitySummaryInput)', () => {
     expect(rendered.markdown).toMatch(/⏭ 対象外/);
     expect(rendered.markdown).toMatch(/job result: failure/);
     expect(rendered.markdown).toMatch(/disabled by owner policy/);
+    const cases = [
+      ['success', 'success', '✅ 成功'],
+      ['failure', 'failed', '❌ 失敗'],
+      ['cancelled', 'unresolved', '⏭ 未実施'],
+      ['skipped', 'unresolved', '⏭ 未実施'],
+      ['unknown', 'unresolved', '⚠️ 判定不能'],
+    ] as const;
+    for (const [rawResult, status, label] of cases) {
+      // Arrange
+      const raw = { jobs: [{ unit: 'build', execution: 'build', rawResult, applicable: true, evidence: 'run' }] };
+      // Act
+      const result = renderQualitySummary(raw);
+      // Assert
+      expect(result.status, rawResult).toBe(status);
+      expect(result.markdown, rawResult).toContain(label);
+      if (rawResult !== 'success') expect(result.markdown, rawResult).toContain(`job result: ${rawResult}`);
+    }
   });
 
   // target_id: renderQualitySummary(QualitySummaryInput)

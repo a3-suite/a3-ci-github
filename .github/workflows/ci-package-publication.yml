@@ -77,7 +77,7 @@ jobs:
           test "$CALLER_WORKFLOW_REF" = "$REPOSITORY/.github/workflows/package-publication-caller.yml@refs/heads/$DEFAULT_BRANCH"
           [[ "$CONTROL_SHA" =~ ^[a-f0-9]{40}$ ]]
       # Package source is untrusted; only the caller workflow snapshot supplies control code.
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -100,7 +100,7 @@ jobs:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ inputs.package_artifact_id }}
           path: package-handoff

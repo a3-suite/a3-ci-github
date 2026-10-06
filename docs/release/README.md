@@ -8,6 +8,18 @@
 - 本リポジトリの初回リリース候補は version tag `v0.1.0` と major alias `v0` です。alias は検証済みリリースと同一コミットに付与します。
 - 実際のタグ作成・push は、対象コミットと検証結果を確認した別の release 操作で行います。
 
+## このrepositoryの公開実行
+
+source versionの正本は`VERSION`です。開発中は`X.Y.Z-dev.N`、release fixing後は`X.Y.Z`とし、exact tagはrelease表記のcommitだけに付与します。統合・fixingの承認条件はgit-branch-strategyを参照します。
+
+`.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするworkflow revisionも承認対象に含め、今回の検証済み実装を使います。
+
+通常版のsourceはmainへ統合済みであることを要求します。公開前のhotfixに限り、tagged sourceと`origin/hotfix/X.Y.Z`のtipが一致し、直前patchのannotated base tagがsourceとmain双方の祖先であり、mainのVERSIONがbase版に一致することを検証します。この例外では公開成功後にmain統合を行えるため、公開前にmain統合を要求しません。
+
+公開処理はdraft作成、3資材の登録、asset IDとbytesのreadback、tag・Release identity・承認本文の再確認、draft解除の順です。既存資材を上書きせず、公開済みReleaseへ不足資材を追記しません。既存本文が承認本文と異なる場合も停止します。公開前に失敗したdraftは保持し、修正後の再実行で同じ資材を検証します。公開後の最終確認または独立readbackの失敗でもalias更新は停止し、公開物を上書きせず原因と次の対応を判断します。
+
+公開後の独立readbackが成功してからaliasを更新します。hotfixはworkflow全体の成功と公開物を確認し、git-branch-strategyに従ってmain・developへ統合します。exact tagは移動しません。
+
 ## 公開後の整合確認
 
 Action実装からworkflow・callerへ接続するコミットの順序は、[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)に従います。

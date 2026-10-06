@@ -140,6 +140,11 @@ a3-lint lint "{project-root}/.github/workflows" \
   --lang yaml \
   --framework any \
   --add-rule-set-root "{ci-github-source-root}/lint-rules/a3-lint" \
+  --add-rule-set-lib "{ci-github-source-root}/lint-rules/a3-lint/shared" \
+  --rules-exclude 'shared/**' \
+  --rules-include 'ci_github_workflow_*.lua' \
+  --rules-exclude 'ci_github_runtime_no_a3_cli.lua' \
+  --rules-exclude 'ci_github_ci_readme_contract.lua' \
   --format json \
   --fail-on error
 
@@ -151,13 +156,17 @@ a3-lint lint "{project-root}/.ci/README.md" \
   --lang markdown \
   --framework any \
   --add-rule-set-root "{ci-github-source-root}/lint-rules/a3-lint" \
+  --add-rule-set-lib "{ci-github-source-root}/lint-rules/a3-lint/shared" \
+  --rules-exclude 'shared/**' \
   --rules-include 'ci_github_ci_readme_contract.lua' \
+  --rules-exclude 'ci_github_workflow_*.lua' \
+  --rules-exclude 'ci_github_runtime_no_a3_cli.lua' \
   --rule-level ci-github-ci-readme-contract=error \
   --format json \
   --fail-on error
 ```
 
-rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。a3-lintの`--lang`はselectorであり、rule-set root全体を指定しても選択langと互換なruleのみが適用されるため、互換目的の`--rules-exclude`は指定しない（この挙動を前提とする）。`--rules-include 'ci_github_ci_readme_contract.lua'`は`.ci/README.md`のlintをreadme契約ruleに限定する明示スコープとして維持する。
+rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。YAML規則はproviderの正式能力`fact:yaml_structure:v1`を必須とする。対応公開版は未確定であり、0.7.0は非対応。公開版切替までは対応能力を実測済みの開発バイナリでローカル検証する。共有helperは検証済み配布rootからlibとして参照し、rule収集から除外する。JS/TS用CLI規則とMarkdown規則をYAML実行へ混在させない。
 
 `.github/`と`.ci/`を無条件にCI assetとみなすinventoryは、非CIファイルを構造的にfalse positiveとして候補化する根本原因である。provider静的検証設定の認識はその最小の緩和であり、inventory scopeの限定または認識集合の再編は別契約で扱う。
 

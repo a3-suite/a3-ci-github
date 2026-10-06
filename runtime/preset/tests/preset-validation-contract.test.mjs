@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import fs from 'node:fs';
+import { stringify } from 'yaml';
 import path from 'node:path';
-import { test, describe, expect } from 'vitest';
+import { test, describe, expect, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 import { loadRegistry, parseYaml } from '../preset-registry.ts';
@@ -10,7 +11,8 @@ import { writeCiAssetLock } from '../ci-asset-lock-plan.ts';
 import { validateDescriptor } from '../descriptor-validation.ts';
 import { createReport } from '../validation-report.ts';
 import { validateQualityPreset, validateStandardImplementation, validateConditionalExtensions } from '../quality-validation.ts';
-import { inspectWorkflowAsset } from '../workflow-validation.ts';
+import { inspectWorkflowAsset, validateCommon } from '../workflow-validation.ts';
+import { findWorkflowAssetReferences } from '../workflow-assets.ts';
 import {
   loadReleaseRequestFixtureModel,
   snapshotTree,
@@ -602,6 +604,61 @@ describe("preset-validation-contract", () => {
     // integration_id: preset-registry-binding-validation
     test('preflight reports incomplete standard and conditional registry bindings', () => withFixture((root) => {
       // Arrange
+      const registryPath = path.join(repositoryRoot, 'skills/ci-github/references/ci-github-preset-assets.reference.yml');
+      const sourceRegistry = parseYaml(readFileSync(registryPath, 'utf8'), registryPath);
+      const invalidRegistryCases = [
+        ['static validation shape', (r) => { r.provider.staticValidation = {}; }, 'provider.staticValidation'],
+        ['tool name', (r) => { r.provider.staticValidation[0].tool = ''; }, 'provider.staticValidation[0].tool'],
+        ['settings ownership', (r) => { r.provider.staticValidation[0].ownership = 'provider'; }, 'provider.staticValidation[0].ownership'],
+        ['config list', (r) => { r.provider.staticValidation[0].configPaths = []; }, 'provider.staticValidation[0].configPaths'],
+        ['config escape', (r) => { r.provider.staticValidation[0].configPaths = ['../outside.yml']; }, 'provider.staticValidation[0].configPaths[0]'],
+        ['action availability', (r) => { r.actionization.targets[0].status = 'unknown'; }, `actionization.targets.${sourceRegistry.actionization.targets[0].id}`],
+        ['action release tag', (r) => { r.actionization.implementationSource.releaseTag = 'latest'; }, 'actionization.implementationSource.releaseTag'],
+        ['action SHA', (r) => { r.actionization.implementationSource.exactRef = 'main'; }, 'actionization.implementationSource.exactRef'],
+        ['action requirements', (r) => { r.actionization.availabilityGate.requires = []; }, 'actionization.availabilityGate.requires'],
+      ];
+      const read = fs.readFileSync;
+      for (const [label, mutate, diagnosticPath] of invalidRegistryCases) {
+        const malformed = structuredClone(sourceRegistry);
+        mutate(malformed);
+        const content = stringify(malformed);
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((filename, options) =>
+          String(filename) === registryPath ? content : read(filename, options));
+        const report = createReport();
+        try {
+          // Act
+          loadRegistry(report);
+          // Assert
+          expect(report.mismatches.some((item) => item.path === diagnosticPath), label).toBe(true);
+        } finally {
+          spy.mockRestore();
+        }
+      }
+      // Arrange
+      const customWorkflow = { jobs: { custom: { 'runs-on': 'ubuntu-24.04', steps: [{ run: '.ci/scripts/entry.sh' }] } } };
+      const customText = stringify(customWorkflow);
+      const scripts = path.join(root, '.ci/scripts');
+      mkdirSync(scripts, { recursive: true });
+      writeFileSync(path.join(scripts, 'entry.sh'), 'python "${script_dir}/helper.py"\n');
+      writeFileSync(path.join(scripts, 'helper.py'), 'import shared\n');
+      writeFileSync(path.join(scripts, 'shared.py'), '# project-owned helper\n');
+      const missingReport = createReport();
+      const registryForCustom = loadRegistry(createReport());
+      // Act
+      const references = findWorkflowAssetReferences(root, customText);
+      validateCommon(root, '.github/workflows/custom.yml', customText, customWorkflow, missingReport, registryForCustom);
+      // Assert
+      expect(references).toEqual(['.ci/scripts/entry.sh', '.ci/scripts/helper.py', '.ci/scripts/shared.py']);
+      expect(missingReport.missingSettings.some((item) => references.includes(item.path))).toBe(false);
+      // Arrange
+      fs.unlinkSync(path.join(scripts, 'helper.py'));
+      const absentWorkflow = { jobs: { custom: { 'runs-on': 'ubuntu-24.04', steps: [{ run: '.ci/scripts/entry.sh' }] } } };
+      const absentReport = createReport();
+      // Act
+      validateCommon(root, '.github/workflows/custom.yml', stringify(absentWorkflow), absentWorkflow, absentReport, registryForCustom);
+      // Assert
+      expect(absentReport.missingSettings.some((item) => item.path === '.ci/scripts/helper.py')).toBe(true);
+      writeFileSync(path.join(scripts, 'helper.py'), 'import shared\n');
       const original = loadRegistry(createReport()); const originalPreset = original.presets.find((p) => p.id === 'release-publication');
       const workflowPath = '.github/workflows/release-publication.yml';
       const workflow = parseYaml(readFileSync(path.join(repositoryRoot, '.github/workflows/ci-release-publication.yml'), 'utf8'), workflowPath);

@@ -89,7 +89,7 @@ contracts:
           - selective-distribution-assets-exposed
           - selective-distribution-invalid-source-rejected
   - id: contract.ci-selective-distribution.publication
-    summary: Exact distribution bootstrap assets are published only from a validated release commit and accepted only after remote byte readback.
+    summary: Exact distribution bootstrap assets become public only with approved notes after immutable source validation and byte-identical draft asset readback.
     conditions:
       - id: selective-distribution-publication-valid
         environment_predicate:
@@ -122,7 +122,7 @@ contracts:
             value: diagnostic
     verification_intents:
       - id: selective-distribution-publication-intent
-        goal: A validated exact tag publishes only the three bootstrap assets, requires byte-identical readback, and blocks alias updates on failure.
+        goal: A validated exact tag publishes only the three bootstrap assets from a draft with unchanged approved notes after byte-identical readback; prepublication failure leaves the draft unpublished, and any publication or verification failure blocks alias updates. Ordinary sources must be integrated into main; a canonical next-patch hotfix tip may precede main integration only when it descends from the annotated base of the current stable main version.
         guarantee_refs:
           - selective-distribution-publication-exposed
           - selective-distribution-publication-failure-exposed

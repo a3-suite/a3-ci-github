@@ -15,7 +15,7 @@ components:
     responsibility: registryから選択配布manifestを生成し、必要資材の検証済み取得、canonical workflowの差分計画、承認済みcopyおよびtransaction復旧を提供する
     kind_ref: application-service
   - component_id: provider-static-validation
-    responsibility: GitHub Actions 資産を対象とする単一ファイル静的検証ルールを提供する
+    responsibility: 導入先へ配布するGitHub Actions共通静的検証ルールと、配布しないrepository構築規約を分離して提供する
     kind_ref: governance-gate
   - component_id: agent-guidance
     responsibility: AIエージェントへ設計・導入・検証・監査・復旧の入口を提供する
