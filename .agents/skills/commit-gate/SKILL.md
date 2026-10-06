@@ -1,6 +1,6 @@
 ---
 name: commit-gate
-description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、公開 Agent Skill `ci-github` の配備整合を含むコミット可否を確認するときに使う。
+description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、Action・workflowの固定参照更新順序と公開 Agent Skillの配備整合を含むコミット可否を確認するときに使う。
 ---
 
 # commit-gate / SKILL
@@ -15,6 +15,7 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 
 ## このスキルが所有すること
 - リポジトリ固有ゲートの適用条件と実行入口
+- 固定参照更新順序ゲートによる、実装準備と利用可能化の区別・接続先の証拠確認
 - スキル配備整合ゲートの検証結果、証拠、停止理由の解決
 - 配置先差分の検出と、削除候補を含む停止判断
 - 配置先の更新差分を、削除を伴わない範囲で自動反映すること

@@ -39,18 +39,6 @@ project:
         - typescript
       frameworks:
         - any
-    - id: skill-ci-github
-      root: lint-rules/a3-lint
-      include:
-        - '**/ci_github_runtime_no_a3_cli.lua'
-        - '**/ci_github_workflow_*.lua'
-        - '**/ci_github_action_*.lua'
-        - '**/*.yml'
-        - '**/*.yaml'
-      languages:
-        - yaml
-      frameworks:
-        - any
     - id: skill-vitest
       root: ${skills_root}/vitest/assets/a3-lint/rules
       lib_dir: ${skills_root}/vitest/assets/a3-lint/shared
@@ -73,16 +61,8 @@ project:
         - typescript
       frameworks:
         - vitest
-    - id: skill-ci-github-markdown
-      root: lint-rules/a3-lint
-      include:
-        - '**/ci_github_ci_readme_contract.lua'
-      languages:
-        - markdown
-      frameworks:
-        - any
 
-# 対象言語が python/typescript/javascript/yaml/markdown にまたがるため既定 lang は固定せず、
+# 対象言語が python/typescript/javascript にまたがるため既定 lang は固定せず、
 # 実行対象の言語ごとに --lang を明示して a3-lint を実行する。
 run_defaults:
   framework: vitest

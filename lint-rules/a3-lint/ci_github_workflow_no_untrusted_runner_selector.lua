@@ -15,48 +15,24 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "fact:yaml_structure:v1",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      required_runtime_capability = "fact:yaml_structure:v1",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
+    required_capability_gaps = { "fact:yaml_structure:v1" },
     dsl_gap_evidence = "required_runtime_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
-    local function path()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.path) == "string" then
-        return target.path:gsub("\\", "/")
-      end
-      return (ctx ~= nil and (ctx.path or ctx.file) or ""):gsub("\\", "/")
+    local yaml = require("ci_github_yaml")
+    local context = yaml.context(ctx)
+    local diagnostics = {}
+    local function report(node, code, message)
+      table.insert(diagnostics, yaml.diagnostic(context, node, "ci_github_workflow_" .. code, message))
     end
-
-    local function source()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.text) == "string" then
-        return target.text
-      end
-      if ctx ~= nil and type(ctx.source) == "function" then
-        local ok, value = pcall(ctx.source)
-        if ok and type(value) == "string" then
-          return value
-        end
-      end
-      return ""
-    end
-
-    local workflow = path():match("/%.github/workflows/") ~= nil
-      and path():match("%.ya?ml$") ~= nil
-    if not workflow then
-      return {}
-    end
-
     local function is_untrusted_expression(expression)
       -- A computed expression may map an input to an allowlisted runner.  Only
       -- a direct source reference is a high-confidence violation here.
@@ -72,25 +48,10 @@ return {
         or expression:match("^github%.base_ref$") ~= nil
         or expression:match("^github%.ref_name$") ~= nil
     end
-
-    local diagnostics = {}
-    local line_number = 0
-    for raw_line in (source() .. "\n"):gmatch("([^\n]*)\n") do
-      line_number = line_number + 1
-      local value = raw_line:match("^%s*runs%-on:%s*(.-)%s*$")
-      if value ~= nil then
-        for expression in value:gmatch("%${{%s*(.-)%s*}}") do
-          if is_untrusted_expression(expression) then
-            table.insert(diagnostics, {
-              message = "untrusted value must not select the runner",
-              code = "ci_github_workflow_untrusted_runner_selector",
-              start_line = line_number,
-              start_col = 1,
-              end_line = line_number,
-              end_col = #raw_line + 1,
-            })
-            break
-          end
+    for _, job in ipairs(yaml.jobs(context)) do
+      for _, node in ipairs(yaml.runner_labels(job)) do
+        for expression in (yaml.value(node) or ""):gmatch("%${{%s*(.-)%s*}}") do
+          if is_untrusted_expression(expression) then report(node, "untrusted_runner_selector", "untrusted value must not select the runner"); break end
         end
       end
     end

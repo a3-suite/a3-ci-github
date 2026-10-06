@@ -61,6 +61,8 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 ## コミットゲート
 
+Action・workflow・公開参照を変更する前に、[固定参照の更新順序](docs/maintenance/action-construction.md#固定参照の更新順序)を確認してください。コミットゲートで準備段階と利用可能化を区別し、Actionと再利用workflowそれぞれの確定SHA・受入証拠を確認します。
+
 コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、`skills/` 配下の公開 Agent Skill の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。
 
 ```sh

@@ -12,6 +12,7 @@ release_tag="${RELEASE_TAG:-}"
 repository="${GITHUB_REPOSITORY:-}"
 expected_source_sha="${EXPECTED_SOURCE_SHA:-}"
 expected_tag_object="${EXPECTED_TAG_OBJECT:-}"
+approved_notes="${APPROVED_RELEASE_NOTES:-}"
 assets=(
   a3-ci-github-distribution-manifest.json
   fetch-a3-ci-github.mjs
@@ -20,6 +21,9 @@ assets=(
 
 [[ "$operation" == publish || "$operation" == readback ]] \
   || fail "operation must be publish or readback"
+[[ "$approved_notes" =~ [^[:space:]] ]] || fail "approved release notes are required for publication"
+approved_notes_base64="$(printf '%s' "$approved_notes" | base64 | tr -d '\r\n')"
+approved_title_base64="$(printf '%s' "$release_tag" | base64 | tr -d '\r\n')"
 [[ "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
   || fail "RELEASE_TAG must match vX.Y.Z"
 [[ "$repository" =~ ^([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)$ ]] \
@@ -66,7 +70,7 @@ verify_tag_identity() {
 }
 
 release_snapshot() {
-  gh_value "repos/$repository/releases/tags/$release_tag" \
+  gh_value "$release_endpoint" \
     --jq '.assets[] | [.name, (.id | tostring)] | @tsv' | LC_ALL=C sort
 }
 
@@ -104,25 +108,54 @@ asset_id_from_snapshot() {
 verify_tag_identity
 # GraphQL variables are literals interpreted by GitHub, not shell parameters.
 # shellcheck disable=SC2016
-release_id="$(gh_value graphql \
+resolve_release_id() {
+  gh_value graphql \
   -F owner="$repository_owner" \
   -F name="$repository_name" \
   -F tag="$release_tag" \
   -f query='query($owner:String!,$name:String!,$tag:String!){repository(owner:$owner,name:$name){release(tagName:$tag){databaseId}}}' \
-  --jq '.data.repository.release.databaseId // empty')"
+  --jq '.data.repository.release.databaseId // empty'
+}
+release_id="$(resolve_release_id)"
 if [[ -z "$release_id" ]]; then
   [[ "$operation" == publish ]] || fail "GitHub Release does not exist: $release_tag"
   gh release create "$release_tag" \
     --repo "$repository" \
     --verify-tag \
     --title "$release_tag" \
-    --generate-notes
+    --draft \
+    --notes "$approved_notes"
+  release_id="$(resolve_release_id)"
 fi
+[[ "$release_id" =~ ^[1-9][0-9]*$ ]] || fail "GitHub Release ID is invalid"
+release_endpoint="repos/$repository/releases/$release_id"
 
-observed_tag="$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .tag_name)"
-observed_draft="$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .draft)"
-[[ "$observed_tag" == "$release_tag" && "$observed_draft" == false ]] \
+observed_tag="$(gh_value "$release_endpoint" --jq .tag_name)"
+observed_release_id="$(gh_value "$release_endpoint" --jq .id)"
+[[ "$observed_release_id" == "$release_id" ]] || fail "GitHub Release ID differs from resolved identity"
+observed_draft="$(gh_value "$release_endpoint" --jq .draft)"
+[[ "$observed_tag" == "$release_tag" && ( "$observed_draft" == false || "$observed_draft" == true ) ]] \
   || fail "GitHub Release identity is invalid"
+verify_release_metadata() {
+  local expected_draft="$1"
+  [[ "$(gh_value "$release_endpoint" --jq .id)" == "$observed_release_id" ]] \
+    || fail "GitHub Release identity changed during verification"
+  [[ "$(gh_value "$release_endpoint" --jq '.tag_name | @base64')" == "$approved_title_base64" ]] \
+    || fail "GitHub Release tag differs from approved tag"
+  # Encoding preserves scalar bytes, including trailing LF, across shell substitution.
+  [[ "$(gh_value "$release_endpoint" --jq '.body | @base64')" == "$approved_notes_base64" ]] \
+    || fail "GitHub Release body differs from approved notes"
+  [[ "$(gh_value "$release_endpoint" --jq '.name | @base64')" == "$approved_title_base64" ]] \
+    || fail "GitHub Release title differs from approved title"
+  [[ "$(gh_value "$release_endpoint" --jq .prerelease)" == false ]] \
+    || fail "GitHub Release must not be a prerelease"
+  [[ "$(gh_value "$release_endpoint" --jq .draft)" == "$expected_draft" ]] \
+    || fail "GitHub Release publication state changed during verification"
+}
+verify_release_metadata "$observed_draft"
+if [[ "$operation" == readback ]]; then
+  [[ "$observed_draft" == false ]] || fail "readback requires a published Release"
+fi
 
 temporary_root="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/a3-ci-github-release.XXXXXX")"
 cleanup() {
@@ -132,9 +165,9 @@ trap cleanup EXIT
 
 snapshot="$(release_snapshot)"
 allow_missing=false
-[[ "$operation" == publish ]] && allow_missing=true
+[[ "$operation" == publish && "$observed_draft" == true ]] && allow_missing=true
 validate_snapshot "$snapshot" "$allow_missing"
-if [[ "$operation" == publish ]]; then
+if [[ "$operation" == publish && "$observed_draft" == true ]]; then
   for asset in "${assets[@]}"; do
     asset_id="$(asset_id_from_snapshot "$snapshot" "$asset")"
     if [[ -z "$asset_id" ]]; then
@@ -159,4 +192,12 @@ final_snapshot="$(release_snapshot)"
 [[ "$final_snapshot" == "$validated_snapshot" ]] \
   || fail "GitHub Release asset identity changed during readback"
 verify_tag_identity
+verify_release_metadata "$observed_draft"
+if [[ "$operation" == publish ]]; then
+  if [[ "$observed_draft" == true ]]; then
+    gh release edit "$release_tag" --repo "$repository" --draft=false
+  fi
+  verify_tag_identity
+  verify_release_metadata false
+fi
 printf '%s\n' "{\"schemaVersion\":\"1\",\"kind\":\"a3-ci-github-distribution-publication\",\"releaseTag\":\"$release_tag\",\"assetNames\":[\"a3-ci-github-distribution-manifest.json\",\"fetch-a3-ci-github.mjs\",\"SHA256SUMS\"],\"readbackStatus\":\"verified\",\"operation\":\"$operation\"}"

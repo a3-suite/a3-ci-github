@@ -37,6 +37,21 @@ Node で実装した共通処理を、bundle 作成を省くためだけに Comp
 
 workflow は job・permissions・credential 注入・stage 順序を所有します。Action は project policy や credential route を選択しません。provider-write-free Action の中に publish write を混在させません。
 
+## 固定参照の更新順序
+
+このrepositoryでは、Action実装、providerの再利用workflow、consumerへ配置するcallerを別の固定参照として扱います。公開refと利用可能条件の正本はpreset registryです。
+
+以下は外部の固定SHAを使う接続の更新順序です。repository自身のCIで使う`uses: ./actions/...`は同一checkoutの検証であり、Actionと検証用workflowを同じコミットで更新できます。
+
+1. **Action実装を確定する。** Actionとbundleへ入る共有runtimeを変更した場合は、source検証とdist同一性を確認し、実行に必要な生成物・依存を含めて先にコミット・pushします。公開経路で統合・公開された後、そのexact release tagのpeeled full SHAをAction接続先として確定します。squash等でSHAが変わった場合は、作業branchのSHAを公開SHAとして使いません。
+2. **workflowからActionへ接続する。** canonical workflowのAction参照、installer等のprovider revision、registryのAction bindingを確定済み公開SHAへ揃えます。参照先のActionがそのworkflowで必要な入力・出力・能力を持つことを確認します。Action実装を変更せず既存の公開済みActionを使う場合は、新しいActionコミットは不要です。
+3. **再利用workflow自身を確定する。** provider callee内の外部Action参照をregistryのproviderActions pinで解決し、`npm run lint:provider`を成功させます。pending状態でもprovider内部にplaceholderは残しません。修正したprovider calleeを検証してコミット・pushし、受入対象のfull SHAを確定します。Hosted受入は実際のcalleeをそのSHAで呼び出して行います。正式な利用可能化ではregistryが要求するexact release tagとの対応も確認し、統合・公開でSHAが変わった場合は最終参照に対応する受入証拠を確認します。
+4. **callerとregistryを切り替える。** 再利用workflowのactivation条件を満たした後、その確定SHAをregistryとcallerのworkflow参照へ設定します。ActionのSHAとworkflowのSHAが同じであることは前提にしません。canonical mapping・preflight・配布閉包の検証後、接続側の変更をコミットします。
+
+一つのコミットへ自己参照する将来SHAは書き込めません。新しいAction実装と、その未確定SHAを使うworkflow接続を同じコミットで確定したことにしません。未公開資材の準備コミットでは、対応する導入経路をregistryのpending状態とplaceholderで明示し、consumerへ利用可能として配備しません。必要なHosted受入が未完了のworkflowも受入待ちとして残します。
+
+公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
+
 ## runtime の利用形態
 
 `runtime/` の配置だけで実行前提を一律に決めません。
@@ -51,17 +66,29 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 installer の候補組立・実候補検証は既存 Python builder と一体で保守する例外です。Node の入力・出力境界は TypeScript 標準に従います。例外理由、追加実行前提と同等の検証は [installer 保守](installer-maintenance.md) を参照してください。
 
-既存 `ci-github-runtime-no-a3-cli` の対象は consumer の workflow と `.ci/` 内の対応 script です。repository の保守用 CLI 実行まで禁止する規則ではありません。対象範囲・検出パターンは rule asset が所有します。
+`ci-github-workflow-no-a3-cli` は consumer の workflow、既存 `ci-github-runtime-no-a3-cli` は `.ci/` 内の対応 JS/TS script を対象にします。repository の保守用 CLI 実行まで禁止する規則ではありません。対象範囲・検出パターンは rule asset が所有します。
 
 ## Action lint
 
-`ci-github-action-runtime-contract` は `actions/<id>/action.yml` / `action.yaml` の block mapping を対象に、許可 runtime と Node entrypoint を検査します。Composite の run 先頭にある `node` / `exec node` は方式レビューの警告です。間接呼び出しや一般的な shell 構文の網羅解析、処理責務からの方式推測は行いません。flow mapping の runs は未検査として警告し、検査済みと扱いません。
+`lint-rules/a3-lint/`は導入先へ配布する共通ルール、`lint-rules/repository/`は配布しないrepository構築規約です。repository専用の`ci-github-action-runtime-contract` は `actions/<id>/action.yml` / `action.yaml` の block／flow mapping を対象に、許可 runtime と Node entrypoint を検査します。Composite の run 先頭にある `node` / `exec node` は方式レビューの警告です。間接呼び出しや一般的な shell 構文の網羅解析、処理責務からの方式推測は行いません。YAML構造はproviderの`fact:yaml_structure:v1`を必須とし、shared helperで所属を参照します。欠落・非対応の観測を正常な空結果へ変換しません。
 
-検査は `a3-lint.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
+検査対象に応じて `a3-lint.repository.yaml` のrule setを明示して選択します。導入先のworkflowは`skill-ci-github`、provider calleeは`provider-workflows`、自己workflowは`repository-workflows`、Action metadataの構築規約は`repository-actions`です。provider/自己workflowへconsumerのname・inline script配置制約をそのまま適用しません。providerの`inputs.runner`はowner callerから受け取る契約であり、入力の静的・versioned制約は既存preflightが所有します。公開consumerのrunner規則は維持し、品質・公開callerの不正runner拒否回帰と、`tests/workflow-contracts.test.mjs` の全provider jobのrunner接続回帰をprovider profileの確認にも含めます。後者は既存の固定値・`inputs.runner`・所定の`matrix.runner`経路を確認し、GitHub入力への直接置換や危険なjobの追加を拒否します。これを任意callerや未受入calleeの安全性証明には使いません。
+
+```sh
+a3-lint lint .github/workflows/ci-quality.yml .github/workflows/ci-quality-platforms.yml .github/workflows/ci-package-preparation.yml .github/workflows/ci-release-publication.yml .github/workflows/ci-package-publication.yml --config a3-lint.repository.yaml --lang yaml --framework any --only-rule-set provider-workflows
+a3-lint lint .github/workflows/quality-gate.yml .github/workflows/release.yml --config a3-lint.repository.yaml --lang yaml --framework any --only-rule-set repository-workflows
+a3-lint lint actions --config a3-lint.repository.yaml --lang yaml --framework any --only-rule-set repository-actions
+```
+
+検査は `a3-lint.repository.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
+
+`a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIとRelease資材生成前は外部CLIの未公開能力に依存させず、`npm run lint:provider` とworkflow契約回帰を実行します。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。
 
 内部依存は `runtime/repository/check-runtime-boundaries.mjs` を source verification gate から実行します。既存の固定版 TypeScript compiler で Action entrypoint から到達する local source の静的 import、reexport、literal dynamic import、直接の literal require を解決し、別 Action の内部 source への実装依存、runtime から Action への逆依存、runtime 内の実装循環を拒否します。type-only import、テスト・保守 CLI の独立 entrypoint、任意の動的 module 名の網羅解析は対象外です。正常・違反・誤検知防止は `tests/runtime-boundaries.test.mjs` で検証します。
 
 ## 検証と公開前状態
+
+`npm run lint:provider`をコミット前・自己CI・Release資材生成前の共通入口とします。全provider callee、自己workflow、Composite Actionの外部参照を列挙してからfull SHAとprovider pin承認を検査し、診断または解析失敗で停止します。consumer canonicalの置換用placeholderをprovider実装の未解決参照と混同しません。Action I/O・権限・配布閉包は既存preflightへ委譲します。
 
 1. SDD の subject、observation、guarantee、verification、test map と契約対象別実行定義を接続。
 2. 型検査、処理の正常系・停止条件、公開 entrypoint の出力と失敗伝播を検証。

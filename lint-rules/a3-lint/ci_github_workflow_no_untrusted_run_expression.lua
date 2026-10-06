@@ -15,51 +15,27 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "fact:yaml_structure:v1",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      required_runtime_capability = "fact:yaml_structure:v1",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
+    required_capability_gaps = { "fact:yaml_structure:v1" },
     dsl_gap_evidence = "required_runtime_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
-    local function path()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.path) == "string" then
-        return target.path:gsub("\\", "/")
-      end
-      return (ctx ~= nil and (ctx.path or ctx.file) or ""):gsub("\\", "/")
+    local yaml = require("ci_github_yaml")
+    local context = yaml.context(ctx)
+    local diagnostics = {}
+    local function report(node, code, message)
+      table.insert(diagnostics, yaml.diagnostic(context, node, "ci_github_workflow_" .. code, message))
     end
-
-    local function source()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.text) == "string" then
-        return target.text
-      end
-      if ctx ~= nil and type(ctx.source) == "function" then
-        local ok, value = pcall(ctx.source)
-        if ok and type(value) == "string" then
-          return value
-        end
-      end
-      return ""
-    end
-
-    local workflow = path():match("/%.github/workflows/") ~= nil
-      and path():match("%.ya?ml$") ~= nil
-    if not workflow then
-      return {}
-    end
-
     local function is_untrusted_expression(expression)
       -- Computed expressions may map an input to a reviewed fixed value.  This
-      -- raw-view rule only rejects an untrusted source used without such a
+      -- rule only rejects an untrusted source used without such a
       -- mapping; trust of step/job outputs requires a higher-level review.
       return expression:match("^github%.event%.pull_request%.title$") ~= nil
         or expression:match("^github%.event%.pull_request%.body$") ~= nil
@@ -74,64 +50,11 @@ return {
         or expression:match("^github%.ref_name$") ~= nil
         or expression:match("^inputs%.[%w_%-]+$") ~= nil
     end
-
-    local function has_untrusted_expression(line)
-      if line:match("^%s*#") ~= nil then
-        return false
-      end
-      for expression in line:gmatch("%${{%s*(.-)%s*}}") do
-        if is_untrusted_expression(expression) then
-          return true
-        end
-      end
-      return false
-    end
-
-    local diagnostics = {}
-    local function inspect_line(line, line_number)
-      if has_untrusted_expression(line) then
-        table.insert(diagnostics, {
-          message = "untrusted value must not be interpolated directly in a run script",
-          code = "ci_github_workflow_untrusted_run_expression",
-          start_line = line_number,
-          start_col = 1,
-          end_line = line_number,
-          end_col = #line + 1,
-        })
-      end
-    end
-
-    local block_indent = nil
-    local line_number = 0
-    for raw_line in (source() .. "\n"):gmatch("([^\n]*)\n") do
-      line_number = line_number + 1
-      if block_indent ~= nil then
-        local leading = raw_line:match("^(%s*)") or ""
-        local trimmed = raw_line:match("^%s*(.-)%s*$") or ""
-        if trimmed ~= "" and #leading <= block_indent then
-          block_indent = nil
-        else
-          inspect_line(raw_line, line_number)
-        end
-      end
-
-      if block_indent == nil then
-        local indent, value = raw_line:match("^(%s*)%-%s+run:%s*(.*)$")
-        local key_indent = nil
-        if indent == nil then
-          indent, value = raw_line:match("^(%s*)run:%s*(.*)$")
-        else
-          key_indent = #indent + 2
-        end
-        if key_indent == nil and indent ~= nil then
-          key_indent = #indent
-        end
-        if indent ~= nil then
-          if value:match("^[|>][+-]?%s*$") ~= nil then
-            block_indent = key_indent
-          else
-            inspect_line(value, line_number)
-          end
+    if yaml.workflow(context) then
+      for _, step in ipairs(yaml.steps(context)) do
+        local node = yaml.field(step, "run")
+        for expression in (yaml.value(node) or ""):gmatch("%${{%s*(.-)%s*}}") do
+          if is_untrusted_expression(expression) then report(node, "untrusted_run_expression", "untrusted value must not be interpolated directly in a run script"); break end
         end
       end
     end
