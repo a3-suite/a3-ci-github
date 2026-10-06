@@ -97,6 +97,11 @@ fi
 if [[ "$command" != api ]]; then
   exit 90
 fi
+printf '%s\\n' "$*" >> "$state/api-endpoints"
+if [[ "$1" == *'/releases/tags/'* && -f "$state/draft" && "$(cat "$state/draft")" == true ]]; then
+  echo 'gh: Not Found (HTTP 404)' >&2
+  exit 1
+fi
 if [[ "$1" == graphql ]]; then
   test -f "$state/tag" && echo 1
   exit 0
@@ -250,6 +255,9 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(published.stdout).toMatch(/"readbackStatus":"verified"/);
       expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+      const observedEndpoints = readFileSync(path.join(stateRoot, 'api-endpoints'), 'utf8');
+      expect(observedEndpoints).not.toContain('/releases/tags/');
+      expect(observedEndpoints).toContain('/releases/1');
 
       const repeated = execute('publish', assetDirectory, binaryRoot, stateRoot);
       expect(repeated.status, repeated.stderr).toBe(0);

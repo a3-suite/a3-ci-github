@@ -40,6 +40,15 @@ verifications:
             guarantee_ref: selective-distribution-publication-exposed
           - id: check-selective-distribution-publication-failure
             guarantee_ref: selective-distribution-publication-failure-exposed
+      - id: selective-distribution-release-integration
+        intent_id: selective-distribution-publication-intent
+        input:
+          scenario: ancestry-and-current-main-tree-identity-with-rejected-invalid-and-unavailable-evidence
+        checks:
+          - id: check-selective-distribution-release-integration
+            guarantee_ref: selective-distribution-publication-exposed
+          - id: check-selective-distribution-release-integration-failure
+            guarantee_ref: selective-distribution-publication-failure-exposed
   - id: verification.ci-selective-distribution.application
     contract_id: contract.ci-selective-distribution.application
     cases:

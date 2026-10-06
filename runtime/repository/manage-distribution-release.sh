@@ -70,7 +70,7 @@ verify_tag_identity() {
 }
 
 release_snapshot() {
-  gh_value "repos/$repository/releases/tags/$release_tag" \
+  gh_value "$release_endpoint" \
     --jq '.assets[] | [.name, (.id | tostring)] | @tsv' | LC_ALL=C sort
 }
 
@@ -108,12 +108,15 @@ asset_id_from_snapshot() {
 verify_tag_identity
 # GraphQL variables are literals interpreted by GitHub, not shell parameters.
 # shellcheck disable=SC2016
-release_id="$(gh_value graphql \
+resolve_release_id() {
+  gh_value graphql \
   -F owner="$repository_owner" \
   -F name="$repository_name" \
   -F tag="$release_tag" \
   -f query='query($owner:String!,$name:String!,$tag:String!){repository(owner:$owner,name:$name){release(tagName:$tag){databaseId}}}' \
-  --jq '.data.repository.release.databaseId // empty')"
+  --jq '.data.repository.release.databaseId // empty'
+}
+release_id="$(resolve_release_id)"
 if [[ -z "$release_id" ]]; then
   [[ "$operation" == publish ]] || fail "GitHub Release does not exist: $release_tag"
   gh release create "$release_tag" \
@@ -122,28 +125,31 @@ if [[ -z "$release_id" ]]; then
     --title "$release_tag" \
     --draft \
     --notes "$approved_notes"
+  release_id="$(resolve_release_id)"
 fi
+[[ "$release_id" =~ ^[1-9][0-9]*$ ]] || fail "GitHub Release ID is invalid"
+release_endpoint="repos/$repository/releases/$release_id"
 
-observed_tag="$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .tag_name)"
-observed_release_id="$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .id)"
-[[ "$observed_release_id" =~ ^[1-9][0-9]*$ ]] || fail "GitHub Release ID is invalid"
-observed_draft="$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .draft)"
+observed_tag="$(gh_value "$release_endpoint" --jq .tag_name)"
+observed_release_id="$(gh_value "$release_endpoint" --jq .id)"
+[[ "$observed_release_id" == "$release_id" ]] || fail "GitHub Release ID differs from resolved identity"
+observed_draft="$(gh_value "$release_endpoint" --jq .draft)"
 [[ "$observed_tag" == "$release_tag" && ( "$observed_draft" == false || "$observed_draft" == true ) ]] \
   || fail "GitHub Release identity is invalid"
 verify_release_metadata() {
   local expected_draft="$1"
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .id)" == "$observed_release_id" ]] \
+  [[ "$(gh_value "$release_endpoint" --jq .id)" == "$observed_release_id" ]] \
     || fail "GitHub Release identity changed during verification"
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq '.tag_name | @base64')" == "$approved_title_base64" ]] \
+  [[ "$(gh_value "$release_endpoint" --jq '.tag_name | @base64')" == "$approved_title_base64" ]] \
     || fail "GitHub Release tag differs from approved tag"
   # Encoding preserves scalar bytes, including trailing LF, across shell substitution.
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq '.body | @base64')" == "$approved_notes_base64" ]] \
+  [[ "$(gh_value "$release_endpoint" --jq '.body | @base64')" == "$approved_notes_base64" ]] \
     || fail "GitHub Release body differs from approved notes"
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq '.name | @base64')" == "$approved_title_base64" ]] \
+  [[ "$(gh_value "$release_endpoint" --jq '.name | @base64')" == "$approved_title_base64" ]] \
     || fail "GitHub Release title differs from approved title"
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .prerelease)" == false ]] \
+  [[ "$(gh_value "$release_endpoint" --jq .prerelease)" == false ]] \
     || fail "GitHub Release must not be a prerelease"
-  [[ "$(gh_value "repos/$repository/releases/tags/$release_tag" --jq .draft)" == "$expected_draft" ]] \
+  [[ "$(gh_value "$release_endpoint" --jq .draft)" == "$expected_draft" ]] \
     || fail "GitHub Release publication state changed during verification"
 }
 verify_release_metadata "$observed_draft"
