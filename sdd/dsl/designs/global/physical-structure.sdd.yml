@@ -8,7 +8,7 @@ elements:
     primary_area_kind: specification
     area_kinds: [specification]
     source_control: managed
-    placement_purpose: repository release tagと照合するSemVer release versionの正本を所有する
+    placement_purpose: repositoryのSemVer source versionを所有し、開発表記とrelease fixing後にexact tagと照合するrelease表記を区別する
   - element_id: actions-root
     element_kind: directory
     path: actions

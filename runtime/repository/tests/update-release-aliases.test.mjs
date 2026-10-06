@@ -72,9 +72,9 @@ const remoteTagObject = (work, tag) => git(work, 'ls-remote', '--refs', 'origin'
 const remoteTagSource = (work, tag) => git(work, 'ls-remote', 'origin', `refs/tags/${tag}^{}`).split(/\s+/)[0] ?? '';
 
 describe("update-release-aliases", () => {
-  test('repository VERSION is a release SemVer', () => {
+  test('repository VERSION is a release or development SemVer', () => {
     const version = readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim();
-    expect(version).toMatch(/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
+    expect(version).toMatch(/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-dev\.(0|[1-9][0-9]*))?$/);
   });
 });
 
@@ -87,8 +87,8 @@ describe("repository-release-alias-update", () => {
     expect(start).not.toBe(-1);
     const nextJob = workflow.indexOf('\n\n  ', start);
     const updateStep = workflow.slice(start, nextJob === -1 ? undefined : nextJob);
-    expect(updateStep).toMatch(/^          RELEASE_TAG: \$\{\{ github\.ref_name \}\}$/m);
-    expect(updateStep).toMatch(/^          RELEASE_SHA: \$\{\{ github\.sha \}\}$/m);
+    expect(updateStep).toMatch(/^          RELEASE_TAG: \$\{\{ inputs\.release-tag \}\}$/m);
+    expect(updateStep).toMatch(/^          RELEASE_SHA: \$\{\{ needs\.prepare-distribution\.outputs\.source_sha \}\}$/m);
     expect(updateStep).toMatch(/^        shell: bash$/m);
     expect(updateStep).toMatch(/^        run: runtime\/repository\/update-release-aliases\.sh$/m);
     expect(updateStep).not.toMatch(/^        run: \|/m);
@@ -106,6 +106,60 @@ describe("repository-release-alias-update", () => {
     expect(validated.stdout).toMatch(/Validated release source/);
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');
+  });
+
+  // integration_id: repository-release-alias-update
+  test('canonical next-patch hotfix can publish before main integration and rejects stale branch or base', () => {
+    const { work } = createRepository('1.2.2');
+    const baseSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.2', baseSha);
+    git(work, 'checkout', '-b', 'hotfix/1.2.3');
+    const sourceSha = appendCommit(work, 'hotfix', '1.2.3');
+    git(work, 'push', 'origin', 'hotfix/1.2.3');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
+    const validated = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+    expect(validated.status, validated.stderr).toBe(0);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+    expect(updateAliases(work, 'v1.2.3', sourceSha).status).toBe(0);
+    expect(remoteTagSource(work, 'v1.2')).toBe(sourceSha);
+    appendCommit(work, 'later hotfix');
+    git(work, 'push', 'origin', 'hotfix/1.2.3');
+    const staleTip = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+    expect(staleTip.status).toBe(1);
+    expect(staleTip.stderr).toMatch(/canonical hotfix tip/);
+    git(work, 'push', 'origin', `${sourceSha}:refs/heads/hotfix/1.2.3`, '--force-with-lease');
+    git(work, 'checkout', 'main');
+    appendCommit(work, 'next stable', '1.3.0');
+    git(work, 'push', 'origin', 'main');
+    const staleBase = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+    expect(staleBase.status).toBe(1);
+    expect(staleBase.stderr).toMatch(/current stable main version/);
+  });
+
+  // integration_id: repository-release-alias-update
+  test.each(['lightweight base', 'unrelated source'])('canonical hotfix rejects %s', (invalidCase) => {
+    const { work } = createRepository('1.2.2');
+    const baseSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.2', baseSha, invalidCase !== 'lightweight base');
+    git(work, 'checkout', invalidCase === 'unrelated source' ? '--orphan' : '-b', 'hotfix/1.2.3');
+    const sourceSha = appendCommit(work, 'hotfix', '1.2.3');
+    git(work, 'push', 'origin', 'hotfix/1.2.3');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
+    const result = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(invalidCase === 'lightweight base' ? /base tag must be annotated/ : /does not descend from its base/);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+  });
+
+  // integration_id: repository-release-alias-update
+  test('release tags reject development VERSION even when integrated into main', () => {
+    const { work } = createRepository('1.2.3-dev.0');
+    const sourceSha = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', sourceSha);
+    const result = updateAliases(work, 'v1.2.3', sourceSha);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/VERSION must be a release SemVer/);
+    expect(remoteTagObject(work, 'v1')).toBe('');
   });
 
   // integration_id: repository-release-alias-update

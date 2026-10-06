@@ -21,7 +21,8 @@ import { loadReleaseRequestFixtureModel, snapshotTree, writeReleaseRequestFixtur
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
 const tsx = path.join(repositoryRoot, 'runtime/preset/node_modules/.bin/tsx');
-const releaseTag = `v${fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim()}`;
+const fixtureVersion = '1.2.3';
+const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
 fs.mkdirSync(temporaryRoot, { recursive: true });
 const committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
@@ -54,6 +55,7 @@ for (const relative of [
     filter: (candidate) => !candidate.split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)) || candidate === source,
   });
 }
+fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
 const runFixtureGit = (args) => {
   const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8' });
   expect(result.status, result.stderr).toBe(0);

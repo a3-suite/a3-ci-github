@@ -14,6 +14,7 @@ validate_only="${CI_RELEASE_VALIDATE_ONLY:-false}"
   || fail "release tag must match vX.Y.Z: $release_tag"
 release_major="${BASH_REMATCH[1]}"
 release_minor="${BASH_REMATCH[2]}"
+release_patch="${BASH_REMATCH[3]}"
 [[ "$release_sha" =~ ^[0-9a-f]{40}$ ]] \
   || fail "release SHA must be a full lowercase commit SHA"
 [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null || true)" == true ]] \
@@ -39,7 +40,21 @@ repository_version="$(git show "$source_sha:VERSION" 2>/dev/null)" \
 
 git fetch --no-tags origin main
 if ! git merge-base --is-ancestor "$source_sha" origin/main; then
-  fail "release tag source is not integrated into main"
+  # Only the canonical next-patch hotfix may precede main integration.
+  (( release_patch > 0 )) || fail "release tag source is not integrated into main"
+  hotfix_ref="refs/heads/hotfix/$repository_version"
+  hotfix_sha="$(git ls-remote --refs origin "$hotfix_ref" | awk 'NR == 1 { print $1 }')"
+  [[ "$hotfix_sha" == "$source_sha" ]] \
+    || fail "release tag source is not integrated into main or the canonical hotfix tip"
+  base_version="$release_major.$release_minor.$((release_patch - 1))"
+  base_tag="v$base_version"
+  git fetch --no-tags origin "refs/tags/$base_tag:refs/tags/$base_tag"
+  [[ "$(git cat-file -t "$base_tag")" == tag ]] || fail "hotfix base tag must be annotated"
+  base_sha="$(git rev-parse "${base_tag}^{commit}")"
+  [[ "$(git show "$base_sha:VERSION")" == "$base_version" ]] || fail "hotfix base VERSION does not match its tag"
+  [[ "$(git show origin/main:VERSION)" == "$base_version" ]] || fail "hotfix base is not the current stable main version"
+  git merge-base --is-ancestor "$base_sha" origin/main || fail "hotfix base is not integrated into main"
+  git merge-base --is-ancestor "$base_sha" "$source_sha" || fail "hotfix source does not descend from its base"
 fi
 
 [[ "$validate_only" == true || "$validate_only" == false ]] \

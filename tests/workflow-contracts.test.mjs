@@ -419,6 +419,8 @@ describe("contract.ci-selective-distribution.publication", () => {
     test('repository release publishes and reads back the exact selective distribution asset set before aliases', () => {
       const workflow = read('.github/workflows/release.yml');
       expect(workflow).toMatch(/^permissions: \{\}$/m);
+      expect(workflow).toMatch(/workflow_dispatch:/);
+      expect(workflow).not.toMatch(/^  push:/m);
       const prepare = jobBlock(workflow, 'prepare-distribution');
       includesAll(prepare, [
         /contents: read/,
@@ -443,6 +445,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /EXPECTED_TAG_OBJECT: \$\{\{ needs\.prepare-distribution\.outputs\.tag_object \}\}/,
       ]);
       expect(publish).not.toMatch(/--clobber|--force/);
+      expect(publish).toContain('APPROVED_RELEASE_NOTES: ${{ inputs.release-notes }}');
       const readback = jobBlock(workflow, 'readback-distribution');
       assertNeeds(readback, ['prepare-distribution', 'publish-distribution']);
       includesAll(readback, [
@@ -451,7 +454,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /GH_TOKEN: \$\{\{ github\.token \}\}/,
       ]);
       const aliases = jobBlock(workflow, 'update-aliases');
-      assertNeeds(aliases, ['readback-distribution']);
+      assertNeeds(aliases, ['prepare-distribution', 'readback-distribution']);
       expect(aliases).toMatch(/runtime\/repository\/update-release-aliases\.sh/);
       const summary = jobBlock(workflow, 'summary');
       assertNeeds(summary, [
@@ -878,7 +881,7 @@ describe("workflow-contracts", () => {
       }
       const generation = yaml.parse(read('.github/workflows/release.yml')).jobs['prepare-distribution'].steps
         .find((step) => step.name === 'Generate selective distribution Release assets');
-      expect(generation.env).toEqual({ DISTRIBUTION_SOURCE_SHA: '${{ github.sha }}', DISTRIBUTION_RELEASE_TAG: '${{ github.ref_name }}' });
+      expect(generation.env).toEqual({ DISTRIBUTION_SOURCE_SHA: '${{ steps.release-identity.outputs.source_sha }}', DISTRIBUTION_RELEASE_TAG: '${{ inputs.release-tag }}' });
       expect(generation.run).toContain('--source-revision "$DISTRIBUTION_SOURCE_SHA"');
       expect(generation.run).toContain('--release-tag "$DISTRIBUTION_RELEASE_TAG"');
       expect(generation.run).not.toContain('${{');
@@ -886,7 +889,7 @@ describe("workflow-contracts", () => {
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
         const job = document.jobs[jobId];
         expect(job).toBeDefined();
-        expect(job.if).toBe(release ? "startsWith(github.ref, 'refs/tags/')" : undefined);
+        expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
         const gates = job.steps.map((step, index) => ({ step, index }))
           .filter(({ step }) => (release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']).includes(step.run?.trim()));

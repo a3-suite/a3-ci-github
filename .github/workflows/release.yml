@@ -1,14 +1,21 @@
 name: release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: 'Approved immutable release tag (vX.Y.Z)'
+        required: true
+        type: string
+      release-notes:
+        description: 'Approved exact Release body'
+        required: true
+        type: string
 
 permissions: {}
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ inputs.release-tag }}
   cancel-in-progress: false
 
 env:
@@ -18,7 +25,6 @@ env:
 jobs:
   prepare-distribution:
     name: Prepare selective distribution
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -26,29 +32,38 @@ jobs:
       source_sha: ${{ steps.release-identity.outputs.source_sha }}
       tag_object: ${{ steps.release-identity.outputs.tag_object }}
     steps:
+      - name: Validate requested exact tag format
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+
       - name: Checkout tagged release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ inputs.release-tag }}
           fetch-depth: 0
-
-      - name: Validate immutable release source
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_SHA: ${{ github.sha }}
-          CI_RELEASE_VALIDATE_ONLY: 'true'
-        shell: bash
-        run: runtime/repository/update-release-aliases.sh
 
       - name: Record validated release identity
         id: release-identity
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
         shell: bash
         run: |
           set -euo pipefail
           source_sha="$(git rev-parse "${RELEASE_TAG}^{commit}")"
           tag_object="$(git rev-parse "refs/tags/${RELEASE_TAG}")"
           printf 'source_sha=%s\ntag_object=%s\n' "$source_sha" "$tag_object" >> "$GITHUB_OUTPUT"
+
+      - name: Validate immutable release source
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          RELEASE_SHA: ${{ steps.release-identity.outputs.source_sha }}
+          CI_RELEASE_VALIDATE_ONLY: 'true'
+        shell: bash
+        run: runtime/repository/update-release-aliases.sh
 
       - name: Set up Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -73,8 +88,8 @@ jobs:
       - name: Generate selective distribution Release assets
         shell: bash
         env:
-          DISTRIBUTION_SOURCE_SHA: ${{ github.sha }}
-          DISTRIBUTION_RELEASE_TAG: ${{ github.ref_name }}
+          DISTRIBUTION_SOURCE_SHA: ${{ steps.release-identity.outputs.source_sha }}
+          DISTRIBUTION_RELEASE_TAG: ${{ inputs.release-tag }}
         run: >-
           runtime/preset/node_modules/.bin/tsx
           runtime/distribution/generate-distribution-release.ts
@@ -111,7 +126,7 @@ jobs:
       - name: Checkout tagged release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.prepare-distribution.outputs.source_sha }}
 
       - name: Download selective distribution handoff
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -139,9 +154,10 @@ jobs:
       - name: Publish exact selective distribution assets
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
           EXPECTED_SOURCE_SHA: ${{ needs.prepare-distribution.outputs.source_sha }}
           EXPECTED_TAG_OBJECT: ${{ needs.prepare-distribution.outputs.tag_object }}
+          APPROVED_RELEASE_NOTES: ${{ inputs.release-notes }}
         shell: bash
         run: runtime/repository/manage-distribution-release.sh publish release-distribution
 
@@ -156,7 +172,7 @@ jobs:
       - name: Checkout tagged release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.prepare-distribution.outputs.source_sha }}
 
       - name: Download selective distribution handoff
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -184,15 +200,16 @@ jobs:
       - name: Verify published asset bytes
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
           EXPECTED_SOURCE_SHA: ${{ needs.prepare-distribution.outputs.source_sha }}
           EXPECTED_TAG_OBJECT: ${{ needs.prepare-distribution.outputs.tag_object }}
+          APPROVED_RELEASE_NOTES: ${{ inputs.release-notes }}
         shell: bash
         run: runtime/repository/manage-distribution-release.sh readback release-distribution
 
   update-aliases:
     name: Update release tag aliases
-    needs: readback-distribution
+    needs: [prepare-distribution, readback-distribution]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -200,12 +217,13 @@ jobs:
       - name: Checkout tagged release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: ${{ inputs.release-tag }}
           fetch-depth: 0
 
       - name: Update major and minor aliases
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          RELEASE_SHA: ${{ needs.prepare-distribution.outputs.source_sha }}
         shell: bash
         run: runtime/repository/update-release-aliases.sh
 
