@@ -64,6 +64,28 @@ fi
 if [[ "$command" == release && "$1" == create ]]; then
   mkdir -p "$state/assets"
   printf '%s\\n' "$2" > "$state/tag"
+  shift 2
+  draft=false
+  while (( $# > 0 )); do
+    case "$1" in
+      --draft) draft=true; shift ;;
+      --title) printf '%s' "$2" > "$state/title"; shift 2 ;;
+      --notes) printf '%s' "$2" > "$state/body"; shift 2 ;;
+      --repo) shift 2 ;;
+      --verify-tag) shift ;;
+      *) exit 94 ;;
+    esac
+  done
+  printf '%s' "$draft" > "$state/draft"
+  exit 0
+fi
+if [[ "$command" == release && "$1" == edit ]]; then
+  test -f "$state/assets/SHA256SUMS"
+  printf false > "$state/draft"
+  echo published >> "$state/publications"
+  if [[ "\${GH_CHANGE_AFTER_PUBLISH:-}" == true ]]; then
+    printf changed > "$state/body"
+  fi
   exit 0
 fi
 if [[ "$command" == release && "$1" == upload ]]; then
@@ -95,11 +117,33 @@ if [[ "$*" == *'/git/tags/'*'--jq .object.type'* ]]; then
   echo commit
   exit 0
 fi
+if [[ "$*" == *'@base64'* ]]; then
+  case "$*" in
+    *'.body | @base64'*) field=body ;;
+    *'.name | @base64'*) field=title ;;
+    *'.tag_name | @base64'*) field=tag ;;
+    *) exit 96 ;;
+  esac
+  if [[ "$field" == tag ]]; then
+    printf '%s' v1.2.3 | base64 | tr -d '\\r\\n'
+  else
+    base64 < "$state/$field" | tr -d '\\r\\n'
+  fi
+  exit 0
+fi
 if [[ "$*" == *'--jq .tag_name'* ]]; then
   cat "$state/tag"
   exit 0
 fi
+if [[ "$*" == *'--jq .id'* ]]; then
+  echo 1
+  exit 0
+fi
 if [[ "$*" == *'--jq .draft'* ]]; then
+  cat "$state/draft"
+  exit 0
+fi
+if [[ "$*" == *'--jq .prerelease'* ]]; then
   echo false
   exit 0
 fi
@@ -153,6 +197,7 @@ const execute = (operation, assetDirectory, binaryRoot, stateRoot, extraEnv = {}
       REMOTE_SOURCE_SHA: expectedSourceSha,
       REMOTE_TAG_OBJECT: expectedTagObject,
       RUNNER_TEMP: temporaryRoot,
+      APPROVED_RELEASE_NOTES: 'approved',
       ...extraEnv,
     },
   },
@@ -167,6 +212,10 @@ describe("contract.ci-selective-distribution.publication", () => {
       const binaryRoot = prepareFakeGh();
       const stateRoot = path.join(temporaryRoot, 'release-state');
       mkdirSync(stateRoot);
+
+      const unapproved = execute('publish', assetDirectory, binaryRoot, stateRoot, { APPROVED_RELEASE_NOTES: '' });
+      expect(unapproved.status).toBe(1);
+      expect(existsSync(path.join(stateRoot, 'tag'))).toBe(false);
 
       const apiFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
         GH_FAIL_ENDPOINT: '/git/ref/tags/',
@@ -188,15 +237,46 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(snapshotFailure.status).toBe(1);
       expect(snapshotFailure.stderr).toMatch(/API observation failed/);
       expect(existsSync(path.join(stateRoot, 'uploads'))).toBe(false);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('true');
+      expect(existsSync(path.join(stateRoot, 'publications'))).toBe(false);
+      const failedReadback = execute('publish', assetDirectory, binaryRoot, stateRoot, { GH_FAIL_ENDPOINT: '/releases/assets/' });
+      expect(failedReadback.status).toBe(1);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('true');
+      expect(existsSync(path.join(stateRoot, 'publications'))).toBe(false);
 
       const published = execute('publish', assetDirectory, binaryRoot, stateRoot);
       expect(published.status, published.stderr).toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('false');
+      expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(published.stdout).toMatch(/"readbackStatus":"verified"/);
       expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
 
       const repeated = execute('publish', assetDirectory, binaryRoot, stateRoot);
       expect(repeated.status, repeated.stderr).toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+
+      const wrongNotes = execute('publish', assetDirectory, binaryRoot, stateRoot, { APPROVED_RELEASE_NOTES: 'different' });
+      expect(wrongNotes.status).toBe(1);
+      expect(wrongNotes.stderr).toMatch(/body differs from approved notes/);
+      expect(readFileSync(path.join(stateRoot, 'body'), 'utf8')).toBe('approved');
+
+      writeFileSync(path.join(stateRoot, 'body'), 'approved\n');
+      const extraLf = execute('readback', assetDirectory, binaryRoot, stateRoot);
+      expect(extraLf.status).toBe(1);
+      expect(extraLf.stderr).toMatch(/body differs from approved notes/);
+      writeFileSync(path.join(stateRoot, 'body'), 'approved');
+      const lfStateRoot = path.join(temporaryRoot, 'release-with-trailing-lf');
+      mkdirSync(lfStateRoot);
+      const exactLf = execute('publish', assetDirectory, binaryRoot, lfStateRoot, { APPROVED_RELEASE_NOTES: 'approved\n' });
+      expect(exactLf.status, exactLf.stderr).toBe(0);
+      expect(readFileSync(path.join(lfStateRoot, 'body'), 'utf8')).toBe('approved\n');
+
+      const changedAfterPublishRoot = path.join(temporaryRoot, 'changed-after-publication');
+      mkdirSync(changedAfterPublishRoot);
+      const changedAfterPublish = execute('publish', assetDirectory, binaryRoot, changedAfterPublishRoot, { GH_CHANGE_AFTER_PUBLISH: 'true' });
+      expect(changedAfterPublish.status).toBe(1);
+      expect(changedAfterPublish.stderr).toMatch(/body differs from approved notes/);
 
       const readback = execute('readback', assetDirectory, binaryRoot, stateRoot);
       expect(readback.status, readback.stderr).toBe(0);

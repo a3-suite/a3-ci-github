@@ -21,7 +21,8 @@ import { loadReleaseRequestFixtureModel, snapshotTree, writeReleaseRequestFixtur
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
 const tsx = path.join(repositoryRoot, 'runtime/preset/node_modules/.bin/tsx');
-const releaseTag = `v${fs.readFileSync(path.join(repositoryRoot, 'VERSION'), 'utf8').trim()}`;
+const fixtureVersion = '1.2.3';
+const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
 fs.mkdirSync(temporaryRoot, { recursive: true });
 const committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
@@ -54,6 +55,7 @@ for (const relative of [
     filter: (candidate) => !candidate.split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)) || candidate === source,
   });
 }
+fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
 const runFixtureGit = (args) => {
   const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8' });
   expect(result.status, result.stderr).toBe(0);
@@ -275,6 +277,30 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(outputConflict.status).toBe(2);
         expect(outputConflict.stderr).toMatch(/distribution-release-output-exists/);
+        // Arrange
+        const linkedSource = path.join(root, 'linked-source');
+        const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8' });
+        expect(clone.status, clone.stderr).toBe(0);
+        const linkedAsset = 'lint-rules/a3-lint/linked.lua';
+        fs.symlinkSync('ci_github_workflow_external_action_full_sha.lua', path.join(linkedSource, linkedAsset));
+        const fixtureGit = (args) => {
+          const result = spawnSync('git', args, { cwd: linkedSource, encoding: 'utf8' });
+          expect(result.status, result.stderr).toBe(0);
+          return result.stdout.trim();
+        };
+        fixtureGit(['add', linkedAsset]);
+        fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'symlink fixture']);
+        const linkedRevision = fixtureGit(['rev-parse', 'HEAD']);
+        const linkedOutput = path.join(root, 'linked-output');
+        // Act
+        const linkedResult = spawnSync(tsx, [generator,
+          '--repository-root', linkedSource, '--source-revision', linkedRevision,
+          '--release-tag', releaseTag, '--output-directory', linkedOutput,
+        ], { encoding: 'utf8' });
+        // Assert
+        expect(linkedResult.status).toBe(2);
+        expect(linkedResult.stderr).toContain(`distribution-source-symlink:${linkedAsset}`);
+        expect(fs.existsSync(linkedOutput)).toBe(false);
       });
     });
 
@@ -1038,6 +1064,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
           expect(merged.selectedAssets).toStrictEqual(['lint.github-actions', 'registry.ci-github']);
           expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/references/ci-distribution-assets.reference.yml'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_workflow_name_matches_file.lua'))).toBeTruthy();
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/shared/ci_github_yaml.lua'))).toBeTruthy();
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_action_runtime_contract.lua'))).toBe(false);
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/repository'))).toBe(false);
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'runtime/repository/check-provider-references.mjs'))).toBe(false);
       });
     });
   });

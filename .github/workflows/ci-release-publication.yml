@@ -142,7 +142,7 @@ jobs:
           test -n "$DEFAULT_BRANCH"
           test "$CALLER_WORKFLOW_REF" = "$REPOSITORY/.github/workflows/release-publication-caller.yml@refs/heads/$DEFAULT_BRANCH"
           [[ "$CONTROL_SHA" =~ ^[a-f0-9]{40}$ ]]
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -200,13 +200,13 @@ jobs:
             *) exit 1 ;;
           esac
           [[ "$(jq -er '.head_sha' run-metadata/publication-request.json)" =~ ^[a-f0-9]{40}$ ]]
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-publication-request
           path: release-publication-request
           github-token: ${{ github.token }}
           run-id: ${{ inputs.publication_request_run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-notes-handoff
           path: release-notes-handoff
@@ -221,7 +221,7 @@ jobs:
           test "$(jq -er '.id | tostring' run-metadata/release-request.json)" = "$CI_RELEASE_REQUEST_RUN_ID"
           test "$(jq -er '.conclusion' run-metadata/release-request.json)" = success
           test "$(jq -er '.repository.full_name' run-metadata/release-request.json)" = "$GITHUB_REPOSITORY"
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-request
           path: release-request
@@ -296,7 +296,7 @@ jobs:
             value="$(jq -er --arg field "$field" '.[$field]' authority/authority.json)"
             printf '%s=%s\n' "$field" "$value" >> "$GITHUB_OUTPUT"
           done
-      - uses: actions/upload-artifact@<commit-sha>
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-authority
           path: authority
@@ -309,10 +309,10 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.authority.outputs.source_sha }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
           path: authority
@@ -340,12 +340,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.authority.outputs.source_sha }}
       - name: Checkout trusted CI assets
         if: env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''
-        uses: actions/checkout@<commit-sha>
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -403,10 +403,10 @@ jobs:
       CI_PLATFORM_ID: ${{ matrix.id }}
       CI_PLATFORM_TARGET: ${{ matrix.target }}
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.authority.outputs.source_sha }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
           path: authority
@@ -435,7 +435,7 @@ jobs:
           cargo-manifest-path: ${{ env.CI_CARGO_MANIFEST_PATH }}
           release-binary-name: ${{ env.CI_RELEASE_BINARY_NAME }}
           release-asset-prefix: ${{ env.CI_RELEASE_ASSET_PREFIX }}
-      - uses: actions/upload-artifact@<commit-sha>
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-build-${{ matrix.id }}
           path: build/${{ matrix.id }}
@@ -451,7 +451,7 @@ jobs:
           snapshot-path: authority/config-snapshot.json
           standard-build-root: build/${{ matrix.id }}
           output-directory: supplemental-build/${{ matrix.id }}
-      - uses: actions/upload-artifact@<commit-sha>
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: inputs.supplemental_release_asset_enabled
         with:
           name: supplemental-build-${{ matrix.id }}
@@ -466,22 +466,22 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.authority.outputs.source_sha }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
           path: authority
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: release-build-*
           path: build
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: supplemental-build-*
           path: supplemental-build
@@ -498,7 +498,7 @@ jobs:
           standard-build-root: build
           supplemental-build-root: supplemental-build
           output-directory: supplemental-asset
-      - uses: actions/upload-artifact@<commit-sha>
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-supplemental-asset
           path: supplemental-asset
@@ -521,7 +521,7 @@ jobs:
     outputs:
       artifact_transfer_id: ${{ steps.upload_release_handoff.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -545,19 +545,19 @@ jobs:
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
           sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
           path: authority
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: release-build-*
           path: build
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         if: inputs.supplemental_release_asset_enabled
         with:
           name: release-supplemental-asset
@@ -576,7 +576,7 @@ jobs:
           supplemental-root: ${{ inputs.supplemental_release_asset_enabled && 'supplemental-asset' || '' }}
           output-directory: release-handoff
       - id: upload_release_handoff
-        uses: actions/upload-artifact@<commit-sha>
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-handoff
           path: release-handoff
@@ -593,7 +593,7 @@ jobs:
       publish_receipt: ${{ steps.verify_publication.outputs['publish-receipt'] }}
       readback_evidence: ${{ steps.verify_publication.outputs['readback-evidence'] }}
     steps:
-      - uses: actions/checkout@<commit-sha>
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
@@ -617,13 +617,13 @@ jobs:
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
           sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
           path: authority
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - uses: actions/download-artifact@<commit-sha>
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ needs.assemble.outputs.artifact_transfer_id }}
           path: release-handoff
