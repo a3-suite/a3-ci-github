@@ -26,3 +26,18 @@ test_maps:
         symbol: "dist entrypoint > entrypoint rejects a changed approval ID"
         check_refs:
           - check-publication-control-failure-status
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: owner-decision-required
+    tests:
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint rejects missing owner decision before creating artifacts"
+        check_refs: [check-publication-control-failure-status]
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects missing owner decision before creating artifacts"
+        check_refs: [check-publication-control-failure-status]
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: unsupported-publication-request-rejected
+    tests:
+      - path: actions/ci-release-publication-control/tests/control.test.ts
+        symbol: "ci-release-publication-control-source > rejects publication requests without a v2 owner decision"
+        check_refs: [check-publication-control-failure-status]

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { parse } from 'yaml';
-import { validateCaller, validateReleasePublicationFlow } from '../publication-validation.ts';
+import { supplementalOwnerAdapterEntrypoint, validateCaller, validateReleasePublicationFlow } from '../publication-validation.ts';
 import { createReport } from '../validation-report.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,13 +10,18 @@ import { loadRegistry } from '../preset-registry.ts';
 import { resolvePublicationWorkflow, inactiveConditionalEntrypoints } from '../ci-preset-assets.ts';
 import { inspectWorkflowAsset } from '../workflow-validation.ts';
 import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
-import { validateQualityPreset } from '../quality-validation.ts';
+import { validateConditionalExtensions, validateQualityPreset } from '../quality-validation.ts';
 import { findWorkflowAssetReferences } from '../workflow-assets.ts';
 
 const model = () => {
   const workflows = new Map(['release-publication-request', 'release-publication-caller'].map((id) => [
     `.github/workflows/${id}.yml`, parse(fs.readFileSync(new URL(`../../../workflows/release/${id}.yml`, import.meta.url), 'utf8')),
   ]));
+  const selection = workflows.get('.github/workflows/release-publication-caller.yml').jobs.publish.with;
+  expect(selection).toHaveProperty('supplemental_release_asset_implementation', '<supplemental-release-asset-implementation>');
+  expect(selection).toHaveProperty('supplemental_release_asset_config_path', '<supplemental-release-asset-config-path>');
+  selection.supplemental_release_asset_implementation = 'owner-adapter';
+  selection.supplemental_release_asset_config_path = '__unset__';
   workflows.set('.github/workflows/release-publication.yml', resolvePublicationWorkflow(
     workflows.get('.github/workflows/release-publication-caller.yml'), loadRegistry(createReport())));
   return workflows;
@@ -70,7 +75,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         expect(run(changed).mismatches.some(item => item.message.startsWith('canonical drift:') && item.path.includes('jobs.publish.steps'))).toBeTruthy();
       }
       const ownerFallback = parse(original);
-      ownerFallback.jobs.publish.steps.find(step => step.id === 'publish_owner').if = 'always()';
+      ownerFallback.jobs.publish.steps.push({ id: 'publish_owner', if: 'always()', shell: 'bash', run: '.ci/trusted/ci-release-publish.sh' });
       expect(run(ownerFallback).mismatches.some(item => item.message.startsWith('canonical drift:'))).toBeTruthy();
     });
   });
@@ -173,6 +178,9 @@ describe("contract.ci-preset-assurance.verification", () => {
       expect(inspect(workflows).mismatches).toStrictEqual([]);
       for (const mutate of [
         step => { step.if = 'always()'; },
+        step => { step.if = "env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'"; },
+        step => { step.uses = 'other/repo/actions/ci-release-authority@' + 'a'.repeat(40); },
+        step => { step.uses = 'a3-suite/a3-ci-github/actions/ci-release-authority@main'; },
         step => { step.with['github-token'] = '${{ secrets.OTHER }}'; },
         step => { step.with['publication-request-run-id'] = 'other'; },
         step => { step['continue-on-error'] = true; },
@@ -275,7 +283,7 @@ describe("publication-validation", () => {
           expect(run(changed, callerAsset).mismatches.some(item => item.path.endsWith('jobs.publish.uses') && item.message.startsWith('canonical drift:'))).toBeTruthy();
         }
       }
-      expect(registry.actionTargets.find(item => item.id === 'ci-workflow-identity').workflows).toStrictEqual([]);
+      expect(registry.actionTargets.some(item => item.id === 'ci-workflow-identity')).toBe(false);
     });
 
     // Supplemental rejection coverage for the external publication workflow boundary.
@@ -292,6 +300,7 @@ describe("publication-validation", () => {
         runner: 'ubuntu-24.04', 'language-profile': 'rust', 'release-implementation': 'rust-cli-release',
         'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'sha256sum-version': '9.5', 'platform-manifest': '.ci/platform-manifest.yml',
         supplemental_release_asset_enabled: false, supplemental_release_asset_owner_contract: '__unset__',
+        supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__',
       });
       const filename = path.join(root, asset.destination);
       fs.mkdirSync(path.dirname(filename), { recursive: true });
@@ -424,6 +433,64 @@ describe("publication-validation", () => {
 
 describe('standard installer preflight', () => {
   describe('selection', () => {
+    test('recognizes only the authority snapshot consumed by the supplemental Action phases', () => {
+      // Arrange
+      const workflows = model();
+      const original = workflows.get('.github/workflows/release-publication.yml');
+      const callerPath = '.github/workflows/release-publication-caller.yml';
+      workflows.get(callerPath).jobs.publish.with.supplemental_release_asset_enabled = true;
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const registry = loadRegistry(createReport());
+      const preset = registry.presets.find(value => value.id === 'release-publication');
+      const calleePath = path.join(repository, registry.releasePublicationReusableWorkflow.source);
+      const readFile = fs.readFileSync;
+      const entrypoint = '.ci/scripts/ci-release-supplemental-asset.sh';
+      const cases = [
+        publication => { publication.jobs.authority.steps.find(step => step.id === 'config').with['sources-json'] = '{}'; },
+        publication => { const step = publication.jobs.authority.steps.find(step => step.id === 'config'); step.with['sources-json'] = step.with['sources-json'].replace(entrypoint, '../unsafe.sh'); },
+        publication => { const step = publication.jobs.authority.steps.find(step => step.id === 'config'); step.with['sources-json'] = step.with['sources-json'].replace('inputs.supplemental_release_asset_implementation', 'inputs.other'); },
+        publication => { publication.jobs.authority.steps.find(step => step.id === 'config').with['sources-json'] = '${{ inputs.snapshot }}'; },
+        publication => { publication.jobs.authority.steps.find(step => step.id === 'config').uses = 'example/other@' + 'a'.repeat(40); },
+        publication => { publication.jobs.authority.steps.find(step => step.id === 'config').with['snapshot-path'] = 'unconsumed.json'; },
+        publication => { publication.jobs.build.steps.find(step => step.name === 'Build and verify supplemental Release asset platform').with['snapshot-path'] = 'unconsumed.json'; },
+        publication => { publication.jobs['supplemental-asset'].if = false; },
+      ];
+      // Act / Assert
+      expect(supplementalOwnerAdapterEntrypoint(original)).toBe(entrypoint);
+      for (const mutate of cases) {
+        const publication = structuredClone(original);
+        mutate(publication);
+        publication.env.INCIDENTAL_ADAPTER = entrypoint;
+        expect(supplementalOwnerAdapterEntrypoint(publication)).toBeUndefined();
+        const report = createReport();
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((filename, ...options) => filename === calleePath ? stringify(publication) : readFile(filename, ...options));
+        try {
+          validateConditionalExtensions({ root: repository, registry, parsed: workflows, report }, preset);
+          expect(report.mismatches.some(item => item.message === 'enabled conditional extension is not reachable from the preset workflow')).toBe(true);
+        } finally {
+          spy.mockRestore();
+        }
+      }
+    });
+
+    test('validates the three static supplemental selections and rejects inconsistent inputs', () => {
+      // Arrange
+      const cases = [
+        [false, '__unset__', 'owner-adapter', '__unset__'],
+        [true, 'example.supplemental-asset-contract', 'owner-adapter', '__unset__'],
+        [true, 'installer.asset-assembly-evidence-contract', 'standard-installer', 'installer/assembly.json'],
+      ];
+      for (const [enabled, ownerContract, implementation, configPath] of cases) {
+        const workflows = model();
+        const selection = workflows.get('.github/workflows/release-publication-caller.yml').jobs.publish.with;
+        Object.assign(selection, { supplemental_release_asset_enabled: enabled, supplemental_release_asset_owner_contract: ownerContract, supplemental_release_asset_implementation: implementation, supplemental_release_asset_config_path: configPath });
+        // Act / Assert
+        expect(inspect(workflows).mismatches).toEqual([]);
+        selection.supplemental_release_asset_config_path = implementation === 'owner-adapter' ? 'installer/assembly.json' : '../unsafe.json';
+        expect(inspect(workflows).mismatches.length).toBeGreaterThan(0);
+      }
+    });
+
     test('accepts declarative standard selection without an owner adapter and rejects provider drift', (t) => {
       // Arrange
       const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -433,6 +500,8 @@ describe('standard installer preflight', () => {
       t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
       const workflows = model();
       const caller = workflows.get('.github/workflows/release-publication-caller.yml');
+      expect(caller.jobs.publish.with).toHaveProperty('supplemental_release_asset_implementation');
+      expect(caller.jobs.publish.with).toHaveProperty('supplemental_release_asset_config_path');
       Object.assign(caller.jobs.publish.with, { supplemental_release_asset_enabled: true, supplemental_release_asset_owner_contract: 'installer.asset-assembly-evidence-contract', supplemental_release_asset_implementation: 'standard-installer', supplemental_release_asset_config_path: 'installer/assembly.json' });
       fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
       fs.writeFileSync(path.join(root, '.github/workflows/release-publication-caller.yml'), stringify(caller));

@@ -23,10 +23,11 @@ const approvedBody = (options: PublisherOptionsType, identity: ReleaseIdentityTy
   const request = readRecord(safePath(root, 'publication-request.json'));
   const notes = readRecord(safePath(root, 'release-notes.json'));
   const approval = readRecord(safePath(root, 'release-notes-approval.json'));
+  if (request.schema !== 'ci.release-publication-request.v2') fail('publication-request-schema-invalid');
   const bound = validateReleaseNotesBinding(notes, approval, identity.tag);
   if (request.releaseIdentity !== identity.tag || request.releaseNotesBodySha256 !== identity.body_sha256
     || bound.bodyDigest !== identity.body_sha256 || request.approvalId !== bound.approvalId) fail('approval-binding-mismatch');
-  if (request.schema === 'ci.release-publication-request.v2' && (request.releaseVersion !== identity.version || request.targetIdentity !== identity.target_identity)) fail('approval-binding-mismatch');
+  if (request.releaseVersion !== identity.version || request.targetIdentity !== identity.target_identity) fail('approval-binding-mismatch');
   try { parseFutureRfc3339(text(request.approvalExpiresAt)); } catch { fail('approval-expired-or-invalid'); }
   if (typeof notes.body !== 'string') fail('approval-binding-mismatch');
   return notes.body;

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { loadRegistry, parseYaml } from '../preset-registry.ts';
 import { validateCiPreset } from '../validate-ci-preset.ts';
+import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { writeCiAssetLock } from '../ci-asset-lock-plan.ts';
 import { validateDescriptor } from '../descriptor-validation.ts';
 import { createReport } from '../validation-report.ts';
@@ -561,33 +562,43 @@ describe("preset-validation-contract", () => {
       const extension = preset.assets.conditionalExtensions[0]; const asset = preset.workflowAssets.find((a) => a.id === extension.workflowAsset);
       const registered = registry.registeredAssets.find((a) => a.id === extension.id);
       const entrypoint = registered.entrypoints[0]; const filename = path.join(root, entrypoint);
-      const caller = { jobs: { publish: { with: { supplemental_release_asset_enabled: true } } } };
-      const publication = { jobs: { supplemental: { steps: [{ run: `bash ${entrypoint}` }] } } };
+      const caller = parseYaml(readFileSync(path.join(repositoryRoot, asset.source), 'utf8'), asset.source);
+      caller.jobs.publish.with.supplemental_release_asset_implementation = 'owner-adapter';
+      caller.jobs.publish.with.supplemental_release_asset_config_path = '__unset__';
+      const request = preset.workflowAssets.find(a => a.id === 'release-publication-request');
+      writeFileSync(path.join(root, request.destination), readFileSync(path.join(repositoryRoot, request.source), 'utf8'));
       mkdirSync(path.dirname(filename), { recursive: true });
       const cases = [
         ['enabled executable', true, 'file', 0o755, true, undefined],
         ['disabled', false, 'missing', 0, false, undefined],
+        ['standard installer needs no owner adapter', true, 'missing', 0, true, undefined, 'standard-installer'],
         ['dynamic selector', '${{ inputs.enabled }}', 'missing', 0, false, 'selector must be a static boolean'],
         ['missing selector', undefined, 'missing', 0, false, 'selector must be a static boolean'],
         ['unreachable', true, 'file', 0o755, false, 'not reachable from the preset workflow'],
-        ['missing reachable entrypoint', true, 'missing', 0, true, undefined],
+        ['missing reachable entrypoint', true, 'missing', 0, true, 'entrypoint is missing'],
         ['directory entrypoint', true, 'directory', 0, true, 'entrypoint must be a regular file'],
         ['nonexecutable entrypoint', true, 'file', 0o644, true, 'entrypoint must be executable'],
       ];
-      for (const [label, enabled, kind, mode, reachable, expected] of cases) {
+      for (const [label, enabled, kind, mode, reachable, expected, implementation = 'owner-adapter'] of cases) {
         const changed = structuredClone(caller); changed.jobs.publish.with.supplemental_release_asset_enabled = enabled;
+        changed.jobs.publish.with.supplemental_release_asset_implementation = implementation;
+        if (!reachable) delete changed.jobs.publish.uses;
         if (kind === 'file') { writeFileSync(filename, 'project-owned extension'); fs.chmodSync(filename, mode); }
         if (kind === 'directory') mkdirSync(filename);
+        writeFileSync(path.join(root, asset.destination), stringify(changed));
         const parsed = new Map([[asset.destination, changed]]);
-        if (reachable) parsed.set('.github/workflows/release-publication.yml', publication);
         const before = snapshotTree(root); const report = createReport();
         const beforeMode = fs.existsSync(filename) ? fs.statSync(filename).mode : undefined;
         // Act
         validateConditionalExtensions({ root, registry, parsed, report }, preset);
+        const preflight = validateCiPresetInternal({ repoRoot: root, presets: [preset.id] }, false);
         // Assert
         const findings = [...report.missingSettings, ...report.mismatches];
         if (expected) expect(findings.some((item) => item.message.includes(expected)), `${label}: ${JSON.stringify(findings)}`).toBeTruthy();
         else expect(findings, label).toStrictEqual([]);
+        expect(preflight.missingSettings.some(item => item.path === entrypoint && item.message === 'enabled conditional extension entrypoint is missing'), label).toBe(enabled === true && implementation === 'owner-adapter' && kind === 'missing');
+        expect(preflight.status).toBe('failed');
+        expect(preflight.missingSettings.some(item => item.message.includes('publication reusable workflow is pending-release'))).toBe(true);
         expect(snapshotTree(root), label).toStrictEqual(before);
         if (beforeMode !== undefined) expect(fs.statSync(filename).mode, label).toBe(beforeMode);
         if (kind === 'directory') fs.rmdirSync(filename);

@@ -68,28 +68,28 @@ scopeValues: [workflow, shared, workflow-external]
 assets:
   - id: release-source-gate-adapter
     useCases: [release-source-identity]
-    kind: project-adapter
+    kind: provider-adapter
     status: required
     scope: workflow
-    entrypoints: [.ci/scripts/ci-source-gate.sh]
+    entrypoints: []
     copyable: false
-    owner: language-and-project-adapter
+    owner: provider-binding
   - id: release-authority-control
     useCases: [release-authority-validation]
     kind: trusted-control
     status: required
     scope: workflow
-    entrypoints: [.ci/trusted/ci-release-authority.sh]
+    entrypoints: []
     copyable: false
-    owner: project-owner
+    owner: provider-binding
   - id: release-build-adapter
     useCases: [release-artifact-build]
-    kind: project-adapter
+    kind: provider-adapter
     status: required
     scope: workflow
-    entrypoints: [.ci/scripts/ci-release-build.sh]
+    entrypoints: []
     copyable: false
-    owner: language-and-project-adapter
+    owner: provider-binding
   - id: release-supplemental-asset-adapter
     useCases: [release-supplemental-asset-build]
     kind: project-adapter
@@ -120,9 +120,9 @@ assets:
     kind: provider-adapter
     status: required
     scope: workflow
-    entrypoints: [.ci/trusted/ci-release-publish.sh]
+    entrypoints: []
     copyable: false
-    owner: provider-and-project-adapter
+    owner: provider-binding
   - id: package-publication-adapter
     useCases: [package-availability, package-remote-publish-readback, package-recovery-state]
     kind: provider-adapter
@@ -155,14 +155,11 @@ adapterBundles:
     delivery: action
     languageProfiles: [rust]
     source: {skill: rust, path: assets/ci/adapter-bundles/rust-quality.yml}
-    targetDescriptor: .ci/adapters/rust-quality.yml
   - id: python-uv-quality
     delivery: action
     languageProfiles: [python]
     source: {skill: python, path: assets/ci/adapter-bundles/python-quality.yml}
-    targetDescriptor: .ci/adapters/python-quality.yml
   - id: typescript-npm-quality
     delivery: action
     languageProfiles: [typescript]
     source: {skill: typescript, path: assets/ci/adapter-bundles/typescript-quality.yml}
-    targetDescriptor: .ci/adapters/typescript-quality.yml

@@ -40,6 +40,7 @@ export const adapterBundleAssets = (
   skillCollectionRoot?: string,
   report?: DiagnosticReport,
 ): AdapterBundleAsset[] => {
+  if (bundle.delivery === 'action') return [];
   const descriptorPath = canonicalSourcePath(bundle.source, SKILL_ROOT, skillCollectionRoot);
   try {
     const descriptor = map(parseYaml(
@@ -201,6 +202,7 @@ export const selectPresets = (
 export const managedAssets = (root: string, registry: RegistryData, selected: Preset[]): ManagedAsset[] => {
   const result = new Map<string, ManagedAsset>();
   const registerAdapterBundle = (bundle: AdapterBundle): void => {
+    if (bundle.delivery === 'action' || !bundle.targetDescriptor) return;
     result.set(bundle.targetDescriptor, {
       path: bundle.targetDescriptor,
       sourcePath: canonicalSourcePath(bundle.source, SKILL_ROOT, registry.skillCollectionRoot),
@@ -264,7 +266,7 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
         const normalized = normalizeAsset(descriptor);
         if (!normalized) continue;
         const bundle = standardQualityBundles(registry, profile)
-          .find((candidate) => candidate.targetDescriptor === normalized);
+          .find((candidate) => candidate.delivery !== 'action' && candidate.targetDescriptor === normalized);
         if (!bundle) continue;
         registerAdapterBundle(bundle);
       }

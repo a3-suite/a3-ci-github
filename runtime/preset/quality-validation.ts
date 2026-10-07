@@ -14,6 +14,7 @@ import type { InspectionContext } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside } from './workflow-assets.ts';
 import { descriptorValues, validateDescriptor } from './descriptor-validation.ts';
 import { uses } from './workflow-validation.ts';
+import { supplementalOwnerAdapterEntrypoint } from './publication-validation.ts';
 import { standardQualityBundle } from '../adapter/standard-quality-bundles.ts';
 import { resolvePublicationWorkflow, resolveQualityWorkflow } from './ci-preset-assets.ts';
 
@@ -112,14 +113,6 @@ const validateQualityWorkflow = (
       settingLocation: workflowPath,
     });
     return;
-  }
-  const standards = standardQualityBundles(registry, profile);
-  if (standards.length > 0 && !standards.some((bundle) => bundle.targetDescriptor === unique[0])) {
-    add(report.mismatches, {
-      path: `${workflowPath}:env.CI_ADAPTER_DESCRIPTOR`,
-      message: 'quality adapter descriptor must use the registered standard bundle for the selected language profile',
-      settingLocation: workflowPath,
-    });
   }
   const destinations = validateDescriptor(
     root,
@@ -330,14 +323,15 @@ const validateStandardImplementation = (
     }
     const selectedDescriptors = [...new Set(descriptorValues(workflow))];
     const standardId = map(workflow.env).CI_STANDARD_BUNDLE_ID;
-    const matchesDependency = standardId === bundle.id && bundle.delivery === 'action'
-      || (!standardId && selectedDescriptors.length === 1 && selectedDescriptors[0] === bundle.targetDescriptor);
+    const matchesDependency = bundle.delivery === 'action'
+      ? standardId === bundle.id
+      : !standardId && selectedDescriptors.length === 1 && selectedDescriptors[0] === bundle.targetDescriptor;
     if (!matchesDependency) add(report.mismatches, {
       path: `${workflowPath}:env.CI_ADAPTER_DESCRIPTOR`,
       message: 'quality adapter descriptor does not match the selected standard implementation dependency',
       settingLocation: workflowPath,
     });
-    const dependencyAssets = standardId === bundle.id ? [] : adapterBundleAssets(bundle, registry.skillCollectionRoot, report);
+    const dependencyAssets = bundle.delivery === 'action' ? [] : adapterBundleAssets(bundle, registry.skillCollectionRoot, report);
     for (const asset of dependencyAssets) {
       const registered = registry.copyableAssets.find((candidate) => candidate.id === asset.id);
       if (!registered || (registered.entrypoints ?? []).length !== 1) add(report.mismatches, {
@@ -390,9 +384,11 @@ const validateConditionalExtensions = (
       continue;
     }
     if (!conditionalExtensionSelected(workflow, extension)) continue;
-    const publication = parsed.get(`.github/workflows/${preset.id}.yml`);
+    const publication = resolvePublicationWorkflow(workflow, registry, report);
     const publicationText = publication ? JSON.stringify(publication) : '';
     const reachable = new Set(findWorkflowAssetReferences(root, publicationText));
+    const ownerAdapter = supplementalOwnerAdapterEntrypoint(publication);
+    if (ownerAdapter) reachable.add(ownerAdapter);
     for (const entrypoint of registered.entrypoints ?? []) {
       if (!reachable.has(entrypoint)) add(report.mismatches, {
         path: entrypoint,
@@ -400,7 +396,14 @@ const validateConditionalExtensions = (
         settingLocation: workflowAsset.destination,
       });
       const absolute = inside(root, entrypoint);
-      if (!fs.existsSync(absolute)) continue;
+      if (!fs.existsSync(absolute)) {
+        add(report.missingSettings, {
+          path: entrypoint,
+          message: 'enabled conditional extension entrypoint is missing',
+          settingLocation: entrypoint,
+        });
+        continue;
+      }
       const metadata = fs.lstatSync(absolute);
       if (!metadata.isFile()) add(report.mismatches, {
         path: entrypoint,

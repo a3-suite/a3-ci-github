@@ -1,13 +1,15 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, describe, expect } from 'vitest';
 import { loadRegistry } from '../preset-registry.ts';
 import { validateActionAvailability } from '../action-availability.ts';
 import { createReport } from '../validation-report.ts';
 
 const fixture = (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-action-availability-'));
+  const parent = new URL('../../../tmp/', import.meta.url);
+  fs.mkdirSync(parent, { recursive: true });
+  const root = fs.mkdtempSync(path.join(fileURLToPath(parent), 'a3-ci-github-action-availability-'));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const report = createReport();
   return { root, report, registry: loadRegistry(report) };
@@ -35,17 +37,33 @@ describe("preset-action-availability-contract", () => {
 
 describe("preset-actionized-fallback-rejection", () => {
   // integration_id: preset-actionized-fallback-rejection
-  test('preflight rejects both retained legacy assembly files and invocations', (t) => {
+  test('preflight rejects all retired Release entrypoints and references without modifying the consumer', (t) => {
     const f = fixture(t);
-    const entrypoint = '.ci/trusted/ci-release-assemble.sh';
-    fs.mkdirSync(path.join(f.root, '.ci/trusted'), { recursive: true });
-    fs.writeFileSync(path.join(f.root, entrypoint), '#!/bin/bash\n');
-    validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, f.report);
-    expect(f.report.mismatches.some((item) => item.path === entrypoint)).toBeTruthy();
-    const second = createReport();
-    const emptyRoot = path.join(f.root, 'without-legacy-file');
-    fs.mkdirSync(emptyRoot);
-    validateActionAvailability(emptyRoot, 'release-publication', new Set(['release-publication']), new Map([['workflow.yml', { jobs: { assemble: { steps: [{ run: entrypoint }] } } }]]), f.registry, second);
-    expect(second.mismatches.some((item) => item.path === entrypoint)).toBeTruthy();
+    const entrypoints = [
+      '.ci/trusted/ci-release-authority.sh', '.ci/scripts/ci-source-gate.sh',
+      '.ci/scripts/ci-release-build.sh', '.ci/trusted/ci-release-assemble.sh',
+      '.ci/trusted/ci-release-publish.sh',
+    ];
+    expect(f.registry.retiredProjectEntrypoints['release-publication']).toStrictEqual(entrypoints);
+    for (const entrypoint of entrypoints) {
+      // Arrange
+      const file = path.join(f.root, entrypoint);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, 'consumer-owned content\n');
+      const report = createReport();
+      // Act
+      validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), new Map(), f.registry, report);
+      // Assert
+      expect(report.mismatches.some(item => item.path === entrypoint), entrypoint).toBe(true);
+      expect(fs.readFileSync(file, 'utf8')).toBe('consumer-owned content\n');
+      fs.unlinkSync(file);
+      for (const step of [{ run: entrypoint }, { env: { REPURPOSED_FILE: entrypoint } }]) {
+        const references = createReport();
+        const workflows = new Map([['workflow.yml', { jobs: { other: { steps: [step] } } }]]);
+        validateActionAvailability(f.root, 'release-publication', new Set(['release-publication']), workflows, f.registry, references);
+        expect(references.mismatches.some(item => item.path === entrypoint), entrypoint).toBe(true);
+        expect(fs.existsSync(file)).toBe(false);
+      }
+    }
   });
 });

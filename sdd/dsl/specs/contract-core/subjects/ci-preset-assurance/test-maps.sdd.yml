@@ -3,6 +3,24 @@ name: contract-test-maps
 subject_ref: subject.ci.preset-assurance
 test_maps:
   - verification_id: verification.ci-preset-assurance.verification
+    case_id: conditional-owner-extension
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: "preset-validation-contract > preset-assurance-contract > preflight verifies enabled conditional owner extensions without changing consumer assets"
+        check_refs: [conditional-reachability]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: supplemental-static-selections
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: "standard installer preflight > selection > validates the three static supplemental selections and rejects inconsistent inputs"
+        check_refs: [static-selection]
+  - verification_id: verification.ci-preset-assurance.verification
+    case_id: supplemental-snapshot-reachability-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: "standard installer preflight > selection > recognizes only the authority snapshot consumed by the supplemental Action phases"
+        check_refs: [snapshot-reachability-rejected]
+  - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.explicit-roots-required
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
@@ -48,10 +66,10 @@ test_maps:
         symbol: "publication-validation > preflight rejects supplemental phase bypasses and mismatched Action inputs"
         check_refs: [phase-mismatch]
   - verification_id: verification.ci-preset-assurance.verification
-    case_id: retired-assembly
+    case_id: retired-release-entrypoints
     tests:
       - path: runtime/preset/tests/action-availability.test.mjs
-        symbol: "preset-actionized-fallback-rejection > preflight rejects both retained legacy assembly files and invocations"
+        symbol: "preset-actionized-fallback-rejection > preflight rejects all retired Release entrypoints and references without modifying the consumer"
         check_refs: [fallback-rejection]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.valid-preset-succeeds

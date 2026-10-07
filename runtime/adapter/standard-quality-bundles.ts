@@ -16,6 +16,9 @@ export const verifyStandardQualityBundle = (entry: StandardQualityBundle): Stand
   return entry;
 };
 
+export const isStandardQualityBundle = (id: unknown): boolean =>
+  STANDARD_QUALITY_BUNDLES.some((entry) => entry.id === id);
+
 export const standardQualityBundle = (id: string): StandardQualityBundle => {
   const entry = STANDARD_QUALITY_BUNDLES.find((candidate) => candidate.id === id);
   if (!entry) throw new Error(`quality-adapter-standard-bundle-unknown:${id}`);

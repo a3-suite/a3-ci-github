@@ -42,5 +42,3 @@ related_contracts:
       contract_id: contract.ci-handoff-integrity.outputs
   - contract_ref:
       contract_id: contract.ci-publish-version.outputs
-  - contract_ref:
-      contract_id: contract.ci-workflow-identity.verify

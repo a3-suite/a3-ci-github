@@ -26,7 +26,7 @@
 
 `.ci/` のファイル数は揃えず、実行経路と責務を揃える。
 
-- `.ci/adapters/` は独自または従来の配置経路のdescriptorだけを置く。標準Action bundleは配置しない。
+- `.ci/adapters/` は独自descriptorだけを置く。標準Action bundleは配置しない。
 - Release／Package の authority、build、assemble、publish は、適用可能な provider registry の固定 SHA Action binding を第一候補とする。project-owned の `.ci/scripts/`／`.ci/trusted/` entrypoint は、選択済み binding が充足しない登録済み `requiredExtensions` に対応する場合だけ接続し、未選択の代替分岐として保持しない。
 - workflow から到達しない stage 別 descriptor、汎用 runner、選択結果だけを記録する manifest は追加しない。`.ci/ci-assets.lock.json` は設定や選択結果ではなく、配布同一性の検証入力だけを保持する。
 - platform ごとの packaging や検証を分割する必要がある場合は、project 実装として分割を維持し、`.ci/README.md` に理由と owner を記録する。
@@ -186,7 +186,7 @@ repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-s
 | --- | --- | --- | --- |
 | `quality-gate` | `quality-gate.yml`（platform 別検証は任意の `quality-gate-platforms.yml`） | language profile、toolchain、runner、Action SHA、標準bundle IDまたは独自descriptor名、platform 選択を使う場合は `.ci/platform-manifest.yml` と `.ci/quality-platforms.yml` | 標準 bundle がない場合の quality adapter |
 | `release-request` | tag request | tag pattern、runner、Action SHA | なし |
-| `release-publication` | request、caller の2 workflow | request handoff、notes handoff、tool versions、`.ci/platform-manifest.yml`、release implementation、quality adapter、言語・製品設定 | 選択した登録済み実装が充足しない authority、assemble、publish extension |
+| `release-publication` | request、caller の2 workflow | request handoff、notes handoff、tool versions、`.ci/platform-manifest.yml`、release implementation、quality adapter、言語・製品設定 | 標準Release処理の個別実装は不要。補助assetで owner-adapter を選ぶ場合だけ補助extension |
 | `package-publication` | request、caller の2 workflow | runner、Action SHA、tool versions、registry secret、package policy | build と publish extension |
 
 標準導入では、一つの repository に同じプリセットの canonical workflow を一組だけ置く。
@@ -221,7 +221,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 主workflowは薄いcallerを配置する。固有値は `jobs.quality.with` へ設定し、共通jobはproviderの `.github/workflows/ci-quality.yml` が実行する。calleeはconsumerのworkflow directoryへコピーしない。入力定義と受渡しはcalleeの `workflow_call.inputs` と `env`、固定参照と利用可能性はregistryの `qualityReusableWorkflow` を参照する。callerに残る `summary` は既存の集約check identityと失敗伝播のために必要であり、共通品質jobを再実装しない。実際のrequired check名の互換性はHostedで受け入れるまで未確認とする。
 
 1. `ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
-   entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に設定し、`adapter-descriptor` は空にする。従来のdescriptor経路では標準IDを空にする。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `ci-adapter-bundles.reference.yml` を参照する。
+   entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に設定し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `ci-adapter-bundles.reference.yml` を参照する。
 
 2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchし、planの
    `create`／`reuse`／`update`と競合なしを確認してから、plan digestを明示してapplyする。
@@ -298,10 +298,12 @@ platform 固有の runtime、artifact、installer の検証が必要な project 
 `release-publication` の処理順、入力境界、notes handoff の生成元、caller の検証責務は `references/implement-release-asset-publication-workflow.guide.md` に従う。本ガイドでは、同プリセットの request と caller を配置し、前節の設定場所および「release workflow の project 設定」へ値を割り当てる。
 
 補助Release assetを選択しないprojectは、callerの`<supplemental-release-asset-enabled>`を
-booleanの`false`、`<supplemental-release-asset-owner-contract>`をYAML文字列`__unset__`へ置換する。この場合は
+booleanの`false`、`<supplemental-release-asset-owner-contract>`をYAML文字列`__unset__`へ置換する。
+`<supplemental-release-asset-implementation>`は`owner-adapter`、
+`<supplemental-release-asset-config-path>`は`__unset__`へ置換する。この場合は
 補助adapterを配置せず、assembleは共通のauthorityとconfig snapshotだけを受け取り、補助handoffを
 受け取らない。固定SHAの`ci-config-snapshot`は空値を拒否するため、無効値を空文字へ戻さない。
-選択するprojectは実装選択を静的に固定する。標準installerは
+選択するprojectはcallerの4つの補助asset placeholderを静的な値へ置換する。標準installerは
 `supplemental_release_asset_implementation: standard-installer` と
 `supplemental_release_asset_config_path: installer/assembly.json` を指定し、owner契約IDを
 `installer.asset-assembly-evidence-contract` にする。製品宣言とmanifestだけを管理し、

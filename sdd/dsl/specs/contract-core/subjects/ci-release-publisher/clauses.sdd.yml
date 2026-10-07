@@ -5,7 +5,7 @@ contracts:
   - id: contract.ci-release-publisher.outputs
     summary: Only the registry-approved GitHub token binding may create a previously
       absent Release, upload validated assets and finalize by create-result
-      immutable ID. Validate approved notes, expiry,
+      immutable ID. Accept only publication-request v2 and bind its owner version and target to authority. Validate approved notes, expiry,
       authority/handoff/pre-observation, reobserve provider suitability and
       complete absence immediately before create, and stop on mismatches,
       unknown results or partial failure without retries, overwrite, deletion or

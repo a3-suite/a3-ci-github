@@ -77,7 +77,7 @@
 - 標準 Release は `authority` job、標準 Package は `publish` job の最初の step で publication entry を検証する。event は `workflow_run`、caller ref は consumer repository の所定 caller path と default branch の組合せ、control SHA は40桁の小文字hexに fail closed で照合する。入口検証より前に他の Action、checkout、project-local code を実行しない。
 - Release の後続 control job は `authority` の成功に依存し、独自の実行条件で失敗・skip・cancel を迂回しない。入口の成功を job output の control SHA で伝搬させず、各 control checkout は `repository: github.repository` と `ref: github.workflow_sha` を直接使い、直後に HEAD をその SHA と照合する。source SHA、別入力、mutable ref へ fallback しない。
 - caller から local `./.github/workflows/` 参照で呼ぶ callee は GitHub の同一commit保証を使い、caller/callee の SHA equality を重ねて検証しない。preflight は固定した local callee path、入口検証、成功依存、control checkout と直後の HEAD 照合を検査し、control job の container / services を許可しない。外部 provider 参照へ変更する場合は repository / workflow path / full commit SHA を固定し、その接続を別途受け入れる。consumer と provider の SHA equality は要求しない。
-- 公開 `ci-workflow-identity` Action の入力・出力契約は維持するが、標準 publication 経路では使わない。workflow の保護と権限設定を trust の前提とし、変更可能な workflow 内の自己検証だけを信頼根拠にしない。
+- workflow の保護と権限設定を trust の前提とし、変更可能な workflow 内の自己検証だけを信頼根拠にしない。
 - `workflow_dispatch` などの手動起動権限や tag push は、選択された ref やその ref 内の CI assets の信頼根拠として扱わない。
 - publish、deploy などの権限付き処理では、workflow orchestration 自体も trusted CI control に含める。event ref 上の workflow に publish 権限を与えず、権限を持たない request workflow と、default branch 上の `workflow_run` で起動する privileged workflow を分離する。
 - project-local trusted CI control を実行する job だけが、その control を監査済み commit SHA の snapshot から checkout する。checkout したファイルを実行または参照しない job へ trust marker として追加しない。

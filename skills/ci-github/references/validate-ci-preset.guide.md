@@ -85,6 +85,7 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
 - 主quality callerはregistryの `qualityReusableWorkflow` と照合し、固定ref・明示input・型・静的versioned runner・read permissions・caller summaryを検証する。provider側calleeの固定sourceからAction接続と固有設定へのbindingを検証し、calleeをconsumerの配置assetやlockへ追加しない。正式固定版とHosted required-check受入が未確定なら利用可能扱いにしない。
 - optional platform callerもregistryの `qualityPlatformsReusableWorkflow` と照合し、calleeの入力・品質設定・Action依存まで検証する。calleeは検証用local-referenceとして配布閉包へ含め、consumerのcopy対象へは含めない。workflowと依存Actionのpending-release gateを維持する。
 - 適用可能な Action 化 target が登録された共通処理を、project-owned entrypoint または copyable asset として重複配置していないことを確認する。project-owned 実装は、選択済み binding が充足しない登録済み `requiredExtensions` にだけ許可し、未登録の代替分岐として補完しない。Action 化 target がなく適用可能な reusable asset もない provider helper だけを copyable asset として許可する。
+- Releaseの廃止入口は registry の `actionization.retiredProjectEntrypoints.release-publication` を正本とする。登録pathは用途にかかわらず予約済みとして、ファイル保持またはworkflow内の参照を失敗にする。preflightはconsumerのファイルを削除しない。
 - 共通処理の候補比較、非採用理由、owner、証拠 identity は review フェーズの証拠として記録する。preflight は Action の登録・固定 ref・workflow mapping、asset の到達性・配置同一性を検証し、コードの意味的同一性を推測しない。
 - write 権限を持つ job で a3 Action を使う場合は、対象 Action の `privilegedJobs` に `workflow-id/job-id` が完全一致で登録されていることを確認する。`trust: read-only` または workflow 単位の登録だけで許可を補完しない。
 - 標準実装を選択した場合は、必要な extension と Action binding、language profile、project設定、依存閉包を照合する。未登録の実装識別子は、同名のローカル entrypoint が存在しても不一致とする。

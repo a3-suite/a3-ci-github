@@ -86,7 +86,7 @@
 
 実装義務はprovider registryの `registry.presets` と `actionization.standardImplementations`、bindingの利用可能性は `actionization.targets` を確認する。選択した標準bindingが充足する処理をproject-local scriptとして再実装しない。request記録、platform matrix、build、assembly、read-only観測などの接続はcanonical workflowを参照する。
 
-標準Release入力の受領契約は `ci-script-contracts.reference.yml` の `standardReleaseInput` を参照する。対応する標準profileでは共通read-only authority Actionを使い、個別authority scriptを要求しない。入力未解決または非標準ownerだけproject-owned extensionへ接続する。公開writeは選択した標準bindingが充足する場合に専用Actionへ委譲し、非標準owner経路だけproject-owned adapterを要求する。適用profileと充足extensionはregistryを参照する。対応する入力・出力と責務は `ci-script-contracts.reference.yml`、provider writeのmappingは `release-publication-evidence.reference.yml` を参照する。未公開bindingは導入完了扱いにしない。
+標準Release入力の受領契約は `ci-script-contracts.reference.yml` の `standardReleaseInput` を参照する。登録済み実装と対応profileでは共通read-only authority Actionを使い、公開writeを専用Actionへ委譲する。authority、source gate、build、assembly、publishの個別scriptは要求しない。入力未解決・未登録実装・非対応profileは停止し、project-owned fallbackへ接続しない。補助assetのowner-adapterは独立した選択として扱う。適用profileと充足extensionはregistryを参照する。対応する入力・出力と責務は `ci-script-contracts.reference.yml`、provider writeのmappingは `release-publication-evidence.reference.yml` を参照する。未公開bindingは導入完了扱いにしない。
 
 ## 停止条件
 - requestのtag refとsource SHA、`git.release-flow`のtag、target commit、version、tag object SHA、tag object typeの対応を証明できない。

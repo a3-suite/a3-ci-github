@@ -95,6 +95,8 @@ npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/c
 
 各 JavaScript / TypeScript Action の依存復元、test、lint、dist 同一性は対象 Action の `package.json` と `runtime/repository/check-action-dist.mjs` に従います。統合、ローカルE2E、Hosted E2Eの境界と追加コマンドは[テスト戦略](docs/maintenance/test-strategy.md)を参照してください。
 
+`node runtime/repository/verify-action-packages.mjs` は Action の source 検証に加え、`tsconfig.cli.json` に従って公開 CLI のソースを strict 型検査します。compiler と Node 型定義は復元済み Action の固定開発依存を再利用します。
+
 ## SDD検証（ローカル保守・リリース前受入）
 
 CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証はローカルまたは承認済み保守環境で workspace ルートから実行します。
@@ -102,6 +104,19 @@ CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証
 ```sh
 a3-sdd sdd check --workspace-root . --format json
 ```
+
+契約テスト参照は全 test map を同じ Vitest 実収集へ渡して確認します。workspace ルートの Bash または Zsh で実行します。
+
+```sh
+test_map_args=()
+for test_map in sdd/dsl/specs/contract-core/subjects/*/test-maps.sdd.yml; do
+  test_map_args+=(--test-map "$test_map")
+done
+a3-sdd sdd resolve-test-targets --workspace-root . \
+  --resolver-profile vitest-5.0.3 "${test_map_args[@]}" --format json
+```
+
+全対象の `verified` を確認し、`unresolved`、`not-supported`、収集失敗を成功扱いにしません。`sdd check` の構文・参照構造の成功だけではテスト名の実在を保証しません。
 
 `root_layout_scan` と `owner_outcomes` を確認し、failure、未分類、対象0件を成功扱いにしません。`sdd/dsl/**/.a3-sdd` は生成状態であり、正本ツリーへ残しません。生成状態の配置は sdd-core の `definition-file-locations` に従います。
 

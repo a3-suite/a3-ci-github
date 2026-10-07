@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-adapter
 contracts:
   - id: contract.ci-quality-adapter.outputs
-    summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve language-owner provenance and require no consumer descriptor.
+    summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve language-owner provenance and require no consumer descriptor; their IDs are rejected in local descriptors.
     conditions:
       - id: quality-adapter-bundle-present
         input_predicate:
