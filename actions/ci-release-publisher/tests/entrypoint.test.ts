@@ -21,7 +21,7 @@ test('publisher entrypoint writes once by immutable ID and emits evidence paths'
   const beforePath = f.put('before.json', before);
   f.put('release-notes.json', { schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body: 'approved notes', body_sha256: f.identity.body_sha256 });
   f.put('release-notes-approval.json', { schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body_sha256: f.identity.body_sha256, approval_id: 'approved-1' });
-  f.put('publication-request.json', { approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 });
+  f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', releaseVersion: f.identity.version, targetIdentity: f.identity.target_identity, approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 });
   const mock = f.put('mock-fetch.mjs', `
 import fs from 'node:fs';
 import path from 'node:path';

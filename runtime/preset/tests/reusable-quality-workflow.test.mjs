@@ -86,7 +86,8 @@ describe("contract.ci-quality-workflow.execution", () => {
         fs.mkdirSync(path.join(root, '.ci/adapters'), { recursive: true });
         fs.writeFileSync(path.join(root, legacy.jobs.quality.with['adapter-descriptor']), standardQualityBundle('typescript-npm-quality').descriptor);
         const legacyResult = inspect(legacy).report;
-        expect(legacyResult.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA'), JSON.stringify(legacyResult)).toBeTruthy();
+        expect(legacyResult.mismatches.some((entry) => entry.message === 'standard quality bundle must use the Action bundle ID')).toBeTruthy();
+        expect(managedAssets(root, registry, [preset]).map((entry) => entry.path)).toStrictEqual([asset.destination]);
         for (const [mutate, diagnostic] of [
           [(value) => { value.jobs.quality.uses = value.jobs.quality.uses.replace(/@.*/, '@' + 'a'.repeat(40)); }, /ref does not match/],
           [(value) => { value.jobs.quality.with.runner = 'ubuntu-latest'; }, /static versioned label/],
@@ -173,7 +174,7 @@ describe("contract.ci-quality-workflow.execution", () => {
         legacy.jobs.platforms.with['adapter-descriptor'] = '.ci/adapters/typescript-quality.yml';
         fs.mkdirSync(path.join(root, '.ci/adapters'), { recursive: true });
         fs.writeFileSync(path.join(root, legacy.jobs.platforms.with['adapter-descriptor']), standardQualityBundle('typescript-npm-quality').descriptor);
-        expect(inspect(legacy).report.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA')).toBeTruthy();
+        expect(inspect(legacy).report.mismatches.some((entry) => entry.message === 'standard quality bundle must use the Action bundle ID')).toBeTruthy();
         for (const [mutate, diagnostic] of [
           [(value) => { value.jobs.platforms.uses = value.jobs.platforms.uses.replace(/@.*/, '@' + 'a'.repeat(40)); }, /ref does not match/],
           [(value) => { value.jobs.platforms.with.runner = 'ubuntu-latest'; }, /static versioned label/],

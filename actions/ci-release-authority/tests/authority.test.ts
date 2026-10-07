@@ -19,6 +19,7 @@ import { createAuthority, OWNER_HANDOFF_PATH } from '../src/authority';
 import { fixture, repository, source } from './fixture';
 import { assembleRelease } from '../../../runtime/release-publication/assembly';
 import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-manifest-decoder';
+import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 
 describe('ci-release-authority-runtime', () => {
   // integration_id: ci-release-authority-runtime
@@ -80,6 +81,27 @@ describe('ci-release-authority-runtime', () => {
         const sentinel = path.join(f.options.outputDirectory, 'owner-file');
         if (fs.existsSync(sentinel)) expect(fs.readFileSync(sentinel, 'utf8')).toBe('preserve'); }
       finally { fs.rmSync(f.root, { recursive: true }); }
+    }
+  });
+
+  // integration_id: ci-release-authority-runtime
+  test('authority rejects unsupported implementation, profile and owner with a valid snapshot digest', async () => {
+    // Arrange
+    for (const [setting, value] of [
+      ['CI_RELEASE_IMPLEMENTATION', 'owner-unknown'],
+      ['CI_LANGUAGE_PROFILE', 'python'],
+      ['CI_RELEASE_OWNER_CONTRACT', 'other-owner'],
+    ]) {
+      const f = fixture();
+      try {
+        const snapshotPath = path.join(f.root, 'snapshot.json');
+        const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+        const changed = resolveConfigSnapshot({ workflow: { ...snapshot.values, [setting]: value } });
+        fs.writeFileSync(snapshotPath, JSON.stringify(changed));
+        // Act / Assert
+        await expect(createAuthority(f.options, f.client), `${setting}=${value}`).rejects.toThrow('owner-contract-inconsistent');
+        expect(fs.existsSync(path.join(f.options.outputDirectory, 'authority.json'))).toBe(false);
+      } finally { fs.rmSync(f.root, { recursive: true }); }
     }
   });
 

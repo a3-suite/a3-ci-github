@@ -87,9 +87,14 @@ jobs:
           CI_FIXED_RUNTIME_ROOT=runtime/preset \
             npm test -- \
             runtime/adapter/tests/materialize-adapter-bundle.test.mjs \
+            runtime/adapter/tests/generate-standard-quality-bundles.test.mjs \
+            runtime/adapter/tests/standard-quality-footprint.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
             runtime/preset/tests/preset-validation-contract.test.mjs \
             runtime/preset/tests/action-availability.test.mjs \
+            runtime/preset/tests/quality-platform-selection.test.mjs \
+            runtime/preset/tests/reusable-quality-workflow.test.mjs \
+            runtime/preset/tests/standard-quality-bundles.test.mjs \
             runtime/preset/tests/publication-validation.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
             npm test -- tests/public-cli-lifecycle.test.mjs
@@ -253,22 +258,6 @@ jobs:
           version: 1.0.0
           target-identity: linux-x64
 
-      - name: Prepare release notes fixture
-        shell: bash
-        run: |
-          set -euo pipefail
-          body_digest="$(printf '%s\n' '# Release v1.2.3' | sha256sum | cut -d' ' -f1)"
-          printf '{"schema":"ci.release-notes.v1","source_contract":"git.release-flow","source_field":"body","release_identity":"v1.2.3","body":"# Release v1.2.3\\n","body_sha256":"%s"}' "$body_digest" > .ci/release-notes.json
-          printf '{"schema":"ci.release-notes-approval.v1","source_contract":"git.release-flow","source_field":"body","release_identity":"v1.2.3","body_sha256":"%s","approval_id":"hosted-review"}' "$body_digest" > .ci/release-notes-approval.json
-
-      - name: Validate release notes binding
-        id: notes
-        uses: ./actions/ci-release-notes-binding
-        with:
-          handoff-json: .ci/release-notes.json
-          approval-json: .ci/release-notes-approval.json
-          release-identity: v1.2.3
-
       - name: Prepare version plan fixture
         shell: bash
         run: |
@@ -297,7 +286,6 @@ jobs:
           PLATFORM_MATRIX: ${{ steps.platform-matrix.outputs.matrix }}
           SCOPE_STATUS: ${{ steps.scope.outputs.status }}
           HANDOFF_STATUS: ${{ steps.handoff.outputs.status }}
-          NOTES_STATUS: ${{ steps.notes.outputs.status }}
           VERSION_STATUS: ${{ steps.version.outputs.status }}
           PUBLISH_VERSION: ${{ steps.version.outputs['publish-version'] }}
           SUMMARY_STATUS: ${{ steps.summary.outputs.status }}
@@ -308,7 +296,6 @@ jobs:
           test "$(printf '%s' "$PLATFORM_MATRIX" | jq -r '.include[0].target')" = x86_64-unknown-linux-gnu
           test "$SCOPE_STATUS" = success
           test "$HANDOFF_STATUS" = success
-          test "$NOTES_STATUS" = success
           test "$VERSION_STATUS" = success
           test "$PUBLISH_VERSION" = '1.2.3-dev.42'
           test "$SUMMARY_STATUS" = success

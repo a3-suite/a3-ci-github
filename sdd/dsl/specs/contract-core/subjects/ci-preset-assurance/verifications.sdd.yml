@@ -70,14 +70,14 @@ verifications:
         checks:
           - id: phase-mismatch
             guarantee_ref: supplemental-phase-drift-reported
-      - id: retired-assembly
-        intent_id: retired-assembly-blocked
+      - id: retired-release-entrypoints
+        intent_id: retired-release-entrypoints-blocked
         input:
-          retired-assembly-file-or-invocation: .ci/trusted/ci-release-assemble.sh
+          retired-release-entrypoints-file-or-invocation: any-registered-retired-release-entrypoint
           preset: release-publication
         checks:
           - id: fallback-rejection
-            guarantee_ref: retired-assembly-reported
+            guarantee_ref: retired-release-entrypoints-reported
       - id: case.ci-preset-assurance.valid-preset-succeeds
         intent_id: ci-preset-assurance-valid-intent
         input:
@@ -101,6 +101,33 @@ verifications:
         checks:
           - id: check.ci-preset-assurance.drift-fails
             guarantee_ref: ci-preset-assurance-drift-fails
+      - id: conditional-owner-extension
+        intent_id: ci-preset-assurance-valid-intent
+        input:
+          preset: release-publication
+          applied-preset: canonical-remote-caller-with-selected-executable-owner-adapter
+        _authoring:
+          case_focus: Verify conditional reachability without fabricating a consumer-local callee; publication availability remains a separate preflight gate.
+        checks:
+          - id: conditional-reachability
+            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
+      - id: supplemental-static-selections
+        intent_id: ci-preset-assurance-valid-intent
+        input:
+          preset: release-publication
+          applied-preset: disabled-or-owner-adapter-or-standard-installer
+        _authoring:
+          case_focus: Verify static caller selections in the publication validation stage; this does not assert Hosted acceptance or overall pending-preset availability.
+        checks:
+          - id: static-selection
+            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
+      - id: supplemental-snapshot-reachability-drift
+        intent_id: supplemental-phase-checked
+        input:
+          supplemental-phase-drift: missing-or-invalid-snapshot-binding-or-unconsumed-snapshot
+        checks:
+          - id: snapshot-reachability-rejected
+            guarantee_ref: supplemental-phase-drift-reported
   - id: verification.ci-preset-assurance.asset-lock
     contract_id: contract.ci-preset-assurance.asset-lock
     cases:

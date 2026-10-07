@@ -25,10 +25,10 @@ contracts:
           kind: input
           term: input.supplemental-phase-drift
           op: present
-      - id: retired-assembly-present
+      - id: retired-release-entrypoints-present
         input_predicate:
           kind: input
-          term: input.retired-assembly-file-or-invocation
+          term: input.retired-release-entrypoints-file-or-invocation
           op: present
       - id: ci-preset-assurance-applied-preset-valid
         input_predicate:
@@ -77,8 +77,8 @@ contracts:
           target:
             kind: observation_field
             value: mismatches
-      - id: retired-assembly-reported
-        when: retired-assembly-present
+      - id: retired-release-entrypoints-reported
+        when: retired-release-entrypoints-present
         observation_ref: observation.ci-preset-assurance.preflight-report
         claim:
           kind: observable-result
@@ -143,9 +143,9 @@ contracts:
       - id: supplemental-phase-checked
         goal: Supplemental phases must use the common Action and exact owner-v2 argument mapping; bypass, wrong inputs and failure suppression produce observable mismatches.
         guarantee_refs: [supplemental-phase-drift-reported]
-      - id: retired-assembly-blocked
-        goal: Retained project-local assembly files or workflow invocations produce mismatches rather than supplying fallback processing.
-        guarantee_refs: [retired-assembly-reported]
+      - id: retired-release-entrypoints-blocked
+        goal: Any path registered as a retired Release entrypoint is reserved; retained files or workflow references produce mismatches regardless of purpose, without modifying consumer assets.
+        guarantee_refs: [retired-release-entrypoints-reported]
       - id: ci-preset-assurance-valid-intent
         goal: A canonical applied preset produces a successful read-only preflight report without modifying the project.
         guarantee_refs:
