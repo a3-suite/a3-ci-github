@@ -91,7 +91,6 @@ describe("repository-runtime-boundary-verification", () => {
   test('Release Actions typecheck the shared control and notes binding implementations', () => {
     const targets = {
       'ci-release-publication-control': ['control.ts'],
-      'ci-release-notes-binding': ['notes-binding.ts'],
       'ci-release-authority': ['control.ts', 'notes-binding.ts'],
       'ci-release-publisher': ['control.ts', 'notes-binding.ts'],
     };

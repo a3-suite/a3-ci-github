@@ -17,7 +17,7 @@ test('entrypoint creates and verifies a publication request', () => {
   const output = path.join(root, 'output');
   const notes = '# Release\n';
   fs.writeFileSync(output, '');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': crypto.createHash('sha256').update(notes).digest('hex') } as Record<string, string>;
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1.2.3', 'INPUT_RELEASE-VERSION': '1.2.3', 'INPUT_TARGET-IDENTITY': 'owner/project', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': crypto.createHash('sha256').update(notes).digest('hex') } as Record<string, string>;
   const entrypoint = entrypointArgs;
 
   // Act
@@ -31,7 +31,7 @@ test('entrypoint creates and verifies a publication request', () => {
   fs.writeFileSync(output, '');
 
   // Act
-  const verified = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify-publication-request' }, encoding: 'utf8' });
+  const verified = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify-publication-request', 'INPUT_RELEASE-VERSION': '', 'INPUT_TARGET-IDENTITY': '' }, encoding: 'utf8' });
 
   // Assert
   expect(verified.status).toBe(0);
@@ -54,6 +54,27 @@ test('entrypoint creates and verifies a publication request', () => {
 
 // contract_id: contract.ci-release-publication-control.outputs
 // integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint rejects missing owner decision before creating artifacts', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-owner-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const output = path.join(root, 'output');
+  const notes = '# Release\n';
+  const input = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1.2.3', 'INPUT_RELEASE-VERSION': '1.2.3', 'INPUT_TARGET-IDENTITY': 'owner/project', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': crypto.createHash('sha256').update(notes).digest('hex') };
+  for (const missing of ['INPUT_RELEASE-VERSION', 'INPUT_TARGET-IDENTITY']) {
+    fs.writeFileSync(output, '');
+    // Act
+    const result = spawnSync(process.execPath, entrypointArgs, { env: { ...input, [missing]: '' }, encoding: 'utf8' });
+    // Assert
+    expect(result.status).not.toBe(0);
+    expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
+    expect(fs.existsSync(path.join(root, 'release-publication-request'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'release-notes-handoff'))).toBe(false);
+  }
+});
+
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint rejects a changed approval ID', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-rejected-'));
@@ -61,7 +82,7 @@ test('entrypoint rejects a changed approval ID', () => {
   const bodyDigest = crypto.createHash('sha256').update('# Release\n').digest('hex');
   fs.writeFileSync(output, '');
   fs.mkdirSync(path.join(root, 'authority'));
-  fs.writeFileSync(path.join(root, 'authority/publication-request.json'), JSON.stringify({ approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', releaseNotesBodySha256: bodyDigest }));
+  fs.writeFileSync(path.join(root, 'authority/publication-request.json'), JSON.stringify({ schema: 'ci.release-publication-request.v2', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseIdentity: 'v1.2.3', approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', releaseNotesBodySha256: bodyDigest }));
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-approval', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_APPROVAL-ID': 'changed', 'INPUT_APPROVAL-BODY-SHA256': bodyDigest } as Record<string, string>;
   const entrypoint = entrypointArgs;
 

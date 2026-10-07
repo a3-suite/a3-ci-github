@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import fs from 'node:fs';
 import path from 'node:path';
 import { executeAdapter, loadAdapterBundle, parseAdapterBundle } from './adapter.js';
-import { standardQualityBundle } from '../../../runtime/adapter/standard-quality-bundles.js';
+import { isStandardQualityBundle, standardQualityBundle } from '../../../runtime/adapter/standard-quality-bundles.js';
 
 export const run = (): void => {
   try {
@@ -11,6 +11,7 @@ export const run = (): void => {
     if (Boolean(bundlePath) === Boolean(standardId)) throw new Error('quality-adapter-bundle-selection-invalid');
     const standard = standardId ? standardQualityBundle(standardId) : undefined;
     const bundle = standard ? parseAdapterBundle(standard.descriptor) : loadAdapterBundle(path.resolve(bundlePath));
+    if (!standard && isStandardQualityBundle(bundle.id)) throw new Error('quality-adapter-standard-id-requires-action-bundle');
     if (standard && (bundle.id !== standard.id || bundle.owner !== standard.owner || bundle.assets.length !== 0)) {
       throw new Error('quality-adapter-standard-bundle-metadata-invalid');
     }

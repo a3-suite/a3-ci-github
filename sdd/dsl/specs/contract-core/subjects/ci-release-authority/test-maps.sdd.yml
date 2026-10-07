@@ -17,6 +17,9 @@ test_maps:
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority accepts read-only repository metadata without claiming publish capability and rejects replay"
         check_refs: [failure]
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: "ci-release-authority-runtime > authority rejects unsupported implementation, profile and owner with a valid snapshot digest"
+        check_refs: [failure, no-outputs]
   - verification_id: verification.ci-release-authority.outputs
     case_id: bundle-boundary
     tests:

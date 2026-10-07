@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { SOURCE_ROOT, parseYaml } from './preset-registry.ts';
-import { add } from './validation-report.ts';
+import { add, createReport } from './validation-report.ts';
 import { map, strings } from './preset-model.ts';
 import type { ValueMap } from './preset-model.ts';
 import type { Report } from './validation-report.ts';
@@ -346,6 +346,17 @@ const validateReleaseCallerWorkflow = (
   return publishWith;
 };
 
+const expectedSupplementalAssetSnapshot: Record<string, string> = {
+  CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: '${{ inputs.supplemental_release_asset_enabled }}',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT:
+    'ci.release-asset-publication-contract#supplementalAsset',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT:
+    '${{ inputs.supplemental_release_asset_owner_contract }}',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER: '.ci/scripts/ci-release-supplemental-asset.sh',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: '${{ inputs.supplemental_release_asset_implementation }}',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '${{ inputs.supplemental_release_asset_config_path }}',
+};
+
 const authoritySnapshotBinding = /^\$\{\{\s*(env|inputs)\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/;
 
 const parseAuthoritySnapshotSources = (sourcesJson: unknown): ValueMap | undefined => {
@@ -441,24 +452,13 @@ const validatePublicationControlSurface = (
     message: 'trusted publication requires request run IDs and the supplemental asset selection',
     settingLocation: publicationPath,
   });
-  const publicationRuns = workflowRunText(publication);
   if (!JSON.stringify(publication).includes('"name":"release-notes-handoff"')) add(report.missingSettings, {
     path: `${publicationPath}:jobs.authority.steps`,
     message: 'trusted publication must download release-notes-handoff',
     settingLocation: publicationPath,
   });
-  for (const token of [
-    'run-metadata/publication-request.json',
-    'authority/publication-request.json',
-  ]) {
-    if (!publicationRuns.includes(token)) add(report.missingSettings, {
-      path: `${publicationPath}:jobs.authority.steps`,
-      message: `trusted publication provenance check is missing: ${token}`,
-      settingLocation: publicationPath,
-    });
-  }
   const publicationControlOperations = workflowActionOperations(publication, 'actions/ci-release-publication-control');
-  for (const operation of ['verify-provenance', 'verify-approval']) {
+  for (const operation of ['verify-approval']) {
     if (!publicationControlOperations.includes(operation)) add(report.missingSettings, {
       path: `${publicationPath}:jobs`,
       message: `trusted publication is missing Action control operation: ${operation}`,
@@ -478,8 +478,8 @@ const validatePublicationControlSurface = (
     'github-token': '${{ github.token }}',
   };
   if (!standardAuthority || typeof standardAuthority.uses !== 'string'
-    || !standardAuthority.uses.includes('/actions/ci-release-authority@')
-    || standardAuthority.if !== "env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'"
+    || !/^a3-suite\/a3-ci-github\/actions\/ci-release-authority@[a-f0-9]{40}$/.test(standardAuthority.uses)
+    || standardAuthority.if !== undefined
     || standardAuthority.run !== undefined || standardAuthority['continue-on-error'] !== undefined
     || Object.entries(expectedAuthorityInputs).some(([key, value]) => map(standardAuthority.with)[key] !== value)) add(report.mismatches, {
     path: `${publicationPath}:jobs.authority.steps.authority`,
@@ -503,16 +503,7 @@ const validatePublicationControlSurface = (
     map(publication.env),
     report,
   );
-  const expectedSupplementalAssetSnapshot: Record<string, string> = {
-    CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: '${{ inputs.supplemental_release_asset_enabled }}',
-    CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT:
-      'ci.release-asset-publication-contract#supplementalAsset',
-    CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT:
-      '${{ inputs.supplemental_release_asset_owner_contract }}',
-    CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER: '.ci/scripts/ci-release-supplemental-asset.sh',
-    CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: '${{ inputs.supplemental_release_asset_implementation }}',
-    CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '${{ inputs.supplemental_release_asset_config_path }}',
-  };
+
   for (const [key, value] of Object.entries(expectedSupplementalAssetSnapshot)) {
     if (workflowSnapshot[key] !== value) add(report.mismatches, {
       path: `${publicationPath}:jobs.authority.steps.config.with.sources-json.workflow.${key}`,
@@ -569,6 +560,25 @@ const validateSupplementalAssemblyStep = (
     message: 'supplemental asset assembly must use the current adapter interface',
     settingLocation: publicationPath,
   });
+};
+
+export const supplementalOwnerAdapterEntrypoint = (publication: ValueMap): string | undefined => {
+  const jobs = map(publication.jobs);
+  const authority = map(jobs.authority);
+  const authoritySteps = Array.isArray(authority.steps) ? authority.steps.map(map) : [];
+  const config = authoritySteps.find(step => step.id === 'config');
+  if (typeof config?.uses !== 'string'
+    || !config.uses.startsWith('a3-suite/a3-ci-github/actions/ci-config-snapshot@')
+    || config.if !== undefined || config.run !== undefined || config['continue-on-error'] !== undefined
+    || map(config.with)['snapshot-path'] !== '${{ env.CI_CONFIG_SNAPSHOT_PATH }}') return undefined;
+  const snapshot = map(parseAuthoritySnapshotSources(map(config.with)['sources-json'])?.workflow);
+  if (Object.entries(expectedSupplementalAssetSnapshot).some(([key, value]) => snapshot[key] !== value)) return undefined;
+  // Reachability follows the selected Action inputs, not incidental snapshot text.
+  const report = createReport();
+  validateSupplementalBuildStep('publication', map(jobs.build), report);
+  validateSupplementalAssemblyStep('publication', map(jobs['supplemental-asset']), report);
+  if (report.mismatches.length || report.missingSettings.length) return undefined;
+  return expectedSupplementalAssetSnapshot.CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER;
 };
 
 const validateReleaseJobGraph = (

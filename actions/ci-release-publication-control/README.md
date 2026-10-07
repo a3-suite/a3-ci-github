@@ -7,3 +7,5 @@
 ## Explicit Release decision
 
 `release-version` and `target-identity` together create `ci.release-publication-request.v2`. The version is owner-selected and must match the stable tag. The verified default-branch dispatch authorizes these publication inputs; separate notes approval remains scoped to the exact body. An absent pair retains v1 for owner exception consumers. Standard `ci-release-authority` requires v2. Input/output details are defined in [action.yml](action.yml).
+
+`create-request` はownerが明示した `release-version` と `target-identity` を必須とし、`ci.release-publication-request.v2` だけを生成します。検証操作はrequest内の値を検証し、この2入力の再指定を要求しません。旧版・未知schema・不完全なowner decisionは拒否します。

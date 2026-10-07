@@ -1,6 +1,9 @@
 import path from 'node:path';
+import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
+import * as sourceVerification from '../runtime/repository/verify-action-packages.mjs';
 
 import { collectActions } from '../runtime/repository/check-action-dist.mjs';
 import {
@@ -11,6 +14,44 @@ import {
 } from '../runtime/repository/verify-action-packages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+describe('repository-cli-source-verification', () => {
+  describe('cliTypecheckPlan', () => {
+    // evidence_role: supplemental
+    // test_level: integration
+    // integration_id: repository-cli-source-verification
+    test('the CLI verification plan accepts valid sources and rejects type errors in every CLI source family', (t) => {
+      // Arrange
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const fixtureRoot = fs.mkdtempSync(path.join(parent, 'cli-typecheck-'));
+      t.onTestFinished(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
+      for (const config of ['tsconfig.action.json', 'tsconfig.cli.json']) {
+        fs.copyFileSync(path.join(root, config), path.join(fixtureRoot, config));
+      }
+      const sources = ['runtime/adapter/cli-runtime.ts', 'runtime/preset/validate-ci-preset.ts', 'runtime/distribution/generate-distribution-release.ts', 'runtime/installer/cli.ts'];
+      for (const source of sources) {
+        const filename = path.join(fixtureRoot, source);
+        fs.mkdirSync(path.dirname(filename), { recursive: true });
+        fs.writeFileSync(filename, 'export const value: string = "valid";\n');
+      }
+      const excluded = path.join(fixtureRoot, 'runtime/preset/tests/excluded.test.ts');
+      fs.mkdirSync(path.dirname(excluded), { recursive: true });
+      fs.writeFileSync(excluded, 'export const value: string = 7;\n');
+      const step = sourceVerification.cliTypecheckPlan(fixtureRoot, collectActionPackages(root))[0];
+      // Act
+      const valid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      for (const source of sources) fs.writeFileSync(path.join(fixtureRoot, source), 'export const value = (input) => input;\n');
+      const invalid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      // Assert
+      expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+      expect(invalid.status).not.toBe(0);
+      for (const source of sources) expect(invalid.stdout.replaceAll('\\', '/')).toContain(source);
+      expect(invalid.stdout).toContain('TS7006');
+      expect(step.args.some((argument) => argument === 'ci' || argument === 'build')).toBe(false);
+    });
+  });
+});
 
 describe("contract.repository-action-distribution.integrity", () => {
   describe("repository-action-source-verification", () => {
@@ -58,7 +99,7 @@ describe("action-package-verification", () => {
         phase: 'test',
       }, {
         command: '/node',
-        args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs'].map((file) => path.join(root, 'runtime/release-publication/tests', file))],
+        args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts'].map((file) => path.join(root, 'runtime/release-publication/tests', file))],
         cwd: path.join(root, 'actions/ci-release-assembly'),
         action: 'shared-release-publication',
         phase: 'test',

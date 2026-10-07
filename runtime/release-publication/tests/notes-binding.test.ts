@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
-import { validateReleaseNotesBinding } from '../../../runtime/release-publication/notes-binding.js';
+import { validateReleaseNotesBinding } from '../notes-binding.js';
 
 describe('validateReleaseNotesBinding(ReleaseNotesHandoff,ReleaseNotesApproval,string)', () => {
   // target_id: validateReleaseNotesBinding(ReleaseNotesHandoff,ReleaseNotesApproval,string)

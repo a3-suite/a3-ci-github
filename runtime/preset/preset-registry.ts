@@ -167,7 +167,7 @@ const isAdapterBundleShape = (value: unknown): value is ValueMap =>
   isMap(value)
   && typeof value.id === 'string'
   && isValidResourceSource(value.source)
-  && typeof value.targetDescriptor === 'string';
+  && (value.delivery === 'action' || value.delivery === undefined && typeof value.targetDescriptor === 'string');
 
 const collectApprovedProviderActionPins = (
   providerActions: ValueMap,
@@ -313,7 +313,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
             ? value.languageProfiles.filter((item: unknown): item is string => typeof item === 'string')
             : [],
           source: toResourceSource(map(value).source, commonSourceSkill),
-          targetDescriptor: String(map(value).targetDescriptor),
+          targetDescriptor: value.delivery === 'action' ? undefined : String(value.targetDescriptor),
           delivery: typeof value.delivery === 'string' ? value.delivery : undefined,
         }))
       : [],

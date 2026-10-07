@@ -22,10 +22,10 @@ inputs:
     description: Release tag identity.
   release-version:
     required: false
-    description: Owner-selected stable version. Together with target-identity creates a v2 Release decision; absent pair retains legacy v1.
+    description: Owner-selected stable version. Required for create-request; verification operations read it from the v2 request.
   target-identity:
     required: false
-    description: Owner-selected opaque publication target. Required together with release-version; no target is inferred.
+    description: Owner-selected opaque publication target. Required for create-request; verification operations read it from the v2 request. No target is inferred.
   release-notes:
     required: false
     description: Approved release notes body.
