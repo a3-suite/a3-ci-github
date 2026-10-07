@@ -32,7 +32,7 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/references/ci-distribution-assets.reference.yml` |
 | adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/references/ci-script-assets.reference.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
 | 配置・論理責務・投影 | physical structure: `{project-root}/sdd/dsl/designs/global/physical-structure.sdd.yml`、logical structure: `{project-root}/sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`、projection: `{project-root}/sdd/dsl/designs/scopes/repository/projection.sdd.yml` |
-| lintと検証ルールの選択 | project config: `{project-root}/a3-lint.yaml`からrule root・適用条件・例外を解決し、preflightと契約テストの検査範囲も照合 |
+| lintと検証ルールの選択 | CI資材の規則は `{project-root}/a3-lint.repository.yaml`、外部Skillの言語・Vitest規則は `{project-root}/a3-lint.yaml`からrule root・適用条件・例外を解決する。対象別profileと実行経路は `{project-root}/docs/maintenance/action-construction.md`を参照し、preflightと契約テストの検査範囲も照合 |
 | CLI入力条件 | CLI manifest: `{project-root}/sdd/dsl/specs/cli/cli-command-manifest.sdd.yml`から各commandを解決 |
 | 契約と検証証拠 | contract package: `{project-root}/sdd/dsl/specs/contract-core/contract-package.sdd.yml`、契約対象の実行定義: `{project-root}/tests/contract-subject-execution.json` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |

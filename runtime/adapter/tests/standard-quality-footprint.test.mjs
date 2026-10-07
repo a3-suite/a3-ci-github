@@ -27,8 +27,20 @@ describe("adapter-bundle-materialization-contract", () => {
         for (const profile of ['rust', 'python', 'typescript']) {
           const bundle = inventory.adapterBundles.find((item) => item.languageProfiles.includes(profile));
           expect(bundle, `unregistered standard profile: ${profile}`).toBeTruthy();
+          expect(bundle.targetDescriptor).toBeUndefined();
           const source = skillRoot ? path.join(skillRoot, bundle.source.skill, bundle.source.path) : undefined;
           const original = standardQualityBundle(bundle.id).descriptor;
+          for (const delivery of [undefined, 'copy']) {
+            const downgraded = structuredClone(inventory);
+            const entry = downgraded.adapterBundles.find((item) => item.id === bundle.id);
+            entry.delivery = delivery;
+            entry.targetDescriptor = '.ci/adapters/copied.yml';
+            const downgradedPath = path.join(fixture, `downgraded-${profile}-${String(delivery)}.json`);
+            fs.writeFileSync(downgradedPath, JSON.stringify(downgraded));
+            expect(() => materializeAdapterBundle({ inventoryPath: downgradedPath, bundleId: bundle.id, targetRoot: path.join(fixture, 'rejected') })).toThrow(/standard-delivery-required/);
+            expect(fs.existsSync(path.join(fixture, 'rejected'))).toBe(false);
+          }
+
           const ownerBefore = source ? fs.readFileSync(source, 'utf8') : undefined;
           const descriptor = yaml.parse(original);
           expect(descriptor.assets, `${profile} unexpectedly requires common scripts`).toStrictEqual([]);

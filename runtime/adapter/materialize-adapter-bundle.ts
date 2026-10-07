@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { pathsReferToSameFile } from '../path/same-file-core.mjs';
 import { isDirectExecution, resolveOutputPath } from './cli-runtime.ts';
-import { standardQualityBundle } from './standard-quality-bundles.js';
+import { isStandardQualityBundle, standardQualityBundle } from './standard-quality-bundles.js';
 
 type YamlDocument = { errors: unknown[]; toJS: () => unknown };
 type ResourceSource = string | { skill?: string; path: string };
@@ -17,7 +17,7 @@ type SourceAsset = {
 type BundleInventory = {
   id: string;
   source: ResourceSource;
-  targetDescriptor: string;
+  targetDescriptor?: string;
   delivery?: string;
 };
 
@@ -241,10 +241,11 @@ const findBundle = (value: unknown, bundleId: string): BundleInventory => {
   if (!isRecord(value) || !Array.isArray(value.adapterBundles)) throw new Error('adapter-materializer-inventory-invalid');
   const item = value.adapterBundles.find((candidate) => isRecord(candidate) && candidate.id === bundleId);
   if (!isRecord(item)) throw new Error(`adapter-materializer-bundle-not-found:${bundleId}`);
+  if (isStandardQualityBundle(item.id) && item.delivery !== 'action') throw new Error('adapter-materializer-standard-delivery-required');
   return {
     id: nonEmptyString(item.id, 'bundle-id'),
     source: parseResourceSource(item.source, 'bundle-source'),
-    targetDescriptor: nonEmptyString(item.targetDescriptor, 'target-descriptor'),
+    targetDescriptor: item.delivery === 'action' ? undefined : nonEmptyString(item.targetDescriptor, 'target-descriptor'),
     delivery: item.delivery === undefined ? undefined : nonEmptyString(item.delivery, 'delivery'),
   };
 };
@@ -392,7 +393,7 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       destination: asset.destination,
     });
   }
-  if (!bundle.targetDescriptor.startsWith('.ci/')) throw new Error(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
+  if (!bundle.targetDescriptor || !bundle.targetDescriptor.startsWith('.ci/')) throw new Error(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
   plan.push({ source: bundle.source, destination: bundle.targetDescriptor });
 
   const sourcePlan = plan.map((item) => {

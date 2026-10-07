@@ -45,14 +45,6 @@ contracts:
       common: [event-missing-or-mismatch, ref-missing-or-mismatch, source-sha-missing-or-mismatch, tag-missing-or-mismatch, digest-missing, event-identity-missing]
       manual: [version-missing-or-mismatch, body-missing, approval-missing-or-unproven, expiry-missing-or-expired]
       tag: [version-resolution-delegation-missing-or-invalid]
-  - id: release-notes-input-resolution-scripts
-    input:
-      common: [request-handoff, event]
-      tag: [approved-notes-handoff-identity, release-notes-handoff-files]
-      workflowDispatch: [release-notes, release-notes-approval]
-    output: [normalized-release-notes, normalized-release-notes-approval]
-    boundary: event別の入力選択と handoff 配置だけを行い、本文・承認 digest の結合検証は release-notes-binding へ委譲する。
-    stopConditions: [request-event-invalid, external-handoff-identity-missing, release-notes-missing, release-notes-approval-missing, normalized-input-write-failed]
   - id: release-authority-scripts
     input: [request-handoff, owner-contract, owner-contract-digest, config-snapshot, source-identity]
     standardReleaseInput:
@@ -68,7 +60,6 @@ contracts:
         scope: release-input-receiving-binding-only
         excludes: [branch-policy, version-policy, approval-principal-policy]
       sourceVersionVerification: optional-owner-selected-profile-validation
-      legacyV1: existing-api-and-artifact-owner-exception-path-only
       canonicalProducer: explicit-v2-inputs-required
 
     output: [authority-context, release-source-version-approval-binding, provider-publication-suitability-observation]
@@ -184,10 +175,10 @@ contracts:
     completionConditions: [complete-same-stop-success]
     stopConditions: [partial, different, unknown-permission-denied, availability-unknown, metadata-mismatch, checksum-mismatch, version-binding-mismatch, overwrite-request]
 ownershipBoundary:
-  ci: script ユースケース、処理契約の意味、共通契約
+  ci: 汎用 CI の目的選択、責務境界、信頼境界、実行効率。具体的な script 処理契約は所有しない。
   languageSkill: format、lint、test、build、package の具体 command
   projectOwner: metadata、availability、credential route、publish command、trusted control
-  providerSkill: 選択した provider の output、summary、artifact、権限、trigger の写像
+  providerSkill: 本 reference の script ユースケースと処理契約、および選択した provider の output、summary、artifact、権限、trigger の写像
   inventory: ci-script-assets が共通 asset の ID、kind、status、scope、owner、entrypoint、copyability を所有し、provider 固有 asset は選択した provider registry が所有する。
   catalog: ci-script-catalog が asset の使用方法、実行例、配置手順を所有する。catalog は inventory の機械情報を再定義しない。
 providerBoundary:

@@ -548,6 +548,12 @@ describe("workflow-contracts", () => {
       const callerPublish = jobBlock(caller, 'publish');
       assertNeeds(callerPublish, ['validate-request']);
       includesAll(callerPublish, [/contents: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
+      expect(yaml.parse(caller).jobs.publish.with).toMatchObject({
+        supplemental_release_asset_enabled: '<supplemental-release-asset-enabled>',
+        supplemental_release_asset_owner_contract: '<supplemental-release-asset-owner-contract>',
+        supplemental_release_asset_implementation: '<supplemental-release-asset-implementation>',
+        supplemental_release_asset_config_path: '<supplemental-release-asset-config-path>',
+      });
       const callerSummary = jobBlock(caller, 'summary');
       assertNeeds(callerSummary, ['validate-request', 'publish']);
       includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
@@ -562,7 +568,25 @@ describe("workflow-contracts", () => {
       const qualityVerification = qualitySteps.find(step => step.name === 'Verify trusted control checkout');
       expect(qualityCheckout.if).toBe("env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''");
       expect(qualityVerification.if).toBe(qualityCheckout.if);
-      includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify publication request workflow run/]);
+      includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify standard Release authority/]);
+      const provider = yaml.parse(publication);
+      for (const [jobId, actionId] of [
+        ['authority', 'ci-release-authority'], ['source-gate', 'ci-rust-source-gate'],
+        ['build', 'ci-rust-release-build'], ['assemble', 'ci-release-assembly'], ['publish', 'ci-release-publisher'],
+      ]) {
+        const step = provider.jobs[jobId].steps.find(item => item.uses === `a3-suite/a3-ci-github/actions/${actionId}@${actionRef}`);
+        expect(step, actionId).toBeDefined();
+        expect(step.if, actionId).toBeUndefined();
+        expect(step.run, actionId).toBeUndefined();
+      }
+      expect(publication).not.toMatch(/authority_owner|publish_owner|publication_notes|release_identity|CI_RELEASE_IMPLEMENTATION (?:==|!=)/);
+      expect(provider.jobs.authority.outputs).toMatchObject({
+        source_sha: '${{ steps.authority.outputs.source_sha }}',
+        version: '${{ steps.authority.outputs.version }}',
+        target_identity: '${{ steps.authority.outputs.target_identity }}',
+        approval_id: "${{ steps.authority.outputs['approval-id'] }}",
+        approval_body_sha256: "${{ steps.authority.outputs['body-sha256'] }}",
+      });
       const configuration = yaml.parse(publication).jobs.authority.steps.find(step => step.id === 'config');
       const sourcesTemplate = configuration.with['sources-json'];
       const runtimeKeys = [
@@ -640,9 +664,8 @@ describe("workflow-contracts", () => {
       expect(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish')).toBeTruthy();
       expect(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence')).toBeTruthy();
       expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/GH_TOKEN|CI_GITHUB_TOKEN/);
-      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, new RegExp(`ci-release-publisher@${actionRef}`), /if: env.CI_RELEASE_IMPLEMENTATION == 'rust-cli-release'/]);
+      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/, new RegExp(`ci-release-publisher@${actionRef}`)]);
       expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh|CI_GITHUB_TOKEN/);
-      includesAll(stepContaining(publicationJob, '- id: publish_owner'), [/if: env.CI_RELEASE_IMPLEMENTATION != 'rust-cli-release'/, /ci-release-publish\.sh/]);
       const publicationSummary = jobBlock(publication, 'summary');
       assertNeeds(publicationSummary, ['authority', 'source-gate', 'quality', 'build', 'supplemental-asset', 'assemble', 'publish']);
       includesAll(publicationSummary, [/if: always\(\)/, /ci-quality-summary@/]);

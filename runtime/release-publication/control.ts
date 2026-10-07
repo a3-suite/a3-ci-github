@@ -60,7 +60,7 @@ const createRequest = (input: ControlInput): ControlResult => {
   const bodySha256 = sha256(releaseNotes);
   if (bodySha256 !== approvedBodySha256) throw new Error('release notes do not match the approved body digest');
   const decision = publicationDecision(input);
-  const request = { schema: decision ? 'ci.release-publication-request.v2' : 'ci.release-publication-request.v1', ...decision, workflowRunId, workflowHeadSha, releaseRequestRunId, releaseIdentity, releaseNotesBodySha256: bodySha256, approvalId, approvalExpiresAt };
+  const request = { schema: 'ci.release-publication-request.v2', ...decision, workflowRunId, workflowHeadSha, releaseRequestRunId, releaseIdentity, releaseNotesBodySha256: bodySha256, approvalId, approvalExpiresAt };
   const requestDir = rootPath(input, 'release-publication-request');
   const notesDir = rootPath(input, 'release-notes-handoff');
   const json = `${JSON.stringify(request)}\n`;
@@ -77,8 +77,7 @@ const createRequest = (input: ControlInput): ControlResult => {
   return {};
 };
 
-const publicationDecision = (input: ControlInput): { releaseVersion: string; targetIdentity: string } | undefined => {
-  if (!input.releaseVersion && !input.targetIdentity) return undefined;
+const publicationDecision = (input: ControlInput): { releaseVersion: string; targetIdentity: string } => {
   const releaseVersion = scalar(input, 'releaseVersion');
   const targetIdentity = scalar(input, 'targetIdentity');
   if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(releaseVersion) || scalar(input, 'releaseIdentity') !== `v${releaseVersion}` || targetIdentity.length > 200) throw new Error('release-publication-decision-invalid');
@@ -88,12 +87,12 @@ const publicationDecision = (input: ControlInput): { releaseVersion: string; tar
 const verifyPublicationRequest = (input: ControlInput): ControlResult => {
   const request = JSON.parse(verifySidecar(input, 'release-publication-request', 'request.json', 'request.json.sha256').toString('utf8')) as Record<string, unknown>;
   const fields = ['workflowRunId', 'workflowHeadSha', 'releaseRequestRunId', 'releaseIdentity', 'releaseNotesBodySha256', 'approvalId', 'approvalExpiresAt'];
-  if (!['ci.release-publication-request.v1', 'ci.release-publication-request.v2'].includes(String(request.schema)) || fields.some((name) => typeof request[name] !== 'string' || !request[name])) throw new Error('request schema is invalid');
+  if (request.schema !== 'ci.release-publication-request.v2' || fields.some((name) => typeof request[name] !== 'string' || !request[name])) throw new Error('request schema is invalid');
   if (request.workflowRunId !== scalar(input, 'requestWorkflowRunId')) throw new Error('request run ID is not bound to workflow_run');
   if (request.workflowHeadSha !== scalar(input, 'requestHeadSha')) throw new Error('request head SHA is not bound to workflow_run');
   if (!/^[1-9][0-9]*$/.test(String(request.releaseRequestRunId))) throw new Error('release request run ID is invalid');
   if (!/^[a-f0-9]{64}$/.test(String(request.releaseNotesBodySha256))) throw new Error('release notes body digest is invalid');
-  if (request.schema === 'ci.release-publication-request.v2' && !publicationDecision(request as ControlInput)) throw new Error('release-publication-decision-invalid');
+  publicationDecision(request as ControlInput);
   return { requestRunId: String(request.releaseRequestRunId) };
 };
 
@@ -108,7 +107,7 @@ const verifyProvenance = (input: ControlInput): ControlResult => {
   const releaseRunId = scalar(input, 'releaseRequestRunId');
   const approvalId = scalar(input, 'approvalId');
   const approvedBodySha256 = scalar(input, 'approvalBodySha256');
-  if (!['ci.release-publication-request.v1', 'ci.release-publication-request.v2'].includes(publicationRequest.schema)) throw new Error('publication request schema is invalid');
+  if (publicationRequest.schema !== 'ci.release-publication-request.v2') throw new Error('publication request schema is invalid');
   if (publicationRequest.workflowRunId !== publicationRunId || publicationRequest.workflowRunId !== String(publicationRun.id)) throw new Error('publication request run ID mismatch');
   if (publicationRequest.workflowHeadSha !== publicationRun.head_sha) throw new Error('publication request head SHA mismatch');
   if (publicationRequest.releaseRequestRunId !== releaseRunId || releaseRequest.request_run_id !== releaseRunId) throw new Error('release request run ID mismatch');
@@ -119,7 +118,7 @@ const verifyProvenance = (input: ControlInput): ControlResult => {
   const releaseRunPath = typeof releaseRun.path === 'string' ? releaseRun.path.split('@', 1)[0] : '';
   if (releaseRun.name !== expectedName || releaseRunPath !== expectedPath || releaseRun.event !== 'push') throw new Error('release request workflow provenance is invalid');
   if (releaseRequest.ref !== `refs/tags/${releaseRequest.tag}` || releaseRun.head_sha !== releaseRequest.source_sha) throw new Error('tag request source provenance is invalid');
-  if (publicationRequest.schema === 'ci.release-publication-request.v2' && !publicationDecision(publicationRequest as ControlInput)) throw new Error('release-publication-decision-invalid');
+  publicationDecision(publicationRequest as ControlInput);
   const body = notes.body;
   if (notes.schema !== 'ci.release-notes.v1' || notes.source_contract !== 'git.release-flow' || notes.source_field !== 'body' || typeof body !== 'string' || !body) throw new Error('release notes schema is invalid');
   const bodySha256 = sha256(body);
@@ -133,6 +132,8 @@ const verifyProvenance = (input: ControlInput): ControlResult => {
 
 const verifyApproval = (input: ControlInput): ControlResult => {
   const request = readJson(rootPath(input, 'authority/publication-request.json'));
+  if (request.schema !== 'ci.release-publication-request.v2') throw new Error('publication request schema is invalid');
+  publicationDecision(request as ControlInput);
   parseFutureRfc3339(request.approvalExpiresAt);
   if (request.approvalId !== scalar(input, 'approvalId')) throw new Error('approval ID changed before publication');
   if (request.releaseNotesBodySha256 !== scalar(input, 'approvalBodySha256')) throw new Error('approved body digest changed before publication');
