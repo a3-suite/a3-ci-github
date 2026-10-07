@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { isStandardQualityBundle } from '../adapter/standard-quality-bundles.ts';
 import path from 'node:path';
 import { add } from './validation-report.ts';
 import { isMap, map, strings } from './preset-model.ts';
@@ -61,6 +62,10 @@ const validateDescriptor = (
     return destinations;
   }
   const descriptor = map(parseYaml(providedContent ?? fs.readFileSync(absolute, 'utf8'), descriptorPath, report));
+  if (providedContent === undefined && isStandardQualityBundle(descriptor.id)) {
+    add(report.mismatches, { path: descriptorPath, message: 'standard quality bundle must use the Action bundle ID', settingLocation: descriptorPath });
+    return destinations;
+  }
   const exact: Array<[string, unknown, unknown]> = [
     ['schemaVersion', descriptor.schemaVersion, '1'],
     ['kind', descriptor.kind, 'ci-adapter-bundle'],

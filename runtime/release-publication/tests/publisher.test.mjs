@@ -14,7 +14,7 @@ const setup = async (t, changes = {}) => {
   const beforePath = f.put('before.json', before);
   f.put('release-notes.json', { schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body: 'approved notes', body_sha256: f.identity.body_sha256 });
   f.put('release-notes-approval.json', { schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body_sha256: f.identity.body_sha256, approval_id: 'approved-1' });
-  f.put('publication-request.json', { approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 });
+  f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', releaseVersion: f.identity.version, targetIdentity: f.identity.target_identity, approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 });
   const writes = [];
   let created = false;
   const after = remoteClient(f, assembly).client;
@@ -58,8 +58,14 @@ describe("publisher", () => {
   describe("publisher", () => {
     test('publisher rejects invalid approval, handoff and pre-observation before writes', async (t) => {
       for (const mutation of [
-        ({ f }) => f.put('publication-request.json', { approvalId: 'approved-1', approvalExpiresAt: '2000-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 }),
+        ({ f }) => f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', releaseVersion: f.identity.version, targetIdentity: f.identity.target_identity, approvalId: 'approved-1', approvalExpiresAt: '2000-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 }),
         ({ f }) => f.put('release-notes.json', { body: 'unapproved' }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), schema: 'ci.release-publication-request.v1' }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), schema: 'unknown' }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), schema: undefined }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), releaseVersion: undefined }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), targetIdentity: undefined }),
+        ({ f }) => f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'))), releaseVersion: '9.9.9' }),
         ({ f }) => f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256, releaseVersion: f.identity.version, targetIdentity: 'different-target' }),
         ({ f, options }) => f.put('before.json', { ...JSON.parse(fs.readFileSync(options.beforePath)), handoff_digest: 'f'.repeat(64) }),
         ({ f }) => f.put(`handoff/assets/${f.name}`, 'changed'),

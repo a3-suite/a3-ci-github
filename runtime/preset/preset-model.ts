@@ -44,7 +44,7 @@ export type AdapterBundle = {
   id: string;
   languageProfiles: string[];
   source: ResourceSource;
-  targetDescriptor: string;
+  targetDescriptor?: string;
   delivery?: string;
 };
 export type AssetLockContract = { path: string; schemaVersion: string; kind: string };

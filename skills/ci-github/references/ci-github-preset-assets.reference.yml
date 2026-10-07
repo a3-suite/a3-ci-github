@@ -195,14 +195,6 @@ actionization:
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts.output
       providerMapping: workflow-summary
-    - id: ci-workflow-identity
-      status: available
-      actionPath: actions/ci-workflow-identity
-      workflows: []
-      trust: read-only
-      privilegedJobs: []
-      ciContract: ci.script-contracts#commonContract
-      providerMapping: release-workflow-identity
     - id: ci-config-snapshot
       status: available
       actionPath: actions/ci-config-snapshot
@@ -227,14 +219,6 @@ actionization:
       privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#contracts.handoff-integrity-scripts
       providerMapping: artifact-handoff-verification
-    - id: ci-release-notes-binding
-      status: available
-      actionPath: actions/ci-release-notes-binding
-      workflows: [release-publication]
-      trust: read-only
-      privilegedJobs: []
-      ciContract: ci.script-contracts#contracts.release-publication-scripts
-      providerMapping: approved-release-notes
     - id: ci-publish-version
       status: available
       actionPath: actions/ci-publish-version
@@ -259,14 +243,6 @@ actionization:
       privilegedJobs: [release-request-tag/request]
       ciContract: ci.script-contracts#contracts.request-handoff-scripts
       providerMapping: release-request-artifact
-    - id: ci-release-notes-input-resolution
-      status: available
-      actionPath: actions/ci-release-notes-input-resolution
-      workflows: [release-publication]
-      trust: read-only
-      privilegedJobs: []
-      ciContract: ci.script-contracts#contracts.release-notes-input-resolution-scripts
-      providerMapping: release-notes-handoff-resolution
     - id: ci-platform-matrix
       status: available
       actionPath: actions/ci-platform-matrix
@@ -352,7 +328,12 @@ actionization:
     activation: exact-release-tag-and-peeled-full-sha-confirmed
     deployment: forbidden-until-available
   retiredProjectEntrypoints:
-    release-publication: [.ci/trusted/ci-release-assemble.sh]
+    release-publication:
+      - .ci/trusted/ci-release-authority.sh
+      - .ci/scripts/ci-source-gate.sh
+      - .ci/scripts/ci-release-build.sh
+      - .ci/trusted/ci-release-assemble.sh
+      - .ci/trusted/ci-release-publish.sh
   standardImplementations:
     - id: rust-cli-release
       languageProfiles: [rust]

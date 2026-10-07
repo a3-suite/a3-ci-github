@@ -36,8 +36,6 @@ subject_scopes:
     path: subjects/ci-release-publication-verifier/
   - subject_id: subject.ci.quality-summary
     path: subjects/ci-quality-summary/
-  - subject_id: subject.ci.release-notes-binding
-    path: subjects/ci-release-notes-binding/
   - subject_id: subject.ci.annotated-tag-resolver
     path: subjects/ci-annotated-tag-resolver/
   - subject_id: subject.ci.release-request-handoff
@@ -48,14 +46,10 @@ subject_scopes:
     path: subjects/ci-package-publication-request/
   - subject_id: subject.ci.quality-adapter
     path: subjects/ci-quality-adapter/
-  - subject_id: subject.ci.release-notes-input-resolution
-    path: subjects/ci-release-notes-input-resolution/
   - subject_id: subject.ci.publish-version
     path: subjects/ci-publish-version/
   - subject_id: subject.ci.vitest-summary
     path: subjects/ci-vitest-summary/
-  - subject_id: subject.ci.workflow-identity
-    path: subjects/ci-workflow-identity/
   - subject_id: subject.ci.quality-workflow
     path: subjects/ci-quality-workflow/
   - subject_id: subject.ci.release-request-workflow

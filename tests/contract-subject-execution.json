@@ -34,10 +34,21 @@
       },
       "segments": [
         {
-          "id": "unit",
+          "id": "unit-source",
           "level": "unit",
-          "status": "excluded",
-          "reason": "Local authority evidence uses actual components and fake GET-only provider responses; Hosted execution is separate."
+          "cwd": "runtime/release-publication",
+          "tests": [
+            "tests/notes-binding.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "notes-binding.ts"
+            ],
+            "exclude": []
+          }
         },
         {
           "id": "integration-source-entrypoint",
@@ -1208,164 +1219,6 @@
       ]
     },
     {
-      "subjectId": "subject.ci.release-notes-binding",
-      "build": {
-        "cwd": "actions/ci-release-notes-binding",
-        "command": [
-          "npm",
-          "run",
-          "build"
-        ]
-      },
-      "segments": [
-        {
-          "id": "unit-source",
-          "level": "unit",
-          "cwd": "actions/ci-release-notes-binding",
-          "tests": [
-            "tests/binding.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "../../runtime/release-publication/notes-binding.ts"
-            ],
-            "exclude": [
-              "dist/**"
-            ]
-          }
-        },
-        {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
-          "cwd": "actions/ci-release-notes-binding",
-          "tests": [
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/index.ts"
-            ],
-            "exclude": []
-          }
-        },
-        {
-          "id": "integration-bundle",
-          "level": "integration",
-          "cwd": "actions/ci-release-notes-binding",
-          "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": false,
-            "scope": "dist",
-            "include": [
-              "dist/**/*.js"
-            ],
-            "exclude": [
-              "src/**"
-            ],
-            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
-          }
-        },
-        {
-          "id": "e2e",
-          "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
-        }
-      ]
-    },
-    {
-      "subjectId": "subject.ci.release-notes-input-resolution",
-      "build": {
-        "cwd": "actions/ci-release-notes-input-resolution",
-        "command": [
-          "npm",
-          "run",
-          "build"
-        ]
-      },
-      "segments": [
-        {
-          "id": "unit",
-          "level": "unit",
-          "status": "excluded",
-          "reason": "The source behavior resolves and copies filesystem-backed handoffs; no isolated unit test surface is declared."
-        },
-        {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
-          "cwd": "actions/ci-release-notes-input-resolution",
-          "tests": [
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/index.ts"
-            ],
-            "exclude": []
-          }
-        },
-        {
-          "id": "integration-source",
-          "level": "integration",
-          "cwd": "actions/ci-release-notes-input-resolution",
-          "tests": [
-            "tests/resolution.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/**/*.ts"
-            ],
-            "exclude": [
-              "dist/**"
-            ]
-          }
-        },
-        {
-          "id": "integration-bundle",
-          "level": "integration",
-          "cwd": "actions/ci-release-notes-input-resolution",
-          "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": false,
-            "scope": "dist",
-            "include": [
-              "dist/**/*.js"
-            ],
-            "exclude": [
-              "src/**"
-            ],
-            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
-          }
-        },
-        {
-          "id": "e2e",
-          "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
-        }
-      ]
-    },
-    {
       "subjectId": "subject.ci.release-request-handoff",
       "build": {
         "cwd": "actions/ci-release-request-handoff",
@@ -1910,82 +1763,6 @@
           "level": "e2e",
           "status": "excluded",
           "reason": "No external system flow is defined for this Action."
-        }
-      ]
-    },
-    {
-      "subjectId": "subject.ci.workflow-identity",
-      "build": {
-        "cwd": "actions/ci-workflow-identity",
-        "command": [
-          "npm",
-          "run",
-          "build"
-        ]
-      },
-      "segments": [
-        {
-          "id": "unit-source",
-          "level": "unit",
-          "cwd": "actions/ci-workflow-identity",
-          "tests": [
-            "tests/identity.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/**/*.ts"
-            ],
-            "exclude": [
-              "dist/**"
-            ]
-          }
-        },
-        {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
-          "cwd": "actions/ci-workflow-identity",
-          "tests": [
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/index.ts"
-            ],
-            "exclude": []
-          }
-        },
-        {
-          "id": "integration-bundle",
-          "level": "integration",
-          "cwd": "actions/ci-workflow-identity",
-          "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": false,
-            "scope": "dist",
-            "include": [
-              "dist/**/*.js"
-            ],
-            "exclude": [
-              "src/**"
-            ],
-            "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
-          }
-        },
-        {
-          "id": "e2e",
-          "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted reusable-workflow identity is observed by the GitHub workflow; no external system flow is defined for local contract-subject execution."
         }
       ]
     },

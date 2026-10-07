@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.action.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "runtime/adapter/*.ts",
+    "runtime/preset/*.ts",
+    "runtime/distribution/*.ts",
+    "runtime/installer/cli.ts"
+  ]
+}

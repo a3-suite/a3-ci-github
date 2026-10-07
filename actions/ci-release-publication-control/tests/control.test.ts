@@ -20,7 +20,7 @@ describe('ci-release-publication-control-source', () => {
     const rootDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-'));
     t.onTestFinished(() => fs.rmSync(rootDirectory, { recursive: true, force: true }));
     const releaseNotes = '# Release\n';
-    const common = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: crypto.createHash('sha256').update(releaseNotes).digest('hex') };
+    const common = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: crypto.createHash('sha256').update(releaseNotes).digest('hex') };
     runControl(common);
 
     // Act
@@ -28,6 +28,7 @@ describe('ci-release-publication-control-source', () => {
 
     // Assert
     expect(result.requestRunId).toBe('11');
+    expect(JSON.parse(fs.readFileSync(path.join(rootDirectory, 'release-publication-request/request.json'), 'utf8'))).toMatchObject({ schema: 'ci.release-publication-request.v2', releaseVersion: '1.2.3', targetIdentity: 'owner/project' });
 
     // Arrange
     const files = ['release-publication-request/request.json', 'release-publication-request/request.json.sha256', 'release-notes-handoff/release-notes.json', 'release-notes-handoff/release-notes-approval.json'];
@@ -76,7 +77,7 @@ describe('ci-release-publication-control-source', () => {
     const rootDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-provenance-'));
     const releaseNotes = '# Release\n';
     const bodyDigest = crypto.createHash('sha256').update(releaseNotes).digest('hex');
-    const common = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: bodyDigest };
+    const common = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: bodyDigest };
     runControl(common);
     writeJsonWithSidecar(path.join(rootDirectory, 'release-request'), 'release-request.json', { schema: 'ci.release-request.v1', event: 'tag', ref: 'refs/tags/v1.2.3', source_sha: 'b'.repeat(40), request_run_id: '11', tag: 'v1.2.3' });
     fs.mkdirSync(path.join(rootDirectory, 'run-metadata'));
@@ -84,7 +85,7 @@ describe('ci-release-publication-control-source', () => {
     fs.writeFileSync(path.join(rootDirectory, 'run-metadata/release-request.json'), JSON.stringify({ id: 11, head_sha: 'b'.repeat(40), name: 'release-request-tag', path: '.github/workflows/release-request-tag.yml@refs/heads/main', event: 'push' }));
     runControl({ ...common, operation: 'verify-provenance', publicationRequestRunId: '22', releaseRequestTagWorkflowName: 'release-request-tag', releaseRequestTagWorkflowPath: '.github/workflows/release-request-tag.yml' });
     fs.mkdirSync(path.join(rootDirectory, 'authority'));
-    fs.writeFileSync(path.join(rootDirectory, 'authority/publication-request.json'), JSON.stringify({ approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', releaseNotesBodySha256: bodyDigest }));
+    fs.writeFileSync(path.join(rootDirectory, 'authority/publication-request.json'), JSON.stringify({ schema: 'ci.release-publication-request.v2', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseIdentity: 'v1.2.3', approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', releaseNotesBodySha256: bodyDigest }));
     runControl({ ...common, operation: 'verify-approval' });
     let failure: unknown;
 
@@ -105,8 +106,11 @@ describe('ci-release-publication-control-source', () => {
     // Arrange
     const rootDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-invalid-'));
     const releaseNotes = '# Release\n';
-    const valid = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: crypto.createHash('sha256').update(releaseNotes).digest('hex') };
+    const valid = { rootDirectory, operation: 'create-request', releaseRequestRunId: '11', requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40), releaseIdentity: 'v1.2.3', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseNotes, approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z', approvalBodySha256: crypto.createHash('sha256').update(releaseNotes).digest('hex') };
     const cases: [Record<string, string>, RegExp][] = [
+      [{ ...valid, releaseVersion: '' }, /releaseVersion-invalid/],
+      [{ ...valid, targetIdentity: '' }, /targetIdentity-invalid/],
+      [{ ...valid, releaseVersion: '1.2.4' }, /decision-invalid/],
       [{ ...valid, operation: 'unknown' }, /operation-invalid/],
       [{ ...valid, releaseRequestRunId: '0' }, /positive integers/],
       [{ ...valid, requestWorkflowRunId: 'x' }, /positive integers/],
@@ -127,4 +131,22 @@ describe('ci-release-publication-control-source', () => {
     failures.forEach((failure, index) => expect(String(failure)).toMatch(cases[index][1]));
     fs.rmSync(rootDirectory, { recursive: true, force: true });
   });
+  // integration_id: ci-release-publication-control-source
+  // contract_id: contract.ci-release-publication-control.outputs
+  test('rejects publication requests without a v2 owner decision', (t) => {
+    // Arrange
+    const rootDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-schema-'));
+    t.onTestFinished(() => fs.rmSync(rootDirectory, { recursive: true, force: true }));
+    const request = { schema: 'ci.release-publication-request.v2', workflowRunId: '22', workflowHeadSha: 'a'.repeat(40), releaseRequestRunId: '11', releaseIdentity: 'v1.2.3', releaseVersion: '1.2.3', targetIdentity: 'owner/project', releaseNotesBodySha256: 'b'.repeat(64), approvalId: 'approval-1', approvalExpiresAt: '2999-01-01T00:00:00Z' };
+    const mutations = [{ schema: 'ci.release-publication-request.v1' }, { schema: 'unknown' }, { schema: undefined }, { releaseVersion: '' }, { targetIdentity: '' }, { releaseVersion: '1.2.4' }];
+    for (const mutation of mutations) {
+      writeJsonWithSidecar(path.join(rootDirectory, 'release-publication-request'), 'request.json', { ...request, ...mutation });
+      fs.mkdirSync(path.join(rootDirectory, 'authority'), { recursive: true });
+      fs.writeFileSync(path.join(rootDirectory, 'authority/publication-request.json'), JSON.stringify({ ...request, ...mutation }));
+      // Act / Assert
+      expect(() => runControl({ operation: 'verify-publication-request', rootDirectory, requestWorkflowRunId: '22', requestHeadSha: 'a'.repeat(40) })).toThrow();
+      expect(() => runControl({ operation: 'verify-approval', rootDirectory, approvalId: 'approval-1', approvalBodySha256: 'b'.repeat(64) })).toThrow();
+    }
+  });
+
 });

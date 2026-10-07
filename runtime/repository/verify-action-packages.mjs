@@ -3,6 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 import { collectActions } from './check-action-dist.mjs';
@@ -62,6 +63,18 @@ export const verificationPlan = (packages, nodePath = process.execPath) => packa
   ];
 });
 
+export const cliTypecheckPlan = (root, packages, nodePath = process.execPath) => {
+  const require = createRequire(path.join(packages[0].path, 'package.json'));
+  const typesRoot = path.dirname(path.dirname(require.resolve('@types/node/package.json')));
+  return [{
+    command: nodePath,
+    args: [require.resolve('typescript/bin/tsc'), '--project', path.join(root, 'tsconfig.cli.json'), '--typeRoots', typesRoot],
+    cwd: root,
+    action: 'public-cli',
+    phase: 'typecheck',
+  }];
+};
+
 export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath) => {
   const actionRoot = path.join(root, 'actions/ci-gh-provisioner');
   const testPath = path.join(root, 'runtime/provisioner/tests/provision-core.test.ts');
@@ -69,7 +82,7 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
     throw new Error('shared provisioner verification dependencies are missing');
   }
   const releaseRoot = path.join(root, 'actions/ci-release-assembly');
-  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
+  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
   if (!existsSync(path.join(root, 'node_modules/vitest')) || releaseTests.some((file) => !existsSync(file))) {
     throw new Error('shared release publication verification dependencies are missing');
   }
@@ -112,6 +125,7 @@ export const verifyActionPackages = (root = defaultRoot) => {
   assertRuntimeBoundaries(root, packages);
   const plan = [
     ...verificationPlan(packages),
+    ...cliTypecheckPlan(root, packages),
     ...sharedRuntimeVerificationPlan(root),
   ];
   runVerificationPlan(plan);

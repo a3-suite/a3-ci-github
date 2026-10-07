@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-publication-control
 contracts:
   - id: contract.ci-release-publication-control.outputs
-    summary: A publication control operation exposes its completion status and verified request identity.
+    summary: Publication control accepts only ci.release-publication-request.v2 with explicit owner version and target; create-request requires those inputs, and verification reads them from the request. Expose completion status and verified request identity.
     conditions:
       - id: publication-operation-present
         input_predicate:
@@ -60,6 +60,6 @@ contracts:
           - publication-control-status-produced
           - publication-request-run-id-produced
       - id: publication-control-rejected
-        goal: Publication control fails when approval or provenance no longer matches the verified request.
+        goal: Publication control fails on unsupported request schema, missing or invalid owner decision, or approval/provenance mismatch.
         guarantee_refs:
           - publication-control-failure-propagated

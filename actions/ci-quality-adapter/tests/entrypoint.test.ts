@@ -46,6 +46,23 @@ test('entrypoint emits status and result path', () => {
 
 // contract_id: contract.ci-quality-adapter.outputs
 // integration_id: ci-quality-adapter-standard-selection
+test('entrypoint rejects a standard bundle supplied through a local descriptor', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-local-standard-'));
+  try {
+    for (const id of ['rust-cargo-quality', 'python-uv-quality', 'typescript-npm-quality']) {
+      // Act
+      const run = runAction(root, descriptor().replace('id: node-quality', `id: ${id}`));
+      // Assert
+      expect(run.result.status).not.toBe(0);
+      expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-id-requires-action-bundle/);
+      expect(fs.existsSync(run.resultPath)).toBe(false);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// integration_id: ci-quality-adapter-standard-selection
 test('entrypoint rejects simultaneous standard ID and descriptor before execution', () => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {

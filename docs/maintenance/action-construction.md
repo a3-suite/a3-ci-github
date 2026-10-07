@@ -52,6 +52,17 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
 
+### pending の再利用workflowをHosted受入する
+
+正式なconsumer導入と、利用可能化のための受入試験を分けます。pending中は通常のconfigure・lock生成を成功させません。受入では、隔離した試験用callerから候補calleeの確定SHAを直接呼び出します。registryを一時的にavailableへ変える操作や、preflightの拒否を無視して本番へ配備する操作は行いません。
+
+1. **対象を確定する。** registryの選択した再利用workflow bindingを読み、provider内部のpin検証済みcalleeと、その公開済みexact tagのpeeled full SHAを選びます。受入callerの`jobs.<job>.uses`はそのfull SHAへ置換します。別SHAのrunは対象の受入証拠にしません。
+2. **受入vehicleを準備する。** 明示的に承認された隔離staging repository、または既存consumerの試験専用環境を使います。該当canonical callerを基にproject固有の静的設定と必要な製品ソース・宣言だけを用意し、provider callee・共通runtime・builderはコピーしません。publicationのcallerはdefault branch上のrequest・callerと検証済みhandoffを要求するため、任意のfeature branchからの直接実行で代替しません。公開先・credential・承認経路は試験用ownerが指定し、本番公開経路と混在させません。各試験条件はregistryの当該bindingと[テスト戦略](test-strategy.md)から選びます。
+3. **実行と証拠を対応付ける。** 実際のcalleeを呼ぶHosted runで、選択したbindingが要求する正常・失敗経路と出力を確認します。run URL、callerのrepository/ref、呼び出したcallee SHA、exact tagとの対応、試験条件・結果、関連handoff/readbackを`logs/agents/{yyyyMMdd}/{yyyyMMdd_HHmmss}_reusable-workflow-acceptance.md`へ記録します。複数bindingの証拠を混同せず、未実施の条件は未実施として残します。静的検証や別SHAの成功では補いません。
+4. **接続側を更新する。** registryのactivation条件を満たしたbindingだけ、その状態とexactRefを更新し、対応するcanonical callerのworkflow placeholderを同じSHAへ置換します。canonical mapping・preflight・配布閉包を検証して接続側の修正版を公開し、その版から通常のconsumer configure・lock生成へ進みます。未受入のbindingはpendingのまま残します。
+
+Hosted実行・試験環境への書き込み・registry activation・修正版公開は、ローカル修正とは別の工程です。既存のRelease公開を取り消すことや、利用projectが現れるまでprovider Releaseを待つことは、この受入手順の前提にしません。
+
 ## runtime の利用形態
 
 `runtime/` の配置だけで実行前提を一律に決めません。
@@ -92,7 +103,7 @@ a3-lint lint actions --config a3-lint.repository.yaml --lang yaml --framework an
 
 1. SDD の subject、observation、guarantee、verification、test map と契約対象別実行定義を接続。
 2. 型検査、処理の正常系・停止条件、公開 entrypoint の出力と失敗伝播を検証。
-3. `runtime/repository/verify-action-packages.mjs` で標準 package 構成と source 検証を確認。
+3. `runtime/repository/verify-action-packages.mjs` で標準 package 構成、Action の source 検証と公開 CLI の strict 型検査を確認。CLI の対象は `tsconfig.cli.json` とし、復元済み Action の compiler・Node 型定義を再利用する。
 4. `runtime/repository/check-action-dist.mjs` で配布物再生成・一致を確認。
 5. workflow を変更した場合は canonical mapping・registry・preflight・配布閉包も確認。
 

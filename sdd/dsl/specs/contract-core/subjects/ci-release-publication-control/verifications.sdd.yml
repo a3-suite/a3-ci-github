@@ -22,3 +22,20 @@ verifications:
         checks:
           - id: check-publication-control-failure-status
             guarantee_ref: publication-control-failure-propagated
+      - id: owner-decision-required
+        intent_id: publication-control-rejected
+        input:
+          operation: create-request
+          release-version: ""
+          target-identity: ""
+        checks:
+          - id: check-publication-control-failure-status
+            guarantee_ref: publication-control-failure-propagated
+      - id: unsupported-publication-request-rejected
+        intent_id: publication-control-rejected
+        input:
+          operation: verify-publication-request
+          schema: ci.release-publication-request.v1
+        checks:
+          - id: check-publication-control-failure-status
+            guarantee_ref: publication-control-failure-propagated

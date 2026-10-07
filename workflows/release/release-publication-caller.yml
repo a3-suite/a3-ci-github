@@ -89,6 +89,8 @@ jobs:
       publication_request_run_id: ${{ github.event.workflow_run.id }}
       supplemental_release_asset_enabled: <supplemental-release-asset-enabled>
       supplemental_release_asset_owner_contract: <supplemental-release-asset-owner-contract>
+      supplemental_release_asset_implementation: <supplemental-release-asset-implementation>
+      supplemental_release_asset_config_path: <supplemental-release-asset-config-path>
 
   summary:
     needs: [validate-request, publish]

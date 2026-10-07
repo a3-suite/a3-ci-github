@@ -143,19 +143,6 @@ routes:
       contract_id: contract.ci-quality-summary.outputs
     hops:
       - component_id: action-contracts
-  - route_id: action-contracts-release-notes-binding
-    contract_ref:
-      subject_ref: subject.ci.release-notes-binding
-      contract_id: contract.ci-release-notes-binding.outputs
-    hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
-  - route_id: action-contracts-release-notes-input-resolution
-    contract_ref:
-      subject_ref: subject.ci.release-notes-input-resolution
-      contract_id: contract.ci-release-notes-input-resolution.outputs
-    hops:
-      - component_id: action-contracts
   - route_id: action-contracts-release-request-handoff
     contract_ref:
       subject_ref: subject.ci.release-request-handoff
@@ -179,12 +166,6 @@ routes:
     contract_ref:
       subject_ref: subject.ci.quality-adapter
       contract_id: contract.ci-quality-adapter.outputs
-    hops:
-      - component_id: action-contracts
-  - route_id: action-contracts-workflow-identity
-    contract_ref:
-      subject_ref: subject.ci.workflow-identity
-      contract_id: contract.ci-workflow-identity.verify
     hops:
       - component_id: action-contracts
   - route_id: action-contracts-vitest-summary
