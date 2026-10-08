@@ -6,7 +6,7 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 
 ## 対応版
 
-このガイドの生成・適用経路は、**v0.3.0以降のexact Release**を対象とする。fetch CLI、manifest、`SHA256SUMS`は同じexact Releaseから取得する。対象Releaseが未公開の場合は、公開後に取得して導入を開始する。
+このガイドの生成・適用経路は、**v0.2.7以降のexact Release**を対象とする。fetch CLI、manifest、`SHA256SUMS`は同じexact Releaseから取得する。対象Releaseが未公開の場合は、公開後に取得して導入を開始する。
 
 v0.2.6はschema `2`と利用可能なreusable workflowを導入した版だが、pin companionの自動生成・lock管理・完全検証と、旧distributionがない場合の分類診断には対応していない。schema `2`であることだけでは本ガイドの対応版条件を満たさない。
 
