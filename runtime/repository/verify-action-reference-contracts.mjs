@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { qualityAdapterDescriptor, publicationRequestInputs } from '../../tests/support/action-reference-fixtures.mjs';
+import { qualityAdapterDescriptor, publicationRequestInputs } from './action-reference-fixtures.mjs';
 
 export function verifyActionReferenceContracts(root, references, snapshot) {
   mkdirSync(path.join(root, 'tmp'), { recursive: true });

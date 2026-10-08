@@ -52,7 +52,7 @@
 - provider Action の実行参照は registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。
 - registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）を適用時に生成して配置し、project は workflow の実行参照を同 file の承認値と照合する。companion は registry の射影であり独自編集しない。適用・更新時は採用した registry の射影と一致することを確認する。
-- 照合は preset の適用時（placeholder 置換）と適用後の検証時に必須とする。preflight は canonical と registry を入力に取るため、companion と registry の射影の一致、および配置済み workflow の実行参照との一致を検証対象に含められる（実装は検証ツールの責務）。
+- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
 - upstream がランタイムのサポート終了や移行を通知した場合（例: Node.js ランタイムの deprecation 警告）は、registry と consumer の pin を同一変更で更新し、`## 更新と停止条件` の追跡項目へ記録する。
 - registry に無い provider Action、または `approvedRuntimes` 外の runtime を実行参照にした場合は、`## 更新と停止条件` に従って workflow の追加・更新・publish を進めない。
 - registry の availability gate を満たす `available` の Action だけを workflow へ接続する。Hosted 実行は別の運用証拠として扱う。
@@ -63,7 +63,7 @@
 - trust boundary と version の判断を混ぜない。安全な runner でも version が未指定なら不適合であり、version が固定されても untrusted input を安全に実行できる証拠にはならない。
 
 ## テンプレートと例外
-- 配布テンプレートにある `<commit-sha>`、`<protected-branch>` などの placeholder と `ubuntu-latest` の例示値は、テンプレートの利用者が project の正本に置換するための入力である。配置後の workflow に残してはならない。
+- 配布templateのplaceholderは共通生成処理の入力である。製品設定を導入時に渡し、固定参照は配布元のmanifestとregistryから解決する。利用者はplaceholderを手動置換せず、生成済みcallerを設定の正本として読み返す。配置後のworkflowにplaceholderを残してはならない。
 - workflow `workflow_dispatch` の入力で runtime や runner を選ぶ場合は、repository 内でレビュー済みの allowlist へ写像し、入力値を `runs-on`、`uses`、download URL、shell source として直接再解釈しない。privileged workflow では trusted CI control が解決した値だけを受け取る。
 - provider 処理が利用する `gh`、`jq`、`sha256sum` は workflow 初期パラメータで exact version を固定し、固定 SHA の toolchain verifier Action で実行前に検証する。
 - `jq` は固定 SHA の `ci-jq-provisioner` Action で指定版を供給してから検証する。Action は jqlang/jq の該当 Release の取得物を同 Release の `sha256sum.txt` と照合し、検証済みの実行ファイルを `GITHUB_PATH` へ追加する。供給失敗は `jq-provision-failed`、供給後の版不一致は verifier の `jq-version-mismatch` で区別する。標準 publication 経路では runner trust policy の入口成功条件と制御checkout照合を満たしてから供給する。

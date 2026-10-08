@@ -89,7 +89,7 @@ contracts:
           - selective-distribution-assets-exposed
           - selective-distribution-invalid-source-rejected
   - id: contract.ci-selective-distribution.publication
-    summary: Exact distribution bootstrap assets become public only with approved notes after immutable source validation and byte-identical draft asset readback.
+    summary: Exact distribution bootstrap assets become public after provider generation and connection checks, immutable source validation and byte-identical draft asset readback with approved notes.
     conditions:
       - id: selective-distribution-publication-valid
         environment_predicate:
@@ -123,6 +123,7 @@ contracts:
     verification_intents:
       - id: selective-distribution-publication-intent
         goal: >-
+          The manifest binds reusable workflow references to the published source SHA and external Action references to verified provider pins. Provider CI verifies template generation, fixed references and caller/callee contracts before publication. Consumer existence and successful Hosted invocation of every reusable workflow are not publication prerequisites. Consumer environment acceptance follows installation and is reported separately.
           A validated exact tag publishes only the three bootstrap assets from a draft with unchanged approved notes after byte-identical readback; prepublication failure leaves the draft unpublished, and any publication or verification failure blocks alias updates.
           Integration into main is evidenced by target ancestry of the fetched main commit snapshot or exact Git tree object identity with that main tip; the target and main commit SHA, both tree IDs, and the accepted evidence method are exposed. Failed reference, tree, or ancestry acquisition stops validation. Tree equality does not substitute for integration approval, releaseability of newly reachable main commits, Hosted validation, or Release identity.
           Ordinary sources must satisfy this integration proof. A canonical next-patch hotfix tip may precede main integration only when it descends from the annotated base of the current stable main version and that base satisfies the same integration proof; annotated tags, exact source and canonical tip identity, and VERSION alignment remain required.
@@ -131,7 +132,7 @@ contracts:
           - selective-distribution-publication-exposed
           - selective-distribution-publication-failure-exposed
   - id: contract.ci-selective-distribution.application
-    summary: Canonical workflow copy requires an approved unchanged plan and restores this transaction after failure or rollback.
+    summary: Configured canonical callers are generated from verified templates under an approved unchanged plan and restored after failure or rollback.
     conditions:
       - id: selective-distribution-application-valid
         environment_predicate:
@@ -210,7 +211,8 @@ contracts:
             value: rollbackStatus
     verification_intents:
       - id: selective-distribution-application-intent
-        goal: Approved unchanged plans apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop.
+        goal: >-
+          Plans bind product settings, manifest-resolved fixed callee references, template digests and generated caller bytes. YAML scalar generation rejects missing or unknown settings and leaves no placeholders. Updates preserve declared settings from the installed caller and reject structural drift. The provider supplies templates and the generation script; consumers supply settings without implementing a renderer or copying provider runtime into Git. Missing Hosted acceptance evidence does not block generation, application or asset lock creation. Generated configuration does not prove successful execution in the consumer environment. Approved unchanged plans apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop.
         guarantee_refs:
           - selective-distribution-plan-exposed
           - selective-distribution-transaction-exposed

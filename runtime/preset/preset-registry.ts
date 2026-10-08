@@ -263,18 +263,27 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
   const providerId = String(map(registry.provider).id ?? '');
   const conformance = map(registry.conformance);
   const reusableBindings: Pick<RegistryData, 'qualityReusableWorkflow' | 'qualityPlatformsReusableWorkflow' | 'packagePreparationReusableWorkflow' | 'releasePublicationReusableWorkflow' | 'packagePublicationReusableWorkflow'> = {};
+  const manifestPath = path.join(SOURCE_ROOT, 'manifest.json');
+  const manifest = fs.existsSync(manifestPath) ? map(JSON.parse(fs.readFileSync(manifestPath, 'utf8'))) : {};
   for (const key of ['qualityReusableWorkflow', 'qualityPlatformsReusableWorkflow', 'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow'] as const) {
     const reusable = map(registry[key]);
     if (typeof reusable.source !== 'string' || !/^\.github\/workflows\/[a-z0-9-]+\.ya?ml$/.test(reusable.source)
-      || !['available', 'pending-release'].includes(String(reusable.status))
       || typeof reusable.referencePlaceholder !== 'string'
-      || reusable.status === 'available' && !FULL_SHA.test(String(reusable.exactRef ?? ''))) add(report.mismatches, {
+      || Object.keys(reusable).some((field) => !['source', 'referencePlaceholder', 'requiredCallerCheck'].includes(field))) add(report.mismatches, {
       path: key, message: 'reusable workflow declaration is invalid',
     });
+    const resolved = map(map(manifest.reusableWorkflows)[String(reusable.source)]);
+    const available = FULL_SHA.test(String(manifest.sourceRevision))
+      && manifest.kind === 'a3-ci-github-distribution-manifest'
+      && manifest.schemaVersion === '2'
+      && manifest.repository === 'a3-suite/a3-ci-github'
+      && resolved.referencePlaceholder === reusable.referencePlaceholder
+      && resolved.sourceRevision === manifest.sourceRevision
+      && map(manifest.workflowReferences)[String(reusable.referencePlaceholder).slice(1, -1)] === manifest.sourceRevision;
     if (typeof reusable.source === 'string') reusableBindings[key] = {
-      source: reusable.source, status: reusable.status as 'available' | 'pending-release',
+      source: reusable.source, status: available ? 'available' : 'pending-release',
       referencePlaceholder: String(reusable.referencePlaceholder ?? ''),
-      exactRef: typeof reusable.exactRef === 'string' ? reusable.exactRef : undefined,
+      exactRef: available ? String(manifest.sourceRevision) : undefined,
     };
   }
   const qualityTriggerExtensions = collectQualityTriggerExtensions(conformance, report);

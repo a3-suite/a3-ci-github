@@ -50,6 +50,7 @@ describe("repository-cli-specification", () => {
     const declared = [...vocabulary.matchAll(/^\s+long:\s+(--\S+)$/gm)].map((match) => match[1]);
     // Assert
     expect(declared.sort()).toStrictEqual([
+      '--set',
       '--approve', '--asset', '--audit-mode', '--bundle', '--inventory', '--manifest',
       '--manifest-url', '--output', '--output-directory', '--plan', '--preset', '--release-tag',
       '--repo-root', '--repository-root', '--skill-collection-root', '--source-revision',

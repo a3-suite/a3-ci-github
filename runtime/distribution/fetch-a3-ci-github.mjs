@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -75,7 +76,7 @@ export const validateDistributionManifest = (manifest) => {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new Error('distribution-manifest-invalid');
   }
-  if (manifest.schemaVersion !== '1' || manifest.kind !== MANIFEST_KIND) {
+  if (manifest.schemaVersion !== '2' || manifest.kind !== MANIFEST_KIND) {
     throw new Error('distribution-manifest-contract-unsupported');
   }
   if (manifest.repository !== REPOSITORY || manifest.rawOrigin !== RAW_ORIGIN) {
@@ -90,6 +91,22 @@ export const validateDistributionManifest = (manifest) => {
   if (!Array.isArray(manifest.assets) || !Array.isArray(manifest.presets)
     || !manifest.files || typeof manifest.files !== 'object' || Array.isArray(manifest.files)) {
     throw new Error('distribution-manifest-shape-invalid');
+  }
+  if (!manifest.workflowTemplates || !manifest.workflowReferences || !manifest.reusableWorkflows
+    || [manifest.workflowTemplates, manifest.workflowReferences, manifest.reusableWorkflows]
+      .some((value) => typeof value !== 'object' || Array.isArray(value))) {
+    throw new Error('distribution-manifest-template-contract-invalid');
+  }
+  for (const reference of Object.values(manifest.workflowReferences)) {
+    if (!FULL_SHA.test(String(reference))) throw new Error('distribution-manifest-workflow-reference-invalid');
+  }
+  for (const [source, binding] of Object.entries(manifest.reusableWorkflows)) {
+    if (!/^\.github\/workflows\/ci-[a-z0-9-]+\.yml$/.test(source)
+      || binding.sourceRevision !== manifest.sourceRevision
+      || !/^<[a-z0-9-]+-workflow-sha>$/.test(binding.referencePlaceholder)
+      || manifest.workflowReferences[binding.referencePlaceholder.slice(1, -1)] !== manifest.sourceRevision) {
+      throw new Error(`distribution-manifest-workflow-binding-invalid:${source}`);
+    }
   }
   const assetIds = new Set();
   for (const asset of manifest.assets) {
@@ -106,6 +123,14 @@ export const validateDistributionManifest = (manifest) => {
         throw new Error(`distribution-manifest-file-invalid:${sourcePath}`);
       }
       if (file.destination !== undefined) normalizeRelative(file.destination);
+      if (asset.application === 'copy') {
+        const template = manifest.workflowTemplates[sourcePath];
+        if (!template || !Array.isArray(template.emptyAllowed)
+          || template.emptyAllowed.some((value) => typeof value !== 'string')
+          || !template.triggerExtensions || typeof template.triggerExtensions !== 'object') {
+          throw new Error(`distribution-manifest-template-invalid:${sourcePath}`);
+        }
+      }
     }
   }
   for (const asset of manifest.assets) {
@@ -409,7 +434,7 @@ const digestIfFile = (filename) => {
   return sha256(fs.readFileSync(filename));
 };
 
-export const planDistributionApplication = ({ projectRoot, sourceRevision, requestedPresets, requestedAssets }) => {
+export const planDistributionApplication = ({ projectRoot, sourceRevision, requestedPresets, requestedAssets, settings = {}, yaml }) => {
   const loaded = loadFetchedDistribution(projectRoot, sourceRevision);
   const selectedAssets = resolveDistributionSelection(loaded.manifest, requestedPresets, requestedAssets);
   const selectedPresetDefinitions = loaded.manifest.presets.filter(
@@ -445,6 +470,20 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
     priorAssets.set(asset.path, asset);
   }
   const actions = [];
+  const templates = loaded.manifest.workflowTemplates;
+  const templateSource = 'runtime/preset/workflow-template.mjs';
+  const templateRuntime = selectedAssets.some((asset) => asset.application === 'copy')
+    ? createRequire(import.meta.url)(inside(loaded.root, templateSource)) : undefined;
+  const yamlPackage = path.resolve(projectRoot, '.a3-skills/ci-github/runtime/node_modules/yaml');
+  if (templateRuntime && !yaml) {
+    assertResolvedInside(projectRoot, yamlPackage, 'distribution-template-runtime-outside-project');
+    regularFile(path.join(yamlPackage, 'package.json'), 'distribution-template-runtime-not-prepared');
+  }
+  const yamlRuntime = templateRuntime ? yaml ?? createRequire(import.meta.url)(yamlPackage) : undefined;
+  const selectedTemplateIds = selectedAssets.filter((asset) => asset.application === 'copy').map((asset) => asset.id);
+  for (const assetId of Object.keys(settings)) {
+    if (!selectedTemplateIds.includes(assetId)) throw new Error(`distribution-template-settings-unselected:${assetId}`);
+  }
   for (const asset of selectedAssets.filter((candidate) => candidate.application === 'copy')) {
     for (const file of asset.files) {
       if (!file.destination) throw new Error(`distribution-copy-destination-missing:${asset.id}`);
@@ -453,8 +492,44 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
       assertResolvedInside(projectRoot, destination, `distribution-destination-outside-root:${file.destination}`);
       const sourceSha256 = sha256(fs.readFileSync(source));
       const destinationSha256 = digestIfFile(destination);
+      const template = templates[file.sourcePath];
+      let generatedContent;
+      const ownedDestination = priorAssets.get(file.destination)?.appliedSha256 === destinationSha256;
+      if (template && (destinationSha256 === null || ownedDestination)) {
+        const sourceText = fs.readFileSync(source, 'utf8');
+        for (const marker of sourceText.matchAll(/<([a-z0-9-]+-workflow-sha)>/g)) {
+          if (!Object.values(loaded.manifest.reusableWorkflows).some((binding) => binding.referencePlaceholder === marker[0])) {
+            throw new Error(`distribution-provider-binding-missing:${marker[1]}`);
+          }
+        }
+        let previous = { values: {}, extensions: {} };
+        if (destinationSha256 !== null && priorAssets.has(file.destination)) {
+          const previousDistribution = loadFetchedDistribution(projectRoot, priorLock.sourceRevision);
+          const previousAsset = previousDistribution.manifest.assets.flatMap((asset) => asset.files)
+            .find((entry) => entry.destination === file.destination);
+          if (!previousAsset) throw new Error(`distribution-template-prior-source-missing:${file.destination}`);
+          previous = templateRuntime.readWorkflowSettings({
+            yaml: yamlRuntime,
+            template: fs.readFileSync(inside(previousDistribution.root, previousAsset.sourcePath), 'utf8'),
+            current: fs.readFileSync(destination, 'utf8'),
+            triggerExtensions: previousDistribution.manifest.workflowTemplates?.[previousAsset.sourcePath]?.triggerExtensions ?? {},
+          });
+          for (const extension of Object.keys(previous.extensions)) {
+            if (!Object.hasOwn(template.triggerExtensions, extension)) throw new Error(`distribution-template-trigger-no-longer-supported:${extension}`);
+          }
+        }
+        generatedContent = templateRuntime.renderWorkflowTemplate({
+          yaml: yamlRuntime, template: sourceText,
+          values: { ...previous.values, ...(settings[asset.id] ?? {}) },
+          references: loaded.manifest.workflowReferences,
+          emptyAllowed: template.emptyAllowed,
+          extensions: previous.extensions,
+        });
+      }
+      const generatedSha256 = generatedContent === undefined ? sourceSha256 : sha256(Buffer.from(generatedContent));
       let action = 'create';
-      if (destinationSha256 === sourceSha256) action = 'reuse';
+      if (template && destinationSha256 !== null && !ownedDestination) action = 'conflict';
+      else if (destinationSha256 === generatedSha256) action = 'reuse';
       else if (destinationSha256 !== null) {
         const prior = priorAssets.get(file.destination);
         action = prior?.appliedSha256 === destinationSha256 ? 'update' : 'conflict';
@@ -466,6 +541,8 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
         sourceSha256,
         destinationSha256,
         action,
+        generatedSha256,
+        ...(generatedContent === undefined ? {} : { generatedContent }),
       });
     }
   }
@@ -633,12 +710,14 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       if (prepared.has(entry.destination)) {
         throw new Error(`distribution-plan-destination-duplicate:${entry.destination}`);
       }
-      prepared.set(entry.destination, sourceBytes);
+      const generatedBytes = entry.generatedContent === undefined ? sourceBytes : Buffer.from(entry.generatedContent);
+      if (sha256(generatedBytes) !== entry.generatedSha256) throw new Error(`distribution-generated-content-changed:${entry.destination}`);
+      prepared.set(entry.destination, generatedBytes);
       if (entry.action === 'reuse') continue;
       transaction.actions.push({
         destination: entry.destination,
         beforeSha256: entry.destinationSha256,
-        afterSha256: entry.sourceSha256,
+        afterSha256: entry.generatedSha256,
         state: 'pending',
       });
     }
@@ -679,7 +758,7 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       planDigest: plan.planDigest,
       transactionId,
       status: 'applied',
-      nextSteps: ['resolve-settings', 'generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests'],
+      nextSteps: ['generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests'],
     };
   } catch (error) {
     if (transactionRoot && transaction && fs.existsSync(path.join(transactionRoot, 'transaction.json'))) {
@@ -726,17 +805,18 @@ const parseCli = (argv) => {
   const commandFlags = {
     fetch: ['--repo-root', '--manifest', '--manifest-url', '--preset', '--asset', '--source-root'],
     verify: ['--repo-root', '--source-revision'],
-    plan: ['--repo-root', '--source-revision', '--preset', '--asset'],
+    plan: ['--repo-root', '--source-revision', '--preset', '--asset', '--set'],
     apply: ['--repo-root', '--plan', '--approve'],
     rollback: ['--repo-root', '--transaction'],
   };
   if (!Object.hasOwn(commandFlags, command)) throw new Error('distribution-command-unknown');
-  const result = { command, presets: [], assets: [], projectRoot: '.', sourceRevision: '', planPath: '', approvalDigest: '', transactionId: '', manifestPath: '', manifestUrl: '', sourceRoot: '' };
-  const repeatable = new Set(['--preset', '--asset']);
+  const result = { command, presets: [], assets: [], settingInputs: [], settings: {}, projectRoot: '.', sourceRevision: '', planPath: '', approvalDigest: '', transactionId: '', manifestPath: '', manifestUrl: '', sourceRoot: '' };
+  const repeatable = new Set(['--preset', '--asset', '--set']);
   const values = {
     '--repo-root': 'projectRoot', '--source-revision': 'sourceRevision', '--plan': 'planPath',
     '--approve': 'approvalDigest', '--transaction': 'transactionId', '--manifest': 'manifestPath',
     '--manifest-url': 'manifestUrl', '--source-root': 'sourceRoot', '--preset': 'presets', '--asset': 'assets',
+    '--set': 'settingInputs',
   };
   for (let index = 1; index < argv.length; index += 2) {
     const flag = argv[index];
@@ -744,6 +824,14 @@ const parseCli = (argv) => {
     if (!commandFlags[command].includes(flag) || !value || value.startsWith('--')) throw new Error(`distribution-cli-argument-invalid:${flag}`);
     if (repeatable.has(flag)) result[values[flag]].push(value);
     else result[values[flag]] = value;
+  }
+  for (const entry of result.settingInputs) {
+    const match = entry.match(/^(workflow\.[a-z0-9-]+):([a-zA-Z][a-zA-Z0-9._-]*)=(.*)$/s);
+    if (!match) throw new Error('distribution-setting-input-invalid');
+    const [, assetId, key, encoded] = match;
+    result.settings[assetId] ??= {};
+    if (Object.hasOwn(result.settings[assetId], key)) throw new Error(`distribution-setting-duplicate:${assetId}:${key}`);
+    result.settings[assetId][key] = JSON.parse(encoded);
   }
   return result;
 };
@@ -773,6 +861,7 @@ const main = async () => {
     sourceRevision: options.sourceRevision,
     requestedPresets: options.presets,
     requestedAssets: options.assets,
+    settings: options.settings,
     });
   }
   if (options.command === 'apply') {

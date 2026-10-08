@@ -147,8 +147,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const { verifyActionReferenceContracts } = await import('./verify-action-reference-contracts.mjs');
       report.connection = verifyActionReferenceContracts(process.cwd(), result.actionReferences, result.snapshot);
       report.connection.diagnostics.push(...result.interfaceDiagnostics);
-      const bindings = Object.entries(result.snapshot.registry).filter(([key]) => key.endsWith('ReusableWorkflow'));
-      const pending = bindings.length > 0 && bindings.every(([, binding]) => binding.status === 'pending-release');
+      const actionization = result.snapshot.registry.actionization;
+      const pending = actionization.availabilityGate.status === 'pending-release'
+        && actionization.targets.every((target) => target.status === 'pending-release');
       report.preparationOnly = args.includes('--preparation') && pending && report.connection.diagnostics.length > 0;
     }
     result.snapshot.assertUnchanged();
