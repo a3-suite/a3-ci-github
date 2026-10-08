@@ -50,6 +50,10 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 一つのコミットへ自己参照する将来SHAは書き込めません。新しいAction実装と、その未確定SHAを使うworkflow接続を同じコミットで確定したことにしません。未公開資材の準備コミットでは、対応する導入経路をregistryのpending状態とplaceholderで明示し、consumerへ利用可能として配備しません。必要なHosted受入が未完了のworkflowも受入待ちとして残します。
 
+Action参照の更新は、公開確認済みのexact tagを明示して `node runtime/repository/update-action-references.mjs --check --tag vX.Y.Z` で差分を確認し、同じ指定の `--write` で適用します。tagのannotated object・peeled SHAをoriginと照合し、tag先のVERSION、Action metadata、対象契約の実dist動作を確認してからregistryと同じAction bindingを使う全参照・installer revisionを更新します。calleeのstatus/exactRef、workflow placeholder、外部Action pinは変更しません。
+
+`npm run lint:provider` はprovider・canonicalのAction参照、tag対応、固定SHA先のmetadata、quality adapterとpublication controlの正常・拒否動作を検査します。Git object不足や実行不能は判定不能です。全calleeがpendingの準備段階だけは接続契約の未達を `preparationOnly` と明示して残せます。接続更新・activation前は `node runtime/repository/check-provider-references.mjs --contracts` を実行し、診断ゼロを要求します。これはHosted受入の代替ではありません。検証対象を増やす場合は既存の対象契約の回帰へ接続し、SHA形式の成功を動作保証に読み替えません。
+
 公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
 
 ### pending の再利用workflowをHosted受入する

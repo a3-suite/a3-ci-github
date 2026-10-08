@@ -34,7 +34,7 @@
 検証依存を復元したrepository rootから実行する。入力はindexの同一snapshotであり、未ステージのworkflowを検査結果へ混ぜない。
 
 ```sh
-node runtime/repository/check-provider-references.mjs --staged
+node runtime/repository/check-provider-references.mjs --staged --contracts --preparation
 ```
 
 実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。
@@ -44,6 +44,7 @@ node runtime/repository/check-provider-references.mjs --staged
 - 適用条件に該当しなければ`非適用`。
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
+- `preparationOnly: true` は準備コミットだけの許容であり、接続契約は未達。`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。availableのbindingが一つでもある場合、この許容は適用しない。接続更新・利用可能化の判定は `--preparation` を外して実行する。
 
 ## 固定参照更新順序ゲート
 

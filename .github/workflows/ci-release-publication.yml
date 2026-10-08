@@ -156,19 +156,19 @@ jobs:
           [[ "$CI_RELEASE_PUBLICATION_REQUEST_RUN_ID" =~ ^[1-9][0-9]*$ ]]
       - name: Resolve platform build matrix
         id: platform-matrix
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: gh-jq-sha256
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -194,14 +194,14 @@ jobs:
           run-id: ${{ inputs.request_run_id }}
       - name: Resolve configuration snapshot
         id: config
-        uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           sources-json: >-
             {"runtime":{"CI_LANGUAGE_PROFILE":${{ toJSON(env.CI_LANGUAGE_PROFILE) }},"CI_TOOLCHAIN_VERSION":${{ toJSON(env.CI_TOOLCHAIN_VERSION) }},"CI_PLATFORM_MANIFEST":${{ toJSON(env.CI_PLATFORM_MANIFEST) }},"CI_RELEASE_IMPLEMENTATION":${{ toJSON(env.CI_RELEASE_IMPLEMENTATION) }},"CI_RELEASE_OWNER_CONTRACT":${{ toJSON(env.CI_RELEASE_OWNER_CONTRACT) }},"CI_CARGO_MANIFEST_PATH":${{ toJSON(env.CI_CARGO_MANIFEST_PATH) }},"CI_CARGO_LOCK_PATH":${{ toJSON(env.CI_CARGO_LOCK_PATH) }},"CI_RELEASE_BINARY_NAME":${{ toJSON(env.CI_RELEASE_BINARY_NAME) }},"CI_RELEASE_ASSET_PREFIX":${{ toJSON(env.CI_RELEASE_ASSET_PREFIX) }}},"workflow":{"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":${{ toJSON(inputs.supplemental_release_asset_owner_contract) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh","CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION":${{ toJSON(inputs.supplemental_release_asset_implementation) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH":${{ toJSON(inputs.supplemental_release_asset_config_path) }}},"preset":{}}
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
       - name: Verify standard Release authority
         id: authority
-        uses: a3-suite/a3-ci-github/actions/ci-release-authority@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-authority@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           root-directory: .
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
@@ -232,16 +232,16 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run standard Rust source gate
-        uses: a3-suite/a3-ci-github/actions/ci-rust-source-gate@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-rust-source-gate@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           authority-path: authority/authority.json
@@ -275,24 +275,24 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git -C .ci-base rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
           uv-version: ${{ env.CI_UV_VERSION }}
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
@@ -325,16 +325,16 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Build and verify standard Rust release assets
-        uses: a3-suite/a3-ci-github/actions/ci-rust-release-build@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-rust-release-build@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           platform-manifest: ${{ env.CI_PLATFORM_MANIFEST }}
@@ -353,9 +353,9 @@ jobs:
           if-no-files-found: error
       - name: Build and verify supplemental Release asset platform
         if: inputs.supplemental_release_asset_enabled
-        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@bd695706802b7d86ed3db94a0e39b41b593358d5
         env:
-          A3_INSTALLER_PROVIDER_REVISION: a5623636a4fc5f628459a5b126e72632f43f89cf
+          A3_INSTALLER_PROVIDER_REVISION: bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           operation: build-platform
           authority-path: authority/authority.json
@@ -399,9 +399,9 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Build and verify supplemental Release asset
-        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@bd695706802b7d86ed3db94a0e39b41b593358d5
         env:
-          A3_INSTALLER_PROVIDER_REVISION: a5623636a4fc5f628459a5b126e72632f43f89cf
+          A3_INSTALLER_PROVIDER_REVISION: bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           operation: assemble
           authority-path: authority/authority.json
@@ -442,15 +442,15 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: gh-jq-sha256
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -476,7 +476,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Assemble release handoff
-        uses: a3-suite/a3-ci-github/actions/ci-release-assembly@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-assembly@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           repository: ${{ github.repository }}
           authority-path: authority/authority.json
@@ -514,15 +514,15 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           mode: gh-jq-sha256
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -542,7 +542,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Validate release handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           handoff-root: release-handoff
           descriptor: handoff.json
@@ -550,14 +550,14 @@ jobs:
           version: ${{ needs.authority.outputs.version }}
           target-identity: ${{ needs.authority.outputs.target_identity }}
       - name: Verify approval is still valid
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           operation: verify-approval
           approval-id: ${{ needs.authority.outputs.approval_id }}
           approval-body-sha256: ${{ needs.authority.outputs.approval_body_sha256 }}
       - name: Observe complete Release absence
         id: publication_before
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -568,7 +568,7 @@ jobs:
           observation-path: publication-before.json
       - id: publish
         name: Publish standard GitHub Release
-        uses: a3-suite/a3-ci-github/actions/ci-release-publisher@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-publisher@bd695706802b7d86ed3db94a0e39b41b593358d5
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -578,7 +578,7 @@ jobs:
           write-output-directory: publication-write
       - name: Verify publication readback evidence
         id: verify_publication
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@bd695706802b7d86ed3db94a0e39b41b593358d5
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -600,7 +600,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a5623636a4fc5f628459a5b126e72632f43f89cf
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@bd695706802b7d86ed3db94a0e39b41b593358d5
         with:
           summary-json: >-
             {"jobs":[{"unit":"authority","execution":"manual release publication / trusted control","rawResult":"${{ needs.authority.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"authority job result: ${{ needs.authority.result }}"},{"unit":"source-gate","execution":"fixed source SHA identity","rawResult":"${{ needs.source-gate.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"source-gate result: ${{ needs.source-gate.result }}"},{"unit":"quality","execution":"fixed source / trusted adapter","rawResult":"${{ needs.quality.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"quality result: ${{ needs.quality.result }}"},{"unit":"build","execution":"platform manifest","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build result: ${{ needs.build.result }}"},{"unit":"supplemental-asset","execution":"owner-selected supplemental Release asset","rawResult":"${{ needs.supplemental-asset.result }}","applicable":${{ !(needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) }},"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"${{ (needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) && 'supplemental asset disabled by workflow input' || format('supplemental-asset result: {0}', needs.supplemental-asset.result) }}"},{"unit":"assemble","execution":"trusted handoff","rawResult":"${{ needs.assemble.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"assemble result: ${{ needs.assemble.result }}"},{"unit":"publish","execution":"Release remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}
