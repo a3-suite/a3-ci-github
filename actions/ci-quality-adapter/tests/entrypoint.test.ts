@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 
-import { qualityAdapterDescriptor } from '../../../tests/support/action-reference-fixtures.mjs';
+import { qualityAdapterDescriptor } from '../../../runtime/repository/action-reference-fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 

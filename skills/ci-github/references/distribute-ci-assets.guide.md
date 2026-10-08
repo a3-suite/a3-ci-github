@@ -2,7 +2,7 @@
 
 ## 目的
 
-GitHub Releaseで承認された配布manifestを起点に、必要なpresetまたはassetだけをfull commit SHA固定sourceから取得し、canonical workflowを差分確認後に配置する。
+GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだけをfull commit SHA固定sourceから取得し、製品設定を埋め込んだcanonical callerを差分確認後に配置する。
 
 ## 境界
 
@@ -75,18 +75,29 @@ node fetch-a3-ci-github.mjs verify \
 
 ## Plan
 
-取得結果が返した`sourceRevision`と、取得時と同じpresetまたはassetを指定する。
+この生成経路はmanifest schemaVersion `2`を使用する。旧`1`は受理しない。既存の旧配布を暗黙に変換せず、新manifestと差分を確認して移行する。
+
+取得結果が返した`sourceRevision`と、取得時と同じpresetまたはassetを指定する。先に`configure-ci-preset.guide.md`の導入時runtimeを準備する。生成処理は既存runtimeのYAML依存を使用し、導入先に個別の生成スクリプトや追加の設定ファイルは作らない。
+
+`--set 'workflow.{asset名}:{placeholder名}={JSON値}'`を繰り返して製品設定を渡す。設定名は選択したtemplateを正本とし、文字列、真偽値、branch配列をJSONで指定する。未知・未指定の必須設定、型不一致は停止する。Action pinとcalleeのSHAはmanifestから自動解決し、利用者は指定しない。
 
 ```bash
 node fetch-a3-ci-github.mjs plan \
   --source-revision "{distribution-full-commit-sha}" \
   --preset quality-gate \
+  --set 'workflow.quality-gate:protected-branch=["main"]' \
+  --set 'workflow.quality-gate:versioned-runner="ubuntu-24.04"' \
+  --set 'workflow.quality-gate:language-profile="typescript"' \
+  --set 'workflow.quality-gate:toolchain-version="24"' \
+  --set 'workflow.quality-gate:standard-bundle-id="typescript-npm-quality"' \
   --repo-root "{project-root}"
 ```
 
 planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分類する。既存asset lockが現在のdestination digestを所有する場合だけ`update`とし、それ以外の差分は`conflict`とする。所有権判定に使ったasset lockの存在状態とdigestもplanへ固定する。過去のlockにあり今回選択されないpathは`stale`として報告するが削除しない。
 
 ## Apply
+
+planはsource templateと生成後callerのdigestを別々に保持し、生成byteも承認digestに含める。更新では旧distributionと既存lockを使い、設置済みcallerの許可された製品設定を引き継ぐ。job・step・permissions等の構造変更は停止する。追加の`--set`だけが設定を上書きする。選択calleeの固定参照は検証済みmanifestから解決する。
 
 `conflict`がないplanの内容とdigestを確認し、同じdigestを明示して適用する。
 
@@ -101,7 +112,7 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 
 ## 適用後
 
-1. workflow placeholder、Action pin、runner、tool version、Variable、Secret参照をprojectの正本へ接続する。
+1. 生成済みcallerを製品設定の正本として読み返し、必要なVariablesとSecretsを登録する。placeholderを手動置換しない。
 2. 標準bundleの配置は不要。独自adapter配置またはbinding検査が必要な場合だけmaterializerを追加取得し、`configure-ci-preset.guide.md`の準備済みruntimeで実行する。external skillを利用する場合はそのidentityとdigestも確認する。
 3. `generate-ci-asset-lock.ts`で`.ci/ci-assets.lock.json`を生成する。
 4. a3-lintとactionlintを実行する。
@@ -110,6 +121,8 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 7. GitHub上でしか確認できない契約だけhosted evidenceを取得する。
 
 通常のCI実行はproject-local distributionを参照しない。
+
+生成・適用・lock生成の成功と、導入先のHosted環境受入は別に記録する。Hosted実行や外部への書き込み・公開は別途承認を要する。
 
 ## Rollback
 

@@ -74,6 +74,12 @@ options:
     kind: value
     value_name: PATH
     summary: Distribution application plan selected for apply
+  - id: set
+    long: --set
+    kind: value
+    value_name: ASSET:KEY=JSON
+    summary: Explicit product setting for one selected workflow template
+    repeatable: true
   - id: approve
     long: --approve
     kind: value

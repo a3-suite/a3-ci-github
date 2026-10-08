@@ -17,9 +17,10 @@ main_success_scenario:
   - summary: presetまたはassetを選び、registry由来の必須依存閉包と外部owner境界を確認する
   - summary: full commit SHA固定URLから選択fileだけをstagingへ取得し、sizeとSHA-256を検証する
   - summary: 検証済みfileと取得receiptをsource revision単位のproject-local distributionへ公開する
-  - summary: canonical workflowのdestination、既存digest、owner状態、create・reuse・update・conflict・staleをplanへ固定する
-  - summary: 明示承認、排他取得、plan前提再確認後にcopyし、transactionと変更前状態を保持する
-  - summary: 設定解決とadapter materializeを既存ownerへ委譲し、asset lock、lint、preflight、consumer契約テストを順に実行する
+  - summary: manifestの固定参照を確認し、templateへ製品設定を結合してcanonical workflowを生成する
+  - summary: 生成結果、destination、既存digest、owner状態、create・reuse・update・conflict・staleをplanへ固定する
+  - summary: 明示承認、排他取得、plan前提再確認後に生成済みworkflowを適用し、transactionと変更前状態を保持する
+  - summary: 必要なadapter materializeを既存ownerへ委譲し、asset lock、lint、preflight、consumer契約テストを順に実行する
 success_outcomes:
   - 選択した配布assetだけがfull source revision、manifest digest、receipt、planおよびtransactionから追跡できる
   - 通常CI実行は導入・検証用のproject-local distributionを参照せず、配置済みcaller・request workflow、固定SHAのprovider再利用workflowとAction、project-owned設定で成立する

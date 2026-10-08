@@ -43,6 +43,8 @@ preset assurance と adapter materialization は異なる責務です。同じ�
 
 Hosted E2E は、外部 repository への書き込みや公開を暗黙に行いません。
 
+提供元の代表受入は候補SHAの5つのcalleeを隔離環境から実呼出しし、Release manifestへ同一SHAの証拠を含めます。Releaseゲートはrun・実参照・必須callee jobの成功を機械検証します。下表の異常系・製品固有条件は受入記録で別途確認し、run成功だけから網羅性を推測しません。導入先の設定・認証・required checkの受入は、公開後に生成済みcallerで行います。
+
 | Flow | 実行時期 | 必須観測 |
 | --- | --- | --- |
 | Quality | Git 初期化後の通常 CI | push、same-repository PR、fork PR、docs-only、失敗summary、optional platform |

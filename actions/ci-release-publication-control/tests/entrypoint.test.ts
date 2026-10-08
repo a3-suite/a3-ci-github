@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 
-import { publicationRequestInputs } from '../../../tests/support/action-reference-fixtures.mjs';
+import { publicationRequestInputs } from '../../../runtime/repository/action-reference-fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 

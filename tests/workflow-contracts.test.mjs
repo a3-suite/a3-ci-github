@@ -435,7 +435,11 @@ describe("contract.ci-selective-distribution.publication", () => {
         /SHA256SUMS/,
         /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/,
       ]);
-      expect(prepare).not.toMatch(/GH_TOKEN|contents: write/);
+      expect(prepare).not.toMatch(/contents: write/);
+      expect(prepare).not.toContain('actions: read');
+      expect(workflow).not.toContain('acceptance-run-urls');
+      expect(prepare).not.toContain('verify-hosted-workflow-acceptance.mjs');
+      expect(prepare).not.toContain('--acceptance-file');
       const publish = jobBlock(workflow, 'publish-distribution');
       assertNeeds(publish, ['prepare-distribution']);
       includesAll(publish, [
@@ -782,10 +786,65 @@ describe("workflow-contracts", () => {
       return fixture;
     };
 
+    const pinOldActionReferences = (fixture) => {
+      const old = execFileSync('git', ['rev-parse', 'refs/tags/v0.2.0^{commit}'], { cwd: fixture, encoding: 'utf8' }).trim();
+      for (const relative of [registryPath, ...repositorySnapshot(fixture).targets]) {
+        writeFileSync(path.join(fixture, relative), readFileSync(path.join(fixture, relative), 'utf8').replaceAll(actionRef, old));
+      }
+      const registry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
+      registry.actionization.implementationSource.releaseTag = 'v0.2.0';
+      writeFileSync(path.join(fixture, registryPath), yaml.stringify(registry));
+    };
+
     // contract_id: contract.ci-quality-adapter.outputs
+    // integration_id: repository-quality-action-reference-contracts
+    test('fixed quality Action references preserve rejection contracts and expose old registry pins', (t) => {
+      // Arrange
+      const fixture = referenceFixture(t);
+      const current = checkRepository(fixture);
+      // Act
+      const accepted = verifyActionReferenceContracts(fixture, current.actionReferences, current.snapshot);
+      // Assert
+      const quality = accepted.observations.filter(({ case: name }) => name.startsWith('quality-'));
+      expect(quality.map(({ case: name }) => name)).toEqual(['quality-custom', 'quality-reserved']);
+      expect(quality.every(({ passed }) => passed)).toBe(true);
+      // Arrange
+      pinOldActionReferences(fixture);
+      const pinned = checkRepository(fixture);
+      // Act
+      const rejected = verifyActionReferenceContracts(fixture, pinned.actionReferences, pinned.snapshot);
+      // Assert
+      expect(pinned.diagnostics).toEqual([]);
+      expect(rejected.diagnostics.filter((diagnostic) => diagnostic.includes('/ci-quality-adapter@'))).toHaveLength(1);
+      expect(rejected.diagnostics.join('\n')).toContain('quality-reserved');
+    });
+
     // contract_id: contract.ci-release-publication-control.outputs
-    // integration_id: repository-action-reference-contracts
-    test('fixed Action references preserve current rejection contracts and expose old registry pins', (t) => {
+    // integration_id: repository-publication-action-reference-contracts
+    test('fixed publication Action references require owner decisions and expose old registry pins', (t) => {
+      // Arrange
+      const fixture = referenceFixture(t);
+      const current = checkRepository(fixture);
+      // Act
+      const accepted = verifyActionReferenceContracts(fixture, current.actionReferences, current.snapshot);
+      // Assert
+      const publication = accepted.observations.filter(({ case: name }) => name.startsWith('publication-'));
+      expect(publication.map(({ case: name }) => name)).toEqual(['publication-valid', 'publication-INPUT_RELEASE-VERSION', 'publication-INPUT_TARGET-IDENTITY', 'publication-owner-decision']);
+      expect(publication.every(({ passed }) => passed)).toBe(true);
+      // Arrange
+      pinOldActionReferences(fixture);
+      const pinned = checkRepository(fixture);
+      // Act
+      const rejected = verifyActionReferenceContracts(fixture, pinned.actionReferences, pinned.snapshot);
+      // Assert
+      expect(pinned.diagnostics).toEqual([]);
+      expect(rejected.diagnostics.filter((diagnostic) => diagnostic.includes('/ci-release-publication-control@'))).toHaveLength(1);
+      expect(rejected.diagnostics.join('\n')).toContain('publication-owner-decision');
+    });
+
+    // evidence_role: supplemental
+    // integration_id: repository-action-reference-gate
+    test('provider reference gate rejects old contracts and unavailable Action bindings', (t) => {
       // Arrange
       const fixture = referenceFixture(t);
       const current = checkRepository(fixture);
@@ -795,36 +854,26 @@ describe("workflow-contracts", () => {
       expect(accepted.observations).toHaveLength(6);
       expect(accepted.diagnostics).toEqual([]);
       // Arrange
-      const old = execFileSync('git', ['rev-parse', 'refs/tags/v0.2.0^{commit}'], { cwd: fixture, encoding: 'utf8' }).trim();
-      for (const relative of [registryPath, ...repositorySnapshot(fixture).targets]) {
-        writeFileSync(path.join(fixture, relative), readFileSync(path.join(fixture, relative), 'utf8').replaceAll(actionRef, old));
-      }
-      const oldRegistry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
-      oldRegistry.actionization.implementationSource.releaseTag = 'v0.2.0';
-      writeFileSync(path.join(fixture, registryPath), yaml.stringify(oldRegistry));
-      const pinned = checkRepository(fixture);
+      pinOldActionReferences(fixture);
       const command = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', ...args], { cwd: fixture, encoding: 'utf8' });
       // Act
-      const rejected = verifyActionReferenceContracts(fixture, pinned.actionReferences, pinned.snapshot);
       const strict = command();
       const preparation = command('--preparation');
       // Assert
-      expect(pinned.diagnostics).toEqual([]);
-      expect(rejected.diagnostics).toHaveLength(2);
-      expect(rejected.diagnostics.join('\n')).toContain('quality-reserved');
-      expect(rejected.diagnostics.join('\n')).toContain('publication-owner-decision');
       expect(strict.status, strict.stderr).toBe(1);
-      expect(preparation.status, preparation.stderr).toBe(0);
-      expect(JSON.parse(preparation.stdout).preparationOnly).toBe(true);
+      expect(preparation.status, preparation.stderr).toBe(1);
+      expect(JSON.parse(preparation.stdout).preparationOnly).toBe(false);
       expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(2);
       // Arrange
       const registry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
-      registry.qualityReusableWorkflow.status = 'available';
+      registry.actionization.availabilityGate.status = 'pending-release';
+      registry.actionization.targets.forEach((target) => { target.status = 'pending-release'; });
       writeFileSync(path.join(fixture, registryPath), yaml.stringify(registry));
       // Act
       const activation = command('--preparation');
       // Assert
       expect(activation.status, activation.stderr).toBe(1);
+      expect(JSON.parse(activation.stdout).diagnostics.join('\n')).toMatch(/available|registered/);
       expect(() => verifyActionReferenceContracts(fixture, [])).toThrow(/Required Action contract reference/);
       expect(() => verifyActionReferenceContracts(fixture, [{ uses: `a3-suite/a3-ci-github/actions/ci-quality-adapter@${'f'.repeat(40)}` }, ...current.actionReferences.filter(({ uses }) => uses.includes('/ci-release-publication-control@'))])).toThrow();
     });
@@ -1098,8 +1147,8 @@ describe("workflow-contracts", () => {
         expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
         const gates = job.steps.map((step, index) => ({ step, index }))
-          .filter(({ step }) => (release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']).includes(step.run?.trim()));
-        expect(gates.map(({ step }) => step.run.trim()).sort()).toEqual((release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']).sort());
+          .filter(({ step }) => (release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']).includes(step.run?.trim()));
+        expect(gates.map(({ step }) => step.run.trim()).sort()).toEqual((release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']).sort());
         expect(job.steps.some((step) => step.run?.includes('lint:repository'))).toBe(false);
         for (const { step } of gates) {
           expect(step.if).toBeUndefined();
@@ -1120,7 +1169,7 @@ describe("workflow-contracts", () => {
         const document = yaml.parse(read(relative));
         assertRequiredGate(document, release);
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
-        for (const gateCommand of release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs'] : ['npm run lint:provider']) {
+        for (const gateCommand of release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']) {
           const gateIndex = document.jobs[jobId].steps.findIndex((step) => step.run === gateCommand);
           const mutations = [
             (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),

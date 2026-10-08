@@ -82,8 +82,8 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
 - qualityの`merge_group`は空のevent設定、`schedule`は一つ以上の非空`cron`だけを持つlistとして検証する。
 - trigger、versioned runner、未解決 placeholder、外部 Action の40桁 SHA、直接・間接 asset を確認する。
 - a3 Action は registry の target、workflow mapping、固定 ref と双方向に照合し、未登録、宣言漏れ、余剰接続を失敗にする。
-- 主quality callerはregistryの `qualityReusableWorkflow` と照合し、固定ref・明示input・型・静的versioned runner・read permissions・caller summaryを検証する。provider側calleeの固定sourceからAction接続と固有設定へのbindingを検証し、calleeをconsumerの配置assetやlockへ追加しない。正式固定版とHosted required-check受入が未確定なら利用可能扱いにしない。
-- optional platform callerもregistryの `qualityPlatformsReusableWorkflow` と照合し、calleeの入力・品質設定・Action依存まで検証する。calleeは検証用local-referenceとして配布閉包へ含め、consumerのcopy対象へは含めない。workflowと依存Actionのpending-release gateを維持する。
+- 主quality callerはregistryの `qualityReusableWorkflow` と照合し、固定ref・明示input・型・静的versioned runner・read permissions・caller summaryを検証する。provider側calleeの固定sourceからAction接続と固有設定へのbindingを検証し、calleeをconsumerの配置assetやlockへ追加しない。正式固定版の生成・配置とHosted required-check受入は別に判定する。
+- optional platform callerもregistryの `qualityPlatformsReusableWorkflow` と照合し、calleeの入力・品質設定・Action依存まで検証する。calleeは検証用local-referenceとして配布閉包へ含め、consumerのcopy対象へは含めない。calleeのexactRefはmanifestの固定参照から解決し、依存Actionのavailability gateはregistryで確認する。
 - 適用可能な Action 化 target が登録された共通処理を、project-owned entrypoint または copyable asset として重複配置していないことを確認する。project-owned 実装は、選択済み binding が充足しない登録済み `requiredExtensions` にだけ許可し、未登録の代替分岐として補完しない。Action 化 target がなく適用可能な reusable asset もない provider helper だけを copyable asset として許可する。
 - Releaseの廃止入口は registry の `actionization.retiredProjectEntrypoints.release-publication` を正本とする。登録pathは用途にかかわらず予約済みとして、ファイル保持またはworkflow内の参照を失敗にする。preflightはconsumerのファイルを削除しない。
 - 共通処理の候補比較、非採用理由、owner、証拠 identity は review フェーズの証拠として記録する。preflight は Action の登録・固定 ref・workflow mapping、asset の到達性・配置同一性を検証し、コードの意味的同一性を推測しない。
