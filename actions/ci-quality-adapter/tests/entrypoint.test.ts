@@ -4,11 +4,13 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 
+import { qualityAdapterDescriptor } from '../../../tests/support/action-reference-fixtures.mjs';
+
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
-const descriptor = (boundary = 'read-only'): string => `schemaVersion: "1"\nkind: ci-adapter-bundle\nid: node-quality\ncontract: quality-scripts\nlanguageProfiles: [node]\nprovider: github\nexecutionBoundary: ${boundary}\nsourceCheckout: fixed-source\ncopyable: true\nowner: ci\nassets: []\nprojectSettings:\n  requiredFiles: []\n  requiredScripts: []\n  requiredEnvironmentPaths: []\ntoolchain:\n  versionEnv: CI_TOOLCHAIN_VERSION\n  verify:\n    command: node\n    args: [--version]\npreparation:\n  - id: prepare\n    command: node\n    args: [-e, "process.exit(0)"]\ncommands:\n  - id: test\n    command: node\n    args: [-e, "process.exit(0)"]\n`;
+const descriptor = qualityAdapterDescriptor;
 
 const runAction = (root: string, content: string, inputs: Record<string, string> = {}) => {
   const descriptor = path.join(root, 'adapter.yml');

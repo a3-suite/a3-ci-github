@@ -39,6 +39,8 @@ preset assurance と adapter materialization は異なる責務です。同じ�
 
 ## Hosted E2E
 
+固定参照先のローカル動作検証は `npm run lint:provider` で実行します。参照先Git objectの`dist`を使うため、作業ツリーのsource/dist検証とは別の証拠です。対象はquality adapterの標準ID拒否とpublication controlのowner decision必須条件、および各正常経路です。入力fixtureはAction entrypoint回帰と共有し、`tests/workflow-contracts.test.mjs`の旧参照・準備/接続判定・更新処理の回帰へ接続しています。対象SHAのHosted E2Eを代替する証拠にはしません。
+
 Hosted E2E は、外部 repository への書き込みや公開を暗黙に行いません。
 
 | Flow | 実行時期 | 必須観測 |
