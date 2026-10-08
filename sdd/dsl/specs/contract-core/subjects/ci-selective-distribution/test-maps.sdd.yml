@@ -153,6 +153,18 @@ test_maps:
     case_id: selective-distribution-application
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > provider-pin-companion > planned provider pin companions are owned and restored with generated callers"
+        check_refs: [check-selective-distribution-plan, check-selective-distribution-transaction, check-selective-distribution-conflict, check-selective-distribution-changed-input, check-selective-distribution-rollback]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > provider-pin-companion > Release and Package generated companions support lock and preflight without fixture pin injection"
+        check_refs: [check-selective-distribution-plan, check-selective-distribution-transaction]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > provider-pin-companion > missing prior distributions are classified without treating old schemas as current"
+        check_refs: [check-selective-distribution-conflict]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > provider-pin-companion > explicit create migration restores retired assets and the prior lock after a post-apply failure"
+        check_refs: [check-selective-distribution-plan, check-selective-distribution-transaction, check-selective-distribution-rollback]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: "contract.ci-selective-distribution.application > workflow-template-generation > normal generation and application need no Hosted evidence and preserve ownership checks"
         check_refs:
           - check-selective-distribution-plan

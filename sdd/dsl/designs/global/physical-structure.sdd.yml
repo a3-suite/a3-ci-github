@@ -58,6 +58,13 @@ elements:
     area_kinds: [implementation]
     source_control: managed
     placement_purpose: providerの固定registryとYAMLの読み込み・解釈を所有し、適用先資材の調査に依存しない
+  - element_id: provider-action-pins
+    element_kind: file
+    path: runtime/preset/provider-action-pins.mjs
+    primary_area_kind: implementation
+    area_kinds: [implementation]
+    source_control: managed
+    placement_purpose: registryからのpin companion完全射影とcallerの外部Action参照検出を生成・検証で共有し、ファイルI/Oに依存しない
   - element_id: preset-project-assets
     element_kind: file
     path: runtime/preset/ci-preset-assets.ts

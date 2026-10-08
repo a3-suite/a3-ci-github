@@ -4,7 +4,7 @@ GitHub Release の不在を観測し、owner write が返した receipt / readba
 
 ## 契約と前提
 
-公開 I/O は [action.yml](action.yml)、JSON shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。意味は `ci.release-asset-publication-contract` に従います。`runs.using: node24` と bundle 済み `dist/index.js` を提供し、consumer に Node 準備を要求しません。正式公開前は pending-release gate により導入できません。
+公開 I/O は [action.yml](action.yml)、JSON shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。意味は `ci.release-asset-publication-contract` に従います。`runs.using: node24` と bundle 済み `dist/index.js` を提供し、consumer に Node 準備を要求しません。公開状態と固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とします。
 
 workflow は選択済み credential を `GH_TOKEN` 環境変数で注入します。Action は credential の選択・保存・fallback を行わず、GET だけを実行します。token に write 能力があってもこの Action は write しません。draft を含む不在を証明するため GitHub が返す repository permissions.push が true であることを要求します。published-only/read-only token では不在を推測せず停止します。対象 provider は github.com のみです。
 

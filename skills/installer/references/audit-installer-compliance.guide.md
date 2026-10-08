@@ -126,43 +126,36 @@
 - installer 成果物が確認できる場合、監査結果（findings）とは別に、証跡から復元した「インストール方法（インストールコマンド）」と「インストール先」を表示する。成果物が存在しない場合は、表示の代わりに証跡不足として報告する。
 - 表示値は manifest（profile / channel / placement / activation / launcherPath）、distribution layout（delivery / release）、execution request（operation mode / source mode）から取得し、推測しない。
 - 取得できない値は `未確認`、未設定の項目は `未設定` と表示する。配信 URL や asset 名を確認できない場合はコマンドを推測せず、`未確認` と表示する。
-- インストール方法は実行するコマンドそのものを表示する。既定コマンドを Unix / Windows それぞれ1つ示し、非既定は代表例（upgrade、offline の manifest / artifact 指定）だけを示す。
-  - 共有 wrapper: `curl ... | sh` / `irm ... | iex` とし、非既定は `INSTALLER_*` を `sh` 側または `$env:` 側へ付ける。
+- インストール方法は実行するコマンドそのものを表示する。対応が確認できたdeliveryとOSだけに既定コマンドを示し、非既定は対応する操作の代表例（upgrade、offline の manifest / artifact 指定）だけを示す。対応範囲は `references/installer-use-case-contract.reference.yml` と検証済み配布物へ照合する。
+  - 共有 Unix wrapper: `curl ... | sh` とし、非既定は `INSTALLER_*` を `sh` 側へ付ける。
+  - Windowsの標準経路はtarget-specific `.ps1` とする。Windows共有wrapperは検証済みowner extensionがある場合だけ、提供元と適用範囲を明示してその実コマンドを示す。
   - target-specific asset: 取得と実行（`./install-*.sh` / `-File install.ps1`）を示し、非既定は CLI 引数で示す。
 - インストール先は launcher、managed root、releases、current、lock、state と、権限・所有者を実パスで示す。プレースホルダは展開前の表記のまま示し、実行時に展開されることを注記する。
 - 変更・失敗時の挙動（dry-run / upgrade / repair / rollback / uninstall）を簡潔に示す。
-- 表示テンプレート:
+- 表示テンプレート（採用したdelivery・OS・操作に該当するblockだけを使用する。Windows共有owner extensionのコマンドは、その検証証跡から取得する）:
 
 ````markdown
 ### インストール方法（インストールコマンド）
 - 配置プロファイル: <profile> / 配信: <delivery>
 
-#### 既定（Unix）
+#### 共有wrapperの既定（Unix）
 ```sh
 curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | sh
 ```
 
-#### 既定（Windows）
-```powershell
-powershell -ExecutionPolicy Bypass -NoProfile -Command "irm <wrapper-url> | iex"
-```
-
-#### 非既定の例
+#### 共有wrapperの非既定例（Unix）
 ```sh
 curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | INSTALLER_MODE=upgrade sh
 curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | INSTALLER_SOURCE=offline INSTALLER_MANIFEST=<path> INSTALLER_ARTIFACT=<path> sh
 ```
-```powershell
-powershell -ExecutionPolicy Bypass -NoProfile -Command "$env:INSTALLER_MODE='upgrade'; irm <wrapper-url> | iex"
-powershell -ExecutionPolicy Bypass -NoProfile -Command "$env:INSTALLER_MODE='upgrade'; $env:INSTALLER_SOURCE='offline'; $env:INSTALLER_MANIFEST='<path>'; $env:INSTALLER_ARTIFACT='<path>'; irm <wrapper-url> | iex"
-```
-
-#### target-specific asset 配布の場合
+#### target-specific asset（Unix）
 ```sh
 curl -fsSL -o <installer-asset-name>.sh <asset-url> && chmod +x <installer-asset-name>.sh && ./<installer-asset-name>.sh
 ./<installer-asset-name>.sh --mode upgrade --source offline --manifest <path> --artifact <path>
 ```
+#### target-specific asset（Windows）
 ```powershell
+Invoke-WebRequest -Uri <asset-url> -OutFile <installer-asset-name>.ps1
 powershell -ExecutionPolicy Bypass -File <installer-asset-name>.ps1
 powershell -ExecutionPolicy Bypass -File <installer-asset-name>.ps1 -Mode upgrade -Source offline -Manifest <path> -Artifact <path>
 ```

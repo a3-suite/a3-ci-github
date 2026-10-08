@@ -8,4 +8,4 @@
 Nodeのnpm cache設定とRustの`RUSTUP_TOOLCHAIN`設定を維持します。準備後の完全一致バージョン確認と品質command実行は[ci-quality-adapter](../ci-quality-adapter/README.md)が担当します。
 checkout、runner、実行条件、権限、credential、品質結果・公開判断はworkflowが所有します。
 
-正式固定SHAの確認前はpreset registryで`pending-release`として扱い、導入を停止します。
+公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とし、preflightはそのavailability gateに従います。
