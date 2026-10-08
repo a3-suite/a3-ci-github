@@ -186,6 +186,27 @@ export const prepareDistributionRelease = (options: {
     return { id, requiredAssets, optionalAssets };
   });
   const files: Record<string, { sha256: string; size: number }> = {};
+  const workflowTemplates = Object.fromEntries(assets.filter((asset) => asset.id.startsWith('workflow.'))
+    .map((asset) => [asset.files[0]!.sourcePath, {
+      emptyAllowed: strings(map(presetRegistry.conformance).emptyAllowedPlaceholders),
+      triggerExtensions: map(map(map(presetRegistry.conformance).workflowTriggerExtensions)[asset.id.slice('workflow.'.length)]),
+    }]));
+  const workflowReferences: Record<string, string> = {};
+  const reusableWorkflows: Record<string, unknown> = {};
+  for (const bindingName of ['qualityReusableWorkflow', 'qualityPlatformsReusableWorkflow',
+    'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow']) {
+    const binding = map(presetRegistry[bindingName]);
+    workflowReferences[String(binding.referencePlaceholder).slice(1, -1)] = options.sourceRevision;
+    reusableWorkflows[String(binding.source)] = {
+      referencePlaceholder: binding.referencePlaceholder,
+      sourceRevision: options.sourceRevision,
+    };
+  }
+  for (const provider of Array.isArray(map(presetRegistry.providerActions).entries)
+    ? map(presetRegistry.providerActions).entries as unknown[] : []) {
+    const entry = map(provider);
+    workflowReferences[String(entry.action)] = String(entry.commitSha);
+  }
   for (const asset of assets) {
     for (const file of asset.files) {
       const bytes = sourceBytes(repositoryRoot, options.sourceRevision, file.sourcePath);
@@ -198,7 +219,7 @@ export const prepareDistributionRelease = (options: {
     }
   }
   const manifest = {
-    schemaVersion: '1',
+    schemaVersion: '2',
     kind: 'a3-ci-github-distribution-manifest',
     version,
     releaseTag: options.releaseTag,
@@ -208,6 +229,9 @@ export const prepareDistributionRelease = (options: {
     assets: assets.sort((left, right) => left.id.localeCompare(right.id)),
     presets: presets.sort((left, right) => left.id.localeCompare(right.id)),
     files: Object.fromEntries(Object.entries(files).sort(([left], [right]) => left.localeCompare(right))),
+    workflowTemplates,
+    workflowReferences,
+    reusableWorkflows,
   };
   fs.mkdirSync(outputDirectory, { recursive: false });
   const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);

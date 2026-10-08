@@ -34,7 +34,7 @@
 検証依存を復元したrepository rootから実行する。入力はindexの同一snapshotであり、未ステージのworkflowを検査結果へ混ぜない。
 
 ```sh
-node runtime/repository/check-provider-references.mjs --staged
+node runtime/repository/check-provider-references.mjs --staged --contracts --preparation
 ```
 
 実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。
@@ -44,19 +44,20 @@ node runtime/repository/check-provider-references.mjs --staged
 - 適用条件に該当しなければ`非適用`。
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
+- `preparationOnly: true` は全Action targetとavailabilityGateがpendingの準備コミットだけの許容であり、接続契約は未達。`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。Actionのavailable targetがある場合、この許容は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新の判定は `--preparation` を外して実行する。
 
 ## 固定参照更新順序ゲート
 
 ### 確認（手動）
 - 更新順序の正本は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)。手順を本ゲートへ複製しない。
-- staged snapshotの変更を実装準備、公開済みActionへの接続、再利用workflowの受入準備、callerの利用可能化に分類し、正本の順序に照合する。
+- staged snapshotの変更を実装準備、公開済みActionへの接続、再利用workflowの公開準備、callerの生成・接続に分類し、正本の順序に照合する。
 - 利用可能として接続する参照は、registryとcanonical sourceの一致、固定SHAの実体と必要な契約、要求される公開・受入証拠を確認する。作業ツリーの実装や別SHAの成功を接続先の証拠に読み替えない。
 - 準備段階で残したpending状態・placeholderと、後続の公開・受入・切替が必要な箇所を確認結果へ明示する。未公開という理由だけで準備コミットを停止しない。
 
 ### 終了条件
 - 適用条件を満たさない場合は`非適用`。
 - 正本の順序と接続先の証拠が整合する、またはpending状態を維持した準備コミットとして整合する場合は`PASS`。
-- 将来SHAの自己参照、未確定・不適合な実装への利用可能な接続、registryとcanonical sourceの参照不一致、必要なactivation条件未達の利用可能化は`STOP`。
+- 将来SHAの自己参照、未確定・不適合なActionへの接続、registryとcanonical sourceのAction参照不一致、manifestとcalleeの固定参照不一致は`STOP`。templateのcallee placeholderは導入時生成の入力として維持する。
 - 必要な正本・参照先・証拠を確認できなければ`判定不能`。未確認の段階を成功として補完しない。
 
 ### 再実行条件

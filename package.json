@@ -8,7 +8,7 @@
     "test": "vitest run",
     "test:coverage": "node tests/coverage-tools/measure-coverage.mjs",
     "test:coverage:installer": "node tests/coverage-tools/measure-installer-coverage.mjs",
-    "lint:provider": "node runtime/repository/check-provider-references.mjs",
+    "lint:provider": "node runtime/repository/check-provider-references.mjs --contracts --preparation",
     "lint:repository": "bash runtime/repository/lint-repository.sh"
   },
   "devDependencies": {

@@ -5,6 +5,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 
+import { publicationRequestInputs } from '../../../runtime/repository/action-reference-fixtures.mjs';
+
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
@@ -59,8 +61,7 @@ test('entrypoint rejects missing owner decision before creating artifacts', (t) 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-owner-'));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const output = path.join(root, 'output');
-  const notes = '# Release\n';
-  const input = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1.2.3', 'INPUT_RELEASE-VERSION': '1.2.3', 'INPUT_TARGET-IDENTITY': 'owner/project', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': crypto.createHash('sha256').update(notes).digest('hex') };
+  const input = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, ...publicationRequestInputs(root) };
   for (const missing of ['INPUT_RELEASE-VERSION', 'INPUT_TARGET-IDENTITY']) {
     fs.writeFileSync(output, '');
     // Act

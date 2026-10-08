@@ -29,6 +29,9 @@ test_maps:
   - verification_id: verification.ci-release-publication-control.outputs
     case_id: owner-decision-required
     tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > fixed publication Action references require owner decisions and expose old registry pins"
+        check_refs: [check-publication-control-failure-status]
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint rejects missing owner decision before creating artifacts"
         check_refs: [check-publication-control-failure-status]

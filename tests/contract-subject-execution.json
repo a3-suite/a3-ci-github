@@ -1388,6 +1388,18 @@
           }
         },
         {
+          "id": "integration-fixed-reference",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Executes referenced published bundles for contract behavior; source coverage remains in source segments and Hosted evidence is separate."
+          }
+        },
+        {
           "id": "e2e",
           "level": "e2e",
           "status": "excluded",
@@ -1550,6 +1562,18 @@
               "src/**"
             ],
             "reason": "Generated dist is verified by behavior and build identity; source-only coverage is collected in source segments."
+          }
+        },
+        {
+          "id": "integration-fixed-reference",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Executes referenced published bundles for contract behavior; source coverage remains in source segments and Hosted evidence is separate."
           }
         },
         {

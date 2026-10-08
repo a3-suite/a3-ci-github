@@ -177,7 +177,7 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 `{skill-collection-root}` は、選択した言語スキルを identity で解決する場合だけ使用する。
 repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
 `{ci-github-skill-root}` 配下へ複製しない。取得とworkflow copyは
-`distribute-ci-assets.guide.md`のfetch／plan／applyを先に完了する。コピー先の`{project-root}`は両方と別であり、
+`distribute-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
 導入後の workflow や adapter から配布元を参照しない。
 
 ## プリセット別の値
@@ -196,17 +196,17 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 ## 導入手順
 
 1. `ci-github` スキルで用途に対応するプリセットを選ぶ。
-2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchし、planと明示承認を経てcanonical workflowを配置する。
+2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。差分の明示承認後に設定済みcanonical callerを配置する。
 3. registry から選択した preset の copyable asset、固定 SHA Action binding、その依存閉包、残る `requiredExtensions` を解決し、copyable assetを配置する。固定本数や platform 数から必要ファイルを推測しない。
 4. quality は標準bundle IDまたは独自descriptor、Release と package は選択した Action binding と残る `requiredExtensions` を workflow から直接接続する。依存閉包に属する copyable asset は改変しない。
 5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
-6. workflow の placeholder だけを project の値へ置換し、外部 Action は `workflow-version-policy.reference.md` の「Action と版情報の扱い」に従って registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin を設定する。consumer workflow 自身が外部 provider Action を直接使用する場合は、registry の `providerActions.pinCompanion` が宣言する `.ci/provider-action-pins.yml` を生成して配置する。主品質・platform品質callerだけを採用する場合、callee内部のpinは配布元が管理するため、このcompanionは不要。job、step、permissions、trust 境界、summary 経路は直接変更しない。
+6. 生成済みcallerの設定と固定参照を読み返す。calleeのSHAはmanifestの固定参照から、外部Action pinはregistryから自動設定される。consumerが外部provider Actionを直接使う場合だけ、registryの`providerActions.pinCompanion`が宣言する`.ci/provider-action-pins.yml`を配置する。job・step・permissions・trust境界・summary経路は直接変更しない。
 7. workflow 初期パラメータ、必要な Variables、Secrets、workflow input の値を上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
 8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証導線、更新・撤去条件を記録する。
 9. 配布元 revision の full commit SHA を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。生成日時はUTCの分単位に正規化され、版識別には使わない。
 10. CI向けa3-lintルールとactionlintで単一workflowの一般規則を検証する。actionlint 設定は `.github/actionlint.yaml`（project-owned、内容非固定）を registry の `provider.staticValidation` に従って扱う。
 11. `references/validate-ci-preset.guide.md` に従い、canonical workflowとの構造照合と配布同一性を含むpreflightを実行する。
-12. 選択した経路で必要な project-owned adapter と project の契約テストを作業 tree で先に成立させる。導入先では手順2で取得・検証した exact Release の full commit SHA を固定し、lock、preflight、契約テストを確認する。未公開 binding の利用可能性は registry に従い、導入完了扱いにしない。hosted 証拠は前述の default branch 制約に従い、既存の非公開・非書込み検証経路または隔離 staging repository で取得できる範囲だけを記録する。
+12. 選択した経路で必要な project-owned adapter と project の契約テストを作業 tree で先に成立させる。導入先では手順2で取得・検証した exact Release の full commit SHA を固定し、lock、preflight、契約テストを確認する。calleeの固定参照は検証済みmanifestから解決する。生成・配置の成功だけで導入先の環境受入を完了扱いにしない。hosted 証拠は前述の default branch 制約に従い、既存の非公開・非書込み検証経路または隔離 staging repository で取得できる範囲だけを記録する。
 
 既存ファイルを暗黙に上書きしない。差分を提示して owner が採用範囲を決めた後に配置し、
 配置後はコピー先を設定の正本として読み返し、preflight時だけregistryのsourceと照合する。
@@ -223,11 +223,12 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 1. `ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
    entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に設定し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `ci-adapter-bundles.reference.yml` を参照する。
 
-2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchし、planの
-   `create`／`reuse`／`update`と競合なしを確認してから、plan digestを明示してapplyする。
-   導入用 TypeScript helper のruntimeは管理対象CI資産に含めず、取得済みdistributionの
-   `runtime/preset/`固定依存定義から`references/validate-ci-preset.guide.md`のremediation手順で
-   `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。
+2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
+   planに必要なruntimeを、取得済みdistributionの`runtime/preset/`固定依存定義から
+   `validate-ci-preset.guide.md`のremediation手順で
+   `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。runtimeはGit管理に含めない。
+   その後、製品設定を`--set`で渡してplanを生成し、`create`／`reuse`／`update`と競合なしを
+   確認してから、plan digestを明示してapplyする。
 
 3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`distribute-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
 
