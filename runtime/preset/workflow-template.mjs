@@ -1,3 +1,5 @@
+export { projectProviderActionPins, providerActionPinRepositories } from './provider-action-pins.mjs';
+
 const PLACEHOLDER = /<([A-Za-z][A-Za-z0-9._-]*)>/g;
 const WHOLE_PLACEHOLDER = /^<([A-Za-z][A-Za-z0-9._-]*)>$/;
 const isMap = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);

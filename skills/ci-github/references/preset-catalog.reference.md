@@ -2,7 +2,7 @@
 
 ## 理解できること
 
-- `ci` のプリセットを GitHub Actions asset へ対応付ける方法
+- `ci-github` のプリセットを GitHub Actions asset へ対応付ける方法
 - provider 固有の入力と実装境界
 - 導入・検証ガイドへの進み方
 
@@ -18,7 +18,7 @@ GitHub 固有の trust、workflow authoring、version 固定には provider prof
 
 | 入力 | 解決元 | 用途 |
 | --- | --- | --- |
-| `preset` | `ci` の契約 | workflow asset の選択 |
+| `preset` | `references/ci-preset-contracts.reference.yml` | workflow asset の選択 |
 | `language-profile` | workflow初期パラメータ | quality adapter の選択 |
 | `toolchain` | projectのversion設定またはworkflow初期パラメータ | runtimeとtoolchainの版固定 |
 | `platform-manifest` | trusted controlまたはowner契約 | build targetと期待asset集合 |
@@ -38,7 +38,7 @@ workflowのsource、配置先、必要assetはregistryのpreset entryから選�
 | `release-publication` | `registry.presets[release-publication]` | notes確認後の手動requestをdefault branchのcallerで検証し、Release資材を公開 |
 | `package-publication` | `registry.presets[package-publication]` | 検証済みpackageをregistryへ公開 |
 
-registryの`source`はスキル公開元からコピーするときだけ使う。コピー後は`.github/`、`.ci/`、projectの設定だけで実行できる状態にする。provider固有の処理順と権限境界は配置したworkflowを正本とする。
+registryの`source`は配布元の固定資材を解決するときだけ使う。callerの生成・配置は `references/configure-ci-preset.guide.md` に従う。配置後は`.github/`、`.ci/`、projectの設定だけで実行できる状態にする。provider固有の処理順と権限境界は配置したworkflowを正本とする。
 
 `quality-gate`のplatform別検証は任意選択とする。必要なprojectだけがregistryの`optionalWorkflowAssets`（`quality-gate-platforms`）を、companionの`.ci/quality-platforms.yml`と一組で導入する。既存projectへの後続導入ではcompanionを先行配置してよい。選択データはplatform manifestの`id`だけを列挙し、runner mappingはmanifestに残す。未選択のprojectは従来の単一runner構成を維持する。採用時は固定名の集約 check を別 required として追加し、base `quality-gate` の判定へ暗黙に混ぜない。
 
@@ -50,7 +50,7 @@ canonical の `release-request` は tag adapter のみを提供する（manual m
 
 `quality-gate`では、`ci.script-assets` inventoryの`adapterBundles`から`languageProfiles`が一致するbundle IDを選ぶ。標準Action経路とdescriptor配置経路の選択・配置は、`references/ci-adapter-bundles.reference.yml` の `profilePolicy` と `copyContract` を参照する。導入手順は `references/configure-ci-preset.guide.md` に従う。
 
-一致する標準bundleがない場合だけ、`ci`スキルのadapter契約を満たすproject-owned descriptorを用意する。Releaseとpackageの実装はadapter bundleへ含めず、registryの`requiredExtensions`へ接続する。
+一致する標準bundleがない場合だけ、`references/ci-adapter-bundles.reference.yml` のdescriptor契約を満たすproject-owned descriptorを用意する。言語固有commandはlanguageまたはproject ownerが所有する。Releaseとpackageの実装はadapter bundleへ含めず、registryの`requiredExtensions`へ接続する。
 
 ## Action の選択
 

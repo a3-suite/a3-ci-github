@@ -83,6 +83,10 @@ runtime_contexts:
     summary: The manifest and supplied quality selection are available and satisfy the ci-platform-matrix input contract, including unique declared IDs in selection order.
   - id: runtime-context.quality-platform-selection-invalid
     summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
+  - id: runtime-context.quality-toolchain-preparation-succeeds
+    summary: The selected language profile is supported, its required tool versions are exact, and every selected toolchain setup step succeeds.
+  - id: runtime-context.quality-toolchain-preparation-fails
+    summary: The selected language profile is unsupported, a required selected tool version is missing or nonexact, or a selected toolchain setup step fails.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid
@@ -123,6 +127,10 @@ runtime_contexts:
     summary: An untracked distribution file exists or a Composite Action references an untracked script.
   - id: runtime-context.repository-action-catalog-inputs-available
     summary: Action definitions and the maintained README Action catalog are available to the catalog projection gate.
+  - id: runtime-context.repository-exact-release-tag-available
+    summary: An annotated exact vX.Y.Z release tag resolves to the target source commit, whose VERSION is a valid X.Y.Z release version matching the tag.
+  - id: runtime-context.repository-release-version-invalid-or-mismatched
+    summary: The target source commit has no VERSION, its VERSION is not a valid X.Y.Z release version, or that version differs from the exact release tag.
   - id: runtime-context.release-publication-request-verified
     summary: The publication request has been verified against the invoking workflow evidence and exposes the bound release request run ID.
   - id: runtime-context.package-publication-request-succeeded
@@ -158,7 +166,7 @@ runtime_contexts:
   - id: runtime-context.preset-materialization-conflict
     summary: A selected source is invalid or a destination already contains different content.
   - id: runtime-context.preset-assurance-roots-missing
-    summary: Preset assurance is invoked without an explicit repository root or skill-collection root.
+    summary: Preset assurance is invoked without an explicit repository root.
   - id: runtime-context.preset-assurance-read-only-output-requested
     summary: Read-only preset assurance is invoked with remediation output requested.
   - id: runtime-context.vitest-report-complete

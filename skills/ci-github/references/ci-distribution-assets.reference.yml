@@ -72,6 +72,8 @@ assets:
       - runtime/preset/workflow-validation.ts
       - runtime/preset/workflow-template.mjs
       - runtime/preset/workflow-template.d.mts
+      - runtime/preset/provider-action-pins.mjs
+      - runtime/preset/provider-action-pins.d.mts
       - runtime/platform/platform-manifest-core.d.mts
       - runtime/platform/platform-manifest-core.mjs
       - runtime/platform/platform-selection-core.ts

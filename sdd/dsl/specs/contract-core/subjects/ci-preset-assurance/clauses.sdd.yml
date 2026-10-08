@@ -132,7 +132,7 @@ contracts:
               values: [failed]
     verification_intents:
       - id: ci-preset-assurance-explicit-roots-intent
-        goal: Missing explicit roots produce a stable invalid-input diagnostic before validation starts.
+        goal: Missing explicit repository root produces a stable invalid-input diagnostic before validation starts.
         guarantee_refs: [ci-preset-assurance-explicit-roots-required]
       - id: ci-preset-assurance-read-only-output-intent
         goal: Read-only audit rejects remediation output with a stable invalid-input diagnostic.
@@ -153,7 +153,7 @@ contracts:
           - ci-preset-assurance-valid-evidence-exposed
           - ci-preset-assurance-semantic-review-state-exposed
       - id: ci-preset-assurance-drift-intent
-        goal: Canonical or distribution identity drift produces a failed report and remains observable without remediation.
+        goal: Canonical or distribution identity drift produces a failed report and remains observable without remediation. Required pin companions must match every registry-projected entry and field, including unused pins; missing, additional or edited values are rejected independently of any existing lock. YAML formatting and mapping order are not semantic drift.
         guarantee_refs: [ci-preset-assurance-drift-fails]
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation binds validated applied assets to one full distribution revision and rejects invalid revision identity.
@@ -198,7 +198,7 @@ contracts:
             value: diagnostic
     verification_intents:
       - id: ci-preset-assurance-lock-generation-intent
-        goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests.
+        goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests. Required generated pin companions record their registry input as the canonical digest and installed bytes as the applied digest; invalid projections cannot be blessed by generating a new lock.
         guarantee_refs:
           - ci-preset-assurance-lock-source-bound
           - ci-preset-assurance-lock-assets-recorded

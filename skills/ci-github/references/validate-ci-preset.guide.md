@@ -44,6 +44,10 @@ bootstrap の `cannot-start`、TypeScript validator が報告した配置済み�
 
 管理対象の変更許可がある場合だけ、実行時の依存をスキル専用ローカル状態へ展開する。remediation でも一時 runtime と npm cache は管理対象資産へ配置しない。
 
+#### runtime準備
+
+初回導入では、この準備をplan前に行う。この段階ではcallerの配置やlock生成を前提とするpreflightを起動しない。
+
 ```bash
 ci_github_local_runtime="{project-root}/.a3-skills/ci-github/runtime"
 mkdir -p "$ci_github_local_runtime"
@@ -52,12 +56,11 @@ cp "{ci-github-source-root}/runtime/preset/package.json" \
   "$ci_github_local_runtime/"
 npm_config_cache="{project-root}/.a3-skills/ci-github/npm-cache" \
   npm ci --prefix "$ci_github_local_runtime" --no-audit --no-fund
-node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
-  --audit-mode remediation \
-  --repo-root "{project-root}"
 ```
 
-lock が未作成または配布元を更新した場合は、同じ runtime で preflight より先に生成する。
+#### 適用後のlock生成とpreflight
+
+配布ガイドのplan／applyと必要なproject設定を終えてから検証する。lockが未作成または配布元を更新した場合は、準備済みruntimeで先に生成する。
 
 ```bash
 CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
@@ -68,6 +71,14 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
 ```
 
 `--source-revision`は配布元の40桁commit SHAとする。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
+
+lock生成が必要な場合はその成功を確認してから、preflightを実行する。
+
+```bash
+node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
+  --audit-mode remediation \
+  --repo-root "{project-root}"
+```
 
 外部skillの資材を参照する構成では、preflightとlock生成の各コマンドに `--skill-collection-root "{skill-collection-root}"` を追加する。未指定で必要な外部資材を解決できない場合は失敗する。preflightは明示したrootが有効なdirectoryかを従来どおり検査する。
 

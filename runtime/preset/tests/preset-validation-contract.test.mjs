@@ -39,6 +39,29 @@ const withFixture = (callback) => {
 
 describe("contract.ci-preset-assurance.asset-lock", () => {
   describe("preset-asset-lock-contract", () => {
+    // contract_id: contract.ci-preset-assurance.asset-lock
+    // contract_id: contract.ci-preset-assurance.verification
+    test('asset lock generation rejects independent edits to unused approved pins', () => withFixture((root) => {
+      const document = parseYaml(readFileSync(path.join(root, model.pinPath), 'utf8'), model.pinPath);
+      const mutations = [
+        (value) => { value['actions/checkout'].runtime = 'node20'; },
+        (value) => { delete value['actions/checkout']; },
+        (value) => { value['extra/action'] = { ...value['actions/checkout'] }; },
+        (value) => { value['actions/checkout'].extra = 'undeclared'; },
+      ];
+      for (const mutate of mutations) {
+        const changed = structuredClone(document);
+        mutate(changed);
+        writeFileSync(path.join(root, model.pinPath), stringify(changed));
+        const before = snapshotTree(root);
+        expect(validateCiPreset({ repoRoot: root, presets: ['release-request'] }).status).toBe('failed');
+        expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40) }))
+          .toThrow(/approved pin companion/);
+        expect(snapshotTree(root)).toStrictEqual(before);
+      }
+      writeFileSync(path.join(root, model.pinPath), JSON.stringify(Object.fromEntries(Object.entries(document).reverse())));
+      expect(writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40) }).assets.some(entry => entry.path === model.pinPath)).toBe(true);
+    }));
     // integration_id: preset-asset-lock-contract
     // contract_id: contract.ci-preset-assurance.asset-lock
     // evidence_role: contract
@@ -55,7 +78,10 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
       // Assert
       expect(lock.sourceRevision).toBe(sourceRevision);
       expect(lock.generatedAt).toBe('2026-09-17T00:41Z');
-      expect(lock.assets.map((asset) => asset.path).sort()).toStrictEqual(releaseRequestAssets.map((asset) => asset.destination).sort());
+      expect(lock.assets.map((asset) => asset.path).sort()).toStrictEqual([...releaseRequestAssets.map((asset) => asset.destination), model.pinPath].sort());
+      const pins = lock.assets.find((asset) => asset.path === model.pinPath);
+      expect(pins.canonicalSha256).toBe(model.sha256(readFileSync(path.join(repositoryRoot, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'))));
+      expect(pins.appliedSha256).toBe(model.sha256(readFileSync(path.join(root, model.pinPath))));
       for (const asset of releaseRequestAssets) {
         const locked = lock.assets.find((entry) => entry.path === asset.destination);
         expect(locked, `missing lock entry: ${asset.destination}`).toBeTruthy();
@@ -167,6 +193,7 @@ describe("preset-validation-contract", () => {
       });
       const lockPath = path.join(root, '.ci/ci-assets.lock.json');
       const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+      const canonicalSha256 = lock.assets[0].canonicalSha256;
       lock.assets[0].canonicalSha256 = '0'.repeat(64);
       writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
       const before = snapshotTree(root);
@@ -177,7 +204,7 @@ describe("preset-validation-contract", () => {
       expect(snapshotTree(root)).toStrictEqual(before);
 
       // Arrange
-      lock.assets[0].canonicalSha256 = model.sha256(readFileSync(path.join(repositoryRoot, releaseRequestAssets[0].source)));
+      lock.assets[0].canonicalSha256 = canonicalSha256;
       const cases = [
         [(value) => { value.schemaVersion = 'unsupported'; }, 'schemaVersion is unsupported'],
         [(value) => { value.kind = 'unsupported'; }, 'kind is unsupported'],

@@ -41,7 +41,13 @@ const inside = (root, relative) => {
   return resolved;
 };
 const regularFile = (filename, diagnostic) => {
-  const stat = fs.lstatSync(filename);
+  let stat;
+  try {
+    stat = fs.lstatSync(filename);
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error(diagnostic, { cause: error });
+    throw error;
+  }
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(diagnostic);
 };
 const assertResolvedInside = (root, target, diagnostic) => {
@@ -544,6 +550,43 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
         generatedSha256,
         ...(generatedContent === undefined ? {} : { generatedContent }),
       });
+    }
+  }
+  if (templateRuntime) {
+    const registryAsset = loaded.manifest.assets.find((asset) => asset.id === 'registry.ci-github');
+    const registrySource = registryAsset?.files.find((file) => file.sourcePath.endsWith('/ci-github-preset-assets.reference.yml'))?.sourcePath;
+    if (!registrySource || !loaded.receipt.files.includes(registrySource)) throw new Error('distribution-pin-registry-not-fetched');
+    const providerActions = yamlRuntime.parse(fs.readFileSync(inside(loaded.root, registrySource), 'utf8')).providerActions;
+    const projection = templateRuntime.projectProviderActionPins(providerActions.entries, providerActions.pinCompanion.fields);
+    const callerTexts = actions.map((entry) => entry.generatedContent ?? (
+      entry.destinationSha256 === null ? '' : fs.readFileSync(inside(projectRoot, entry.destination), 'utf8')));
+    const selectedPaths = new Set(actions.map((entry) => entry.destination));
+    for (const preset of loaded.manifest.presets) {
+      for (const assetId of [...preset.requiredAssets, ...preset.optionalAssets]) {
+        const asset = loaded.manifest.assets.find((candidate) => candidate.id === assetId);
+        for (const file of asset?.application === 'copy' ? asset.files : []) {
+          if (file.destination && !selectedPaths.has(file.destination) && priorAssets.has(file.destination)) {
+            const current = inside(projectRoot, file.destination);
+            assertResolvedInside(projectRoot, current, `distribution-destination-outside-root:${file.destination}`);
+            if (fs.existsSync(current)) callerTexts.push(fs.readFileSync(current, 'utf8'));
+          }
+        }
+      }
+    }
+    const requiresPins = callerTexts.some((text) => [...templateRuntime.providerActionPinRepositories(yamlRuntime.parse(text))]
+      .some((action) => Object.hasOwn(projection, action)));
+    if (requiresPins) {
+      const destination = providerActions.pinCompanion.path;
+      const absolute = inside(projectRoot, destination);
+      assertResolvedInside(projectRoot, absolute, `distribution-destination-outside-root:${destination}`);
+      const generatedContent = yamlRuntime.stringify(projection);
+      const generatedSha256 = sha256(Buffer.from(generatedContent));
+      const destinationSha256 = digestIfFile(absolute);
+      const action = destinationSha256 === null ? 'create' : destinationSha256 === generatedSha256 ? 'reuse'
+        : priorAssets.get(destination)?.appliedSha256 === destinationSha256 ? 'update' : 'conflict';
+      actions.push({ assetId: registryAsset.id, sourcePath: registrySource, destination,
+        sourceSha256: sha256(fs.readFileSync(inside(loaded.root, registrySource))), destinationSha256,
+        action, generatedSha256, generatedContent });
     }
   }
   const selectedDestinations = new Set(actions.map((entry) => entry.destination));
