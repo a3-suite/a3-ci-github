@@ -45,23 +45,22 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 1. **Action実装を確定する。** Actionとbundleへ入る共有runtimeを変更した場合は、source検証とdist同一性を確認し、実行に必要な生成物・依存を含めて先にコミット・pushします。公開経路で統合・公開された後、そのexact release tagのpeeled full SHAをAction接続先として確定します。squash等でSHAが変わった場合は、作業branchのSHAを公開SHAとして使いません。
 2. **workflowからActionへ接続する。** canonical workflowのAction参照、installer等のprovider revision、registryのAction bindingを確定済み公開SHAへ揃えます。参照先のActionがそのworkflowで必要な入力・出力・能力を持つことを確認します。Action実装を変更せず既存の公開済みActionを使う場合は、新しいActionコミットは不要です。
-3. **再利用workflow自身を確定する。** provider callee内の外部Action参照をregistryのproviderActions pinで解決し、`npm run lint:provider`を成功させます。pending状態でもprovider内部にplaceholderは残しません。修正したprovider calleeを検証してコミット・pushし、受入対象のfull SHAを確定します。Hosted受入は実際のcalleeをそのSHAで呼び出して行います。正式な利用可能化ではregistryが要求するexact release tagとの対応も確認し、統合・公開でSHAが変わった場合は最終参照に対応する受入証拠を確認します。
-4. **callerとregistryを切り替える。** 再利用workflowのactivation条件を満たした後、その確定SHAをregistryとcallerのworkflow参照へ設定します。ActionのSHAとworkflowのSHAが同じであることは前提にしません。canonical mapping・preflight・配布閉包の検証後、接続側の変更をコミットします。
+3. **再利用workflow自身を確定する。** provider callee内の外部Action参照をregistryのproviderActions pinで解決し、`npm run lint:provider`を成功させます。callee・template・生成処理を検証してコミット・pushし、配布対象のfull SHAを確定します。
+4. **候補SHAを配布する。** 公開tagとmanifestの固定参照の一致を検証して公開します。consumerのcallerはそのmanifestから導入時に生成し、導入先の環境で受け入れます。source registryとtemplateへ自己SHAを書き戻しません。ActionとworkflowのSHAが同じであることは前提にしません。
 
-一つのコミットへ自己参照する将来SHAは書き込めません。新しいAction実装と、その未確定SHAを使うworkflow接続を同じコミットで確定したことにしません。未公開資材の準備コミットでは、対応する導入経路をregistryのpending状態とplaceholderで明示し、consumerへ利用可能として配備しません。必要なHosted受入が未完了のworkflowも受入待ちとして残します。
+Action実装とその将来SHAを使う接続は同一コミットで確定できません。未公開Actionの準備状態は既存Action bindingで管理します。再利用workflowはsourceに状態を持たず、distribution manifestから固定参照を解決します。
+
+Action参照の更新は、公開確認済みのexact tagを明示して `node runtime/repository/update-action-references.mjs --check --tag vX.Y.Z` で差分を確認し、同じ指定の `--write` で適用します。tagのannotated object・peeled SHAをoriginと照合し、tag先のVERSION、Action metadata、対象契約の実dist動作を確認してからregistryと同じAction bindingを使う全参照・installer revisionを更新します。calleeのmanifest参照、workflow placeholder、外部Action pinは変更しません。
+
+`npm run lint:provider` はprovider・canonicalのAction参照、tag対応、固定SHA先のmetadata、quality adapterとpublication controlの正常・拒否動作を検査します。Git object不足や実行不能は判定不能です。未公開Actionの準備段階だけは接続契約の未達を `preparationOnly` と明示して残せます。接続更新・候補受入前は `node runtime/repository/check-provider-references.mjs --contracts` を実行し、診断ゼロを要求します。これはHosted受入の代替ではありません。検証対象を増やす場合は既存の対象契約の回帰へ接続し、SHA形式の成功を動作保証に読み替えません。
 
 公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
 
-### pending の再利用workflowをHosted受入する
+### 再利用workflowの公開と導入後受入
 
-正式なconsumer導入と、利用可能化のための受入試験を分けます。pending中は通常のconfigure・lock生成を成功させません。受入では、隔離した試験用callerから候補calleeの確定SHAを直接呼び出します。registryを一時的にavailableへ変える操作や、preflightの拒否を無視して本番へ配備する操作は行いません。
+公開前の生成・固定参照・接続契約の検証と、導入先のHosted環境受入の責務は[Release手順](../release/README.md#Release公開と利用側受入の順序)が参照する配布契約に従います。公開workflowは既存の生成回帰を実行します。導入先では通常のfetch・plan・applyでcallerを生成し、製品設定・認証・required checkを受け入れます。
 
-1. **対象を確定する。** registryの選択した再利用workflow bindingを読み、provider内部のpin検証済みcalleeと、その公開済みexact tagのpeeled full SHAを選びます。受入callerの`jobs.<job>.uses`はそのfull SHAへ置換します。別SHAのrunは対象の受入証拠にしません。
-2. **受入vehicleを準備する。** 明示的に承認された隔離staging repository、または既存consumerの試験専用環境を使います。該当canonical callerを基にproject固有の静的設定と必要な製品ソース・宣言だけを用意し、provider callee・共通runtime・builderはコピーしません。publicationのcallerはdefault branch上のrequest・callerと検証済みhandoffを要求するため、任意のfeature branchからの直接実行で代替しません。公開先・credential・承認経路は試験用ownerが指定し、本番公開経路と混在させません。各試験条件はregistryの当該bindingと[テスト戦略](test-strategy.md)から選びます。
-3. **実行と証拠を対応付ける。** 実際のcalleeを呼ぶHosted runで、選択したbindingが要求する正常・失敗経路と出力を確認します。run URL、callerのrepository/ref、呼び出したcallee SHA、exact tagとの対応、試験条件・結果、関連handoff/readbackを`logs/agents/{yyyyMMdd}/{yyyyMMdd_HHmmss}_reusable-workflow-acceptance.md`へ記録します。複数bindingの証拠を混同せず、未実施の条件は未実施として残します。静的検証や別SHAの成功では補いません。
-4. **接続側を更新する。** registryのactivation条件を満たしたbindingだけ、その状態とexactRefを更新し、対応するcanonical callerのworkflow placeholderを同じSHAへ置換します。canonical mapping・preflight・配布閉包を検証して接続側の修正版を公開し、その版から通常のconsumer configure・lock生成へ進みます。未受入のbindingはpendingのまま残します。
-
-Hosted実行・試験環境への書き込み・registry activation・修正版公開は、ローカル修正とは別の工程です。既存のRelease公開を取り消すことや、利用projectが現れるまでprovider Releaseを待つことは、この受入手順の前提にしません。
+Hosted実行・環境への書き込み・試験公開・Release公開は、ローカル修正とは別の承認工程です。実行した経路とSHA、run URL、条件と結果を記録し、ローカル検証や生成成功をHosted成功へ読み替えません。Hostedでの代表検証は[テスト戦略](test-strategy.md)に従います。
 
 ## runtime の利用形態
 

@@ -14,6 +14,9 @@ test_maps:
   - verification_id: verification.ci-quality-adapter.outputs
     case_id: standard-selection-rejected
     tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > fixed quality Action references preserve rejection contracts and expose old registry pins"
+        check_refs: [check-quality-adapter-standard-rejection]
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint rejects simultaneous standard ID and descriptor before execution"
         check_refs: [check-quality-adapter-standard-rejection]

@@ -28,7 +28,7 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 | Release | `workflows/release/` |
 | Package公開 | `workflows/package/` |
 
-`workflows/` は適用先へ配置するcaller・request workflowのsourceです。`.github/workflows/` はproviderの再利用calleeと、このリポジトリ自身のCIを置きます。個々のcanonical sourceとbindingは[preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)を参照してください。
+`workflows/` は導入時に製品設定を埋め込むcaller・request templateです。`.github/workflows/` はproviderの再利用calleeと、このリポジトリ自身のCIを置きます。calleeの固定参照はRelease manifestから解決します。導入先では生成済みcallerを設定の正本として管理し、共通実装や個別の生成スクリプトはコピーしません。個々のcanonical sourceとAction bindingは[preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)を参照してください。
 
 ## 選択配布
 

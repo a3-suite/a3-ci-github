@@ -1,6 +1,6 @@
 ---
 name: ci-asset-audit
-description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化・配置変更・Release公開後の取り残しを監査するときに使う。
+description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、固定参照先の契約適合、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化・配置変更・Release公開後の取り残しを監査するときに使う。
 ---
 
 # ci-asset-audit / SKILL
@@ -76,11 +76,13 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 
 - **無駄と複雑度**: consumerとproviderの両側で、実際の利用経路に接続しない実装・設定・環境変数・依存、委譲先と重複する準備・検証・後処理、不要なwrapper・分岐・fallbackを確認する。参照箇所だけでなく委譲先と固定refの能力を照合し、必要な互換性経路や信頼境界を区別する。各候補は、削除または単純化しても維持すべき契約・失敗伝播・証拠と、減る保守・設定・取得・実行負担を示す。
 
-- **公開後の利用可能化と配備**: 対象Releaseのtagとpeeled full SHA、公開資材、registryの固定参照・利用可能状態、公開Skillの説明と配備実体を照合する。公開済みなのに旧参照や`pending-release`が残る場合は、各経路のactivation条件と証拠に照らして、意図的な固定・受入待ちと更新漏れを区別する。履歴上のversionや参照を一律に最新版へ変更する判断はしない。Release公開・資材readback・必要なHosted受入・registryの利用可能化・Skill配備を別の達成状態として示し、Release workflowや公開手順から後続更新・検証への導線が欠けていないか確認する。provider自身のCI成功をconsumer接続や各calleeのHosted受入の証拠に代用せず、未達条件があれば自動的に`available`と判断しない。配備比較は明示されたrootと対象Skillの範囲で行い、更新差分・不足・staleを分ける。公開refや配備先が監査範囲外・未指定・未取得なら該当段階を未確認とし、ローカル正本の整合だけで配布・配備まで完了としない。
+- **配布・生成・受入と配備**: source template、Release manifest、生成済みcallerを区別し、tagのpeeled SHA、manifestのcallee固定参照、生成設定・byte・lock、公開Skillと配備実体を照合する。再利用workflowはsource registryの状態書換えや公開後の自己SHA書戻しを要求しない。Actionの固定公開参照とavailabilityはregistryで確認する。生成・更新時の製品設定保持、固定参照の整合、不正設定や管理外差分の拒否、不要な個別生成実装や設定正本の追加を確認する。提供元の生成・接続検証と導入先の設定・認証・required checkの受入は別の証拠とし、静的CIやreadbackでHosted受入を代替しない。履歴上のversionや固定Action参照を一律に最新版へ変更しない。配備比較は明示rootと対象Skillに限定し、不足・stale・範囲外・未確認を分ける。ローカル正本の整合だけで公開・配備まで完了としない。
 
 対称性の差は、契約・owner・権限・公開先・trigger・互換性に基づく必要な差と、説明できない欠落・粒度不一致・移行の取り残しに分ける。対称性を理由に固有責務や信頼境界を消さない。
 
 七項目それぞれについて、確認範囲と根拠を添えた結論を毎回報告する。構造は正本と実体の対応、ルールは参照した正本と実際の適用・検証範囲を示す。削減・共通化の候補がない場合も理由を示す。対称性の問題がない場合は比較した対応関係と必要な差を示す。証拠不足や指定範囲外は未確認として示し、「候補なし」「問題なし」で代用しない。
+
+固定参照を持つ対象経路では、caller→callee→Actionの実際の`uses`を起点に、参照SHA・tag対応・必要な契約・確認したmetadata/dist・検証結果を対応付ける。実行方法と準備段階の扱いは[Action構築方針](../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。sourceの修正済み、固定参照先への反映済み、対象SHAのHosted受入済みを別々に判定し、どれかが未確認なら経路全体を問題なしとしない。registryとworkflowが同じ旧SHAを指す場合も、相互一致だけでは現在契約への適合証拠にしない。生成・配置・公開とHosted受入の達成状態を分け、受入未実施をAction参照更新の取り残しを調べない理由にはしない。
 
 検証資材の評価では、subject／test-mapの保証とテストが実際に観測する境界を照合する。provider内部の回帰をActionの公開出力保証へ直接算入せず、テストの収集成功を実行・契約達成の証拠にしない。計測は保守方針に従う元ソースの対象・分母・子プロセス経路を確認し、生成済み配布物の動作検証と分ける。言語別の計測値を合算して品質判定せず、未実行OSやskipは未確認として残す。計測設定・手順は本スキルへ複製しない。
 

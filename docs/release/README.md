@@ -21,9 +21,11 @@ sourceとhotfix baseのmain統合証拠は、[publication契約](../../sdd/dsl/s
 
 ## Release公開と利用側受入の順序
 
-このrepositoryでは、公開対象sourceの提供元CI・契約検証を通して固定版を公開し、その公開版を固定参照して利用側のHosted受入を行います。利用側の受入は、下記の導入経路の利用可能化を判断する工程です。
+公開条件と導入時生成・導入後検証の責務は、[配布契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)のpublication／applicationを正本とします。
 
-公開前の版に利用側の受入実績を要求せず、利用プロジェクトの存在や導入済みであることをRelease公開の必須条件にしません。利用側の受入が未実施であることだけを、未修正不具合・既知の問題・Release公開の停止理由として扱いません。提供元の必須検証の失敗や確認済みの不具合とは区別します。受入前の経路はregistryのactivation条件に従って受入待ちとして管理し、利用可能化済みとは報告しません。
+公開前は提供元CIで生成・固定参照・接続契約を検証します。公開後、導入先は提供スクリプトでtemplateへ製品設定と固定参照を埋め込み、生成したcallerを配置して環境を検証します。全5経路のHosted成功証拠を公開・導入の必須条件にしません。
+
+公開workflowは生成・接続契約の回帰を実行してから配布資材を組み立てます。導入先のHosted実行結果はmanifestや通常planの入力にしません。
 
 ## 公開後の整合確認
 
@@ -32,9 +34,9 @@ Action実装からworkflow・callerへ接続するコミットの順序は、[�
 Release公開結果を確認し、接続変更・利用可能化・Skill配備を行う場合は該当する項目を確認します。
 
 1. `.github/workflows/release.yml`の公開・3資材のreadback・alias更新結果と、対象tagのpeeled full SHAを確認します。
-2. Action・workflowの接続を変更する場合は、[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)とcanonical workflowの参照を、上記の固定参照更新順序に従って更新します。各targetの利用可能化はregistryのactivation条件と証拠で判定します。
-3. 再利用workflowの利用可能化を行う場合は、対象workflowに要求されるHosted受入を確認します。provider自身のCIや配布Releaseのreadbackを、consumerのpublication・handoff・required checkの受入証拠として扱いません。未達の経路は受入待ちとして残します。
-4. 公開後にregistryを変更した場合は、修正した正本と公開済み配布物を区別し、配布物への反映は次のReleaseで行います。既存Releaseの固定参照は維持します。
+2. manifestのcallee参照が公開tagのpeeled SHAに一致することを確認します。Action参照の更新は上記の固定参照更新順序に従い、calleeのSHAと混同しません。
+3. 導入先では選択presetのcallerを生成し、製品設定・認証・required checkの受入を行います。生成・接続契約の検証は導入先の環境確認の代替にはしません。
+4. 公開物は更新しません。実装・template・契約の修正は次のReleaseへ含めます。
 5. 公開Skillを配備する場合は、[skills-deploy](../../.agents/skills/skills-deploy/SKILL.md)で対象Skillと明示された配備先の差分確認・承認された反映・再検査を行います。
 
 完了報告では、今回の対象となったRelease公開、registryの利用可能化、経路別Hosted受入、配布物への反映、Skill配備の達成状態と未確認・受入待ちを分けて示します。対応する後続操作が未実施なら、公開成功だけで全体の切替完了としません。

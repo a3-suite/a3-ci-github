@@ -89,42 +89,32 @@ conformance:
 
 releasePublicationReusableWorkflow:
   source: .github/workflows/ci-release-publication.yml
-  status: pending-release
   referencePlaceholder: <release-publication-workflow-sha>
-  activation: exact-release-tag-and-peeled-full-sha-and-hosted-publication-acceptance-confirmed
 
 packagePublicationReusableWorkflow:
   source: .github/workflows/ci-package-publication.yml
-  status: pending-release
   referencePlaceholder: <package-publication-workflow-sha>
-  activation: exact-release-tag-and-peeled-full-sha-and-hosted-publication-acceptance-confirmed
 
 packagePreparationReusableWorkflow:
   source: .github/workflows/ci-package-preparation.yml
-  status: pending-release
   referencePlaceholder: <package-preparation-workflow-sha>
-  activation: exact-release-tag-and-peeled-full-sha-and-hosted-handoff-acceptance-confirmed
 
 qualityPlatformsReusableWorkflow:
   source: .github/workflows/ci-quality-platforms.yml
-  status: pending-release
   referencePlaceholder: <quality-platforms-workflow-sha>
-  activation: exact-release-tag-and-peeled-full-sha-and-hosted-required-check-acceptance-confirmed
   requiredCallerCheck: quality-gate-platforms / summary
 
 qualityReusableWorkflow:
   source: .github/workflows/ci-quality.yml
-  status: pending-release
   referencePlaceholder: <quality-workflow-sha>
-  activation: exact-release-tag-and-peeled-full-sha-and-hosted-required-check-acceptance-confirmed
   requiredCallerCheck: summary
 providerAssets: []
 actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.2.0
-    exactRef: "a5623636a4fc5f628459a5b126e72632f43f89cf"
+    releaseTag: v0.2.4
+    exactRef: "bd695706802b7d86ed3db94a0e39b41b593358d5"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available
