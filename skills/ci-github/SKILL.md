@@ -41,7 +41,7 @@ description: GitHub Actions向けCIの設計、canonical workflowの選択・配
 
 ### canonical workflowを適用したい
 
-- exact Releaseの配布manifestから対象presetを取得し、差分planと明示承認を経てcanonical workflowを配置する。
+- exact Releaseの配布manifestから対象presetを取得し、導入時runtimeで製品設定を埋め込んだcallerを生成する。差分planと明示承認を経て配置し、更新ではcallerの宣言済み設定を保持する。
 - 選択した経路の準備は導入ガイドに従い、preflightで適用先を検証する。
 - 参照: `references/distribute-ci-assets.guide.md`
 - 参照: `references/configure-ci-preset.guide.md`

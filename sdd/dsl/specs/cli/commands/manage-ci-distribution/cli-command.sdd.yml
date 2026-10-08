@@ -30,7 +30,7 @@ command:
         - option_id: source-revision
           presence: required
     - id: plan
-      summary: Classify canonical workflow copy actions without changing managed consumer files
+      summary: Generate configured canonical callers and classify actions without changing managed consumer files
       option_bindings:
         - option_id: repo-root
           presence: optional
@@ -39,6 +39,8 @@ command:
         - option_id: preset
           presence: optional
         - option_id: asset
+          presence: optional
+        - option_id: set
           presence: optional
     - id: apply
       summary: Apply one explicitly approved unchanged plan under an exclusive transaction
@@ -62,6 +64,6 @@ command:
       options: [manifest, manifest-url, preset, asset, source-revision, source-root]
     - id: application
       title: Planned application or recovery
-      options: [repo-root, plan, approve, transaction]
+      options: [repo-root, plan, approve, transaction, set]
   help:
     usage: node runtime/distribution/fetch-a3-ci-github.mjs <fetch|verify|plan|apply|rollback> [options]

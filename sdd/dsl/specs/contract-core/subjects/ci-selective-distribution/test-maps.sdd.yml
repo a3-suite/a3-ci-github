@@ -153,6 +153,17 @@ test_maps:
     case_id: selective-distribution-application
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > workflow-template-generation > normal generation and application need no Hosted evidence and preserve ownership checks"
+        check_refs:
+          - check-selective-distribution-plan
+          - check-selective-distribution-transaction
+          - check-selective-distribution-conflict
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > workflow-template-generation > workflow generation safely resolves values and preserves only declared caller settings"
+        check_refs:
+          - check-selective-distribution-plan
+          - check-selective-distribution-conflict
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: "contract.ci-selective-distribution.application > selective-distribution > fetch, plan, apply and rollback preserve explicit consumer state transitions"
         check_refs:
           - check-selective-distribution-plan

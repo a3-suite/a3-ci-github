@@ -10,17 +10,40 @@ import {
   applyDistributionPlan,
   fetchDistribution,
   loadDistributionManifest,
-  planDistributionApplication,
+  planDistributionApplication as createDistributionPlan,
   resolveDistributionSelection,
   rollbackDistributionTransaction,
   validateDistributionManifest,
   verifyFetchedDistribution,
 } from '../fetch-a3-ci-github.mjs';
 import { loadReleaseRequestFixtureModel, snapshotTree, writeReleaseRequestFixture } from '../../preset/tests/support/release-request-fixture.mjs';
+import { readWorkflowSettings, renderWorkflowTemplate } from '../../preset/workflow-template.mjs';
 
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
 const tsx = path.join(repositoryRoot, 'runtime/preset/node_modules/.bin/tsx');
+const yaml = createRequire(path.join(repositoryRoot, 'runtime/preset/package.json'))('yaml');
+const fixtureSettings = {
+  'protected-branch': ['main'], 'versioned-runner': 'ubuntu-24.04', 'language-profile': 'typescript',
+  'toolchain-version': '24.0.0', 'uv-version': '', 'cargo-audit-version': '', 'cargo-manifest-path': '',
+  'cargo-lock-path': '', 'optional-jq-version': '', 'standard-bundle-id': 'typescript-npm-quality',
+  'adapter-descriptor': '', 'release-tag-pattern': 'v*', 'sha256sum-version': '9.7',
+  'platform-manifest': '.ci/platform-manifest.yml', 'gh-version': '2.80.0', 'jq-version': '1.7.1',
+  'release-implementation': 'rust-cli', 'release-binary-name': '', 'release-asset-prefix': '',
+  'supplemental-release-asset-enabled': false, 'supplemental-release-asset-owner-contract': 'owner-v2',
+  'supplemental-release-asset-implementation': 'owner-adapter', 'supplemental-release-asset-config-path': '.ci/installer.yml',
+};
+const planDistributionApplication = (options) => {
+  const distributionRoot = path.join(options.projectRoot, '.a3-skills/ci-github/distributions', options.sourceRevision);
+  const manifest = JSON.parse(fs.readFileSync(path.join(distributionRoot, 'manifest.json')));
+  const settings = {};
+  for (const asset of resolveDistributionSelection(manifest, options.requestedPresets, options.requestedAssets).filter((asset) => asset.application === 'copy')) {
+    const template = fs.readFileSync(path.join(distributionRoot, asset.files[0].sourcePath), 'utf8');
+    settings[asset.id] = Object.fromEntries([...new Set([...template.matchAll(/<([a-zA-Z][a-zA-Z0-9._-]*)>/g)].map((match) => match[1]))]
+      .filter((key) => Object.hasOwn(fixtureSettings, key)).map((key) => [key, fixtureSettings[key]]));
+  }
+  return createDistributionPlan({ yaml, settings, ...options });
+};
 const fixtureVersion = '1.2.3';
 const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
@@ -105,6 +128,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const first = prepareRelease(root);
         const manifest = validateDistributionManifest(first.manifest);
         expect(manifest.sourceRevision).toBe(sourceRevision);
+        for (const binding of Object.values(manifest.reusableWorkflows)) {
+          expect(binding.sourceRevision).toBe(sourceRevision);
+          expect(binding).not.toHaveProperty('acceptance');
+        }
         expect(manifest.assets.some((asset) => asset.id === 'runtime.preset')).toBeTruthy();
         expect(manifest.assets.some((asset) => asset.id === 'workflow.quality-gate')).toBeTruthy();
         expect(manifest.files['skills/ci-github/references/ci-script-contracts.reference.yml']).toBeTruthy();
@@ -203,6 +230,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const report = { missingSettings: [], mismatches: [] };
         const registry = loadRegistry(report);
         assert.deepEqual(report.mismatches, []);
+        assert.equal(registry[${JSON.stringify(binding)}].status, 'available');
+        assert.equal(registry[${JSON.stringify(binding)}].exactRef, ${JSON.stringify(sourceRevision)});
         const source = registry[${JSON.stringify(binding)}].source;
         const workflow = { jobs: { ${job}: { uses: registry.actionRepository + '/' + source + '@' + 'a'.repeat(40), with: {} } } };
         assert.ok(${resolver}(workflow, registry, report).env);
@@ -310,7 +339,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const { manifest } = prepareRelease(root);
         const cases = [
           [null, /distribution-manifest-invalid/],
-          [{ ...manifest, schemaVersion: '2' }, /distribution-manifest-contract-unsupported/],
+          [{ ...manifest, schemaVersion: '1' }, /distribution-manifest-contract-unsupported/],
           [{ ...manifest, repository: 'other/repository' }, /distribution-manifest-source-untrusted/],
           [{ ...manifest, sourceRevision: 'main' }, /distribution-manifest-source-revision-invalid/],
           [{ ...manifest, releaseTag: 'latest' }, /distribution-manifest-release-tag-invalid/],
@@ -319,6 +348,17 @@ describe("contract.ci-selective-distribution.delivery", () => {
         for (const [candidate, diagnostic] of cases) {
           expect(() => validateDistributionManifest(candidate)).toThrow(diagnostic);
         }
+        for (const mutate of [
+          (binding) => { binding.sourceRevision = 'a'.repeat(40); },
+          (binding) => { binding.referencePlaceholder = '<unknown-workflow-sha>'; },
+        ]) {
+          const candidate = structuredClone(manifest);
+          mutate(candidate.reusableWorkflows['.github/workflows/ci-quality.yml']);
+          expect(() => validateDistributionManifest(candidate)).toThrow(/distribution-manifest-workflow-binding-invalid/);
+        }
+        const differentReference = structuredClone(manifest);
+        differentReference.workflowReferences['quality-workflow-sha'] = 'a'.repeat(40);
+        expect(() => validateDistributionManifest(differentReference)).toThrow(/distribution-manifest-workflow-binding-invalid/);
         const duplicate = structuredClone(manifest);
         duplicate.assets.push(structuredClone(duplicate.assets[0]));
         expect(() => validateDistributionManifest(duplicate)).toThrow(/distribution-manifest-asset-invalid/);
@@ -401,6 +441,61 @@ describe("contract.ci-selective-distribution.selection", () => {
 });
 
 describe("contract.ci-selective-distribution.application", () => {
+  describe('workflow-template-generation', () => {
+    test('normal generation and application need no Hosted evidence and preserve ownership checks', async () => {
+      // Arrange
+      await withFixture('distribution-template-generation-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        await fetchDistribution({ projectRoot, manifest: release.manifest,
+          manifestBytes: Buffer.from(JSON.stringify(release.manifest)),
+          requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });
+        const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
+        // Act / Assert
+        const workflowPath = path.join(projectRoot, '.github/workflows/quality-gate.yml');
+        fs.mkdirSync(path.dirname(workflowPath), { recursive: true });
+        fs.copyFileSync(path.join(repositoryRoot, 'workflows/quality/quality-gate.yml'), workflowPath);
+        const unmanaged = planDistributionApplication(options);
+        expect(unmanaged.actions.map((entry) => entry.action)).toEqual(['conflict']);
+        expect(() => applyDistributionPlan({ projectRoot, planPath: unmanaged.planPath, approvalDigest: unmanaged.planDigest })).toThrow(/plan-has-conflicts/);
+        expect(fs.readFileSync(workflowPath, 'utf8')).toContain('<quality-workflow-sha>');
+        fs.rmSync(workflowPath);
+        const plan = planDistributionApplication(options);
+        expect(plan.actions.every((entry) => entry.generatedSha256 !== entry.sourceSha256)).toBe(true);
+        expect(plan.actions[0].generatedContent).toContain(`ci-quality.yml@${sourceRevision}`);
+        expect(plan.actions[0].generatedContent).not.toMatch(/<[a-zA-Z][a-zA-Z0-9._-]*>/);
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        expect(applied.nextSteps).toEqual(['generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests']);
+        expect(fs.readFileSync(workflowPath, 'utf8')).toBe(plan.actions[0].generatedContent);
+        expect(fs.existsSync(path.join(projectRoot, '.ci/ci-assets.lock.json'))).toBe(false);
+      });
+    });
+    // contract_id: contract.ci-selective-distribution.application
+    test('workflow generation safely resolves values and preserves only declared caller settings', () => {
+      const template = 'on:\n  push:\n    branches: [<protected-branch>]\njobs:\n  quality:\n    uses: provider/workflow@<quality-workflow-sha>\n    with:\n      runner: <versioned-runner>\n      enabled: <feature-enabled>\n      optional: <optional-value>\n';
+      const references = { 'quality-workflow-sha': 'a'.repeat(40) };
+      const values = { 'protected-branch': ['main', 'develop'], 'versioned-runner': 'ubuntu-24.04\npermissions: write-all', 'feature-enabled': false };
+      const rendered = renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] });
+      const observed = yaml.parse(rendered);
+      expect(observed.jobs.quality.uses).toBe(`provider/workflow@${'a'.repeat(40)}`);
+      expect(observed.on.push.branches).toStrictEqual(['main', 'develop']);
+      expect(observed.jobs.quality.with.enabled).toBe(false);
+      expect(observed.jobs.quality.with.runner).toBe(values['versioned-runner']);
+      expect(observed.permissions).toBeUndefined();
+      const extracted = readWorkflowSettings({ yaml, template, current: rendered });
+      expect(extracted.values['protected-branch']).toStrictEqual(['main', 'develop']);
+      expect(extracted.values['versioned-runner']).toBe(values['versioned-runner']);
+      expect(extracted.values['quality-workflow-sha']).toBeUndefined();
+      expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, unknown: 'x' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-unknown/);
+      expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, 'feature-enabled': 'false' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-invalid/);
+      expect(() => renderWorkflowTemplate({ yaml, template, references, values: {}, emptyAllowed: ['optional-value'] })).toThrow(/setting-missing/);
+      const drifted = structuredClone(observed);
+      drifted.jobs.quality.permissions = 'write-all';
+      expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/structure-conflict/);
+      expect(renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] })).toBe(rendered);
+    });
+  });
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
     // contract_id: contract.ci-selective-distribution.application
@@ -472,7 +567,7 @@ describe("contract.ci-selective-distribution.application", () => {
             '.github/workflows/quality-gate-platforms.yml', '.github/workflows/quality-gate.yml', 'README.md',
           ]);
           const optionalWorkflow = fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-platforms.yml'), 'utf8');
-          expect(optionalWorkflow).toMatch(/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-quality-platforms.yml@<quality-platforms-workflow-sha>/);
+          expect(optionalWorkflow).toContain(`uses: a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@${sourceRevision}`);
           expect(optionalWorkflow).not.toMatch(/ci-platform-matrix@|id: trusted-assets/);
           expect(optionalWorkflow).not.toMatch(/CoreLoader|pyyaml|\.a3-skills\//);
           for (const [relative, text] of Object.entries(configurations)) {
@@ -493,7 +588,7 @@ describe("contract.ci-selective-distribution.application", () => {
           ]);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/release-publication.yml'))).toBe(false);
           const publication = fs.readFileSync(path.join(projectRoot, '.github/workflows/release-publication-caller.yml'), 'utf8');
-          expect(publication).toMatch(/ci-release-publication\.yml@<release-publication-workflow-sha>/);
+          expect(publication).toContain(`ci-release-publication.yml@${sourceRevision}`);
           expect(publication).not.toMatch(/\.a3-skills\//);
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
           expect(rollbackDistributionTransaction({ projectRoot, transactionId: releaseApplied.transactionId }).status).toBe('rolled-back');
@@ -510,7 +605,7 @@ describe("contract.ci-selective-distribution.application", () => {
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/package-publication.yml'))).toBe(false);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/package-preparation.yml'))).toBe(false);
           const packageCaller = fs.readFileSync(path.join(projectRoot, '.github/workflows/package-publication-caller.yml'), 'utf8');
-          expect(packageCaller).toMatch(/ci-package-publication\.yml@<package-publication-workflow-sha>/);
+          expect(packageCaller).toContain(`ci-package-publication.yml@${sourceRevision}`);
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
           expect(rollbackDistributionTransaction({ projectRoot, transactionId: packageApplied.transactionId }).status).toBe('rolled-back');
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
@@ -974,11 +1069,18 @@ describe("contract.ci-selective-distribution.application", () => {
         ], { encoding: 'utf8' });
         expect(verifyResult.status, verifyResult.stderr).toBe(0);
         expect(JSON.parse(verifyResult.stdout).status).toBe('verified');
+        const yamlSource = path.dirname(createRequire(path.join(repositoryRoot, 'runtime/preset/package.json')).resolve('yaml/package.json'));
+        const yamlDestination = path.join(projectRoot, '.a3-skills/ci-github/runtime/node_modules/yaml');
+        fs.mkdirSync(path.dirname(yamlDestination), { recursive: true });
+        fs.cpSync(yamlSource, yamlDestination, { recursive: true });
         const planResult = spawnSync(process.execPath, [
           cli, 'plan',
           '--source-revision', sourceRevision,
           '--preset', 'quality-gate',
           '--repo-root', projectRoot,
+          ...Object.entries(fixtureSettings).filter(([key]) =>
+            fs.readFileSync(path.join(repositoryRoot, 'workflows/quality/quality-gate.yml'), 'utf8').includes(`<${key}>`))
+            .flatMap(([key, value]) => ['--set', `workflow.quality-gate:${key}=${JSON.stringify(value)}`]),
         ], { encoding: 'utf8' });
         expect(planResult.status, planResult.stderr).toBe(0);
         const plan = JSON.parse(planResult.stdout);
@@ -1483,10 +1585,13 @@ describe("contract.ci-selective-distribution.application", () => {
         rollbackDistributionTransaction({ projectRoot, transactionId: reused.transactionId });
         expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
         // Arrange
-        const oldManagedBytes = Buffer.from('name: previously managed workflow\n');
+        const oldManagedBytes = Buffer.from(canonical.toString('utf8').replaceAll('ubuntu-24.04', 'ubuntu-22.04'));
         fs.writeFileSync(workflow, oldManagedBytes);
         writeOwnership(oldManagedBytes);
         const ownershipBefore = fs.readFileSync(lockPath);
+        const preserved = planDistributionApplication({ ...options, settings: {} });
+        expect(preserved.actions.map((entry) => entry.action)).toEqual(['reuse']);
+        expect(preserved.actions[0].generatedContent).toBe(oldManagedBytes.toString('utf8'));
         const update = planDistributionApplication(options);
         // Act
         const updated = applyDistributionPlan({ projectRoot, planPath: update.planPath, approvalDigest: update.planDigest });
