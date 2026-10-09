@@ -8,6 +8,7 @@ import { isMap, map, strings, publicationBinding } from './preset-model.ts';
 import type { Finding, ManagedAsset, Preset, RegistryData, TriggerExtensionRule, ValueMap, WorkflowAsset } from './preset-model.ts';
 import type { InspectionContext, Report } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside, realPathIsInside, sha256 } from './workflow-assets.ts';
+import { projectProviderActionPins, providerActionPinRepositories } from './provider-action-pins.mjs';
 
 const SHA256 = /^[0-9a-f]{64}$/;
 
@@ -458,10 +459,7 @@ const validateProviderActionPinCompanion = (
   if (!companionPath || registry.providerActionPinCompanionComparison !== 'required') return;
   const used = new Set<string>();
   for (const workflow of parsed.values()) {
-    for (const value of actionUses(workflow)) {
-      if (value.startsWith('./')) continue;
-      const target = value.split('@')[0];
-      const repository = target.split('/').slice(0, 2).join('/');
+    for (const repository of providerActionPinRepositories(workflow)) {
       if (repository === registry.actionRepository) continue;
       if (registry.approvedProviderActionPins.has(repository)) used.add(repository);
     }
@@ -477,7 +475,13 @@ const validateProviderActionPinCompanion = (
     return;
   }
   const document = map(parseYaml(fs.readFileSync(absolute, 'utf8'), companionPath, report));
-  for (const action of [...used].sort()) {
+  const projection = projectProviderActionPins(registry.approvedProviderActionEntries.values(), registry.providerActionPinFields);
+  for (const action of Object.keys(document).filter((action) => !Object.hasOwn(projection, action))) add(report.mismatches, {
+    path: `${companionPath}:${action}`,
+    message: 'approved pin companion entry is not declared in the registry',
+    settingLocation: companionPath,
+  });
+  for (const action of Object.keys(projection)) {
     const entry = map(document[action]);
     if (Object.keys(entry).length === 0) {
       add(report.mismatches, {
@@ -487,10 +491,9 @@ const validateProviderActionPinCompanion = (
       });
       continue;
     }
-    for (const field of registry.providerActionPinFields) {
-      const expected = registry.approvedProviderActionEntries.get(action)?.[field];
-      if (expected === undefined) continue;
-      if (String(entry[field] ?? '') !== expected) add(report.mismatches, {
+    for (const field of new Set([...registry.providerActionPinFields, ...Object.keys(entry)])) {
+      const expected = projection[action]?.[field];
+      if (entry[field] !== expected) add(report.mismatches, {
         path: `${companionPath}:${action}.${field}`,
         message: 'approved pin companion does not match the registry',
         settingLocation: companionPath,

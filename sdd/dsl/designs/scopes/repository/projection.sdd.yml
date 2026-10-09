@@ -25,6 +25,8 @@ mappings:
   - component_id: runtime-implementations
     element_id: preset-registry
   - component_id: runtime-implementations
+    element_id: provider-action-pins
+  - component_id: runtime-implementations
     element_id: preset-project-assets
   - component_id: selective-distribution
     element_id: distribution-runtime-root

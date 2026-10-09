@@ -4,6 +4,7 @@ import { isMap, map, strings, valueAtPath, conditionalExtensionSelected, normali
 import type { ValueMap, ResourceSource, AdapterBundle, AdapterBundleAsset, Preset, RegistryData, DiagnosticReport, StandardImplementation, ManagedAsset } from './preset-model.ts';
 import { SOURCE_ROOT, SKILL_ROOT, parseYaml } from './preset-registry.ts';
 import { add } from './validation-report.ts';
+import { providerActionPinRepositories } from './provider-action-pins.mjs';
 
 const findSkillRoot = (collectionRoot: string, skill: string): string | undefined => {
   if (!fs.existsSync(collectionRoot)) return undefined;
@@ -282,5 +283,12 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
       }
     }
   }
+  const requiresPins = selected.some((preset) => installedPresetWorkflows(root, preset).some(({ workflow }) =>
+    [...providerActionPinRepositories(workflow)].some((action) => registry.approvedProviderActionPins.has(action))));
+  if (requiresPins && registry.providerActionPinCompanionPath) result.set(registry.providerActionPinCompanionPath, {
+    path: registry.providerActionPinCompanionPath,
+    sourcePath: path.join(SOURCE_ROOT, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'),
+    exactCopy: false,
+  });
   return [...result.values()].sort((left, right) => left.path.localeCompare(right.path));
 };

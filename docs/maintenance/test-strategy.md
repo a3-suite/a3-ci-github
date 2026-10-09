@@ -43,7 +43,7 @@ preset assurance と adapter materialization は異なる責務です。同じ�
 
 Hosted E2E は、外部 repository への書き込みや公開を暗黙に行いません。
 
-提供元の代表受入は候補SHAの5つのcalleeを隔離環境から実呼出しし、Release manifestへ同一SHAの証拠を含めます。Releaseゲートはrun・実参照・必須callee jobの成功を機械検証します。下表の異常系・製品固有条件は受入記録で別途確認し、run成功だけから網羅性を推測しません。導入先の設定・認証・required checkの受入は、公開後に生成済みcallerで行います。
+提供元はcallerの生成、固定参照、caller/callee契約を検証してから配布を公開します。Release manifestは配布同一性と固定参照を記録し、Hosted実呼出しの受入証拠は含めません。Hosted invocationは公開前提ではなく、導入先の設定・認証・required checkと下表の異常系・製品固有条件の受入は、導入後に生成済みcallerで行い、別の受入記録へ残します。run成功だけから網羅性を推測しません。責務境界の正本は`contract.ci-selective-distribution.publication`です。
 
 | Flow | 実行時期 | 必須観測 |
 | --- | --- | --- |

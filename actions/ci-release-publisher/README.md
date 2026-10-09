@@ -8,4 +8,4 @@ workflowが`GH_TOKEN`と`GITHUB_REPOSITORY`を注入する。標準bindingは`gi
 
 write前にauthority directoryの承認済みnotes・approval・publication requestとhandoff・pre-observationを照合する。既存Releaseはdraftも含めて拒否し、create結果のimmutable IDにupload・finalizeを固定する。結果不明や部分失敗では停止し、再create・上書き・削除・自動recoveryを行わない。失敗後の部分Releaseはownerが診断する。
 
-`receipt-path`／`readback-path`は後続のread-only `ci-release-publication-verifier`に渡す。jobの成功出力は独立verifierから取得する。正式Release・full SHAが未確定の間はregistryのpending-releaseに従い導入を拒否する。
+`receipt-path`／`readback-path`は後続のread-only `ci-release-publication-verifier`に渡す。jobの成功出力は独立verifierから取得する。公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とする。
