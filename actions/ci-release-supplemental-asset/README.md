@@ -17,7 +17,7 @@ adapter は snapshot の `CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER` から解決し
 
 ## 責務境界
 
-標準モードはsnapshotの実装選択と製品宣言pathを使い、Action同梱runtimeが実candidateのprofile検証を実行し、成功後に証跡を確定します。固定provider revisionはcanonical workflowがActionの固定SHAと同じ値を環境注入します。Python 3.11以上、Git、UnixのBashまたはWindowsのpwsh/tarはrunnerで提供します。標準経路は利用側adapter・builder・共通テストを要求しません。入力profileと保証範囲は[installer標準組立契約](../../skills/installer/references/installer-standard-assembly-contract.reference.yml)へ委譲します。owner-adapterモードの固有意味検証はownerに残します。この Action の成功は installer 意味検証の独立証拠ではありません。最終 handoff の不透明 evidence と digest の結合は `ci-release-assembly` が検証します。
+標準モードはsnapshotの実装選択と製品宣言pathを使い、Action同梱runtimeが実candidateのprofile検証を実行し、成功後に証跡を確定します。固定provider revisionはcanonical workflowがActionの固定SHAと同じ値を環境注入します。Python 3.11以上、Git、UnixのBashまたはWindows PowerShell 5.1以降はrunnerで提供します。標準経路は利用側adapter・builder・共通テストを要求しません。入力profileと保証範囲は[installer標準組立契約](../../skills/installer/references/installer-standard-assembly-contract.reference.yml)へ委譲します。owner-adapterモードの固有意味検証はownerに残します。この Action の成功は installer 意味検証の独立証拠ではありません。最終 handoff の不透明 evidence と digest の結合は `ci-release-assembly` が検証します。
 
 workflow が固定 checkout、read-only permissions、toolchain、artifact 搬送、job 順序を所有します。この Action は execution sandbox ではなく、owner code の全書込先・中間状態を制限するものではありません。provider API・publish write・credential fallback は持ちません。処理時間の上限は caller の job timeout が所有します。
 

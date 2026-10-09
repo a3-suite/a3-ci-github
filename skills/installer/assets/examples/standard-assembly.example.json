@@ -1,11 +1,26 @@
 {
   "schemaVersion": "installer.assembly.v1",
-  "useCase": "github-release-native",
-  "verificationProfile": "native-offline-dry-run-v1",
+  "useCase": "github-release-native-shared",
+  "verificationProfile": "shared-exact-payload-v1",
   "platforms": {
     "linux-x86_64": {
       "manifest": "installer/linux.json",
       "assetName": "install-linux-x86_64.sh"
+    },
+    "macos-arm64": {
+      "manifest": "installer/macos.json",
+      "assetName": "install-macos-arm64.sh"
+    },
+    "windows-x86_64": {
+      "manifest": "installer/windows.json",
+      "assetName": "install-windows-x86_64.ps1"
+    }
+  },
+  "sharedWrapper": {
+    "assetName": "install.sh",
+    "deliveryUrls": {
+      "linux-x86_64": "https://github.com/<repository-owner>/<repository-name>/releases/download/<release-tag>/install-linux-x86_64.sh",
+      "macos-arm64": "https://github.com/<repository-owner>/<repository-name>/releases/download/<release-tag>/install-macos-arm64.sh"
     }
   }
 }

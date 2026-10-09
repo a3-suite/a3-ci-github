@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+#Requires -Version 5.1
 [CmdletBinding()]
 param(
   [ValidateSet('install', 'upgrade', 'repair', 'dry-run')][string]$Mode = 'install',
@@ -67,6 +67,10 @@ $LOCK_PATH = [Environment]::ExpandEnvironmentVariables($LOCK_PATH)
 $INSTALL_STATE_PATH = [Environment]::ExpandEnvironmentVariables($INSTALL_STATE_PATH)
 $LAUNCHER_PATH = [Environment]::ExpandEnvironmentVariables($LAUNCHER_PATH)
 if ($PROFILE -notin @('per-user-cli', 'system-wide')) { throw 'unsupported placement profile' }
+function Test-AbsolutePath([string]$Path) {
+  # IsPathRooted alone also accepts drive-relative and current-drive paths.
+  return $Path -match '^(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+(?:[\\/]|$))'
+}
 function Assert-ManagedRootBreadth([string]$Path) {
   $full = [IO.Path]::GetFullPath($Path).TrimEnd([char]'\')
   $parts = $full.Split([char]'\', [StringSplitOptions]::RemoveEmptyEntries)
@@ -75,7 +79,7 @@ function Assert-ManagedRootBreadth([string]$Path) {
   if ($parts[1] -ieq 'Users' -and $parts.Count -eq 3) { throw 'managed root is too broad' }
 }
 foreach ($path in @($MANAGED_ROOT, $RELEASE_PATH, $CURRENT_POINTER, $LOCK_PATH, $INSTALL_STATE_PATH)) {
-  if (-not [IO.Path]::IsPathFullyQualified($path)) { throw 'placement paths must be absolute' }
+  if (-not (Test-AbsolutePath $path)) { throw 'placement paths must be absolute' }
 }
 $root = [IO.Path]::GetFullPath($MANAGED_ROOT)
 if ($root -eq [IO.Path]::GetPathRoot($root)) { throw 'invalid managed root' }
@@ -90,7 +94,7 @@ foreach ($path in @($release, $pointer, $lock, $state)) {
 Assert-ManagedRootBreadth $MANAGED_ROOT
 $launcher = $null
 if ($LAUNCHER_PATH) {
-  if (-not [IO.Path]::IsPathFullyQualified($LAUNCHER_PATH)) {
+  if (-not (Test-AbsolutePath $LAUNCHER_PATH)) {
     throw 'launcher path must be absolute'
   }
   foreach ($segment in ($LAUNCHER_PATH -split '[\\/]')) {
@@ -174,13 +178,8 @@ function Ensure-Directory([string]$Path) {
   }
 }
 function Expand-Artifact([string]$ArchivePath, [string]$Destination) {
-  # PATH 先頭には Git for Windows の MSYS GNU tar が現れることがあり、zip を扱えず
-  # Windows のパスを remote 指定として誤解釈する。Windows 同梱の bsdtar を絶対パスで解決する。
-  $tar = Join-Path $env:SystemRoot 'System32\tar.exe'
-  if (-not (Test-Path -LiteralPath $tar -PathType Leaf)) { throw 'tar is required' }
-  [IO.Directory]::CreateDirectory($Destination) | Out-Null
-  & $tar -xf $ArchivePath -C $Destination
-  if ($LASTEXITCODE -ne 0) { throw 'archive extraction failed' }
+  # Use the Unicode-aware API for Windows paths, after archive entry validation.
+  [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $Destination)
 }
 function Invoke-CleanupStep([string]$Label, [scriptblock]$Action) {
   try { & $Action }
@@ -231,14 +230,14 @@ try {
   }
   $manifestPath = Join-Path $work 'manifest.json'
   if ($Source -eq 'online') {
-    Invoke-WebRequest -Uri $MANIFEST_URL -OutFile $manifestPath -MaximumRedirection 5 | Out-Null
+    Invoke-WebRequest -UseBasicParsing -Uri $MANIFEST_URL -OutFile $manifestPath -MaximumRedirection 5 | Out-Null
   }
   else { [IO.File]::Copy($Manifest, $manifestPath) }
   $actualManifest = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
   if ($actualManifest -ne $MANIFEST_SHA256.ToUpperInvariant()) { throw 'manifest checksum mismatch' }
   $artifactPath = Join-Path $work 'artifact.zip'
   if ($Source -eq 'online') {
-    Invoke-WebRequest -Uri $ARTIFACT_URL -OutFile $artifactPath -MaximumRedirection 5 | Out-Null
+    Invoke-WebRequest -UseBasicParsing -Uri $ARTIFACT_URL -OutFile $artifactPath -MaximumRedirection 5 | Out-Null
   }
   else { [IO.File]::Copy($Artifact, $artifactPath) }
   if ((Get-FileHash -LiteralPath $artifactPath -Algorithm SHA256).Hash -ne $expectedArtifact) {

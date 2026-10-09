@@ -9,6 +9,7 @@ placementRole: public_reference
 authority:
   role: authoritative-definition
   owns:
+    - audit stage selection and check-item scope
     - audit mode semantics
     - audit phase order and applicability
     - audit status semantics and result aggregation
@@ -29,6 +30,50 @@ usage:
     - provider 固有の監査手順を共通監査へ写像するとき
   consumers: [human, agent, validator]
 auditContract:
+  purpose:
+    objective: リリース前に、最新公開安定版の標準への適合、差分の正当性、公開準備を確認する。
+    successMeaning: 選択した監査段階の確認に適合している。構成監査だけの成功は実動作やリリース準備完了を証明せず、両段階の成功も実公開の成功を証明しない。
+    scopeRules:
+      - 最新標準の比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。
+      - 公開経路の実装、権限設定、authority、handoff、artifact、checksum、停止条件は、静的照合とリリース前の契約検証で確認する。
+      - 実公開時のrun・actor・公開後の配布物取得などは公開後確認として別記し、その未実施だけでリリース前監査を非成功にしない。
+      - 選択した段階に必要な確認の不足は既存のstatusClassificationで非成功として保持し、実行証跡の未取得を構成不適合へ混ぜない。
+      - 監査を実公開操作へ拡張せず、公開後確認は対象ownerの運用手順へ引き継ぐ。
+  stages:
+    defaultSelection: configuration-only
+    selections:
+      configuration-only: [configuration]
+      configuration-and-evidence: [configuration, execution-evidence]
+    selectionRules:
+      - 通常の監査はconfiguration-onlyとする。証跡監査、両段階、またはリリース前の実行確認が明示された場合はconfiguration-and-evidenceとする。
+      - 監査モードread-only/remediationと段階選択は別に記録する。証跡監査の選択は実installや外部副作用の実行許可を兼ねない。
+    definitions:
+      configuration:
+        title: 構成監査
+        checks: 最新標準との設定・実装・文書の整合、差分の必要性と許容条件、必要な検査導線の配置・接続、provider設定の確認。
+      execution-evidence:
+        title: 証跡監査
+        checks: 契約テストの実行結果、実候補・manifest・archiveのchecksum対応、検証profile、native dry-run・隔離install・起動の証跡。
+    itemMapping:
+      basis: check-claim-and-required-evidence
+      rules:
+        - phaseやsubject全体で分けず、同じphase/subject内の確認項目ごとに構成確認と実行証跡へ写像する。
+        - 構成ファイルや必要な検査導線の欠落はconfigurationへ、未生成の実候補や実行結果の不足はexecution-evidenceへ分類する。
+        - phaseの必須性と完了条件は選択した段階の適用項目だけへ適用する。その段階の項目がないphaseは理由付きで集約から除外する。
+        - 委譲時も選択段階と確認対象を渡し、ownerの根拠・判断を段階別に保持する。実行証跡不足だけを構成の不適合へ読み替えず、静的に確認した違反を隠さない。
+    resultHandling:
+      scope: each-selected-stage-check-items
+      classification: statusClassification
+      aggregation: statusAggregation
+      unselectedStage:
+        status: 未実施
+        reason: stage-not-requested
+        aggregation: excluded
+      evidenceAbsence:
+        - 証跡照合を完了したが必要な実行結果がない場合は、証跡未取得を理由として判定不能にする。
+        - 監査確認自体が未着手なら未実施、必須操作を開始・継続できないならblockedとする。未取得は新しいstatusにしない。
+        - 観測済みの契約違反や必須検証の失敗はfailedとして保持し、証跡不足と混同しない。
+      combinedResult: 両段階が選択された場合だけ段階別結果をstatusAggregationで集約する。構成監査だけなら構成の結果を報告し、動作確認済みと表示しない。
   modes:
     read-only:
       managedTargetState: forbidden
@@ -49,12 +94,16 @@ auditContract:
       purpose: 対象 revision、preset、language profile、adapter、provider 設定を固定する。
       records:
         - audit-mode
+        - audit-purpose
+        - audit-stage-selection
         - audit-target-identity
     - id: provider-preflight
       requirement: required
       purpose: 配置資産、設定、固定参照、provider 前提の不一致を検出する。
     completion:
       requires:
+        - audit-purpose-recorded
+        - audit-stage-selection-recorded
         - audit-mode-recorded
         - audit-target-identity-fixed
         - provider-preflight-has-terminal-status
@@ -75,7 +124,7 @@ auditContract:
     - id: contract-evidence
       requirement: required
       layer: semantic-audit
-      purpose: 外部観測可能な契約と安全不変条件を直接検証する。
+      purpose: 契約・安全不変条件と検査導線の対応を確認し、証跡監査を選択した場合は実行結果を直接検証する。
     - id: supplemental-evidence
       requirement: conditional
       layer: machine-audit
@@ -83,7 +132,9 @@ auditContract:
     - id: runtime-evidence
       requirement: conditional
       layer: overall-supporting
-      purpose: 契約が要求する provider 実行環境または remote readback を確認する。
+      purpose: リリース前確認に必要なprovider設定と、公開を伴わない実行環境の証拠を確認する。
+      appliesWhen: リリース前の契約確認に、静的検証・契約テストだけでは確認できないprovider設定または非公開実行の観測が必要である。
+      excludes: 監査対象製品の実公開run、公開成功、公開後readbackを必須確認にすること。
   statuses:
     success:
       terminal: true
@@ -127,6 +178,9 @@ auditContract:
         inapplicable: excluded-from-aggregation
         inapplicableReason: required
   reporting:
+    stageScope: stages.resultHandling
+    requiredStageFields: [selected-stages, stage, check-claims, status, evidence-provenance, unresolved-items]
+    unselectedStageReporting: 未実施と未依頼理由を明記し、選択段階のstatusへ混ぜない。
     aggregation:
       id: result-aggregation
       owner: audit-orchestrator
@@ -151,6 +205,7 @@ auditContract:
         subjectSource: ci.audit-subjects
         subjectAggregation:
           selection: every-subject
+          scope: selected-stage-check-items
           phaseField: phase
           statusSource: subject-status
           aggregation: statusAggregation
@@ -158,6 +213,7 @@ auditContract:
         candidateAggregation:
           sourceField: candidateSource
           selection: every-candidate
+          scope: selected-stage-check-items
           statusMapping: semanticCandidateStatus
           sourceRequirement: required
           emptyCandidateSet: no-additional-input
@@ -186,8 +242,10 @@ auditContract:
       overall-audit-success-and-evidence-applicability-unsatisfied: 判定不能
       overall-audit-success-and-evidence-applicable: 適合
   result:
+    scope: each-selected-stage
     inputs: [machine-audit, semantic-audit, runtime-evidence]
     aggregation: statusAggregation
+    combinedInputs: selected-stage-results-only
   evidenceApplicability:
     reuseCondition: all-required-bindings-match
     mismatchStatus: 判定不能
@@ -212,6 +270,11 @@ auditContract:
         - complete-evidence-provenance
         - classification-observation-facts-available
         - no-mutable-external-state-dependency
+      stageAndClaimBinding:
+        auditScopeIdentity: selected-stage-and-check-claims
+        evaluationContractIdentity: stage-specific-expectations
+        observationFacts: evidence-kind-stage-and-proven-claims
+        rule: sourceやchecksumが同一でも構成監査のsuccessを実行証跡のsuccessへ流用しない。段階と確認対象が一致しない結果は再利用しない。
       statusRule: execution-disposition-does-not-change-audit-status
     bindingsByKind:
       local:
@@ -310,9 +373,14 @@ auditContract:
           replacement: next-completed-audit
         cleanupAuthority: explicit-cache-owner-operation
   completion:
+    scope: selected-stage-check-items-only
     terminalStatuses: [success, failed, blocked, 判定不能]
     requires:
       - pre-audit-has-terminal-status
+      - audit-purpose-recorded
+      - audit-stage-selection-recorded
+      - every-selected-stage-has-terminal-result
+      - every-unselected-stage-has-unrequested-reason
       - audit-mode-recorded
       - audit-target-identity-fixed
       - every-applicable-phase-has-terminal-status
@@ -327,6 +395,7 @@ auditContract:
       - every-inapplicable-semantic-audit-subject-has-discovery-scope-and-reason
       - overall-audit-has-terminal-status
   conformanceSuccess:
+    scope: selected-stage-check-items-only
     requiredAggregateStatus: success
     requiredEvidenceApplicability: satisfied
     requires:
@@ -336,6 +405,7 @@ auditContract:
       - no-required-result-is-failed-blocked-or-undecidable
   providerMapping:
     requirements:
+      - map-every-check-item-to-stage-without-moving-whole-mixed-phase
       - map-every-pre-audit-step-exactly-once
       - map-every-common-audit-phase-exactly-once
       - map-every-post-preflight-provider-check-to-exactly-one-common-audit-phase

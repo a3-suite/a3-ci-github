@@ -1016,6 +1016,8 @@ describe("workflow-contracts", () => {
         /python-version: '3\.12'/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_build_installer\.py -v/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_runtime_installer\.py -k test_windows -v/,
+        /name: Test native Windows installer safety \/ Windows PowerShell 5\.1\n\s+shell: powershell\n\s+env:\n\s+CI_INSTALLER_POWERSHELL: powershell/,
+        /name: Test native Windows installer safety \/ PowerShell 7\n\s+shell: pwsh\n\s+env:\n\s+CI_INSTALLER_POWERSHELL: pwsh/,
       ]);
       for (const native of [installerWindows, installerMacos]) {
         expect(native).toContain('npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
