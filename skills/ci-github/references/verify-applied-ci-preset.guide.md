@@ -2,7 +2,7 @@
 
 ## 目的
 
-適用先 project に配置した GitHub Actions workflow と `.ci/` 資産を、導入前の構成検証から hosted 実行まで確認する。
+リリース前に、最新の公開済み安定版が提供する標準構成と、適用先のGitHub Actions workflow・`.ci/`資産の整合を中心に監査する。標準へ合わせる差分と必要な固有差分を明らかにし、安全性・動作・リリース前の検証証拠で裏付ける。目的と対象境界は`ci-audit-contract.reference.yml`の`auditContract.purpose`に固定する。
 
 `verify-applied-ci-assets.guide.md` でテスト対象と証拠役割を決め、このガイドで GitHub Actions 固有の検証へ写像する。
 
@@ -29,7 +29,11 @@
 
 ## 検証手順
 
-共通の `target-resolution` で監査モードと監査対象 identity を記録してから provider preflight へ進む。provider preflight の結果は監査前stepとして保持し、後続監査の開始可否は共通契約の `preAudit.continuation` だけから導出する。
+共通の `target-resolution` でリリース前確認という監査目的、監査モードと監査対象 identity を記録してから provider preflight へ進む。provider preflight の結果は監査前stepとして保持し、後続監査の開始可否は共通契約の `preAudit.continuation` だけから導出する。
+
+同時に`auditContract.stages`で段階を選択し、記録する。既定は構成監査のみ。証跡監査を指定された場合は同じ対象の構成監査から証跡監査へ進む。以下の手順は確認項目ごとに`stages.itemMapping`とsubjectの`stageChecks`へ写像し、実行結果の未取得を構成の不適合へ混ぜない。
+
+監査開始時に`ci-audit-subjects.reference.yml`の必須subject`latest-standard-alignment`を登録し、同subjectの`baselineResolution`で最新の公開済み安定版を比較基準に固定する。GitHub Actionsの実workflow・Action binding・資材・設定・文書を`comparisonScope`へ対応付け、配置済み資産と比較する。差分分類・証拠・判定入力・報告順は同subjectに従う。読み取り専用監査では比較と移行案の提示までとし、既存実装を更新しない。
 
 1. `references/validate-ci-preset.guide.md` の監査モード別手順に従って導入先 root の preflight を実行し、workflow、必要 asset、quality adapter descriptor、Action SHA、設定値の不一致を検出して記録する。読み取り専用監査では変更せず、修正を含む依頼では明示された変更許可の範囲だけを修正して再検証する。Release／Package の stage 別 descriptor が workflow から到達していない場合は追加せず、既存の未接続 descriptor を撤去対象として記録する。
 
@@ -49,42 +53,51 @@
    - README がない、空欄だけ、または導線が切れている場合は対象契約違反として `statusClassification` へ渡す。変更を含む依頼では導入ガイドのテンプレートから作成・更新して再確認する。読み取り専用監査では不足を報告し、監査者が無断で変更しない。
    - README の decision、停止条件、共有契約が正本と異なる場合は、README の修正ではなく正本との不一致として扱う。
    - 固定項目は常に記載し、オプション項目は該当時だけ記載する。標準からの差異がない場合、補足の自由記述は不要とする。差異がある場合は、標準で成立しない理由、owner、正本・検証導線を追跡できることを確認する。
-   - `ci-audit-subjects.reference.yml` の `repository-root-readme` に必要な入力として、workflow、provider registry、policy、manifest、hosted / remote 証拠を準備する。この手順では委譲せず、手順5の意味監査へ渡す。
+   - `ci-audit-subjects.reference.yml` の `repository-root-readme` に必要な入力として、workflow、provider registry、policy、manifest、リリース前確認に適用するhosted設定・検証証拠を準備する。この手順では委譲せず、手順5の意味監査へ渡す。
    - `repository-ci-documentation.discovery` を適用して候補と個別扱いを確定する。適用対象は手順5の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
    - 共通検証で確定した `installer-distribution` の適用判定を手順5の意味監査へ渡し、GitHub Actions 固有の適用条件を追加しない。
 
 5. `ci-workflow-use-cases.reference.yml` のユースケースシミュレーションで抽出した各シナリオを、GitHub Actions の実行経路へ写像する。
+
+   以下の公開経路は、構成監査では配置済みの実装・設定・契約テストへの対応付けで照合する。テストの実行結果は選択した証跡監査で照合する。実tag作成、実publication request、実公開成功の発生をシミュレーションの成立条件にしない。
 
    - event と filter が入口条件を表すことを確認する。
    - job の `if` と `needs` を順に評価し、成功、失敗、skip、cancel 時の到達先を確認する。
    - job と workflow の `permissions`、environment、secret 注入、checkout 対象が、その経路の trust と副作用に一致することを確認する。
    - Action と reusable workflow の入出力、artifact の生成・受渡し・取得、summary と最終statusが preset 契約の出力と停止条件へ接続されることを確認する。
    - write経路では、前段の失敗、不一致、artifact欠落、権限不足、remote状態不明から publish へ到達しないことを確認する。
-   - publication request は、GitHub が受理した `workflow_dispatch` の run identity、event、actor、default branch、workflow path を hosted 設定と run metadata で確認する。actor が publication authorization authority であることを project owner 契約と照合し、一致しない、または確認不能なら意味監査を成功にしない。actor の存在確認は authorization の意味確認を代替しない。これは承認済み入力の搬送 provenance であり、タグ作成前の人間による本文承認の証明へ読み替えない。
+   - publication request は、`workflow_dispatch` のrun identity、event、actor、default branch、workflow pathを検証する実装を、workflow、hosted設定、project owner契約、契約テストへ照合する。actorのauthorizationを照合する経路と、不一致・確認不能で停止する経路を確認する。実公開runの発生やactorの実観測は公開後確認へ分け、未発生だけで意味監査を非成功にしない。actorの存在確認はauthorizationの意味確認や、タグ作成前の人間による本文承認の証明を代替しない。
    - 標準 Release flow では、git スキルによる release identity と本文の事前承認後に annotated tag を作成し、その push が request handoff で停止することを確認する。tag request の成功後に、認証済み dispatcher が同じ承認済み本文と publication authorization の一意な approval ID、digest、期限を渡す手動 publication request だけが default branch の caller を経て publish へ到達することを確認する。publication request が request と notes handoff を同一 run に生成し、caller が workflow path、event、default branch、run ID、head SHAを、publication が actor／triggering actor の存在、artifact digest、release identity、approval ID／期限を再検証することを確認する。承認期限は authority 入口だけでなく publish 直前にも再検証する。tag request の成功を publication caller へ直接接続する `workflow_run` 連鎖は不一致とする。
    - `repository-root-readme.delegation` へ GitHub Actions 固有の正本と実経路を検証証跡として追加し、この時点で一度だけ委譲する。返却結果を `resultHandling` で共通 status へ集約する。
    - `repository-ci-documentation` が適用対象の場合、GitHub上の実経路として workflow、固定 SHA Action、owner 契約、手動操作を照合先に追加し、共通契約の `reviewRequirements` と `reportingFields` を適用する。
-   - `project-owned-ci-adapter` が適用対象の場合、workflow から adapter への接続、適用する script 契約の identity／version、手順6で取得または再利用する project 契約テスト証拠の対象 identity を特定する。証拠と subject status はこの手順では記録しない。
-   - `installer-distribution` が適用対象の場合、GitHub Actions 固有の公開経路と証拠を `delegation.ciInputs` へ加えて、この時点で一度だけ installer スキルへ委譲する。返却結果を保持し、同 subject の `publicationPathCheck` を GitHub Actions の実経路へ写像する。修正が必要な場合は共通契約の `remediationPriority` をそのまま適用し、GitHub Actions 固有の優先規則を追加しない。
+   - `project-owned-ci-adapter`が適用対象の場合、workflow接続、適用する契約、必須テストの配置と対応付けを構成監査で確認して記録する。実行結果の取得・照合と証跡監査のsubject statusは手順6で扱う。
    - rerun では `run_attempt` だけを根拠に状態を再利用せず、request、source、handoff、remote identity を再確認する経路をたどる。
    - 共通処理を project-owned の entrypoint へ接続した場合は、`review-ci-workflow.guide.md` の候補比較を適用する。`providerActions.selectionOrder` または `actionization.targets` に契約適合する候補がある、あるいは選択済み binding が充足しない登録済み extension ではない、という対象契約違反を観測した場合は、配置成立の事実と分けて `statusClassification` へ渡す。preflight は未登録の project-owned fallback を補完しない。また、コードの意味的同一性を推測せず、候補比較の記録と契約テストの証拠を別に確認する。
 
    workflow の全入口、条件分岐、write job、owner handoff も逆向きにたどり、対応するシナリオまたは対象外の根拠があることを確認する。静的に式を確定できない場合は、監査操作の完了有無と証拠不足の事実を記録し、推測せず `statusClassification` へ渡す。
 
-6. `verify-applied-ci-assets.guide.md` の動的証拠に関する副作用判定を先に適用する。実行可能な project の契約対象ごとに、language adapter と `.ci` entrypoint の代表正常系、主要失敗、境界条件を、解決済みの検査ツール所有状態を使って実行する。入力、出力、終了状態、証跡と管理対象資産の状態不変を確認する。管理対象資産／外部の永続状態への書き込みが必要、または副作用を確認できない場合、read-only では実行せず、必須監査操作を開始・継続できない事実を `statusClassification` へ渡す。
+   **標準比較工程**: シミュレーション後、整合判定の前に次を順に実施する。
 
-   - `project-owned-ci-adapter` が適用対象の場合、手順5で特定した対象について project 契約テスト証拠を取得または再利用し、監査対象 revision への結合と同 subject の `evidenceRequirements` を照合する。欠落、期限切れ、失敗を非成功として保持し、証拠と subject status を記録する。preflight 成功だけで subject を成功にしない。
+   1. `latest-standard-alignment.comparisonScope`の各項目について標準と現状を対応付ける。project-localのセットアップガイドも文書の比較対象に含め、既存ガイドとの一致だけを標準適合の根拠にしない。
+   2. `installer-distribution`が適用対象なら、GitHub Actions固有の公開経路と証拠を`delegation.ciInputs`へ加えてinstallerスキルへ一度だけ委譲する。ownerが返す固定providerの対応根拠、OS別の期待入口・現入口とREADMEコマンド、移行可否・維持理由を既存の差分表へ受け取る。同subjectの`publicationPathCheck`を実経路へ写像する。
+   3. 対象identity・比較基準・段階とowner結果の結合を確認し、`latest-standard-alignment`の比較完了条件を照合して差分の必要性と移行対象を判定する。固定providerの対応根拠やOS別比較が欠ける場合はownerへ差し戻し、既存のstatus分類へ渡す。installerの判定をCI側で代替せず、修正の優先順位は`remediationPriority`に従う。
 
-7. 契約テストで覆われない局所分岐、再発防止、fixture／runtime 互換性が必要かを判定する。不要な場合は補助証拠フェーズを対象外とする理由を記録する。必要な場合は既存の補助証拠を確認し、不足を `test-gap` として記録する。補助操作の開始可否と完了後の証拠十分性を分けて記録し、共通契約の `statusClassification` へ渡す。修正を含む依頼で補助テストを追加する場合も、明示された変更許可の範囲に限定する。補助テストは契約保証の代替にしない。
+6. 構成監査では契約対象と実行可能な検査導線の対応を確認する。証跡監査を選択した場合は、`verify-applied-ci-assets.guide.md`の副作用判定を先に適用し、language adapterと`.ci` entrypointの代表正常系、主要失敗、境界条件の実行結果を取得または再利用する。実行時は入力、出力、終了状態、証跡と管理対象資産の状態不変を確認する。管理対象資産／外部の永続状態への書き込みが必要、または副作用不明ならread-onlyでは実行せず、必須操作の開始・継続不能を証跡監査の`statusClassification`へ渡す。未選択の実行確認は未依頼として記録する。
 
-8. preset 契約が provider 実行環境または remote readback を要求する経路だけで、次の証拠を取得する。対象外の経路では実行証拠フェーズを対象外とする理由を記録する。
+   - 証跡監査で`project-owned-ci-adapter`が適用対象の場合、手順5で特定した契約テストの結果を取得または再利用し、対象revisionとの結合と`stageChecks.execution-evidence`を照合する。欠落・期限切れ・失敗は証跡監査の非成功として保持し、preflightや構成監査の成功で代替しない。
+
+7. 局所分岐、再発防止、fixture／runtime互換性の検査導線が必要かを構成監査で判定する。不要なら対象外理由を記録する。必要な導線の欠落は構成監査の`test-gap`とする。証跡監査を選択した場合は既存の補助テスト結果を照合し、操作の開始可否と完了後の証拠不足を分けて共通`statusClassification`へ渡す。テスト追加は明示された変更許可の範囲に限定し、補助テストを契約保証の代替にしない。
+
+8. 共通監査契約の`runtime-evidence.appliesWhen`に該当するリリース前確認だけで、次の設定・検証証拠を取得する。対象外の経路では実行証拠フェーズを対象外とする理由を記録する。
+
+   `stages.itemMapping`に従い、providerの必要設定を読み取る確認は構成監査、動的な実行結果の照合は選択した証跡監査へ分ける。runtime-evidence全体を証跡監査へ移して設定確認を省略しない。
 
    - `quality-gate`: required check または trigger の意味を確認する変更
-   - `release-request`: tag preparation、request identity、handoff
-   - `release-publication`: 手動request、default branch caller、notes identity、authority、source identity、artifact、checksum、remote release
-   - `package-publication`: version plan、registry 状態、非上書き条件
+   - `release-request`: tag preparation、request identity、handoffの実装・設定・契約テスト
+   - `release-publication`: 手動request、default branch caller、notes identity、authority、source identity、候補artifact、checksum、公開後readbackと不一致時停止の実装・設定・契約テスト
+   - `package-publication`: version plan、公開先registryの設定・既存状態、非上書き条件の実装・契約テスト
 
-   既存の hosted run または remote readback と、状態を変更しない GitHub 上の観測を優先する。監査証拠を得る目的だけで Release／Package の実行を新たに開始しない。新しい hosted 実行が必要な場合は、`verify-applied-ci-assets.guide.md` の証拠取得境界に従って監査から独立した操作として扱う。hosted、secret、権限、remote resource の観測を開始・継続できない事実、または完了した観測の証拠が不足・曖昧である事実を記録し、共通の `statusClassification` へ渡す。
+   状態を変更しないGitHub設定の観測と、対象identityに結合できる既存の非公開実行証拠を優先する。実Release／Packageの作成、実公開run、公開済みassetの取得成功は監査の必須証拠にしない。これらは公開後確認として別記する。リリース前に必要な設定・非公開実行の観測を開始・継続できない事実、または完了した観測の証拠不足は、共通の`statusClassification`へ渡す。新しいhosted実行は`verify-applied-ci-assets.guide.md`の証拠取得境界に従って監査から独立した操作として扱う。
 
 ## 共通監査前段・フェーズ・集約への写像
 
@@ -94,9 +107,9 @@
 | `provider-preflight` | 手順1で配置資産、固定 Action ref、設定を preflight する |
 | `static-validation` | 手順2から4で workflow、設定、README、到達資産を静的に検証する |
 | `use-case-simulation` | 手順5で通常・例外・再実行経路と意味監査 subject を GitHub Actions の実経路へ写像する |
-| `contract-evidence` | 手順6で契約対象の正常、失敗、境界を検証する |
-| `supplemental-evidence` | 手順7で固有目的の有無を判定し、許可された修正時だけ追加する |
-| `runtime-evidence` | 手順8で既存 hosted run または remote readback を対象 identity に結合する |
+| `contract-evidence` | 手順6で構成監査の検査導線と、選択した証跡監査の実行結果を分ける |
+| `supplemental-evidence` | 手順7で必要な検査導線と、選択した証跡監査の補助結果を分ける |
+| `runtime-evidence` | 手順8でリリース前に必要なhosted設定・非公開実行証拠を対象identityに結合し、実公開・公開後確認は分ける |
 | `result-aggregation` | 機械監査、意味監査subject、意味候補、適用対象の実行証拠を保持し、監査契約の `reporting` と `result` を適用する |
 
 ## テスト資産の配置
@@ -106,6 +119,16 @@
 - `release-publication` は source identity gate と固定 source quality job を分離し、build が両方の成功を要求することを確認する。`.ci/platform-manifest.yml` は `platforms[].{id,runner,target}` として検証し、選択された登録済み標準実装の Action 参照と依存資産を preflight で確認する。
 - 契約テストと補助テストは project の既存 `tests/` 規約へ置き、必要な場合だけ `tests/ci/` を使用する。
 - preflight script、preflight runtime、導入元スキルの配置 path は project の実行時資産に含めない。
+
+## 報告
+
+共通の`latest-standard-alignment.reportFormat`を使用する。GitHub固有の形式を追加せず、必須の詳細根拠は参照先または該当区分へ記載する。
+
+`latest-standard-alignment.reportingFields`と`reportingOrder`に従い、最新標準との整合判定・差分・移行案を先頭に示す。installerの標準差分はowner結果を保持して集約する。安全性・動作・Hostedの確認結果と監査全体のstatusを分けて示す。
+
+構成監査と証跡監査のstatusを分け、全体結果は選択した段階の範囲で表示する。証跡監査が未選択なら未実施と未依頼理由を明記し、構成のstatusへ混ぜない。構成だけの成功を動作確認済みやリリース準備完了へ読み替えない。実公開時のactor・run、remote release、公開済みassetの取得・checksum照合は公開後確認として別記する。
+
+監査レポートの最後に、同subjectの`finalReport`に従って「標準適合度・差分・正当性レビュー」を必ず付ける。共通資産監査と一体で報告する場合は一つにまとめ、installerのownerレビュー結果も保持する。差分なし・未確認の場合も省略しない。
 
 ## 判定
 

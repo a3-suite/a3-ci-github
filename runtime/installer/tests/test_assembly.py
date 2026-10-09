@@ -25,6 +25,27 @@ class StandardAssemblyTest(unittest.TestCase):
             native = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native", "verificationProfile": "native-offline-dry-run-v1", "platforms": {"linux-x86_64": {"manifest": "product.json", "assetName": "install.sh"}}}
             config_path.write_text(json.dumps(native))
             self.assertEqual(assembly.config_for({"configPath": str(config_path)}), native)
+            unix = {"linux-x86_64", "macos-arm64"}
+            platforms = {target: {"manifest": f"{target}.json", "assetName": f"install-{target}.ps1" if target.startswith("windows") else f"install-{target}.sh"} for target in ["linux-x86_64", "macos-arm64", "windows-x86_64"]}
+            shared = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native-shared", "verificationProfile": "shared-exact-payload-v1", "platforms": platforms, "sharedWrapper": {"assetName": "install.sh", "deliveryUrls": {target: f"https://example.invalid/{platforms[target]['assetName']}" for target in unix}}}
+            for selected in [platforms, {target: platforms[target] for target in unix}]:
+                with self.subTest(selected=selected):
+                    value = {**shared, "platforms": selected}
+                    config_path.write_text(json.dumps(value))
+                    self.assertEqual(assembly.config_for({"configPath": str(config_path)}), value)
+            example = json.loads((ROOT.parents[1] / "skills/installer/assets/examples/standard-assembly.example.json").read_text(encoding="utf-8"))
+            config_path.write_text(json.dumps(example))
+            self.assertEqual(assembly.config_for({"configPath": str(config_path)}), example)
+            for urls in [{}, {"linux-x86_64": "https://example.invalid/linux.sh"}, {**shared["sharedWrapper"]["deliveryUrls"], "windows-x86_64": "https://example.invalid/windows.ps1"}]:
+                with self.subTest(urls=urls):
+                    config_path.write_text(json.dumps({**shared, "sharedWrapper": {**shared["sharedWrapper"], "deliveryUrls": urls}}))
+                    with self.assertRaisesRegex(ValueError, "installer-wrapper-urls-invalid"):
+                        assembly.config_for({"configPath": str(config_path)})
+            for selected in [{"windows-x86_64": platforms["windows-x86_64"]}, {"linux-x86_64": platforms["linux-x86_64"]}]:
+                with self.subTest(selected=selected):
+                    config_path.write_text(json.dumps({**shared, "platforms": selected}))
+                    with self.assertRaisesRegex(ValueError, "installer-shared-platform-unsupported"):
+                        assembly.config_for({"configPath": str(config_path)})
             for changes in [{"unknown": True}, {"verificationProfile": "unselected"}, {"useCase": "npm-package"}, {"platforms": {}}, {"platforms": {"windows-arm64": {}}}, {"platforms": {"linux-x86_64": {"manifest": "product.json", "assetName": "manifest-linux-x86_64.json"}}}]:
                 with self.subTest(changes=changes):
                     config_path.write_text(json.dumps({**native, **changes}))
@@ -207,26 +228,34 @@ class StandardAssemblyTest(unittest.TestCase):
             (root / "product.json").write_text(json.dumps(template))
             platforms = {target: {"manifest": "product.json", "assetName": f"install-{target}.sh"} for target in ["linux-x86_64", "macos-arm64"]}
             config = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native-shared", "verificationProfile": "shared-exact-payload-v1", "platforms": platforms, "sharedWrapper": {"assetName": "install.sh", "deliveryUrls": {target: f"https://github.com/example-org/example-app/releases/download/v1.0.0/{entry['assetName']}" for target, entry in platforms.items()}}}
+            windows_root = root / "windows"
+            windows_root.mkdir()
+            windows_bundle, windows_artifact = legacy._per_user_windows_bundle(windows_root)
+            shutil.copyfile(windows_bundle / "manifest-windows-x86_64.json", root / "windows.json")
+            platforms["windows-x86_64"] = {"manifest": "windows.json", "assetName": "install-windows-x86_64.ps1"}
             (root / "assembly.json").write_text(json.dumps(config))
-            release_platforms = [{"id": "release-linux", "target": "x86_64-unknown-linux-gnu"}, {"id": "release-macos", "target": "aarch64-apple-darwin"}]
+            release_platforms = [{"id": "release-linux", "target": "x86_64-unknown-linux-gnu"}, {"id": "release-macos", "target": "aarch64-apple-darwin"}, {"id": "release-windows", "target": "x86_64-pc-windows-msvc"}]
             standard_root, supplemental_root = root / "standard", root / "supplemental"
             standard_root.mkdir()
             supplemental_root.mkdir()
             request = {"releasePlatforms": release_platforms, "sourceRoot": str(root), "configPath": str(root / "assembly.json"), "authority": {"source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "tag": "v1.0.0", "publication": {"repository": "example-org/example-app"}}, "assemblyId": "assembly-1", "providerRevision": "a" * 40}
             for target in platforms:
-                binding = next(entry for entry in release_platforms if (entry["id"] == "release-linux") == (target == "linux-x86_64"))
+                binding = next(entry for entry in release_platforms if assembly.NATIVE_TARGETS[entry["target"]] == target)
+                selected_artifact = windows_artifact if target == "windows-x86_64" else artifact
                 standard = standard_root / ("release-build-" + binding["id"])
                 standard.mkdir()
-                shutil.copyfile(artifact, standard / artifact.name)
-                checksum = assembly.digest(artifact)
-                (standard / (artifact.name + ".sha256")).write_bytes(f"{checksum}  {artifact.name}\n".encode("utf-8"))
-                assembly.write_json(standard / "asset-manifest.json", {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": binding["id"], "platform_target": binding["target"], "assets": [{"path": artifact.name, "sha256": checksum, "checksum_path": artifact.name + ".sha256"}]})
+                shutil.copyfile(selected_artifact, standard / selected_artifact.name)
+                checksum = assembly.digest(selected_artifact)
+                (standard / (selected_artifact.name + ".sha256")).write_bytes(f"{checksum}  {selected_artifact.name}\n".encode("utf-8"))
+                assembly.write_json(standard / "asset-manifest.json", {"schema_version": "1", "kind": "ci-release-build-manifest", "source_sha": test_runtime_installer.REVISION, "version": "1.0.0", "platform_id": binding["id"], "platform_target": binding["target"], "assets": [{"path": selected_artifact.name, "sha256": checksum, "checksum_path": selected_artifact.name + ".sha256"}]})
                 output = supplemental_root / ("supplemental-build-" + binding["id"])
                 output.mkdir()
                 scratch = root / ("scratch-" + target)
                 scratch.mkdir()
-                with patch.object(assembly.platform, "system", return_value="Linux" if target.startswith("linux") else "Darwin"), patch.object(assembly.platform, "machine", return_value="x86_64" if target.startswith("linux") else "arm64"), patch.object(assembly, "verify_native"):
+                host = {"linux-x86_64": ("Linux", "x86_64"), "macos-arm64": ("Darwin", "arm64"), "windows-x86_64": ("Windows", "AMD64")}[target]
+                with patch.object(assembly.platform, "system", return_value=host[0]), patch.object(assembly.platform, "machine", return_value=host[1]), patch.object(assembly, "verify_native") as native_verification:
                     assembly.platform_record({**request, "standardBuildRoot": str(standard)}, config, output, scratch)
+                    native_verification.assert_called_once_with(output / "candidate", platforms[target]["assetName"], f"manifest-{target}.json", standard / selected_artifact.name)
             assembly_request = {**request, "operation": "assemble", "standardBuildRoot": str(standard_root), "supplementalBuildRoot": str(supplemental_root)}
             failed_output = root / "failed-handoff"
             with patch.object(assembly, "verify_wrapper", side_effect=ValueError("injected-wrapper-profile-failure")), self.assertRaisesRegex(ValueError, "injected-wrapper-profile-failure"):
@@ -238,7 +267,14 @@ class StandardAssemblyTest(unittest.TestCase):
             self.assertFalse((root / "failed-result/supplemental-manifest.json").exists())
             assembly.run({**assembly_request, "outputDirectory": str(root / "handoff")})
             handoff = assembly.read_json(root / "handoff/supplemental-manifest.json")
-            self.assertEqual(len(handoff["assets"]), 5)
+            self.assertEqual({entry["path"] for entry in handoff["assets"]}, {"install.sh", *(entry["assetName"] for entry in platforms.values()), *(f"manifest-{target}.json" for target in platforms)})
+            wrapper_evidence = assembly.read_json(root / "handoff/install.sh.owner.json")["installerEvidence"]
+            self.assertEqual(set(wrapper_evidence["platform_installers"]), {"linux-x86_64", "macos-arm64"})
+            windows_script = supplemental_root / "supplemental-build-release-windows/candidate/install-windows-x86_64.ps1"
+            windows_script.write_bytes(windows_script.read_bytes() + b"\n# changed after verification\n")
+            with self.assertRaisesRegex(ValueError, "installer-platform-evidence-invalid"):
+                assembly.run({**assembly_request, "outputDirectory": str(root / "failed-windows")})
+            self.assertFalse((root / "failed-windows/supplemental-manifest.json").exists())
             self.assertFalse((root / "handoff/tmp").exists())
             self.assertFalse((root / "managed").exists())
 

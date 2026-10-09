@@ -1,6 +1,6 @@
 ---
 name: installer
-description: GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材取得するインストーラ、インストールスクリプト、関連ドキュメントの作成・修正・レビュー、提供元の固定runtimeを使う製品宣言とCI接続の検証、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の適合監査で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
+description: GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材取得するインストーラ、インストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール手順の簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
 ---
 
 # installer / SKILL
@@ -43,6 +43,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - destructive な操作、所有権変更、権限変更は managed root 内に閉じる。root 外の launcher 操作は manifest 契約の「launcher 安全不変条件」に従い、service manager 登録は必要な最小操作だけに限定する。
 
 ## 関連スキル
+- 任意: root-docs - READMEのインストール節を監査・改稿するときに、本文構成・最短導線・詳細への参照を担う補助スキルとして適用する
 - 任意: repository-audit - installer の導入推奨と project SSOT の採否を確認するときに参照する
 - 任意: runtime-script - installer が配置または生成する起動スクリプト、service manager handoff、PID、ログ、restart、health 境界を整理するときに参照する
 - 任意: env - 環境変数や設定ファイルの扱いを整理するときに参照する
@@ -98,6 +99,16 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - 参照: references/installer-asset-assembly-evidence-contract.reference.md
 - 参照: references/define-installer.guide.md
 
+### インストーラをセットアップしたい、またはCIセットアップから委譲された
+- セットアップ依頼の範囲で、次のガイドの手順を実施し、完了条件を確認する。ガイドの紹介や構成提案だけで終了しない。既存の固有実装がある場合は、標準構成との比較と必要性の対話を先に行う。
+- 同ガイドの「固定providerの対応確認」を宣言変更前に行う。Unix共有入口を第一に比較し、サンプルを固定版の対応証拠にせず、対象別入口を残す場合は理由を確認する。
+- CIから委譲された場合は、実施結果と未確認事項をCI側へ返す。
+- 参照: references/use-standard-installer.guide.md
+
+### READMEのインストール手順を簡素化・修正したい
+- 本スキルを主工程とし、採用した配布経路・コマンド・対応環境・配置先の正当性を確認する。READMEの本文・最短導線にはroot-docsを補助として適用し、次のガイドの「製品READMEへのインストール手順追記」節に限定して許可範囲の改稿と再確認まで行う。構成提案だけで終了しない。
+- 参照: references/use-standard-installer.guide.md
+
 ### 標準installerをCIまたはローカルで組み立てたい
 - 提供元の固定版を選択し、実装選択・製品宣言path・検証profileを明示する。
 - 標準経路では共通実装を利用projectへコピーしない。個別adapterが必要かは、標準契約で満たせない製品要求から判断する。
@@ -119,11 +130,13 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - 参照: references/define-installer.guide.md
 
 ### インストーラを監査したい
-- 作成済み、導入判断が `required`、または project SSOT で要求される installer script、manifest、execution request、関連ドキュメント、テスト証跡が本スキルの契約に沿っているかを監査する。期待される成果物が存在しない場合も証跡不足として扱う。
+- 通常の監査は構成監査とする。証跡監査・両段階・リリース前の実行確認を指定された場合は、同じ対象について構成監査から証跡監査へ進む。CIから委譲された場合は選択段階と確認対象を引き継ぐ。
+- READMEのインストール節ではroot-docsを補助として適用し、提供元が対応する短い既定オンライン起動を第一案としてOSごとに現手順と比較する。現在のasset名・URL・配置との一致だけで差分なしにせず、比較結果、残す操作の必要性、具体的な置換案を報告する。その修正を依頼された場合はREADMEの改稿と再確認へ進む。判定と変更範囲は監査ガイドに従う。
+- 作成済み、導入判断が `required`、またはproject SSOTで要求されるinstaller script、製品宣言・manifest、execution request、関連ドキュメント、検査導線を構成監査で確認する。証跡監査では実候補とテスト結果を照合する。構成の欠落と実行証跡の未取得を分けて扱う。
 - スキル文書自体の監査ではなく、インストーラ成果物の実装・入力・運用証跡を対象にする。
-- 機械検証の成功だけで、実装責務・CI接続・実候補の証跡を確認した意味監査の成功とは扱わない。
-- 標準経路は製品宣言・固定provider revision・候補checksum・実候補の検証profileを照合してから意味監査へ進む。
-- 意味監査は共通 installer への準拠、準拠可能性、例外根拠の順に確認し、具体的な導入・更新案を提示する。比較基準と手順は監査ガイドに従う。
+- 機械検証の成功だけで、実装責務・CI接続を確認した構成監査や、実候補の証跡を確認した証跡監査の成功とは扱わない。
+- 構成監査では製品宣言・固定provider revision・検証profileの選択と接続を、証跡監査では候補checksumと実候補の検証結果を照合する。
+- リリース前の確認として、最新の公開済み安定版の標準installerとの整合を中心に、標準へ合わせる差分、必要性を確認した固有差分、未確認を判定し、移行案を先頭に報告する。安全性・動作・実候補の証跡は裏付けとして保持する。目的・比較基準・差分判定・CIへの返却は監査ガイドに従う。
 - 準拠監査での project SSOT の扱いと判定順は、監査ガイドの優先順位に従う。
 - 参照: references/audit-installer-compliance.guide.md
 

@@ -2,7 +2,7 @@
 
 ## 目的
 
-適用先 project に配置した CI 資産について、何をテスト対象にするか、どの証拠で監査完了と適合を判定するかを決める。
+リリース前の確認として、最新の公開済み安定版の標準構成と適用先CI資産の整合を監査の主軸とし、差分の必要性と移行対象を明らかにする。安全性・動作・リリース前の検証証拠を裏付けとして接続し、監査完了と適合を判定する。目的と実公開との境界は`ci-audit-contract.reference.yml`の`auditContract.purpose`を正本とする。
 
 ## 正本と対象境界
 
@@ -13,6 +13,16 @@
 - 配布元スキルのリソースは適用先の実行時依存にしない。適用先では、選択した provider が所有する workflow／設定 root と `.ci/` の全資産を棚卸しし、保証対象は provider workflow、workflow から到達する `.ci/`、project-local adapter、および正本が必須とする管理資産から導出する。provider 固有の物理 path は provider 固有の検証ガイドへ委譲する。
 - SDD の利用有無にかかわらず、CI runtime に SDD CLI や DSL を組み込まない。
 
+## 標準整合の必須確認
+
+`ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。
+
+## 監査段階の選択
+
+監査開始時に`ci-audit-contract.reference.yml`の`auditContract.stages`で段階を選択し、対象identityとともに記録する。通常は構成監査のみとし、証跡監査を指定された場合は構成監査の後に同じ対象の証跡監査へ進む。以下の確認項目は`stages.itemMapping`とsubjectの`stageChecks`に従って段階へ写像する。phaseやsubject全体を証跡監査へ移して構成の必須確認を省略しない。
+
+ownerへの委譲ではsubject catalogの`stageHandling`も適用する。返却結果に構成判断と実行証跡不足が混在している場合は確認対象ごとに分け、元のowner判断を保持する。
+
 ## テスト対象の判定
 
 1. 選択した provider が所有する workflow／設定 root と `.ci/` の全資産を棚卸しし、配置済み workflow、正本が必須とする管理資産、workflow から到達する資産を抽出する。
@@ -20,8 +30,8 @@
 3. `ci-audit-subjects.reference.yml` の `repository-root-readme` を意味監査の必須 subject として登録し、同 subject の `ownerSkill` が要求する前提と `delegation.ciInputs` を準備する。委譲は provider 固有証拠を揃えた後、ユースケースシミュレーションで実行する。
 4. 同subject catalogの `repository-ci-documentation.discovery` を順に適用して候補と個別扱いを確定する。適用対象は同 subject の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
 5. 同subject catalogの `installer-distribution.adoptionAssessment` を先に適用し、定義済みの handling を保持する。続いて `installer-distribution.appliesWhen`、`discovery`、`inapplicable` と、監査契約の `statusClassification` から適用判定を導出する。適用対象なら `delegation.ciInputs` を準備し、provider 固有証拠を揃えた後、ユースケースシミュレーションで一度だけ委譲する。修正が必要な場合は同 subject の `remediationPriority` を適用し、読み取り専用監査と修正許可のある監査を `modeHandling` で分ける。
-6. 外部から観測できる仕様や安全不変条件は契約証拠へ接続する。
-7. 契約証拠を確保した後、局所保証、再発防止、テスト資産互換性に固有の観測が必要かを判定する。補助証拠の追加可否は監査モードに従う。
+6. 外部から観測できる仕様や安全不変条件を実行可能な検査へ接続する。導線の有無は構成監査で、実行結果は選択した証跡監査で確認する。
+7. 局所保証、再発防止、テスト資産互換性の検査導線が必要かを判定する。実行結果の取得・照合は証跡監査を選択した場合に行い、補助証拠の追加可否は監査モードに従う。
 8. 到達不能な補助ファイル、導入元スキルの内部実装、provider の再利用単位本体は適用先の実装テスト対象にしない。ただし適用先での固定 ref、入出力、権限、配置結果との接続は確認する。
 9. 棚卸しした各ファイルを、CI に必要な資産、別 owner が管理する非 CI 資産、削除または置換が必要な重複・未到達・旧資産のいずれかへ分類し、根拠を記録する。別 owner の資産は owner と用途を確認して CI 監査の保証対象から除外し、到達不能という理由だけで不要と判定しない。未分類のファイルが残る間は意味監査を完了扱いにしない。
 
@@ -41,18 +51,19 @@
    - 確認に使った静的証拠と、後続フェーズで取得または再利用する契約テスト、provider 実行証拠、remote 証拠の対象 identity
 5. 通常経路は入力が一度だけ固定され、期待する出力と evidence へ到達することを机上実行する。例外経路は正本の `decision` と preset の停止・完了条件から期待結果を解決する。停止が必要な場合は後続のwriteや成功集約へ進まず、成功完了が許可される場合は副作用を繰り返さずに完了条件を満たすことを机上実行する。
 6. 再実行経路は、identity、入力、権限、remote 状態の再確認を通り、以前の成功や部分状態を根拠なく再利用しないことを確認する。
-7. 契約が順序、状態遷移、または停止条件を定義する stage を workflow が実行する場合、`ci-audit-subjects.reference.yml` の `ci-workflow-sequence` を適用し、同 subject の `evidenceRequirements` に従って各契約シーケンスを実行可能な検査（契約テスト、validator、静的検査）の identity と直近結果へ対応付ける。机上の推論やレビュー記録は実行結果の代替にせず、検査が未接続の場合は `test-gap`、契約が沈黙または不足する場合は `contract-gap` として分類する。
+7. 契約が順序、状態遷移、または停止条件を定義するstageをworkflowが実行する場合、`ci-workflow-sequence.stageChecks`を適用する。構成監査では各契約シーケンスを実行可能な検査のidentityへ対応付け、未接続は`test-gap`、契約不足は`contract-gap`とする。直近の実行結果の照合は証跡監査で行い、机上の推論や対応付けだけで実行済みにしない。
 8. 次の双方向照合で抜け漏れを判定する。
+   - `latest-standard-alignment`の比較を実施し、installerが適用対象ならそのowner結果も受領してから、全差分の分類とsubject statusを確定する。未解消の差分や未確認を、採用中の版の検証成功で相殺しない。
    - 抽出した全シナリオに、到達可能な実装経路と観測可能な終了状態がある。
    - `ci-workflow-sequence` が適用対象の場合、契約シーケンスが実行可能な検査へ接続され、未接続または契約不足が `test-gap` / `contract-gap` として報告されている。
    - 配置済み workflow の各入口、分岐、write経路、owner handoff に、対応するシナリオまたは対象外の根拠がある。
    - preset の必須入力、出力、停止条件が少なくとも一つのシナリオで確認され、未接続の項目がない。
    - `repository-root-readme` は `delegation.resultHandling` に従って委譲結果を集約する。
    - `repository-ci-documentation` が適用対象の場合、同 subject の `reviewRequirements` を全対象文書へ適用する。
-   - `project-owned-ci-adapter` が適用対象の場合、workflow 接続、適用する script 契約の identity／version、後続の `contract-evidence` で取得または再利用する project 契約テスト証拠の対象 identity を特定する。証拠の取得・照合・subject status の確定はここでは行わない。
+   - `project-owned-ci-adapter`が適用対象の場合、workflow接続、適用契約、必須テストの配置と対応付けを構成監査で確認する。実行結果の取得・照合は証跡監査の`contract-evidence`へ渡し、段階別subject statusを保持する。
    - `installer-distribution` が適用対象の場合、provider 固有証拠を含む入力を揃えて一度だけ委譲し、返却結果を保持して、installer owner が選択した公開経路と CI の実装経路を照合する。
 
-机上シミュレーションは hosted runner、secret、権限、外部サービスの実動作を証明しない。必須観測の開始・継続可否と、完了した観測の証拠十分性は、静的経路の成立とは分けて `auditContract.statusClassification` の condition へ照合する。
+机上シミュレーションは hosted runner、secret、権限、外部サービスの実動作を証明しない。リリース前に必要な観測の開始・継続可否と、完了した観測の証拠十分性は、静的経路の成立とは分けて `auditContract.statusClassification` の condition へ照合する。実公開で初めて確認できる事項は`auditContract.purpose`に従って公開後確認へ分ける。
 
 preflight が `success` でも、機械監査または意味監査を省略して適合扱いにしない。provider の再利用単位とローカル実装の重複、registry 外 workflow、到達不能 asset、provider が所有する root／`.ci/` の未分類資産、workflow の処理単位と契約の不一致は、`semanticCandidates` を起点に owner・処理契約・入出力・停止条件・副作用を照合し、候補ごとの判断と証拠を残す。候補と意味監査のstatusは `ci-audit-contract.reference.yml` の `reporting.semanticCandidateStatus` と `reporting.statuses.semantic-audit` から導出する。
 
@@ -76,6 +87,8 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 
 ## 契約証拠と補助証拠
 
+検査の配置・契約への対応付けは構成監査で確認する。本章の契約テストや補助テストの実行結果取得・照合は、証跡監査を選択した場合に行う。構成監査だけの場合は未依頼として報告し、実行結果の未取得で構成のstatusを変更しない。必要な検査導線の欠落は構成監査の不足として保持する。
+
 - 契約証拠は、project の契約正本（contract registry が存在する場合）または `ci` の preset／script 契約が定める外部観測可能な振る舞いを直接検証する。
 - 補助証拠は契約保証を代替せず、`contract-test-supplement`、`local-regression-prevention`、`test-asset-compatibility` のいずれかの固有目的を持つ。
 - coverage 率だけを理由に補助テストを追加しない。
@@ -84,7 +97,7 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 
 契約証拠または補助証拠を動的に取得する前に、project owner が定めた実行方法から、実行コマンド、管理対象資産への書き込み、外部の永続状態への書き込み、cache／temp／coverageなどの一時状態を確認し、根拠と解決した出力先を記録する。
 
-`project-owned-ci-adapter` が適用対象の場合、ユースケースシミュレーションで特定した対象について project 契約テスト証拠を取得または再利用し、監査対象 revision への結合と同 subject の `evidenceRequirements` を照合してから subject status を確定する。preflight 成功で代替しない。
+証跡監査で `project-owned-ci-adapter` が適用対象の場合、ユースケースシミュレーションで特定した対象について project 契約テスト証拠を取得または再利用し、監査対象 revision への結合と同 subject の `evidenceRequirements` を照合してから、その段階の subject status を確定する。preflight 成功で代替しない。
 
 | 動的証拠の副作用 | read-only 監査での扱い |
 | --- | --- |
@@ -120,11 +133,13 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 
 最初に `ci-audit-contract.reference.yml` の `preAudit` を適用し、監査モード、監査対象 identity、provider preflight の結果と証拠を記録する。後続監査の開始可否は同契約の `preAudit.continuation` だけから導出する。対象状態と外部状態の変更可否、および検査ツール所有の一時状態は同契約の `modes` に従う。
 
-その後、同契約の `auditContract.phases` を記載順に適用する。`conditional` のフェーズは、対象外の根拠を記録できる場合だけ省略する。各フェーズの結果には、監査対象 identity、status、証拠の provenance、証拠種別に必要な identity binding、証拠取得の実施区分 `executed` または `reused` を残す。`reused` は適用性を今回確認した証拠の再利用であり、`未実施` へ読み替えない。
+その後、選択した各段階について同契約の`auditContract.phases`を記載順に適用する。段階に適用する確認項目がないphaseは理由を記録し、対象がある必須phaseを省略しない。各結果には段階・確認対象、監査対象identity、status、証拠のprovenance、必要なidentity binding、実施区分`executed`/`reused`を残す。未選択段階の扱いは`stages.resultHandling`に従う。
+
+結果を再利用する場合は`evidenceApplicability.reuseEvaluation.stageAndClaimBinding`を適用し、段階と確認対象を既存のscope・contract identityと観測事実へ結合する。sourceやchecksumが同じでも、構成監査の結果を実行証跡の結果へ流用しない。
 
 各フェーズの観測と意味監査 subject の結果は `ci-audit-contract.reference.yml` の `auditContract.statusClassification` へ照合し、`reporting.statuses.semantic-audit.subjectAggregation` を含む集約を経て、全体結果を同じ正本の `result` で確定する。本ガイドでは status の意味、優先順位、終端規則を補完しない。
 
-証拠取得では、既存の provider 実行証拠または remote readback と、状態を変更しない観測を優先する。新しい外部副作用を伴う実行を、監査証拠を得る目的だけで開始しない。観測の開始可否と、完了した観測の証拠十分性は `auditContract.statusClassification` へそのまま渡す。新しい実行が必要な場合は監査から独立した操作として扱い、対象 owner の運用契約、authority、安全条件、明示的な実行承認を満たしてから、その結果を監査証拠へ接続する。
+証拠取得は`auditContract.purpose`と`runtime-evidence`の適用範囲に限定する。既存の対象identityに結合できる証拠と、状態を変更しない観測を優先し、実Release／Package公開を証拠取得の前提にしない。リリース前に必要な観測の開始可否と、完了した観測の証拠十分性は `auditContract.statusClassification` へ渡す。新しい外部副作用を伴う実行は監査から独立した操作として扱い、対象ownerの運用契約、authority、安全条件、明示的な実行承認に従う。
 
 ## 配置と責務
 
@@ -133,6 +148,16 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 - language skill は format、lint、test、build の具体的な検証を所有する。
 - provider 固有スキルは workflow、再利用単位、権限、artifact、provider 実行環境への写像を所有する。
 - project owner は adapter、project 固有設定、契約テスト、補助テストを所有する。
+
+## 報告の主軸
+
+本文の形式は`ci-audit-subjects.reference.yml`の`latest-standard-alignment.reportFormat`を正本とする。「判定」「要対応」「標準適合度・差分・正当性レビュー」の3区分で要点を示し、必須の詳細根拠は同契約に従って参照先または該当区分へ記載する。
+
+`latest-standard-alignment.reportingFields`と`reportingOrder`に従い、比較基準、標準整合のstatus、差分と理由、移行案・未確認事項を先頭に示す。安全性・動作・Hosted証拠と監査全体のstatusを併記する。標準整合の確認は、他の必須subjectや実行証拠を代替しない。
+
+構成監査と証跡監査のstatusを分けて示し、全体結果は選択段階の範囲で表示する。構成だけの成功を動作確認済みやリリース準備完了へ読み替えない。公開後確認は別記し、選択した証跡監査の必須証拠不足と混同しない。
+
+監査レポートの最後に、同subjectの`finalReport`に従って「標準適合度・差分・正当性レビュー」を必ず付ける。集計と差分表は確認済みのsubject結果から作成し、差分なし・未確認の場合も省略しない。
 
 ## 判定
 

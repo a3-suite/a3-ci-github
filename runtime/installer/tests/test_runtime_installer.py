@@ -37,6 +37,11 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _windows_powershell() -> str:
+    """Select the engine under test, defaulting to Windows' built-in engine."""
+    return os.environ.get("CI_INSTALLER_POWERSHELL", "powershell")
+
+
 class RuntimeInstallerTest(unittest.TestCase):
     """Check the assembled installer runtime against its public modes."""
 
@@ -136,8 +141,10 @@ class RuntimeInstallerTest(unittest.TestCase):
     ) -> subprocess.CompletedProcess[str]:
         if sys.platform == "win32":
             command = [
-                "pwsh",
+                _windows_powershell(),
                 "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
                 "-File",
                 str(bundle / "installer.ps1"),
             ]
@@ -193,7 +200,10 @@ class RuntimeInstallerTest(unittest.TestCase):
             f"; Get-Content -Raw -LiteralPath {self._ps_quote(script)} | iex"
         )
         return subprocess.run(
-            ["pwsh", "-NoProfile", "-Command", command],
+            [
+                _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-Command", command,
+            ],
             capture_output=True,
             text=True,
             check=False,
@@ -1372,13 +1382,15 @@ class RuntimeInstallerTest(unittest.TestCase):
         "PowerShell runtime test requires Windows",
     )
     def test_windows_dry_run_install_and_noop(self) -> None:
-        """Exercise PowerShell mode transitions on Windows."""
+        """Exercise mode transitions with a non-ASCII Windows placement path."""
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             artifact = root / "tool.zip"
             with zipfile.ZipFile(artifact, "w") as archive:
                 archive.writestr("tool.exe", b"binary")
-            bundle, checksum, state = self._bundle(root, artifact)
+            bundle, checksum, state = self._bundle(
+                root, artifact, managed_root=root / "managed-工具"
+            )
             for mode, result in (
                 ("dry-run", "dry-run"),
                 ("install", "success"),
@@ -1412,6 +1424,49 @@ class RuntimeInstallerTest(unittest.TestCase):
             invalid = self._run_iex(bundle, artifact, mode="bogus")
             self.assertNotEqual(invalid.returncode, 0)
             self.assertIn("Mode", invalid.stderr)
+
+    @unittest.skipUnless(
+        sys.platform == "win32",
+        "PowerShell runtime test requires Windows",
+    )
+    def test_windows_online_downloads_do_not_require_html_parsing(self) -> None:
+        """Fetch exact fixture bytes without IE parsing or interactive prompts."""
+        with _temporary_directory() as temp:
+            root = Path(temp).resolve()
+            artifact = root / "tool.zip"
+            with zipfile.ZipFile(artifact, "w") as archive:
+                archive.writestr("tool.exe", b"binary")
+            bundle, _, state = self._bundle(root, artifact)
+            manifest = next(bundle.glob("manifest-*.json"))
+            script = bundle / "installer.ps1"
+            command = (
+                "function Invoke-WebRequest { "
+                "param([string]$Uri, [string]$OutFile, "
+                "[int]$MaximumRedirection, [switch]$UseBasicParsing); "
+                "if (-not $UseBasicParsing) { throw 'HTML parsing is forbidden' }; "
+                "if ($Uri -eq $MANIFEST_URL) { "
+                f"Copy-Item -LiteralPath {self._ps_quote(manifest)} -Destination $OutFile "
+                "} elseif ($Uri -eq $ARTIFACT_URL) { "
+                f"Copy-Item -LiteralPath {self._ps_quote(artifact)} -Destination $OutFile "
+                "} else { throw 'unexpected fixture URL' } }; "
+                "$env:INSTALLER_MODE='dry-run'; $env:INSTALLER_SOURCE='online'; "
+                "$env:INSTALLER_JSON='1'; "
+                f"Get-Content -Raw -LiteralPath {self._ps_quote(script)} | iex"
+            )
+
+            completed = subprocess.run(
+                [
+                    _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-Command", command,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout)["result"], "dry-run")
+            self.assertFalse(state.exists())
 
     @unittest.skipUnless(
         sys.platform == "win32",
@@ -1747,7 +1802,10 @@ class RuntimeInstallerTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "requires Windows junctions")
     def test_windows_rejects_relative_launcher_when_assembly_is_bypassed(self) -> None:
         """Reject relative runtime input before working-directory resolution."""
-        for launcher in ("example-app.exe", "C:example-app.exe"):
+        for launcher in (
+            "example-app.exe", "C:example-app.exe",
+            "\\example-app.exe", "/example-app.exe",
+        ):
             with self.subTest(launcher=launcher), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve()
                 output, artifact = self._per_user_windows_bundle(root, system_wide=True)
@@ -1756,7 +1814,7 @@ class RuntimeInstallerTest(unittest.TestCase):
                 script = script_path.read_text(encoding="utf-8")
                 rewritten = re.sub(
                     r"\$LAUNCHER_PATH = [^\n]+",
-                    f"$LAUNCHER_PATH = '{launcher}'",
+                    lambda _match: f"$LAUNCHER_PATH = '{launcher}'",
                     script,
                     count=1,
                 )
@@ -1819,7 +1877,10 @@ class RuntimeInstallerTest(unittest.TestCase):
                     f"-Artifact {self._ps_quote(artifact)}; exit $LASTEXITCODE"
                 )
                 completed = subprocess.run(
-                    ["pwsh", "-NoProfile", "-Command", command],
+                    [
+                        _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                        "-Command", command,
+                    ],
                     capture_output=True,
                     text=True,
                     check=False,
