@@ -11,10 +11,10 @@ from pathlib import Path
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = Path(os.environ.get("A3_REPO_ROOT", SCRIPT_PATH.parents[4])).resolve()
 SKILL_ROOT = Path("skills")
-DESTINATION_ENV = "A3_CI_GITHUB_SKILL_DEPLOY_ROOT"
+DESTINATION_CONFIG = "a3-ci-github.skillDeployRoot"
 CLI_ENV = "A3_PROJECT_SKILL_DEPLOY_CLI"
 CLI_RELATIVE = Path("project-skill-deploy/scripts/deploy_project_skills.py")
-EXCLUDED_PARTS = {"_build", "__pycache__", ".git"}
+EXCLUDED_PARTS = {"_build", "__pycache__"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -92,18 +92,12 @@ def unstaged_overlaps() -> list[str]:
         )
         if is_deployable(path)
     ]
-    paths.extend(
-        path
-        for path in git_paths(
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            SKILL_ROOT.as_posix(),
-        )
-        if is_deployable(path)
-    )
+    tracked = set(git_paths("ls-files", "--cached", "-z", "--", SKILL_ROOT.as_posix()))
+    # 配備CLIはGitのignoreを使わず収集するため、同じ公開ソースをindexと照合する。
+    for candidate in (REPO_ROOT / SKILL_ROOT).rglob("*"):
+        path = candidate.relative_to(REPO_ROOT)
+        if candidate.is_file() and is_deployable(path) and path not in tracked:
+            paths.append(path)
     return sorted({path.as_posix() for path in paths})
 
 
@@ -158,10 +152,10 @@ def blockers_from(plan: dict[str, object]) -> list[str]:
 
 def main() -> int:
     try:
-        if not deployable_staged_changes():
+        if not git_paths("diff", "--cached", "--name-only", "-z"):
             print(
                 "skill-deploy-parity: 非適用 "
-                "(staged changes do not include deployable public skill files)"
+                "(no staged commit)"
             )
             return 0
         if not index_has_skill_root():
@@ -181,13 +175,19 @@ def main() -> int:
             for path in overlaps:
                 print(f"- {path}", file=sys.stderr)
             return 1
-        destination_value = os.environ.get(DESTINATION_ENV)
+        destination_config = run_git("config", "--local", "--get", DESTINATION_CONFIG)
+        if destination_config.returncode not in (0, 1):
+            raise RuntimeError("cannot read skill deployment destination config")
+        destination_value = os.fsdecode(destination_config.stdout).strip()
         if not destination_value:
             print(
-                f"skill-deploy-parity: 非適用 ({DESTINATION_ENV} is not configured)"
+                f"skill-deploy-parity: STOP: {DESTINATION_CONFIG} is not configured",
+                file=sys.stderr,
             )
-            return 0
-        destination = Path(destination_value).expanduser().resolve()
+            return 1
+        destination = Path(destination_value).expanduser()
+        if not destination.is_absolute():
+            raise ValueError("skill deployment destination must be an absolute path")
         cli = resolve_cli(destination)
         if not cli.is_file():
             print(

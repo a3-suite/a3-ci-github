@@ -1,6 +1,6 @@
 ---
 name: commit-gate
-description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、Action・workflowの固定参照更新順序と公開 Agent Skillの配備整合を含むコミット可否を確認するときに使う。
+description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、Action・workflowの固定参照更新順序と公開 Agent Skill全体の自動配備・整合を含むコミット可否を確認するときに使う。
 ---
 
 # commit-gate / SKILL
@@ -37,7 +37,7 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 - 配備整合ゲートの差分確認、候補分類、反映、再検査は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本スキルでは再実装しない。
 - 配備先の更新差分は削除を伴わない範囲で自動反映し、削除、prune、管理外 skill の削除は自動反映せず停止する。
 - 対象 root に未ステージ差分または未追跡ファイルがある場合は、推測で整合済みとせず停止する。
-- 配備先 root は環境変数で明示し、作業ディレクトリや過去の配置から推測しない。
+- 配備先は `skills-deploy` のデプロイコンテキストに従って明示設定し、未設定を非適用として通さない。
 - 実行後に staged snapshot または対象 root の状態が変わった場合は、配備整合証拠を失効させる。
 
 ## コミットフローへの引き渡し

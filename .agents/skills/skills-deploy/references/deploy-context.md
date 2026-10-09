@@ -28,7 +28,8 @@
 ## コミットゲート連携
 
 - `commit-gate` スキルの `skill-deploy-parity` は、このコンテキストの固定入力を `project-skill-deploy` へ渡して差分を確認する。
-- 配備先 root は `A3_CI_GITHUB_SKILL_DEPLOY_ROOT` で明示する。未設定の場合は配備整合ゲートを `非適用` とする。
+- 配備先rootは、利用者が指定した絶対pathを `git config --local a3-ci-github.skillDeployRoot "{destination-root}"` で保存する。個人環境のpathを追跡ファイルへ記録しない。未設定の場合はゲートを `STOP` とし、非適用として通さない。
+- コミット対象の変更があるときは公開root全体を検査する。公開スキルの差分だけを条件とせず、過去の未配備差分も削除を伴わない範囲で反映する。staged snapshotと一致しない公開ソースは配備しない。
 - 使用する CLI は `{destination-root}/project-skill-deploy/scripts/deploy_project_skills.py` とし、`A3_PROJECT_SKILL_DEPLOY_CLI` で上書きできる。
 - コミットゲートは削除を伴わない更新差分だけを自動反映し、削除、prune、管理外 skill の削除では停止する。この自動反映を、外部書き込みの明示許可として扱う。
 
