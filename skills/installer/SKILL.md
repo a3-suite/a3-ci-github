@@ -13,7 +13,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - インストーラは「取得」「検証」「配置」「切替」「起動確認」を混同せず、各段階の責務を分ける。
 - 取得元は GitHub、package registry、artifact repository などの外部境界として扱い、信頼は manifest、checksum、署名、固定 version で確立する。
 - 標準経路では、JRE、Node.js、package manager などの実行基盤は事前インストール済み前提とし、installer は存在確認と version 照合だけを行う。
-- starter の installer は、アーカイブ展開に OS 提供の `tar` を存在確認して使い、無い場合は展開の前に失敗する。Windows は PATH 上の tar に依存せず、`%SystemRoot%\System32\tar.exe`（bsdtar）を絶対パスで使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
+- starter の installer は、Unixのアーカイブ展開にOS提供の`tar`を存在確認して使い、無い場合は展開の前に失敗する。WindowsのZIP展開には.NETのAPIを使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
 - 既存データ、既存設定、稼働中プロセスを壊さないことを最優先にする。
 - 検証した入力と実行に使う入力を一致させる。
 - 失敗時に残る状態を先に定義し、途中成功の副作用を最小化する。

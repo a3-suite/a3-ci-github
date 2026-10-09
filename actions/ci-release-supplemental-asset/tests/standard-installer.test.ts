@@ -75,6 +75,24 @@ const runDistributedAction = (f: ReturnType<typeof fixture>) => {
 
 describe('standard installer', () => {
   describe('assembly', () => {
+    test('verifies a native candidate through the Python assembly boundary', (t) => {
+      // Arrange
+      const f = fixture(t);
+      const authority = JSON.parse(fs.readFileSync(path.join(f.root, 'authority.json'), 'utf8'));
+      const driver = 'import json,os,runpy,subprocess,sys\nsys.path.insert(0,os.path.dirname(sys.argv[1]))\nassembly=runpy.run_path(sys.argv[1])\ntry: assembly["run"](json.load(sys.stdin))\nexcept subprocess.CalledProcessError as error:\n sys.stderr.write(error.stderr or "")\n raise';
+      const output = path.join(f.root, 'native-output');
+      // Act
+      const result = spawnSync(python, ['-c', driver, path.join(repository, 'runtime/installer/src/assembly.py')], {
+        cwd: f.root, encoding: 'utf8', input: JSON.stringify({ operation: 'build-platform', sourceRoot: f.root,
+          configPath: path.join(f.root, 'installer/assembly.json'), authority, releasePlatforms: [platform],
+          standardBuildRoot: path.join(f.root, 'standard'), outputDirectory: output,
+          providerRevision: 'a'.repeat(40), assemblyId: 'native-boundary' }),
+      });
+      // Assert
+      expect(result.status, result.stderr).toBe(0);
+      expect(fs.existsSync(path.join(output, 'platform-record.json'))).toBe(true);
+    });
+
     test('verifies native candidate and produces handoff without consumer implementation', (t) => {
       // Arrange
       const f = fixture(t);
