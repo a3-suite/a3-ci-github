@@ -1638,7 +1638,7 @@ class RuntimeInstallerTest(unittest.TestCase):
         "PowerShell runtime test requires Windows",
     )
     def test_windows_installer_ignores_path_tar(self) -> None:
-        """Ignore a PATH tar so extraction keeps using the bundled bsdtar."""
+        """Ignore external PATH tools when extracting a validated ZIP."""
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             artifact = root / "tool.zip"
@@ -1684,33 +1684,19 @@ class RuntimeInstallerTest(unittest.TestCase):
             self.assertEqual(installed.returncode, 0, installed.stderr)
             release_binary = managed / "releases/1.0.0/tool.exe"
             release_binary.write_bytes(b"damaged")
-            real_tar = Path(os.environ["SystemRoot"]) / "System32" / "tar.exe"
-            fake_bin = root / "fake-bin"
-            fake_bin.mkdir()
-            tar_log = root / "tar.log"
-            fake_tar = fake_bin / "tar.cmd"
-            fake_tar.write_text(
-                "@echo off\r\n"
-                f'echo %* >> "{tar_log}"\r\n'
-                'echo %* | findstr /C:".staging" >nul && exit /b 1\r\n'
-                f'"{real_tar}" %*\r\n',
-                encoding="utf-8",
-            )
-            # 同梱 tar の絶対解決は固定のため、組立済み script の解決式だけを stub へ
-            # 差し替え、managed staging の extraction 失敗を再現する。
             script_path = bundle / "installer.ps1"
-            script = script_path.read_text(encoding="utf-8")
-            resolved = "Join-Path $env:SystemRoot 'System32\\tar.exe'"
-            self.assertIn(resolved, script)
+            script = script_path.read_text(encoding="utf-8-sig")
+            extraction = "  [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $Destination)"
+            self.assertIn(extraction, script)
             script_path.write_text(
-                script.replace(resolved, f"'{fake_tar}'"), encoding="utf-8"
+                script.replace(extraction, "  if ($Destination -like '*\\.staging-*') { throw 'fixture managed archive extraction failed' }\n" + extraction),
+                encoding="utf-8-sig",
             )
 
             failed = self._run(bundle, checksum, artifact, mode="repair")
 
             self.assertNotEqual(failed.returncode, 0)
             self.assertIn("archive extraction failed", failed.stderr)
-            self.assertIn(".staging", tar_log.read_text(encoding="utf-8"))
             self.assertEqual(release_binary.read_bytes(), b"damaged")
             self.assertFalse(list(managed.glob(".previous-release-*")))
 

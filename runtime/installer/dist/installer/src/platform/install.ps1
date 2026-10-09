@@ -178,13 +178,8 @@ function Ensure-Directory([string]$Path) {
   }
 }
 function Expand-Artifact([string]$ArchivePath, [string]$Destination) {
-  # PATH 先頭には Git for Windows の MSYS GNU tar が現れることがあり、zip を扱えず
-  # Windows のパスを remote 指定として誤解釈する。Windows 同梱の bsdtar を絶対パスで解決する。
-  $tar = Join-Path $env:SystemRoot 'System32\tar.exe'
-  if (-not (Test-Path -LiteralPath $tar -PathType Leaf)) { throw 'tar is required' }
-  [IO.Directory]::CreateDirectory($Destination) | Out-Null
-  & $tar -xf $ArchivePath -C $Destination
-  if ($LASTEXITCODE -ne 0) { throw 'archive extraction failed' }
+  # Use the Unicode-aware API for Windows paths, after archive entry validation.
+  [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $Destination)
 }
 function Invoke-CleanupStep([string]$Label, [scriptblock]$Action) {
   try { & $Action }

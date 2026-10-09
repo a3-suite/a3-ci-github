@@ -19,7 +19,7 @@ installer はこのリポジトリの機能として保守します。公開仕�
 
 Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/clauses.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
 
-配布する`.ps1`はUTF-8 BOM付きで生成します。5.1が日本語などを含む配置先をシステムのANSI文字コードで誤読しないためです。
+配布する`.ps1`はUTF-8 BOM付きで生成します。5.1が日本語などを含む配置先をシステムのANSI文字コードで誤読しないためです。ZIPの安全検査後の展開には.NET APIを使い、外部tarの文字コードで配置先が変わることを避けます。
 
 入力固定とAction／CLI境界はTypeScriptです。候補組立とprofile検証はPython 3.11以上を使います。既存builderのarchive処理・source正規化・checksum・確定処理を同じPython processから利用でき、TypeScriptへ同じ処理を再実装せずに実候補を検証できるため、この部分を[Action構築方針](action-construction.md)の例外とします。Python runtimeに外部package依存はありません。新規の言語非依存な制御処理一般への例外ではありません。
 
