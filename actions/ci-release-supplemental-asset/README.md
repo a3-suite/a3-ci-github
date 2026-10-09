@@ -21,7 +21,7 @@ adapter は snapshot の `CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER` から解決し
 
 workflow が固定 checkout、read-only permissions、toolchain、artifact 搬送、job 順序を所有します。この Action は execution sandbox ではなく、owner code の全書込先・中間状態を制限するものではありません。provider API・publish write・credential fallback は持ちません。処理時間の上限は caller の job timeout が所有します。
 
-新 Action は pending-release です。公開済み exact ref が承認・登録されるまで、preflight は導入を拒否します。
+公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とし、preflightはそのavailability gateに従います。
 
 ## 保守
 

@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-workflow
 contracts:
   - id: contract.ci-quality-workflow.execution
-    summary: The main and optional platform quality callers pass explicit project settings to fixed reusable workflows, which order trusted source resolution before adapter execution and aggregate every applicable result. Each caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Deployment remains forbidden until fixed publication of the workflows and their dependencies and Hosted required-check acceptance.
+    summary: The main and optional platform quality callers pass explicit project settings to fixed reusable workflows, which order trusted source resolution before adapter execution and aggregate every applicable result. Each caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Installation requires fixed publication of the selected workflows and their dependencies. Missing Hosted acceptance evidence does not block caller generation, application or asset lock creation. Consumer Hosted acceptance follows installation and establishes required-check compatibility before the generated callers are adopted as required checks.
     conditions:
       - id: ci-quality-workflow-caller-selected
         input_predicate:

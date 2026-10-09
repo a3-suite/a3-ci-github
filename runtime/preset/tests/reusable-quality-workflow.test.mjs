@@ -228,7 +228,7 @@ describe("contract.ci-package-publication-workflow.publication", () => {
         expect(report.missingSettings.some((entry) => entry.message.includes('package preparation reusable workflow is pending-release'))).toBeTruthy();
         expect(observed.has('ci-publish-version')).toBeTruthy();
         expect(!report.mismatches.some((entry) => entry.message.includes('package preparation'))).toBeTruthy();
-        expect(managedAssets(root, registry, [preset]).map((entry) => entry.path)).toStrictEqual([asset.destination]);
+        expect(managedAssets(root, registry, [preset]).map((entry) => entry.path)).toStrictEqual([registry.providerActionPinCompanionPath, asset.destination]);
         expect(fs.existsSync(path.join(root, registry.packagePreparationReusableWorkflow.source))).toBe(false);
         expect(fs.existsSync(path.join(root, '.github/workflows/package-preparation.yml'))).toBe(false);
         for (const [mutate, diagnostic] of [

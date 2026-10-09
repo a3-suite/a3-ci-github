@@ -1,3 +1,5 @@
+export { projectProviderActionPins, providerActionPinRepositories } from './provider-action-pins.mjs';
+
 interface YamlRuntime {
   parseDocument(source: string, options: { uniqueKeys: boolean }): { errors: readonly unknown[]; toJS(options: { maxAliasCount: number }): unknown };
   stringify(value: unknown): string;

@@ -16,7 +16,7 @@ import {
   validateDistributionManifest,
   verifyFetchedDistribution,
 } from '../fetch-a3-ci-github.mjs';
-import { loadReleaseRequestFixtureModel, snapshotTree, writeReleaseRequestFixture } from '../../preset/tests/support/release-request-fixture.mjs';
+import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
 import { readWorkflowSettings, renderWorkflowTemplate } from '../../preset/workflow-template.mjs';
 
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -37,10 +37,11 @@ const planDistributionApplication = (options) => {
   const distributionRoot = path.join(options.projectRoot, '.a3-skills/ci-github/distributions', options.sourceRevision);
   const manifest = JSON.parse(fs.readFileSync(path.join(distributionRoot, 'manifest.json')));
   const settings = {};
+  const values = { ...fixtureSettings, ...options.settingOverrides };
   for (const asset of resolveDistributionSelection(manifest, options.requestedPresets, options.requestedAssets).filter((asset) => asset.application === 'copy')) {
     const template = fs.readFileSync(path.join(distributionRoot, asset.files[0].sourcePath), 'utf8');
     settings[asset.id] = Object.fromEntries([...new Set([...template.matchAll(/<([a-zA-Z][a-zA-Z0-9._-]*)>/g)].map((match) => match[1]))]
-      .filter((key) => Object.hasOwn(fixtureSettings, key)).map((key) => [key, fixtureSettings[key]]));
+      .filter((key) => Object.hasOwn(values, key)).map((key) => [key, values[key]]));
   }
   return createDistributionPlan({ yaml, settings, ...options });
 };
@@ -441,6 +442,184 @@ describe("contract.ci-selective-distribution.selection", () => {
 });
 
 describe("contract.ci-selective-distribution.application", () => {
+  describe('provider-pin-companion', () => {
+    // contract_id: contract.ci-selective-distribution.application
+    // contract_id: contract.ci-preset-assurance.asset-lock
+    test('Release and Package generated companions support lock and preflight without fixture pin injection', async () => {
+      await withFixture('distribution-generated-preflight-', async (root) => {
+        const release = prepareRelease(root);
+        for (const preset of ['release-publication', 'package-publication']) {
+          const projectRoot = path.join(root, preset);
+          fs.mkdirSync(path.join(projectRoot, '.ci/scripts'), { recursive: true });
+          fs.mkdirSync(path.join(projectRoot, '.ci/trusted'), { recursive: true });
+          fs.writeFileSync(path.join(projectRoot, 'Cargo.toml'), '[package]\nname = "fixture"\nversion = "1.2.3"\n');
+          fs.writeFileSync(path.join(projectRoot, 'Cargo.lock'), 'version = 4\n');
+          fs.writeFileSync(path.join(projectRoot, '.ci/platform-manifest.yml'), 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n');
+          for (const name of ['.ci/scripts/ci-package-build.sh', '.ci/trusted/ci-package-publish.sh']) fs.writeFileSync(path.join(projectRoot, name), '#!/bin/bash\nexit 0\n');
+          const selection = { requestedPresets: [preset], requestedAssets: [] };
+          const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+            sourceRoot: repositoryRoot, ...selection });
+          const plan = planDistributionApplication({ projectRoot, sourceRevision, ...selection,
+            settingOverrides: { 'language-profile': 'rust', 'standard-bundle-id': 'rust-cargo-quality',
+              'release-implementation': 'rust-cli-release', 'toolchain-version': '1.90.0', 'cargo-audit-version': '0.21.0',
+              'cargo-manifest-path': 'Cargo.toml', 'cargo-lock-path': 'Cargo.lock', 'release-binary-name': 'fixture', 'release-asset-prefix': 'fixture',
+              'supplemental-release-asset-owner-contract': '__unset__', 'supplemental-release-asset-config-path': '__unset__' } });
+          applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+          const scriptPath = path.join(root, `${preset}.mts`);
+          const moduleUrl = (relative) => JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, relative)).href);
+          fs.writeFileSync(scriptPath, `import assert from 'node:assert/strict';
+import { writeCiAssetLock } from ${moduleUrl('runtime/preset/ci-asset-lock-plan.ts')};
+import { validateCiPreset } from ${moduleUrl('runtime/preset/validate-ci-preset.ts')};
+const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });
+assert.ok(lock.assets.some(entry => entry.path === '.ci/provider-action-pins.yml'));
+const report = validateCiPreset({ repoRoot: ${JSON.stringify(projectRoot)} });
+assert.equal(report.status, 'success', JSON.stringify(report));`);
+          const result = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: { ...process.env,
+            CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
+          expect(result.status, result.stderr).toBe(0);
+        }
+      });
+    });
+    // contract_id: contract.ci-selective-distribution.application
+    test('planned provider pin companions are owned and restored with generated callers', async () => {
+      await withFixture('distribution-provider-pins-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const selection = { requestedPresets: ['release-request'], requestedAssets: [] };
+        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const options = { projectRoot, sourceRevision, ...selection };
+        const plan = planDistributionApplication(options);
+        const pins = plan.actions.find((entry) => entry.destination === '.ci/provider-action-pins.yml');
+        expect(pins?.action).toBe('create');
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        expect(yaml.parse(fs.readFileSync(path.join(projectRoot, pins.destination), 'utf8'))['actions/upload-artifact'].commitSha)
+          .toBe(release.manifest.workflowReferences['actions/upload-artifact']);
+        expect(planDistributionApplication(options).actions.find((entry) => entry.destination === pins.destination).action).toBe('reuse');
+        expect(rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId }).status).toBe('rolled-back');
+        expect(fs.existsSync(path.join(projectRoot, pins.destination))).toBe(false);
+        const fresh = planDistributionApplication(options);
+        expect(() => applyDistributionPlan({ projectRoot, planPath: fresh.planPath, approvalDigest: fresh.planDigest,
+          beforeWrite: ({ entry }) => { if (entry.destination === pins.destination) throw new Error('pin-write-failed'); } }))
+          .toThrow(/pin-write-failed/);
+        for (const entry of fresh.actions) expect(fs.existsSync(path.join(projectRoot, entry.destination))).toBe(false);
+        applyDistributionPlan({ projectRoot, planPath: fresh.planPath, approvalDigest: fresh.planDigest });
+        const pinPath = path.join(projectRoot, pins.destination);
+        const priorBytes = `${fs.readFileSync(pinPath, 'utf8')}\n`;
+        fs.writeFileSync(pinPath, priorBytes);
+        expect(planDistributionApplication(options).actions.find((entry) => entry.destination === pins.destination).action).toBe('conflict');
+        fs.writeFileSync(path.join(projectRoot, '.ci/ci-assets.lock.json'), JSON.stringify({
+          schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
+          assets: fresh.actions.map((entry) => ({ path: entry.destination,
+            appliedSha256: sha256(fs.readFileSync(path.join(projectRoot, entry.destination))) })),
+        }));
+        const update = planDistributionApplication(options);
+        expect(update.actions.find((entry) => entry.destination === pins.destination).action).toBe('update');
+        fs.writeFileSync(pinPath, `${priorBytes}# independent edit\n`);
+        expect(() => applyDistributionPlan({ projectRoot, planPath: update.planPath, approvalDigest: update.planDigest }))
+          .toThrow(/distribution-plan-input-changed/);
+        fs.writeFileSync(pinPath, priorBytes);
+        const updated = applyDistributionPlan({ projectRoot, planPath: update.planPath, approvalDigest: update.planDigest });
+        expect(fs.readFileSync(pinPath, 'utf8')).toBe(pins.generatedContent);
+        rollbackDistributionTransaction({ projectRoot, transactionId: updated.transactionId });
+        expect(fs.readFileSync(pinPath, 'utf8')).toBe(priorBytes);
+        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, requestedPresets: ['quality-gate'], requestedAssets: [] });
+        const quality = planDistributionApplication({ ...options, requestedPresets: ['quality-gate'] });
+        expect(quality.actions.find((entry) => entry.destination === pins.destination).action).toBe('update');
+      });
+    });
+    // contract_id: contract.ci-selective-distribution.application
+    test('missing prior distributions are classified without treating old schemas as current', async () => {
+      await withFixture('distribution-prior-migration-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const selection = { requestedPresets: ['quality-gate'], requestedAssets: [] };
+        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const options = { projectRoot, sourceRevision, ...selection };
+        const plan = planDistributionApplication(options);
+        applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const priorRevision = 'b'.repeat(40);
+        const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+        fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+        fs.writeFileSync(lockPath, JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision: priorRevision,
+          assets: plan.actions.map((entry) => ({ path: entry.destination, appliedSha256: entry.generatedSha256 })) }));
+        expect(() => planDistributionApplication(options)).toThrow(/distribution-local-manifest-missing/);
+        const priorRoot = path.join(projectRoot, '.a3-skills/ci-github/distributions', priorRevision);
+        fs.mkdirSync(priorRoot);
+        fs.writeFileSync(path.join(priorRoot, 'manifest.json'), JSON.stringify({ schemaVersion: '1', kind: release.manifest.kind }));
+        fs.writeFileSync(path.join(priorRoot, 'receipt.json'), '{}');
+        expect(() => planDistributionApplication(options)).toThrow(/distribution-manifest-contract-unsupported/);
+      });
+    });
+    // contract_id: contract.ci-selective-distribution.application
+    test('explicit create migration restores retired assets and the prior lock after a post-apply failure', async () => {
+      await withFixture('distribution-create-migration-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        const previous = new Map([
+          ['.ci/ci-assets.lock.json', JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision: 'b'.repeat(40), assets: [] })],
+          ['.github/workflows/release-publication-request.yml', 'old caller\n'],
+          ['.ci/scripts/ci-source-gate.sh', 'old retired entrypoint\n'],
+        ]);
+        const backupRoot = path.join(projectRoot, 'tmp/migration');
+        for (const [relative, bytes] of previous) {
+          const current = path.join(projectRoot, relative);
+          const backup = path.join(backupRoot, relative);
+          fs.mkdirSync(path.dirname(current), { recursive: true });
+          fs.mkdirSync(path.dirname(backup), { recursive: true });
+          fs.writeFileSync(current, bytes);
+          fs.copyFileSync(current, backup);
+          expect(sha256(fs.readFileSync(backup))).toBe(sha256(Buffer.from(bytes)));
+          fs.unlinkSync(current);
+        }
+        fs.writeFileSync(path.join(projectRoot, 'README.md'), 'unrelated owner content\n');
+        const selection = { requestedPresets: ['release-request'], requestedAssets: [] };
+        const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const plan = planDistributionApplication({ projectRoot, sourceRevision, ...selection });
+        expect(plan.actions.every(entry => entry.action === 'create')).toBe(true);
+        expect(() => applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest,
+          beforeWrite: ({ index }) => { if (index === 1) throw new Error('migration-apply-failed'); } }))
+          .toThrow(/migration-apply-failed/);
+        const transactionsRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions');
+        const transaction = JSON.parse(fs.readFileSync(path.join(transactionsRoot, fs.readdirSync(transactionsRoot)[0], 'transaction.json')));
+        expect(transaction.status).toBe('rolled-back');
+        for (const entry of plan.actions) expect(fs.existsSync(path.join(projectRoot, entry.destination))).toBe(false);
+        expect(() => rollbackDistributionTransaction({ projectRoot, transactionId: transaction.transactionId }))
+          .toThrow(/distribution-transaction-not-rollbackable/);
+        for (const [relative, bytes] of previous) {
+          fs.copyFileSync(path.join(backupRoot, relative), path.join(projectRoot, relative));
+          expect(fs.readFileSync(path.join(projectRoot, relative), 'utf8')).toBe(bytes);
+          fs.unlinkSync(path.join(projectRoot, relative));
+        }
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const scriptPath = path.join(root, 'generate-lock.mts');
+        fs.writeFileSync(scriptPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });`);
+        const generated = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: { ...process.env,
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
+        expect(generated.status, generated.stderr).toBe(0);
+        const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+        const newLockSha256 = sha256(fs.readFileSync(lockPath));
+        rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId });
+        expect(sha256(fs.readFileSync(lockPath))).toBe(newLockSha256);
+        fs.unlinkSync(lockPath);
+        for (const [relative, bytes] of previous) {
+          const backup = path.join(backupRoot, relative);
+          expect(sha256(fs.readFileSync(backup))).toBe(sha256(Buffer.from(bytes)));
+          expect(fs.existsSync(path.join(projectRoot, relative))).toBe(false);
+          fs.copyFileSync(backup, path.join(projectRoot, relative));
+          expect(fs.readFileSync(path.join(projectRoot, relative), 'utf8')).toBe(bytes);
+        }
+        expect(fs.existsSync(path.join(projectRoot, '.ci/provider-action-pins.yml'))).toBe(false);
+        expect(fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8')).toBe('unrelated owner content\n');
+        expect(fs.existsSync(fetched.distributionRoot)).toBe(true);
+      });
+    });
+  });
   describe('workflow-template-generation', () => {
     test('normal generation and application need no Hosted evidence and preserve ownership checks', async () => {
       // Arrange
@@ -582,7 +761,7 @@ describe("contract.ci-selective-distribution.application", () => {
           const releasePlan = planDistributionApplication({ projectRoot, sourceRevision, ...releaseSelection });
           const releaseApplied = applyDistributionPlan({ projectRoot, planPath: releasePlan.planPath, approvalDigest: releasePlan.planDigest });
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual([
-            '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
+            '.ci/platform-manifest.yml', '.ci/provider-action-pins.yml', '.ci/quality-platforms.yml',
             '.github/workflows/release-publication-caller.yml', '.github/workflows/release-publication-request.yml',
             '.github/workflows/release-request-tag.yml', 'README.md',
           ]);
@@ -599,7 +778,7 @@ describe("contract.ci-selective-distribution.application", () => {
           const packagePlan = planDistributionApplication({ projectRoot, sourceRevision, ...packageSelection });
           const packageApplied = applyDistributionPlan({ projectRoot, planPath: packagePlan.planPath, approvalDigest: packagePlan.planDigest });
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual([
-            '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
+            '.ci/platform-manifest.yml', '.ci/provider-action-pins.yml', '.ci/quality-platforms.yml',
             '.github/workflows/package-publication-caller.yml', '.github/workflows/package-publication-request.yml', 'README.md',
           ]);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/package-publication.yml'))).toBe(false);
@@ -1403,14 +1582,14 @@ describe("contract.ci-selective-distribution.delivery", () => {
         };
         const request = await fetchDistribution({ projectRoot, manifest: release.manifest,
           manifestBytes: release.manifestBytes, requestedPresets: ['release-request'], requestedAssets: [], sourceRoot: repositoryRoot });
-        const model = loadReleaseRequestFixtureModel({ repositoryRoot: request.distributionRoot, runtimeRoot });
-        writeReleaseRequestFixture({ repositoryRoot: request.distributionRoot, root: projectRoot, model });
+        const requestPlan = planDistributionApplication({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
+        applyDistributionPlan({ projectRoot, planPath: requestPlan.planPath, approvalDigest: requestPlan.planDigest });
         const moduleUrl = (distributionRoot, relative) => JSON.stringify(pathToFileURL(path.join(distributionRoot, relative)).href);
         run(`import assert from 'node:assert/strict';
       import { writeCiAssetLock } from ${moduleUrl(request.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')};
       import { validateCiPreset } from ${moduleUrl(request.distributionRoot, 'runtime/preset/validate-ci-preset.ts')};
       const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });
-      assert.equal(lock.assets.length, 1);
+      assert.equal(lock.assets.length, 2);
       assert.equal(validateCiPreset({ repoRoot: ${JSON.stringify(projectRoot)}, presets: ['release-request'] }).status, 'success');`);
         const quality = await fetchDistribution({ projectRoot, manifest: release.manifest,
           manifestBytes: release.manifestBytes, requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });

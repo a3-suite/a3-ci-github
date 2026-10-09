@@ -96,6 +96,9 @@ test_maps:
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.drift-fails
     tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: "contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation rejects independent edits to unused approved pins"
+        check_refs: [check.ci-preset-assurance.drift-fails]
       - path: runtime/preset/tests/standard-quality-bundles.test.mjs
         symbol: "contract.ci-preset-assurance.verification > preset-assurance-contract > preflight validates fixed standard quality bundles without a descriptor or external owner checkout"
         check_refs: [check.ci-preset-assurance.drift-fails]
@@ -117,6 +120,9 @@ test_maps:
   - verification_id: verification.ci-preset-assurance.asset-lock
     case_id: case.ci-preset-assurance.asset-lock-generated
     tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > provider-pin-companion > Release and Package generated companions support lock and preflight without fixture pin injection"
+        check_refs: [check.ci-preset-assurance.asset-lock-source-bound, check.ci-preset-assurance.asset-lock-assets-recorded]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests"
         check_refs:

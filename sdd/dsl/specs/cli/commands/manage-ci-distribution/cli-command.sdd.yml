@@ -30,7 +30,7 @@ command:
         - option_id: source-revision
           presence: required
     - id: plan
-      summary: Generate configured canonical callers and classify actions without changing managed consumer files
+      summary: Generate configured canonical callers and required registry pin companions and classify actions without changing managed consumer files
       option_bindings:
         - option_id: repo-root
           presence: optional

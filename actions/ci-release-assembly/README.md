@@ -6,7 +6,7 @@ Release build manifest と owner 検証済み補助 handoff を照合し、provi
 
 公開入力・出力は [action.yml](action.yml)、GitHub 固有の evidence shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。処理意味は `ci.script-contracts#release-assembly-scripts` に従います。
 
-`runs.using: node24` と bundle 済み `dist/index.js` で実行します。consumer 側の Node 準備・依存 package の install、source の実行、provider write はありません。正式公開前は registry の pending-release gate により導入できません。
+`runs.using: node24` と bundle 済み `dist/index.js` で実行します。consumer 側の Node 準備・依存 package の install、source の実行、provider write はありません。公開状態と固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とします。
 
 `authority-path` の既存 authority に `publication`（schema の identity）と `config_snapshot_digest` を追加します。publication の source_sha / version / target_identity は authority の同名 field と一致し、repository は Action 入力と一致する必要があります。owner authority が検証済み tag object と承認済み本文 digest を投影します。意味契約や承認を新たに発行しません。
 
