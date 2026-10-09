@@ -149,11 +149,14 @@ def manifest_for(request: dict, entry: dict, build: dict, native: str) -> dict:
 
 
 def verify_native(candidate: Path, asset_name: str, manifest_name: str, artifact: Path) -> None:
+    environment = None
     if sys.platform == "win32":
+        # A Python child of PowerShell 7 inherits incompatible module paths for 5.1.
+        environment = {key: value for key, value in os.environ.items() if key.upper() != "PSMODULEPATH"}
         command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(candidate / asset_name), "-Mode", "dry-run", "-Source", "offline", "-Manifest", str(candidate / manifest_name), "-Artifact", str(artifact), "-Json"]
     else:
         command = ["bash", str(candidate / asset_name), "--mode", "dry-run", "--source", "offline", "--manifest", str(candidate / manifest_name), "--artifact", str(artifact), "--json"]
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
+    result = subprocess.run(command, capture_output=True, text=True, check=True, env=environment)
     if obj(json.loads(result.stdout)).get("result") != "dry-run":
         raise ValueError("installer-verification-failed")
 
