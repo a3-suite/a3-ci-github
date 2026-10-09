@@ -10,6 +10,7 @@ import tempfile
 import unittest
 import zipfile
 import warnings
+from codecs import BOM_UTF8
 from pathlib import Path, PurePosixPath
 
 BUNDLE_ROOT = Path(__file__).resolve().parents[1]
@@ -218,7 +219,7 @@ class BuildInstallerContractTest(unittest.TestCase):
         """Cover the checkout that most often rewrites line endings to CRLF."""
         with tempfile.TemporaryDirectory() as temporary_root:
             root = Path(temporary_root)
-            managed_root = "C:\\ProgramData\\example-app"
+            managed_root = "C:\\ProgramData\\example-app-工具"
             lf_root = root / "lf"
             crlf_root = root / "crlf"
             lf_root.mkdir()
@@ -244,6 +245,8 @@ class BuildInstallerContractTest(unittest.TestCase):
             self.assertEqual(lf_assemble.returncode, 0, lf_assemble.stderr)
             self.assertEqual(crlf_assemble.returncode, 0, crlf_assemble.stderr)
             crlf_bytes = (crlf_output / "example-installer.ps1").read_bytes()
+            self.assertTrue(crlf_bytes.startswith(BOM_UTF8))
+            self.assertIn(managed_root, crlf_bytes.decode("utf-8-sig"))
             self.assertNotIn(b"\r", crlf_bytes)
             self.assertEqual(
                 (lf_output / "example-installer.ps1").read_bytes(), crlf_bytes

@@ -18,9 +18,14 @@ authority:
     - repository release-shape and installer-adoption decision criteria
 integration:
   auditContract: ci.audit-contract
+  stages: ci.audit-contract.stages
   phaseConstraint: semantic-audit-layer-only
   statusClassification: ci.audit-contract.statusClassification
   aggregation: ci.audit-contract.statusAggregation
+stageHandling:
+  mapping: 確認項目の段階選択・集約はci.audit-contract.stagesに従う。stageChecksはsubject固有の確認対象だけを定義する。
+  delegationInputs: [audit-stage-selection, audit-target-identity, stage-specific-check-claims]
+  delegatedResults: ownerの元の判断・根拠・証跡不足を保持し、対応する段階の確認項目へ写像する。owner結果を分離できなければ対象段階の未確認として扱い、構成適合や実証済みを推測しない。
 usage:
   whenToRead:
     - CI 監査の意味監査 subject を発見して適用判定するとき
@@ -28,6 +33,128 @@ usage:
     - 委譲結果を CI 実行経路と照合して報告するとき
   consumers: [human, agent, validator]
 subjects:
+  - id: latest-standard-alignment
+    requirement: required
+    phase: use-case-simulation
+    discovery: installed-ci-assets-and-latest-published-stable-provider-distribution
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns: [baseline-resolution, standard-comparison, difference-classification, subject-status-aggregation]
+      excludes: [installer-contract-compliance-judgment, project-owned-contract-semantics]
+    baselineResolution:
+      ownerSkill: ci-github
+      guide: references/distribute-ci-assets.guide.md
+      section: 対応条件
+      requirements:
+        - resolve-latest-published-stable-release-at-audit-start
+        - bind-release-commit-manifest-and-registry-to-the-same-distribution
+        - record-installed-provider-revision-and-audit-target-identity
+        - do-not-use-unpublished-working-tree-as-published-standard
+        - recheck-latest-release-before-reusing-comparison-evidence
+    comparisonScope:
+      - selected-preset-workflows-and-action-bindings
+      - reachable-ci-assets-and-required-configuration
+      - obsolete-or-duplicated-project-owned-implementations
+      - repository-root-readme-owner-result
+      - ci-documentation-and-installer-owner-result-when-applicable
+    stageChecks:
+      configuration: comparisonScopeの構成・実装・文書と、固有差分の必要性・許容条件を確認する。
+      execution-evidence: 固有差分に実行検証が必要な場合、その検証結果をownerの証跡へ照合する。構成の差分分類を実動作の保証へ読み替えない。
+    differenceClassification:
+      aligned:
+        meaning: 最新標準の適用要件を満たす。許可された製品設定値の相違は逸脱にしない。
+      requires-standard-migration:
+        meaning: 最新標準との実質差があり、標準で満たせない要件を根拠にした例外が成立していない。
+      justified-project-difference:
+        meaning: 標準で満たせない必須要件、owner、採用方針、構成上の根拠が確認され、標準契約で認められた例外である。実動作の検証状況は証跡監査で別記する。
+      unresolved:
+        meaning: 比較基準、構成対象、差分の必要性、または構成上の根拠を確定できない。実行結果の未取得だけをこの分類へ混ぜない。
+    reviewRequirements:
+      - compare-installed-configuration-with-fixed-latest-standard-baseline
+      - classify-every-substantive-difference-with-owner-and-evidence
+      - do-not-treat-release-age-alone-as-a-safety-contract-violation
+      - do-not-update-every-action-pin-to-its-upstream-latest-version
+      - delegate-installer-differences-through-installer-distribution
+      - do-not-substitute-old-revision-preflight-success-for-standard-alignment
+      - 適用するownerの必須比較について、対象identity・比較基準・選択段階に対応する証拠の受領と充足確認を終えてからsubject statusを確定する。ownerのsuccess表記だけで比較実施を代替しない。
+    classificationInputs:
+      - requires-standard-migration-is-observed-target-contract-violation-of-this-subject
+      - missing-baseline-or-unresolved-difference-is-not-contract-satisfaction
+      - ownerの必須比較が未実施、または必要な比較証拠が不足している場合は標準適合をsuccessとしない。実施状態と不足根拠を保持し、既存のstatusClassificationへ渡す。
+      - distinguish-unstarted-operation-from-completed-operation-with-insufficient-evidence
+      - completed-comparison-with-only-aligned-or-justified-differences-satisfies-this-subject
+      - classify-through-ci-audit-contract-status-classification
+    reportingFields:
+      - baseline-release-commit-and-manifest-identity
+      - installed-provider-revision-and-audit-target-identity
+      - difference-classification-owner-and-evidence
+      - standard-alignment-counts-and-comparison-scope
+      - per-difference-justification-review-result
+      - stage-specific-execution-evidence-result
+      - standard-migration-plan-and-unresolved-items
+      - status
+    reportingOrder: report-this-subject-before-supporting-safety-runtime-and-hosted-evidence
+    reportFormat:
+      scope: ci-and-installer-pre-release-audit-report
+      rules:
+        - 本文は対象・比較標準・範囲に続く「判定」「要対応」「標準適合度・差分・正当性レビュー」の3区分とし、CIとinstallerで同じ形式を使う。
+        - statusの意味・段階別の判定と集約はci.audit-contractに従う。構成監査行には最新標準との整合判定と主要差分の要点を示す。証跡監査を選択した場合は、その行を実際のstatus・証跡参照先・未確認範囲に置き換え、両段階の集約結果も判定内へ示す。未依頼は構成の不適合にしない。
+        - 要対応は対応内容・owner・未確認事項と確認方法を簡潔に示し、なければ「なし」とする。installerのインストール概要は判定の補足として表示する。
+        - 差分表と適合度はfinalReportに従う。分類名はdifferenceClassificationに対応させ、差分なしの場合は表の代わりに「差分なし」とする。実行検証を要する差分がある場合だけ「実行結果・根拠」欄を追加し、構成上の正当性と分ける。
+        - 必須の確認項目・phase/subject別結果・severity・停止理由・証跡identityなどを省略する許可ではない。本文は要点と参照先を示し、必要な詳細は追跡できる記録へまとめる。参照先がない必要情報は該当区分に記載し、同じ説明やログを重複掲載しない。
+      template: |
+        # 監査レポート
+
+        対象: <プロジェクト / revision>
+        比較標準: <提供元Release / revision>
+        範囲: <CI・インストーラなど / 選択段階・監査モード / 確認項目の参照先>
+
+        ## 判定
+
+        | 段階 | 結果 | 理由・根拠 |
+        | --- | --- | --- |
+        | 構成監査 | <status> | <要点と参照先> |
+        | 証跡監査 | 未実施 | 未依頼 |
+
+        ## 要対応
+
+        - <対応内容 / 担当owner>
+        - <未確認事項と確認方法>
+        ※ なければ「なし」。
+
+        ## 標準適合度・差分・正当性レビュー
+
+        標準適合度: <一致件数>/<比較総数>（<割合>%）
+        内訳: 標準一致 <件数> / 正当な固有差分 <件数> /
+              標準移行が必要 <件数> / 未確認 <件数>
+        比較項目・除外理由: <参照先。実行証跡の確認件数は別記>
+
+        | 対象・owner | 標準 → 現状 | 分類・正当性レビュー | 根拠・対応 |
+        | --- | --- | --- | --- |
+        | <対象 / owner> | <期待状態 → 実状態> | <分類 / 妥当・不当・未確認と理由> | <パス:行番号または実行identity / 対応> |
+
+        ※ 差分がなければ「差分なし」。
+    finalReport:
+      requirement: required
+      placement: end-of-audit-report
+      title: 標準適合度・差分・正当性レビュー
+      alignmentSummary:
+        - auditContract.purposeのリリース前確認の範囲で集計し、公開後確認は別記する。公開後にしか得られない証跡の未実施をunresolved件数へ含めない。
+        - 比較基準と対象状態を示し、comparisonScopeから確定した重複のない構成比較項目一覧を集計の分母にする。実行証跡の確認件数は別記し、混ぜない。除外対象は理由を示す。
+        - 適用ownerの必須比較を、未実施・証拠不足を理由に集計対象から除外しない。項目を特定できる不足はunresolvedへ分類し、総数を確定できなければ適合率を算出しない。比較不足を残したまま100%・差分なしと報告しない。
+        - differenceClassificationの4分類それぞれの件数と総数を示す。標準適合度はaligned件数/総数とし、正当な固有差分と未確認をalignedへ含めない。
+        - 総数を確定できない場合や総数が0の場合は適合率を算出せず、理由と未確認範囲を示す。適合度は監査全体のstatusや安全性の判定を代替しない。
+      differenceReview:
+        - 全実質差について、対象、標準の期待状態、実状態、分類、owner、正当性の結論と理由、証拠のパス・行番号または実行identity、対応案を表にする。差分がなければ差分なしと明記する。
+        - 正当性は標準で満たせない必須要件、例外の許容条件、採用方針、構成上の根拠へ照合してレビューする。既存実装の存在や移行の手間だけを正当化根拠にしない。
+        - 構成上の正当性の結論はdifferenceClassificationと整合させ、実行検証の結果と根拠は別の欄へ示す。必要性が成立しても動作検証済みにはしない。installerの差分はownerの段階別レビュー結果を保持する。
+      executionEvidenceSummary:
+        - 選択段階、証跡の有無、監査操作の実施状態、対象identity・checksumとの対応、結果と未確認事項を示す。
+        - 証跡監査が未選択なら未実施と未依頼理由を示し、構成適合度や構成監査のstatusへ影響させない。実行失敗・証跡不足は選択した証跡監査の結果として保持する。
+      resultHandling: summarize-existing-subject-results-without-reclassifying-overall-status
+    modeHandling:
+      read-only: report-comparison-and-migration-plan-without-mutation
+      remediation: apply-authorized-migration-after-unresolved-project-choice-is-confirmed
   - id: repository-root-readme
     requirement: required
     phase: use-case-simulation
@@ -39,6 +166,8 @@ subjects:
         - ci-authorities-and-execution-evidence
       resultHandling:
         - preserve-root-docs-audit-result
+        - 実READMEと監査対象identityに対応した確認範囲・根拠を受領する。未コミットまたは既存差分だけを理由に必須確認対象から除外せず、既存変更を保全して確認する。
+        - 必須確認の実施と根拠の対応を確認してから集約する。不足はroot-docsへ差し戻し、未実施・根拠不足を既存のstatusClassificationへ渡す。文書内容の判断はroot-docsに保持する。
         - classify-delegation-result-through-status-classification
   - id: repository-ci-documentation
     requirement: conditional
@@ -95,6 +224,9 @@ subjects:
     requirement: conditional
     appliesWhen: selected-preset-requires-project-owned-adapter
     phase: contract-evidence
+    stageChecks:
+      configuration: adapter入口・適用契約・workflow接続・入出力と停止経路・必須契約テストの配置と対応付けを確認する。
+      execution-evidence: project-contract-test-result-bound-to-audit-targetと実行による入出力・停止条件の証跡を照合する。
     discovery:
       sources:
         - selected-preset-required-extensions
@@ -131,6 +263,9 @@ subjects:
     requirement: conditional
     appliesWhen: 配置済み workflow が、選択した preset 契約で順序、状態遷移、または停止条件を定義された stage を実行している。
     phase: contract-evidence
+    stageChecks:
+      configuration: contract-sequence-to-executable-check-mappingと実行可能な検査の配置・接続を確認し、test-gap/contract-gapを分類する。
+      execution-evidence: executable-check-identity-and-latest-resultを対象identityへ結合して照合する。推論や対応付けだけで実行済みにしない。
     discovery:
       sources:
         - selected-preset-contract-sequences
@@ -208,17 +343,28 @@ subjects:
         - installer-contract-compliance-judgment
         - concrete-installer-remediation
     ownerSkill: installer
+    stageChecks:
+      configuration: installer ownerの構成監査結果と、選択した公開経路の実装・設定の接続を照合する。
+      execution-evidence: installer ownerの実候補・検証profile・native実行証跡を保持し、構成監査結果で代替しない。
     delegation:
       trigger: インストーラを監査したい
       ciInputs:
+        - pre-release-audit-purpose-and-scope
+        - audit-stage-selection-and-stage-specific-check-claims
         - installer-applicability-evidence
         - installer-asset-identity-and-owner-contract-evidence
         - resolved-publication-path
         - ci-authorities-and-execution-evidence
+        - latest-standard-alignment-baseline-and-installed-provider-revision
       resultHandling:
         - preserve-installer-audit-result
+        - preserve-installer-stage-results-and-evidence-gaps-without-cross-stage-substitution
+        - installer ownerの監査ガイドが要求する構成比較の証拠（READMEのOS別比較を含む）を受領し、対象identity・比較基準・選択段階との対応と充足を確認してから集約する。
+        - ownerのsuccess表記、asset名・URL・manifestの一致、CI公開経路の接続だけで必須比較の実施を代替しない。比較不足はinstallerへ差し戻し、実施状態と不足根拠を既存のstatusClassificationへ渡す。
+        - 比較内容の正当性と具体的な置換案・維持理由の判断はinstaller ownerに保持する。CIはownerの判断規則を複製・再判定せず、未依頼の実行証跡を構成比較の不足へ混ぜない。
         - classify-delegation-result-through-status-classification
     remediationPriority:
+      scope: selected-stage-check-items
       inputMappings:
         installerAuditAction:
           source: installer-audit-result.audit-action
@@ -274,6 +420,8 @@ subjects:
       - installer-owner-contract
       - resolved-publication-path
       - installer-audit-result
+      - installer-standard-alignment-and-difference-evidence
+      - installer-readme-os-comparison-evidence
       - ci-publication-path-comparison
       - remediation-routing-result
       - status

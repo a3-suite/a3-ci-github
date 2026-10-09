@@ -24,6 +24,7 @@ NATIVE_TARGETS = {
     "x86_64-pc-windows-msvc": "windows-x86_64",
 }
 PLATFORMS = set(NATIVE_TARGETS.values())
+SHARED_PLATFORMS = {"linux-x86_64", "macos-arm64"}
 
 
 def load_builder(name: str) -> ModuleType:
@@ -83,7 +84,7 @@ def config_for(request: dict) -> dict:
     platforms = obj(config["platforms"])
     if not platforms or not set(platforms) <= PLATFORMS:
         raise ValueError("installer-platform-unsupported")
-    if shared != ("sharedWrapper" in config) or (shared and set(platforms) != {"linux-x86_64", "macos-arm64"}):
+    if shared != ("sharedWrapper" in config) or (shared and not SHARED_PLATFORMS <= set(platforms)):
         raise ValueError("installer-shared-platform-unsupported")
     for entry in platforms.values():
         exact(obj(entry), {"manifest", "assetName"})
@@ -92,7 +93,7 @@ def config_for(request: dict) -> dict:
         wrapper = obj(config["sharedWrapper"])
         exact(wrapper, {"assetName", "deliveryUrls"})
         name(wrapper["assetName"])
-        if set(obj(wrapper["deliveryUrls"])) != set(platforms):
+        if set(obj(wrapper["deliveryUrls"])) != SHARED_PLATFORMS:
             raise ValueError("installer-wrapper-urls-invalid")
     published_names = []
     for target, entry in platforms.items():
@@ -149,7 +150,7 @@ def manifest_for(request: dict, entry: dict, build: dict, native: str) -> dict:
 
 def verify_native(candidate: Path, asset_name: str, manifest_name: str, artifact: Path) -> None:
     if sys.platform == "win32":
-        command = ["pwsh", "-NoProfile", "-File", str(candidate / asset_name), "-Mode", "dry-run", "-Source", "offline", "-Manifest", str(candidate / manifest_name), "-Artifact", str(artifact), "-Json"]
+        command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(candidate / asset_name), "-Mode", "dry-run", "-Source", "offline", "-Manifest", str(candidate / manifest_name), "-Artifact", str(artifact), "-Json"]
     else:
         command = ["bash", str(candidate / asset_name), "--mode", "dry-run", "--source", "offline", "--manifest", str(candidate / manifest_name), "--artifact", str(artifact), "--json"]
     result = subprocess.run(command, capture_output=True, text=True, check=True)
@@ -287,10 +288,11 @@ def assemble(request: dict, config: dict, output: Path, scratch: Path) -> None:
         builder = load_builder("build-shared-wrapper")
         candidate = scratch / "wrapper"
         wrapper_name = config["sharedWrapper"]["assetName"]
-        paths = {target: path / config["platforms"][target]["assetName"] for target, path in candidates.items()}
+        wrapper_candidates = {target: candidates[target] for target in config["sharedWrapper"]["deliveryUrls"]}
+        paths = {target: path / config["platforms"][target]["assetName"] for target, path in wrapper_candidates.items()}
         builder.assemble_candidate(source_dir=ROOT / "wrapper", installer_paths=paths, installer_urls=config["sharedWrapper"]["deliveryUrls"], output_dir=candidate, asset_name=wrapper_name, source_revision=request["authority"]["source_sha"], assembly_id=request["assemblyId"])
         record = read_json(candidate / "installer-asset-candidate.json")
-        verify_wrapper(request, config, candidate / wrapper_name, candidates, scratch)
+        verify_wrapper(request, config, candidate / wrapper_name, wrapper_candidates, scratch)
         verification_path = scratch / "wrapper-verification.json"
         write_json(verification_path, {"status": "passed", "suite": "shared-exact-payload-v1", "wrapper_checksum": record["asset_checksum"], "source_revision": record["source_revision"], "platform_installer_checksums": {target: "sha256:" + digest(file) for target, file in paths.items()}})
         builder.finalize_evidence(output_dir=candidate, verification_evidence_path=verification_path)

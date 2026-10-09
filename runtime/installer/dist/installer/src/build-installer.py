@@ -10,6 +10,7 @@ import re
 import shlex
 import sys
 import zipfile
+from codecs import BOM_UTF8
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import urlsplit
 
@@ -585,7 +586,11 @@ def _render_script(source: bytes, values: dict[str, str], windows: bool) -> byte
     if source.count(marker) != 1:
         raise AssemblyError("installer source must contain one runtime values marker")
     config = _runtime_config_ps1(values) if windows else _runtime_config_sh(values)
-    return source.replace(marker, config.rstrip(b"\n"))
+    script = source.replace(marker, config.rstrip(b"\n"))
+    # Windows PowerShell reads BOM-less files using the system ANSI code page.
+    if windows and not script.startswith(BOM_UTF8):
+        script = BOM_UTF8 + script
+    return script
 
 
 def assemble_candidate(

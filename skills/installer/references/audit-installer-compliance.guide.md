@@ -1,8 +1,21 @@
 # インストーラ監査ガイド
 
 ## 目的
-- 作成済み、導入判断が `required`、または project SSOT で要求されるインストーラ成果物が installer スキルの契約に沿って実装されているかを、証跡ベースで監査できるようにする。
+- リリース前に、作成済み、導入判断が `required`、またはproject SSOTで要求されるインストーラ成果物を、最新の公開済み安定版の標準installerと比較し、標準へ合わせる差分と必要な固有差分を明らかにする。安全性・動作・実候補の検証証跡を裏付けとして、標準整合と公開準備を確認する。
 - 監査ガイドの型は `compliance` とし、review / validate / check では不足する対象集合、契約、実装、証跡、停止条件の対応を扱う。
+
+監査目的と実公開との境界は、ci-githubスキルの`references/ci-audit-contract.reference.yml`の`auditContract.purpose`に固定する。成功は選択した段階への適合を示す。実候補・組立証跡・検証profileの結果は、証跡監査を選択した場合の必須確認として保持する。実Release・公開後URLの取得成功は公開後確認へ分ける。
+
+## 監査段階と確認対象
+
+段階選択・判定・集約・結果再利用は、同監査契約の`auditContract.stages`と`evidenceApplicability.reuseEvaluation.stageAndClaimBinding`を正本とする。通常は構成監査のみ。証跡監査を指定された場合は構成監査から同じ対象の証跡監査へ進む。CIから委譲された場合も選択段階と確認対象を引き継ぐ。
+
+| 段階 | installer側の確認対象 |
+| --- | --- |
+| 構成監査 | 製品宣言・manifestと配置設定、固定provider、実装と安全・停止経路、CI組立・公開経路への接続、README、必要な検証profile・契約テストの配置と対応付け、固有差分の必要性・許容条件 |
+| 証跡監査 | 実候補・組立証跡・checksumの一致、対象OSでの検証profileと契約テストの結果、dry-run・隔離install・起動・状態と復旧の実証 |
+
+以下のフローは確認項目ごとにこの対象へ写像する。構成ファイルや必要な検査導線の欠落は構成監査の不適合とし、未生成候補・実行結果の未取得は証跡監査へ分ける。証跡監査が未選択なら未実施・未依頼を明記し、構成監査へ非成功を混ぜない。同じsource/checksumでも構成の成功を実証として再利用しない。
 
 ## 選択条件
 - installer script、manifest schema、manifest、execution request、組立済み installer asset、asset 組立証跡 record、installer が配置または生成する runtime script、systemd unit または service manager 定義、運用ドキュメント、テスト、fixture、audit log などの成果物を監査する。
@@ -18,7 +31,13 @@
 
 ## 機械検証と意味監査
 - 配置警告は project override の採否を決めない。警告の対象、必要性、既存 project SSOT の証跡を project override classification で判断する。検査不能を配置適合へ読み替えない。
-- 意味監査では、distribution layout と実際の物理配置、実装、CI workflow、証跡を照合する。機械検証と意味監査がともに成功し、残る証跡不足がない場合にだけ監査全体を成功とする。
+- 構成監査では最新標準とdistribution layout、実装、CI workflow、README、検査導線を照合し、証跡監査では実候補・配置結果・実行証跡を照合する。各段階はその段階の適用項目で判定し、全体結果は選択段階だけから集約する。構成だけの成功を動作確認済みやリリース準備完了にしない。
+
+## 標準整合の必須判定
+
+- 比較基準は監査開始時の最新の公開済み安定版に固定する。Release・provider revision・manifestのidentityと採用中のrevisionを記録する。採用中の版への検証成功だけで標準整合を確認済みとしない。
+- 差分分類の語彙はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.differenceClassification`に従う。installer差分の必要性・例外成立・安全性の判断は本スキルが所有し、例外の成立条件はcoverage matrixの`projectOverrideClassification`へ照合する。許可された製品設定値や、同じ標準要件を満たす版番号だけの差を逸脱にしない。
+- 標準へ移行すべき差分が残れば構成の標準整合を未達とする。比較基準や例外の必要性を確認できなければ構成を未確認とする。根拠のある固有差分は理由と適用範囲を併記し、実行検証の結果は別記する。実行結果の未取得だけで構成を未達にせず、古い版だけをcore safety invariant違反としない。
 
 ## 監査時の優先順位
 - project SSOT は命名、対象 platform、adapter、release 方針など project 固有の実装詳細を判断する正本として扱う。
@@ -37,12 +56,13 @@
 - 本ガイドでは、分類表の条件や severity を再定義しない。
 
 ## severity 判定
+- 以下は選択した段階の確認項目に適用する。未選択の証跡監査に属する実候補・実行結果の不足から、構成監査のfindingや停止理由を生成しない。
 - `blocker`: core safety invariant への到達可能な違反、または runtime-script 監査側で blocker に分類される違反がある。
 - `major`: 監査対象として確定した期待成果物が存在しない、または契約 surface はあるが、fixture、state、audit、rollback、source mode、検証済み入力一致、project override classification に必要な証跡が不足している。または危険になり得る設計だが blocker の到達可能性を証跡で確認できない。
 - `minor`: ドキュメントの境界説明、ログ粒度、診断メッセージ、fixture 名寄せなど、準拠判定の中核 invariant を直接壊さない改善。
 - `none`: project override classification が finding 不要と分類し、core safety invariant への到達可能な違反や証跡不足がない。
 - installer が配置または生成する runtime script の runtime-script 契約違反は、runtime-script 監査側の blocker / major 分類を installer 監査で下げずに finding として扱う。
-- project SSOT が shell-source を明示している場合でも、それだけで accepted project detail にはしない。project override classification と shell-source 系 fixture の証跡で分類する。
+- project SSOT が shell-source を明示している場合でも、それだけで accepted project detail にはしない。構成監査では project override classification の許容条件と shell-source 系 fixture の検査導線を確認し、証跡監査ではその実行結果を照合する。静的に確認できる権限境界違反は構成監査のfindingとして保持する。
 - checksums で検証した manifest と installer が実行する manifest が別物になり得る導線は major 以上とする。実行 manifest が未検証のまま artifact 取得、配置、service 操作、activation state 変更へ到達可能なら blocker とする。
 - test timeout / hang は、timeout の主体と残存状態で分類する。test harness や fixture driver の停止で installer の副作用が確認できない場合は証跡不足または検証器不備として major、installer が lock、service 停止、partial state、検証前配置を残す場合は該当 invariant の major または blocker とする。
 
@@ -57,6 +77,7 @@
 - `none` は `observe` とし、finding ではなく audit note または未確認範囲として記録する。
 
 ## runtime-script 監査結果の取り込み
+- 委譲時に選択段階と確認対象を渡し、runtime-script ownerの元の判断を保持する。実装・設定・検査導線に関する判断は構成監査、実動作や実行証跡不足は証跡監査へ写像する。以下の実行証跡・gate actionを未選択の証跡監査から構成監査へ混ぜない。owner結果を分離できない場合は未確認として報告し、適合や実証済みを推測しない。
 - installer が runtime script、systemd unit、service manager 定義、EnvironmentFile を配置または生成する場合は、runtime-script 監査結果を service runtime 境界の証跡として取り込む。
 - runtime-script 監査を実行できない場合の同等証跡は、runtime-script 監査ガイドの最低証跡セットと代替証跡条件を満たす場合だけ準拠証跡として扱う。
 - 説明文、サンプル、実行者の口頭確認、証跡元を追跡できない summary は同等証跡として扱わない。
@@ -75,19 +96,21 @@
 
 ## フロー
 1. 監査対象を棚卸する。
-   - project SSOT、release manifest、execution request、asset 組立証跡 record、coverage matrix、fixture baseline から、installer script、manifest schema、組立済み installer asset、asset checksum、manifest checksum、provenance、組立後検証結果、state / handoff state、audit log、installer が配置または生成する runtime script、systemd unit または service manager 定義、運用ドキュメント、テストを棚卸する。
+   - 選択段階、対象identity、確認対象を記録する。以降は「監査段階と確認対象」に従って項目を分け、証跡監査の照合は選択した場合だけ行う。
+   - project SSOT、release manifest、execution request、asset 組立証跡 record、coverage matrix、fixture baseline から、installer script、manifest schema、組立済み installer asset、asset checksum、manifest checksum、provenance、組立後検証結果、state / handoff state、audit log、installer が配置または生成する runtime script、systemd unit または service manager 定義、製品READMEのインストール節、運用ドキュメント、テストを棚卸する。
    - 監査対象外のファイルを明示し、スキル文書や一般サンプルを証跡に混ぜない。
 2. 判定基準を固定する。
+   - 提供元の公開済み安定版Releaseと採用中のprovider revisionを比較し、最新版の標準構成を比較基準に固定する。提供元の版選定と必要機能の確認はci-githubスキルの`references/distribute-ci-assets.guide.md`の「対応条件」へ委譲し、版番号を本ガイドへ保持しない。比較したRelease・revisionを記録し、最新資材を確認できない場合は未確認とする。CI監査から委譲された場合は、最新Releaseの確認結果と同一の比較基準・監査対象に結合した証跡を確認して再利用する。別の版を比較基準にしない。
    - 監査で使う installer の共通契約と適用可能な starter を特定し、比較元のパスと実ファイル checksum または未変更の revision、対象実装の状態を記録する。比較元を特定できなければ証跡不足として扱い、比較済み・最新版に適合と報告しない。
    - 共通構成・動作と対象実装の差分を確認し、製品固有値や許可 adapter の適合で準拠できるかを先に評価する。配置検証の成功だけで実装・動作への準拠を判断しない。
    - 準拠できない場合は、必須制約の必要性と標準経路では満たせない根拠を証跡へ照合し、project override classification で判定する。既存実装や project SSOT の記載だけで例外を正当化しない。正当性の検証前に例外を受け入れない。
    - project SSOT で判断する実装詳細、標準経路から外れる project override、core safety invariant で判断する準拠条件を分ける。
    - project-owned custom installer の実装形式を、インストーラ作成ガイドの選択基準に照らして確認する。
-   - project override classification に従い、証跡不足は finding とし、残存リスクは分類結果に応じて finding または audit note として扱う。
+   - project override classificationに従い、必要性・許容条件の根拠不足は構成監査のfindingとする。実行結果の不足は選択した証跡監査へ保持し、構成上の例外成立と動作検証の成立を混同しない。
 3. 契約 surface へ対応付ける。
    - manifest contract、execution request contract、source mode contract、asset 組立証跡契約、state machine、audit log contract、audit event contract、fixture baseline のどれを各成果物が満たすべきかを対応付ける。
    - installer が runtime script を配置または生成する場合は、runtime-script スキルの監査結果、または runtime-script 監査ガイドの最低証跡セットと代替証跡条件を満たす同等証跡を service runtime 境界の証跡として対応付ける。
-   - 対応する成果物が存在しない場合は「未確認」ではなく「証跡不足」として扱う。
+   - 必須の構成や検査導線の欠落と、実候補・組立証跡・実行結果の未取得を分け、該当段階の根拠不足として扱う。未生成の実候補だけで構成不適合にしない。
 4. blocker を先に確認する。
    - operator が検証した manifest / artifact と installer が実行に使う manifest / artifact が一致しているか。
    - manifest 再取得や fallback により、検証済み入力と実行入力が別物になり得る到達可能経路がないか。
@@ -100,36 +123,56 @@
    - installer が配置または生成する runtime script が、起動時に fetch、build、install、runtime 導入、未検証入力実行、secret 永続化、daemonize、独自 PID 管理、独自 restart 管理へ到達しないか。
 5. invariant ごとに監査する。
    - coverage matrix の installer invariant、asset assembly evidence boundary、audit evidence boundary を軸に、入力固定、source mode、operation mode、runtime 前提、state / audit 分離、secret 非永続、activation strategy、配置検証、asset 組立証跡、設定・復旧境界、service runtime 境界、証跡完走性を確認する。
-   - fixture catalog の expected outcome と coverage role を見て、成功証跡と違反検出証跡の両方があるかを確認する。
+   - 構成監査ではfixture catalogのexpected outcomeとcoverage roleが検査へ対応付くかを確認する。成功証跡と違反検出証跡の実結果は証跡監査で確認する。
 6. runtime overlay を確認する。
    - Java / Maven 系では固定 Maven coordinate、JRE version 照合、SNAPSHOT / moving metadata 拒否、Jar checksum、runtime script と service manager の境界を確認する。
    - Node / npm 系では固定 package version、integrity / checksum、`latest` / range 拒否、package manager version 照合、lifecycle script policy、credential 非永続を確認する。
    - installer が runtime script を配置または生成する場合は、runtime-script スキルの起動責務、手動操作、service manager handoff、PID、ログ、restart、health 境界に沿っているかを確認する。
    - runtime-script 監査で blocker / major に分類される違反または証跡不足は、installer 監査の service runtime 境界 finding として併記する。
-7. テスト証跡を確認する。
-   - 組立済み asset を扱う場合は、公開 asset と組立証跡 record（candidate / verification / final evidence）の checksum 対応も確認する。
+7. READMEの標準比較を構成監査の独立工程として、次の順に実施する。検査導線を確認し、選択した証跡監査で実行結果を照合する。
+   1. `references/use-standard-installer.guide.md`の「固定providerの対応確認」を実施し、採用workflowの固定revisionで成立するuse case・platform・runtime前提・URLを確定する。
+   2. 同ガイドのREADME基本形と「標準構成からのセットアップ」を使い、OSごとに標準の入口・期待コマンドと現在の入口・READMEコマンドを既存の差分表へ並べる。project-localのセットアップガイドとREADMEの参照先も比較対象に含める。
+   3. 差分ごとに標準へ移行できるか、維持するなら標準では満たせない要件とownerの根拠があるかを確認する。短い標準起動へ置換できる操作には具体的なREADME置換案を示す。
+   4. 対応根拠、OS別比較、必要性レビューを揃えて既存の差分分類と段階別判定へ渡す。比較結果はCIへ返し、既存ガイドとの一致やpreflight成功だけで整合判定へ進まない。
+
+   以下の確認項目を上記工程と段階別検査へ対応付ける。
+   - 組立済みassetを扱う場合は、公開予定の実候補assetと組立証跡record（candidate / verification / final evidence）のchecksum対応を確認する。公開前でも取得できる実候補・証跡を使い、Releaseへの添付完了を要求しない。
    - fixture baseline に対応する成功系、失敗系、冪等再実行、rollback / handoff、dry-run、state / audit 境界のテストがあるかを確認する。
-   - テストがない場合、実装が正しく見えても監査結果は「証跡不足」として扱う。
+   - 必要なテストの配置・対応付けがなければ構成監査の不足とする。テストはあるが実行結果がない場合は、選択した証跡監査の証跡不足とし、構成の結果を変更しない。
    - timeout / hang は、test harness の不備、fixture driver の不備、installer 実行の停止を分け、残存 state、lock、service、managed root、audit log の副作用を確認して severity を決める。
+   - 製品READMEを必須確認対象とし、インストール節の有無と、起動コマンド・対応OS/CPU・前提条件・配置先・起動確認を照合する。構成監査では採用した配布経路、manifest、実装、配布計画との一致を確認し、証跡監査では検証済み実候補との一致を確認する。記載観点は`references/use-standard-installer.guide.md`の「製品READMEへのインストール手順追記」に従う。
+   - READMEの本文・導入導線はroot-docsスキルの`references/audit-root-docs.guide.md`を補助として適用する。対象をインストール節とその参照先へ限定し、段階・対象identity・確認項目とinstallerが確認した製品情報を渡す。root-docsの文書判断と、installerが所有する配布経路・コマンドの正当性を分けて保持する。実行証跡不足は該当する証跡段階へ写像し、構成の不適合へ混ぜない。
+   - 同セットアップガイドのREADME基本形と短い既定オンライン起動を比較基準にする。OSごとに標準の期待コマンドと現コマンドを対応付け、取得・保存・別実行、既定引数、独自例外処理、重複手順、高度な操作の過剰掲載を残す必要性を確認する。現在のasset名・URL・配置の一致だけで、この比較を省略しない。標準で必要な前提・権限・安全上の注意や、初回導入に不可欠な固有操作は根拠を保持する。字句や行数だけの差では変更を求めず、未提供の入口へ推測で置き換えない。
+   - 同セットアップガイドの「標準構成からのセットアップ」と「固定providerの対応確認」に従い、共有入口の適用可否も比較する。OSごとに入口ファイル・役割（共有入口／対象別payload）、採用use case、標準入口への移行可否、維持理由または提供元の不足を差分表に記録する。固定providerの対応根拠、Windowsの実行環境、URLの置換結果も照合し、スキル・サンプルやpreflight成功だけで対応済みとしない。採用宣言に固定版が拒否する組合せ・URLの未確定値が残る場合は構成の不適合とし、確認未実施・根拠不足は既存の未確認分類へ渡す。短い対象別起動を記載済みでも比較を省略せず、比較不足のまま構成の標準整合をsuccess・100%・差分なしとしない。共有入口が未対応の場合はその不足を移行対象として示し、契約に適合する対象別実装自体を安全性違反としない。
+   - READMEの欠落・記載不整合は構成監査のfindingとする。未実行platformは証跡監査で区別し、監査結果にインストール概要を表示するだけでREADME確認の代わりにしない。監査中はREADMEを変更しない。
+   - このOS別比較を既存レポートの差分表へ必ず記録する。短い標準起動へ置換できる余分な操作には、具体的なREADME置換案を「要対応」へ示す。維持が必要なら標準で満たせない理由とownerの根拠を示し、既存の差分分類へ渡す。比較未実施または標準入口を確定できない状態で「差分なし」「標準適合」と報告しない。必要な値を確定できなければ未確認値と確認先を示し、未依頼の実行証跡不足とは分ける。修正を依頼された場合は同セットアップガイドの「製品READMEへのインストール手順追記」節へ接続し、許可範囲の改稿と構成再確認まで行う。
+   - 公開予定URLはrelease identity・asset名・配布計画への一致を構成監査で確認する。URL構成が不明なら構成の未確認、選択した検証profileの結果不足なら証跡監査の不足とする。公開後のHTTP取得・実公開物の導入は公開後確認へ分ける。
 8. 指摘を分類する。
    - severity 判定、action / 停止要否、project override classification を基準にする。
    - runtime-script 監査結果を取り込む場合は、runtime-script 側の result class、evidence gap、blocker candidate、audit action、停止要否、handoff 先、gate action を保持する。
    - 同じ事象が複数 invariant に触れる場合は、最も高い severity を採用し、関連 invariant を finding に併記する。
 9. 監査結果を出す。
+   - 本文はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.reportFormat`に従う。以下の必須詳細は参照先または該当区分へ記載し、installer固有の報告形式を追加しない。インストール概要は判定の補足として示す。
+   - 構成監査と証跡監査の結果・根拠・確認対象・未確認を分けて報告する。証跡監査が未選択なら未実施・未依頼を明記する。CIへも段階別結果を返し、実行証跡不足を構成の不適合へ混ぜさせない。
+   - リリース前確認の結果として報告し、実公開成功の証明と読み替えない。実公開後に確認するURL取得・公開物導入・Hosted公開は別記し、その未実施だけで監査全体を非成功にしない。
+   - 比較基準のRelease・revision・manifest、採用中のrevision、標準整合の判定、差分分類と理由、移行案・未確認事項を先頭に報告する。安全性・動作・実候補・Hostedの証拠と、監査全体の結果は裏付けとして分けて示す。CIから委譲された場合は標準整合と差分の証拠をCIへ返し、installer側の判定をCI側で代替させない。
+   - 要件を満たせる最新の標準構成への移行案を優先提示する。既存の固有実装を残す場合は`references/use-standard-installer.guide.md`の「標準構成からのセットアップ」に従い、必要性と標準では満たせない要件を確認する。読み取り専用監査では変更せず、移行案と確認事項を報告する。修正依頼へ進む場合は、既存の採否が未確定なら利用者と採用方針を確認する。最新版の存在だけで採用中の版を契約違反とせず、準拠判定と更新推奨を分ける。
    - 比較元、対象状態、共通 installer への準拠状況、準拠可能性、非準拠の根拠と検証結果を示す。準拠が必要な場合は選択した starter、製品固有の適合箇所、導入・更新の具体手順、既存資産への影響、検証方法を提示する。正当な例外は許容範囲と残存リスクを示す。
    - finding は重大度、分類、result class、audit action、停止要否、handoff 先、gate action、対象 contract / invariant、証跡パスと行番号、問題、推奨案、理想案を含める。
    - confirmed finding、blocker candidate、core evidence gap、major evidence gap、residual evidence gap、open question を分ける。
    - 問題がない場合も、確認済み invariant と残る証跡不足を明示する。
-   - installer 成果物が確認できる場合は、監査結果の最後に「インストール概要の表示」に従ってインストール方法とインストール先を表示する。
+   - installer 成果物が確認できる場合は、「インストール概要の表示」に従ってインストール方法とインストール先を表示する。
+   - 監査レポートの最後に、ci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.finalReport`に従って「標準適合度・差分・正当性レビュー」を必ず付ける。installerの比較範囲で集計し、全実質差の正当性を本スキルの例外成立条件でレビューする。差分なし・未確認の場合も省略しない。CIから委譲された場合は比較項目と分類、差分表、ownerレビュー結果をCIへ返し、CIの末尾レポートで重複集計させない。
 
 ## インストール概要の表示
-- installer 成果物が確認できる場合、監査結果（findings）とは別に、証跡から復元した「インストール方法（インストールコマンド）」と「インストール先」を表示する。成果物が存在しない場合は、表示の代わりに証跡不足として報告する。
+- manifest・配布計画または実候補から確認できる「インストール方法（インストールコマンド）」と「インストール先」を表示し、予定の構成値か実証した結果かを区別する。実候補未生成だけを構成の不適合にせず、値を確認できない場合は根拠不足として示す。
 - 表示値は manifest（profile / channel / placement / activation / launcherPath）、distribution layout（delivery / release）、execution request（operation mode / source mode）から取得し、推測しない。
 - 取得できない値は `未確認`、未設定の項目は `未設定` と表示する。配信 URL や asset 名を確認できない場合はコマンドを推測せず、`未確認` と表示する。
-- インストール方法は実行するコマンドそのものを表示する。対応が確認できたdeliveryとOSだけに既定コマンドを示し、非既定は対応する操作の代表例（upgrade、offline の manifest / artifact 指定）だけを示す。対応範囲は `references/installer-use-case-contract.reference.yml` と検証済み配布物へ照合する。
+- インストール方法は実行するコマンドそのものを表示する。採用したdeliveryとOSに既定コマンドを示し、非既定は対応する操作の代表例（upgrade、offline の manifest / artifact 指定）だけを示す。構成監査では対応範囲を `references/installer-use-case-contract.reference.yml` とmanifest・配布計画へ照合し、証跡監査では検証済み実候補へ照合する。予定の対応範囲と実証した範囲を区別する。
   - 共有 Unix wrapper: `curl ... | sh` とし、非既定は `INSTALLER_*` を `sh` 側へ付ける。
   - Windowsの標準経路はtarget-specific `.ps1` とする。Windows共有wrapperは検証済みowner extensionがある場合だけ、提供元と適用範囲を明示してその実コマンドを示す。
-  - target-specific asset: 取得と実行（`./install-*.sh` / `-File install.ps1`）を示し、非既定は CLI 引数で示す。
+  - 既定のオンライン導入は`assets/examples/readme-installation.example.md`を参照し、採用済みの配布経路に対応する実コマンドを表示する。Unix共有wrapperとWindows対象別installerを混同しない。
+  - offlineなどファイル実行が必要な操作では、取得済みtarget-specific assetの実行（`./install-*.sh` / `-File install.ps1`）とCLI引数を示す。
 - インストール先は launcher、managed root、releases、current、lock、state と、権限・所有者を実パスで示す。プレースホルダは展開前の表記のまま示し、実行時に展開されることを注記する。
 - 変更・失敗時の挙動（dry-run / upgrade / repair / rollback / uninstall）を簡潔に示す。
 - 表示テンプレート（採用したdelivery・OS・操作に該当するblockだけを使用する。Windows共有owner extensionのコマンドは、その検証証跡から取得する）:
@@ -138,25 +181,22 @@
 ### インストール方法（インストールコマンド）
 - 配置プロファイル: <profile> / 配信: <delivery>
 
-#### 共有wrapperの既定（Unix）
-```sh
-curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | sh
-```
+#### 既定のオンライン導入
+<READMEサンプルを参照し、採用済みdelivery・OSの実コマンドを表示>
 
 #### 共有wrapperの非既定例（Unix）
 ```sh
 curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | INSTALLER_MODE=upgrade sh
 curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | INSTALLER_SOURCE=offline INSTALLER_MANIFEST=<path> INSTALLER_ARTIFACT=<path> sh
 ```
-#### target-specific asset（Unix）
+#### 取得済みtarget-specific assetのoffline例（Unix）
 ```sh
-curl -fsSL -o <installer-asset-name>.sh <asset-url> && chmod +x <installer-asset-name>.sh && ./<installer-asset-name>.sh
 ./<installer-asset-name>.sh --mode upgrade --source offline --manifest <path> --artifact <path>
 ```
-#### target-specific asset（Windows）
+#### 取得済みtarget-specific assetのoffline例（Windows）
+Windows PowerShell 5.1以降に対応する標準実装では、Windows標準の`powershell`を使います。
+
 ```powershell
-Invoke-WebRequest -Uri <asset-url> -OutFile <installer-asset-name>.ps1
-powershell -ExecutionPolicy Bypass -File <installer-asset-name>.ps1
 powershell -ExecutionPolicy Bypass -File <installer-asset-name>.ps1 -Mode upgrade -Source offline -Manifest <path> -Artifact <path>
 ```
 

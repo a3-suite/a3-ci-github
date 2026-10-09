@@ -504,9 +504,21 @@ jobs:
         shell: pwsh
         run: python -m unittest discover -s runtime/installer/tests -p test_build_installer.py -v
 
-      - name: Test native Windows installer safety
+      - name: Test native Windows installer safety / Windows PowerShell 5.1
+        shell: powershell
+        env:
+          CI_INSTALLER_POWERSHELL: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) { throw 'Windows PowerShell 5.1 is required for this test' }
+          python -m unittest discover -s runtime/installer/tests -p test_runtime_installer.py -k test_windows -v
+
+      - name: Test native Windows installer safety / PowerShell 7
         shell: pwsh
-        run: python -m unittest discover -s runtime/installer/tests -p test_runtime_installer.py -k test_windows -v
+        env:
+          CI_INSTALLER_POWERSHELL: pwsh
+        run: |
+          if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or later is required for this test' }
+          python -m unittest discover -s runtime/installer/tests -p test_runtime_installer.py -k test_windows -v
 
   installer-macos:
     name: Installer contract / macOS ARM64
