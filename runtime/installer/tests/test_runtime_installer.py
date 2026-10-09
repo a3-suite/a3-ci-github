@@ -37,6 +37,11 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _windows_powershell() -> str:
+    """Select the engine under test, defaulting to Windows' built-in engine."""
+    return os.environ.get("CI_INSTALLER_POWERSHELL", "powershell")
+
+
 class RuntimeInstallerTest(unittest.TestCase):
     """Check the assembled installer runtime against its public modes."""
 
@@ -136,8 +141,10 @@ class RuntimeInstallerTest(unittest.TestCase):
     ) -> subprocess.CompletedProcess[str]:
         if sys.platform == "win32":
             command = [
-                "pwsh",
+                _windows_powershell(),
                 "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
                 "-File",
                 str(bundle / "installer.ps1"),
             ]
@@ -193,7 +200,10 @@ class RuntimeInstallerTest(unittest.TestCase):
             f"; Get-Content -Raw -LiteralPath {self._ps_quote(script)} | iex"
         )
         return subprocess.run(
-            ["pwsh", "-NoProfile", "-Command", command],
+            [
+                _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-Command", command,
+            ],
             capture_output=True,
             text=True,
             check=False,
@@ -1372,13 +1382,15 @@ class RuntimeInstallerTest(unittest.TestCase):
         "PowerShell runtime test requires Windows",
     )
     def test_windows_dry_run_install_and_noop(self) -> None:
-        """Exercise PowerShell mode transitions on Windows."""
+        """Exercise mode transitions with a non-ASCII Windows placement path."""
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             artifact = root / "tool.zip"
             with zipfile.ZipFile(artifact, "w") as archive:
                 archive.writestr("tool.exe", b"binary")
-            bundle, checksum, state = self._bundle(root, artifact)
+            bundle, checksum, state = self._bundle(
+                root, artifact, managed_root=root / "managed-工具"
+            )
             for mode, result in (
                 ("dry-run", "dry-run"),
                 ("install", "success"),
@@ -1412,6 +1424,49 @@ class RuntimeInstallerTest(unittest.TestCase):
             invalid = self._run_iex(bundle, artifact, mode="bogus")
             self.assertNotEqual(invalid.returncode, 0)
             self.assertIn("Mode", invalid.stderr)
+
+    @unittest.skipUnless(
+        sys.platform == "win32",
+        "PowerShell runtime test requires Windows",
+    )
+    def test_windows_online_downloads_do_not_require_html_parsing(self) -> None:
+        """Fetch exact fixture bytes without IE parsing or interactive prompts."""
+        with _temporary_directory() as temp:
+            root = Path(temp).resolve()
+            artifact = root / "tool.zip"
+            with zipfile.ZipFile(artifact, "w") as archive:
+                archive.writestr("tool.exe", b"binary")
+            bundle, _, state = self._bundle(root, artifact)
+            manifest = next(bundle.glob("manifest-*.json"))
+            script = bundle / "installer.ps1"
+            command = (
+                "function Invoke-WebRequest { "
+                "param([string]$Uri, [string]$OutFile, "
+                "[int]$MaximumRedirection, [switch]$UseBasicParsing); "
+                "if (-not $UseBasicParsing) { throw 'HTML parsing is forbidden' }; "
+                "if ($Uri -eq $MANIFEST_URL) { "
+                f"Copy-Item -LiteralPath {self._ps_quote(manifest)} -Destination $OutFile "
+                "} elseif ($Uri -eq $ARTIFACT_URL) { "
+                f"Copy-Item -LiteralPath {self._ps_quote(artifact)} -Destination $OutFile "
+                "} else { throw 'unexpected fixture URL' } }; "
+                "$env:INSTALLER_MODE='dry-run'; $env:INSTALLER_SOURCE='online'; "
+                "$env:INSTALLER_JSON='1'; "
+                f"Get-Content -Raw -LiteralPath {self._ps_quote(script)} | iex"
+            )
+
+            completed = subprocess.run(
+                [
+                    _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-Command", command,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(json.loads(completed.stdout)["result"], "dry-run")
+            self.assertFalse(state.exists())
 
     @unittest.skipUnless(
         sys.platform == "win32",
@@ -1583,7 +1638,7 @@ class RuntimeInstallerTest(unittest.TestCase):
         "PowerShell runtime test requires Windows",
     )
     def test_windows_installer_ignores_path_tar(self) -> None:
-        """Ignore a PATH tar so extraction keeps using the bundled bsdtar."""
+        """Ignore external PATH tools when extracting a validated ZIP."""
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp).resolve()
             artifact = root / "tool.zip"
@@ -1629,33 +1684,19 @@ class RuntimeInstallerTest(unittest.TestCase):
             self.assertEqual(installed.returncode, 0, installed.stderr)
             release_binary = managed / "releases/1.0.0/tool.exe"
             release_binary.write_bytes(b"damaged")
-            real_tar = Path(os.environ["SystemRoot"]) / "System32" / "tar.exe"
-            fake_bin = root / "fake-bin"
-            fake_bin.mkdir()
-            tar_log = root / "tar.log"
-            fake_tar = fake_bin / "tar.cmd"
-            fake_tar.write_text(
-                "@echo off\r\n"
-                f'echo %* >> "{tar_log}"\r\n'
-                'echo %* | findstr /C:".staging" >nul && exit /b 1\r\n'
-                f'"{real_tar}" %*\r\n',
-                encoding="utf-8",
-            )
-            # 同梱 tar の絶対解決は固定のため、組立済み script の解決式だけを stub へ
-            # 差し替え、managed staging の extraction 失敗を再現する。
             script_path = bundle / "installer.ps1"
-            script = script_path.read_text(encoding="utf-8")
-            resolved = "Join-Path $env:SystemRoot 'System32\\tar.exe'"
-            self.assertIn(resolved, script)
+            script = script_path.read_text(encoding="utf-8-sig")
+            extraction = "  [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $Destination)"
+            self.assertIn(extraction, script)
             script_path.write_text(
-                script.replace(resolved, f"'{fake_tar}'"), encoding="utf-8"
+                script.replace(extraction, "  if ($Destination -like '*\\.staging-*') { throw 'fixture managed archive extraction failed' }\n" + extraction),
+                encoding="utf-8-sig",
             )
 
             failed = self._run(bundle, checksum, artifact, mode="repair")
 
             self.assertNotEqual(failed.returncode, 0)
             self.assertIn("archive extraction failed", failed.stderr)
-            self.assertIn(".staging", tar_log.read_text(encoding="utf-8"))
             self.assertEqual(release_binary.read_bytes(), b"damaged")
             self.assertFalse(list(managed.glob(".previous-release-*")))
 
@@ -1747,7 +1788,10 @@ class RuntimeInstallerTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "requires Windows junctions")
     def test_windows_rejects_relative_launcher_when_assembly_is_bypassed(self) -> None:
         """Reject relative runtime input before working-directory resolution."""
-        for launcher in ("example-app.exe", "C:example-app.exe"):
+        for launcher in (
+            "example-app.exe", "C:example-app.exe",
+            "\\example-app.exe", "/example-app.exe",
+        ):
             with self.subTest(launcher=launcher), tempfile.TemporaryDirectory() as temp:
                 root = Path(temp).resolve()
                 output, artifact = self._per_user_windows_bundle(root, system_wide=True)
@@ -1756,7 +1800,7 @@ class RuntimeInstallerTest(unittest.TestCase):
                 script = script_path.read_text(encoding="utf-8")
                 rewritten = re.sub(
                     r"\$LAUNCHER_PATH = [^\n]+",
-                    f"$LAUNCHER_PATH = '{launcher}'",
+                    lambda _match: f"$LAUNCHER_PATH = '{launcher}'",
                     script,
                     count=1,
                 )
@@ -1819,7 +1863,10 @@ class RuntimeInstallerTest(unittest.TestCase):
                     f"-Artifact {self._ps_quote(artifact)}; exit $LASTEXITCODE"
                 )
                 completed = subprocess.run(
-                    ["pwsh", "-NoProfile", "-Command", command],
+                    [
+                        _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                        "-Command", command,
+                    ],
                     capture_output=True,
                     text=True,
                     check=False,

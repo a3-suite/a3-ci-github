@@ -146,6 +146,7 @@ useCases:
     supportedTargetPlatformIds:
       - linux-x86_64
       - macos-arm64
+      - windows-x86_64
     requiredManifestFields:
       - targetPlatformId
       - source.fixedReference

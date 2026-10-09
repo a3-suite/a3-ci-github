@@ -8,7 +8,7 @@
 
 ## 導入前提
 
-使用するprovider Releaseは、[選択配布ガイドの対応版](distribute-ci-assets.guide.md#対応版)を満たすことを先に確認する。取得・生成・適用の版条件と手順は同ガイドへ委譲する。
+使用するprovider Releaseは、[選択配布ガイドの対応条件](distribute-ci-assets.guide.md#対応条件)を満たすことを先に確認する。Releaseの選定・比較、必要機能の確認、取得・生成・適用の手順は同ガイドへ委譲する。
 
 ## 標準構成からのセットアップ
 
@@ -211,10 +211,10 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 
 ## 導入手順
 
-1. `ci-github` スキルで用途に対応する標準プリセットを選ぶ。既存の固有実装がある場合は「標準構成からのセットアップ」に従い、必要性と採用方針を利用者と確認する。installerを配布する場合は、installerスキルへセットアップの選択・製品宣言を委譲し、実装選択・契約ID・製品宣言pathをplan前に確定する。
+1. `ci-github` スキルで用途に対応する標準プリセットを選ぶ。既存の固有実装がある場合は「標準構成からのセットアップ」に従い、必要性と採用方針を利用者と確認する。installerの採否をproject SSOTで確認する。未確定の場合はrepository-auditへ導入判断を委譲し、採否を利用者と確認する。配布する場合は、installerスキルの「インストーラをセットアップしたい、またはCIセットアップから委譲された」からセットアップガイドの実施へ委譲し、実装選択・契約ID・製品宣言pathをplan前に確定する。
 2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。差分の明示承認後に設定済みcanonical callerを配置する。
 3. apply結果をregistryの選択preset、copyable asset、固定 SHA Action bindingと依存閉包へ照合し、残る `requiredExtensions` を確認する。callerとpin companionの配置は手順2の承認済みapplyだけで行い、固定本数や platform 数から必要ファイルを推測しない。
-4. 生成済みcallerの標準bundle IDまたは独自descriptor、Releaseとpackageの選択したAction bindingを確認し、残る `requiredExtensions` をproject側に用意する。依存閉包に属する copyable asset は改変しない。installerは手順1で確定した構成の接続を確認し、その後の組立・検証・製品READMEへのインストール手順追記をinstallerスキルへ委譲する。
+4. 生成済みcallerの標準bundle IDまたは独自descriptor、Releaseとpackageの選択したAction bindingを確認し、残る `requiredExtensions` をproject側に用意する。依存閉包に属する copyable asset は改変しない。installerは手順1で確定した構成の接続を確認し、その後の組立・検証・製品READMEへのインストール手順追記をinstallerスキルへ委譲する。セットアップガイドの完了条件に対する実施結果と未確認事項を受け取り、委譲の記載だけで完了扱いにしない。
 5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
 6. 生成済みcallerの設定と固定参照を読み返す。calleeのSHAはmanifestの固定参照から、外部Action pinはregistryから自動設定される。consumerが外部provider Actionを直接使う場合だけ、provider CLIのplanがregistryの完全な射影であるpin companionを生成し、consumerの承認後にapplyが配置する。companionもcallerと同じ所有権確認・rollbackの対象とし、独自編集しない。job・step・permissions・trust境界・summary経路は直接変更しない。
 7. workflow初期パラメータは手順2の`--set`で確定した生成結果を確認し、必要なVariables、Secrets、実行ごとのworkflow inputを上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
@@ -374,6 +374,7 @@ trigger variant を owner が決めてから移行する。
 - canonical workflow と到達する asset が配置されている。
 - workflow、descriptor、policy、Variables、Secrets の正本が一意である。
 - preflight と provider の静的検証が成功している。
+- installerの採否が確定している。採用した場合は、installerセットアップガイドの完了条件と実施結果を確認している。未実施・未確認・ブロッカーが残る場合はCIセットアップ全体を完了扱いにしない。非採用の場合は理由を報告する。
 - hosted、権限、secret、remote readback の未確認事項は成功扱いされていない。
 
 package 準備の提供側 workflow、固定参照と公開状態は preset registry の

@@ -17,9 +17,15 @@ installer はこのリポジトリの機能として保守します。公開仕�
 
 ## 実装方式
 
+Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/clauses.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
+
+配布する`.ps1`はUTF-8 BOM付きで生成します。5.1が日本語などを含む配置先をシステムのANSI文字コードで誤読しないためです。ZIPの安全検査後の展開には.NET APIを使い、外部tarの文字コードで配置先が変わることを避けます。
+
 入力固定とAction／CLI境界はTypeScriptです。候補組立とprofile検証はPython 3.11以上を使います。既存builderのarchive処理・source正規化・checksum・確定処理を同じPython processから利用でき、TypeScriptへ同じ処理を再実装せずに実候補を検証できるため、この部分を[Action構築方針](action-construction.md)の例外とします。Python runtimeに外部package依存はありません。新規の言語非依存な制御処理一般への例外ではありません。
 
 ActionとCLIのPython payloadは同じ `src/` から生成します。利用側の製品宣言・manifest以外に共通実装・テストのGit管理を要求しません。runnerのPython、Git、OS toolchainの前提は [Action README](../../actions/ci-release-supplemental-asset/README.md) に従います。
+
+共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
 
 ## 検証と生成
 
