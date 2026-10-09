@@ -4,11 +4,11 @@
 
 GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだけをfull commit SHA固定sourceから取得し、製品設定を埋め込んだcanonical callerを差分確認後に配置する。
 
-## 対応版
+## 対応条件
 
-このガイドの生成・適用経路は、**v0.2.7以降のexact Release**を対象とする。fetch CLI、manifest、`SHA256SUMS`は同じexact Releaseから取得する。対象Releaseが未公開の場合は、公開後に取得して導入を開始する。
+導入時に提供元の公開済み安定版Releaseを確認し、導入済みの配布元revisionと比較して採用するexact Releaseを確定する。fetch CLI、manifest、`SHA256SUMS`はその同じReleaseから取得する。特定のリリース番号を本スキルの導入条件として保持しない。
 
-v0.2.6はschema `2`と利用可能なreusable workflowを導入した版だが、pin companionの自動生成・lock管理・完全検証と、旧distributionがない場合の分類診断には対応していない。schema `2`であることだけでは本ガイドの対応版条件を満たさない。
+採用するReleaseの公開契約と配布資材から、選択presetの利用可能性、caller生成、必要なpin companionの自動生成・lock管理・完全検証、旧distributionがない場合の分類診断に対応することを確認する。manifestのschemaだけで機能対応を推測しない。必要機能が未提供または確認不能なら導入を停止する。
 
 ## 境界
 
@@ -103,7 +103,7 @@ planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分�
 
 ### 旧配布からの初回移行（create経路）
 
-v0.2.5以前のschema `1`からは通常の`update`を使わず、「対応版」を満たす新Releaseへ`create`経路で移行する。旧schemaの読み込み・自動変換は行わない。旧lockのrevisionに対応するdistributionがない場合は`distribution-local-manifest-missing`、旧schemaの場合は`distribution-manifest-contract-unsupported`で停止する。lockを手編集して更新を通さない。
+非対応の旧manifest schemaからは通常の`update`を使わず、「対応条件」を満たす新Releaseへ`create`経路で移行する。旧schemaの読み込み・自動変換は行わない。旧lockのrevisionに対応するdistributionがない場合は`distribution-local-manifest-missing`、旧schemaの場合は`distribution-manifest-contract-unsupported`で停止する。lockを手編集して更新を通さない。
 
 1. 新しいexact Releaseを取得し、旧lock、置換対象caller、retired資産を棚卸しする。retiredの定義はpreset registryを参照し、製品設定・owner adapter・Secretsを移行対象と混同しない。旧callerの許可された設定値を確認して、後述のplanへ`--set`で明示する。
 2. consumerの運用者が退避・除去対象の正確なpathを承認する。consumerのGit除外された`tmp/`配下に専用退避先を作り、各対象を元の相対pathを維持してcopyする。元path・退避path・SHA-256を記録し、退避byteとの一致を確認する。退避対象外は変更しない。

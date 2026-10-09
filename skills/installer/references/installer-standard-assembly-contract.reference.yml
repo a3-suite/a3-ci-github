@@ -15,8 +15,8 @@ fields:
   schemaVersion: 固定schema識別子
   useCase: github-release-native または github-release-native-shared
   verificationProfile: useCaseに対応するprofileの明示選択
-  platforms: installer native idをkey、manifestとassetNameだけを持つobjectをvalueとする
-  sharedWrapper: shared useCaseだけで必須。assetNameと各platformの固定HTTPS deliveryUrlsを持つ
+  platforms: installer native idをkey、manifestとassetNameだけを持つobjectをvalueとする。shared useCaseは両Unix対象が必須で、Windows対象別installerを併用できる
+  sharedWrapper: shared useCaseだけで必須。assetNameと両Unix対象だけの固定HTTPS deliveryUrlsを持つ。Windowsはこの入口へ含めない
 unknownFields: reject
 platforms:
   native: [linux-x86_64, macos-arm64, windows-x86_64]
@@ -37,7 +37,7 @@ profiles:
     execution: 対象native runnerで実候補を実manifest・実archiveと共にoffline dry-run実行する
   shared-exact-payload-v1:
     useCase: github-release-native-shared
-    execution: 各native候補の上記検証に加え、実wrapperと実payloadを固定delivery test doubleで検証する
+    execution: Windowsを含む選択した各native候補の上記検証に加え、実wrapperと両Unixの実payloadを固定delivery test doubleで検証する
     excludes: test doubleからのWindows対応または他OS native実行の推認
 ownership:
   provider: 共通runtime・builder・共通テスト・実候補検証と証跡生成
@@ -46,6 +46,7 @@ ownership:
   ciDownloads: 固定Action同梱runtimeを利用。Agent Skillは不要
   localDownloads: 固定配布CLIをGit管理外へ取得。source cloneと依存restoreは不要
 bindings:
+  - sharedWrapper.deliveryUrlsは実際の固定製品Release URLを宣言する。サンプルのplaceholderは利用側で置換し、authorityによるmanifestのmarker解決対象には含めない
   - 製品宣言とmanifestはauthority.source_shaのGit blobと一致する
   - Release platform manifestはauthorityのpath・checksumに一致し、両phaseの実行前後で変更されない
   - release identityとartifact checksumはauthorityと標準buildから導出する
