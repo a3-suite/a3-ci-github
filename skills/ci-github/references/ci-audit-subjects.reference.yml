@@ -57,6 +57,7 @@ subjects:
       - obsolete-or-duplicated-project-owned-implementations
       - repository-root-readme-owner-result
       - ci-documentation-and-installer-owner-result-when-applicable
+      - applicable-project-contracts-instructions-and-local-skills-for-ci-or-installer
     stageChecks:
       configuration: comparisonScopeの構成・実装・文書と、固有差分の必要性・許容条件を確認する。
       execution-evidence: 固有差分に実行検証が必要な場合、その検証結果をownerの証跡へ照合する。構成の差分分類を実動作の保証へ読み替えない。
@@ -76,6 +77,7 @@ subjects:
       - do-not-update-every-action-pin-to-its-upstream-latest-version
       - delegate-installer-differences-through-installer-distribution
       - do-not-substitute-old-revision-preflight-success-for-standard-alignment
+      - project固有の契約・文書・有効な指示・ローカルスキルと標準の競合を確認し、該当ownerの意味判断と解決案を保持する。旧規則の存在だけで固有差分を正当化しない。
       - 適用するownerの必須比較について、対象identity・比較基準・選択段階に対応する証拠の受領と充足確認を終えてからsubject statusを確定する。ownerのsuccess表記だけで比較実施を代替しない。
     classificationInputs:
       - requires-standard-migration-is-observed-target-contract-violation-of-this-subject
@@ -146,6 +148,7 @@ subjects:
         - 総数を確定できない場合や総数が0の場合は適合率を算出せず、理由と未確認範囲を示す。適合度は監査全体のstatusや安全性の判定を代替しない。
       differenceReview:
         - 全実質差について、対象、標準の期待状態、実状態、分類、owner、正当性の結論と理由、証拠のパス・行番号または実行identity、対応案を表にする。差分がなければ差分なしと明記する。
+        - project固有規則との競合は、双方のパス・行番号、適用範囲、必要性の根拠、解決案または修正後の結果を同じ差分表へ含める。同じ差分を別項目として重複集計しない。
         - 正当性は標準で満たせない必須要件、例外の許容条件、採用方針、構成上の根拠へ照合してレビューする。既存実装の存在や移行の手間だけを正当化根拠にしない。
         - 構成上の正当性の結論はdifferenceClassificationと整合させ、実行検証の結果と根拠は別の欄へ示す。必要性が成立しても動作検証済みにはしない。installerの差分はownerの段階別レビュー結果を保持する。
       executionEvidenceSummary:

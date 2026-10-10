@@ -3,16 +3,21 @@ name: requirement
 requirements:
   - requirement_id: ci-github-selective-distribution
     type: functional
-    summary: 利用projectが固定revisionから選択したCI資材だけを検証付きで取得し、競合を確認して適用・復旧できる
+    summary: 提供元が1回のReleaseで実装と接続が揃うCI資材を公開し、利用projectが選択取得・適用・復旧できる
     rationale:
       why: >-
         repository全体または旧Agent Skill同梱資産へ依存すると、不要資材の取得、配布authorityの重複、
-        consumerごとの更新差分と復旧状態の不明確化が発生するため
+        consumerごとの更新差分と復旧状態の不明確化が発生するため。
+        実装修正版と接続更新版を別Releaseにすると、修正を採用したつもりでも旧実装を実行する状態が生じるため
     subject:
       namespace: ci
       key: selective-distribution
     priority: must
     fit_criteria:
+      - 通常リリースとhotfixは、それぞれ1つのexact tagと1回のGitHub Release公開で、その版の実装・生成物・workflow接続・installer接続を利用可能にする
+      - Action実装の事前Releaseや接続専用の後続Releaseを必須にせず、consumerは同じReleaseから導入するだけでその版の修正実装を利用できる
+      - 公開対象のworkflowとinstallerが実際に参照するfull SHAの資材を検証し、公開対象へ含まれない実装、旧実装への接続、未検証の接続を公開成功として扱わない
+      - 公開回数と準備コミット数を区別し、複数の準備コミットを使ってもexact tag、Release、consumerの採用版を分割しない
       - 配布assetとpresetの依存閉包をrepository registryから一意に選択できる
       - Release manifestは同一full commit SHAの登録済み通常ファイルについてpath、size、SHA-256を提示する
       - exact tagのGitHub Releaseはmanifest、standalone fetch CLI、SHA256SUMSだけを公開し、remote readbackが準備済みbyteと一致した後だけ成功する
@@ -25,7 +30,12 @@ requirements:
     derived_artifacts:
       use_cases:
         - use_case_ref:
+            use_case_id: ci-github-distribution-publication
+        - use_case_ref:
             use_case_id: ci-github-selective-asset-delivery
       quality_scenarios:
         - quality_scenario_ref:
             quality_scenario_id: ci-github-selective-distribution-safe
+      constraints:
+        - constraint_ref:
+            constraint_id: ci-github-single-release-publication

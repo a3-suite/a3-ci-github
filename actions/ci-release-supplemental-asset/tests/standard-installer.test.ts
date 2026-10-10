@@ -29,10 +29,12 @@ const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v
   manifest.state = { installStatePath: path.join(managed, 'state/install.state') };
   manifest.compatibility = { requiredInstallerVersion: '2' };
   fs.mkdirSync(path.join(root, 'installer'));
-  fs.writeFileSync(path.join(root, 'installer/product.json'), JSON.stringify(manifest));
-  fs.writeFileSync(path.join(root, 'installer/assembly.json'), JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms: { [target]: { manifest: 'installer/product.json', assetName } } }));
+  fs.writeFileSync(path.join(root, 'installer/product.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.writeFileSync(path.join(root, 'installer/assembly.json'), `${JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms: { [target]: { manifest: 'installer/product.json', assetName } } }, null, 2)}\n`);
+  fs.writeFileSync(path.join(root, 'platform.yml'), `platforms:\n  - id: ${platform.id}\n    runner: ${platform.runner}\n    target: ${platform.target}\n`);
   execFileSync('git', ['init', '-q', '--object-format=sha1', root]);
-  execFileSync('git', ['-C', root, 'add', 'installer']);
+  execFileSync('git', ['-C', root, 'config', 'core.autocrlf', 'false']);
+  execFileSync('git', ['-C', root, 'add', 'installer', 'platform.yml']);
   const tree = execFileSync('git', ['-C', root, 'write-tree'], { encoding: 'utf8' }).trim();
   const sourceSha = execFileSync('git', ['-C', root, 'hash-object', '-t', 'commit', '-w', '--stdin'], { input: `tree ${tree}\nauthor Fixture <fixture@example.invalid> 1 +0000\ncommitter Fixture <fixture@example.invalid> 1 +0000\n\nfixture\n`, encoding: 'utf8' }).trim();
   fs.writeFileSync(path.join(root, '.git/HEAD'), `${sourceSha}\n`);
@@ -45,7 +47,6 @@ const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v
   const checksum = sha256(fs.readFileSync(archive));
   fs.writeFileSync(`${archive}.sha256`, `${checksum}  ${archiveName}\n`);
   fs.writeFileSync(path.join(root, 'standard/asset-manifest.json'), JSON.stringify({ schema_version: '1', kind: 'ci-release-build-manifest', source_sha: sourceSha, version: '1.0.0', platform_id: platform.id, platform_target: platform.target, assets: [{ path: archiveName, sha256: checksum, checksum_path: `${archiveName}.sha256` }] }));
-  fs.writeFileSync(path.join(root, 'platform.yml'), `platforms:\n  - id: ${platform.id}\n    runner: ${platform.runner}\n    target: ${platform.target}\n`);
   const configure = (changes: Record<string, string> = {}): void => {
     const values = { CI_PLATFORM_MANIFEST: 'platform.yml', CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'true', CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT: 'ci.release-asset-publication-contract#supplementalAsset', CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract', CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer', CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'installer/assembly.json', ...changes };
     const sources = {};
@@ -65,16 +66,107 @@ const prepareAssembly = (f: ReturnType<typeof fixture>): SupplementalOptionsType
   return { ...f.options, operation: 'assemble', standardBuildRoot: 'standard-download', supplementalBuildRoot: 'supplemental-download', outputDirectory: 'handoff' };
 };
 
-const runDistributedAction = (f: ReturnType<typeof fixture>) => {
+const checkoutLineEndings = (root: string, endings: string): void => {
+  const files = ['installer/assembly.json', 'installer/product.json', 'platform.yml'];
+  for (const relative of files) fs.unlinkSync(path.join(root, relative));
+  execFileSync('git', ['-C', root, '-c', `core.autocrlf=${endings === 'lf' ? 'false' : 'true'}`, 'checkout-index', '--force', '--', ...files]);
+  for (const relative of files) {
+    const filename = path.join(root, relative);
+    if (endings === 'mixed') {
+      let line = 0;
+      fs.writeFileSync(filename, fs.readFileSync(filename, 'utf8').replace(/\r\n/g, () => ++line % 2 ? '\n' : '\r\n'));
+    }
+    const bytes = fs.readFileSync(filename, 'utf8');
+    if (endings !== 'lf') expect(bytes).toContain('\r\n');
+    if (endings !== 'crlf') expect(bytes.replace(/\r\n/g, '')).toContain('\n');
+  }
+};
+
+const runDistributedAction = (f: ReturnType<typeof fixture>, options = f.options) => {
   const output = path.join(f.root, 'runner-output');
   fs.writeFileSync(output, '');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, A3_INSTALLER_PROVIDER_REVISION: 'a'.repeat(40), INPUT_OPERATION: 'build-platform', 'INPUT_SOURCE-ROOT': f.root, 'INPUT_AUTHORITY-PATH': 'authority.json', 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_STANDARD-BUILD-ROOT': 'standard', 'INPUT_OUTPUT-DIRECTORY': 'platform-output', 'INPUT_SUPPLEMENTAL-BUILD-ROOT': '' };
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, A3_INSTALLER_PROVIDER_REVISION: 'a'.repeat(40), INPUT_OPERATION: options.operation, 'INPUT_SOURCE-ROOT': f.root, 'INPUT_AUTHORITY-PATH': 'authority.json', 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot, 'INPUT_OUTPUT-DIRECTORY': options.outputDirectory, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '' };
   const result = spawnSync(process.execPath, [path.join(repository, 'actions/ci-release-supplemental-asset/dist/index.js')], { cwd: f.root, encoding: 'utf8', env });
   return { result, output };
 };
 
 describe('standard installer', () => {
   describe('assembly', () => {
+    for (const endings of ['lf', 'crlf', 'mixed']) test(`accepts ${endings} checkout declarations through both phases and release assembly`, (t) => {
+      // Arrange
+      const f = fixture(t);
+      checkoutLineEndings(f.root, endings);
+      // Act
+      runSupplemental(f.options);
+      const assembled = prepareAssembly(f);
+      runSupplemental(assembled);
+      const result = assembleRelease({ authorityPath: path.join(f.root, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(f.root, 'snapshot.json'), platformManifestPath: path.join(f.root, 'platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(f.root, assembled.standardBuildRoot), supplementalRoot: path.join(f.root, 'handoff'), outputRoot: path.join(f.root, 'release-handoff') }, decodePlatformManifest);
+      // Assert
+      expect(result.assets.map((asset) => asset.name)).toContain(assetName);
+    });
+    for (const surface of ['Action', 'CLI']) test(`distributed ${surface} accepts CRLF checkout through both phases`, (t) => {
+      // Arrange
+      const f = fixture(t);
+      checkoutLineEndings(f.root, 'crlf');
+      const execute = (options: SupplementalOptionsType): void => {
+        const result = surface === 'Action' ? runDistributedAction(f, options).result : spawnSync(process.execPath,
+          [path.join(repository, 'runtime/installer/run-installer.mjs'), '--operation', options.operation, '--source-root', f.root,
+            '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', options.standardBuildRoot,
+            ...(options.supplementalBuildRoot ? ['--supplemental-build-root', options.supplementalBuildRoot] : []),
+            '--output-directory', options.outputDirectory, '--provider-revision', 'a'.repeat(40)], { encoding: 'utf8' });
+        expect(result.status, result.stderr).toBe(0);
+      };
+      // Act
+      execute(f.options);
+      execute(prepareAssembly(f));
+      // Assert
+      expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(true);
+    });
+    test('rejects changes beyond checkout line endings in both phases', (t) => {
+      // Arrange
+      const changes = [
+        (bytes: Buffer): Buffer => Buffer.concat([Buffer.from('\uFEFF'), bytes]),
+        (bytes: Buffer): Buffer => Buffer.from(bytes.toString('utf8').replace(/\n/g, '\r')),
+        (bytes: Buffer): Buffer => bytes.subarray(0, bytes.length - 1),
+        (bytes: Buffer): Buffer => Buffer.concat([bytes, Buffer.from(' ')]),
+        (bytes: Buffer): Buffer => Buffer.concat([bytes, Buffer.from([0xff])]),
+        (bytes: Buffer): Buffer => Buffer.from(bytes.toString('utf8').replace(/("[^"]+": ")/, '$1changed-').replace(/^platforms:/, 'platforms: changed')),
+      ];
+      for (const relative of ['installer/assembly.json', 'installer/product.json', 'platform.yml']) {
+        for (const [index, change] of changes.entries()) {
+          for (const operation of ['build-platform', 'assemble']) {
+            const f = fixture(t);
+            let options = f.options;
+            if (operation === 'assemble') { runSupplemental(f.options); options = prepareAssembly(f); }
+            const filename = path.join(f.root, relative);
+            const original = fs.readFileSync(filename);
+            expect(change(original)).not.toEqual(original);
+            fs.writeFileSync(filename, change(original));
+            const code = index === 4 ? 'source-text-utf8-invalid' : relative === 'platform.yml' ? 'platform-mismatch'
+              : relative === 'installer/assembly.json' ? 'owner-adapter-source-mismatch' : 'installer-declaration-source-mismatch';
+            // Act / Assert
+            expect(() => runSupplemental(options)).toThrow(code);
+            expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
+          }
+        }
+      }
+    });
+    test('rejects newline-only input mutation during provider execution in both phases', (t) => {
+      // Arrange
+      for (const relative of ['installer/assembly.json', 'installer/product.json', 'platform.yml']) {
+        for (const operation of ['build-platform', 'assemble']) {
+          const f = fixture(t);
+          let options = f.options;
+          if (operation === 'assemble') { runSupplemental(f.options); options = prepareAssembly(f); }
+          const installerRoot = path.join(f.root, 'injected-provider');
+          fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
+          fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), `import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/${JSON.stringify(relative)}\np.write_bytes(p.read_bytes().replace(b"\\n",b"\\r\\n"))\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n`);
+          // Act / Assert
+          expect(() => runSupplemental({ ...options, installerRoot })).toThrow('build-input-mutated');
+          expect(fs.existsSync(path.join(f.root, options.outputDirectory, 'supplemental-manifest.json'))).toBe(false);
+        }
+      }
+    });
     test('verifies a native candidate through the Python assembly boundary', (t) => {
       // Arrange
       const f = fixture(t);

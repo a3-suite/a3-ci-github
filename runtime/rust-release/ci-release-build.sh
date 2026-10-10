@@ -38,14 +38,8 @@ esac
 
 expected_manifest_digest=$(jq -er '.platform_manifest_sha256' "$authority_path")
 if ! [[ "$expected_manifest_digest" =~ ^[0-9a-f]{64}$ ]]; then exit 1; fi
-if command -v sha256sum >/dev/null 2>&1; then
-  actual_manifest_digest=$(tr -d '\r' < "$platform_manifest" | sha256sum | awk '{print $1}')
-else
-  actual_manifest_digest=$(tr -d '\r' < "$platform_manifest" | shasum -a 256 | awk '{print $1}')
-fi
-test "$actual_manifest_digest" = "$expected_manifest_digest"
 node "$script_dir/dist/index.mjs" \
-  "$platform_manifest" "$platform_id" "$platform_target"
+  "$platform_manifest" "$platform_id" "$platform_target" "$expected_manifest_digest"
 
 if [[ "$platform_target" == *-windows-* ]]; then
   command -v pwsh >/dev/null 2>&1

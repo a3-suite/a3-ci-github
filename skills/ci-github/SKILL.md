@@ -1,6 +1,6 @@
 ---
 name: ci-github
-description: GitHub Actions向けCIの設計、セットアップ・更新、canonical workflowの選択・配置、固定SHA Actionの接続、preflight、品質検証、Release／package公開、構成監査・証跡監査、復旧を行うときに使う。
+description: GitHub Actions向けCIの設計、セットアップ・更新、canonical workflowの選択・配置、固定SHA Actionの接続、preflight、品質検証、Release／package公開、構成監査・証跡監査、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、復旧を行うときに使う。
 ---
 
 # ci-github / SKILL
@@ -23,7 +23,9 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 必須: git - branch、tag、version、release notes、公開承認を確認するため
 - 必須: git-branch-strategy - branch categoryとpublish triggerを確認するため
+- 必須: post-artifact-review - 監査・監査後修正の最終結果を、主工程から独立レビュー必須として確認するため
 - 任意: github-actions - Action自体の公開契約と配布方法を確認する場合
+- 任意: a3-lint - 公開済みのCI向けルールを選択し、静的検証を実行する場合
 - 任意: 各言語スキル - quality、build、package commandを確認する場合
 
 ## 注意
@@ -58,6 +60,7 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 通常の監査は構成監査とする。証跡監査・両段階・リリース前の実行確認を指定された場合は、同じ対象について構成監査から証跡監査へ進む。段階選択と判定範囲は監査契約の`auditContract.stages`に従い、構成適合と実行証跡の結果を分けて報告する。
 - リリース前の確認として、最新の公開済み安定版の標準構成との整合を中心に監査する。必須subjectの比較基準を固定し、監査ガイドの標準比較工程を実施してから差分の必要性と移行対象を判定・報告する。installerが適用対象なら、固定providerの対応確認とOS別比較を含むowner結果を受け取ってから整合判定へ進む。permissions、runner trust、artifact handoff、停止条件とリリース前の検証証拠は、その裏付けとして確認する。目的と対象境界は監査契約、判定・報告は監査ガイドとsubject catalogに従う。
+- 同ガイドの「機械検証の選択」と「プロジェクト固有規則との競合確認」を実施し、検査の未対応項目と、標準に競合するローカル規則の解決案を差分表へ残す。
 - 参照: `references/verify-applied-ci-preset.guide.md`
 
 ### Releaseまたはpackage公開を実装・復旧したい

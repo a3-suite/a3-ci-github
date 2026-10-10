@@ -62,3 +62,12 @@ test_maps:
         symbol: "contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success"
         check_refs:
           - check-release-build-failure
+  - verification_id: verification.ci-rust-release-build.processing
+    case_id: source-text-boundary
+    tests:
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
+        check_refs: [failure, output]
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: "contract.ci-rust-release-build.processing > rust-release-scripts-regression > Windows build stops when native toolchain setup fails"
+        check_refs: [failure, output]
