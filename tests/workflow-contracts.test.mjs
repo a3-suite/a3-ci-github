@@ -15,6 +15,30 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
 
+describe('contract.ci-selective-distribution.publication', () => {
+  describe('repository-provider-binding', () => {
+  test('repository CI validates untagged connection candidates and preserves implementation preparation', () => {
+    const step = yaml.parse(read('.github/workflows/quality-gate.yml')).jobs['contract-linux'].steps.find((entry) => entry.id === 'provider-binding');
+    const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
+    expect(script).toBeDefined();
+    const code = script.split('\n').filter((line) => !line.startsWith('import ')).join('\n');
+    for (const [version, releaseTag, mode] of [['0.3.0\n', 'v0.2.11', '--preparation'], ['0.2.11\n', 'v0.2.10', '--preparation'], ['0.2.11\n', 'v0.2.11', '--candidate']]) {
+      const calls = [];
+      const context = {
+        process: { cwd: () => root, execPath: process.execPath },
+        readFileSync: (filename) => { expect(filename).toBe('VERSION'); return version; },
+        repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag } } } }),
+        execFileSync: (...args) => calls.push(args),
+      };
+      runInNewContext(code, context);
+      expect(calls).toEqual([[process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', mode], { stdio: 'inherit' }]]);
+      expect(() => runInNewContext(code, { ...context, execFileSync: () => { throw new Error('fixed-reference-contract-failed'); } })).toThrow('fixed-reference-contract-failed');
+      expect(() => runInNewContext(code, { ...context, repositorySnapshot: () => { throw new Error('registry-invalid'); } })).toThrow('registry-invalid');
+    }
+  });
+  });
+});
+
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
     // integration_id: quality-workflow-contract
@@ -779,6 +803,10 @@ describe("workflow-contracts", () => {
       const fixture = mkdtempSync(path.join(root, 'tmp/action-reference-gate-'));
       t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
       execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe' });
+      const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
+      if (execFileSync('git', ['tag', '--list', releaseTag], { cwd: fixture, encoding: 'utf8' }).trim() === '') {
+        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
+      }
       mkdirSync(path.join(fixture, 'actions'));
       for (const relative of [registryPath, ...repositorySnapshot(root).targets]) {
         mkdirSync(path.dirname(path.join(fixture, relative)), { recursive: true });
@@ -941,7 +969,8 @@ describe("workflow-contracts", () => {
       const job = Object.values(workflow.jobs).find((job) => job.steps?.includes(control));
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
-      const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) });
+      const candidate = snapshot.registry.actionization.implementationSource.releaseTag === `v${read('VERSION').trim()}`;
+      const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
       expect(result.interfaceDiagnostics.join('\n')).toContain('undeclared Action input undeclared-input');
@@ -1048,7 +1077,8 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences('runs: {using: composite, steps: [{uses: actions/checkout@main}]}', 'actions/example/action.yml', approved)).toHaveLength(1);
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
-      const checked = checkRepository(root);
+      const candidate = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag === `v${read('VERSION').trim()}`;
+      const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);
       const lintProfiles = yaml.parse(read('a3-lint.repository.yaml')).project.rule_sets;
@@ -1113,7 +1143,7 @@ describe("workflow-contracts", () => {
         expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
         const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs';
-        const commands = release ? ['provider-binding', testCommand] : ['npm run lint:provider'];
+        const commands = release ? ['provider-binding', testCommand] : ['provider-binding'];
         const gates = job.steps.map((step, index) => ({ step, index }))
           .filter(({ step }) => commands.includes(step.id ?? step.run?.trim()));
         expect(gates.map(({ step }) => step.id ?? step.run.trim()).sort()).toEqual([...commands].sort());
@@ -1128,6 +1158,7 @@ describe("workflow-contracts", () => {
         for (const { step } of gates) {
           expect(step.if).toBeUndefined();
           expect(step['continue-on-error'] ?? false).toBe(false);
+          expect(step.run).not.toContain('|| true');
         }
         const index = Math.max(...gates.map((gate) => gate.index));
         const protectedCommand = release ? 'runtime/distribution/generate-distribution-release.ts' : 'tests/workflow-contracts.test.mjs';
@@ -1144,7 +1175,7 @@ describe("workflow-contracts", () => {
         const document = yaml.parse(read(relative));
         assertRequiredGate(document, release);
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
-        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['npm run lint:provider']) {
+        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['provider-binding']) {
           const gateIndex = document.jobs[jobId].steps.findIndex((step) => (step.id ?? step.run) === gateCommand);
           const mutations = [
             (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),

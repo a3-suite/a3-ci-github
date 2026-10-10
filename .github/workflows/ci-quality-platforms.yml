@@ -110,7 +110,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@4683eface1915b15f4c822b00c604a216a78867c
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -166,7 +166,7 @@ jobs:
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
       - name: Resolve platform matrix
         id: resolve
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@4683eface1915b15f4c822b00c604a216a78867c
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
         with:
           manifest-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_PLATFORM_MANIFEST }}
           selection-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_QUALITY_PLATFORM_SELECTION }}
@@ -197,7 +197,7 @@ jobs:
             package.json
             package-lock.json
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@4683eface1915b15f4c822b00c604a216a78867c
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -205,7 +205,7 @@ jobs:
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@4683eface1915b15f4c822b00c604a216a78867c
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', needs.resolve-platforms.outputs['trusted_root'], env.CI_ADAPTER_DESCRIPTOR) || '' }}
@@ -296,6 +296,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@4683eface1915b15f4c822b00c604a216a78867c
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}

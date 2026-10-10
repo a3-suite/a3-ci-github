@@ -36,7 +36,18 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Validate provider references before contract execution
-        run: npm run lint:provider
+        id: provider-binding
+        shell: bash
+        run: |
+          node --input-type=module - <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync } from 'node:fs';
+          import { repositorySnapshot } from './runtime/repository/check-provider-references.mjs';
+          const { registry } = repositorySnapshot(process.cwd());
+          const version = readFileSync('VERSION', 'utf8').trim();
+          const candidate = registry.actionization.implementationSource.releaseTag === `v${version}`;
+          execFileSync(process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', candidate ? '--candidate' : '--preparation'], { stdio: 'inherit' });
+          NODE
 
       - name: Verify bundled Action distributions
         shell: bash

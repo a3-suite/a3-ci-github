@@ -116,6 +116,9 @@ test_maps:
   - verification_id: verification.ci-selective-distribution.publication
     case_id: selective-distribution-single-release-binding
     tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > repository-provider-binding > repository CI validates untagged connection candidates and preserves implementation preparation"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: "contract.ci-selective-distribution.publication > one Release connects an untagged implementation on release/0.2.11"
         check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
