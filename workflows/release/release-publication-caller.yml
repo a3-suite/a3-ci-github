@@ -56,7 +56,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate publication request identity
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@1d6958ce3953da4ecba81940ce6ab90e4a0a5435
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@4683eface1915b15f4c822b00c604a216a78867c
         with:
           operation: verify-publication-request
           request-workflow-run-id: ${{ github.event.workflow_run.id }}
@@ -102,7 +102,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1d6958ce3953da4ecba81940ce6ab90e4a0a5435
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@4683eface1915b15f4c822b00c604a216a78867c
         with:
           summary-json: >-
             {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}

@@ -66,6 +66,12 @@ describe("contract.ci-rust-release-build.processing", () => {
         expect(incomplete.status).not.toBe(0);
         expect(incomplete.stderr).toMatch(/usage:/);
       }
+      const windowsManifest = 'platforms:\n  - {id: windows-x64, runner: windows-2022, target: x86_64-pc-windows-msvc}\n';
+      for (const content of [windowsManifest, windowsManifest.replaceAll('\n', '\r\n'), windowsManifest.replace('\n', '\r\n')]) {
+        writeFileSync(manifest, content);
+        const windows = run(process.execPath, [...invocation, manifest, 'windows-x64', 'x86_64-pc-windows-msvc', sha256(windowsManifest)]);
+        expect(windows.status, windows.stderr).toBe(0);
+      }
     }));
   });
 });
@@ -614,7 +620,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);
       const manifestPath = path.join(fixture, 'platform-manifest.yml');
-      const manifestText = 'platforms:\n  - {id: windows-x64, runner: windows-2025, target: x86_64-pc-windows-msvc}\n';
+      const manifestText = 'platforms:\n  - {id: windows-x64, runner: windows-2022, target: x86_64-pc-windows-msvc}\n';
       writeFileSync(manifestPath, manifestText);
       const authorityPath = path.join(fixture, 'authority.json');
       writeFileSync(authorityPath, JSON.stringify({
