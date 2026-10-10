@@ -64,3 +64,7 @@ verifications:
         checks:
           - id: digest
             guarantee_ref: bound-asset-digest
+      - id: platform-checkout-eol
+        intent_id: bound-assembly
+        input: {platform-manifest: LF-CRLF-or-mixed}
+        checks: [{id: handoff, guarantee_ref: bound-handoff}, {id: digest, guarantee_ref: bound-asset-digest}]

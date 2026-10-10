@@ -50,6 +50,12 @@ observations:
         - selector: readbackStatus
           kind: observation_field
           meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
+        - selector: implementationSourceRevision
+          kind: observation_field
+          meaning: Full first-party implementation SHA verified against the final tagged source.
+        - selector: implementationBindingStatus
+          kind: observation_field
+          meaning: Verified only after implementation ancestry, VERSION, execution closure identity and fixed-reference connections pass; evidence identifies both source SHAs and the checked paths and Git object identities.
         - selector: diagnostic
           kind: observation_field
           meaning: Stable failure evidence for invalid source, duplicate or missing assets, or changed readback bytes.

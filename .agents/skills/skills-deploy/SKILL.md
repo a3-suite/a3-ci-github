@@ -49,7 +49,7 @@ description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を
 
 ### コミットゲートから配備整合を確認したい
 
-- 配備先 root を `A3_CI_GITHUB_SKILL_DEPLOY_ROOT` で明示し、`commit-gate` スキルの `skill-deploy-parity` から `project-skill-deploy` の差分検査、削除を伴わない反映、再検査を実行する。
+- `references/deploy-context.md` に従い配備先をリポジトリのローカルGit設定に保存し、`commit-gate` スキルの `skill-deploy-parity` から公開root全体の差分検査、削除を伴わない反映、再検査を実行する。
 - 削除候補がある場合は自動反映せず、明示操作として報告する。
 
 ## 参照

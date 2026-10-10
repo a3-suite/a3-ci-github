@@ -49,6 +49,29 @@ verifications:
             guarantee_ref: selective-distribution-publication-exposed
           - id: check-selective-distribution-release-integration-failure
             guarantee_ref: selective-distribution-publication-failure-exposed
+      - id: selective-distribution-single-release-binding
+        intent_id: selective-distribution-publication-intent
+        input:
+          scenario: implementation-commit-and-connection-commit-with-one-final-release
+          valid_variants:
+            - ordinary-release-with-verified-implementation-ancestor
+            - hotfix-with-verified-implementation-ancestor
+          rejected_variants:
+            - missing-or-unrelated-implementation-commit
+            - implementation-and-final-source-version-mismatch
+            - missing-declared-action-entrypoint
+            - changed-action-metadata-bundle-composite-script-or-runtime-payload
+            - stale-workflow-or-installer-binding
+            - fixed-reference-contract-failure
+          publication_count: 1
+          prior_implementation_release_required: false
+        checks:
+          - id: check-selective-distribution-single-release-success
+            guarantee_ref: selective-distribution-publication-exposed
+          - id: check-selective-distribution-implementation-binding
+            guarantee_ref: selective-distribution-implementation-binding-verified
+          - id: check-selective-distribution-single-release-rejection
+            guarantee_ref: selective-distribution-publication-failure-exposed
   - id: verification.ci-selective-distribution.application
     contract_id: contract.ci-selective-distribution.application
     cases:

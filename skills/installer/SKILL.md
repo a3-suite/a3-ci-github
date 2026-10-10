@@ -1,6 +1,6 @@
 ---
 name: installer
-description: GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材取得するインストーラ、インストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール手順の簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
+description: GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材取得するインストーラ、インストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール・アンインストール手順の作成・簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
 ---
 
 # installer / SKILL
@@ -43,6 +43,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - destructive な操作、所有権変更、権限変更は managed root 内に閉じる。root 外の launcher 操作は manifest 契約の「launcher 安全不変条件」に従い、service manager 登録は必要な最小操作だけに限定する。
 
 ## 関連スキル
+- 必須: post-artifact-review - セットアップ・README修正・監査・監査後修正の最終結果を、主工程から独立レビュー必須として確認するため
 - 任意: root-docs - READMEのインストール節を監査・改稿するときに、本文構成・最短導線・詳細への参照を担う補助スキルとして適用する
 - 任意: repository-audit - installer の導入推奨と project SSOT の採否を確認するときに参照する
 - 任意: runtime-script - installer が配置または生成する起動スクリプト、service manager handoff、PID、ログ、restart、health 境界を整理するときに参照する
@@ -52,7 +53,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - 任意: review - インストーラの設計や差分をレビューするときに参照する
 - 任意: test - 失敗系、rollback、冪等性のテスト方針を整理するときに参照する
 - 任意: ci - installer asset の CI 組立、workflow、権限、release publish の実装境界を整理するときに参照する
-- 任意: a3-lint - distribution layout の canonical textual marker を事前に機械検証するときに参照する
+- 任意: a3-lint - 公開済みルールの対応範囲で配布・宣言・READMEを機械検証するときに参照する
 - 任意: tech-stack-selection - installer 実装言語や配布技術の採否理由を設計書として整理するときに参照する
 - 任意: module-boundary-design - installer 実装が巨大化し、保守単位、公開契約、依存方向を整理するときに参照する
 
@@ -105,7 +106,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 - CIから委譲された場合は、実施結果と未確認事項をCI側へ返す。
 - 参照: references/use-standard-installer.guide.md
 
-### READMEのインストール手順を簡素化・修正したい
+### READMEのインストール・アンインストール手順を作成・簡素化・修正したい
 - 本スキルを主工程とし、採用した配布経路・コマンド・対応環境・配置先の正当性を確認する。READMEの本文・最短導線にはroot-docsを補助として適用し、次のガイドの「製品READMEへのインストール手順追記」節に限定して許可範囲の改稿と再確認まで行う。構成提案だけで終了しない。
 - 参照: references/use-standard-installer.guide.md
 
@@ -132,6 +133,7 @@ GitHub 管理のソース、Release asset、Packages、npm・Maven などの外�
 ### インストーラを監査したい
 - 通常の監査は構成監査とする。証跡監査・両段階・リリース前の実行確認を指定された場合は、同じ対象について構成監査から証跡監査へ進む。CIから委譲された場合は選択段階と確認対象を引き継ぐ。
 - READMEのインストール節ではroot-docsを補助として適用し、提供元が対応する短い既定オンライン起動を第一案としてOSごとに現手順と比較する。現在のasset名・URL・配置との一致だけで差分なしにせず、比較結果、残す操作の必要性、具体的な置換案を報告する。その修正を依頼された場合はREADMEの改稿と再確認へ進む。判定と変更範囲は監査ガイドに従う。
+- 同ガイドの機械検証とproject固有規則の競合確認を実施し、未対応の検査項目と競合の解決案を保持する。
 - 作成済み、導入判断が `required`、またはproject SSOTで要求されるinstaller script、製品宣言・manifest、execution request、関連ドキュメント、検査導線を構成監査で確認する。証跡監査では実候補とテスト結果を照合する。構成の欠落と実行証跡の未取得を分けて扱う。
 - スキル文書自体の監査ではなく、インストーラ成果物の実装・入力・運用証跡を対象にする。
 - 機械検証の成功だけで、実装責務・CI接続を確認した構成監査や、実候補の証跡を確認した証跡監査の成功とは扱わない。

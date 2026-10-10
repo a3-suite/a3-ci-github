@@ -10,7 +10,6 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
@@ -18,9 +17,12 @@ import { fileURLToPath } from 'node:url';
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(scriptRoot, '../..');
 const hasPwsh = spawnSync('pwsh', ['--version'], { encoding: 'utf8' }).status === 0;
+const nativePowerShells = process.platform === 'win32' ? ['powershell', 'pwsh'].filter((shell) => spawnSync(shell, ['-NoProfile', '-Command', 'exit 0']).status === 0) : [];
 
 const withFixture = (callback) => {
-  const fixture = mkdtempSync(path.join(os.tmpdir(), 'a3-ci-github-rust-release-'));
+  const temporaryRoot = path.join(repositoryRoot, 'tests/tmp');
+  mkdirSync(temporaryRoot, { recursive: true });
+  const fixture = mkdtempSync(path.join(temporaryRoot, 'a3-ci-github-rust-release-'));
   try {
     callback(fixture);
   } finally {
@@ -35,7 +37,7 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
   ...options,
 });
 
-const sha256 = (content) => createHash('sha256').update(content.replaceAll('\r', '')).digest('hex');
+const sha256 = (content) => createHash('sha256').update(content.replaceAll('\r\n', '\n')).digest('hex');
 
 describe("contract.ci-rust-release-build.processing", () => {
   describe("rust-release-build-script", () => {
@@ -49,16 +51,17 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Catch the CLI error before Node prints a minified bundle as its code frame.
       const invocation = ['--input-type=module', '--eval', "import { pathToFileURL } from 'node:url'; try { await import(pathToFileURL(process.argv[1]).href); } catch (error) { console.error(error.message); process.exitCode = 1; }", executable];
       // Act
-      const accepted = run(process.execPath, [...invocation, manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']);
-      const missingId = run(process.execPath, [...invocation, manifest, 'unknown', 'x86_64-unknown-linux-gnu']);
-      const wrongTarget = run(process.execPath, [...invocation, manifest, 'linux-x64', 'wrong-target']);
+      const digest = sha256(readFileSync(manifest, 'utf8'));
+      const accepted = run(process.execPath, [...invocation, manifest, 'linux-x64', 'x86_64-unknown-linux-gnu', digest]);
+      const missingId = run(process.execPath, [...invocation, manifest, 'unknown', 'x86_64-unknown-linux-gnu', digest]);
+      const wrongTarget = run(process.execPath, [...invocation, manifest, 'linux-x64', 'wrong-target', digest]);
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(missingId.status).not.toBe(0);
       expect(missingId.stderr).toMatch(/selected platform id is not present/);
       expect(wrongTarget.status).not.toBe(0);
       expect(wrongTarget.stderr).toMatch(/selected platform target does not match/);
-      for (const args of [[], [manifest], [manifest, 'linux-x64']]) {
+      for (const args of [[], [manifest], [manifest, 'linux-x64'], [manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']]) {
         const incomplete = run(process.execPath, [...invocation, ...args]);
         expect(incomplete.status).not.toBe(0);
         expect(incomplete.stderr).toMatch(/usage:/);
@@ -193,6 +196,23 @@ describe("contract.ci-rust-release-build.processing", () => {
       ), { env: environment });
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
+
+      // Act / Assert: checkout EOL differences are permitted, other bytes remain bound.
+      const acceptedManifests = [manifestText.replaceAll('\n', '\r\n'), manifestText.replace('\n', '\r\n')];
+      for (const [index, content] of acceptedManifests.entries()) {
+        writeFileSync(manifestPath, content);
+        const acceptedCheckout = runBuild(args('1.90.0', platformTarget, path.join(fixture, `checkout-${index}`)), { env: environment });
+        expect(acceptedCheckout.status, acceptedCheckout.stderr).toBe(0);
+      }
+      const rejectedManifests = [manifestText.replaceAll('\n', '\r'), `\uFEFF${manifestText}`, manifestText.trimEnd(), `${manifestText} `, Buffer.concat([Buffer.from(manifestText), Buffer.from([0xff])])];
+      for (const [index, content] of rejectedManifests.entries()) {
+        writeFileSync(manifestPath, content);
+        const output = path.join(fixture, `checkout-rejected-${index}`);
+        const rejectedCheckout = runBuild(args('1.90.0', platformTarget, output), { env: environment });
+        expect(rejectedCheckout.status).not.toBe(0);
+        expect(existsSync(output)).toBe(false);
+      }
+      writeFileSync(manifestPath, manifestText);
 
       // Act + Assert: the authority version is accepted as an independent token in the --version output.
       const tokenOutputs = ['a3-sdd 0.3.0', 'v0.3.0', 'V0.3.0', '0.3.0', 'a3-sdd 0.3.0\n(commit abc)', 'a3-sdd\t0.3.0', 'a3-sdd\r0.3.0'];
@@ -590,7 +610,7 @@ describe("contract.ci-rust-release-build.processing", () => {
 
     // contract_id: contract.ci-rust-release-build.processing
     // integration_id: rust-release-scripts-regression
-    test('Windows build stops when native toolchain setup fails', { skip: process.platform !== 'win32' || !hasPwsh }, () => withFixture((fixture) => {
+    test('Windows build stops when native toolchain setup fails', { skip: nativePowerShells.length === 0 }, () => withFixture((fixture) => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);
       const manifestPath = path.join(fixture, 'platform-manifest.yml');
@@ -617,16 +637,31 @@ describe("contract.ci-rust-release-build.processing", () => {
         CI_RELEASE_ASSET_PREFIX: 'example-cli',
       };
 
-      // Act
-      const result = run('pwsh', [
-        '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'ci-release-build.ps1'),
-        'rust', manifestPath, '1.90.0', 'windows-x64', 'x86_64-pc-windows-msvc',
-        authorityPath, output,
-      ], { cwd: fixture, env: environment });
-      // Assert
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toMatch(/rust toolchain setup failed/);
-      expect(existsSync(output)).toBe(false);
+      for (const shell of nativePowerShells) {
+        const invoke = () => run(shell, [
+          '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'ci-release-build.ps1'),
+          'rust', manifestPath, '1.90.0', 'windows-x64', 'x86_64-pc-windows-msvc', authorityPath, output,
+        ], { cwd: fixture, env: environment });
+        for (const content of [manifestText, manifestText.replaceAll('\n', '\r\n'), manifestText.replace('\n', '\r\n')]) {
+          writeFileSync(manifestPath, content);
+          // Act
+          const result = invoke();
+          // Assert: a sentinel toolchain failure proves the real script passed manifest validation.
+          expect(result.status).not.toBe(0);
+          expect(result.stderr).toMatch(/rust toolchain setup failed/);
+          expect(existsSync(output)).toBe(false);
+        }
+        for (const content of [manifestText.replaceAll('\n', '\r'), `\uFEFF${manifestText}`, manifestText.trimEnd(), `${manifestText} `, Buffer.concat([Buffer.from(manifestText), Buffer.from([0xff])])]) {
+          writeFileSync(manifestPath, content);
+          // Act
+          const result = invoke();
+          // Assert
+          expect(result.status).not.toBe(0);
+          expect(result.stderr).toMatch(/platform manifest identity mismatch/);
+          expect(result.stderr).not.toMatch(/rust toolchain setup failed/);
+          expect(existsSync(output)).toBe(false);
+        }
+      }
     }));
   });
 });

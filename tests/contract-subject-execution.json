@@ -38,14 +38,16 @@
           "level": "unit",
           "cwd": "runtime/release-publication",
           "tests": [
-            "tests/notes-binding.test.ts"
+            "tests/notes-binding.test.ts",
+            "../platform/tests/source-text.test.mjs"
           ],
           "typescript": true,
           "coverage": {
             "enabled": true,
             "scope": "source",
             "include": [
-              "notes-binding.ts"
+              "notes-binding.ts",
+              "../platform/source-text.mjs"
             ],
             "exclude": []
           }
@@ -2073,7 +2075,10 @@
             "enabled": true,
             "scope": "source",
             "include": [
-              "runtime/distribution/**/*.mjs"
+              "runtime/distribution/**/*.mjs",
+              "runtime/repository/check-provider-references.mjs",
+              "runtime/repository/update-action-references.mjs",
+              "runtime/repository/verify-implementation-binding.mjs"
             ],
             "exclude": [
               "runtime/distribution/tests/**"
@@ -2096,6 +2101,18 @@
             "exclude": [
               "runtime/distribution/tests/**"
             ]
+          }
+        },
+        {
+          "id": "e2e-local-binding",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "runtime/repository/tests/single-release-binding.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "The publication CLI, workflow shell, and fixed bundle subprocesses form a local process E2E boundary; coverage is not attributed across those child processes."
           }
         },
         {

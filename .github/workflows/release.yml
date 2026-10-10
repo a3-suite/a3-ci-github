@@ -31,6 +31,8 @@ jobs:
     outputs:
       source_sha: ${{ steps.release-identity.outputs.source_sha }}
       tag_object: ${{ steps.release-identity.outputs.tag_object }}
+      implementation_source_sha: ${{ steps.provider-binding.outputs.implementation_source_sha }}
+      implementation_binding_status: ${{ steps.provider-binding.outputs.implementation_binding_status }}
     steps:
       - name: Validate requested exact tag format
         env:
@@ -76,14 +78,22 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Validate provider references before distribution generation
-        run: npm run lint:provider
+        id: provider-binding
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          binding_report="$(node runtime/repository/check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG")"
+          printf '%s\n' "$binding_report"
+          BINDING_REPORT="$binding_report" node --input-type=module -e 'import fs from "node:fs"; const result = JSON.parse(process.env.BINDING_REPORT); if (result.implementationBindingStatus !== "verified") process.exit(1); fs.appendFileSync(process.env.GITHUB_OUTPUT, `implementation_source_sha=${result.implementationSourceRevision}\nimplementation_binding_status=${result.implementationBindingStatus}\n`);'
 
       - name: Install distribution builder dependencies
         shell: bash
         run: npm --prefix runtime/preset ci --no-audit --no-fund
 
       - name: Validate workflow and generation contracts before distribution generation
-        run: npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs
+        run: npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs
 
       - name: Generate selective distribution Release assets
         shell: bash
@@ -238,6 +248,8 @@ jobs:
           PUBLISH_RESULT: ${{ needs.publish-distribution.result }}
           READBACK_RESULT: ${{ needs.readback-distribution.result }}
           ALIASES_RESULT: ${{ needs.update-aliases.result }}
+          IMPLEMENTATION_SOURCE_SHA: ${{ needs.prepare-distribution.outputs.implementation_source_sha }}
+          IMPLEMENTATION_BINDING_STATUS: ${{ needs.prepare-distribution.outputs.implementation_binding_status }}
         shell: bash
         run: |
           set -euo pipefail
@@ -247,10 +259,13 @@ jobs:
             echo "- publish: $PUBLISH_RESULT"
             echo "- readback: $READBACK_RESULT"
             echo "- aliases: $ALIASES_RESULT"
+            echo "- implementationSourceRevision: $IMPLEMENTATION_SOURCE_SHA"
+            echo "- implementationBindingStatus: $IMPLEMENTATION_BINDING_STATUS"
           } | tee -a "$GITHUB_STEP_SUMMARY"
           failed=0
           test "$PREPARE_RESULT" = success || failed=1
           test "$PUBLISH_RESULT" = success || failed=1
           test "$READBACK_RESULT" = success || failed=1
           test "$ALIASES_RESULT" = success || failed=1
+          test "$IMPLEMENTATION_BINDING_STATUS" = verified || failed=1
           test "$failed" = 0

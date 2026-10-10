@@ -34,6 +34,12 @@
   - Windows: `powershell -ExecutionPolicy Bypass -NoProfile -Command "irm <wrapper-url> | iex"`
 - 共有 Unix wrapper は、プラットフォームを実行時に検出し、検証済み platform installer を選んで実行する。wrapper と platform installer は別 asset として公開し、組立証跡で対応付ける。
 
+## 製品宣言の標準配置
+
+製品リポジトリではassemblyを`installer/assembly.json`、対象別manifestを`installer/manifests/<native-platform-id>.json`へ置く。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
+
+この配置と次節のインストール先を標準との比較基準にする。既存のディレクトリ名だけを維持理由にせず、異なる配置が必要なら製品要件とownerの根拠をproject SSOTへ記録する。ディレクトリ名の違いだけで安全性違反とは扱わず、既存のproject override分類へ渡す。
+
 ## 配置プロファイルと標準配置
 - installer は配置プロファイルとして `per-user-cli`（既定）と `system-wide` を扱う。manifest の `placement.profile` を省略した場合は `per-user-cli` とする。
 - `per-user-cli` は root 権限を必要とせず、単一ユーザーの CLI 向けの既定とする。`system-wide` はサービス、複数ユーザー、共有 CLI の要求がある場合だけ project SSOT の証跡付きで選ぶ。

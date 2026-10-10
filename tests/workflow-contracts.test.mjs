@@ -3,7 +3,6 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
 import { checkActionReferences, checkProviderReferences, checkRepository, registryPath, repositorySnapshot } from '../runtime/repository/check-provider-references.mjs';
 import { verifyActionReferenceContracts } from '../runtime/repository/verify-action-reference-contracts.mjs';
-import { applyActionReferenceUpdate, planActionReferenceUpdate } from '../runtime/repository/update-action-references.mjs';
 import path from 'node:path';
 import { test, describe, expect, onTestFinished } from 'vitest';
 import { runInNewContext } from 'node:vm';
@@ -433,6 +432,8 @@ describe("contract.ci-selective-distribution.publication", () => {
         /a3-ci-github-distribution-manifest\.json/,
         /fetch-a3-ci-github\.mjs/,
         /SHA256SUMS/,
+        /check-provider-references\.mjs --contracts --release-tag/,
+        /implementation_binding_status: \$\{\{ steps\.provider-binding\.outputs\.implementation_binding_status \}\}/,
         /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/,
       ]);
       expect(prepare).not.toMatch(/contents: write/);
@@ -903,13 +904,14 @@ describe("workflow-contracts", () => {
       git('read-tree', 'HEAD');
       mkdirSync(path.dirname(path.join(fixture, entrypoint)), { recursive: true });
       writeFileSync(path.join(fixture, entrypoint), bundle);
-      git('add', entrypoint);
+      writeFileSync(path.join(fixture, 'VERSION'), '999.0.0\n');
+      git('add', entrypoint, 'VERSION');
       const hooks = path.join(fixture, 'tmp/empty-hooks');
       mkdirSync(hooks, { recursive: true });
       git('-c', 'user.name=Reference Test', '-c', 'user.email=reference-test@example.invalid', '-c', 'commit.gpgsign=false', '-c', `core.hooksPath=${hooks}`, 'commit', '-m', 'Synthetic unavailable bundle');
       const sha = git('rev-parse', 'HEAD');
       const tag = 'v999.0.0';
-      git('tag', tag);
+      git('-c', 'user.name=Reference Test', '-c', 'user.email=reference-test@example.invalid', 'tag', '-a', tag, '-m', 'Synthetic unavailable bundle');
       for (const relative of [registryPath, ...repositorySnapshot(fixture).targets]) {
         writeFileSync(path.join(fixture, relative), readFileSync(path.join(fixture, relative), 'utf8').replaceAll(actionRef, sha));
       }
@@ -947,44 +949,6 @@ describe("workflow-contracts", () => {
       expect(result.diagnostics.join('\n')).toContain('installer provider revision differs');
     });
 
-    // integration_id: repository-action-reference-update
-    test('Action reference updater confines changes and rejects stale inputs and tag mappings', (t) => {
-      // Arrange
-      const fixture = referenceFixture(t);
-      const old = execFileSync('git', ['rev-parse', 'refs/tags/v0.2.0^{commit}'], { cwd: fixture, encoding: 'utf8' }).trim();
-      const targets = [registryPath, ...repositorySnapshot(fixture).targets];
-      for (const relative of targets) writeFileSync(path.join(fixture, relative), readFileSync(path.join(fixture, relative), 'utf8').replaceAll(actionRef, old));
-      const oldRegistry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
-      oldRegistry.actionization.implementationSource.releaseTag = 'v0.2.0';
-      writeFileSync(path.join(fixture, registryPath), yaml.stringify(oldRegistry));
-      const pending = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8')).qualityReusableWorkflow;
-      // Act
-      const plan = planActionReferenceUpdate(fixture, 'v0.2.4');
-      // Assert
-      expect(plan.changedPaths).toHaveLength(13);
-      expect(plan.connection.diagnostics).toEqual([]);
-      for (const relative of targets.filter((target) => !plan.changedPaths.includes(target))) expect(plan.after.get(relative)).toBe(plan.before.get(relative));
-      expect(yaml.parse(plan.after.get(registryPath)).qualityReusableWorkflow).toEqual(pending);
-      // Arrange
-      writeFileSync(path.join(fixture, registryPath), `${plan.before.get(registryPath)}\n# concurrent change\n`);
-      // Act / Assert
-      expect(() => applyActionReferenceUpdate(fixture, plan)).toThrow(/input changed/);
-      // Arrange
-      writeFileSync(path.join(fixture, registryPath), plan.before.get(registryPath));
-      // Act
-      applyActionReferenceUpdate(fixture, plan);
-      const repeated = planActionReferenceUpdate(fixture, 'v0.2.4');
-      // Assert
-      expect(repeated.changedPaths).toEqual([]);
-      expect(checkRepository(fixture).diagnostics).toEqual([]);
-      expect(() => planActionReferenceUpdate(fixture, 'v0')).toThrow(/exact/);
-      expect(() => planActionReferenceUpdate(fixture, 'v9.9.9')).toThrow();
-      // Arrange
-      execFileSync('git', ['tag', '-d', 'v0.2.4'], { cwd: fixture, stdio: 'pipe' });
-      execFileSync('git', ['tag', 'v0.2.4', old], { cwd: fixture, stdio: 'pipe' });
-      // Act / Assert
-      expect(() => planActionReferenceUpdate(fixture, 'v0.2.4')).toThrow(/annotated/);
-    });
     // integration_id: repository-quality-delivery-regression
     test('repository quality workflow scopes branch events and cancels only stale PR runs', () => {
       const workflow = read('.github/workflows/quality-gate.yml');
@@ -1148,9 +1112,18 @@ describe("workflow-contracts", () => {
         expect(job).toBeDefined();
         expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
+        const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs';
+        const commands = release ? ['provider-binding', testCommand] : ['npm run lint:provider'];
         const gates = job.steps.map((step, index) => ({ step, index }))
-          .filter(({ step }) => (release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']).includes(step.run?.trim()));
-        expect(gates.map(({ step }) => step.run.trim()).sort()).toEqual((release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']).sort());
+          .filter(({ step }) => commands.includes(step.id ?? step.run?.trim()));
+        expect(gates.map(({ step }) => step.id ?? step.run.trim()).sort()).toEqual([...commands].sort());
+        if (release) {
+          const binding = gates.find(({ step }) => step.id === 'provider-binding').step;
+          expect(binding.run).toContain('set -euo pipefail');
+          expect(binding.run).toContain('check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG"');
+          expect(binding.run).not.toContain('|| true');
+          expect(binding.env.RELEASE_TAG).toBe('${{ inputs.release-tag }}');
+        }
         expect(job.steps.some((step) => step.run?.includes('lint:repository'))).toBe(false);
         for (const { step } of gates) {
           expect(step.if).toBeUndefined();
@@ -1171,8 +1144,8 @@ describe("workflow-contracts", () => {
         const document = yaml.parse(read(relative));
         assertRequiredGate(document, release);
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
-        for (const gateCommand of release ? ['npm run lint:provider', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs'] : ['npm run lint:provider']) {
-          const gateIndex = document.jobs[jobId].steps.findIndex((step) => step.run === gateCommand);
+        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['npm run lint:provider']) {
+          const gateIndex = document.jobs[jobId].steps.findIndex((step) => (step.id ?? step.run) === gateCommand);
           const mutations = [
             (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),
             (copy) => { copy.jobs[jobId].steps[gateIndex].if = false; },

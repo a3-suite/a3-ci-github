@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.rust-release-build
 contracts:
   - id: contract.ci-rust-release-build.processing
-    summary: The shared scripts build, package, and verify an authority-bound Rust release asset or fail closed. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
+    summary: The shared scripts build, package, and verify an authority-bound Rust release asset or fail closed. Both Unix and PowerShell build scripts verify platform identity using the source-text identity rule of contract.ci-release-authority.outputs before toolchain execution. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
     conditions:
       - id: rust-release-build-inputs-match-authority
         environment_predicate:

@@ -152,3 +152,33 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects noncanonical checksum bytes in both phases
         check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-checkout-eol
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts lf checkout declarations through both phases and release assembly"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > distributed Action accepts CRLF checkout through both phases"
+        check_refs: [success, output]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > distributed CLI accepts CRLF checkout through both phases"
+        check_refs: [success, output]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-source-content
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > rejects changes beyond checkout line endings in both phases"
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-execution-eol-mutation
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > rejects newline-only input mutation during provider execution in both phases"
+        check_refs: [refusal]

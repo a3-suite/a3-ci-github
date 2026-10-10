@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
+import { verifyImplementationBinding } from './verify-implementation-binding.mjs';
 
 export const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
 export const parseYaml = (text, relative) => {
@@ -77,31 +78,46 @@ export function repositorySnapshot(root, staged = false) {
   } };
 }
 
-export function checkRepository(root, staged = false) {
+export function checkRepository(root, staged = false, options = {}) {
   const snapshot = repositorySnapshot(root, staged);
   const binding = snapshot.registry.actionization.implementationSource;
   if (!/^[0-9a-f]{40}$/.test(binding.exactRef) || binding.repository !== 'a3-suite/a3-ci-github') throw new Error('Invalid first-party Action binding');
   const diagnostics = snapshot.providerTargets.flatMap((relative) => checkProviderReferences(snapshot.read(relative), relative, snapshot.approved, binding));
-  const connection = checkActionReferences(root, snapshot);
+  const connection = checkActionReferences(root, snapshot, options);
   diagnostics.push(...connection.diagnostics);
   snapshot.assertUnchanged();
-  return { checkedTargets: snapshot.targets.length, diagnostics, interfaceDiagnostics: connection.interfaceDiagnostics, actionReferences: connection.references, snapshot };
+  return { checkedTargets: snapshot.targets.length, diagnostics, interfaceDiagnostics: connection.interfaceDiagnostics, actionReferences: connection.references, implementationBinding: connection.implementationBinding, snapshot };
 }
 
-export function checkActionReferences(root, snapshot) {
+function actionEntrypointDiagnostics(root, actionPath, sha, action, closureRoots) {
+  const runs = action.runs ?? {};
+  let entries;
+  if (/^node[0-9]+$/.test(runs.using)) entries = ['main', ...['pre', 'post'].filter((key) => Object.hasOwn(runs, key))].map((key) => runs[key]);
+  else if (runs.using === 'composite') {
+    const pattern = /(?:\$\{GITHUB_ACTION_PATH\}|\$GITHUB_ACTION_PATH\b|\$\{\{\s*github\.action_path\s*\}\})["']?\/([a-zA-Z0-9._/-]+)(?:["'](?=[\s;|&)]|$)|(?=[\s;|&)]|$))/g;
+    entries = (runs.steps ?? []).flatMap((step) => [...(step.run ?? '').matchAll(pattern)].map((match) => match[1]));
+    if ((runs.steps ?? []).some((step) => /\$(?:\{?GITHUB_ACTION_PATH\b|\{\{\s*github\.action_path\b)/.test((step.run ?? '').replace(pattern, '')))) return [`${actionPath}@${sha}: unresolved Composite Action entrypoint`];
+  }
+  else return [`${actionPath}@${sha}: unsupported Action entrypoint runtime`];
+  return entries.flatMap((entry) => {
+    if (typeof entry !== 'string' || !entry || path.posix.isAbsolute(entry)) return [`${actionPath}@${sha}: invalid Action entrypoint`];
+    const relative = path.posix.normalize(`${actionPath}/${entry}`);
+    if (!closureRoots.some((directory) => relative.startsWith(`${directory}/`))) return [`${actionPath}@${sha}: Action entrypoint outside execution closure: ${entry}`];
+    const object = execFileSync('git', ['ls-tree', '--format=%(objectmode) %(objecttype)', sha, '--', `:(literal)${relative}`], { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
+    return /^(100644|100755) blob$/.test(object) ? [] : [`${actionPath}@${sha}: Action entrypoint is missing or not a regular file: ${entry}`];
+  });
+}
+
+export function checkActionReferences(root, snapshot, options = {}) {
   const binding = snapshot.registry.actionization.implementationSource;
   const diagnostics = [];
   const interfaceDiagnostics = [];
   const references = snapshot.targets.flatMap((relative) => workflowReferences(snapshot.read(relative), relative)
     .filter((reference) => typeof reference.uses === 'string' && reference.uses.startsWith(`${binding.repository}/actions/`))
     .map((reference) => ({ ...reference, relative })));
+  const actionPaths = references.flatMap(({ uses }) => /^a3-suite\/a3-ci-github\/(actions\/[a-z0-9-]+)@[0-9a-f]{40}$/.exec(uses)?.[1] ?? []);
+  const closureRoots = [...new Set([...actionPaths, 'runtime'])];
   const metadata = new Map();
-  if (references.length) {
-    const tag = binding.releaseTag;
-    if (!/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(tag)) throw new Error('Invalid first-party release tag');
-    const resolved = execFileSync('git', ['rev-parse', `refs/tags/${tag}^{commit}`], { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
-    if (resolved !== binding.exactRef) diagnostics.push('First-party Action binding differs from its exact release tag');
-  }
   for (const reference of references) {
     const match = /^a3-suite\/a3-ci-github\/(actions\/[a-z0-9-]+)@([0-9a-f]{40})$/.exec(reference.uses);
     if (!match) {
@@ -118,6 +134,7 @@ export function checkActionReferences(root, snapshot) {
     if (!metadata.has(reference.uses)) {
       const text = execFileSync('git', ['show', `${sha}:${actionPath}/action.yml`], { cwd: root, encoding: 'utf8', stdio: 'pipe' });
       metadata.set(reference.uses, parseYaml(text, `${sha}:${actionPath}/action.yml`).toJS());
+      diagnostics.push(...actionEntrypointDiagnostics(root, actionPath, sha, metadata.get(reference.uses), closureRoots));
     }
     const action = metadata.get(reference.uses);
     const inputs = reference.step?.with ?? {};
@@ -134,15 +151,48 @@ export function checkActionReferences(root, snapshot) {
     const revision = reference.step?.env?.A3_INSTALLER_PROVIDER_REVISION;
     if (revision !== undefined && revision !== sha) diagnostics.push(`${reference.relative}:${reference.location}: installer provider revision differs from the Action SHA`);
   }
-  return { diagnostics, interfaceDiagnostics, references };
+  let implementationBinding;
+  if (actionPaths.length) {
+    const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
+    let sourceRevision;
+    let sourceTree;
+    if (options.candidate) {
+      sourceRevision = git('rev-parse', 'HEAD');
+      sourceTree = snapshot.before ?? git('rev-parse', 'HEAD^{tree}');
+      if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...new Set([...actionPaths, 'runtime']))) throw new Error('implementation-candidate-execution-assets-dirty');
+      if (snapshot.read('VERSION').trim() !== git('show', `${sourceTree}:VERSION`)) throw new Error('implementation-candidate-version-dirty');
+    } else {
+      const tag = options.releaseTag ?? binding.releaseTag;
+      if (tag !== binding.releaseTag) throw new Error('implementation-binding-release-tag-mismatch');
+      if (git('cat-file', '-t', `refs/tags/${tag}`) !== 'tag') throw new Error('implementation-binding-annotated-tag-required');
+      sourceRevision = git('rev-parse', `refs/tags/${tag}^{commit}`);
+      if (options.releaseTag && (snapshot.before || sourceRevision !== git('rev-parse', 'HEAD'))) throw new Error('implementation-publication-source-mismatch');
+      if (options.releaseTag && git('status', '--porcelain', '--untracked-files=all', '--', 'VERSION', registryPath, ...snapshot.targets, ...new Set([...actionPaths, 'runtime']))) throw new Error('implementation-publication-source-dirty');
+      sourceTree = sourceRevision;
+    }
+    implementationBinding = verifyImplementationBinding(root, binding, actionPaths, { sourceRevision, sourceTree });
+  } else if (options.releaseTag || options.candidate) throw new Error('implementation-binding-references-missing');
+  return { diagnostics, interfaceDiagnostics, references, implementationBinding };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const args = process.argv.slice(2);
-    if (args.some((arg) => !['--staged', '--contracts', '--preparation'].includes(arg)) || args.includes('--preparation') && !args.includes('--contracts')) throw new Error('Usage: node runtime/repository/check-provider-references.mjs [--staged] [--contracts [--preparation]]');
-    const result = checkRepository(process.cwd(), args.includes('--staged'));
-    const report = { checkedTargets: result.checkedTargets, diagnostics: result.diagnostics, interfaceDiagnostics: result.interfaceDiagnostics };
+    const options = {};
+    const flags = new Set();
+    for (let index = 0; index < args.length; index += 1) {
+      const arg = args[index];
+      if (flags.has(arg) || !['--staged', '--contracts', '--preparation', '--candidate', '--release-tag'].includes(arg)) throw new Error('Usage: node runtime/repository/check-provider-references.mjs [--staged] [--contracts] [--preparation|--candidate] or --contracts --release-tag <vX.Y.Z>');
+      flags.add(arg);
+      if (arg === '--release-tag') { options.releaseTag = args[++index]; if (!/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(options.releaseTag ?? '')) throw new Error('Expected an exact release tag'); }
+    }
+    options.candidate = flags.has('--candidate');
+    if (flags.has('--preparation') && (!flags.has('--contracts') || options.candidate) || options.releaseTag && (!flags.has('--contracts') || options.candidate || flags.has('--staged') || flags.has('--preparation'))) throw new Error('Invalid provider reference validation mode');
+    const result = checkRepository(process.cwd(), flags.has('--staged'), options);
+    const report = { checkedTargets: result.checkedTargets, diagnostics: result.diagnostics, interfaceDiagnostics: result.interfaceDiagnostics,
+      implementationBinding: result.implementationBinding,
+      implementationSourceRevision: result.implementationBinding?.implementationSourceRevision,
+      implementationBindingStatus: result.implementationBinding?.implementationBindingStatus };
     if (args.includes('--contracts') && !result.diagnostics.length) {
       const { verifyActionReferenceContracts } = await import('./verify-action-reference-contracts.mjs');
       report.connection = verifyActionReferenceContracts(process.cwd(), result.actionReferences, result.snapshot);
@@ -153,6 +203,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       report.preparationOnly = args.includes('--preparation') && pending && report.connection.diagnostics.length > 0;
     }
     result.snapshot.assertUnchanged();
+    if (!flags.has('--contracts') && report.implementationBinding) {
+      report.implementationBindingStatus = 'unverified';
+      report.implementationBinding.implementationBindingStatus = 'unverified';
+    }
+    if (result.diagnostics.length || result.interfaceDiagnostics.length || report.connection?.diagnostics.length) {
+      report.implementationBindingStatus = 'rejected';
+      if (report.implementationBinding) report.implementationBinding.implementationBindingStatus = 'rejected';
+    }
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     process.exitCode = result.diagnostics.length || (report.connection?.diagnostics.length ?? result.interfaceDiagnostics.length) && !report.preparationOnly ? 1 : 0;
   } catch (error) {

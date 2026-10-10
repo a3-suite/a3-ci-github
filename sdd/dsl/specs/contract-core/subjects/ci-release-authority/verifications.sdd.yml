@@ -29,3 +29,7 @@ verifications:
         checks:
           - id: authority
             guarantee_ref: authority-file
+      - id: platform-checkout-eol
+        intent_id: coherent-authority
+        input: {platform-manifest: CRLF-or-mixed}
+        checks: [{id: authority, guarantee_ref: authority-file}]
