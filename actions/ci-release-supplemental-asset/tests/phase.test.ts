@@ -47,13 +47,17 @@ describe('supplemental source rejects unsafe paths, invalid phases and existing 
 });
 
 describe('supplemental source rejects snapshot, source and owner selection mismatches', () => {
-  for (const field of ['snapshot', 'source', 'contract', 'adapter', 'dirty-adapter']) test(field, (sub) => {
+  for (const field of ['snapshot', 'source', 'contract', 'adapter', 'dirty-adapter', 'dirty-adapter-eol']) test(field, (sub) => {
     const f = fixture(sub);
     if (field === 'snapshot') fs.writeFileSync(path.join(f.root, 'snapshot.json'), '{}');
     if (field === 'source') f.configure({}, { source_sha: 'a'.repeat(40) });
     if (field === 'contract') f.configure({ CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: '__unset__' });
     if (field === 'adapter') f.configure({ CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER: '../escape' });
     if (field === 'dirty-adapter') fs.appendFileSync(path.join(f.root, '.ci/scripts/ci-release-supplemental-asset.sh'), '\n# not from the authority commit\n');
+    if (field === 'dirty-adapter-eol') {
+      const filename = path.join(f.root, '.ci/scripts/ci-release-supplemental-asset.sh');
+      fs.writeFileSync(filename, fs.readFileSync(filename, 'utf8').replaceAll('\n', '\r\n'));
+    }
     expect(() => runSupplemental(f.options)).toThrow();
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
   });

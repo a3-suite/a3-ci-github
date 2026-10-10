@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { parse } from 'yaml';
 import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
+import { sourceTextSha256 } from '../platform/source-text.mjs';
 import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text } from './io';
 import { validateSnapshot } from './snapshot';
 import { supplementalSelection } from './selection';
@@ -86,7 +87,9 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
   let committedAdapter: Buffer;
   try { committedAdapter = execFileSync('git', ['-C', root, 'show', `${sourceSha}:${adapterRelative}`], { maxBuffer: LIMITS.jsonBytes, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch { return fail('owner-adapter-source-mismatch'); }
-  if (sha256(committedAdapter) !== hashFile(adapter, LIMITS.jsonBytes)) fail('owner-adapter-source-mismatch');
+  if (standardInstaller) {
+    if (sourceTextSha256(committedAdapter) !== sourceTextSha256(readBytes(adapter))) fail('owner-adapter-source-mismatch');
+  } else if (sha256(committedAdapter) !== hashFile(adapter, LIMITS.jsonBytes)) fail('owner-adapter-source-mismatch');
   const standard = safePath(root, relativePath(options.standardBuildRoot), true);
   const supplemental = options.supplementalBuildRoot ? safePath(root, relativePath(options.supplementalBuildRoot), true) : undefined;
   const protectedDirectories = [standard, supplemental, path.join(root, '.git')]
@@ -115,14 +118,14 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
   if (platformPath) {
     const bytes = readBytes(platformPath, 65536);
     if (config.CI_PLATFORM_MANIFEST !== authority.platform_manifest
-      || sha256(bytes) !== authority.platform_manifest_sha256) fail('platform-mismatch');
+      || sourceTextSha256(bytes) !== authority.platform_manifest_sha256) fail('platform-mismatch');
     releasePlatforms = validatePlatformManifestValue(parse(bytes.toString('utf8'), { maxAliasCount: 20, uniqueKeys: true }));
   }
   const platformDigest = (): string | undefined => {
     if (!platformPath) return undefined;
-    const digest = hashFile(safePath(root, relativePath(authority.platform_manifest as string)), 65536);
-    if (digest !== authority.platform_manifest_sha256) fail('platform-mismatch');
-    return digest;
+    const filename = safePath(root, relativePath(authority.platform_manifest as string));
+    if (sourceTextSha256(readBytes(filename, 65536)) !== authority.platform_manifest_sha256) fail('platform-mismatch');
+    return hashFile(filename, 65536);
   };
   const fingerprint = (): unknown => {
     if (fs.realpathSync(root) !== root) fail('root-invalid');
@@ -146,7 +149,7 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
       let bytes: Buffer;
       try { bytes = execFileSync('git', ['-C', root, 'show', `${sourceSha}:${relative}`], { maxBuffer: LIMITS.jsonBytes, stdio: ['ignore', 'pipe', 'ignore'] }); }
       catch { return fail('installer-declaration-source-mismatch'); }
-      if (sha256(bytes) !== hashFile(filename, LIMITS.jsonBytes)) fail('installer-declaration-source-mismatch');
+      if (sourceTextSha256(bytes) !== sourceTextSha256(readBytes(filename))) fail('installer-declaration-source-mismatch');
       manifestInputs.push(filename);
     }
   }

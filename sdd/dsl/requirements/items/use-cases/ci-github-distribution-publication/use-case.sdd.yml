@@ -1,0 +1,31 @@
+version: 1
+name: use-case
+use_case_id: ci-github-distribution-publication
+summary: 提供元の保守者が実装と接続の揃ったCI資材を1回のReleaseで公開する
+actors:
+  - actor_id: provider-maintainer
+    kind: human
+    role: primary
+    summary: 公開する修正範囲、版、固定参照、検証結果とRelease公開を承認する保守者
+goal: consumerが1つの公開版を導入するだけで、その版の修正実装を実行できる
+preconditions:
+  - 公開対象の変更範囲と版が確定し、無関係な変更が除外されている
+  - 実装、生成物、固定参照の検証に必要なGit objectを取得できる
+trigger: 提供元が通常リリースまたはhotfixを公開する
+main_success_scenario:
+  - summary: 実装と配布物を確定し、実際に接続する固定参照で契約を検証する
+  - summary: 最終公開対象に実装が含まれ、workflow、installer、registryとmanifestの接続が整合することを確認する
+  - summary: 承認済みexact tagと本文を使い、配布bootstrapを1つのGitHub Releaseとして公開する
+  - summary: 配布資材のremote readbackと固定参照を確認し、公開後のaliasと統合を規定の順序で処理する
+success_outcomes:
+  - consumerはそのReleaseから通常の導入を行い、接続専用の別Releaseを待たず修正実装を利用できる
+  - 公開資材の完全性、実行資材への接続、consumerの環境受入を別の結果として追跡できる
+failure_outcomes:
+  - 実装の包含、資材の同一性、固定参照または必要な契約を確認できなければ公開を成功扱いにしない
+  - 同じ版の失敗したdraftは既存の公開契約に従って再検証し、exact tagや公開済み資材を上書きしない
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.publication

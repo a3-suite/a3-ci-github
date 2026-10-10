@@ -4,15 +4,15 @@
   "verificationProfile": "shared-exact-payload-v1",
   "platforms": {
     "linux-x86_64": {
-      "manifest": "installer/linux.json",
+      "manifest": "installer/manifests/linux-x86_64.json",
       "assetName": "install-linux-x86_64.sh"
     },
     "macos-arm64": {
-      "manifest": "installer/macos.json",
+      "manifest": "installer/manifests/macos-arm64.json",
       "assetName": "install-macos-arm64.sh"
     },
     "windows-x86_64": {
-      "manifest": "installer/windows.json",
+      "manifest": "installer/manifests/windows-x86_64.json",
       "assetName": "install-windows-x86_64.ps1"
     }
   },

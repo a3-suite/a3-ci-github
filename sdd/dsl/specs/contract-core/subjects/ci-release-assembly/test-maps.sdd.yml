@@ -53,3 +53,15 @@ test_maps:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order"
         check_refs: [digest]
+  - verification_id: verification.ci-release-assembly.outputs
+    case_id: platform-checkout-eol
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts lf checkout declarations through both phases and release assembly"
+        check_refs: [handoff, digest]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly"
+        check_refs: [handoff, digest]
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly"
+        check_refs: [handoff, digest]

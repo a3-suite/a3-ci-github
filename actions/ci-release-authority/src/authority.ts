@@ -8,6 +8,7 @@ import { validateEvidence } from '../../../runtime/release-publication/schema';
 import { remoteId } from '../../../runtime/release-publication/observation';
 import type { ReadOnlyClientType } from '../../../runtime/release-publication/observation';
 import { verifySourceCompatibility } from '../../../runtime/release-publication/provider';
+import { sourceTextSha256 } from '../../../runtime/platform/source-text.mjs';
 
 export type AuthorityOptions = { rootDirectory: string; snapshotPath: string; outputDirectory: string; repository: string; requestRunId: string; publicationRequestRunId: string };
 export const OWNER_HANDOFF_PATH = '.github/workflows/release-publication-request.yml';
@@ -84,7 +85,7 @@ export const createAuthority = async (options: AuthorityOptions, client: ReadOnl
   if (values.CI_RELEASE_OWNER_CONTRACT !== 'git.release-flow' || values.CI_RELEASE_IMPLEMENTATION !== 'rust-cli-release'
     || values.CI_LANGUAGE_PROFILE !== 'rust') fail('owner-contract-inconsistent');
   const manifestPath = text(values.CI_PLATFORM_MANIFEST, 'platform-manifest-invalid');
-  const manifestDigest = sha256(readBytes(safePath(root, manifestPath)));
+  const manifestDigest = sourceTextSha256(readBytes(safePath(root, manifestPath)));
   const toolchain = text(values.CI_TOOLCHAIN_VERSION, 'toolchain-invalid');
   if (toolchain.includes('<') || toolchain === '__unset__') fail('toolchain-invalid');
   const identity = validateEvidence('identity', { repository, tag: decision.tag, tag_object_sha: tagObjectSha, source_sha: sourceSha, version: decision.version, target_identity: decision.targetIdentity, body_sha256: bound.bodyDigest });

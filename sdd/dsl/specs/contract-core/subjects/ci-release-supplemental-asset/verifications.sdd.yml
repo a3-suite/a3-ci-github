@@ -109,3 +109,15 @@ verifications:
         intent_id: fail-closed
         input: {implementation: standard-installer, checksum: noncanonical-bytes}
         checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-checkout-eol
+        intent_id: bound-phase
+        input: {implementation: standard-installer, checkout: LF-CRLF-or-mixed}
+        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
+      - id: standard-source-content
+        intent_id: fail-closed
+        input: {implementation: standard-installer, source-change: beyond-CRLF-to-LF}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-execution-eol-mutation
+        intent_id: fail-closed
+        input: {implementation: standard-installer, provider-mutates: newline-only}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}]
