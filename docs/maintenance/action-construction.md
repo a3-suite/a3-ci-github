@@ -43,16 +43,34 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 以下は外部の固定SHAを使う接続の更新順序です。repository自身のCIで使う`uses: ./actions/...`は同一checkoutの検証であり、Actionと検証用workflowを同じコミットで更新できます。
 
-1. **Action実装を確定する。** Actionとbundleへ入る共有runtimeを変更した場合は、source検証とdist同一性を確認し、実行に必要な生成物・依存を含めて先にコミット・pushします。公開経路で統合・公開された後、そのexact release tagのpeeled full SHAをAction接続先として確定します。squash等でSHAが変わった場合は、作業branchのSHAを公開SHAとして使いません。
-2. **workflowからActionへ接続する。** canonical workflowのAction参照、installer等のprovider revision、registryのAction bindingを確定済み公開SHAへ揃えます。参照先のActionがそのworkflowで必要な入力・出力・能力を持つことを確認します。Action実装を変更せず既存の公開済みActionを使う場合は、新しいActionコミットは不要です。
-3. **再利用workflow自身を確定する。** provider callee内の外部Action参照をregistryのproviderActions pinで解決し、`npm run lint:provider`を成功させます。callee・template・生成処理を検証してコミット・pushし、配布対象のfull SHAを確定します。
-4. **候補SHAを配布する。** 公開tagとmanifestの固定参照の一致を検証して公開します。consumerのcallerはそのmanifestから導入時に生成し、導入先の環境で受け入れます。source registryとtemplateへ自己SHAを書き戻しません。ActionとworkflowのSHAが同じであることは前提にしません。
+通常リリースとhotfixの公開単位、実装SHAの包含・同一性、公開前の接続保証は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とします。公開を1回にまとめる準備順序は次のとおりです。
 
-Action実装とその将来SHAを使う接続は同一コミットで確定できません。未公開Actionの準備状態は既存Action bindingで管理します。再利用workflowはsourceに状態を持たず、distribution manifestから固定参照を解決します。
+1. **実装コミットAを確定する。** 対象版のVERSION、Action、共有runtime、生成物と依存を揃え、source検証とdist同一性を確認してコミットします。この段階で別Releaseを公開しません。
+2. **接続コミットBを作る。** Aの確定済みfull SHAへcanonical workflow、provider callee、installer revisionとregistryのAction bindingを揃えます。接続とその検証以外で実行資材を変えた場合は、実装コミットの確定からやり直します。
+3. **最終候補を検証する。** Bと実際の参照先Aを使ってpublication契約を確認します。callee自身のSHAはmanifest生成で解決し、sourceへ将来の自己SHAを書き戻しません。third-party Actionの承認pinは従来どおり検証します。
+4. **Bを1回だけ公開する。** 承認済みannotated exact tagとReleaseをBに作成し、配布資材のreadbackまで確認します。consumerはそのReleaseからcallerを生成して環境を受け入れます。
 
-Action参照の更新は、公開確認済みのexact tagを明示して `node runtime/repository/update-action-references.mjs --check --tag vX.Y.Z` で差分を確認し、同じ指定の `--write` で適用します。tagのannotated object・peeled SHAをoriginと照合し、tag先のVERSION、Action metadata、対象契約の実dist動作を確認してからregistryと同じAction bindingを使う全参照・installer revisionを更新します。calleeのmanifest参照、workflow placeholder、外部Action pinは変更しません。
+準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致は要求せず、正本の包含・同一性を確認します。rebaseやsquashで参照先が変わる、または実行資材が変わる場合は接続・検証を確定し直します。
 
-`npm run lint:provider` はprovider・canonicalのAction参照、tag対応、固定SHA先のmetadata、quality adapterとpublication controlの正常・拒否動作を検査します。Git object不足や実行不能は判定不能です。未公開Actionの準備段階だけは接続契約の未達を `preparationOnly` と明示して残せます。接続更新・候補受入前は `node runtime/repository/check-provider-references.mjs --contracts` を実行し、診断ゼロを要求します。これはHosted受入の代替ではありません。検証対象を増やす場合は既存の対象契約の回帰へ接続し、SHA形式の成功を動作保証に読み替えません。
+接続の更新には、対象版の`RELEASE_TAG`と確定済みAの`IMPLEMENTATION_SHA`を明示します。事前のtag・Releaseは不要です。
+
+```sh
+node runtime/repository/update-action-references.mjs --check --tag "$RELEASE_TAG" --implementation-sha "$IMPLEMENTATION_SHA"
+node runtime/repository/update-action-references.mjs --write --tag "$RELEASE_TAG" --implementation-sha "$IMPLEMENTATION_SHA"
+node runtime/repository/check-provider-references.mjs --candidate --contracts
+```
+
+`--check`は変更予定を出力し、差分があれば1、差分がなければ0、検査不能なら2で終了します。差分と接続検査の結果を確認してから`--write`を実行します。staged snapshotの最終候補は`--staged --candidate --contracts`で検査します。参照Actionのmetadataが宣言するNode entrypointとCompositeの固定scriptの存在を確認し、参照するActionディレクトリ全体と共有`runtime/`のGit treeでバイト列とmodeの一致を確認します。この範囲に変更があればAを確定し直します。
+
+Bにannotated exact tagを作成した後、そのtagのcheckoutで公開検査を実行します。
+
+```sh
+node runtime/repository/check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG"
+```
+
+Release workflowはこの公開検査が成功した後だけ資材を生成します。検査JSONとworkflowの結果要約に`implementationSourceRevision`と`implementationBindingStatus`を残します。引数なしの既存参照検査はregistryが宣言するtagを確認する保守用入口であり、今回の公開検査には使いません。
+
+固定参照の実体・I/O・実dist動作を検証する既存ゲートは維持します。必要なGit objectの欠落や実行不能は判定不能とし、別checkoutの成功やSHA形式だけを接続先の動作保証に読み替えません。Hosted受入は別の証拠です。
 
 公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
 
@@ -92,13 +110,13 @@ a3-lint lint actions --config a3-lint.repository.yaml --lang yaml --framework an
 
 検査は `a3-lint.repository.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
 
-`a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIとRelease資材生成前は外部CLIの未公開能力に依存させず、`npm run lint:provider` とworkflow契約回帰を実行します。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。
+`a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIはregistryの対象版がVERSIONと一致しexact tagがまだない接続候補では事前tag不要の候補検査、それ以外では既存tagの固定参照検査を行い、Release資材生成前は最終tagの公開検査とworkflow契約回帰を実行し、外部CLIの未公開能力に依存させません。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。
 
 内部依存は `runtime/repository/check-runtime-boundaries.mjs` を source verification gate から実行します。既存の固定版 TypeScript compiler で Action entrypoint から到達する local source の静的 import、reexport、literal dynamic import、直接の literal require を解決し、別 Action の内部 source への実装依存、runtime から Action への逆依存、runtime 内の実装循環を拒否します。type-only import、テスト・保守 CLI の独立 entrypoint、任意の動的 module 名の網羅解析は対象外です。正常・違反・誤検知防止は `tests/runtime-boundaries.test.mjs` で検証します。
 
 ## 検証と公開前状態
 
-`npm run lint:provider`をコミット前・自己CI・Release資材生成前の共通入口とします。全provider callee、自己workflow、Composite Actionの外部参照を列挙してからfull SHAとprovider pin承認を検査し、診断または解析失敗で停止します。consumer canonicalの置換用placeholderをprovider実装の未解決参照と混同しません。Action I/O・権限・配布閉包は既存preflightへ委譲します。
+provider固定参照の保守用入口は`npm run lint:provider`です。接続候補とRelease資材生成前には、固定参照の更新順序に記載した検査を使います。全provider callee、自己workflow、Composite Actionの外部参照を列挙してからfull SHAとprovider pin承認を検査し、診断または解析失敗で停止します。consumer canonicalの置換用placeholderをprovider実装の未解決参照と混同しません。Action I/O・権限・配布閉包は既存preflightへ委譲します。
 
 1. SDD の subject、observation、guarantee、verification、test map と契約対象別実行定義を接続。
 2. 型検査、処理の正常系・停止条件、公開 entrypoint の出力と失敗伝播を検証。
@@ -108,4 +126,4 @@ a3-lint lint actions --config a3-lint.repository.yaml --lang yaml --framework an
 
 Hosted runner / 実 provider の検証は [テスト戦略](test-strategy.md) の受入境界に従います。ローカル成功を Hosted 成功へ読み替えません。
 
-実装が存在するだけでは公開済み Action と扱いません。未公開の Action は registry で pending とし、公開済み exact ref が確定するまで導入を fail-closed にします。既存の公開 SHA に新 Action が存在するように装いません。公開操作は実装・ローカル検証と別の承認で行います。
+実装が存在するだけでは公開済み Action と扱いません。公開前の候補検証とconsumerが採用できる公開状態を区別し、publication契約を満たした単一Releaseから導入します。既存の公開SHAに新Actionが存在するように装いません。公開操作は実装・ローカル検証と別の承認で行います。

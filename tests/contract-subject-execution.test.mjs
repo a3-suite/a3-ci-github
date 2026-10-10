@@ -60,7 +60,8 @@ describe('repository-contract-subject-execution', () => {
     // Assert
     expect(tests).toContain('tests/public-cli-lifecycle.test.mjs');
     expect(selected).not.toContain('tests/public-cli-lifecycle.test.mjs');
-    expect(selected).toHaveLength(tests.length - 1);
+    expect(selected).not.toContain('runtime/repository/tests/single-release-binding.test.mjs');
+    expect(selected).toHaveLength(tests.length - 2);
     const maintenance = tests.filter((file) => !registered.has(file));
     expect(maintenance).toHaveLength(7);
     expect(maintenance.every((file) => selected.includes(file))).toBe(true);

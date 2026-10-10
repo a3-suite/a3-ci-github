@@ -53,6 +53,10 @@ items:
     kind: requirement
   - path: items/requirements/ci-github-selective-distribution/requirement.sdd.yml
     kind: requirement
+  - path: items/constraints/ci-github-single-release-publication/constraint.sdd.yml
+    kind: constraint
+  - path: items/use-cases/ci-github-distribution-publication/use-case.sdd.yml
+    kind: use-case
   - path: items/use-cases/ci-github-selective-asset-delivery/use-case.sdd.yml
     kind: use-case
   - path: items/quality-scenarios/ci-github-selective-distribution-safe/quality-scenario.sdd.yml

@@ -114,6 +114,75 @@ test_maps:
         check_refs:
           - check-selective-distribution-publication-failure
   - verification_id: verification.ci-selective-distribution.publication
+    case_id: selective-distribution-single-release-binding
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > repository-provider-binding > repository CI validates untagged connection candidates and preserves implementation preparation"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > one Release connects an untagged implementation on release/0.2.11"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > one Release connects an untagged implementation on hotfix/0.2.11"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > candidate updates reject missing and unrelated implementation commits and preserve approval inputs"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > candidate application rejects closure changes and symlink destinations without writing references"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution input VERSION"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution input runtime/payload.mjs"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/action.yml"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/dist/index.js"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/scripts/composite.sh"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution file modes"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects stale workflow and installer bindings and invalid interfaces"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release cannot validate an unexecutable fixed bundle or bypass execution checks"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared main entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared pre entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared post entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared composite entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-bare entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-quoted entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-unresolved entrypoint"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/manage-distribution-release.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > repository-selective-distribution-release > distribution Release publication is idempotent and readback rejects changed remote bytes"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-single-release-rejection]
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > repository-selective-distribution-release > repository release publishes and reads back the exact selective distribution asset set before aliases"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding]
+  - verification_id: verification.ci-selective-distribution.publication
     case_id: selective-distribution-release-integration
     tests:
       - path: runtime/repository/tests/update-release-aliases.test.mjs

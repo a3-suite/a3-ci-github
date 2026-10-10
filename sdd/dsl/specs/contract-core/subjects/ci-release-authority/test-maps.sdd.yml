@@ -29,3 +29,9 @@ test_maps:
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: "dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection"
         check_refs: [authority]
+  - verification_id: verification.ci-release-authority.outputs
+    case_id: platform-checkout-eol
+    tests:
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: "ci-release-authority-runtime > authority binds LF source identity for CRLF and mixed platform manifests"
+        check_refs: [authority]

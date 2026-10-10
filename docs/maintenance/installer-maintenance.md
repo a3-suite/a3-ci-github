@@ -15,6 +15,8 @@ installer はこのリポジトリの機能として保守します。公開仕�
 
 公開例を入力にするテストは配布資産の検証として扱います。現在の native manifest template は builder・runtime・Action の共通回帰でも利用し、別の内部fixtureへ同じ定義を複製しません。内部専用の値・障害注入はテスト側で作ります。
 
+公開ガイド・サンプルを変更するときは、[宣言とインストール先の標準配置](../../skills/installer/references/define-installer.guide.md#製品宣言の標準配置)、[製品READMEの記載範囲](../../skills/installer/references/use-standard-installer.guide.md#製品readmeへのインストール手順追記)、[標準比較の完了チェック](../../skills/installer/references/audit-installer-compliance.guide.md#標準比較の完了チェック)との参照整合を確認します。CI監査はinstaller ownerの返却結果を受け取り、同じ判断規則をCI側に複製しません。
+
 ## 実装方式
 
 Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/clauses.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。

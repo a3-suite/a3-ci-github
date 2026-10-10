@@ -89,7 +89,7 @@ contracts:
           - selective-distribution-assets-exposed
           - selective-distribution-invalid-source-rejected
   - id: contract.ci-selective-distribution.publication
-    summary: Exact distribution bootstrap assets become public after provider generation and connection checks, immutable source validation and byte-identical draft asset readback with approved notes.
+    summary: One exact-tag Release makes its implementation and fixed workflow and installer connections available together after provider checks and byte-identical draft asset readback with approved notes.
     conditions:
       - id: selective-distribution-publication-valid
         environment_predicate:
@@ -120,10 +120,28 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
+      - id: selective-distribution-implementation-binding-verified
+        when: selective-distribution-publication-valid
+        observation_ref: observation.ci-selective-distribution.publication-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: implementationBindingStatus
+            right:
+              kind: value_set
+              values:
+                - verified
     verification_intents:
       - id: selective-distribution-publication-intent
         goal: >-
           The manifest binds reusable workflow references to the published source SHA and external Action references to verified provider pins. Provider CI verifies template generation, fixed references and caller/callee contracts before publication. Consumer existence and successful Hosted invocation of every reusable workflow are not publication prerequisites. Consumer environment acceptance follows installation and is reported separately.
+          Each ordinary release and hotfix uses one immutable exact tag and one GitHub Release to deliver its implementation and connections. A separate implementation Release or connection-only follow-up Release is not a prerequisite. Preparation may use multiple commits; one publication does not require a single commit or equality of the implementation and final source SHA.
+          Every first-party Action binding resolves an existing full implementation SHA that is an ancestor of, or equal to, the final tagged source. The implementation SHA and final source declare the same release VERSION. All referenced Actions, their metadata, entrypoints, bundled payloads, Composite scripts and transitively required provider runtime assets are present at that SHA and byte-and-mode identical in the final source. Canonical workflows, provider callees and installer provider revisions use that verified binding; caller generation binds callees to the final source SHA. The registry release tag identifies the enclosing Release, not necessarily the implementation SHA itself.
+          Before the final tag exists, candidate validation verifies the implementation against the selected candidate commit or staged tree without requiring a prior Release. Publication revalidates the finalized tag, its source and implementation ancestry, execution closure identity, registry and workflow connections, required I/O and actual fixed-reference behavior. A missing Git object, unrelated implementation, changed execution closure, stale binding or failed contract prevents publication. Arbitrary known SHAs and successful tests of another checkout cannot replace that evidence. Moving branches, tag execution references and future self-SHA placeholders are not substitutes for full SHA bindings.
+          These first-party rules do not relax third-party Action pin approval or upstream tag-to-SHA identity checks. Manifest file digests, asset readback, immutable exact tags and publication failure handling remain unchanged.
           A validated exact tag publishes only the three bootstrap assets from a draft with unchanged approved notes after byte-identical readback; prepublication failure leaves the draft unpublished, and any publication or verification failure blocks alias updates.
           Integration into main is evidenced by target ancestry of the fetched main commit snapshot or exact Git tree object identity with that main tip; the target and main commit SHA, both tree IDs, and the accepted evidence method are exposed. Failed reference, tree, or ancestry acquisition stops validation. Tree equality does not substitute for integration approval, releaseability of newly reachable main commits, Hosted validation, or Release identity.
           Ordinary sources must satisfy this integration proof. A canonical next-patch hotfix tip may precede main integration only when it descends from the annotated base of the current stable main version and that base satisfies the same integration proof; annotated tags, exact source and canonical tip identity, and VERSION alignment remain required.
@@ -131,6 +149,7 @@ contracts:
         guarantee_refs:
           - selective-distribution-publication-exposed
           - selective-distribution-publication-failure-exposed
+          - selective-distribution-implementation-binding-verified
   - id: contract.ci-selective-distribution.application
     summary: Configured canonical callers and required registry-projected pin companions are generated under an approved unchanged plan and restored after failure or rollback.
     conditions:
