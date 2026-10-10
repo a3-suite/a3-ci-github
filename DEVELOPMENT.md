@@ -27,6 +27,8 @@
 
 `skills/ci-github/references/` と `skills/installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
 
+公開スキルの導入版の扱いは、[公開導入ガイドの版選定](docs/maintenance/README.md#公開導入ガイドの版選定)に従います。
+
 installer の実装・配布生成・テストは `runtime/installer/` で保守します。公開スキルの配備は実装の配布を代替しません。配置、言語の例外理由、検証と配布生成の手順は [installer 保守](docs/maintenance/installer-maintenance.md) を参照してください。
 
 ## 依存グラフの扱い
@@ -63,12 +65,7 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 Action・workflow・公開参照を変更する前に、[固定参照の更新順序](docs/maintenance/action-construction.md#固定参照の更新順序)を確認してください。コミットゲートで準備段階と利用可能化を区別し、Actionと再利用workflowそれぞれの確定SHA・受入証拠を確認します。
 
-コミット前のリポジトリ固有ゲートは `.agents/skills/commit-gate/` を正本とし、`skills/` 配下の公開 Agent Skill の配備整合を確認します。配備先 root は環境変数で明示し、未設定時は配備整合ゲートを非適用とします。削除、prune、管理外 skill の削除は自動反映しません。
-
-```sh
-export A3_CI_GITHUB_SKILL_DEPLOY_ROOT=<external-skills-root>
-python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
-```
+コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.md#コミットゲート連携)に従います。
 
 ## Action catalog
 

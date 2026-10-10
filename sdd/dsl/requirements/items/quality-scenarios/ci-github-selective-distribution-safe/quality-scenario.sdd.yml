@@ -7,6 +7,8 @@ stimulus: Repository保守者が固定revisionの配布bootstrapを公開する�
 environment: GitHub Releaseとfull SHA Raw source、または同一repository snapshotを利用できる導入・保守環境
 response: 配布資材の公開・取得を完全性検証後にだけ成功として受け入れ、承認済みplan以外のconsumer変更を拒否または復旧する
 response_measure:
+  - 通常リリースとhotfixの各公開で、consumerが同じReleaseだけを採用して修正実装を利用でき、実装の事前公開や接続専用の追加公開を要求しない
+  - 公開対象に含まれない実装SHA、実行資材の差異、または旧実装への接続を検出した場合は公開を成功扱いにしない
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開またはconsumer管理資産変更を成功扱いにしない
   - GitHub Releaseの3 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
   - 通信にはtimeoutと有限retryを適用し、検証済みlocal distributionは同一manifest digestの場合だけ再利用する

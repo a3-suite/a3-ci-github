@@ -37,6 +37,10 @@ verifications:
         checks:
           - id: check-rust-release-version-diagnostic
             guarantee_ref: rust-release-version-diagnostic-present
+      - id: source-text-boundary
+        intent_id: rust-release-processing-rejected
+        input: {platform-manifest: changed-content-BOM-bare-CR-terminal-newline-or-invalid-UTF8}
+        checks: [{id: failure, guarantee_ref: rust-release-processing-fails}, {id: output, guarantee_ref: rust-release-rejected-final-output-safe}]
   - id: verification.ci-rust-release-build.outputs
     contract_id: contract.ci-rust-release-build.outputs
     cases:

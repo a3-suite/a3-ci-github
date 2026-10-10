@@ -1,0 +1,18 @@
+version: 1
+name: constraint
+constraint_id: ci-github-single-release-publication
+summary: CI資材の実装と接続の公開を1つのReleaseにまとめる
+scope:
+  namespace: ci
+  key: selective-distribution
+rule: >-
+  通常リリースとhotfixの公開単位はそれぞれ1つのexact tagとGitHub Releaseとする。
+  Action実装の事前Release、接続専用の後続Release、consumerの複数版採用を必須にしない。
+  準備コミットは分けてよいが、実行参照はfull SHAへ固定し、将来の自己SHA、mutable ref、
+  未検証の参照へ置き換えない。公開対象と実行される資材の対応は仕様側のpublication契約で検証する。
+rationale:
+  why: 修正の公開とその利用可能化を分離すると、公開済みの修正版を採用しても旧実装が動くため
+violation_impact: consumerで修正が有効にならない、追加Releaseが必要になる、または実行資材の追跡可能性が失われる
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution

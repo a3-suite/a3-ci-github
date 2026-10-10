@@ -11,6 +11,8 @@
 
 source versionの正本は`VERSION`です。
 
+通常リリースとhotfixは、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従い、実装と接続を1つのexact tagとReleaseで公開します。準備と検査コマンドは[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)へ委譲します。Release workflowは最終tagのcheckoutで包含・同一性と固定SHA先の契約を検査してから資材を生成します。
+
 `.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするworkflow revisionも承認対象に含め、今回の検証済み実装を使います。
 
 sourceとhotfix baseのmain統合証拠は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とし、`runtime/repository/update-release-aliases.sh`が検証します。
@@ -34,7 +36,7 @@ Action実装からworkflow・callerへ接続するコミットの順序は、[�
 Release公開結果を確認し、接続変更・利用可能化・Skill配備を行う場合は該当する項目を確認します。
 
 1. `.github/workflows/release.yml`の公開・3資材のreadback・alias更新結果と、対象tagのpeeled full SHAを確認します。
-2. manifestのcallee参照が公開tagのpeeled SHAに一致することを確認します。Action参照の更新は上記の固定参照更新順序に従い、calleeのSHAと混同しません。
+2. manifestのcallee参照が公開tagのpeeled SHAに一致し、Action・installerの固定参照が同じReleaseのpublication契約を満たすことを確認します。公開後に参照更新を必須の後続作業として残さず、実装SHAとcalleeのSHAを混同しません。
 3. 導入先では選択presetのcallerを生成し、製品設定・認証・required checkの受入を行います。生成・接続契約の検証は導入先の環境確認の代替にはしません。
 4. 公開物は更新しません。実装・template・契約の修正は次のReleaseへ含めます。
 5. 公開Skillを配備する場合は、[skills-deploy](../../.agents/skills/skills-deploy/SKILL.md)で対象Skillと明示された配備先の差分確認・承認された反映・再検査を行います。

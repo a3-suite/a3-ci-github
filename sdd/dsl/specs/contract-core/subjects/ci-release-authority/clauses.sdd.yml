@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-authority
 contracts:
   - id: contract.ci-release-authority.outputs
-    summary: Accept explicit owner inputs from the existing authorized publication request, verify provenance, owner receiving workflow digest, tag/source, notes approval, expiry, snapshot and provider source/workflow compatibility before build; record publish credential write capability as not observed, and emit a coherent authority handoff using GET-only observations. Do not infer version, choose policy or credentials, execute source/owner code, or replace the write-time reobservation and independent verifier.
+    summary: The source-text identity rule hashes strictly decoded UTF-8 after replacing CRLF with LF only; it preserves BOM, bare CR, terminal newlines, whitespace and all other content, and rejects invalid UTF-8. platform_manifest_sha256 uses this rule across authority, build, supplemental and release assembly. Accept explicit owner inputs from the existing authorized publication request, verify provenance, owner receiving workflow digest, tag/source, notes approval, expiry, snapshot and provider source/workflow compatibility before build; record publish credential write capability as not observed, and emit a coherent authority handoff using GET-only observations. Do not infer version, choose policy or credentials, execute source/owner code, or replace the write-time reobservation and independent verifier.
     conditions:
       - id: valid
         environment_predicate:

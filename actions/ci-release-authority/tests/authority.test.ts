@@ -22,6 +22,22 @@ import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-m
 import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 
 describe('ci-release-authority-runtime', () => {
+  test('authority binds LF source identity for CRLF and mixed platform manifests', async () => {
+    // Arrange
+    for (const endings of ['crlf', 'mixed']) {
+      const f = fixture();
+      try {
+        const filename = path.join(f.root, '.ci/platform-manifest.yml');
+        const lf = fs.readFileSync(filename, 'utf8');
+        fs.writeFileSync(filename, endings === 'crlf' ? lf.replaceAll('\n', '\r\n') : lf.replace('\n', '\r\n'));
+        // Act
+        const result = await createAuthority(f.options, f.client);
+        const authority = JSON.parse(fs.readFileSync(result.authorityPath, 'utf8'));
+        // Assert
+        expect(authority.platform_manifest_sha256).toBe(crypto.createHash('sha256').update(lf).digest('hex'));
+      } finally { fs.rmSync(f.root, { recursive: true }); }
+    }
+  });
   // integration_id: ci-release-authority-runtime
   test('standard authority binds explicit decision, existing owner workflow, snapshot and GET-only observations', async () => {
     const f = fixture();
@@ -37,6 +53,10 @@ describe('ci-release-authority-runtime', () => {
       expect(authority.provider_publication_suitability.status).toBe('source-compatible');
       expect(authority.provider_publication_suitability.write_capability).toBe('not-observed');
       expect(result.approvalId).toBe('approved');
+      const platformPath = path.join(f.root, '.ci/platform-manifest.yml');
+      const platformLf = fs.readFileSync(platformPath, 'utf8').replaceAll('\r\n', '\n');
+      expect(authority.platform_manifest_sha256).toBe(crypto.createHash('sha256').update(platformLf).digest('hex'));
+      fs.writeFileSync(platformPath, platformLf.replaceAll('\n', '\r\n'));
       expect(fs.existsSync(path.join(f.root, 'authority/release-notes-approval.json'))).toBeTruthy();
       const build = path.join(f.root, 'build/release-build-linux');
       fs.mkdirSync(build, { recursive: true });

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
+import { sourceTextSha256 } from '../platform/source-text.mjs';
 import { LIMITS, fail, record, equal, hex, assetName, safePath, readBytes, readRecord, parseJson, hashFile, sha256, writeNewJson } from './io';
 import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } from './schema';
 import type { AssemblyType } from './schema';
@@ -24,7 +25,7 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
   const supplementalEnabled = config.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED === 'true';
   if (supplementalEnabled !== Boolean(options.supplementalRoot)) fail(supplementalEnabled ? 'selected-supplemental-asset-missing' : 'unexpected-supplemental-asset');
   const platformBytes = readBytes(options.platformManifestPath, 65536);
-  if (sha256(platformBytes) !== authority.platform_manifest_sha256 || config.CI_PLATFORM_MANIFEST !== authority.platform_manifest) fail('platform-mismatch');
+  if (sourceTextSha256(platformBytes) !== authority.platform_manifest_sha256 || config.CI_PLATFORM_MANIFEST !== authority.platform_manifest) fail('platform-mismatch');
   const matrix: unknown = JSON.parse(options.platformMatrix);
   exactKeys(matrix, ['include']);
   const expectedMatrix = { include: validatePlatformManifestValue(decodeManifest(platformBytes.toString('utf8'))) };

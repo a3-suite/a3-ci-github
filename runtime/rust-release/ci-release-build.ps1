@@ -24,11 +24,8 @@ if ($authority.language_profile -ne $Profile) { throw 'authority language profil
 if ($authority.toolchain_version -ne $Toolchain) { throw 'authority toolchain mismatch' }
 if ($authority.platform_manifest -ne $PlatformManifest) { throw 'authority platform manifest mismatch' }
 if ((git rev-parse HEAD) -ne $authority.source_sha) { throw 'source identity mismatch' }
-$manifestBytes = [Text.Encoding]::UTF8.GetBytes((Get-Content -LiteralPath $PlatformManifest -Raw).Replace("`r", ''))
-$manifestHash = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($manifestBytes)).Replace('-', '').ToLowerInvariant()
-if ($manifestHash -ne $authority.platform_manifest_sha256) {
-  throw 'platform manifest identity mismatch'
-}
+& node (Join-Path $PSScriptRoot 'dist/index.mjs') $PlatformManifest $PlatformId $PlatformTarget $authority.platform_manifest_sha256
+if ($LASTEXITCODE -ne 0) { throw 'platform manifest identity mismatch' }
 
 rustup toolchain install $Toolchain --profile minimal
 if ($LASTEXITCODE -ne 0) { throw 'rust toolchain setup failed' }
