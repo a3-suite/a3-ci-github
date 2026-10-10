@@ -48,8 +48,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       const manifest = path.join(fixture, 'platforms.yml');
       writeFileSync(manifest, 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n');
       const executable = path.join(scriptRoot, entrypoint);
-      // Catch the CLI error before Node prints a minified bundle as its code frame.
-      const invocation = ['--input-type=module', '--eval', "import { pathToFileURL } from 'node:url'; try { await import(pathToFileURL(process.argv[1]).href); } catch (error) { console.error(error.message); process.exitCode = 1; }", executable];
+      const invocation = [executable];
       // Act
       const digest = sha256(readFileSync(manifest, 'utf8'));
       const accepted = run(process.execPath, [...invocation, manifest, 'linux-x64', 'x86_64-unknown-linux-gnu', digest]);
@@ -59,6 +58,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(missingId.status).not.toBe(0);
       expect(missingId.stderr).toMatch(/selected platform id is not present/);
+      expect(missingId.stderr.length).toBeLessThan(4096);
       expect(wrongTarget.status).not.toBe(0);
       expect(wrongTarget.stderr).toMatch(/selected platform target does not match/);
       for (const args of [[], [manifest], [manifest, 'linux-x64'], [manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']]) {
@@ -648,7 +648,7 @@ describe("contract.ci-rust-release-build.processing", () => {
           const result = invoke();
           // Assert: a sentinel toolchain failure proves the real script passed manifest validation.
           expect(result.status).not.toBe(0);
-          expect(result.stderr).toMatch(/rust toolchain setup failed/);
+          expect(result.stderr, `${shell}: ${result.stderr.slice(-4000)}`).toMatch(/rust toolchain setup failed/);
           expect(existsSync(output)).toBe(false);
         }
         for (const content of [manifestText.replaceAll('\n', '\r'), `\uFEFF${manifestText}`, manifestText.trimEnd(), `${manifestText} `, Buffer.concat([Buffer.from(manifestText), Buffer.from([0xff])])]) {

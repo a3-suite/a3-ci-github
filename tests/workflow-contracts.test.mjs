@@ -22,13 +22,19 @@ describe('contract.ci-selective-distribution.publication', () => {
     const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
     expect(script).toBeDefined();
     const code = script.split('\n').filter((line) => !line.startsWith('import ')).join('\n');
-    for (const [version, releaseTag, mode] of [['0.3.0\n', 'v0.2.11', '--preparation'], ['0.2.11\n', 'v0.2.10', '--preparation'], ['0.2.11\n', 'v0.2.11', '--candidate']]) {
+    for (const [version, releaseTag, tagPresent, mode] of [['0.3.0\n', 'v0.2.11', true, '--preparation'], ['0.2.11\n', 'v0.2.10', true, '--preparation'], ['0.2.11\n', 'v0.2.11', false, '--candidate'], ['0.2.11\n', 'v0.2.11', true, '--preparation']]) {
       const calls = [];
       const context = {
         process: { cwd: () => root, execPath: process.execPath },
         readFileSync: (filename) => { expect(filename).toBe('VERSION'); return version; },
         repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag } } } }),
-        execFileSync: (...args) => calls.push(args),
+        execFileSync: (command, ...args) => {
+          if (command === 'git') {
+            expect(args).toEqual([['tag', '--list', releaseTag], { encoding: 'utf8' }]);
+            return tagPresent ? `${releaseTag}\n` : '';
+          }
+          calls.push([command, ...args]);
+        },
       };
       runInNewContext(code, context);
       expect(calls).toEqual([[process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', mode], { stdio: 'inherit' }]]);
@@ -969,7 +975,8 @@ describe("workflow-contracts", () => {
       const job = Object.values(workflow.jobs).find((job) => job.steps?.includes(control));
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
-      const candidate = snapshot.registry.actionization.implementationSource.releaseTag === `v${read('VERSION').trim()}`;
+      const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
       const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
@@ -1077,7 +1084,8 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences('runs: {using: composite, steps: [{uses: actions/checkout@main}]}', 'actions/example/action.yml', approved)).toHaveLength(1);
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
-      const candidate = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag === `v${read('VERSION').trim()}`;
+      const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
       const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);

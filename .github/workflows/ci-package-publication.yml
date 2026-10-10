@@ -87,15 +87,15 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@4683eface1915b15f4c822b00c604a216a78867c
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@4683eface1915b15f4c822b00c604a216a78867c
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@4683eface1915b15f4c822b00c604a216a78867c
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@4683eface1915b15f4c822b00c604a216a78867c
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -135,7 +135,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@8cfd31b992474ebe0f1558a858d6c55c08d0e1b7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@4683eface1915b15f4c822b00c604a216a78867c
         with:
           summary-json: >-
             {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish job result: ${{ needs.publish.result }}"}]}

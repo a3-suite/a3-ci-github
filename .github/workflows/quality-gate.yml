@@ -45,7 +45,8 @@ jobs:
           import { repositorySnapshot } from './runtime/repository/check-provider-references.mjs';
           const { registry } = repositorySnapshot(process.cwd());
           const version = readFileSync('VERSION', 'utf8').trim();
-          const candidate = registry.actionization.implementationSource.releaseTag === `v${version}`;
+          const releaseTag = registry.actionization.implementationSource.releaseTag;
+          const candidate = releaseTag === `v${version}` && execFileSync('git', ['tag', '--list', releaseTag], { encoding: 'utf8' }).trim() === '';
           execFileSync(process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', candidate ? '--candidate' : '--preparation'], { stdio: 'inherit' });
           NODE
 

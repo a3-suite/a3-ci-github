@@ -25,4 +25,10 @@ const main = () => {
   verifyPlatformSelection(bytes.toString('utf8'), selectedId, selectedTarget);
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { main(); }
+  catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+}
