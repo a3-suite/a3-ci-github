@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-publication-workflow
 contracts:
   - id: contract.ci-release-publication-workflow.publication
-    summary: The canonical release workflows order unprivileged request creation, trusted request and publication entry validation, handoff production, privileged publication, and publication readback.
+    summary: The canonical release workflows order unprivileged request creation, trusted request and publication entry validation, handoff production, privileged publication, and publication readback. Standard-installer platform artifact transfer preserves the exact declared evidence filenames and bytes, including hidden source snapshots, until final owner verification; missing, modified, or undeclared evidence blocks publication.
     conditions:
       - id: ci-release-publication-workflow-canonical-source-available
         input_predicate:
@@ -34,6 +34,13 @@ contracts:
           target:
             kind: observation_field
             value: failure-summary
+      - id: ci-release-publication-workflow-evidence-transfer-declared
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci.release-publication-workflow.result
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: evidence-transfer}
     verification_intents:
       - id: ci-release-publication-workflow-success-intent
         goal: Verify the provider publication workflow is called through a registered full SHA with typed static owner configuration, default-branch workflow_run caller entry, authority success dependencies, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and readback.
@@ -43,3 +50,6 @@ contracts:
         goal: Verify failed or unresolved prerequisite stages block publication while the aggregate summary remains observable.
         guarantee_refs:
           - ci-release-publication-workflow-failure-observed
+      - id: ci-release-publication-workflow-evidence-transfer-intent
+        goal: Verify only the selected supplemental build directory opts into hidden-file upload for standard-installer, downloaded supplemental artifacts reach the final assemble phase, and publication depends on its successful handoff. Runtime candidate completeness and rejection belong to contract.ci-release-supplemental-asset.outputs.
+        guarantee_refs: [ci-release-publication-workflow-evidence-transfer-declared]

@@ -29,9 +29,9 @@
   - wrapper 自体は配信 URL と TLS を信頼する。payload（platform installer、manifest、artifact、archive）は実行前に checksum 検証する。
   - 検証完了前に managed root、handoff state、activation state、service、install state への破壊的副作用を起こさない。pipe の途中終了でも検証前の段階で停止する。
   - 非既定の operation mode / source mode は環境変数で選択し、pipe の引数に依存しない。
-- 配信コマンド例（Windows共有wrapperは非標準extensionが提供される場合だけ使用する）:
+- Windowsの実行方式は`references/use-standard-installer.guide.md`の「Windowsの実行方式の選択」に従う。標準のオンラインコマンドは`assets/examples/readme-installation.example.md`を参照する。Windows共有wrapperは必要性と対応を確認した非標準extensionに限り、同じ起動オプションで取得URLをその固定wrapper URLへ置き換える。
+- Unix共有wrapperの配信コマンド例:
   - Unix: `curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | sh`
-  - Windows: `powershell -ExecutionPolicy Bypass -NoProfile -Command "irm <wrapper-url> | iex"`
 - 共有 Unix wrapper は、プラットフォームを実行時に検出し、検証済み platform installer を選んで実行する。wrapper と platform installer は別 asset として公開し、組立証跡で対応付ける。
 
 ## 製品宣言の標準配置

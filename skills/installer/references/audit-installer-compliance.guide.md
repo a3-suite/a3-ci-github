@@ -211,7 +211,7 @@
 - 配置プロファイル: <profile> / 配信: <delivery>
 
 #### 既定のオンライン導入
-<READMEサンプルを参照し、採用済みdelivery・OSの実コマンドを表示>
+<セットアップガイドの「Windowsの実行方式の選択」とREADMEサンプルを参照し、採用済みdelivery・OSの実コマンドを表示>
 
 #### 共有wrapperの非既定例（Unix）
 ```sh
@@ -226,7 +226,7 @@ curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | INSTALLER_SOU
 Windows PowerShell 5.1以降に対応する標準実装では、Windows標準の`powershell`を使います。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <installer-asset-name>.ps1 -Mode upgrade -Source offline -Manifest <path> -Artifact <path>
+powershell -NoProfile -ExecutionPolicy Bypass -File <installer-asset-name>.ps1 -Mode upgrade -Source offline -Manifest <path> -Artifact <path>
 ```
 
 ### インストール先

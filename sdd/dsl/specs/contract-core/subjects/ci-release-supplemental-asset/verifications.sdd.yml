@@ -121,3 +121,24 @@ verifications:
         intent_id: fail-closed
         input: {implementation: standard-installer, provider-mutates: newline-only}
         checks: [{id: refusal, guarantee_ref: phase-rejected}]
+      - id: standard-evidence-preserved
+        intent_id: standard-installer-evidence-transfer
+        input: {implementation: standard-installer, transferred-evidence: preserved}
+        checks:
+          - {id: inventory, guarantee_ref: standard-installer-evidence-preserved}
+          - {id: assets, guarantee_ref: standard-installer-publication-assets-produced}
+      - id: standard-evidence-missing
+        intent_id: standard-installer-evidence-transfer
+        input: {implementation: standard-installer, transferred-evidence: missing}
+        checks:
+          - {id: refusal, guarantee_ref: phase-rejected}
+      - id: standard-evidence-modified
+        intent_id: standard-installer-evidence-transfer
+        input: {implementation: standard-installer, transferred-evidence: modified}
+        checks:
+          - {id: refusal, guarantee_ref: phase-rejected}
+      - id: standard-evidence-extra
+        intent_id: standard-installer-evidence-transfer
+        input: {implementation: standard-installer, transferred-evidence: extra}
+        checks:
+          - {id: refusal, guarantee_ref: phase-rejected}

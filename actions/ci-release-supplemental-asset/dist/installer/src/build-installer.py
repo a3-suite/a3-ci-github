@@ -27,7 +27,7 @@ from builder_common import (
     _zip_info,
 )
 
-BUILDER_IDENTITY = "installer.github-release-native.script-builder.v2"
+BUILDER_IDENTITY = "installer.github-release-native.script-builder.v3"
 PLACEHOLDER_PATTERN = re.compile(r"<[^<>]+>")
 CANDIDATE_RECORD_NAME = "installer-asset-candidate.json"
 VERIFICATION_RECORD_NAME = "installer-verification-evidence.json"
@@ -612,7 +612,13 @@ def assemble_candidate(
             f"output parent directory does not exist: {output_dir.parent}"
         )
 
-    source_snapshot = _snapshot_source(source_dir)
+    # Windows checkout cannot preserve Unix execute bits; entrypoint modes are
+    # defined by the runtime format so cross-platform rebuilds remain identical.
+    entrypoint_modes = {"install.sh": 0o755, "install.ps1": 0o644}
+    source_snapshot = [
+        (path, payload, entrypoint_modes.get(path.as_posix(), mode))
+        for path, payload, mode in _snapshot_source(source_dir)
+    ]
     if any(
         path.as_posix() in {"runtime-values.sh", "runtime-values.ps1"}
         for path, _, _ in source_snapshot
