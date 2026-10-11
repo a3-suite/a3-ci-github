@@ -217,30 +217,11 @@
           "reason": "The contract crosses the fixed checkout, files and owner process; evidence is integration-source and integration-bundle."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
-          "cwd": "actions/ci-release-supplemental-asset",
-          "tests": [
-            "tests/entrypoint.test.ts"
-          ],
-          "typescript": true,
-          "coverage": {
-            "enabled": true,
-            "scope": "source",
-            "include": [
-              "src/index.ts"
-            ],
-            "exclude": []
-          }
-        },
-        {
           "id": "integration-source",
           "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
           "tests": [
-            "tests/phase.test.ts",
-            "tests/standard-installer.test.ts",
-            "../../runtime/installer/tests/common-regression.test.mjs"
+            "tests/phase.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -266,8 +247,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-supplemental-asset",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -285,10 +265,23 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-standard-installer",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted installer builds and owner semantic acceptance require separate owner evidence; local fixtures execute both v2 phases without provider publication."
+          "cwd": "actions/ci-release-supplemental-asset",
+          "tests": [
+            "tests/standard-installer.test.ts",
+            "tests/standard-installer.e2e.test.ts",
+            "tests/entrypoint.test.ts",
+            "../../runtime/installer/tests/common-regression.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [],
+            "exclude": [],
+            "reason": "Native installer execution and packaged CLI/Action process startup are E2E evidence; they do not contribute to unit-plus-integration source coverage."
+          }
         }
       ]
     },

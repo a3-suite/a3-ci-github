@@ -24,6 +24,18 @@ Unixは、共有入口の`install.sh`がOS・CPUを判定し、対応する対�
 
 採用方針が確定するまではその実装を変更せず、独立して進められる標準構成の調査・差分確認を進める。固有差分の判定と必要な証跡は`installer-contract-coverage.reference.yml`の`projectOverrideClassification`を正本とする。固有実装がない場合は、この対話を追加せず通常の手順へ進む。
 
+## Windowsの実行方式の選択
+
+Windowsは次の順に実行方式を選び、「固定providerの対応確認」で採用版の対応を確認する。
+
+| 用途 | 選ぶ方式 | 案内先 |
+| --- | --- | --- |
+| 通常のオンライン導入 | 固定製品Releaseの対象OS・CPU用`.ps1`を取得・実行する。標準の第一案とする。 | 製品README。コマンドの基本形は`assets/examples/readme-installation.example.md`。 |
+| offline導入・dry-runなど、取得済みinstallerへ引数を渡す実行 | `.ps1`を`-File`で実行し、固定runtimeが対応する引数を渡す。 | 製品の運用文書。READMEには必要な場合だけリンクする。 |
+| 対象別installerでは満たせない製品要件がある | 必要性と提供元の対応を確認し、Windows共有wrapperを非標準extensionとして検討する。 | 製品の運用文書とproject SSOT。 |
+
+Windows PowerShell 5.1以降に対応する構成では、実行ファイルを`powershell`とする。起動例は`-NoProfile -ExecutionPolicy Bypass`を共通指定し、利用者のプロファイルを読み込まない。コマンド文字列には`-c`、取得済みファイルには`-File`を使う。`-c`は`-Command`の省略形なので、別方式として扱わない。
+
 ## 固定providerの対応確認
 
 配備されたスキル・サンプルは導入案であり、利用projectが固定するproviderの対応証拠ではない。宣言を変更する前に、次を確認する。
@@ -83,7 +95,7 @@ READMEは対象製品版の導入・利用手順として書く。対応OS・CPU
 
 前提は、標準対応環境に別途導入・設定が必要な場合だけ記載する。通常使えるツールは列挙せず、実装上の依存があるだけではREADMEへの記載理由にしない。依存の存在確認と安全な停止は実装・検証側で維持する。
 
-1. 固定providerが対応する短い既定オンライン起動と、現在のREADMEコマンドをOSごとに比較する。Unixの共通コマンドはLinux・macOSで一つにまとめる。サンプルの字句や行数ではなく、必要な導入操作で判断する。
+1. 固定providerが対応する短い既定オンライン起動と、現在のREADMEコマンドをOSごとに比較する。Windowsは「Windowsの実行方式の選択」に従う。Unixの共通コマンドはLinux・macOSで一つにまとめる。サンプルの字句や行数ではなく、必要な導入操作で判断する。
 2. 共有`install.sh`と対象別`install-*.sh`・`.ps1`の名前と役割、起動shell、固定URL・asset名・対応OSを製品宣言と配布計画へ照合する。共有入口への移行では宣言・profile・asset・URLを一緒に揃え、READMEのURLだけを未生成の入口へ変えない。
 3. 配置先をmanifestから取得し、`references/define-installer.guide.md`の「配置プロファイルと標準配置」との差分を確認する。配置先の説明は一箇所にまとめ、詳細な内部構造はREADMEへ展開しない。必要な導入操作だけで起動確認へ到達できるかをroot-docsの観点で再確認する。
 4. アンインストール手順はサンプルの削除対象をmanifestへ照合し、製品専用のlauncher・managed rootだけを対象にする。共有ディレクトリ・共有PATHを削除対象にせず、製品の設定・データが削除されるか残るかを確認する。未提供のuninstallコマンドを案内しない。

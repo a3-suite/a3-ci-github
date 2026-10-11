@@ -15,6 +15,11 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.supplemental-phase-invalid
           op: available
+      - id: standard-installer-evidence-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.standard-installer-evidence-valid
+          op: available
     guarantees:
       - id: phase-success
         when: supplemental-valid
@@ -41,6 +46,20 @@ contracts:
           relation:
             left: {kind: observation_field, value: outcome}
             right: {kind: value_set, values: [failure]}
+      - id: standard-installer-evidence-preserved
+        when: standard-installer-evidence-valid
+        observation_ref: observation.ci-release-supplemental-asset.evidence
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: candidate-files}
+      - id: standard-installer-publication-assets-produced
+        when: standard-installer-evidence-valid
+        observation_ref: observation.ci-release-supplemental-asset.evidence
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: publication-assets}
     verification_intents:
       - id: bound-phase
         goal: Both phases select only the snapshot-bound owner adapter or provider standard installer and receive the exact ordered path arguments and return the new output only after successful common checks.
@@ -48,3 +67,6 @@ contracts:
       - id: fail-closed
         goal: Reject unsafe, unselected, mismatched or mutated inputs and failed or missing owner output without successful Action outputs.
         guarantee_refs: [phase-rejected]
+      - id: standard-installer-evidence-transfer
+        goal: Final assemble verifies the exact transported candidate inventory and SHA-256 bytes including hidden source evidence, rejects missing, modified or undeclared files without a successful supplemental handoff, and excludes verification-only source snapshots from publication assets.
+        guarantee_refs: [standard-installer-evidence-preserved, standard-installer-publication-assets-produced, phase-rejected]

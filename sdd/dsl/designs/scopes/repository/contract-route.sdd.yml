@@ -162,6 +162,12 @@ routes:
       contract_id: contract.ci-package-publication-request.outputs
     hops:
       - component_id: action-contracts
+  - route_id: action-contracts-quality-toolchain
+    contract_ref:
+      subject_ref: subject.ci.quality-toolchain
+      contract_id: contract.ci-quality-toolchain.preparation
+    hops:
+      - component_id: action-contracts
   - route_id: action-contracts-quality-adapter
     contract_ref:
       subject_ref: subject.ci.quality-adapter

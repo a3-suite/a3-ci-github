@@ -19,3 +19,9 @@ verifications:
         checks:
           - id: check-ci-release-publication-workflow-failure
             guarantee_ref: ci-release-publication-workflow-failure-observed
+      - id: ci-release-publication-workflow-evidence-transfer
+        intent_id: ci-release-publication-workflow-evidence-transfer-intent
+        input: {scenario: canonical-transfer}
+        checks:
+          - id: check-ci-release-publication-workflow-evidence-transfer
+            guarantee_ref: ci-release-publication-workflow-evidence-transfer-declared
