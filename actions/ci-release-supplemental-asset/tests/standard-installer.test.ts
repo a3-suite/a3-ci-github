@@ -137,7 +137,9 @@ describe('standard installer', () => {
       for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
       runInstallerCli(['--operation', 'assemble', '--source-root', root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard-download', '--supplemental-build-root', 'supplemental-download', '--output-directory', 'transport-handoff', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer/dist'));
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'transport-handoff/supplemental-manifest.json'), 'utf8'));
-      expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([assetName, `manifest-${target}.json`].sort());
+      const declaration = JSON.parse(fs.readFileSync(path.join(root, 'installer/assembly.json'), 'utf8'));
+      const declaredAssets = Object.entries(declaration.platforms).flatMap(([platformId, entry]) => [(entry as { assetName: string }).assetName, `manifest-${platformId}.json`]);
+      expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual(declaredAssets.sort());
       expect(fs.readdirSync(path.join(root, 'transport-handoff')).some((name) => name.includes('installer-source'))).toBe(false);
     });
     for (const mutation of ['missing', 'modified', 'extra']) test(`rejects ${mutation} transferred platform evidence`, (t) => {
