@@ -20,6 +20,8 @@ env:
 jobs:
   contract-linux:
     name: CI Action contract / Linux
+    outputs:
+      source-sha: ${{ steps.installer-handoff.outputs.source-sha }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -456,6 +458,28 @@ jobs:
           path: tests/tmp/coverage/installer/run-*/coverage.json
           if-no-files-found: error
 
+      - name: Prepare Linux installer transport acceptance
+        id: installer-handoff
+        env:
+          CI_INSTALLER_ACCEPTANCE_OUTPUT: tests/tmp/installer-acceptance
+          CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT: tests/tmp/installer-platform-acceptance
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts -t 'verifies native candidate and produces handoff without consumer implementation'
+
+      - name: Upload installer platform evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-platform-${{ runner.os }}
+          path: tests/tmp/installer-platform-acceptance
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Upload verified installer release handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-handoff-${{ runner.os }}
+          path: tests/tmp/installer-acceptance
+          if-no-files-found: error
+
   rust-windows:
     name: Rust release contract / Windows
     runs-on: windows-2025
@@ -503,7 +527,16 @@ jobs:
         id: installer-handoff
         env:
           CI_INSTALLER_ACCEPTANCE_OUTPUT: tests/tmp/installer-acceptance
-        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+          CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT: tests/tmp/installer-platform-acceptance
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+
+      - name: Upload installer platform evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-platform-${{ runner.os }}
+          path: tests/tmp/installer-platform-acceptance
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Upload verified installer release handoff
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -567,7 +600,16 @@ jobs:
         id: installer-handoff
         env:
           CI_INSTALLER_ACCEPTANCE_OUTPUT: tests/tmp/installer-acceptance
-        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+          CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT: tests/tmp/installer-platform-acceptance
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+
+      - name: Upload installer platform evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-platform-${{ runner.os }}
+          path: tests/tmp/installer-platform-acceptance
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Upload verified installer release handoff
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -581,12 +623,14 @@ jobs:
 
   installer-handoff:
     name: Installer handoff / ${{ matrix.platform }}
-    needs: [installer-windows, installer-macos]
+    needs: [contract-linux, installer-windows, installer-macos]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
+          - platform: Linux
+            producer: contract-linux
           - platform: Windows
             producer: installer-windows
           - platform: macOS
@@ -594,6 +638,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up installer transport Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
+      - name: Set up installer transport Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Download installer platform evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: installer-platform-${{ matrix.platform }}
+          path: tests/tmp/installer-platform-acceptance
+
+      - name: Revalidate transported installer platform evidence
+        env:
+          CI_INSTALLER_PLATFORM_INPUT: tests/tmp/installer-platform-acceptance
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts -t 'revalidates downloaded platform evidence'
 
       - name: Download installer release handoff
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c

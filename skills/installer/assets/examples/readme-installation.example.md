@@ -25,7 +25,7 @@ curl -fsSL --proto '=https' --proto-redir '=https' '<固定Releaseの共有wrapp
 Windows PowerShell 5.1以降で実行します。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm '<固定Releaseの対象別PowerShell installer HTTPS URL>' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -c "irm '<固定Releaseの対象別PowerShell installer HTTPS URL>' | iex"
 ```
 
 ### 起動確認

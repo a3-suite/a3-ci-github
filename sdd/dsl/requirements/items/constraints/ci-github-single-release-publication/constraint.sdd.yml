@@ -7,7 +7,8 @@ scope:
   key: selective-distribution
 rule: >-
   通常リリースとhotfixの公開単位はそれぞれ1つのexact tagとGitHub Releaseとする。
-  Action実装の事前Release、接続専用の後続Release、consumerの複数版採用を必須にしない。
+  同じ版の実装と接続の利用可能化を、Action実装の先行Releaseと接続専用の後続Releaseへ分割してはならない。
+  consumerはその1つのReleaseから導入するだけで修正実装を利用できなければならない。
   準備コミットは分けてよいが、実行参照はfull SHAへ固定し、将来の自己SHA、mutable ref、
   未検証の参照へ置き換えない。公開対象と実行される資材の対応は仕様側のpublication契約で検証する。
 rationale:

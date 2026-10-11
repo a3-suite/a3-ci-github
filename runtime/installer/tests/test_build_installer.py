@@ -63,6 +63,27 @@ def _temporary_directory() -> tempfile.TemporaryDirectory[str]:
 class BuildInstallerContractTest(unittest.TestCase):
     """Exercise the provider builder through its command-line boundary."""
 
+    def test_entrypoint_modes_do_not_depend_on_checkout_platform(self) -> None:
+        with _temporary_directory() as temporary_root:
+            root = Path(temporary_root)
+            source = self._write_source(root)
+            powershell = source / "install.ps1"
+            powershell.write_bytes(b"# __INSTALLER_RUNTIME_VALUES__\nexit 0\n")
+            manifest = self._write_adapted_manifest(root)
+            outputs = []
+            for mode in (0o644, 0o755):
+                (source / "install.sh").chmod(mode)
+                powershell.chmod(mode)
+                output = root / f"output-{mode:o}"
+                result = self._run_assemble(source, manifest, output)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                outputs.append({file.name: file.read_bytes() for file in output.iterdir()})
+            self.assertEqual(outputs[0], outputs[1])
+            with zipfile.ZipFile(root / "output-644/.installer-source.zip") as archive:
+                modes = {entry.filename: (entry.external_attr >> 16) & 0o777 for entry in archive.infolist()}
+            self.assertEqual(modes["install.sh"], 0o755)
+            self.assertEqual(modes["install.ps1"], 0o644)
+
     def test_builder_assembles_then_finalizes_exact_verified_asset(self) -> None:
         """Bind final evidence to the exact archive verified after assembly."""
         with tempfile.TemporaryDirectory() as temporary_root:

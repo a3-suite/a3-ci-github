@@ -183,3 +183,5 @@ runtime_contexts:
     summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with known provider suitability.
   - id: runtime-context.release-authority-invalid
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
+  - id: runtime-context.standard-installer-evidence-valid
+    summary: Standard-installer assemble receives authority-bound transported candidates whose exact file inventories and SHA-256 bytes match their platform records and whose native verification succeeds.
