@@ -16,3 +16,6 @@ observations:
         - selector: failure-summary
           kind: observation_field
           meaning: Declared always-run summary route after publication prerequisites and publication that preserves failed and unknown outcomes.
+        - selector: evidence-transfer
+          kind: observation_field
+          meaning: Declared standard-installer-only hidden-file upload from the selected supplemental build directory, download into the supplemental build root, and required final assemble handoff before publication.

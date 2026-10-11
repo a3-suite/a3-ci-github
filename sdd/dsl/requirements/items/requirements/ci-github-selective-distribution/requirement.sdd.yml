@@ -15,7 +15,7 @@ requirements:
     priority: must
     fit_criteria:
       - 通常リリースとhotfixは、それぞれ1つのexact tagと1回のGitHub Release公開で、その版の実装・生成物・workflow接続・installer接続を利用可能にする
-      - Action実装の事前Releaseや接続専用の後続Releaseを必須にせず、consumerは同じReleaseから導入するだけでその版の修正実装を利用できる
+      - 同じ版の実装と接続の利用可能化を別Releaseへ分割せず、consumerは1つのReleaseから導入するだけでその版の修正実装を利用できる
       - 公開対象のworkflowとinstallerが実際に参照するfull SHAの資材を検証し、公開対象へ含まれない実装、旧実装への接続、未検証の接続を公開成功として扱わない
       - 公開回数と準備コミット数を区別し、複数の準備コミットを使ってもexact tag、Release、consumerの採用版を分割しない
       - 配布assetとpresetの依存閉包をrepository registryから一意に選択できる

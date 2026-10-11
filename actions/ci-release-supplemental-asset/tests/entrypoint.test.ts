@@ -9,7 +9,9 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, string> = {}) => runEntrypoint(f, changes, entrypointArgs);
 // contract_id: contract.ci-release-supplemental-asset.outputs
-// integration_id: supplemental-phase-entrypoint
+// evidence_role: contract
+// flow_id: supplemental-phase-entrypoint
+// test_level: e2e
 for (const operation of ['build-platform', 'assemble']) {
   test(`supplemental entrypoint emits success for the v2 ${operation} phase`, (t) => {
     const f = fixture(t);

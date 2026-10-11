@@ -19,7 +19,7 @@
 | canonical workflow | trigger、permissions、job、`needs`、trust、summary の宣言構造 | GitHub Hosted runner 上の代表 flow |
 | preset runtime | registry、実 filesystem、lock digest、read-only、source root 分離 | 公開 CLI を別 process で起動する consumer flow |
 | repository runtime | local bare Git、subprocess、成果物、失敗時の非破壊性 | stateful な Hosted delivery flow がある場合だけ追加 |
-| installer runtime | Vitest の provider regression から Python builder・組立profile・利用可能なOS実行経路へ委譲。Action／CLI境界は supplemental Action の統合テストで確認 | Linux共通回帰、Windows・macOS ARM64 native回帰と配布Action／CLI境界はrepository CI。Release handoffの組立・整合性・破損拒否も検証。Windows／macOSからLinuxへのartifact搬送は整合性Actionで確認。製品の公開・readbackは別受入 |
+| installer runtime | 同一プロセスで検証できる内部連携 | 実installer・配布Action／CLIのプロセス起動を伴う標準installerテストとPython provider回帰はE2Eとして実行し、単体＋統合の計測には含めない。Linux共通回帰、Windows・macOS ARM64 native回帰はrepository CI。Release handoffの組立・整合性・破損拒否も検証。Windows／macOSからLinuxへのartifact搬送は整合性Actionで確認。製品の公開・readbackは別受入 |
 | a3-lint rule | 実 a3-lint runtime に対する正常、違反、誤検知 fixture | repository lint の受入実行を smoke とし、rule ごとの E2E は作らない |
 | SDD・契約実行定義 | owner validator、route、test map、path、subject 集合 | 公開利用フローではないため原則追加しない |
 | Skill・文書 | reference、catalog、command、リンクの整合 | エージェント応答を不安定な E2E として固定しない |
