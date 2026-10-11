@@ -595,6 +595,11 @@ describe("workflow-contracts", () => {
       assertNeeds(callerSummary, ['validate-request', 'publish']);
       includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
       expect(publication).toMatch(/workflow_call:/);
+      expect(yaml.parse(publication).concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
       assertPublicationControl(publication, 'release');
       const qualitySteps = yaml.parse(publication).jobs.quality.steps;
       const qualityAdapter = qualitySteps.find(step => step.id === 'quality-adapter');
@@ -665,6 +670,7 @@ describe("workflow-contracts", () => {
         /actions\/upload-artifact@/,
         /^        if: inputs\.supplemental_release_asset_enabled$/m,
         /^          path: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
+        /^          include-hidden-files: \$\{\{ inputs\.supplemental_release_asset_implementation == 'standard-installer' \}\}$/m,
         /^          if-no-files-found: error$/m,
       ]);
       includesAll(stepContaining(buildJob, 'name: release-build-${{ matrix.id }}'), [
@@ -672,6 +678,7 @@ describe("workflow-contracts", () => {
         /^          path: build\/\$\{\{ matrix\.id \}\}$/m,
         /^          if-no-files-found: error$/m,
       ]);
+      expect(publication.match(/include-hidden-files:/g)).toHaveLength(1);
       const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');
       assertNeeds(supplementalAssetJob, ['authority', 'source-gate', 'quality', 'build']);
       includesAll(supplementalAssetJob, [
@@ -1022,6 +1029,12 @@ describe("workflow-contracts", () => {
       for (const native of [installerWindows, installerMacos]) {
         expect(native).toContain('npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
         expect(native).toContain('npm ci --ignore-scripts --no-audit --no-fund');
+        includesAll(stepContaining(native, '- name: Upload installer platform evidence'), [
+          /name: installer-platform-\$\{\{ runner\.os \}\}/,
+          /path: tests\/tmp\/installer-platform-acceptance/,
+          /include-hidden-files: true/,
+          /if-no-files-found: error/,
+        ]);
       }
       includesAll(installerMacos, [
         /^    runs-on: macos-14$/m,
@@ -1036,7 +1049,11 @@ describe("workflow-contracts", () => {
       ]);
       expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
       includesAll(installerHandoff, [
-        /needs: \[installer-windows, installer-macos\]/,
+        /producer: contract-linux/,
+        /name: installer-platform-\$\{\{ matrix\.platform \}\}/,
+        /CI_INSTALLER_PLATFORM_INPUT: tests\/tmp\/installer-platform-acceptance/,
+        /-t 'revalidates downloaded platform evidence'/,
+        /needs: \[contract-linux, installer-windows, installer-macos\]/,
         /producer: installer-windows/,
         /producer: installer-macos/,
         /uses: \.\/actions\/ci-handoff-integrity/,

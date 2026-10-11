@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
 describe('provider installer', () => {
+  // evidence_role: supplemental
+  // flow_id: provider-installer-runtime-regression
+  // test_level: e2e
   describe('common regression', () => {
     test('executes provider assembly, builders and available native runtime safety regressions', () => {
       // Arrange

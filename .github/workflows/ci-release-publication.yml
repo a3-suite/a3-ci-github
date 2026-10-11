@@ -367,6 +367,7 @@ jobs:
         with:
           name: supplemental-build-${{ matrix.id }}
           path: supplemental-build/${{ matrix.id }}
+          include-hidden-files: ${{ inputs.supplemental_release_asset_implementation == 'standard-installer' }}
           if-no-files-found: error
 
   supplemental-asset:

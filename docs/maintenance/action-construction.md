@@ -108,6 +108,8 @@ a3-lint lint .github/workflows/quality-gate.yml .github/workflows/release.yml --
 a3-lint lint actions --config a3-lint.repository.yaml --lang yaml --framework any --only-rule-set repository-actions
 ```
 
+actionlintは `.github/actionlint.yaml` を使用します。publication workflowの `concurrency.queue` は上流未対応（[rhysd/actionlint#657](https://github.com/rhysd/actionlint/issues/657)）のため、このファイルの該当診断だけを限定除外します。設定値と非キャンセル条件は既存workflow契約テストで検証します。利用するactionlintがqueueを認識するようになったら除外を撤去し、同じworkflowと契約テストを再検証します。
+
 検査は `a3-lint.repository.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
 
 `a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIはregistryの対象版がVERSIONと一致しexact tagがまだない接続候補では事前tag不要の候補検査、それ以外では既存tagの固定参照検査を行い、Release資材生成前は最終tagの公開検査とworkflow契約回帰を実行し、外部CLIの未公開能力に依存させません。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。

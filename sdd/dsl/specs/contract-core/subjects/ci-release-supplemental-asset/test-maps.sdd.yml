@@ -86,7 +86,7 @@ test_maps:
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: standard-installer
     tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > executes standard mode from the distributed Action and reports verified output
         check_refs:
           - success
@@ -110,7 +110,7 @@ test_maps:
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: standard-local-cli
     tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > executes packaged local CLI with the
           same fixed boundary
         check_refs:
@@ -119,7 +119,7 @@ test_maps:
   - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: standard-provider-profile-refusal
     tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > rejects unsupported provider profile without successful Action output or generated assets
         check_refs: [refusal]
   - verification_id: verification.ci-release-supplemental-asset.outputs
@@ -164,10 +164,10 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: "standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly"
         check_refs: [success, output]
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: "standard installer > assembly > distributed Action accepts CRLF checkout through both phases"
         check_refs: [success, output]
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: "standard installer > assembly > distributed CLI accepts CRLF checkout through both phases"
         check_refs: [success, output]
   - verification_id: verification.ci-release-supplemental-asset.outputs
@@ -181,4 +181,28 @@ test_maps:
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: "standard installer > assembly > rejects newline-only input mutation during provider execution in both phases"
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-evidence-preserved
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > revalidates downloaded platform evidence"
+        check_refs: [inventory, assets]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-evidence-missing
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > rejects missing transferred platform evidence"
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-evidence-modified
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > rejects modified transferred platform evidence"
+        check_refs: [refusal]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-evidence-extra
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > rejects extra transferred platform evidence"
         check_refs: [refusal]

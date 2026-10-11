@@ -27,3 +27,17 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: failure when common validation or the selected owner phase fails.
+  - id: observation.ci-release-supplemental-asset.evidence
+    summary: Transported standard-installer candidate files and finalized publication assets.
+    boundary:
+      ref: boundary.workspace-files
+    value:
+      root: supplemental-phase-files
+      kind: object
+      fields:
+        - selector: candidate-files
+          kind: observation_field
+          meaning: The candidate directory contains exactly the filenames declared by platform-record.json, including .installer-source.zip, with matching SHA-256 bytes.
+        - selector: publication-assets
+          kind: observation_field
+          meaning: Final supplemental handoff contains the declared installer and manifest assets, with verification-only source snapshots excluded.

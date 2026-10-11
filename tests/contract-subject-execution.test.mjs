@@ -61,7 +61,11 @@ describe('repository-contract-subject-execution', () => {
     expect(tests).toContain('tests/public-cli-lifecycle.test.mjs');
     expect(selected).not.toContain('tests/public-cli-lifecycle.test.mjs');
     expect(selected).not.toContain('runtime/repository/tests/single-release-binding.test.mjs');
-    expect(selected).toHaveLength(tests.length - 2);
+    expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
+    expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts');
+    expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/entrypoint.test.ts');
+    expect(selected).not.toContain('runtime/installer/tests/common-regression.test.mjs');
+    expect(selected).toHaveLength(tests.length - 6);
     const maintenance = tests.filter((file) => !registered.has(file));
     expect(maintenance).toHaveLength(7);
     expect(maintenance.every((file) => selected.includes(file))).toBe(true);
@@ -362,7 +366,10 @@ describe("repository-contract-subject-execution", () => {
     // Assert
     const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const actionRoots = globSync('actions/*/tests/entrypoint.test.ts', { cwd: projectRoot })
-      .map((file) => path.dirname(path.dirname(file))).sort();
+      .map((file) => path.dirname(path.dirname(file)))
+      .filter((root) => root !== 'actions/ci-release-supplemental-asset').sort();
+    const supplemental = definition.subjects.find((subject) => subject.subjectId === 'subject.ci.release-supplemental-asset');
+    expect(supplemental.segments.find((segment) => segment.level === 'e2e').tests).toContain('tests/entrypoint.test.ts');
     expect(observations.map((observation) => observation.cwd).sort()).toStrictEqual(actionRoots);
     for (const observation of observations) {
       expect(observation.cwd).toBe(observation.expectedCwd);

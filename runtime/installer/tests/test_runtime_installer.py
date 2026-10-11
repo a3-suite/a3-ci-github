@@ -138,6 +138,7 @@ class RuntimeInstallerTest(unittest.TestCase):
         env: dict[str, str] | None = None,
         source_mode: str = "offline",
         smoke: bool = False,
+        windows_fixture: tuple[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if sys.platform == "win32":
             command = [
@@ -158,6 +159,26 @@ class RuntimeInstallerTest(unittest.TestCase):
                 ]
             if smoke:
                 command += ["-SmokeHelp"]
+            if windows_fixture is not None:
+                setup, cleanup = windows_fixture
+                invocation = " ".join(self._ps_quote(argument) for argument in command)
+                fixture = (
+                    "$ErrorActionPreference = 'Stop'\n"
+                    "try {\n"
+                    f"  {setup}\n"
+                    "  $ErrorActionPreference = 'Continue'\n"
+                    f"  & {invocation}\n"
+                    "  $fixtureExit = $LASTEXITCODE\n"
+                    "} finally {\n"
+                    "  $ErrorActionPreference = 'Stop'\n"
+                    f"  {cleanup}\n"
+                    "}\n"
+                    "exit $fixtureExit\n"
+                )
+                command = [
+                    _windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-Command", fixture,
+                ]
         else:
             command = ["bash", str(bundle / "installer.sh")]
             command += ["--mode", mode, "--source", source_mode, "--json"]
@@ -175,9 +196,95 @@ class RuntimeInstallerTest(unittest.TestCase):
         )
 
     @staticmethod
-    def _ps_quote(value: Path) -> str:
+    def _ps_quote(value: str | Path) -> str:
         """Quote a path for a single-quoted PowerShell string."""
         return "'" + str(value).replace("'", "''") + "'"
+
+    def _assert_unsafe_archive_upgrade_rejected(
+        self, *, drive_path: bool, overwrite: bool
+    ) -> None:
+        with _temporary_directory() as temp:
+            root = Path(temp).resolve()
+            windows = sys.platform == "win32"
+            artifact = root / ("tool.zip" if windows else "tool.tar.gz")
+            if windows:
+                with zipfile.ZipFile(artifact, "w") as archive:
+                    archive.writestr("tool.exe", b"binary")
+            else:
+                artifact = self._artifact(root)
+            bundle, checksum, state = self._bundle(root, artifact)
+            installed = self._run(bundle, checksum, artifact, mode="install")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            pointer = state.parent.parent / "current"
+            previous_pointer = pointer.read_bytes() if windows else os.readlink(pointer)
+            previous_state = state.read_bytes()
+            release = state.parent.parent / "releases/1.0.0"
+            previous_release = {
+                str(path.relative_to(release)): path.read_bytes()
+                for path in release.rglob("*") if path.is_file()
+            }
+            outside = root / "outside"
+            outside.mkdir()
+            sentinel = outside / ("existing" if overwrite else "created")
+            if overwrite:
+                sentinel.write_bytes(b"existing data")
+            entry = str(sentinel) if drive_path else f"../../../outside/{sentinel.name}"
+            if windows:
+                with zipfile.ZipFile(artifact, "w") as archive:
+                    archive.writestr("tool.exe", b"binary")
+                    archive.writestr(entry, b"unsafe data")
+            else:
+                with tarfile.open(artifact, "w:gz") as archive:
+                    for name in ("tool", entry):
+                        payload = b"unsafe data"
+                        info = tarfile.TarInfo(name)
+                        info.size = len(payload)
+                        archive.addfile(info, io.BytesIO(payload))
+            # Assemble after mutation so checksum validation accepts the archive.
+            upgrade, upgrade_checksum, _ = self._bundle(root, artifact, version="2.0.0")
+            work = root / "work"
+            work.mkdir()
+            environment = dict(os.environ, TMPDIR=str(work), TMP=str(work), TEMP=str(work))
+            rejected = self._run(
+                upgrade, upgrade_checksum, artifact, mode="upgrade", env=environment
+            )
+            self.assertEqual(rejected.returncode, 2, rejected.stderr)
+            self.assertIn("unsafe archive path", rejected.stderr)
+            self.assertEqual(
+                pointer.read_bytes() if windows else os.readlink(pointer), previous_pointer
+            )
+            self.assertEqual(state.read_bytes(), previous_state)
+            self.assertEqual({
+                str(path.relative_to(release)): path.read_bytes()
+                for path in release.rglob("*") if path.is_file()
+            }, previous_release)
+            self.assertFalse((release.parent / "2.0.0").exists())
+            if overwrite:
+                self.assertEqual(sentinel.read_bytes(), b"existing data")
+            else:
+                self.assertFalse(sentinel.exists())
+            self.assertEqual(list(work.iterdir()), [])
+
+    @unittest.skipUnless(
+        sys.platform == "darwin" and platform.machine() == "arm64"
+        or sys.platform.startswith("linux") and platform.machine() == "x86_64",
+        "native Unix runtime test requires a supported target",
+    )
+    def test_unix_unsafe_archive_upgrade_preserves_existing_install(self) -> None:
+        for overwrite in (False, True):
+            with self.subTest(overwrite=overwrite):
+                self._assert_unsafe_archive_upgrade_rejected(
+                    drive_path=False, overwrite=overwrite
+                )
+
+    @unittest.skipUnless(sys.platform == "win32", "requires Windows runtime")
+    def test_windows_unsafe_archive_upgrade_preserves_existing_install(self) -> None:
+        for drive_path in (False, True):
+            for overwrite in (False, True):
+                with self.subTest(drive_path=drive_path, overwrite=overwrite):
+                    self._assert_unsafe_archive_upgrade_rejected(
+                        drive_path=drive_path, overwrite=overwrite
+                    )
 
     def _run_iex(
         self,
@@ -1012,7 +1119,8 @@ class RuntimeInstallerTest(unittest.TestCase):
             failed = self._run(
                 second_bundle, second_checksum, second_artifact, mode="upgrade", env=env
             )
-            self.assertNotEqual(failed.returncode, 0)
+            self.assertEqual(failed.returncode, 2, failed.stderr)
+            self.assertIn("install state write failed", failed.stderr)
             self.assertEqual(pointer.resolve(), previous_pointer)
             self.assertEqual(state.read_bytes(), previous_state)
             self.assertFalse((state.parent.parent / "releases/2.0.0").exists())
@@ -1246,7 +1354,7 @@ class RuntimeInstallerTest(unittest.TestCase):
                 env=env,
             )
 
-            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 2, completed.stderr)
             self.assertIn(
                 "another installation owns the runtime lock", completed.stderr
             )
@@ -1609,7 +1717,7 @@ class RuntimeInstallerTest(unittest.TestCase):
     )
     def test_windows_lock_conflict_fails_before_fetch(self) -> None:
         """Reject a concurrent run instead of starting a fixed download."""
-        with tempfile.TemporaryDirectory() as temp:
+        with _temporary_directory() as temp:
             root = Path(temp).resolve()
             managed = root / "managed"
             bundle_root = root / "bundle"
@@ -1617,21 +1725,74 @@ class RuntimeInstallerTest(unittest.TestCase):
             artifact = bundle_root / "tool.zip"
             with zipfile.ZipFile(artifact, "w") as archive:
                 archive.writestr("tool.exe", b"binary")
-            bundle, checksum, _ = self._bundle(
+            bundle, _, _ = self._bundle(
                 bundle_root, artifact, managed_root=managed
             )
             lock = managed / "install.lock"
             lock.parent.mkdir(parents=True)
             lock.write_bytes(b"held")
 
-            completed = self._run(
-                bundle, checksum, artifact, mode="install", source_mode="online"
+            fetch_log = root / "fetch.log"
+            fetch_log.write_text("", encoding="utf-8")
+            command = (
+                "function Invoke-WebRequest { "
+                "param([string]$Uri, [string]$OutFile, "
+                "[int]$MaximumRedirection, [switch]$UseBasicParsing); "
+                f"Add-Content -LiteralPath {self._ps_quote(fetch_log)} -Value $Uri; "
+                "throw 'unexpected fetch' }; "
+                f"& {self._ps_quote(bundle / 'installer.ps1')} "
+                "-Mode install -Source online -Json"
+            )
+            completed = subprocess.run(
+                [_windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
+                 "-Command", command],
+                capture_output=True, text=True, check=False,
             )
 
-            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 2, completed.stderr)
             self.assertIn(
                 "another installation owns the runtime lock", completed.stderr
             )
+            self.assertEqual(len(fetch_log.read_text(encoding="utf-8-sig").splitlines()), 0)
+            self.assertEqual(lock.read_bytes(), b"held")
+
+    @unittest.skipUnless(sys.platform == "win32", "requires Windows runtime")
+    def test_windows_state_write_failure_restores_pointer_and_state(self) -> None:
+        with _temporary_directory() as temp:
+            root = Path(temp).resolve()
+            artifact = root / "tool.zip"
+            with zipfile.ZipFile(artifact, "w") as archive:
+                archive.writestr("tool.exe", b"binary")
+            bundle, checksum, state = self._bundle(root, artifact)
+            installed = self._run(bundle, checksum, artifact, mode="install")
+            self.assertEqual(installed.returncode, 0, installed.stderr)
+            pointer = state.parent.parent / "current"
+            previous_pointer = pointer.read_bytes()
+            previous_state = state.read_bytes()
+            binary = state.parent.parent / "releases/1.0.0/tool.exe"
+            previous_binary = binary.read_bytes()
+            upgrade, upgrade_checksum, _ = self._bundle(root, artifact, version="2.0.0")
+            script_path = upgrade / "installer.ps1"
+            script_checksum = _sha(script_path)
+            failed = self._run(
+                upgrade, upgrade_checksum, artifact, mode="upgrade",
+                windows_fixture=(
+                    # Deny replacement while allowing reads and rollback writes.
+                    f"$stateHandle = [IO.File]::Open({self._ps_quote(state)}, "
+                    "[IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)",
+                    "if ($null -ne $stateHandle) { $stateHandle.Dispose() }",
+                ),
+            )
+            self.assertEqual(failed.returncode, 2, failed.stderr)
+            self.assertIn('"Replace"', failed.stderr)
+            self.assertNotIn("rollback failed", failed.stderr)
+            self.assertEqual(_sha(script_path), script_checksum)
+            self.assertEqual(pointer.read_bytes(), previous_pointer)
+            self.assertEqual(state.read_bytes(), previous_state)
+            self.assertEqual(binary.read_bytes(), previous_binary)
+            self.assertFalse((binary.parent.parent / "2.0.0").exists())
+            self.assertFalse((state.parent.parent / "install.lock").exists())
+            self.assertFalse(list(state.parent.glob(".install-state-*.tmp")))
 
     @unittest.skipUnless(
         sys.platform == "win32",
@@ -1684,21 +1845,42 @@ class RuntimeInstallerTest(unittest.TestCase):
             self.assertEqual(installed.returncode, 0, installed.stderr)
             release_binary = managed / "releases/1.0.0/tool.exe"
             release_binary.write_bytes(b"damaged")
+            pointer = managed / "current"
+            state = managed / "state/install.state"
+            previous_pointer = pointer.read_bytes()
+            previous_state = state.read_bytes()
             script_path = bundle / "installer.ps1"
-            script = script_path.read_text(encoding="utf-8-sig")
-            extraction = "  [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $Destination)"
-            self.assertIn(extraction, script)
-            script_path.write_text(
-                script.replace(extraction, "  if ($Destination -like '*\\.staging-*') { throw 'fixture managed archive extraction failed' }\n" + extraction),
-                encoding="utf-8-sig",
+            script_checksum = _sha(script_path)
+            failed = self._run(
+                bundle, checksum, artifact, mode="repair",
+                windows_fixture=(
+                    f"$managedRoot = {self._ps_quote(managed)}\n"
+                    "$originalAcl = Get-Acl -LiteralPath $managedRoot\n"
+                    "$blockedAcl = Get-Acl -LiteralPath $managedRoot\n"
+                    "$identity = [Security.Principal.WindowsIdentity]::GetCurrent().User\n"
+                    # Files remain writable; only managed staging creation fails.
+                    "$rule = [Security.AccessControl.FileSystemAccessRule]::new("
+                    "$identity, [Security.AccessControl.FileSystemRights]::CreateDirectories, "
+                    "[Security.AccessControl.InheritanceFlags]::None, "
+                    "[Security.AccessControl.PropagationFlags]::None, "
+                    "[Security.AccessControl.AccessControlType]::Deny)\n"
+                    "$blockedAcl.AddAccessRule($rule)\n"
+                    "Set-Acl -LiteralPath $managedRoot -AclObject $blockedAcl",
+                    "if ($null -ne $originalAcl) { "
+                    "Set-Acl -LiteralPath $managedRoot -AclObject $originalAcl }",
+                ),
             )
 
-            failed = self._run(bundle, checksum, artifact, mode="repair")
-
-            self.assertNotEqual(failed.returncode, 0)
-            self.assertIn("archive extraction failed", failed.stderr)
+            self.assertEqual(failed.returncode, 2, failed.stderr)
+            self.assertIn('"ExtractToDirectory"', failed.stderr)
+            self.assertNotIn("rollback failed", failed.stderr)
+            self.assertEqual(_sha(script_path), script_checksum)
+            self.assertEqual(pointer.read_bytes(), previous_pointer)
+            self.assertEqual(state.read_bytes(), previous_state)
             self.assertEqual(release_binary.read_bytes(), b"damaged")
             self.assertFalse(list(managed.glob(".previous-release-*")))
+            self.assertFalse(list(managed.glob(".staging-*")))
+            self.assertFalse((managed / "install.lock").exists())
 
     @unittest.skipUnless(
         sys.platform == "win32",
