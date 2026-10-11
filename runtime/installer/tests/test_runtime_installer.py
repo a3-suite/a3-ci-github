@@ -1741,7 +1741,7 @@ class RuntimeInstallerTest(unittest.TestCase):
                 f"Add-Content -LiteralPath {self._ps_quote(fetch_log)} -Value $Uri; "
                 "throw 'unexpected fetch' }; "
                 f"& {self._ps_quote(bundle / 'installer.ps1')} "
-                "-Mode install -Source online -Json"
+                "-Mode install -Source online -Json; exit $LASTEXITCODE"
             )
             completed = subprocess.run(
                 [_windows_powershell(), "-NoProfile", "-ExecutionPolicy", "Bypass",
