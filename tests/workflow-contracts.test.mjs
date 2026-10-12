@@ -15,6 +15,26 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
 
+describe('installer public naming references', () => {
+  // evidence_role: supplemental
+  // target_id: standard-installer-entry-samples
+  // test_level: integration
+  describe('samples', () => {
+  test('README and assembly samples use the authoritative public entry names', () => {
+    // Arrange
+    const contract = yaml.parse(read('skills/installer/references/installer-standard-assembly-contract.reference.yml'));
+    // Act
+    const declaration = JSON.parse(read('skills/installer/assets/examples/standard-assembly.example.json'));
+    const readme = read('skills/installer/assets/examples/readme-installation.example.md');
+    // Assert
+    expect(declaration.platforms[contract.publicEntryNames.windows.platform].assetName).toBe(contract.publicEntryNames.windows.assetName);
+    expect(declaration.sharedWrapper.assetName).toBe(contract.publicEntryNames.unixShared.assetName);
+    expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.windows.assetName}' | iex`);
+    expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.unixShared.assetName}' | sh`);
+  });
+  });
+});
+
 describe('contract.ci-selective-distribution.publication', () => {
   describe('repository-provider-binding', () => {
   test('repository CI validates untagged connection candidates and preserves implementation preparation', () => {

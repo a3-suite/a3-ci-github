@@ -26,6 +26,8 @@ Unixは、共有入口の`install.sh`がOS・CPUを判定し、対応する対�
 
 ## Windowsの実行方式の選択
 
+標準Windowsの公開入口名は`references/installer-standard-assembly-contract.reference.yml`の`publicEntryNames.windows`で決める。製品・CPU名から別名を作ったり、既存の宣言名を引き継いだりしない。宣言・READMEのURL末尾・生成物・checksumと証跡を同じ契約名へ揃える。Unix共有入口は同契約の`publicEntryNames.unixShared`、Unix対象別導入は従来の公開名を使う。
+
 Windowsは次の順に実行方式を選び、「固定providerの対応確認」で採用版の対応を確認する。
 
 | 用途 | 選ぶ方式 | 案内先 |
@@ -96,7 +98,7 @@ READMEは対象製品版の導入・利用手順として書く。対応OS・CPU
 前提は、標準対応環境に別途導入・設定が必要な場合だけ記載する。通常使えるツールは列挙せず、実装上の依存があるだけではREADMEへの記載理由にしない。依存の存在確認と安全な停止は実装・検証側で維持する。
 
 1. 固定providerが対応する短い既定オンライン起動と、現在のREADMEコマンドをOSごとに比較する。Windowsは「Windowsの実行方式の選択」に従う。Unixの共通コマンドはLinux・macOSで一つにまとめる。サンプルの字句や行数ではなく、必要な導入操作で判断する。
-2. 共有`install.sh`と対象別`install-*.sh`・`.ps1`の名前と役割、起動shell、固定URL・asset名・対応OSを製品宣言と配布計画へ照合する。共有入口への移行では宣言・profile・asset・URLを一緒に揃え、READMEのURLだけを未生成の入口へ変えない。
+2. 公開名を標準組立契約の`publicEntryNames`へ直接照合してから、宣言・README・生成物との一致を確認する。Windowsの名前にCPU名を補わず、旧名で宣言とREADMEが一致していても標準適合にしない。起動shell、固定URL・asset名・対応OSも配布計画へ照合し、READMEのURLだけを未生成の入口へ変えない。
 3. 配置先をmanifestから取得し、`references/define-installer.guide.md`の「配置プロファイルと標準配置」との差分を確認する。配置先の説明は一箇所にまとめ、詳細な内部構造はREADMEへ展開しない。必要な導入操作だけで起動確認へ到達できるかをroot-docsの観点で再確認する。
 4. アンインストール手順はサンプルの削除対象をmanifestへ照合し、製品専用のlauncher・managed rootだけを対象にする。共有ディレクトリ・共有PATHを削除対象にせず、製品の設定・データが削除されるか残るかを確認する。未提供のuninstallコマンドを案内しない。
 

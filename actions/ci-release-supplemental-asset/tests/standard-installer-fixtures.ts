@@ -10,12 +10,12 @@ export const python = process.platform === 'win32' ? 'python' : 'python3';
 const target = process.platform === 'win32' ? 'windows-x86_64' : process.platform === 'darwin' ? 'macos-arm64' : 'linux-x86_64';
 const platform = { id: `release-${process.platform}`, runner: process.platform === 'win32' ? 'windows-2022' : process.platform === 'darwin' ? 'macos-14' : 'ubuntu-24.04', target: process.platform === 'win32' ? 'x86_64-pc-windows-msvc' : process.platform === 'darwin' ? 'aarch64-apple-darwin' : 'x86_64-unknown-linux-gnu' };
 const archiveName = process.platform === 'win32' ? 'tool.zip' : 'tool.tar.gz';
-const assetName = process.platform === 'win32' ? `install-${target}.ps1` : `install-${target}.sh`;
+const assetName = process.platform === 'win32' ? 'install.ps1' : `install-${target}.sh`;
 
 export { archiveName, assetName, platform, repository, target };
 export type { SupplementalOptionsType };
 
-export const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v1'): { root: string; options: SupplementalOptionsType; configure: (changes?: Record<string, string>) => void } => {
+export const fixture = (t: TestContext, verificationProfile = 'native-offline-dry-run-v1', windowsAssetName?: string): { root: string; options: SupplementalOptionsType; configure: (changes?: Record<string, string>) => void } => {
   const parent = path.join(repository, 'tests/tmp');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.realpathSync(fs.mkdtempSync(path.join(parent, 'standard-installer-')));
@@ -29,7 +29,8 @@ export const fixture = (t: TestContext, verificationProfile = 'native-offline-dr
   manifest.compatibility = { requiredInstallerVersion: '2' };
   fs.mkdirSync(path.join(root, 'installer'));
   fs.writeFileSync(path.join(root, 'installer/product.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  fs.writeFileSync(path.join(root, 'installer/assembly.json'), `${JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms: { [target]: { manifest: 'installer/product.json', assetName } } }, null, 2)}\n`);
+  const platforms = { [target]: { manifest: 'installer/product.json', assetName }, ...(windowsAssetName === undefined ? {} : { 'windows-x86_64': { manifest: 'installer/product.json', assetName: windowsAssetName } }) };
+  fs.writeFileSync(path.join(root, 'installer/assembly.json'), `${JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms }, null, 2)}\n`);
   fs.writeFileSync(path.join(root, 'platform.yml'), `platforms:\n  - id: ${platform.id}\n    runner: ${platform.runner}\n    target: ${platform.target}\n`);
   execFileSync('git', ['init', '-q', '--object-format=sha1', root]);
   execFileSync('git', ['-C', root, 'config', 'core.autocrlf', 'false']);

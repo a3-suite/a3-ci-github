@@ -64,9 +64,9 @@ runtime_contexts:
   - id: runtime-context.release-notes-input-resolution-valid
     summary: Safe input paths identify nonempty notes and approval files, and the writable normalized destination has neither notes nor approval files already present.
   - id: runtime-context.supplemental-phase-valid
-    summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory.
+    summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints.
   - id: runtime-context.supplemental-phase-invalid
-    summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, the owner fails or produces no nonempty output, or read-only inputs change.
+    summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change.
   - id: runtime-context.release-assembly-valid
     summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed.
   - id: runtime-context.release-assembly-invalid

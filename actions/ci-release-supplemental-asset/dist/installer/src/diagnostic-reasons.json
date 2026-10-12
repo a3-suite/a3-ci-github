@@ -5,6 +5,8 @@
   "installer-build-identity-invalid",
   "installer-config-fields-invalid",
   "installer-config-invalid",
+  "installer-windows-entry-name-invalid",
+  "installer-unix-shared-entry-name-invalid",
   "installer-generated-value-conflict",
   "installer-input-invalid",
   "installer-name-invalid",

@@ -17,7 +17,7 @@
 ### Linux・macOS
 
 ```sh
-curl -fsSL --proto '=https' --proto-redir '=https' '<固定Releaseの共有wrapper HTTPS URL>' | sh
+curl -fsSL --proto '=https' --proto-redir '=https' 'https://github.com/<owner>/<repository>/releases/download/<release-tag>/install.sh' | sh
 ```
 
 ### Windows
@@ -25,7 +25,7 @@ curl -fsSL --proto '=https' --proto-redir '=https' '<固定Releaseの共有wrapp
 Windows PowerShell 5.1以降で実行します。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -c "irm '<固定Releaseの対象別PowerShell installer HTTPS URL>' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -c "irm 'https://github.com/<owner>/<repository>/releases/download/<release-tag>/install.ps1' | iex"
 ```
 
 ### 起動確認

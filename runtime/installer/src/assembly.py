@@ -103,13 +103,17 @@ def config_for(request: dict) -> dict:
         raise ValueError("installer-platform-unsupported")
     if shared != ("sharedWrapper" in config) or (shared and not SHARED_PLATFORMS <= set(platforms)):
         raise ValueError("installer-shared-platform-unsupported")
-    for entry in platforms.values():
+    for target, entry in platforms.items():
         exact(obj(entry), {"manifest", "assetName"})
         name(entry["assetName"])
+        if target == "windows-x86_64" and entry["assetName"] != "install.ps1":
+            raise InstallerDiagnosticError("installer-windows-entry-name-invalid", {"install.ps1": None}, {"nonstandard-entry-name": None})
     if shared:
         wrapper = obj(config["sharedWrapper"])
         exact(wrapper, {"assetName", "deliveryUrls"})
         name(wrapper["assetName"])
+        if wrapper["assetName"] != "install.sh":
+            raise InstallerDiagnosticError("installer-unix-shared-entry-name-invalid", {"install.sh": None}, {"nonstandard-entry-name": None})
         if set(obj(wrapper["deliveryUrls"])) != SHARED_PLATFORMS:
             raise ValueError("installer-wrapper-urls-invalid")
     published_names = []
