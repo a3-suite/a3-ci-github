@@ -33,10 +33,10 @@ async function request(method, endpoint, body) {
 async function releases() {
   const result = [];
   for (let page = 1; page <= 100; page++) {
-    const entries = await request('GET', `/repos/${repository}/releases?per_page=2&page=${page}`);
+    const entries = await request('GET', `/repos/${repository}/releases?per_page=100&page=${page}`);
     assert.ok(Array.isArray(entries), 'probe-list-shape-invalid');
     result.push(...entries);
-    if (entries.length < 2) {
+    if (entries.length < 100) {
       assert.equal(new Set(result.map(entry => entry.id)).size, result.length, 'probe-list-duplicate');
       return { entries: result, pages: page };
     }

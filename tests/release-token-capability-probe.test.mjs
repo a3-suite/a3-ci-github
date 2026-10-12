@@ -26,7 +26,7 @@ describe('release token capability probe', () => {
           if (options.method === 'DELETE') { created = false; return new Response(null, { status: 204 }); }
           if (endpoint.endsWith('/42')) { directReads++; if (${transport} && directReads === 1) throw new Error('synthetic-private-token response fragment'); return Response.json({ ...draft, draft: !(${changed} && directReads > 1) }); }
           if (created && ${listTransport}) throw new Error('synthetic-private-token list fragment');
-          return Response.json(created && ${visible} ? (new URL(url).searchParams.get('page') === '1' ? [{ id: 1 }, { id: 2 }] : [draft]) : []);
+          return Response.json(created && ${visible} ? (new URL(url).searchParams.get('page') === '1' ? Array.from({ length: 100 }, (_, index) => ({ id: index + 101 })) : [draft]) : []);
         };
         await import(${JSON.stringify(entry)});`;
       // Act
