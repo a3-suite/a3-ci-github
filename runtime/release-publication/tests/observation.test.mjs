@@ -61,6 +61,26 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   describe("release-publication-rejection", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-rejection
+    test('pre-create reobserves absence and rejects a newly visible draft using GET only', async (t) => {
+      // Arrange
+      const f = fixture(t);
+      const assembly = f.assemble();
+      let lists = 0;
+      const { client, calls } = remoteClient(f, assembly, { ids: [] });
+      client.hasStandardGithubTokenWriteAccess = repository => repository === f.identity.repository;
+      const originalJson = client.json;
+      client.json = async endpoint => endpoint === '/repos/owner/project'
+        ? { full_name: f.identity.repository, permissions: { push: false } } : originalJson(endpoint);
+      client.list = async () => ++lists === 1 ? [] : [{ id: 42, tag_name: f.identity.tag, draft: true }];
+      // Act
+      const result = observeBefore({ ...f.options, handoffRoot: f.options.outputRoot }, client);
+      // Assert
+      await expect(result).rejects.toThrow(/existing-release-or-asset/);
+      expect(lists).toBe(2);
+      expect(calls.every(([method]) => method === 'GET')).toBe(true);
+    });
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    // integration_id: release-publication-rejection
     test('pre-create refuses existing releases including drafts', async (t) => {
       const f = fixture(t);
       const assembly = f.assemble();
@@ -176,7 +196,7 @@ describe('safe release diagnostics', () => {
         for (const repository of [{}, { permissions: {} }]) {
           expect(draftVisibilityFailure(repository, f.identity, client)).toBe(allowed ? undefined : repository.permissions ? 'push-permission-missing' : 'permissions-missing');
         }
-        expect(draftVisibilityFailure({ permissions: { push: false } }, f.identity, client)).toBe('push-permission-denied');
+        expect(draftVisibilityFailure({ permissions: { push: false } }, f.identity, client)).toBe(allowed ? undefined : 'push-permission-denied');
         expect(draftVisibilityFailure({ permissions: { push: 'invalid' } }, f.identity, client)).toBe('push-permission-invalid');
         expect(draftVisibilityFailure({ permissions: [] }, f.identity, client)).toBe('permissions-missing');
       }

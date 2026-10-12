@@ -45,7 +45,7 @@ jobs:
       contents: read
     steps:
       - name: Validate and write publication request
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@2840aab727ab4661c3f40d3fad869e39d595a67a
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@6cae7e07b9af9789c8a5ce46ef903bddff0335fb
         with:
           operation: create-request
           release-request-run-id: ${{ inputs.request_run_id }}
@@ -81,7 +81,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@2840aab727ab4661c3f40d3fad869e39d595a67a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6cae7e07b9af9789c8a5ce46ef903bddff0335fb
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"publication request handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}

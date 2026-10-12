@@ -5,13 +5,17 @@ verifications:
   - id: verification.ci-release-publication-verifier.outputs
     contract_id: contract.ci-release-publication-verifier.outputs
     cases:
+      - id: inventory-propagation-before-create
+        intent_id: fail-closed
+        input: {release-inventory: initially-empty-then-same-tag-draft}
+        checks: [{id: rejection, guarantee_ref: verification-rejected}]
       - id: standard-workflow-credential
         intent_id: observe-absence
-        input: {credential: bound-standard-workflow-github-token, permission-metadata: absent-or-empty}
+        input: {credential: bound-standard-workflow-github-token, permission-metadata: absent-empty-or-boolean-false}
         checks: [{id: status, guarantee_ref: observation-status}, {id: path, guarantee_ref: observation-file}]
       - id: credential-evidence-boundary
         intent_id: fail-closed
-        input: {credential-evidence: mismatching-context-token-capability-repository-or-denied-metadata}
+        input: {credential-evidence: mismatching-context-token-capability-repository-unbound-false-or-malformed-metadata}
         checks: [{id: rejection, guarantee_ref: verification-rejected}]
       - id: asset-inventory-boundary
         intent_id: fail-closed

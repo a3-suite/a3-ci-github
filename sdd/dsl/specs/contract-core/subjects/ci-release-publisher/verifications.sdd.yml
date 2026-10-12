@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-publisher.outputs
     contract_id: contract.ci-release-publisher.outputs
     cases:
+      - id: standard-workflow-capability
+        intent_id: publish-evidence
+        input: {credential: bound-standard-workflow-github-token, permission-metadata: boolean-false}
+        checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
       - id: canonical-repository-identity
         intent_id: publish-evidence
         input: {repository-response: canonical-casing}
