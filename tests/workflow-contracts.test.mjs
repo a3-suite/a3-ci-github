@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
 import { checkActionReferences, checkProviderReferences, checkRepository, registryPath, repositorySnapshot } from '../runtime/repository/check-provider-references.mjs';
@@ -10,10 +10,35 @@ import { fileURLToPath } from 'node:url';
 import { createDocsOnlyMatcher, detectChangeScope } from '../actions/ci-change-scope/src/scope.ts';
 import { materializePublishVersion } from '../actions/ci-publish-version/src/materialize.ts';
 import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapshot.ts';
+import { releaseSkillsFixture } from '../runtime/release-publication/tests/fixtures.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
+
+describe('contract.ci-release-assembly.outputs', () => {
+  describe('same-release-skills', () => {
+    // evidence_role: supplemental
+    // integration_id: same-release-skills-asset-collision
+    test('skills ZIP rejects a collision with a product asset before output', (t) => {
+      // Arrange
+      const f = releaseSkillsFixture(t);
+      const directory = path.join(f.root, 'build/release-build-linux');
+      const name = 'project-skills.zip';
+      renameSync(path.join(directory, f.name), path.join(directory, name));
+      renameSync(path.join(directory, `${f.name}.sha256`), path.join(directory, `${name}.sha256`));
+      f.put(`build/release-build-linux/${name}.sha256`, `${f.buildManifest.assets[0].sha256}  ${name}\n`);
+      f.buildManifest.assets[0].path = name;
+      f.buildManifest.assets[0].checksum_path = `${name}.sha256`;
+      f.put('build/release-build-linux/asset-manifest.json', f.buildManifest);
+      // Act
+      const assemble = f.assemble;
+      // Assert
+      expect(assemble).toThrow(/asset-name-collision/);
+      expect(existsSync(f.options.outputRoot)).toBe(false);
+    });
+  });
+});
 
 describe('installer public naming references', () => {
   // evidence_role: supplemental
@@ -42,12 +67,13 @@ describe('contract.ci-selective-distribution.publication', () => {
     const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
     expect(script).toBeDefined();
     const code = script.split('\n').filter((line) => !line.startsWith('import ')).join('\n');
-    for (const [version, releaseTag, tagPresent, mode] of [['0.3.0\n', 'v0.2.11', true, '--preparation'], ['0.2.11\n', 'v0.2.10', true, '--preparation'], ['0.2.11\n', 'v0.2.11', false, '--candidate'], ['0.2.11\n', 'v0.2.11', true, '--preparation']]) {
+    for (const [version, releaseTag, tagPresent, contained, mode] of [['0.3.0\n', 'v0.2.11', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.10', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.11', false, null, '--candidate'], ['0.2.11\n', 'v0.2.11', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.11', true, 1, '--candidate']]) {
       const calls = [];
       const context = {
         process: { cwd: () => root, execPath: process.execPath },
         readFileSync: (filename) => { expect(filename).toBe('VERSION'); return version; },
-        repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag } } } }),
+        repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag, exactRef: actionRef } } } }),
+        spawnSync: (command, args) => { expect(command).toBe('git'); expect(args).toEqual(['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`]); return { status: contained }; },
         execFileSync: (command, ...args) => {
           if (command === 'git') {
             expect(args).toEqual([['tag', '--list', releaseTag], { encoding: 'utf8' }]);
@@ -856,8 +882,8 @@ describe("workflow-contracts", () => {
       t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
       execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe' });
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      if (execFileSync('git', ['tag', '--list', releaseTag], { cwd: fixture, encoding: 'utf8' }).trim() === '') {
-        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
+      if (spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: fixture }).status !== 0) {
+        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
       }
       mkdirSync(path.join(fixture, 'actions'));
       for (const relative of [registryPath, ...repositorySnapshot(root).targets]) {
@@ -944,7 +970,8 @@ describe("workflow-contracts", () => {
       expect(strict.status, strict.stderr).toBe(1);
       expect(preparation.status, preparation.stderr).toBe(1);
       expect(JSON.parse(preparation.stdout).preparationOnly).toBe(false);
-      expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(2);
+      expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(3);
+      expect(JSON.parse(preparation.stdout).connection.diagnostics.join('\n')).toContain('skills-source-root');
       // Arrange
       const registry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
       registry.actionization.availabilityGate.status = 'pending-release';
@@ -1022,7 +1049,7 @@ describe("workflow-contracts", () => {
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
       const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: root }).status !== 0;
       const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
@@ -1141,7 +1168,7 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: root }).status !== 0;
       const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);

@@ -42,13 +42,16 @@ jobs:
         shell: bash
         run: |
           node --input-type=module - <<'NODE'
-          import { execFileSync } from 'node:child_process';
+          import { execFileSync, spawnSync } from 'node:child_process';
           import { readFileSync } from 'node:fs';
           import { repositorySnapshot } from './runtime/repository/check-provider-references.mjs';
           const { registry } = repositorySnapshot(process.cwd());
           const version = readFileSync('VERSION', 'utf8').trim();
           const releaseTag = registry.actionization.implementationSource.releaseTag;
-          const candidate = releaseTag === `v${version}` && execFileSync('git', ['tag', '--list', releaseTag], { encoding: 'utf8' }).trim() === '';
+          const tagPresent = execFileSync('git', ['tag', '--list', releaseTag], { encoding: 'utf8' }).trim() !== '';
+          const contained = tagPresent ? spawnSync('git', ['merge-base', '--is-ancestor', registry.actionization.implementationSource.exactRef, `${releaseTag}^{commit}`]) : null;
+          if (contained && ![0, 1].includes(contained.status)) throw new Error('implementation-containment-unavailable');
+          const candidate = releaseTag === `v${version}` && (!tagPresent || contained.status === 1);
           execFileSync(process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', candidate ? '--candidate' : '--preparation'], { stdio: 'inherit' });
           NODE
 
