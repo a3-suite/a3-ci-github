@@ -23,3 +23,18 @@ test_maps:
         symbol: "repository-contract-subject-execution > execution definition covers every contract-package subject scope"
         check_refs:
           - check-repository-contract-execution-mapped
+  - verification_id: verification.repository-managed-source-integrity.integrity
+    case_id: detailed-failure-integrity
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > managed-source rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: "repository-maintenance-cli > maintenance entrypoints retain safe failure context and primary exits when sinks fail"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.repository-managed-source-integrity.execution-mapping
+    case_id: detailed-failure-execution-mapping
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > managed-source rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]

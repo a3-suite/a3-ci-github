@@ -28,7 +28,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const [name, sha] = step.uses.split('@'); expect(sha).toBe(pins.get(name));
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
     }
-    expect(action.runs.steps.slice(1).map((step) => step.if)).toStrictEqual(["inputs.language-profile == 'typescript'", "inputs.language-profile == 'python'", "inputs.language-profile == 'python'", "inputs.language-profile == 'rust'", "inputs.language-profile == 'rust'"]);
+    expect(action.runs.steps.slice(1, -1).map((step) => step.if)).toStrictEqual(["inputs.language-profile == 'typescript'", "inputs.language-profile == 'python'", "inputs.language-profile == 'python'", "inputs.language-profile == 'rust'", "inputs.language-profile == 'rust'"]);
     expect(dependencies[0].with.cache).toBe('npm');
     expect(dependencies[0].with['node-version']).toStrictEqual('${{ inputs.toolchain-version }}');
     expect(dependencies[1].with['python-version']).toStrictEqual('${{ inputs.toolchain-version }}');
@@ -72,4 +72,22 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       expect(run(audit, { ...env, CARGO_EXIT: '17' }, directory).status).toBe(17);
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   });
+  // contract_id: contract.ci-quality-toolchain.preparation
+  // integration_id: quality-toolchain-failure-retention
+  test('failure retention identifies the failed setup without executing another setup', () => {
+    const step = action.runs.steps.at(-1);
+    expect(step.if).toBe('failure()');
+    const result = run(step.run, {
+      GITHUB_ACTION_PATH: path.join(root, 'actions/ci-quality-toolchain'),
+      VALIDATE_RESULT: 'success', TYPESCRIPT_RESULT: 'skipped', PYTHON_RESULT: 'skipped',
+      UV_RESULT: 'skipped', RUST_RESULT: 'failure', CARGO_AUDIT_RESULT: 'skipped',
+    });
+    expect(result.status).toBe(0);
+    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+    const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
+    expect(evidence.classification).toMatchObject({ subject: 'ci-quality-toolchain', stage: 'rust-setup' });
+    expect(evidence['execution-state']).toMatchObject({ outcome: 'failure', write: 'runner-toolchain-may-be-partial' });
+    expect(evidence['next-check'].rule).toBe('rust-setup');
+  });
+
 });

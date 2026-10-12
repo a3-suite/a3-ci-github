@@ -73,3 +73,13 @@ observations:
         - selector: diagnostic
           kind: observation_field
           meaning: Stable reason that prevents an invalid lock from being written.
+  - id: observation.ci-preset-assurance.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "bootstrap・lock生成・lint/preflightのoperationと検査ownerを区別し、repo/project rootの役割、provider revision、preset、対象workflow/asset相対path、欠落/改変/不一致と期待/観測identity、実行できなかった検査、read-only状態を残す。"

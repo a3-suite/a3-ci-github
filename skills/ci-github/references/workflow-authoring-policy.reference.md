@@ -19,7 +19,7 @@
 - platform 結果の集約 job 名は `<workflow-name> / summary` に固定し、required check は集約 job を参照する。
 - required check から参照する名前は workflow rename と独立して安定させる。
 
-用途別の workflow asset は `preset-catalog.reference.md` を正本とする。本policyでは provider 固有の workflow file 名を標準例として再定義しない。権限を持つ publish / deploy は通常 CI から分離する。
+用途別の workflow asset は `references/preset-catalog.reference.md` を正本とする。本policyでは provider 固有の workflow file 名を標準例として再定義しない。権限を持つ publish / deploy は通常 CI から分離する。
 
 ## 実装境界
 - workflow は順序、条件、権限、入出力のオーケストレーションに限定する。
@@ -30,7 +30,7 @@
 - 行数基準を満たすための圧縮、薄い wrapper、または複雑さを別資産へ移すだけの分割を行わない。
 - Action は許可済み発行元に限定し、版指定は `references/workflow-version-policy.reference.md` に従う。
 - 新規Action採用時は権限と保守状況を記録する。
-- CI runtime の依存境界は `ci-runtime-boundary.reference.md` に従う。
+- CI runtime の依存境界は `references/ci-runtime-boundary.reference.md` に従う。
 
 ## concurrency
 - 通常 CI は pull request の run だけを `cancel-in-progress: true` で置換する。post-merge（保護 branch push）、merge group、定期実行は置換対象にしない。
@@ -48,7 +48,7 @@
 - 適合判定は source identity の確定後（build 前）に一度行い、write 直前に default branch と権限状態を再観測する。build 中の変更を理由に早期結果を恒久証拠へ読み替えない。
 - credential route が workflow 変更権限を宣言しているだけでは適合と扱わない。権限の実効性を確認できない場合は fail closed とし、強い credential への自動 fallback を行わない。
 - 不適合または判定不能の場合は publish を停止し、tag、source SHA、default branch SHA、差分 entry を診断として owner へ返す。CI が tag や公開 source を自動で作り直さない。
-- 公開の provider 操作（release 作成、asset upload、finalize、観測）が失敗した場合は、`release-asset-publication-contract.reference.yml` の `providerPublicationSuitability.failureAttribution` に従って GitHub API の操作単位で診断を残す。必須項目と秘匿対象は同 section を正本とし、この profile では再定義しない。
+- 公開の provider 操作（release 作成、asset upload、finalize、観測）が失敗した場合は、`references/release-asset-publication-contract.reference.yml` の `providerPublicationSuitability.failureAttribution` に従って GitHub API の操作単位で診断を残す。必須項目と秘匿対象は同 section を正本とし、この profile では再定義しない。
 
 ## 静的検証
 - 実在する workflow を repository root の `actionlint` で検証する。
@@ -67,7 +67,7 @@ actionlint {project-root}/.github/workflows/ci.yml
 - `actionlint` は構文、式、context参照の検証であり、trust、権限、trigger、publish安全性の保証には使わない。
 
 ## 関連
-- `design-ci-workflow.guide.md`
-- `review-ci-workflow.guide.md`
+- `references/design-ci-workflow.guide.md`
+- `references/review-ci-workflow.guide.md`
 - `references/runner-trust-policy.reference.md`
 - `references/workflow-version-policy.reference.md`

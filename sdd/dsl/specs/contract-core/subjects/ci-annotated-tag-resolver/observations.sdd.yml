@@ -30,3 +30,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected tag resolution step.
+  - id: observation.ci-annotated-tag-resolver.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "tag取得・annotated tag検証・commit解決を区別し、repository、要求tag、参照種別、取得できたtag object SHAとcommit SHA、期待する固定参照と観測値、provider応答の安全な相関情報を残す。"

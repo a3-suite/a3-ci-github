@@ -25,7 +25,7 @@ test('Action rejects an invalid version as provisioning failure', () => {
     },
   });
   expect(result.status).toBe(1);
-  expect(result.stderr).toMatch(/gh-provision-failed: invalid exact version/);
+  expect(result.stderr).toMatch(/gh-provision-failed/);
 });
 
 });

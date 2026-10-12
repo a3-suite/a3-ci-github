@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,22 @@ from types import ModuleType
 from builder_common import _checksum_bytes
 
 ROOT = Path(__file__).resolve().parent
+DIAGNOSTIC_REASONS = frozenset(json.loads((ROOT / "diagnostic-reasons.json").read_text(encoding="utf-8")))
+
+
+class InstallerDiagnosticError(ValueError):
+    def __init__(self, reason: str, expected: dict, observed: dict) -> None:
+        super().__init__(reason)
+        def public_name(value: str) -> str:
+            return value if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9._+-]{1,200}", value) else "omitted"
+        self.comparison = {
+            "field": "installer-candidate-files",
+            "expected": sorted(public_name(value) for value in expected),
+            "observed": sorted(public_name(value) for value in observed),
+            "missing": sorted(public_name(value) for value in expected.keys() - observed.keys()),
+            "extra": sorted(public_name(value) for value in observed.keys() - expected.keys()),
+            "changed": sorted(public_name(value) for value in expected.keys() & observed.keys() if expected[value] != observed[value]),
+        }
 OWNER_CONTRACT = "installer.asset-assembly-evidence-contract"
 POSIX_SHELL = "/bin/sh"
 NATIVE_TARGETS = {
@@ -212,8 +229,9 @@ def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, P
         if any(record.get(key) != value for key, value in {"schema": "installer.platform.v1", "platformId": binding["id"], "platformTarget": binding["target"], "nativePlatformId": target, "sourceSha": authority["source_sha"], "version": authority["version"], "assemblyId": request["assemblyId"], "providerRevision": request["providerRevision"], "configChecksum": digest(Path(request["configPath"])), "assetName": entry["assetName"]}.items()):
             raise ValueError("installer-platform-evidence-invalid")
         candidate = directory / "candidate"
-        if record["files"] != {p.name: digest(p) for p in candidate.iterdir()}:
-            raise ValueError("installer-platform-evidence-invalid")
+        observed_files = {p.name: digest(p) for p in candidate.iterdir()}
+        if record["files"] != observed_files:
+            raise InstallerDiagnosticError("installer-platform-evidence-invalid", obj(record["files"]), observed_files)
         evidence = read_json(candidate / "installer-asset-evidence.json")
         verification = read_json(candidate / "installer-verification-evidence.json")
         if verification.get("status") != "passed" or verification.get("suite") != "native-offline-dry-run-v1" or evidence.get("asset_checksum") != "sha256:" + digest(candidate / entry["assetName"]):
@@ -237,8 +255,9 @@ def checked_platforms(request: dict, config: dict, scratch: Path) -> dict[str, P
         builder = load_builder("build-installer")
         builder.assemble_candidate(source_dir=ROOT / "platform", manifest_path=expected_manifest, output_dir=rebuilt, asset_name=entry["assetName"], source_revision=authority["source_sha"], assembly_id=request["assemblyId"])
         builder.finalize_evidence(output_dir=rebuilt, verification_evidence_path=candidate / "installer-verification-evidence.json")
-        if record["files"] != {p.name: digest(p) for p in rebuilt.iterdir()}:
-            raise ValueError("installer-provider-candidate-mismatch")
+        rebuilt_files = {p.name: digest(p) for p in rebuilt.iterdir()}
+        if record["files"] != rebuilt_files:
+            raise InstallerDiagnosticError("installer-provider-candidate-mismatch", rebuilt_files, obj(record["files"]))
         candidates[target] = candidate
     return candidates
 
@@ -311,23 +330,43 @@ def run(request: dict) -> None:
     output.mkdir()
     temporary_root = output / "tmp"
     temporary_root.mkdir()
+    primary_error = None
     try:
-        with tempfile.TemporaryDirectory(prefix="installer-verify-", dir=temporary_root) as directory:
+        with tempfile.TemporaryDirectory(prefix="installer-verify-", dir=temporary_root, ignore_cleanup_errors=True) as directory:
             if request["operation"] == "build-platform":
                 platform_record(request, config, output, Path(directory))
             elif request["operation"] == "assemble":
                 assemble(request, config, output, Path(directory))
             else:
                 raise ValueError("installer-operation-invalid")
+    except BaseException as error:
+        primary_error = error
+        raise
     finally:
-        temporary_root.rmdir()
+        try:
+            temporary_root.rmdir()
+        except OSError:
+            if primary_error is None:
+                raise
 
 
 def main() -> int:
+    phase = "request"
     try:
-        run(obj(json.load(sys.stdin)))
-    except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError):
-        sys.stderr.write("installer-assembly-failed\n")
+        request = obj(json.load(sys.stdin))
+        if request.get("operation") in {"build-platform", "assemble"}:
+            phase = request["operation"]
+        run(request)
+    except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
+        reason = str(error) if isinstance(error, (ValueError, TypeError)) and str(error) in DIAGNOSTIC_REASONS else "installer-unknown-failure"
+        if isinstance(error, FileNotFoundError):
+            reason = "process-start-failed" if error.filename in {"bash", "sh", "powershell", POSIX_SHELL} else "installer-input-invalid"
+        elif isinstance(error, subprocess.SubprocessError):
+            reason = "process-failed"
+        diagnostic = {"phase": phase, "sanitized-reason": reason}
+        if isinstance(error, InstallerDiagnosticError):
+            diagnostic["comparison"] = error.comparison
+        sys.stderr.write(json.dumps(diagnostic) + "\n")
         return 1
     return 0
 

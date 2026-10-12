@@ -28,3 +28,13 @@ observations:
         - selector: other-files
           kind: observation_field
           meaning: Newline-separated non-documentation paths.
+  - id: observation.ci-change-scope.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "比較範囲解決・Git取得・差分分類を区別し、event種別、base/headの固定SHA、取得できないref、判定不能の理由を残す。unresolvedを正常な分類結果として維持し、fail-openをfailureへ変更しない。"

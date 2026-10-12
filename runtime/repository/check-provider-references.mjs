@@ -1,3 +1,4 @@
+import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -62,14 +63,14 @@ export function repositorySnapshot(root, staged = false) {
   })();
   const providerTargets = paths.filter((relative) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(relative) || /^actions\/[^/]+\/action\.ya?ml$/.test(relative));
   for (const name of ['ci-quality', 'ci-quality-platforms', 'ci-package-preparation', 'ci-release-publication', 'ci-package-publication']) {
-    if (!providerTargets.includes(`.github/workflows/${name}.yml`)) throw new Error(`Missing provider callee: ${name}`);
+    if (!providerTargets.includes(`.github/workflows/${name}.yml`)) throw new DiagnosticError(`provider-callee-missing: Missing provider callee: ${name}`, { diagnostics: { field: 'provider-callee', expected: name, observed: 'missing' } });
   }
   const registry = parseDocument(read(registryPath));
-  if (registry.errors.length) throw new Error('Invalid provider registry YAML');
+  if (registry.errors.length) throw new DiagnosticError('provider-registry-yaml-invalid: Invalid provider registry YAML', { diagnostics: { field: 'provider-registry', expected: 'valid-yaml', observed: 'parse-failed' } });
   const value = registry.toJS();
   const entries = value.providerActions.entries;
   const approved = new Map(entries.map((entry) => [entry.action, entry.commitSha]));
-  if (approved.size !== entries.length || entries.some((entry) => !/^[0-9a-f]{40}$/.test(entry.commitSha))) throw new Error('Invalid provider pin registry');
+  if (approved.size !== entries.length || entries.some((entry) => !/^[0-9a-f]{40}$/.test(entry.commitSha))) throw new DiagnosticError('provider-pin-registry-invalid: Invalid provider pin registry', { diagnostics: { field: 'provider-pin-registry', expected: 'unique-full-sha-pins', observed: 'invalid' } });
   const canonicalTargets = paths.filter((relative) => /^workflows\/.+\.ya?ml$/.test(relative));
   const targets = [...providerTargets, ...canonicalTargets];
   return { read, registry: value, approved, targets, providerTargets, before, assertUnchanged: () => {
@@ -176,18 +177,21 @@ export function checkActionReferences(root, snapshot, options = {}) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const diagnostic = new FailureContext('repository-managed-source-integrity', 'provider-reference-validation');
   try {
     const args = process.argv.slice(2);
     const options = {};
     const flags = new Set();
     for (let index = 0; index < args.length; index += 1) {
       const arg = args[index];
-      if (flags.has(arg) || !['--staged', '--contracts', '--preparation', '--candidate', '--release-tag'].includes(arg)) throw new Error('Usage: node runtime/repository/check-provider-references.mjs [--staged] [--contracts] [--preparation|--candidate] or --contracts --release-tag <vX.Y.Z>');
+      if (flags.has(arg) || !['--staged', '--contracts', '--preparation', '--candidate', '--release-tag'].includes(arg)) throw new DiagnosticError('provider-reference-arguments-invalid', { diagnostics: { field: 'arguments', expected: 'Usage: node runtime/repository/check-provider-references.mjs [--staged] [--contracts] [--preparation|--candidate] or --contracts --release-tag <vX.Y.Z>', observed: 'invalid-arguments' } });
       flags.add(arg);
-      if (arg === '--release-tag') { options.releaseTag = args[++index]; if (!/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(options.releaseTag ?? '')) throw new Error('Expected an exact release tag'); }
+      if (arg === '--release-tag') { options.releaseTag = args[++index]; if (!/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(options.releaseTag ?? '')) throw new DiagnosticError('provider-reference-release-tag-invalid', { diagnostics: { field: 'release-tag', expected: 'vX.Y.Z', observed: 'invalid' } }); }
     }
     options.candidate = flags.has('--candidate');
-    if (flags.has('--preparation') && (!flags.has('--contracts') || options.candidate) || options.releaseTag && (!flags.has('--contracts') || options.candidate || flags.has('--staged') || flags.has('--preparation'))) throw new Error('Invalid provider reference validation mode');
+    if (flags.has('--preparation') && (!flags.has('--contracts') || options.candidate) || options.releaseTag && (!flags.has('--contracts') || options.candidate || flags.has('--staged') || flags.has('--preparation'))) throw new DiagnosticError('provider-reference-mode-invalid', { diagnostics: { field: 'validation-mode', expected: 'preparation-or-candidate-or-release', observed: 'invalid-combination' } });
+    diagnostic.confirmed();
+    diagnostic.at('repository-binding', { input: 'registry-workflows-and-action-metadata' });
     const result = checkRepository(process.cwd(), flags.has('--staged'), options);
     const report = { checkedTargets: result.checkedTargets, diagnostics: result.diagnostics, interfaceDiagnostics: result.interfaceDiagnostics,
       implementationBinding: result.implementationBinding,
@@ -213,8 +217,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     }
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     process.exitCode = result.diagnostics.length || (report.connection?.diagnostics.length ?? result.interfaceDiagnostics.length) && !report.preparationOnly ? 1 : 0;
+    if (process.exitCode) diagnostic.report(new DiagnosticError('repository-binding-rejected', { diagnostics: { field: 'binding-status', expected: 'accepted', observed: report.implementationBindingStatus, evidence: 'stdout-validation-report' } }));
   } catch (error) {
-    process.stderr.write(`${error.message}\n`);
-    process.exitCode = 2;
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 2);
   }
 }

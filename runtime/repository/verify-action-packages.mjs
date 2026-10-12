@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { collectActions } from './check-action-dist.mjs';
 import { assertRuntimeBoundaries } from './check-runtime-boundaries.mjs';
+import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, '../..');
@@ -28,14 +29,14 @@ export const collectActionPackages = (root, actions = collectActions(root)) => a
     const configPath = path.join(action.path, 'tsconfig.json');
     const testsRoot = path.join(action.path, 'tests');
     for (const required of [packagePath, lockPath, configPath, testsRoot]) {
-      if (!existsSync(required)) throw new Error(`${action.name} is missing ${path.relative(action.path, required)}`);
+      if (!existsSync(required)) throw new DiagnosticError(`${action.name} is missing ${path.relative(action.path, required)}`, { diagnosticCode: 'action-source-input-missing', diagnostics: { action: action.name, field: path.relative(action.path, required), expected: 'present', observed: 'missing' } });
     }
     const manifest = JSON.parse(readFileSync(packagePath, 'utf8'));
     if (manifest.scripts?.lint !== 'tsc --noEmit') {
-      throw new Error(`${action.name} must expose the standard TypeScript lint command`);
+      throw new DiagnosticError(`${action.name} must expose the standard TypeScript lint command`, { diagnosticCode: 'action-source-typecheck-invalid', diagnostics: { action: action.name, field: 'scripts.lint', expected: 'standard-typecheck', observed: 'invalid' } });
     }
     const tests = collectTests(testsRoot);
-    if (tests.length === 0) throw new Error(`${action.name} has no TypeScript tests`);
+    if (tests.length === 0) throw new DiagnosticError(`${action.name} has no TypeScript tests`, { diagnosticCode: 'action-source-tests-missing' });
     return {
       name: action.name,
       path: action.path,
@@ -109,34 +110,51 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
   }];
 };
 
-export const runVerificationPlan = (plan, execute = execFileSync) => {
-  for (const step of plan) {
-    process.stdout.write(`::group::${step.action} / ${step.phase}\n`);
+export const runVerificationPlan = (plan, execute = execFileSync, diagnostic = new FailureContext('repository-action-distribution', 'source-verification')) => {
+  for (const [index, step] of plan.entries()) {
+    diagnostic.at(step.phase, { action: step.action, input: 'action-source-and-contract-tests', completedSteps: index, remainingSteps: plan.length - index });
+    try { process.stdout.write(`::group::${step.action} / ${step.phase}\n`); } catch { /* Group markers cannot mask the verification result. */ }
     try {
+      diagnostic.writeState = 'verification-local-artifacts-possible';
       execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' });
+      diagnostic.confirmed();
+    } catch (error) {
+      throw new DiagnosticError('Action source verification failed', {
+        diagnosticCode: 'action-source-verification-failed', cause: error,
+        diagnostics: { field: step.action, expected: 'zero-exit', observed: typeof error?.status === 'number' ? error.status : safeErrorReason(error), completedSteps: index, remainingSteps: plan.length - index },
+      });
     } finally {
-      process.stdout.write('::endgroup::\n');
+      try { process.stdout.write('::endgroup::\n'); } catch { /* Preserve a child failure when closing the log group fails. */ }
     }
   }
 };
 
-export const verifyActionPackages = (root = defaultRoot) => {
+export const verifyActionPackages = (root = defaultRoot, diagnostic = new FailureContext('repository-action-distribution', 'source-verification')) => {
+  diagnostic.at('action-inventory', { input: 'actions-and-package-metadata' });
   const packages = collectActionPackages(root);
+  diagnostic.confirmed();
+  diagnostic.at('runtime-boundaries', { input: 'action-import-dependencies', actionCount: packages.length });
   assertRuntimeBoundaries(root, packages);
+  diagnostic.confirmed();
+  diagnostic.at('verification-plan', { input: 'source-typechecks-and-contract-tests' });
   const plan = [
     ...verificationPlan(packages),
     ...cliTypecheckPlan(root, packages),
     ...sharedRuntimeVerificationPlan(root),
   ];
-  runVerificationPlan(plan);
+  diagnostic.confirmed();
+  runVerificationPlan(plan, execFileSync, diagnostic);
+  diagnostic.at('result-output', { output: 'stdout-verification-result' });
   process.stdout.write(`Action source verification passed (${packages.length} bundled Actions).\n`);
 };
 
 if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  const diagnostic = new FailureContext('repository-action-distribution', 'source-verification');
   try {
-    verifyActionPackages();
+    verifyActionPackages(defaultRoot, diagnostic);
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
+    const reason = diagnostic.report(error);
+    completeFailure(reason, 1);
   }
 }

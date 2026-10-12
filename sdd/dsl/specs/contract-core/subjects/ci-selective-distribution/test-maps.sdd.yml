@@ -296,3 +296,48 @@ test_maps:
         check_refs:
           - check-selective-distribution-plan
           - check-selective-distribution-transaction
+  - verification_id: verification.ci-selective-distribution.selection
+    case_id: detailed-failure-selection
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > distribution selection rejection preserves state and diagnostic context"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-selective-distribution.delivery
+    case_id: detailed-failure-delivery
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.delivery > selective-distribution > release generator retains exit code when diagnostic sinks fail"
+        check_refs: [diagnostic-details]
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > distribution delivery rejection preserves state and diagnostic context"
+        check_refs: [diagnostic-details]
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: "contract.ci-selective-distribution.delivery > distribution-bootstrap-cli > distribution CLI retains exit 2 when its diagnostic sink fails"
+        check_refs: [diagnostic-details]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.delivery > selective-distribution-delivery > fetch retains validation failure and cached files when lock and staging cleanup fail"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-selective-distribution.publication
+    case_id: detailed-failure-publication
+    tests:
+      - path: runtime/repository/tests/manage-distribution-release.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > repository-selective-distribution-release > distribution Release publication is idempotent and readback rejects changed remote bytes"
+        check_refs: [diagnostic-details]
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > distribution-publication rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-selective-distribution.application
+    case_id: detailed-failure-application
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > distribution application rejection preserves state and diagnostic context"
+        check_refs: [diagnostic-details]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > selective-distribution-recovery > rollback retains its original rejection when owned lock cleanup fails"
+        check_refs: [diagnostic-details]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > selective-distribution-recovery > successful apply and rollback report cleanup failure with the completed transaction state"
+        check_refs: [diagnostic-details]
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.application > selective-distribution-recovery > rollback retains the restoration error when recording recovery state also fails"
+        check_refs: [diagnostic-details]

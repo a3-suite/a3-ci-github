@@ -16,3 +16,9 @@ test_maps:
         symbol: "workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary"
         check_refs:
           - check-ci-release-request-workflow-failure
+  - verification_id: verification.ci-release-request-workflow.handoff
+    case_id: detailed-failure-handoff
+    tests:
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > release-request aggregate retains failed job identity and run evidence"
+        check_refs: [diagnostic-details]

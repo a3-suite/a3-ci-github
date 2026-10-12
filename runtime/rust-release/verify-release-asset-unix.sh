@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ci_failure_subject=ci-rust-release-build
+ci_failure_operation=verify-asset
+ci_failure_script_dir=${BASH_SOURCE[0]%/*}
+if [[ "$ci_failure_script_dir" == "${BASH_SOURCE[0]}" ]]; then ci_failure_script_dir=.; fi
+source "$ci_failure_script_dir/../diagnostics/failure.sh"
+if (( $# < 7 )); then echo 'arguments-missing' >&2; exit 1; fi
+for ci_required_argument in "${@:1:7}"; do
+  if [[ -z "$ci_required_argument" ]]; then echo 'arguments-missing' >&2; exit 1; fi
+done
 
-binary_name=${1:?binary name is required}
-asset_prefix=${2:?asset prefix is required}
-version=${3:?version is required}
-platform_id=${4:?platform id is required}
-platform_target=${5:?platform target is required}
-source_sha=${6:?source SHA is required}
-output_dir=${7:?output directory is required}
+binary_name=${1}
+asset_prefix=${2}
+version=${3}
+platform_id=${4}
+platform_target=${5}
+source_sha=${6}
+output_dir=${7}
 
 archive_name="${asset_prefix}-${version}-${platform_id}.tar.gz"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=asset-read
+ci_failure_field=release-archive
+ci_failure_expected=unavailable
+ci_failure_observed=unavailable
 test -s "$output_dir/$archive_name"
 test -s "$output_dir/$archive_name.sha256"
 test -s "$output_dir/asset-manifest.json"

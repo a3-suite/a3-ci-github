@@ -1,3 +1,4 @@
+import { completeFailure, FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import fs from 'node:fs';
 import { decodePlatformManifest } from './platform-manifest-decoder';
 import { assembleRelease } from '../../../runtime/release-publication/assembly';
@@ -10,20 +11,27 @@ const input = (name: string, required = true): string => {
   return value;
 };
 export const run = async (): Promise<void> => {
+  const diagnostic = new FailureContext('ci-release-assembly', 'release-assembly');
   try {
     const outputPath = process.env.GITHUB_OUTPUT;
     if (!outputPath || /[\0\r\n]/.test(outputPath)) fail('output-path-invalid');
     const outputRoot = input('output-directory');
+    diagnostic.confirmed();
+    diagnostic.at('assembly-validation', {"input": "authority-snapshot-platform-build-and-supplemental"});
     const assembly = assembleRelease({
       repository: input('repository'), authorityPath: input('authority-path'), snapshotPath: input('snapshot-path'),
       platformManifestPath: input('platform-manifest-path'), platformMatrix: input('platform-matrix'),
       buildRoot: input('build-root'), supplementalRoot: input('supplemental-root', false), outputRoot,
     }, decodePlatformManifest);
+    diagnostic.retainedEvidence = 'configured-output-directory/assembly.json';
     const outputs = { status: 'success', 'release-handoff': outputRoot, 'asset-digest': assembly.asset_digest };
+    diagnostic.confirmed();
+    diagnostic.at('output-write', {"output": "GITHUB_OUTPUT"});
+    diagnostic.writeState = 'write-may-be-partial';
     fs.appendFileSync(outputPath, Object.entries(outputs).map(([key, value]) => `${key}=${value}\n`).join(''), 'utf8');
   } catch (error: unknown) {
-    process.stderr.write(`${releaseErrorMessage(error)}\n`);
-    process.exitCode = 1;
+    diagnostic.report(error);
+    completeFailure(releaseErrorMessage(error), 1);
   }
 };
 if (process.env.GITHUB_ACTIONS === 'true') void run();

@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ci_failure_subject=repository-action-distribution
+ci_failure_operation=release-alias-update
+ci_failure_script_dir=${BASH_SOURCE[0]%/*}
+if [[ "$ci_failure_script_dir" == "${BASH_SOURCE[0]}" ]]; then ci_failure_script_dir=.; fi
+source "$ci_failure_script_dir/../diagnostics/failure.sh"
+trap 'ci_failure_native_exit=$?; ci_failure_line=$LINENO' ERR
+ci_failure_field=RELEASE_TAG
+ci_failure_expected=vX.Y.Z
+ci_failure_observed=invalid-or-unavailable
 
 fail() {
   echo "::error::$*" >&2
@@ -11,10 +20,12 @@ release_sha="${RELEASE_SHA:-}"
 validate_only="${CI_RELEASE_VALIDATE_ONLY:-false}"
 
 [[ "$release_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
-  || fail "release tag must match vX.Y.Z: $release_tag"
+  || fail "release tag must match vX.Y.Z"
 release_major="${BASH_REMATCH[1]}"
 release_minor="${BASH_REMATCH[2]}"
 release_patch="${BASH_REMATCH[3]}"
+ci_failure_field=RELEASE_SHA
+ci_failure_expected=full-commit-sha
 [[ "$release_sha" =~ ^[0-9a-f]{40}$ ]] \
   || fail "release SHA must be a full lowercase commit SHA"
 [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null || true)" == true ]] \
@@ -24,20 +35,38 @@ git remote get-url origin >/dev/null 2>&1 \
 
 major_alias="v$release_major"
 minor_alias="v$release_major.$release_minor"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=tag-observation
+ci_failure_field=release-source-sha
+ci_failure_expected=$release_sha
+ci_failure_observed=unavailable
+ci_failure_write=local-git-observations-may-exist
 git fetch --force --no-tags origin "refs/tags/$release_tag:refs/tags/$release_tag"
 source_sha="$(git rev-parse "${release_tag}^{commit}")"
+ci_failure_observed=$source_sha
 
 [[ "$(git cat-file -t "$release_tag")" == tag ]] \
   || fail "release tag must be annotated: $release_tag"
 [[ "$source_sha" == "$release_sha" ]] \
   || fail "tag source does not match the GitHub event commit"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=release-version
+ci_failure_field=VERSION
+ci_failure_expected=${release_tag#v}
+ci_failure_observed=invalid-or-unavailable
 repository_version="$(git show "$source_sha:VERSION" 2>/dev/null)" \
   || fail "tagged commit must contain VERSION"
 [[ "$repository_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
-  || fail "repository VERSION must be a release SemVer: $repository_version"
+  || fail "repository VERSION must be a release SemVer"
+ci_failure_observed=$repository_version
 [[ "v$repository_version" == "$release_tag" ]] \
   || fail "release tag version does not match repository VERSION: $release_tag != v$repository_version"
 
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=main-integration
+ci_failure_field=release-source-integration
+ci_failure_expected=main-or-canonical-next-patch-hotfix
+ci_failure_observed=unavailable
 git fetch --no-tags origin refs/heads/main
 main_sha="$(git rev-parse --verify 'FETCH_HEAD^{commit}')" || fail "cannot resolve fetched main snapshot"
 main_tree="$(git rev-parse --verify "$main_sha^{tree}")" || fail "cannot resolve main tree"
@@ -56,6 +85,8 @@ integrated_into_main() {
 }
 
 if ! integrated_into_main "$source_sha" source; then
+  ci_failure_stage=hotfix-base-and-tip
+  ci_failure_field=canonical-hotfix-binding
   # Only the canonical next-patch hotfix may precede main integration.
   (( release_patch > 0 )) || fail "release tag source is not integrated into main"
   hotfix_ref="refs/heads/hotfix/$repository_version"
@@ -72,7 +103,12 @@ if ! integrated_into_main "$source_sha" source; then
   integrated_into_main "$base_sha" base || fail "hotfix base is not integrated into main"
   git merge-base --is-ancestor "$base_sha" "$source_sha" || fail "hotfix source does not descend from its base"
 fi
+ci_failure_last_confirmed=$ci_failure_stage
 
+ci_failure_stage=validation-mode
+ci_failure_field=CI_RELEASE_VALIDATE_ONLY
+ci_failure_expected=true-or-false
+ci_failure_observed=invalid-or-unavailable
 [[ "$validate_only" == true || "$validate_only" == false ]] \
   || fail "CI_RELEASE_VALIDATE_ONLY must be true or false"
 if [[ "$validate_only" == true ]]; then
@@ -103,7 +139,11 @@ version_is_greater() {
 declare -a aliases_to_update=()
 observed_major_object=""
 observed_minor_object=""
+ci_failure_stage="alias-observation"
+ci_failure_field=mutable-alias
+ci_failure_expected=$source_sha
 for alias in "$major_alias" "$minor_alias"; do
+  ci_failure_observed=unavailable
   remote_object="$(git ls-remote --refs origin "refs/tags/$alias" | awk 'NR == 1 { print $1 }')"
   if [[ "$alias" == "$major_alias" ]]; then
     observed_major_object="$remote_object"
@@ -120,6 +160,7 @@ for alias in "$major_alias" "$minor_alias"; do
     || fail "alias changed while it was being inspected: $alias"
 
   current_source="$(git rev-parse "${alias}^{commit}")"
+  ci_failure_observed=$current_source
   current_subject="$(git for-each-ref --format='%(contents:subject)' "refs/tags/$alias")"
   alias_subject_regex="^${alias}[[:space:]]->[[:space:]](v[0-9]+\.[0-9]+\.[0-9]+)$"
   if [[ "$current_subject" =~ $alias_subject_regex ]]; then
@@ -151,6 +192,9 @@ fi
 
 declare -a push_options=()
 declare -a alias_refspecs=()
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage="alias-preparation"
+ci_failure_observed=unavailable
 for alias in "${aliases_to_update[@]}"; do
   if [[ "$alias" == "$major_alias" ]]; then
     remote_object="$observed_major_object"
@@ -163,16 +207,27 @@ for alias in "${aliases_to_update[@]}"; do
     push_options+=("--force-with-lease=refs/tags/$alias:")
   fi
 
+  ci_failure_field=$alias
+  ci_failure_write=local-alias-tags-may-be-partial
   git tag -a -f "$alias" "$source_sha" -m "$alias -> $release_tag"
   alias_refspecs+=("refs/tags/$alias")
 done
 
 # Immutable full release tags are never included in this mutable alias push.
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage="alias-publication"
+ci_failure_field=mutable-aliases
+ci_failure_write=remote-alias-update-outcome-unknown
 git push --atomic "${push_options[@]}" origin "${alias_refspecs[@]}"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_write=remote-aliases-updated
+ci_failure_stage="alias-readback"
 
 for alias in "${aliases_to_update[@]}"; do
+  ci_failure_field=$alias
   remote_object="$(git ls-remote --refs origin "refs/tags/$alias" | awk 'NR == 1 { print $1 }')"
   remote_source="$(git ls-remote origin "refs/tags/${alias}^{}" | awk 'NR == 1 { print $1 }')"
+  ci_failure_observed=${remote_source:-unavailable}
   if [[ -z "$remote_object" || "$remote_object" == "$source_sha" || "$remote_source" != "$source_sha" ]]; then
     fail "remote alias verification failed: $alias"
   fi

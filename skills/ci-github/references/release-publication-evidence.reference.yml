@@ -48,7 +48,7 @@ workflowMapping:
 observationCredential:
   source: workflow-injected-GH_TOKEN
   operations: GET-only
-  visibilityRequirement: repository-permissions-push-confirmed-for-draft-visibility
+  visibilityRequirement: contract.ci-release-publication-verifier.outputs
   unknown: fail-closed
 supplemental:
   phaseInvocation: actions/ci-release-supplemental-asset/README.md

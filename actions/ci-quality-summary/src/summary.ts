@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { createHash } from 'node:crypto';
 
 const RESULTS = ['success', 'failed', 'blocked', '判定不能', '未実施', '対象外'] as const;
@@ -30,7 +31,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const normalize = (value: unknown, field: string): string => {
   if (typeof value !== 'string' || value.length === 0 || /[\0\r\n]/.test(value)) {
-    throw new Error(`ci-summary-${field}-invalid`);
+    throw new DiagnosticError(`ci-summary-${field}-invalid`);
   }
   return value;
 };
@@ -49,9 +50,9 @@ const rawResult = (
 
 const parseRows = (value: unknown, section: string): SummaryRow[] => {
   if (value === undefined) return [];
-  if (!Array.isArray(value)) throw new Error(`ci-summary-${section}-invalid`);
+  if (!Array.isArray(value)) throw new DiagnosticError(`ci-summary-${section}-invalid`);
   return value.map((row) => {
-    if (!isRecord(row)) throw new Error('ci-summary-row-invalid');
+    if (!isRecord(row)) throw new DiagnosticError('ci-summary-row-invalid');
     const common = {
       unit: normalize(row.unit, 'unit'),
       execution: normalize(row.execution, 'execution'),
@@ -60,32 +61,32 @@ const parseRows = (value: unknown, section: string): SummaryRow[] => {
     let parsed: SummaryRow;
     if (row.rawResult !== undefined) {
       if (row.result !== undefined || row.collection !== undefined) {
-        throw new Error('ci-summary-result-source-ambiguous');
+        throw new DiagnosticError('ci-summary-result-source-ambiguous');
       }
-      if (typeof row.applicable !== 'boolean') throw new Error('ci-summary-applicable-invalid');
+      if (typeof row.applicable !== 'boolean') throw new DiagnosticError('ci-summary-applicable-invalid');
       const sourceResult = normalize(row.rawResult, 'raw-result');
       parsed = { ...common, ...rawResult(sourceResult, row.applicable) };
       if (row.reason !== undefined) parsed.reason = normalize(row.reason, 'reason');
       else if (row.applicable && parsed.result !== 'success') parsed.reason = `job result: ${sourceResult}`;
     } else {
-      if (row.applicable !== undefined) throw new Error('ci-summary-result-source-ambiguous');
+      if (row.applicable !== undefined) throw new DiagnosticError('ci-summary-result-source-ambiguous');
       const result = normalize(row.result, 'result') as Result;
-      if (!RESULTS.includes(result)) throw new Error('ci-summary-result-invalid');
+      if (!RESULTS.includes(result)) throw new DiagnosticError('ci-summary-result-invalid');
       const collection = normalize(row.collection, 'collection') as Collection;
-      if (!COLLECTIONS.includes(collection)) throw new Error('ci-summary-collection-invalid');
+      if (!COLLECTIONS.includes(collection)) throw new DiagnosticError('ci-summary-collection-invalid');
       parsed = { ...common, result, collection };
       if (row.reason !== undefined) parsed.reason = normalize(row.reason, 'reason');
     }
-    if (parsed.result !== 'success' && !parsed.reason) throw new Error('ci-summary-reason-required');
+    if (parsed.result !== 'success' && !parsed.reason) throw new DiagnosticError('ci-summary-reason-required');
     return parsed;
   });
 };
 
 const parseInput = (value: unknown): QualitySummaryInput => {
-  if (!isRecord(value)) throw new Error('ci-summary-input-invalid');
+  if (!isRecord(value)) throw new DiagnosticError('ci-summary-input-invalid');
   const jobs = parseRows(value.jobs, 'jobs');
   const tests = parseRows(value.tests, 'tests');
-  if (jobs.length === 0 && tests.length === 0) throw new Error('ci-summary-rows-invalid');
+  if (jobs.length === 0 && tests.length === 0) throw new DiagnosticError('ci-summary-rows-invalid');
   return { jobs, tests };
 };
 
@@ -122,7 +123,7 @@ const aggregateStatus = (rows: SummaryRow[]): RenderedSummary['status'] => {
 export const renderQualitySummary = (value: unknown): RenderedSummary => {
   const parsed = parseInput(value);
   const rows = [...(parsed.jobs ?? []), ...(parsed.tests ?? [])];
-  if (rows.every((row) => isExcluded(row))) throw new Error('ci-summary-all-excluded');
+  if (rows.every((row) => isExcluded(row))) throw new DiagnosticError('ci-summary-all-excluded');
   const lines: string[] = [];
   if (parsed.jobs?.length) lines.push(...renderTable('ジョブサマリ', 'ジョブ', parsed.jobs), '');
   if (parsed.tests?.length) lines.push(...renderTable('テストサマリ', 'テスト', parsed.tests), '');

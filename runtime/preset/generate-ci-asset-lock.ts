@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node --import tsx
+import { completeFailure, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 
 import path from 'node:path';
 import process from 'node:process';
@@ -23,12 +24,16 @@ const parseArgs = (argv: string[]): {
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const diagnostic = new FailureContext('ci-preset-assurance', 'lock');
   try {
     const options = parseArgs(process.argv.slice(2));
+    diagnostic.confirmed();
+    diagnostic.at('lock-generation', { input: 'workflows-registry-and-source-revision' });
+    diagnostic.writeState = 'lock-write-may-have-started';
     const lock = writeCiAssetLock(options);
     process.stdout.write(`${JSON.stringify(lock, null, 2)}\n`);
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 2;
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 2);
   }
 }

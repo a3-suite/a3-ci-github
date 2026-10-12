@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-jq-provisioner.provision
     contract_id: contract.ci-jq-provisioner.provision
     cases:
+      - id: detailed-failure-provision
+        intent_id: detailed-diagnostics-provision
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-provision}]
       - id: supported-runner-assets
         intent_id: checked-jq-provisioned
         input:

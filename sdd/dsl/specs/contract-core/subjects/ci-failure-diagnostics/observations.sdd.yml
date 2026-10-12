@@ -25,3 +25,31 @@ observations:
         - selector: bootstrap-diagnostic
           kind: observation_field
           meaning: Stable machine-readable failure envelope emitted before runtime validation starts.
+        - selector: subject-contract-coverage
+          kind: observation_field
+          meaning: Every packaged subject and contract defines its failure diagnostic details and refers to the shared minimum; source inspection proves definitions only, independently of execution evidence.
+  - id: observation.ci-failure-diagnostics.failure-evidence
+    summary: Detailed failure evidence reconstructed from final logs and existing referenced evidence, without imposing a new universal serialized output format.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: classification
+          kind: observation_field
+          meaning: Contract subject or component, operation and failing stage, stable reason and known cause classification. Unknown causes are explicitly unknown; a generic failure code alone is insufficient when a safe specific reason was known.
+        - selector: context
+          kind: observation_field
+          meaning: Available run/job/step/matrix, source revision, platform/target, safe input/asset identities and external request correlation. Existing CI context may supply identifiers. Values not obtained before failure are explicitly unavailable or not applicable; they are never invented.
+        - selector: comparison
+          kind: observation_field
+          meaning: Applicable rule or violated field, safe expected and observed identities, versions, inventory, sizes or digests. Missing, extra, malformed, mismatching and unobserved data are distinct. Protected values and entire input/response/argv/environment dumps are forbidden; omission for protection is explicit.
+        - selector: evidence-location
+          kind: observation_field
+          meaning: The original diagnostic survives in the run/job/step log after failure. Reference existing detailed reports or partial artifacts only when needed, with safe relative paths or log links and available digest/inventory identity. State not-generated, transfer-failed or unavailable rather than referring to nonexistent evidence. Failed/always routes preserve required evidence; artifact generation is not mandatory when retained logs suffice.
+        - selector: execution-state
+          kind: observation_field
+          meaning: Original exit or classified outcome, last confirmed processing stage, applicable write/partial-output/rollback state, and separately observed diagnostic-retention failure. Retention/summary failure must not overwrite the original reason or make the invocation succeed. No retry is added solely to obtain diagnostics.
+        - selector: next-check
+          kind: observation_field
+          meaning: The reason and violated contract identify the concrete input, permission, tool, remote request or evidence to inspect next. Known failure and insufficient observation are distinguished; remediation and rerun safety are not claimed without the applicable state evidence.

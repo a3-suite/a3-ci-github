@@ -95,6 +95,30 @@ describe("update-release-aliases", () => {
 });
 
 describe("repository-release-alias-update", () => {
+  // evidence_role: contract
+  // test_level: integration
+  // contract_id: contract.repository-action-distribution.integrity
+  // integration_id: repository-release-alias-update
+  test('alias push failure retains native exit and uncertain remote state without moving exact tags', () => {
+    const { origin, work } = createRepository();
+    const source = git(work, 'rev-parse', 'HEAD');
+    pushReleaseTag(work, 'v1.2.3', source);
+    const exactTag = remoteTagObject(work, 'v1.2.3');
+    const hook = path.join(origin, 'hooks/pre-receive');
+    writeFileSync(hook, '#!/usr/bin/env bash\nexit 1\n');
+    chmodSync(hook, 0o755);
+    const result = updateAliases(work, 'v1.2.3', source);
+    expect(result.status).toBe(1);
+    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+    const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+    expect(evidence.classification).toMatchObject({ subject: 'repository-action-distribution', stage: 'alias-publication' });
+    expect(evidence.comparison).toMatchObject({ field: 'mutable-aliases', expected: source });
+    expect(evidence['execution-state']).toMatchObject({ exit: 1, nativeExit: '1', lastConfirmed: 'alias-preparation', write: 'remote-alias-update-outcome-unknown' });
+    expect(remoteTagObject(work, 'v1.2.3')).toBe(exactTag);
+    expect(remoteTagObject(work, 'v1')).toBe('');
+    expect(remoteTagObject(work, 'v1.2')).toBe('');
+  });
+
   // integration_id: repository-release-alias-update
   test('release workflow delegates alias mutation to the executable repository runtime', () => {
     const workflow = readFileSync(path.join(repositoryRoot, '.github/workflows/release.yml'), 'utf8');
@@ -372,13 +396,22 @@ describe("repository-release-alias-update", () => {
     expect(missingResult.stderr).toMatch(/must contain VERSION/);
     expect(remoteTagObject(missing.work, 'v1')).toBe('');
 
-    const invalid = createRepository('01.2.3');
-    const invalidSha = git(invalid.work, 'rev-parse', 'HEAD');
-    pushReleaseTag(invalid.work, 'v1.2.3', invalidSha);
-    const invalidResult = updateAliases(invalid.work, 'v1.2.3', invalidSha);
-    expect(invalidResult.status).toBe(1);
-    expect(invalidResult.stderr).toMatch(/VERSION must be a release SemVer/);
-    expect(remoteTagObject(invalid.work, 'v1')).toBe('');
+    const protectedVersion = 'private-maintenance-version-must-not-appear';
+    for (const version of ['01.2.3', protectedVersion]) {
+      const invalid = createRepository(version);
+      const invalidSha = git(invalid.work, 'rev-parse', 'HEAD');
+      pushReleaseTag(invalid.work, 'v1.2.3', invalidSha);
+      const invalidResult = updateAliases(invalid.work, 'v1.2.3', invalidSha);
+      expect(invalidResult.status).toBe(1);
+      expect(invalidResult.stderr).toMatch(/VERSION must be a release SemVer/);
+      expect(`${invalidResult.stdout}${invalidResult.stderr}`).not.toContain(version);
+      const diagnostic = JSON.parse(invalidResult.stderr.split('\n').find(line => line.startsWith('ci-failure-diagnostic:')).slice('ci-failure-diagnostic:'.length));
+      expect(diagnostic.classification.stage).toBe('release-version');
+      expect(diagnostic.comparison).toEqual({ field: 'VERSION', expected: '1.2.3', observed: 'invalid-or-unavailable' });
+      expect(remoteTagSource(invalid.work, 'v1.2.3')).toBe(invalidSha);
+      expect(remoteTagObject(invalid.work, 'v1')).toBe('');
+      expect(remoteTagObject(invalid.work, 'v1.2')).toBe('');
+    }
   });
 
   // integration_id: repository-release-alias-update
@@ -392,6 +425,7 @@ describe("repository-release-alias-update", () => {
     expect(mismatch.stderr).toMatch(/does not match repository VERSION/);
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');
+
   });
 
   // integration_id: repository-release-alias-update
@@ -413,6 +447,26 @@ describe("repository-release-alias-update", () => {
     expect(bareRepository.stderr).toMatch(/requires a Git work tree/);
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');
+    const hotfix = createRepository('1.2.2');
+    pushReleaseTag(hotfix.work, 'v1.2.2', git(hotfix.work, 'rev-parse', 'HEAD'));
+    git(hotfix.work, 'checkout', '-b', 'hotfix/1.2.3');
+    const hotfixSha = appendCommit(hotfix.work, 'release', '1.2.3');
+    git(hotfix.work, 'push', 'origin', 'hotfix/1.2.3');
+    pushReleaseTag(hotfix.work, 'v1.2.3', hotfixSha);
+    const protectedMode = 'private-validation-mode-must-not-appear';
+    for (const [target, sha, confirmed] of [[work, sourceSha, 'main-integration'], [hotfix.work, hotfixSha, 'hotfix-base-and-tip']]) {
+      const invalidMode = updateAliasesAt(target, 'v1.2.3', sha, { CI_RELEASE_VALIDATE_ONLY: protectedMode });
+      expect(invalidMode.status).toBe(1);
+      expect(`${invalidMode.stdout}${invalidMode.stderr}`).not.toContain(protectedMode);
+      const evidence = JSON.parse(invalidMode.stderr.split('\n').find(line => line.startsWith('ci-failure-diagnostic:')).slice('ci-failure-diagnostic:'.length));
+      expect(evidence.classification.stage).toBe('validation-mode');
+      expect(evidence.comparison).toEqual({ field: 'CI_RELEASE_VALIDATE_ONLY', expected: 'true-or-false', observed: 'invalid-or-unavailable' });
+      expect(evidence['next-check']).toEqual({ rule: 'validation-mode', input: 'CI_RELEASE_VALIDATE_ONLY' });
+      expect(evidence['execution-state'].lastConfirmed).toBe(confirmed);
+      expect(remoteTagSource(target, 'v1.2.3')).toBe(sha);
+      expect(remoteTagObject(target, 'v1')).toBe('');
+      expect(remoteTagObject(target, 'v1.2')).toBe('');
+    }
   });
 
   // integration_id: repository-release-alias-update

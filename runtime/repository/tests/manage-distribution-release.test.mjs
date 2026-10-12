@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmdirSync,
   rmSync,
   writeFileSync,
@@ -58,7 +59,15 @@ set -euo pipefail
 state="$GH_STATE"
 command="$1"
 shift
+printf '%s\\n' "$command $*" >> "$state/attempts"
+if [[ -n "\${GH_FAIL_OPERATION:-}" && "$command $1" == "$GH_FAIL_OPERATION" ]]; then
+  printf '%s' private-child-stdout-sentinel
+  printf '%s' private-child-stderr-sentinel >&2
+  exit 93
+fi
 if [[ -n "\${GH_FAIL_ENDPOINT:-}" && "$*" == *"$GH_FAIL_ENDPOINT"* ]]; then
+  printf '%s' private-child-stdout-sentinel
+  printf '%s' private-child-stderr-sentinel >&2
   exit 93
 fi
 if [[ "$command" == release && "$1" == create ]]; then
@@ -248,6 +257,27 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(failedReadback.status).toBe(1);
       expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('true');
       expect(existsSync(path.join(stateRoot, 'publications'))).toBe(false);
+
+      for (const [name, failureEnv, expectedStage, status, write] of [
+        ['upload', { GH_FAIL_OPERATION: 'release upload' }, 'asset-upload', 93, 'release-assets-may-be-partial'],
+        ['readback', { GH_FAIL_ENDPOINT: '/releases/assets/' }, 'asset-readback', 1, 'release-assets-may-be-partial'],
+        ['finalize', { GH_FAIL_OPERATION: 'release edit' }, 'release-finalize', 93, 'finalize-result-unknown'],
+      ]) {
+        const failedRoot = path.join(temporaryRoot, `failed-${name}`);
+        mkdirSync(failedRoot);
+        const failed = execute('publish', assetDirectory, binaryRoot, failedRoot, failureEnv);
+        const records = failed.stderr.split('\n').filter(line => line.startsWith('ci-failure-diagnostic:')).map(line => JSON.parse(line.slice('ci-failure-diagnostic:'.length)));
+        expect(failed.status).toBe(status);
+        expect(records.length).toBeGreaterThan(0);
+        expect(records.some(evidence => evidence.classification.stage === expectedStage && evidence['execution-state'].nativeExit === '93')).toBe(true);
+        expect(records.at(-1)['execution-state']).toMatchObject({ exit: status, write });
+        expect(failed.stdout + failed.stderr).not.toContain('private-child-');
+        expect(readFileSync(path.join(failedRoot, 'draft'), 'utf8')).toBe('true');
+        expect(existsSync(path.join(failedRoot, 'publications'))).toBe(false);
+        const attempts = readFileSync(path.join(failedRoot, 'attempts'), 'utf8').trim().split('\n');
+        expect(attempts.filter(line => line.startsWith(name === 'upload' ? 'release upload' : name === 'finalize' ? 'release edit' : 'api -H Accept: application/octet-stream')).length).toBe(1);
+        expect(readdirSync(temporaryRoot).filter(name => name.startsWith('a3-ci-github-release.'))).toEqual([]);
+      }
 
       const published = execute('publish', assetDirectory, binaryRoot, stateRoot);
       expect(published.status, published.stderr).toBe(0);

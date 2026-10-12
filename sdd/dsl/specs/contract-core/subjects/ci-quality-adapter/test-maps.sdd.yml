@@ -64,3 +64,15 @@ test_maps:
         symbol: "ci-quality-adapter-source > rejects a missing or mismatched toolchain version token with the stable diagnostic"
         check_refs:
           - check-quality-adapter-toolchain-version-diagnostic
+  - verification_id: verification.ci-quality-adapter.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-quality-adapter failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint keeps unsafe child output out of logs and the public result"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint keeps unsafe child output out of logs and the public result"
+        check_refs: [diagnostic-details]

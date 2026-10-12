@@ -1,24 +1,46 @@
-import { LIMITS, fail, sha256, equal, safePath, readBytes, readJson, readRecord, hashFile, record, writeNewJson } from './io';
+import { LIMITS, fail, sha256, equal, safePath, readBytes, readJson, readRecord, hashFile, record, writeNewJson, diagnosticFailure, diagnosticEndpoint, releaseErrorMessage } from './io';
 import { validateEvidence, identityFromAuthority, assetDigest, sortedAssets } from './schema';
 import type { AssetType, AssemblyType, ReleaseIdentityType, ObservationType, ReceiptType, ReadbackType } from './schema';
 
 export type ObservationOptionsType = { authorityPath: string; repository: string; handoffRoot: string };
 export type VerificationOptionsType = ObservationOptionsType & { receiptPath: string; readbackPath: string; beforePath: string };
+type ResponseMetadataType = { status: number; requestId: string };
 export type ReadOnlyClientType = {
   json(endpoint: string): Promise<unknown>;
   list(endpoint: string): Promise<Record<string, unknown>[]>;
   assetDigest(endpoint: string, size: number): Promise<string>;
+  responseMetadata?(endpoint: string, value?: object): ResponseMetadataType | undefined;
+  hasStandardGithubTokenWriteAccess?(repository: string): boolean;
 };
+
+export const draftVisibilityFailure = (repository: Record<string, unknown>, identity: ReleaseIdentityType, client: ReadOnlyClientType): string | undefined => {
+  if (Object.hasOwn(repository, 'permissions') && !record(repository.permissions)) return 'permissions-missing';
+  if (record(repository.permissions) && Object.hasOwn(repository.permissions, 'push')) {
+    if (repository.permissions.push === true) return undefined;
+    return repository.permissions.push === false ? 'push-permission-denied' : 'push-permission-invalid';
+  }
+  if (client.hasStandardGithubTokenWriteAccess?.(identity.repository) === true) return undefined;
+  return record(repository.permissions) ? 'push-permission-missing' : 'permissions-missing';
+};
+const observationAttempts = 3;
+const observationDelayMs = 1000;
 const remoteRecord = async (client: ReadOnlyClientType, endpoint: string): Promise<Record<string, unknown>> => {
   const value = await client.json(endpoint);
-  if (!record(value)) fail('remote-state-unknown');
+  if (!record(value)) remoteFailure(endpoint, 'response', 'response-shape-invalid', client.responseMetadata?.(endpoint));
   return value;
+};
+
+function remoteFailure(endpoint: string, phase: string, reason: string, response?: Response | ResponseMetadataType, binary = false, cause?: unknown): never {
+  const requestId = response && 'headers' in response ? response.headers.get('x-github-request-id') ?? '' : response?.requestId ?? '';
+  return diagnosticFailure('remote-state-unknown', { operation: binary ? 'asset-readback' : 'remote-observation', phase, method: 'GET',
+    'sanitized-endpoint': diagnosticEndpoint(endpoint), 'http-status': response?.status ?? 'unavailable',
+    'request-id': /^[A-Za-z0-9:-]{1,100}$/.test(requestId) ? requestId : 'unavailable', 'sanitized-reason': reason }, cause);
 };
 
 export const remoteId = (value: unknown): string => {
   if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) return String(value);
   if (typeof value === 'string' && /^[1-9][0-9]{0,19}$/.test(value)) return value;
-  return fail('remote-state-unknown');
+  return remoteFailure('unavailable', 'response', 'remote-id-invalid');
 };
 export const loadAssembly = (options: ObservationOptionsType): { identity: ReleaseIdentityType; assembly: AssemblyType; handoffDigest: string } => {
   const identity = identityFromAuthority(readRecord(options.authorityPath), options.repository);
@@ -50,24 +72,49 @@ export const loadAssembly = (options: ObservationOptionsType): { identity: Relea
     || descriptor.version !== identity.version || descriptor.target_identity !== identity.target_identity || descriptor.manifest !== 'manifest.json') fail('authority-handoff-binding-mismatch');
   return { identity, assembly, handoffDigest: sha256(readBytes(safePath(options.handoffRoot, 'handoff.json'))) };
 };
-const boundedBody = async (response: Response, maximum: number): Promise<Buffer> => {
-  if (!response.body) fail('remote-state-unknown');
+const boundedBody = async (response: Response, maximum: number, endpoint: string): Promise<Buffer> => {
+  if (!response.body) remoteFailure(endpoint, 'response', 'response-empty', response);
   const parts: Buffer[] = [];
   let length = 0;
-  for await (const chunk of response.body) {
-    length += chunk.length;
-    if (length > maximum) fail('remote-state-unknown');
-    parts.push(Buffer.from(chunk));
+  try {
+    for await (const chunk of response.body!) {
+      length += chunk.length;
+      if (length > maximum) remoteFailure(endpoint, 'response', 'response-too-large', response);
+      parts.push(Buffer.from(chunk));
+    }
+  } catch (error) {
+    if (releaseErrorMessage(error).startsWith('remote-state-unknown:')) throw error;
+    remoteFailure(endpoint, 'response', error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request-timeout' : 'response-read-failed', response, false, error);
   }
   return Buffer.concat(parts);
 };
 export class GithubReadOnlyClient implements ReadOnlyClientType {
   private readonly token: string;
   private readonly fetcher: typeof fetch;
+  private readonly responses = new Map<string, ResponseMetadataType>();
+  private readonly recordResponses = new WeakMap<object, ResponseMetadataType>();
+  private readonly standardGithubTokenRepository: string | undefined;
   constructor(token: unknown, fetcher: typeof fetch = fetch) {
     if (typeof token !== 'string' || !token || /[\r\n\0]/.test(token)) fail('credential-missing');
     this.token = token;
     this.fetcher = fetcher;
+    const repository = process.env.GITHUB_REPOSITORY;
+    if (process.env.GITHUB_ACTIONS === 'true'
+      && process.env.CI_RELEASE_CREDENTIAL_SOURCE === 'standard-workflow-github-token'
+      && process.env.CI_RELEASE_CONTENTS_PERMISSION === 'write'
+      && process.env.GITHUB_TOKEN === token
+      && process.env.GITHUB_EVENT_NAME === 'workflow_run'
+      && typeof repository === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)
+      && process.env.GITHUB_REF?.startsWith('refs/heads/')
+      && process.env.GITHUB_WORKFLOW_REF === `${repository}/.github/workflows/release-publication-caller.yml@${process.env.GITHUB_REF}`) {
+      this.standardGithubTokenRepository = repository;
+    }
+  }
+  hasStandardGithubTokenWriteAccess(repository: string): boolean {
+    return this.standardGithubTokenRepository?.toLowerCase() === repository.toLowerCase();
+  }
+  responseMetadata(endpoint: string, value?: object): ResponseMetadataType | undefined {
+    return value ? this.recordResponses.get(value) : this.responses.get(endpoint.split('?')[0]);
   }
   async request(endpoint: string, binary = false): Promise<Response> {
     if (!endpoint.startsWith('/repos/') || /[\r\n\0]/.test(endpoint)) fail('endpoint-invalid');
@@ -79,55 +126,68 @@ export class GithubReadOnlyClient implements ReadOnlyClientType {
       });
       if (binary && response.status === 302) {
         const location = response.headers.get('location');
-        if (!location) fail('remote-state-unknown');
-        const redirect = new URL(location);
-        if (redirect.protocol !== 'https:' || redirect.hostname !== 'release-assets.githubusercontent.com' || redirect.username || redirect.password || redirect.port) fail('remote-state-unknown');
+        if (!location) remoteFailure(endpoint, 'response', 'redirect-missing', response, binary);
+        let redirect: URL;
+        try { redirect = new URL(location); } catch { return remoteFailure(endpoint, 'response', 'redirect-invalid', response, binary); }
+        if (redirect.protocol !== 'https:' || redirect.hostname !== 'release-assets.githubusercontent.com' || redirect.username || redirect.password || redirect.port) remoteFailure(endpoint, 'response', 'redirect-invalid', response, binary);
         response = await this.fetcher(redirect, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(LIMITS.timeoutMs) });
       }
       if (response.status !== 200) {
-        const requestId = response.headers.get('x-github-request-id') ?? 'unavailable';
-        // Only provider operation identity is exposed; response bodies and signed URLs are never diagnostics.
-        const diagnostic = { operation: binary ? 'asset-readback' : 'remote-observation', method: 'GET', 'sanitized-endpoint': endpoint.split('?')[0], 'http-status': response.status, 'request-id': /^[A-Za-z0-9:-]{1,100}$/.test(requestId) ? requestId : 'unavailable', 'sanitized-reason': 'provider-read-failed' };
-        throw new Error(`remote-state-unknown:${JSON.stringify(diagnostic)}`);
+        remoteFailure(endpoint, 'request', 'provider-read-failed', response, binary);
       }
+      const requestId = response.headers.get('x-github-request-id') ?? '';
+      this.responses.set(endpoint.split('?')[0], { status: response.status, requestId: /^[A-Za-z0-9:-]{1,100}$/.test(requestId) ? requestId : 'unavailable' });
       return response;
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('remote-state-unknown:')) throw error;
-      return fail('remote-state-unknown');
+      if (releaseErrorMessage(error).startsWith('remote-state-unknown:')) throw error;
+      return remoteFailure(endpoint, 'request', error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request-timeout' : 'network-failed', undefined, binary, error);
     }
   }
   async json(endpoint: string): Promise<unknown> {
     const response = await this.request(endpoint);
-    try { return JSON.parse((await boundedBody(response, LIMITS.responseBytes)).toString('utf8')); } catch { return fail('remote-state-unknown'); }
+    const bytes = await boundedBody(response, LIMITS.responseBytes, endpoint);
+    try {
+      const value: unknown = JSON.parse(bytes.toString('utf8'));
+      const metadata = this.responseMetadata(endpoint)!;
+      if (record(value) || Array.isArray(value)) this.recordResponses.set(value, metadata);
+      if (Array.isArray(value)) for (const entry of value) if (record(entry)) this.recordResponses.set(entry, metadata);
+      return value;
+    } catch (error) { return remoteFailure(endpoint, 'response', 'response-invalid-json', response, false, error); }
   }
   async list(endpoint: string): Promise<Record<string, unknown>[]> {
     const result: Record<string, unknown>[] = [];
     const ids = new Set();
     for (let page = 1; page <= LIMITS.pages; page += 1) {
       const entries = await this.json(`${endpoint}?per_page=100&page=${page}`);
-      if (!Array.isArray(entries) || entries.length > 100) fail('remote-state-unknown');
+      if (!Array.isArray(entries) || entries.length > 100) remoteFailure(endpoint, 'inventory', 'response-shape-invalid', this.responseMetadata(endpoint));
       const values: unknown[] = entries;
       for (const entry of values) {
-        if (!record(entry)) fail('remote-state-unknown');
-        const id = remoteId(entry.id);
-        if (ids.has(id)) fail('remote-state-unknown');
+        if (!record(entry)) remoteFailure(endpoint, 'inventory', 'response-shape-invalid', this.responseMetadata(endpoint));
+        let id: string;
+        try { id = remoteId(entry.id); } catch { return remoteFailure(endpoint, 'inventory', 'remote-id-invalid', this.responseMetadata(endpoint)); }
+        if (ids.has(id)) remoteFailure(endpoint, 'inventory', 'inventory-duplicate-id', this.responseMetadata(endpoint));
         ids.add(id);
         result.push(entry);
       }
       if (entries.length < 100) return result;
     }
-    return fail('remote-state-unknown');
+    return remoteFailure(endpoint, 'inventory', 'pagination-limit', this.responseMetadata(endpoint));
   }
   async assetDigest(endpoint: string, size: number): Promise<string> {
     const response = await this.request(endpoint, true);
-    if (!response.body) fail('remote-state-unknown');
+    if (!response.body) remoteFailure(endpoint, 'response', 'response-empty', response, true);
     const { createHash } = await import('node:crypto');
     const hash = createHash('sha256');
     let length = 0;
-    for await (const chunk of response.body) {
-      length += chunk.length;
-      if (length > size || length > LIMITS.assetBytes) fail('checksum-mismatch');
-      hash.update(chunk);
+    try {
+      for await (const chunk of response.body!) {
+        length += chunk.length;
+        if (length > size || length > LIMITS.assetBytes) fail('checksum-mismatch');
+        hash.update(chunk);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'checksum-mismatch') throw error;
+      remoteFailure(endpoint, 'response', error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name) ? 'request-timeout' : 'response-read-failed', response, true, error);
     }
     if (length !== size) fail('checksum-mismatch');
     return hash.digest('hex');
@@ -137,10 +197,13 @@ export const repositoryEndpoint = (identity: ReleaseIdentityType): string => `/r
 const observeInventory = async (client: ReadOnlyClientType, identity: ReleaseIdentityType): Promise<string[]> => {
   const endpoint = repositoryEndpoint(identity);
   const repository = await remoteRecord(client, endpoint);
-  // GitHub draft visibility requires push access. A published-only read cannot prove absence.
-  if (typeof repository.full_name !== 'string' || repository.full_name.toLowerCase() !== identity.repository.toLowerCase() || !record(repository.permissions) || repository.permissions.push !== true) fail('remote-state-unknown');
+  const response = client.responseMetadata?.(endpoint, repository);
+  // The fixed publication workflow supplies an alternative bound capability for installation tokens.
+  if (typeof repository.full_name !== 'string' || repository.full_name.toLowerCase() !== identity.repository.toLowerCase()) remoteFailure(endpoint, 'repository', 'repository-identity-mismatch', response);
+  const visibilityFailure = draftVisibilityFailure(repository, identity, client);
+  if (visibilityFailure) remoteFailure(endpoint, 'repository', visibilityFailure, response);
   return (await client.list(`${endpoint}/releases`)).filter((release) => {
-    if (typeof release.tag_name !== 'string' || typeof release.draft !== 'boolean') fail('remote-state-unknown');
+    if (typeof release.tag_name !== 'string' || typeof release.draft !== 'boolean') remoteFailure(`${endpoint}/releases`, 'inventory', 'response-shape-invalid', client.responseMetadata?.(`${endpoint}/releases`, release));
     return release.tag_name === identity.tag;
   }).map((release) => remoteId(release.id));
 };
@@ -167,25 +230,34 @@ export const verifyCreatedRelease = async (identity: ReleaseIdentityType, releas
   await observeUniqueRelease(identity, releaseId, client);
 };
 const observeUniqueRelease = async (identity: ReleaseIdentityType, releaseId: string, client: ReadOnlyClientType): Promise<string[]> => {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < observationAttempts; attempt += 1) {
     const ids = await observeInventory(client, identity);
     if (ids.length > 1 || (ids.length === 1 && ids[0] !== releaseId)) fail('existing-release-or-asset');
     if (ids.length === 1) return ids;
-    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (attempt + 1 < observationAttempts) await new Promise((resolve) => setTimeout(resolve, observationDelayMs));
   }
-  return fail('remote-state-unknown');
+  return remoteFailure(`${repositoryEndpoint(identity)}/releases`, 'post-create', 'release-not-visible', client.responseMetadata?.(`${repositoryEndpoint(identity)}/releases`));
 };
 export const observeAssets = async (identity: ReleaseIdentityType, releaseId: string, assembly: AssemblyType, client: ReadOnlyClientType): Promise<AssetType[]> => {
   const endpoint = repositoryEndpoint(identity);
-  const remoteAssets = await client.list(`${endpoint}/releases/${releaseId}/assets`);
-  if (remoteAssets.length !== assembly.assets.length) fail('asset-set-mismatch');
-  const names = new Set();
+  let candidates: { asset: AssetType; id: string }[] = [];
+  for (let attempt = 0; attempt < observationAttempts; attempt += 1) {
+    const remoteAssets = await client.list(`${endpoint}/releases/${releaseId}/assets`);
+    const observed = new Set();
+    candidates = [];
+    for (const remote of remoteAssets) {
+      const expected = assembly.assets.find((asset) => asset.name === remote.name);
+      if (!expected || observed.has(remote.name) || remote.size !== expected.size || remote.state !== 'uploaded') fail('asset-set-mismatch');
+      candidates.push({ asset: expected, id: remoteId(remote.id) });
+      observed.add(remote.name);
+    }
+    if (remoteAssets.length === assembly.assets.length) break;
+    if (attempt + 1 === observationAttempts) fail('asset-set-mismatch');
+    await new Promise((resolve) => setTimeout(resolve, observationDelayMs));
+  }
   const assets: AssetType[] = [];
-  for (const remote of remoteAssets) {
-    const expected = assembly.assets.find((asset) => asset.name === remote.name);
-    if (!expected || names.has(remote.name) || remote.size !== expected.size || remote.state !== 'uploaded') fail('asset-set-mismatch');
-    names.add(expected.name);
-    const digest = await client.assetDigest(`${endpoint}/releases/assets/${remoteId(remote.id)}`, expected.size);
+  for (const { asset: expected, id } of candidates) {
+    const digest = await client.assetDigest(`${endpoint}/releases/assets/${id}`, expected.size);
     if (digest !== expected.sha256) fail('checksum-mismatch');
     assets.push({ name: expected.name, size: expected.size, sha256: digest });
   }

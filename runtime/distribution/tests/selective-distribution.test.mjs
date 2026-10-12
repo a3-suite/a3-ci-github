@@ -69,6 +69,7 @@ for (const relative of [
   'runtime/path',
   'runtime/vitest',
   'runtime/distribution',
+  'runtime/diagnostics',
   'lint-rules/a3-lint',
 ]) {
   const source = path.join(repositoryRoot, relative);
@@ -266,6 +267,19 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.delivery
+    test('release generator retains exit code when diagnostic sinks fail', () => {
+      // Arrange
+      const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
+      const loader = createRequire(path.join(repositoryRoot, 'runtime/preset/package.json')).resolve('tsx');
+      const driver = `process.argv=[process.execPath,${JSON.stringify(generator)}];process.stderr.write=()=>{throw new Error('private-sink-failure')};process.on('uncaughtException',()=>{process.exitCode=88});await import(${JSON.stringify(generator)});`;
+      // Act
+      const result = spawnSync(process.execPath, ['--import', loader, '--input-type=module', '-e', driver], { encoding: 'utf8' });
+      // Assert
+      expect(result.status).toBe(2);
+      expect(result.stdout + result.stderr).toBe('');
+    });
+
+    // contract_id: contract.ci-selective-distribution.delivery
     test('release generator rejects invalid version source and output boundaries', async () => {
       await withFixture('a3-ci-github-distribution-release-guards-', (root) => {
         const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
@@ -329,7 +343,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ], { encoding: 'utf8' });
         // Assert
         expect(linkedResult.status).toBe(2);
-        expect(linkedResult.stderr).toContain(`distribution-source-symlink:${linkedAsset}`);
+        expect(linkedResult.stderr).toContain('distribution-source-symlink');
         expect(fs.existsSync(linkedOutput)).toBe(false);
       });
     });
@@ -433,9 +447,9 @@ describe("contract.ci-selective-distribution.selection", () => {
         const directAssets = resolveDistributionSelection(
           manifest,
           [],
-          ['runtime.preset', 'registry.ci-github'],
+          ['runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
         );
-        expect(directAssets.map((asset) => asset.id)).toStrictEqual(['registry.ci-github', 'runtime.preset']);
+        expect(directAssets.map((asset) => asset.id)).toStrictEqual(['registry.ci-github', 'runtime.diagnostics', 'runtime.preset']);
       });
     });
   });
@@ -502,7 +516,7 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         const fresh = planDistributionApplication(options);
         expect(() => applyDistributionPlan({ projectRoot, planPath: fresh.planPath, approvalDigest: fresh.planDigest,
           beforeWrite: ({ entry }) => { if (entry.destination === pins.destination) throw new Error('pin-write-failed'); } }))
-          .toThrow(/pin-write-failed/);
+          .toThrow(/distribution-unknown-failure/);
         for (const entry of fresh.actions) expect(fs.existsSync(path.join(projectRoot, entry.destination))).toBe(false);
         applyDistributionPlan({ projectRoot, planPath: fresh.planPath, approvalDigest: fresh.planDigest });
         const pinPath = path.join(projectRoot, pins.destination);
@@ -584,7 +598,7 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         expect(plan.actions.every(entry => entry.action === 'create')).toBe(true);
         expect(() => applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest,
           beforeWrite: ({ index }) => { if (index === 1) throw new Error('migration-apply-failed'); } }))
-          .toThrow(/migration-apply-failed/);
+          .toThrow(/distribution-unknown-failure/);
         const transactionsRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions');
         const transaction = JSON.parse(fs.readFileSync(path.join(transactionsRoot, fs.readdirSync(transactionsRoot)[0], 'transaction.json')));
         expect(transaction.status).toBe('rolled-back');
@@ -846,7 +860,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
             manifest,
             manifestBytes,
             requestedPresets: [],
-            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
+            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
             sourceRoot: repositoryRoot,
           })).rejects.toThrow(/distribution-file-integrity-mismatch/);
         expect(fs.existsSync(path.join(projectRoot, '.a3-skills/ci-github/distributions', sourceRevision))).toBe(false);
@@ -885,7 +899,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           manifest: release.manifest,
           manifestBytes: release.manifestBytes,
           requestedPresets: [],
-          requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
+          requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
           sourceRoot: repositoryRoot,
         });
         fs.writeFileSync(path.join(fetched.distributionRoot, 'workflows/quality/quality-gate.yml'), 'tampered\n');
@@ -909,14 +923,14 @@ describe("contract.ci-selective-distribution.application", () => {
           manifest: release.manifest,
           manifestBytes: release.manifestBytes,
           requestedPresets: [],
-          requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
+          requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
           sourceRoot: repositoryRoot,
         });
         expect(() => planDistributionApplication({
             projectRoot,
             sourceRevision,
             requestedPresets: [],
-            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
+            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
           })).toThrow(/distribution-copy-requires-matching-preset:workflow\.quality-gate/);
         await fetchDistribution({
           projectRoot,
@@ -930,7 +944,7 @@ describe("contract.ci-selective-distribution.application", () => {
             projectRoot,
             sourceRevision,
             requestedPresets: ['release-request'],
-            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github'],
+            requestedAssets: ['workflow.quality-gate', 'runtime.quality-workflow', 'runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
           })).toThrow(/distribution-copy-requires-matching-preset:workflow\.quality-gate/);
         await fetchDistribution({
           projectRoot,
@@ -1005,7 +1019,14 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(plan.actions.length > 1).toBeTruthy();
         const changedLater = plan.actions[1].destination;
         const changedPath = path.join(projectRoot, changedLater);
-        expect(() => applyDistributionPlan({
+        const originalRemove = fs.rmSync;
+        let failure;
+        fs.rmSync = (target, options) => {
+          if (target === path.join(projectRoot, '.a3-skills/ci-github/apply.lock')) throw new Error('private cleanup error');
+          return originalRemove(target, options);
+        };
+        try {
+          applyDistributionPlan({
             projectRoot,
             planPath: plan.planPath,
             approvalDigest: plan.planDigest,
@@ -1014,7 +1035,15 @@ describe("contract.ci-selective-distribution.application", () => {
               fs.mkdirSync(path.dirname(changedPath), { recursive: true });
               fs.writeFileSync(changedPath, 'changed-after-plan\n');
             },
-          })).toThrow(/distribution-plan-input-changed/);
+          });
+        } catch (error) { failure = error; }
+        finally { fs.rmSync = originalRemove; }
+        expect(failure.message).toMatch(/distribution-plan-input-changed/);
+        expect(failure.details.cleanup).toBe('lock-cleanup-failed');
+        expect(failure.details.rollback).toBe('restored');
+        const retainedLock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+        expect(fs.existsSync(retainedLock)).toBe(true);
+        fs.rmSync(retainedLock, { force: true });
         expect(fs.existsSync(path.join(projectRoot, plan.actions[0].destination))).toBe(false);
         expect(fs.readFileSync(changedPath, 'utf8')).toBe('changed-after-plan\n');
         const transactionsRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions');
@@ -1521,14 +1550,51 @@ describe("contract.ci-selective-distribution.delivery", () => {
             });
           try {
             // Act / Assert
-            await expect(fetchDistribution({ ...options, download })).rejects.toThrow(
-              operation === 'close' ? 'lock close failed' : 'lock removal failed');
+            await expect(fetchDistribution({ ...options, download })).rejects.toThrow('distribution-lock-cleanup-failed');
             expect(download).not.toHaveBeenCalled();
             expect(fs.readdirSync(stateRoot).filter((name) => name.startsWith('.staging-'))).toEqual([]);
           } finally {
             cleanup.mockRestore();
             opened.mockRestore();
           }
+        }
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.delivery
+    // integration_id: selective-distribution-delivery
+    test('fetch retains validation failure and cached files when lock and staging cleanup fail', async () => {
+      await withFixture('distribution-primary-cleanup-', async (root) => {
+        const release = prepareRelease(root);
+        for (const operation of ['lock', 'staging', 'both']) {
+          const projectRoot = path.join(root, operation);
+          fs.mkdirSync(projectRoot);
+          const options = { projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+            requestedPresets: ['release-request'], requestedAssets: [] };
+          const fetched = await fetchDistribution({ ...options, sourceRoot: committedSourceRoot });
+          const before = snapshotTree(fetched.distributionRoot);
+          const originalRemove = fs.rmSync;
+          let failure;
+          const cleanup = vi.spyOn(fs, 'rmSync').mockImplementation((target, removeOptions) => {
+            const lock = target === path.join(fetched.distributionRoot, '.fetch.lock');
+            const staging = path.basename(target).startsWith('.staging-');
+            if ((lock && operation !== 'staging') || (staging && operation !== 'lock')) throw new Error('private cleanup failure');
+            return originalRemove(target, removeOptions);
+          });
+          try {
+            await fetchDistribution({ ...options, requestedPresets: ['quality-gate'], download: async () => Buffer.from('corrupt') });
+          } catch (error) { failure = error; }
+          finally { cleanup.mockRestore(); }
+          expect(failure.message).toMatch(/^distribution-file-integrity-mismatch:/);
+          expect(failure.details.write).toBe('not-started');
+          expect(failure.details.cleanupFailures).toEqual(operation === 'lock' ? ['lock-remove']
+            : operation === 'staging' ? ['staging-remove'] : ['lock-remove', 'staging-remove']);
+          const after = snapshotTree(fetched.distributionRoot);
+          delete after['.fetch.lock'];
+          expect(after).toEqual(before);
+          expect(verifyFetchedDistribution({ projectRoot, sourceRevision }).status).toBe('verified');
         }
       });
     });
@@ -1652,7 +1718,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           ['untrusted redirect', { status: 302, location: 'https://example.invalid/asset' }, /distribution-download-redirect-untrusted/],
           ['insecure redirect', { status: 302, location: 'http://raw.githubusercontent.com/asset' }, /distribution-download-redirect-untrusted/],
           ['HTTP failure', { status: 404, location: null }, /http-404/],
-          ['opaque transport failure', { failure: 'transport unavailable' }, /transport unavailable/],
+          ['opaque transport failure', { failure: 'transport unavailable' }, /distribution-download-failed:network-result-unknown/],
         ];
         try {
           for (const [label, response, diagnostic] of cases) {
@@ -1796,6 +1862,136 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(() => applyDistributionPlan({ projectRoot, planPath: conflict.planPath,
           approvalDigest: conflict.planDigest })).toThrow(/distribution-plan-has-conflicts/);
         expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+  });
+});
+
+
+describe('contract.ci-selective-distribution.application', () => {
+  describe('selective-distribution-recovery', () => {
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.application
+    // integration_id: selective-distribution-recovery
+    test('rollback retains its original rejection when owned lock cleanup fails', async () => {
+      await withFixture('distribution-rollback-cleanup-', async (projectRoot) => {
+        const stateRoot = path.join(projectRoot, '.a3-skills/ci-github');
+        fs.mkdirSync(stateRoot, { recursive: true });
+        const existing = path.join(projectRoot, 'existing-state');
+        fs.writeFileSync(existing, 'preserved\n');
+        const transactionId = '1-123456789abc';
+        expect(() => rollbackDistributionTransaction({ projectRoot, transactionId })).toThrow('distribution-transaction-missing');
+        const lock = path.join(stateRoot, 'apply.lock');
+        const originalRemove = fs.rmSync;
+        const cleanup = vi.spyOn(fs, 'rmSync').mockImplementation((target, options) => {
+          if (target === lock) throw new Error('private lock removal failure');
+          return originalRemove(target, options);
+        });
+        let failure;
+        try { rollbackDistributionTransaction({ projectRoot, transactionId }); }
+        catch (error) { failure = error; }
+        finally { cleanup.mockRestore(); }
+        expect(failure.message).toBe('distribution-transaction-missing');
+        expect(failure.details).toMatchObject({ transactionId, write: 'not-started', rollback: 'unavailable',
+          cleanup: 'lock-cleanup-failed', cleanupFailures: ['lock-remove'] });
+        expect(fs.existsSync(lock)).toBe(true);
+        expect(fs.readFileSync(existing, 'utf8')).toBe('preserved\n');
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.application
+    // integration_id: selective-distribution-recovery
+    test('successful apply and rollback report cleanup failure with the completed transaction state', async () => {
+      await withFixture('distribution-completed-cleanup-', async (root) => {
+        const release = prepareRelease(root);
+        for (const operation of ['apply', 'rollback']) {
+          const projectRoot = path.join(root, operation);
+          fs.mkdirSync(projectRoot);
+          await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+            requestedPresets: ['release-request'], requestedAssets: [], sourceRoot: committedSourceRoot });
+          const plan = planDistributionApplication({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
+          const apply = () => applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+          const applied = operation === 'rollback' ? apply() : undefined;
+          const lock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+          const originalRemove = fs.rmSync;
+          const cleanup = vi.spyOn(fs, 'rmSync').mockImplementation((target, options) => {
+            if (target === lock) throw new Error('private lock removal failure');
+            return originalRemove(target, options);
+          });
+          let failure;
+          try {
+            if (operation === 'apply') apply();
+            else rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId });
+          } catch (error) { failure = error; }
+          finally { cleanup.mockRestore(); }
+          expect(failure.message).toBe('distribution-lock-cleanup-failed');
+          expect(failure.details.write).toBe(operation === 'apply' ? 'applied' : 'rolled-back');
+          expect(failure.details.rollback).toBe(operation === 'apply' ? 'not-required' : 'restored');
+          const transactionId = failure.details.transactionId;
+          expect(transactionId).toMatch(/^[0-9]+-[0-9a-f]{12}$/);
+          const transaction = JSON.parse(fs.readFileSync(path.join(projectRoot,
+            '.a3-skills/ci-github/transactions', transactionId, 'transaction.json'), 'utf8'));
+          expect(transaction.status).toBe(operation === 'apply' ? 'applied' : 'rolled-back');
+          for (const entry of plan.actions) {
+            const target = path.join(projectRoot, entry.destination);
+            if (operation === 'apply') expect(fs.readFileSync(target, 'utf8')).toBe(entry.generatedContent);
+            else expect(fs.existsSync(target)).toBe(false);
+          }
+          expect(fs.existsSync(lock)).toBe(true);
+        }
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.application
+    // integration_id: selective-distribution-recovery
+    test('rollback retains the restoration error when recording recovery state also fails', async () => {
+      await withFixture('distribution-rollback-record-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          requestedPresets: ['release-request'], requestedAssets: [], sourceRoot: committedSourceRoot });
+        const plan = planDistributionApplication({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const transactionPath = path.join(projectRoot, '.a3-skills/ci-github/transactions', applied.transactionId, 'transaction.json');
+        const target = path.join(projectRoot, plan.actions.at(-1).destination);
+        const before = fs.readFileSync(target);
+        const originalFailure = new Error('private restoration error');
+        const lockPath = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+        for (const lockCleanupFails of [false, true]) {
+          let restorationFailed = false;
+          const originalRemove = fs.rmSync;
+          const originalRename = fs.renameSync;
+          const remove = vi.spyOn(fs, 'rmSync').mockImplementation((filename, options) => {
+            if (filename === target) { restorationFailed = true; throw originalFailure; }
+            if (filename === lockPath && lockCleanupFails) throw new Error('private lock cleanup failure');
+            return originalRemove(filename, options);
+          });
+          const record = vi.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+            if (destination === transactionPath && restorationFailed) throw new Error('private record failure');
+            return originalRename(source, destination);
+          });
+          let failure;
+          try { rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId }); }
+          catch (error) { failure = error; }
+          finally { remove.mockRestore(); record.mockRestore(); }
+          expect(failure.message).toBe('distribution-unknown-failure');
+          expect(failure.cause).toBe(originalFailure);
+          expect(failure.details).toMatchObject({ transactionId: applied.transactionId,
+            write: 'partial-output', rollback: 'failed',
+            cleanup: lockCleanupFails ? 'lock-cleanup-failed' : 'transaction-record-write-failed' });
+          if (lockCleanupFails) expect(failure.details).toMatchObject({
+            priorCleanup: 'transaction-record-write-failed', cleanupFailures: ['lock-remove'],
+          });
+          expect(fs.readFileSync(target)).toEqual(before);
+          expect(JSON.parse(fs.readFileSync(transactionPath, 'utf8')).status).toBe('rolling-back');
+          expect(fs.existsSync(lockPath)).toBe(lockCleanupFails);
+        }
       });
     });
   });

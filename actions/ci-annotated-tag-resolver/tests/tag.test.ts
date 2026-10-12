@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import { resolveAnnotatedTag } from '../src/tag.js';
 
 const tagSha = 'a'.repeat(40);
@@ -40,5 +41,17 @@ describe('resolveAnnotatedTag(string,string,string,string,fetch)', () => {
 
     // Assert
     expect(String(failure)).toMatch(/annotated-tag-required/);
+    const evidence = new FailureContext('ci-annotated-tag-resolver', 'annotated-tag-resolver').evidence(failure);
+    expect(evidence.classification.stage).toBe('annotated-tag-validation');
+    expect(evidence.comparison).toEqual({ field: 'tag-object-type', expected: 'tag', observed: 'commit' });
+  });
+  // target_id: resolveAnnotatedTag(string,string,string,string,fetch)
+  test('retains safe provider correlation without the response body or token', async () => {
+    let failure: unknown;
+    try { await resolveAnnotatedTag('owner/repo', 'v1.2.3', 'private-token', 'https://api.example.test', async () => new Response('private-response', { status: 403, headers: { 'x-github-request-id': 'ABCD:1234' } })); } catch (error) { failure = error; }
+    const evidence = new FailureContext('ci-annotated-tag-resolver', 'annotated-tag-resolver').evidence(failure);
+    expect(evidence.classification).toMatchObject({ stage: 'tag-ref-observation', reason: 'github-api-http-403' });
+    expect(evidence.context.inputs).toMatchObject({ repository: 'owner/repo', tag: 'v1.2.3', httpStatus: 403, requestId: 'ABCD:1234' });
+    expect(JSON.stringify(evidence)).not.toContain('private-');
   });
 });

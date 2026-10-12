@@ -57,14 +57,14 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(missingId.status).not.toBe(0);
-      expect(missingId.stderr).toMatch(/selected platform id is not present/);
+      expect(missingId.stderr).toMatch(/platform-selection-id-missing/);
       expect(missingId.stderr.length).toBeLessThan(4096);
       expect(wrongTarget.status).not.toBe(0);
-      expect(wrongTarget.stderr).toMatch(/selected platform target does not match/);
+      expect(wrongTarget.stderr).toMatch(/platform-selection-target-mismatch/);
       for (const args of [[], [manifest], [manifest, 'linux-x64'], [manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']]) {
         const incomplete = run(process.execPath, [...invocation, ...args]);
         expect(incomplete.status).not.toBe(0);
-        expect(incomplete.stderr).toMatch(/usage:/);
+        expect(incomplete.stderr).toMatch(/platform-selection-arguments-invalid/);
       }
       const windowsManifest = 'platforms:\n  - {id: windows-x64, runner: windows-2022, target: x86_64-pc-windows-msvc}\n';
       for (const content of [windowsManifest, windowsManifest.replaceAll('\n', '\r\n'), windowsManifest.replace('\n', '\r\n')]) {
@@ -683,7 +683,7 @@ describe("rust-release-scripts", () => {
       expect(script).toMatch(/\$package\.version -cne \$authority\.version/);
       expect(script).toMatch(/\$token -ceq \$authority\.version -or \$token -ceq "v\$\(\$authority\.version\)" -or \$token -ceq "V\$\(\$authority\.version\)"/);
       expect(script).toMatch(/\$binaryVersionOutput -split '\[\\x20\\x09\\x0A\\x0D\]\+'/);
-      expect(script).toMatch(/binary-version-mismatch: expected=\$\(\$authority\.version\) or v\$\(\$authority\.version\) or V\$\(\$authority\.version\) received=\$binaryVersionOutput/);
+      expect(script).toContain("throw 'binary-version-mismatch'");
     });
 
     // integration_id: rust-release-scripts-regression

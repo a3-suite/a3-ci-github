@@ -44,3 +44,15 @@ test_maps:
         symbol: "contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification"
         check_refs:
           - check-verification-failure
+  - verification_id: verification.ci-github-toolchain-verifier.processing
+    case_id: detailed-failure-processing
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-github-toolchain-verifier.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]

@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import { createHash } from 'node:crypto';
 import { STANDARD_QUALITY_BUNDLES } from './standard-quality-bundles.generated.js';
 
@@ -11,7 +12,7 @@ export const verifyStandardQualityBundle = (entry: StandardQualityBundle): Stand
     || entry.sourceRepository !== 'https://github.com/izumilufty/a3-prompts'
     || !entry.sourcePath.startsWith('skills/') || entry.sourcePath.split('/').includes('..')
     || createHash('sha256').update(entry.descriptor).digest('hex') !== entry.sha256) {
-    throw new Error(`quality-adapter-standard-bundle-integrity:${entry.id}`);
+    throw new DiagnosticError(`quality-adapter-standard-bundle-integrity:${entry.id}`);
   }
   return entry;
 };
@@ -21,6 +22,6 @@ export const isStandardQualityBundle = (id: unknown): boolean =>
 
 export const standardQualityBundle = (id: string): StandardQualityBundle => {
   const entry = STANDARD_QUALITY_BUNDLES.find((candidate) => candidate.id === id);
-  if (!entry) throw new Error(`quality-adapter-standard-bundle-unknown:${id}`);
+  if (!entry) throw new DiagnosticError(`quality-adapter-standard-bundle-unknown:${id}`);
   return verifyStandardQualityBundle(entry);
 };

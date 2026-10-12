@@ -1,13 +1,14 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 const isMap = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export const projectProviderActionPins = (entries, fields) => {
   const result = new Map();
   for (const entry of entries) {
     if (!isMap(entry) || typeof entry.action !== 'string' || !entry.action || result.has(entry.action)) {
-      throw new Error('provider-action-pin-entry-invalid');
+      throw new DiagnosticError('provider-action-pin-entry-invalid');
     }
     result.set(entry.action, Object.fromEntries(fields.map((field) => {
-      if (typeof entry[field] !== 'string' || !entry[field]) throw new Error(`provider-action-pin-field-invalid:${entry.action}.${field}`);
+      if (typeof entry[field] !== 'string' || !entry[field]) throw new DiagnosticError(`provider-action-pin-field-invalid:${entry.action}.${field}`);
       return [field, entry[field]];
     })));
   }

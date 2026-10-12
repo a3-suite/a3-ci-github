@@ -53,3 +53,9 @@ test_maps:
         symbol: "workflow-contracts > quality-workflow-contract > optional platform quality workflow preserves trusted assets matrix execution and summary"
         check_refs:
           - check-ci-quality-workflow-platform
+  - verification_id: verification.ci-quality-workflow.execution
+    case_id: detailed-failure-execution
+    tests:
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > quality aggregate retains failed job identity and run evidence"
+        check_refs: [diagnostic-details]

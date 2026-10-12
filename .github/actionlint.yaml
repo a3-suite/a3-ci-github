@@ -3,3 +3,6 @@ paths:
     ignore:
       # Upstream issue rhysd/actionlint#657; queue values remain covered by workflow contracts.
       - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
+  .github/workflows/ci-package-publication.yml:
+    ignore:
+      - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'

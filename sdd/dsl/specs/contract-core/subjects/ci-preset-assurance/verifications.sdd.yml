@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-preset-assurance.verification
     contract_id: contract.ci-preset-assurance.verification
     cases:
+      - id: detailed-failure-verification
+        intent_id: detailed-diagnostics-verification
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-verification}]
       - id: case.ci-preset-assurance.explicit-roots-required
         intent_id: ci-preset-assurance-explicit-roots-intent
         input:
@@ -131,6 +135,10 @@ verifications:
   - id: verification.ci-preset-assurance.asset-lock
     contract_id: contract.ci-preset-assurance.asset-lock
     cases:
+      - id: detailed-failure-asset-lock
+        intent_id: detailed-diagnostics-asset-lock
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-asset-lock}]
       - id: case.ci-preset-assurance.asset-lock-generated
         intent_id: ci-preset-assurance-lock-generation-intent
         input:

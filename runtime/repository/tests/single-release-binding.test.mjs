@@ -174,7 +174,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Act
     const rejectedCandidate = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', sha));
     // Assert
-    expect(rejectedCandidate).toMatch(/execution unavailable/);
+    expect(rejectedCandidate).toMatch(/action-contract-execution-unavailable/);
     // Arrange
     for (const relative of [registryPath, ...repositorySnapshot(f.directory).targets]) {
       f.write(relative, readFileSync(path.join(f.directory, relative), 'utf8').replaceAll('0'.repeat(40), sha).replace('releaseTag: v0.2.10', 'releaseTag: v0.2.11'));
@@ -185,7 +185,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     const result = cli('--contracts', '--release-tag', 'v0.2.11');
     const bypass = cli('--release-tag', 'v0.2.11');
     // Assert
-    expect(result.status).toBe(2); expect(result.stderr).toContain('execution unavailable');
+    expect(result.status).toBe(2); expect(result.stderr).toContain('action-contract-execution-unavailable');
     expect(bypass.status).toBe(2);
   });
 

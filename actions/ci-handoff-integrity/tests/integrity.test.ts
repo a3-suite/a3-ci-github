@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, test, vi, expect } from 'vitest';
+import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import { validateHandoffDescriptor, validateHandoffIntegrity } from '../src/integrity.js';
 
 describe('ci-handoff-integrity-source', () => {
@@ -37,7 +38,11 @@ describe('ci-handoff-integrity-source', () => {
     const validate = () => validateHandoffIntegrity(root, 'handoff.json', { sourceSha: 'abc', version: '1.0.0', targetIdentity: 'linux' });
     // Assert
     try {
-      expect(validate).toThrow(/handoff-manifest-checksum-mismatch/);
+      let failure: unknown;
+      try { validate(); } catch (error) { failure = error; }
+      const evidence = new FailureContext('ci-handoff-integrity', 'handoff-integrity').evidence(failure);
+      expect(evidence.classification.stage).toBe('manifest-reread-comparison');
+      expect(evidence.comparison).toEqual({ field: 'manifest-sha256', path: 'manifest.json', expected: crypto.createHash('sha256').update(manifest).digest('hex'), observed: crypto.createHash('sha256').update(changedManifest).digest('hex'), expectedSize: Buffer.byteLength(manifest), observedSize: Buffer.byteLength(changedManifest) });
     } finally {
       spy.mockRestore();
     }

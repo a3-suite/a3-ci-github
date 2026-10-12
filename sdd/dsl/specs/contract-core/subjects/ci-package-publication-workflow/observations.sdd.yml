@@ -16,3 +16,13 @@ observations:
         - selector: failure-summary
           kind: observation_field
           meaning: Declared always-run summary route after request validation, preparation, and publication that preserves failed and unknown outcomes.
+  - id: observation.ci-package-publication-workflow.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "request・source/quality・package build・credential準備・publication・readback・summaryのどのjob/stepで失敗したか、package/version/registry、matrix identity、元のneeds result、既存log/artifactへの参照、公開操作の未実行/部分実行/結果不明を残す。"

@@ -30,3 +30,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected quality summary step.
+  - id: observation.ci-quality-summary.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "入力result/report読取・classification・render・evidence保存を区別し、欠落または不正な入力identity、failed/unresolved/skippedの元状態、未収集項目、保存済み証跡参照を残す。summary作成失敗で元の失敗を隠さない。"

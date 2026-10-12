@@ -1,6 +1,6 @@
 ---
 name: ci-asset-audit
-description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、固定参照先の契約適合、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化・配置変更・Release公開後の取り残しを監査するときに使う。
+description: a3-ci-github のworkflow・Action・runtime・installer・公開Skill・保守検証資材を棚卸し、consumerとproviderの責務、配布・実行経路、固定参照先の契約適合、失敗時の診断可能性、構造・ルールの妥当性、対称性、不要なコピー・個別実装・複雑度、共通化・配置変更・Release公開後の取り残しを監査するときに使う。
 ---
 
 # ci-asset-audit / SKILL
@@ -35,6 +35,7 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | lintと検証ルールの選択 | CI資材の規則は `{project-root}/a3-lint.repository.yaml`、外部Skillの言語・Vitest規則は `{project-root}/a3-lint.yaml`からrule root・適用条件・例外を解決する。対象別profileと実行経路は `{project-root}/docs/maintenance/action-construction.md`を参照し、preflightと契約テストの検査範囲も照合 |
 | CLI入力条件 | CLI manifest: `{project-root}/sdd/dsl/specs/cli/cli-command-manifest.sdd.yml`から各commandを解決 |
 | 契約と検証証拠 | contract package: `{project-root}/sdd/dsl/specs/contract-core/contract-package.sdd.yml`、契約対象の実行定義: `{project-root}/tests/contract-subject-execution.json` |
+| 失敗診断の要求・共通保証・固有保証 | 要求: `{project-root}/sdd/dsl/requirements/items/requirements/ci-failure-diagnostics/requirement.sdd.yml`、共通契約: `{project-root}/sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/`、各subjectの固有契約。公開監査への接続: `{project-root}/skills/ci-github/references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |
 | installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
 | Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: `{project-root}/.agents/skills/skills-deploy/SKILL.md`。固定参照と利用可能条件は上記preset registry・version policyから解決 |
@@ -70,6 +71,7 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 - **コピー削減**: consumerで管理する各資材が固有の設定・判断・実装として必要かを確認する。providerのAction／reusable workflowへの固定参照や導入時だけの参照へ置き換えられる共通処理を探す。削減余地はGit管理するコピー、CI実行時にダウンロードする資材、導入・保守時だけの取得資材を分けて示す。
 - **追加共通化**: 未共通化の処理も対象にし、同じ意味・責務の重複を確認する。候補ごとに対象経路、減らせるcopy・個別実装、維持するowner責務、共通化の保守・移行費用を示す。既に共通化済みの資材の確認だけで終えない。
 - **対称性**: 比較する資材・経路の対応関係と比較単位を先に決める。同じ役割の処理は責務・粒度・入力出力・検証・失敗伝播・後処理・配置依存・証拠の対応を照合する。request→caller→calleeのように役割が異なる段階は、同じ処理を持つかではなく、責務の受渡しに欠落・重複がないかを確認する。
+- **失敗診断**: 全対象の共通・固有診断契約から、public入口、子処理、summary、保持/cleanup失敗までの実装と検査へ追跡する。宣言・配置の確認と実際の最終ログ/既存証跡を分け、取得済みの安全な情報が失われていないか、元の理由・終了状態・残存状態が維持されるかを正本へ照合する。ローカル、native OS、Hosted、未注入条件を区別し、公開監査スキルの導線への接続も確認する。診断項目をここへ再定義しない。
 
 - **構造**: 正本の論理責務と物理配置・実依存を照合し、名前と責務、公開入口と内部処理、sourceと生成・配布物の対応を確認する。各層・分割・wrapperが独立した責務や境界を提供するかを確認し、ファイル数や層数だけで良否を決めない。
 - **ルール**: 適用する規則の正本・owner・対象・選択条件・例外と実際の検査箇所を対応付ける。実装が従うかに加え、規則自体が現在の目的・実行経路・信頼境界に妥当かを確認する。未使用前提の必須化、同じ規則の再定義、矛盾する判定、古い例外、検査対象漏れ・誤適用・実装追認のテストを探す。型検査・lint・生成物同一性・回帰が通常の検証経路から対象へ届くかを確認し、監査時だけの個別実行で検査漏れを補った状態を区別する。言語・runtimeの例外は保守方針の理由と実行前提に照合する。lint成功や既存テスト成功だけを規則の妥当性の根拠にしない。

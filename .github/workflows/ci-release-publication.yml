@@ -500,6 +500,9 @@ jobs:
     permissions:
       actions: read
       contents: write
+    env:
+      CI_RELEASE_CREDENTIAL_SOURCE: standard-workflow-github-token
+      CI_RELEASE_CONTENTS_PERMISSION: write
     outputs:
       release_remote_identity: ${{ steps.verify_publication.outputs['release-remote-identity'] }}
       publish_receipt: ${{ steps.verify_publication.outputs['publish-receipt'] }}
@@ -561,6 +564,7 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@23d2a19387e9b1c20ad7af80bc36788645b73eab
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           operation: observe-before
           repository: ${{ github.repository }}
@@ -572,6 +576,7 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-release-publisher@23d2a19387e9b1c20ad7af80bc36788645b73eab
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           authority-path: authority/authority.json
           release-handoff-root: release-handoff
@@ -582,6 +587,7 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@23d2a19387e9b1c20ad7af80bc36788645b73eab
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           operation: verify-after
           repository: ${{ github.repository }}

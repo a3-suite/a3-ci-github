@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-quality-adapter.outputs
     summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve language-owner provenance and require no consumer descriptor; their IDs are rejected in local descriptors.
     conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: quality-adapter-bundle-present
         input_predicate:
           kind: input
@@ -67,7 +72,17 @@ contracts:
           target:
             kind: diagnostic_code
             value: quality-adapter-toolchain-version-mismatch
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-quality-adapter.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-outputs]
       - id: quality-adapter-execution
         goal: A read-only descriptor executes in the selected source root and returns status.
         guarantee_refs:

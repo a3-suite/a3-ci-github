@@ -11,8 +11,11 @@ const run = (args) => spawnSync(process.execPath, [bootstrapPath, ...args], { cw
 const diagnosticOf = (result) => {
   expect(result.status).toBe(2);
   const diagnostic = JSON.parse(result.stderr.trim());
-  expect(Object.keys(diagnostic).sort()).toStrictEqual(['schemaVersion', 'kind', 'outcome', 'reason', 'message'].sort());
+  expect(Object.keys(diagnostic).sort()).toStrictEqual(['schemaVersion', 'kind', 'outcome', 'reason', 'message', 'failureEvidence'].sort());
   expect(diagnostic.kind).toBe('ci-github-preflight-bootstrap');
+  expect(diagnostic.failureEvidence.classification.subject).toBe('ci-preset-assurance');
+  expect(diagnostic.failureEvidence['execution-state'].outcome).toBe(diagnostic.outcome);
+  expect(diagnostic.failureEvidence['next-check'].rule).toBe(diagnostic.reason);
   return diagnostic;
 };
 
@@ -261,7 +264,7 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
           const diagnostic = diagnosticOf(result);
           expect(diagnostic.reason).toBe('runtime-dependency-tree-invalid');
           expect(diagnostic.outcome).toBe('cannot-start');
-          expect(diagnostic.message).toMatch(message);
+          expect(diagnostic.message).toBe('See failureEvidence and the preceding runtime log.');
           expect(result.stdout).toBe('');
           expect(trace.length).toBe(settings.npm ? 1 : 0);
           expect(trace.every((entry) => entry.command === 'npm')).toBeTruthy();
@@ -293,7 +296,7 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
           const diagnostic = diagnosticOf(result);
           expect(diagnostic.reason).toBe(reason);
           expect(diagnostic.outcome).toBe(outcome);
-          expect(diagnostic.message).toMatch(message);
+          expect(diagnostic.message).toBe('See failureEvidence and the preceding runtime log.');
           expect(result.stdout).toBe('');
           expect(trace[0].command).toBe('npm');
           expect(trace.every((entry) => !fs.existsSync(entry.temp))).toBeTruthy();

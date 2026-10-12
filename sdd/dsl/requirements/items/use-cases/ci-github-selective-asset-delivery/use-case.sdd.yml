@@ -6,7 +6,7 @@ actors:
   - actor_id: ci-maintainer
     kind: human
     role: primary
-    summary: 利用projectの配布asset選択、差分承認、適用後検証および復旧を管理する主体
+    summary: 利用projectの配布asset選択、差分確認、適用後検証および復旧を管理する主体
 goal: 不要資材と実装authorityの複製を避け、固定revisionの必要資材だけを再現可能な状態で利用projectへ接続する
 preconditions:
   - 承認済みGitHub Release identity、配布manifestおよびfetch CLIの取得元を解決できる
@@ -19,7 +19,7 @@ main_success_scenario:
   - summary: 検証済みfileと取得receiptをsource revision単位のproject-local distributionへ公開する
   - summary: manifestの固定参照を確認し、templateへ製品設定を結合してcanonical workflowを生成する
   - summary: 生成結果、destination、既存digest、owner状態、create・reuse・update・conflict・staleをplanへ固定する
-  - summary: 明示承認、排他取得、plan前提再確認後に生成済みworkflowを適用し、transactionと変更前状態を保持する
+  - summary: 依頼で許可された範囲の差分確認、同一digest照合、排他取得、plan前提再確認後に生成済みworkflowを適用し、transactionと変更前状態を保持する
   - summary: 必要なadapter materializeを既存ownerへ委譲し、asset lock、lint、preflight、consumer契約テストを順に実行する
 success_outcomes:
   - 選択した配布assetだけがfull source revision、manifest digest、receipt、planおよびtransactionから追跡できる
@@ -27,7 +27,7 @@ success_outcomes:
   - 更新失敗時は旧distributionを保持し、今回transactionの変更を復旧できる
 failure_outcomes:
   - manifest、source、size、digest、依存閉包またはredirect境界が不正ならconsumer管理資産を変更しない
-  - plan後のsource、destination、manifestまたは承認digestが変化した場合はcopyを開始または継続しない
+  - plan後のsource、destination、manifestまたは照合対象のplan digestが変化した場合はcopyを開始または継続しない
   - 管理外差分、並行apply、未取得assetまたは不完全な閉包を成功扱いにしない
 related_requirements:
   - requirement_ref:

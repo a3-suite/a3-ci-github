@@ -22,7 +22,7 @@ Unixは、共有入口の`install.sh`がOS・CPUを判定し、対応する対�
 - 製品宣言・manifest・許可されたadapterで同じ要件を満たせるか。満たせない場合は、標準runtimeのどの適用範囲・機能が不足するか。
 - A: 標準構成へ移行する（要件を満たせる場合の推奨）、B: 必要性を確認した最小限のowner extensionを残す、のどちらを採用するか。
 
-採用方針が確定するまではその実装を変更せず、独立して進められる標準構成の調査・差分確認を進める。固有差分の判定と必要な証跡は`installer-contract-coverage.reference.yml`の`projectOverrideClassification`を正本とする。固有実装がない場合は、この対話を追加せず通常の手順へ進む。
+採用方針が確定するまではその実装を変更せず、独立して進められる標準構成の調査・差分確認を進める。固有差分の判定と必要な証跡は`references/installer-contract-coverage.reference.yml`の`projectOverrideClassification`を正本とする。固有実装がない場合は、この対話を追加せず通常の手順へ進む。
 
 ## Windowsの実行方式の選択
 

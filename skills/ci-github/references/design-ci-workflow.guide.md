@@ -17,7 +17,7 @@
 7. 標準 bundle がない profile は project-owned adapter の候補を調べ、profile が提供する検証、build、package、version、artifact の契約を確認する。
 8. `references/configure-ci-preset.guide.md`に従い、選択した標準構成をworkflowへ接続する。
 
-CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml` と `references/ci-workflow-use-cases.reference.yml` が定義する）を独立した workflow として選択せず、CIプリセットの一連の経路として扱う。新規用途は `ci-workflow-use-cases.reference.yml` の selectionRules で既存の CIプリセット、adapter、owner-defined workflow を分類する。未設定の CIプリセット、language profile、adapter は既定値で補完しない。
+CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml` と `references/ci-workflow-use-cases.reference.yml` が定義する）を独立した workflow として選択せず、CIプリセットの一連の経路として扱う。新規用途は `references/ci-workflow-use-cases.reference.yml` の selectionRules で既存の CIプリセット、adapter、owner-defined workflow を分類する。未設定の CIプリセット、language profile、adapter は既定値で補完しない。
 
 ## フロー
 1. 運用契約の authority を確認する。
@@ -65,7 +65,7 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
    - 依存ロックの有無を前提に、インストール手順を固定する。
    - 実行するスクリプト名は定義と一致させ、存在確認のチェックを入れる。
    - ログやレポートは追跡対象と混在させない。
-   - 失敗時に必要なログだけをアーティファクト化し、保持期限を短くする。
+   - 失敗診断は`references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics.authorityResolution`で正本を解決し、保持経路と検査を接続する。ログで保証を満たせる場合はartifactを追加せず、必要な既存証跡を転送する場合だけ失敗後も保持する経路と保持期限を確認する。
    - `continue-on-error` を使う場合は最終集計ステップで必ず失敗させる。
 9. artifactの公開が必要か判断する。
    - artifactの公開が不要な場合は公開経路の確認を省略し、手順10へ進む。

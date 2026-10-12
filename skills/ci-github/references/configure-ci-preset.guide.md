@@ -3,8 +3,8 @@
 ## 目的
 
 選択したCIプリセットのcallerを製品設定付きで生成・配置し、project固有の実装だけを接続する。
-プリセットの意味、コピー元、コピー先は `ci-github-preset-assets.reference.yml`、共通処理契約は
-`ci-script-contracts.reference.yml` を正本とする。
+プリセットの意味、コピー元、コピー先は `references/ci-github-preset-assets.reference.yml`、共通処理契約は
+`references/ci-script-contracts.reference.yml` を正本とする。
 
 ## 導入前提
 
@@ -152,7 +152,7 @@ trusted CI assets の初期解決は provider profile の canonical state であ
 差分種別が「なし」以外のときは、「標準で成立しない理由」へ標準では満たせない要件と標準側の制約を書く。
 差分がない場合は「なし」と記入し、標準の説明を繰り返さない。
 
-`例外経路` は `ci-workflow-use-cases.reference.yml` の `exceptions` にある exception ID を記録する。
+`例外経路` は `references/ci-workflow-use-cases.reference.yml` の `exceptions` にある exception ID を記録する。
 例外の decision、停止条件、共有契約は正本を参照し、README へ複製しない。trigger extension、
 `requiredExtensions`、owner adapter など既存の拡張も、同じ差分記録から正本へ追跡できるようにする。
 
@@ -187,7 +187,7 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 
 | 表記 | 意味 |
 | --- | --- |
-| `{ci-github-source-root}` | `distribute-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
+| `{ci-github-source-root}` | `references/distribute-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
 | `{skill-collection-root}` | adapter bundle の `source.skill` を解決できる外部スキル集合 root |
 | `{ci-github-skill-root}` | `project-skill-deploy`で別途配備した、導線と参照文書だけを持つ`ci-github` Agent Skill root |
 | `{project-root}` | CI を導入する project の root |
@@ -195,7 +195,7 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 `{skill-collection-root}` は、選択した言語スキルを identity で解決する場合だけ使用する。
 repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
 `{ci-github-skill-root}` 配下へ複製しない。取得とworkflow copyは
-`distribute-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
+`references/distribute-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
 導入後の workflow や adapter から配布元を参照しない。
 
 ## プリセット別の値
@@ -214,11 +214,11 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 ## 導入手順
 
 1. `ci-github` スキルで用途に対応する標準プリセットを選ぶ。既存の固有実装がある場合は「標準構成からのセットアップ」に従い、必要性と採用方針を利用者と確認する。installerの採否をproject SSOTで確認する。未確定の場合はrepository-auditへ導入判断を委譲し、採否を利用者と確認する。配布する場合は、installerスキルの「インストーラをセットアップしたい、またはCIセットアップから委譲された」からセットアップガイドの実施へ委譲し、実装選択・契約ID・製品宣言pathをplan前に確定する。
-2. `distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。差分の明示承認後に設定済みcanonical callerを配置する。
-3. apply結果をregistryの選択preset、copyable asset、固定 SHA Action bindingと依存閉包へ照合し、残る `requiredExtensions` を確認する。callerとpin companionの配置は手順2の承認済みapplyだけで行い、固定本数や platform 数から必要ファイルを推測しない。
+2. `references/distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。依頼で許可された範囲の差分を確認し、設定済みcanonical callerを配置する。
+3. apply結果をregistryの選択preset、copyable asset、固定 SHA Action bindingと依存閉包へ照合し、残る `requiredExtensions` を確認する。callerとpin companionの配置は手順2の確認済みplanのapplyだけで行い、固定本数や platform 数から必要ファイルを推測しない。
 4. 生成済みcallerの標準bundle IDまたは独自descriptor、Releaseとpackageの選択したAction bindingを確認し、残る `requiredExtensions` をproject側に用意する。依存閉包に属する copyable asset は改変しない。installerは手順1で確定した構成の接続を確認し、その後の組立・検証・製品READMEへのインストール手順追記をinstallerスキルへ委譲する。セットアップガイドの完了条件に対する実施結果と未確認事項を受け取り、委譲の記載だけで完了扱いにしない。
-5. 配置されたregistryの`workflowAssets`を読み返し、planで承認したdestinationと一致することを確認する。
-6. 生成済みcallerの設定と固定参照を読み返す。calleeのSHAはmanifestの固定参照から、外部Action pinはregistryから自動設定される。consumerが外部provider Actionを直接使う場合だけ、provider CLIのplanがregistryの完全な射影であるpin companionを生成し、consumerの承認後にapplyが配置する。companionもcallerと同じ所有権確認・rollbackの対象とし、独自編集しない。job・step・permissions・trust境界・summary経路は直接変更しない。
+5. 配置されたregistryの`workflowAssets`を読み返し、planで確認したdestinationと一致することを確認する。
+6. 生成済みcallerの設定と固定参照を読み返す。calleeのSHAはmanifestの固定参照から、外部Action pinはregistryから自動設定される。consumerが外部provider Actionを直接使う場合だけ、provider CLIのplanがregistryの完全な射影であるpin companionを生成し、許可された作業範囲で差分を確認後にapplyが配置する。companionもcallerと同じ所有権確認・rollbackの対象とし、独自編集しない。job・step・permissions・trust境界・summary経路は直接変更しない。
 7. workflow初期パラメータは手順2の`--set`で確定した生成結果を確認し、必要なVariables、Secrets、実行ごとのworkflow inputを上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
 8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証導線、更新・撤去条件を記録する。
 9. 配布元 revision の full commit SHA を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。生成日時はUTCの分単位に正規化され、版識別には使わない。
@@ -238,18 +238,18 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 
 主workflowは薄いcallerを配置する。固有値はplanの`--set`で渡し、生成された`jobs.quality.with`を確認する。共通jobはproviderの `.github/workflows/ci-quality.yml` が実行する。calleeはconsumerのworkflow directoryへコピーしない。入力定義と受渡しはcalleeの `workflow_call.inputs` と `env`、固定参照と利用可能性はregistryの `qualityReusableWorkflow` を参照する。callerに残る `summary` は既存の集約check identityと失敗伝播のために必要であり、共通品質jobを再実装しない。実際のrequired check名の互換性はHostedで受け入れるまで未確認とする。
 
-1. `ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
-   entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `ci-adapter-bundles.reference.yml` を参照する。
+1. `references/ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
+   entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `references/ci-adapter-bundles.reference.yml` を参照する。
    plan前にlanguage profile、toolchain、runner、保護branch、必要なtoolのexact版を選ぶ。選択した言語で使わないuvまたはcargo-auditの版と、主qualityで使わないjqの版は、対応する生成設定へJSON文字列の空値を渡す。
 
-2. `distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
+2. `references/distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
    planに必要なruntimeを、取得済みdistributionの`runtime/preset/`固定依存定義から
-   `validate-ci-preset.guide.md`の「runtime準備」で
+   `references/validate-ci-preset.guide.md`の「runtime準備」で
    `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。runtimeはGit管理に含めない。
    その後、製品設定を`--set`で渡してplanを生成し、`create`／`reuse`／`update`と競合なしを
    確認してから、plan digestを明示してapplyする。
 
-3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`distribute-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
+3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`references/distribute-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
 
    ```bash
    ci_github_local_runtime="{project-root}/.a3-skills/ci-github/runtime"
@@ -277,7 +277,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
    `vars.`はGitHub Variables、`secrets.`はGitHub Secrets、
    `workflow_dispatch.inputs`は実行ごとの入力として設定する。tool versionを`vars.`へ移さない。
 
-6. 生成済みcallerのlanguage profile、toolchain、必要なtool version、runner、保護branch、標準bundle IDまたは独自descriptor名をplanの承認値と照合する。
+6. 生成済みcallerのlanguage profile、toolchain、必要なtool version、runner、保護branch、標準bundle IDまたは独自descriptor名を確認済みplanの値と照合する。
    calleeと外部Actionの固定参照は生成時に自動解決される。標準bundle APIは正式Releaseのexact tagとfull SHAが確認されるまで導入しない。
    trusted CI assets の採用済み marker は base の `.ci/ci-assets.lock.json` であり、workflow に flag はない。
 
@@ -303,7 +303,7 @@ platform 固有の runtime、artifact、installer の検証が必要な project 
 
 1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`。runner は registry の allowlist 内の versioned label）。
 2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。
-3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、承認済みapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
+3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。
 5. callerの `platform-summary` は `quality-gate-platforms / summary` の固定名で、calleeの失敗・中断・未実施・結果欠落を成功に読み替えない。provider側は期待platformの欠落、docs-only時の対象外記録、matrix結果を集約する。Hostedでrequired check名と失敗伝播を受け入れるまで利用可能扱いにせず、受入後にbase `quality-gate` のrequired checkと別に登録する。
 6. `.ci/README.md` の差分記録に、platform 別検証の採用と platform 選択の正本を残す。
@@ -387,6 +387,6 @@ owner の build／publication adapter は維持する。`pending-release` の間
 
 Release・Package 公開 callee は consumer へコピーせず、caller の `jobs.publish.uses` から provider を固定参照する。固定参照と公開状態は preset registry の `releasePublicationReusableWorkflow`／`packagePublicationReusableWorkflow`、設定入力は provider の `workflow_call.inputs` を正本とする。設定はplanの`--set`で静的なowner値を渡し、生成されたcallerの`jobs.publish.with`と照合する。Releaseのrequest run IDとPackageの検証済みhandoff identity以外の設定を実行時リクエストから取得しない。`pending-release` の間は導入しない。
 
-旧構成からは既存 callee の設定を caller 入力へ移し、plan の差分確認と承認を経て caller を切り替える。旧 callee の削除は所有と参照がないことを確認して別途承認する。提供元 SHA と consumer の `github.workflow_sha` は別の値であり、control checkout は後者と `github.repository` を使用する。
+旧構成からは既存 callee の設定を caller 入力へ移し、許可された作業範囲で plan の差分確認を経て caller を切り替える。旧 callee の削除は所有と参照がないことを確認して別途承認する。提供元 SHA と consumer の `github.workflow_sha` は別の値であり、control checkout は後者と `github.repository` を使用する。
 
 Packageのregistry secretはcallerの `jobs.publish.secrets` から明示注入し、consumerのowner publisherを呼ぶ。準備calleeの固定参照は `packagePreparationReusableWorkflow` の既存契約を維持する。

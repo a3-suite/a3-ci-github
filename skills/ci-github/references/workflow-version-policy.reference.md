@@ -17,7 +17,7 @@
 - runner の信頼境界、self-hosted 採用可否、required check は `references/runner-trust-policy.reference.md` に従う。
 - Action 自体の実装・配布は github-actions スキルに委譲する。
 - project の依存関係の内容は各言語・package manager の正本に従い、本ポリシーは workflow からの解決条件だけを定める。
-- package の immutable version、channel alias、artifact 種別、配布経路、registry 条件は workflow runtime の版ではない。CI は `implement-package-publish-workflow.guide.md` に従い、git スキルの owner 契約で許可された version plan だけを具体化する。
+- package の immutable version、channel alias、artifact 種別、配布経路、registry 条件は workflow runtime の版ではない。CI は `references/implement-package-publish-workflow.guide.md` に従い、git スキルの owner 契約で許可された version plan だけを具体化する。
 
 ## 適用対象
 - project で実行する `.github/workflows/**` の workflow、reusable workflow、job、step。
@@ -49,10 +49,10 @@
 - local Action は workflow と同じ commit に含まれる資材として扱い、外部 Action の tag pin へ置き換えない。
 - `a3-suite/a3-ci-github` の Action は a3 管理 Action として扱う。consumer接続前に`actionization.implementationSource.releaseTag`のReleaseが公開済みであり、`exactRef`と公開対象の対応を提供元の[publication契約](https://github.com/a3-suite/a3-ci-github/blob/main/sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従って確認する。採用版の契約と検証結果を使い、変更された契約を旧版へ遡及適用しない。tagのpeeled SHAとAction SHAが同じであることだけを確認方法にせず、実装の事前Releaseや接続専用の後続Releaseを要求しない。`uses`は`exactRef`の40桁SHAを実行参照とし、tagを実行参照へ使わない。
 - GitHub 公式、vendor、community の third-party Action は upstream owner の release policy を上書きしない。consumer は full commit SHA を実行参照とし、採用時に upstream の exact release tag、その target commit、実行参照の SHA が一致することを確認する。
-- provider Action の実行参照は registry（`ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
+- provider Action の実行参照は registry（`references/ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。
-- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、承認済みapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`distribute-ci-assets.guide.md`を参照する。
-- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
+- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/distribute-ci-assets.guide.md`を参照する。
+- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
 - upstream がランタイムのサポート終了や移行を通知した場合（例: Node.js ランタイムの deprecation 警告）は、registry と consumer の pin を同一変更で更新し、`## 更新と停止条件` の追跡項目へ記録する。
 - registry に無い provider Action、または `approvedRuntimes` 外の runtime を実行参照にした場合は、`## 更新と停止条件` に従って workflow の追加・更新・publish を進めない。
 - registry の availability gate を満たす `available` の Action だけを workflow へ接続する。Hosted 実行は別の運用証拠として扱う。
@@ -76,7 +76,7 @@
 - CI配布資産の版識別には配布元のfull commit SHAとcontent digestを使う。`.ci/ci-assets.lock.json`の`generatedAt`はUTC分単位の観測時刻であり、同一性、新旧、版順序の判定に使わない。
 - 版を更新する場合は、対象、旧版、新版、upstream の根拠、影響する runner/toolchain、検証結果を同じ変更で追跡できるようにする。
 - security fix で緊急更新する場合も、mutable alias へ戻さず、確認できる commit、version、digest のいずれかへ固定してから検証する。
-- version、commit、digest、runner image の identity が workflow または設定に未指定・不正・mutable の場合は、観測した対象契約違反を `ci-audit-contract.reference.yml` の `statusClassification` へ渡し、workflow の追加・更新・publish を進めない。
+- version、commit、digest、runner image の identity が workflow または設定に未指定・不正・mutable の場合は、観測した対象契約違反を `references/ci-audit-contract.reference.yml` の `statusClassification` へ渡し、workflow の追加・更新・publish を進めない。
 - 必須 identity の観測結果と監査statusは同契約の `statusClassification` と `result` に従い、監査または適合のsuccessを確定できない場合は workflow の追加・更新・publish を進めない。
 - `actionlint` の成功だけでは version の固定、upstream identity、runner image の実体、外部設定の適用を証明できない。静的検証と運用証跡を分けて報告する。
 
@@ -93,6 +93,6 @@
 - [ ] version の証拠と runner trust、権限、trigger、publish authority の証拠を混同していない。
 
 ## 関連
-- `design-ci-workflow.guide.md`
+- `references/design-ci-workflow.guide.md`
 - `references/workflow-authoring-policy.reference.md`
 - `references/runner-trust-policy.reference.md`

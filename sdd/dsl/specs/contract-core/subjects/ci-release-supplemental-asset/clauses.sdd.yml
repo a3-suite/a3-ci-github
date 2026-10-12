@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-release-supplemental-asset.outputs
     summary: Validate the authority-bound selected snapshot, fixed checkout, safe phase inputs and unclaimed output before executing the selected executable owner adapter whose bytes match the fixed source Git blob, with the v2 argument vector. Recheck identity, authority, snapshot, adapter and build input bytes after execution. Success requires owner exit zero and a new nonempty directory. Owner-adapter mode keeps installer semantics owner-owned. Standard-installer mode requires an enabled authority-bound selection, a fixed-source declaration, explicit supported verification profile and provider identity; the provider assembles and verifies the exact candidate and generates bound owner evidence before finalization. Fixed-source standard installer declarations and product manifests use the source-text identity rule of contract.ci-release-authority.outputs; owner-adapter executable bytes remain exact. Input mutation checks remain byte-exact, including newline-only changes during execution. Release platform identity remains independent of native installer identity. Each selected native target must bind uniquely to an authority-bound Release id and build target; both phases reject mismatches or platform manifest mutation while permitting unselected Release targets. Native supports Linux/macOS/Windows. Windows installer execution supports Windows PowerShell 5.1 and later, including PowerShell 7, without requiring a PowerShell upgrade; shared wrapper supports Linux/macOS only and may coexist with a target-specific Windows installer in the same declaration. Shared wrapper dispatch and evidence include only the Unix payloads; every selected native candidate retains its own verification before handoff. Common implementation is never required in the consumer source; this is not an execution sandbox or a provider publication operation. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
     conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: supplemental-valid
         environment_predicate:
           kind: environment-ref
@@ -60,7 +65,24 @@ contracts:
           kind: observable-result
           op: present
           target: {kind: observation_field, value: publication-assets}
+      - id: phase-diagnostic
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: diagnostic}
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-release-supplemental-asset.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-outputs]
       - id: bound-phase
         goal: Both phases select only the snapshot-bound owner adapter or provider standard installer and receive the exact ordered path arguments and return the new output only after successful common checks.
         guarantee_refs: [phase-success, phase-output]
@@ -70,3 +92,6 @@ contracts:
       - id: standard-installer-evidence-transfer
         goal: Final assemble verifies the exact transported candidate inventory and SHA-256 bytes including hidden source evidence, rejects missing, modified or undeclared files without a successful supplemental handoff, and excludes verification-only source snapshots from publication assets.
         guarantee_refs: [standard-installer-evidence-preserved, standard-installer-publication-assets-produced, phase-rejected]
+      - id: safe-diagnostics
+        goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
+        guarantee_refs: [phase-diagnostic]

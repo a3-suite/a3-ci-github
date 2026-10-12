@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import { createHash } from 'node:crypto';
 import { appendFile, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -21,14 +22,15 @@ export function selectChecksumDigest(manifest: string, asset: string, failurePre
     line.match(/^([0-9a-f]{64})\s+\*?([^\s]+)$/),
   ).filter((match) => match?.[2] === asset);
   if (matches.length !== 1) {
-    throw new Error(`${failurePrefix}: checksum entry for ${asset} must occur once`);
+    throw new DiagnosticError(`${failurePrefix}: checksum entry for ${asset} must occur once`, { diagnostics: { stage: 'checksum-inventory', field: 'checksum-entry-count', asset, expected: 1, observed: matches.length } });
   }
   return matches[0]![1];
 }
 
 export function verifySha256(content: Buffer, expected: string, asset: string, failurePrefix: string): void {
-  if (sha256Hex(content) !== expected) {
-    throw new Error(`${failurePrefix}: checksum mismatch for ${asset}`);
+  const observed = sha256Hex(content);
+  if (observed !== expected) {
+    throw new DiagnosticError(`${failurePrefix}: checksum mismatch for ${asset}`, { diagnostics: { stage: 'checksum-validation', field: 'sha256', asset, expected, observed } });
   }
 }
 
@@ -48,7 +50,7 @@ export async function downloadVerifiedAsset(request: VerifiedAssetRequest): Prom
     manifest = await fetchAsset(checksumUrl);
     content = await fetchAsset(assetUrl);
   } catch (error) {
-    throw new Error(`${failurePrefix}: download: ${String(error)}`);
+    throw new DiagnosticError(`${failurePrefix}: download failed`, { cause: error, diagnostics: { stage: 'asset-download', field: 'provider-release-asset', asset, observed: 'download-failed', expected: 'complete-download', ...(error instanceof DiagnosticError && error.details && typeof error.details === 'object' ? error.details : {}) } });
   }
   const expected = selectChecksumDigest(manifest.toString('utf8'), asset, failurePrefix);
   verifySha256(content, expected, asset, failurePrefix);
@@ -63,8 +65,9 @@ export async function exportDirectoryToPath(
   try {
     await appendFile(githubPath, `${path.dirname(installed)}\n`, 'utf8');
   } catch (error) {
-    await rm(path.dirname(installed), { recursive: true, force: true });
-    throw new Error(`${failurePrefix}: PATH update: ${String(error)}`);
+    let rollback = 'removed';
+    try { await rm(path.dirname(installed), { recursive: true, force: true }); } catch { rollback = 'cleanup-failed'; }
+    throw new DiagnosticError(`${failurePrefix}: PATH update failed`, { cause: error, diagnostics: { stage: 'path-export', field: 'GITHUB_PATH', observed: 'write-failed', expected: 'append-installed-directory', rollback } });
   }
   return installed;
 }

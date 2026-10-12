@@ -36,3 +36,13 @@ observations:
         - selector: quality-output-state
           kind: observation_field
           meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.
+  - id: observation.ci-platform-matrix.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "manifest読取・schema/identity検証・selection解決を区別し、manifest/selection相対path、違反field、重複/未知platform ID、選択順序と該当targetを残す。無効な選択からmatrixや成功outputを生成しない。"

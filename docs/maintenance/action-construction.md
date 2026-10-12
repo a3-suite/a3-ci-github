@@ -92,6 +92,8 @@ Hosted実行・環境への書き込み・試験公開・Release公開は、ロ�
 
 既存 `.mjs` の全面移行は要求しません。release-publication の JSON 形式は `runtime/release-publication/evidence.schema.json` を正本とし、実装型の witness と required field の回帰を `runtime/release-publication/tests/schema.test.ts` で確認します。
 
+共有診断処理の正本は `runtime/diagnostics/failure.mts` です。Action の strict 検査で本体を確認し、既存の dist 再生成ゲートで native Node 用の `failure.mjs` と型宣言を生成・照合します。生成物は手編集せず、consumer の bootstrap は生成済み `.mjs` を使います。
+
 installer の候補組立・実候補検証は既存 Python builder と一体で保守する例外です。Node の入力・出力境界は TypeScript 標準に従います。例外理由、追加実行前提と同等の検証は [installer 保守](installer-maintenance.md) を参照してください。
 
 `ci-github-workflow-no-a3-cli` は consumer の workflow、既存 `ci-github-runtime-no-a3-cli` は `.ci/` 内の対応 JS/TS script を対象にします。repository の保守用 CLI 実行まで禁止する規則ではありません。対象範囲・検出パターンは rule asset が所有します。

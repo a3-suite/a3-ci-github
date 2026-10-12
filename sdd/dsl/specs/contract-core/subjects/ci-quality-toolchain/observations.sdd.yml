@@ -13,3 +13,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Success only after all selected preparation steps succeed; failure on invalid input or setup failure.
+  - id: observation.ci-quality-toolchain.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "language/profile選択・要求version検証・各setup・version確認を区別し、選択language/profile、失敗したtool/setup step、要求/観測version、OS/arch、元の終了状態を残す。未選択toolの取得を診断目的で追加しない。"

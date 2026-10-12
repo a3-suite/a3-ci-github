@@ -34,3 +34,13 @@ observations:
         - selector: successful-output-state
           kind: observation_field
           meaning: Successful evidence outputs are absent on failure.
+  - id: observation.ci-release-publisher.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "入力/approval検証・pre-write reobservation・create・個別asset upload・finalize・remote readback・receipt保存を区別し、固定source/tag/asset、method・安全なendpoint・HTTP status/request ID、確定したRelease IDと最後に完了した公開段階、期待/観測digestを残す。provider拒否、write前未実行、write後の結果不明を区別し、診断でretryや成功receiptを追加しない。"

@@ -76,7 +76,7 @@ describe('jq provisioning', () => {
     await expect(() => provisionJqOnPath({
       version: '1.7.1', runnerOs: 'Linux', runnerArch: 'X64', tempRoot,
       fetchAsset: async () => { throw new Error('HTTP 404'); },
-    }, githubPath)).rejects.toThrow(/jq-provision-failed: download: Error: HTTP 404/);
+    }, githubPath)).rejects.toThrow(/jq-provision-failed: download failed/);
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 

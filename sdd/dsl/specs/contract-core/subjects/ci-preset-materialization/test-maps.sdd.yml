@@ -38,3 +38,9 @@ test_maps:
         symbol: "contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files"
         check_refs:
           - check-ci-preset-materialization-failure
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: detailed-failure-application
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > materialization preserves its outcome and safe diagnostic context"
+        check_refs: [diagnostic-details]

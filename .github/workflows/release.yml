@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           binding_report="$(node runtime/repository/check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG")"
           printf '%s\n' "$binding_report"
-          BINDING_REPORT="$binding_report" node --input-type=module -e 'import fs from "node:fs"; const result = JSON.parse(process.env.BINDING_REPORT); if (result.implementationBindingStatus !== "verified") process.exit(1); fs.appendFileSync(process.env.GITHUB_OUTPUT, `implementation_source_sha=${result.implementationSourceRevision}\nimplementation_binding_status=${result.implementationBindingStatus}\n`);'
+          BINDING_REPORT="$binding_report" node --input-type=module -e 'import fs from "node:fs"; const result = JSON.parse(process.env.BINDING_REPORT); if (result.implementationBindingStatus !== "verified") process.exit(1); fs.appendFileSync(process.env.GITHUB_OUTPUT, "implementation_source_sha=" + result.implementationSourceRevision + "\nimplementation_binding_status=" + result.implementationBindingStatus + "\n");'
 
       - name: Install distribution builder dependencies
         shell: bash

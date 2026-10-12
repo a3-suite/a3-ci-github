@@ -10,7 +10,7 @@
 - install state は現在の install 状態を表し、audit log は実行の履歴を追記する。
 - audit log を扱う場合、manifest は audit log path と audit log policy を持ち、実行主体、実行時刻、理由は execution request から受け取る。
 - audit log を使わない project では、install state だけで現在状態を記録してよい。`external-orchestrated` では handoff state を外部切替待ち release の記録先にする。
-- audit event type、payload、begin/result の一致条件、offline local artifact reference の正本は `installer-audit-event-contract.reference.yml` とする。
+- audit event type、payload、begin/result の一致条件、offline local artifact reference の正本は `references/installer-audit-event-contract.reference.yml` とする。
 
 ## 標準境界
 - audit log は追記型を基本にする。
