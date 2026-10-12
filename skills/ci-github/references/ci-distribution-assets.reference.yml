@@ -43,9 +43,14 @@ assets:
       - skills/ci-github/references/ci-script-assets.reference.yml
       - skills/ci-github/references/ci-script-contracts.reference.yml
       - skills/ci-github/references/ci-distribution-assets.reference.yml
+  - id: runtime.diagnostics
+    application: local-reference
+    sourcePaths:
+      - runtime/diagnostics/failure.mjs
+      - runtime/diagnostics/failure.d.mts
   - id: runtime.preset
     application: local-reference
-    dependencies: [registry.ci-github]
+    dependencies: [registry.ci-github, runtime.diagnostics]
     sourcePaths:
       - runtime/preset/package.json
       - runtime/preset/package-lock.json
@@ -110,6 +115,7 @@ assets:
       - runtime/path/same-file-core.mjs
   - id: runtime.vitest-summary
     application: local-reference
+    dependencies: [runtime.diagnostics]
     sourcePaths:
       - runtime/adapter/vitest-test-summary.ts
       - runtime/vitest/vitest-summary-core.d.mts
@@ -126,6 +132,7 @@ assets:
       - runtime/installer/run-installer.mjs
       - runtime/installer/dist/index.js
       - runtime/installer/dist/installer/src/assembly.py
+      - runtime/installer/dist/installer/src/diagnostic-reasons.json
       - runtime/installer/dist/installer/src/build-installer.py
       - runtime/installer/dist/installer/src/build-shared-wrapper.py
       - runtime/installer/dist/installer/src/builder_common.py

@@ -3,6 +3,8 @@ import path from 'node:path';
 import { describe, test, expect } from 'vitest';
 import { fixture, bundle as runEntrypoint } from './fixtures';
 
+import { fixture as standardFixture, archiveName, runDistributedAction } from './standard-installer-fixtures';
+
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
@@ -48,6 +50,15 @@ test('supplemental entrypoint propagates owner failure without owner diagnostics
   const result = bundle(f);
   expect(result.status).toBe(1);
   expect(String(result.stderr)).toMatch(/owner-adapter-failed/);
+  const diagnostic = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('owner-adapter-failed:'))!.slice('owner-adapter-failed:'.length));
+  expect(diagnostic.operation).toBe('owner-adapter');
+  expect(diagnostic.phase).toBe('build-platform');
+  expect(diagnostic['exit-status']).toBe(23);
+  const evidence = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
+  expect(evidence.classification.stage).toBe('owner-adapter-execution');
+  expect(evidence.comparison['exit-status']).toBe(23);
+  expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
+  expect(diagnostic['sanitized-reason']).toBe('process-failed');
   expect(String(result.stderr)).not.toMatch(/secret-owner-diagnostic/);
   expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
 });
@@ -62,6 +73,25 @@ test('supplemental entrypoint rejects mutated standard inputs and retains partia
   const retry = bundle(f);
   expect(retry.status).toBe(1);
   expect(String(retry.stderr)).toMatch(/output-already-exists/);
+});
+
+// contract_id: contract.ci-release-supplemental-asset.outputs
+// evidence_role: contract
+// flow_id: supplemental-safe-diagnostics
+// test_level: e2e
+test('supplemental entrypoint preserves safe standard installer diagnostics', (t) => {
+  const f = standardFixture(t);
+  fs.writeFileSync(path.join(f.root, 'standard', `${archiveName}.sha256`), 'synthetic-secret');
+  const { result, output } = runDistributedAction(f, f.options, entrypointArgs);
+  expect(result.status).toBe(1);
+  expect(result.stderr).not.toContain('synthetic-secret');
+  const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('standard-installer-failed:'))!.slice('standard-installer-failed:'.length));
+  expect(diagnostic.operation).toBe('standard-installer');
+  expect(diagnostic.phase).toBe('build-platform');
+  expect(diagnostic['sanitized-reason']).toBe('installer-artifact-checksum-invalid');
+  expect(diagnostic['exit-status']).toBe(1);
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
 });
 
 });

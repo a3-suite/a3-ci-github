@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ci_failure_subject=ci-selective-distribution
+ci_failure_operation=publication
+ci_failure_script_dir=${BASH_SOURCE[0]%/*}
+if [[ "$ci_failure_script_dir" == "${BASH_SOURCE[0]}" ]]; then ci_failure_script_dir=.; fi
+source "$ci_failure_script_dir/../diagnostics/failure.sh"
 
 fail() {
   echo "::error::$*" >&2
@@ -48,9 +53,22 @@ done
   sha256sum --check --strict SHA256SUMS
 )
 
+gh_safe() {
+  local status
+  if gh "$@" 2>/dev/null; then
+    return 0
+  else
+    status=$?
+  fi
+  # Capture the child result before the owner converts observation failures to its public status.
+  ci_failure_native_exit=$status
+  ci_failure_log "$status" "$LINENO" || true
+  return "$status"
+}
+
 gh_value() {
   local value
-  if ! value="$(gh api "$@")"; then
+  if ! value="$(gh_safe api "$@")"; then
     fail "GitHub API observation failed"
   fi
   printf '%s' "$value"
@@ -82,7 +100,7 @@ validate_snapshot() {
     [[ -z "$name" ]] && continue
     case "$name" in
       a3-ci-github-distribution-manifest.json|fetch-a3-ci-github.mjs|SHA256SUMS) ;;
-      *) fail "GitHub Release contains an unmanaged asset: $name" ;;
+      *) fail "GitHub Release contains an unmanaged asset" ;;
     esac
     [[ "$id" =~ ^[1-9][0-9]*$ ]] || fail "Release asset ID is invalid: $name"
   done <<< "$snapshot"
@@ -105,6 +123,9 @@ asset_id_from_snapshot() {
   printf '%s\n' "$snapshot" | awk -F '\t' -v name="$asset" '$1 == name { print $2 }'
 }
 
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=tag-observation
+ci_failure_field=fixed-release-identity
 verify_tag_identity
 # GraphQL variables are literals interpreted by GitHub, not shell parameters.
 # shellcheck disable=SC2016
@@ -119,16 +140,25 @@ resolve_release_id() {
 release_id="$(resolve_release_id)"
 if [[ -z "$release_id" ]]; then
   [[ "$operation" == publish ]] || fail "GitHub Release does not exist: $release_tag"
-  gh release create "$release_tag" \
+  ci_failure_last_confirmed=$ci_failure_stage
+  ci_failure_stage=release-create
+  ci_failure_field=release-identity
+  ci_failure_write=remote-write-result-unknown
+  gh_safe release create "$release_tag" \
     --repo "$repository" \
     --verify-tag \
     --title "$release_tag" \
     --draft \
-    --notes "$approved_notes"
+    --notes "$approved_notes" >/dev/null
   release_id="$(resolve_release_id)"
 fi
 [[ "$release_id" =~ ^[1-9][0-9]*$ ]] || fail "GitHub Release ID is invalid"
 release_endpoint="repos/$repository/releases/$release_id"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=release-observation
+ci_failure_field=release-id
+ci_failure_expected=$release_id
+ci_failure_observed=unavailable
 
 observed_tag="$(gh_value "$release_endpoint" --jq .tag_name)"
 observed_release_id="$(gh_value "$release_endpoint" --jq .id)"
@@ -159,7 +189,16 @@ fi
 
 temporary_root="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/a3-ci-github-release.XXXXXX")"
 cleanup() {
-  rm -rf -- "$temporary_root"
+  local status=$? cleanup_status=0
+  rm -rf -- "$temporary_root" 2>/dev/null || cleanup_status=$?
+  ci_failure_log "$status" "$ci_failure_line" || true
+  if (( cleanup_status != 0 )); then
+    ci_failure_stage=temporary-cleanup
+    ci_failure_field=owned-temporary-root
+    ci_failure_log "$cleanup_status" "$LINENO" || true
+    if (( status == 0 )); then status=$cleanup_status; fi
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 
@@ -171,7 +210,11 @@ if [[ "$operation" == publish && "$observed_draft" == true ]]; then
   for asset in "${assets[@]}"; do
     asset_id="$(asset_id_from_snapshot "$snapshot" "$asset")"
     if [[ -z "$asset_id" ]]; then
-      gh release upload "$release_tag" "$asset_directory/$asset" --repo "$repository"
+      ci_failure_last_confirmed=$ci_failure_stage
+      ci_failure_stage=asset-upload
+      ci_failure_field=$asset
+      ci_failure_write=release-assets-may-be-partial
+      gh_safe release upload "$release_tag" "$asset_directory/$asset" --repo "$repository" >/dev/null
     fi
   done
   snapshot="$(release_snapshot)"
@@ -180,7 +223,10 @@ validated_snapshot="$snapshot"
 validate_snapshot "$validated_snapshot" false
 for asset in "${assets[@]}"; do
   asset_id="$(asset_id_from_snapshot "$validated_snapshot" "$asset")"
-  gh api \
+  ci_failure_last_confirmed=$ci_failure_stage
+  ci_failure_stage=asset-readback
+  ci_failure_field=$asset
+  gh_safe api \
     -H 'Accept: application/octet-stream' \
     "repos/$repository/releases/assets/$asset_id" > "$temporary_root/$asset" \
     || fail "Release asset readback failed: $asset"
@@ -195,7 +241,11 @@ verify_tag_identity
 verify_release_metadata "$observed_draft"
 if [[ "$operation" == publish ]]; then
   if [[ "$observed_draft" == true ]]; then
-    gh release edit "$release_tag" --repo "$repository" --draft=false
+    ci_failure_last_confirmed=$ci_failure_stage
+    ci_failure_stage=release-finalize
+    ci_failure_field=publication-state
+    ci_failure_write=finalize-result-unknown
+    gh_safe release edit "$release_tag" --repo "$repository" --draft=false >/dev/null
   fi
   verify_tag_identity
   verify_release_metadata false

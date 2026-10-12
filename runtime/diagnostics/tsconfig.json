@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.action.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": true,
+    "rootDir": "."
+  },
+  "include": ["failure.mts"]
+}

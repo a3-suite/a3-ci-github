@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-selective-distribution.selection
     summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
     conditions:
+      - id: diagnostic-required-selection
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: selective-distribution-selection-valid
         environment_predicate:
           kind: environment-ref
@@ -34,7 +39,17 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
+      - id: diagnostic-details-selection
+        when: diagnostic-required-selection
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-selection
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-selection]
       - id: selective-distribution-selection-intent
         goal: A preset exposes its complete registered closure and a direct incomplete asset request is rejected.
         guarantee_refs:
@@ -43,6 +58,11 @@ contracts:
   - id: contract.ci-selective-distribution.delivery
     summary: Selected files are published locally only after immutable source identity and file integrity validation.
     conditions:
+      - id: diagnostic-required-delivery
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: selective-distribution-source-valid
         environment_predicate:
           kind: environment-ref
@@ -81,7 +101,17 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
+      - id: diagnostic-details-delivery
+        when: diagnostic-required-delivery
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-delivery
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-delivery]
       - id: selective-distribution-delivery-intent
         goal: Valid selected files produce a revision-bound receipt and invalid source bytes do not become a usable local distribution. Missing prior manifests produce the classified distribution-local-manifest-missing diagnostic; unsupported manifest schemas are rejected without conversion or fallback.
         guarantee_refs:
@@ -91,6 +121,11 @@ contracts:
   - id: contract.ci-selective-distribution.publication
     summary: One exact-tag Release makes its implementation and fixed workflow and installer connections available together after provider checks and byte-identical draft asset readback with approved notes.
     conditions:
+      - id: diagnostic-required-publication
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: selective-distribution-publication-valid
         environment_predicate:
           kind: environment-ref
@@ -134,7 +169,17 @@ contracts:
               kind: value_set
               values:
                 - verified
+      - id: diagnostic-details-publication
+        when: diagnostic-required-publication
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-publication
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-publication]
       - id: selective-distribution-publication-intent
         goal: >-
           The manifest binds reusable workflow references to the published source SHA and external Action references to verified provider pins. Provider CI verifies template generation, fixed references and caller/callee contracts before publication. Consumer existence and successful Hosted invocation of every reusable workflow are not publication prerequisites. Consumer environment acceptance follows installation and is reported separately.
@@ -151,8 +196,13 @@ contracts:
           - selective-distribution-publication-failure-exposed
           - selective-distribution-implementation-binding-verified
   - id: contract.ci-selective-distribution.application
-    summary: Configured canonical callers and required registry-projected pin companions are generated under an approved unchanged plan and restored after failure or rollback.
+    summary: Configured canonical callers and required registry-projected pin companions are generated under a reviewed unchanged plan within the authorized scope and restored after failure or rollback.
     conditions:
+      - id: diagnostic-required-application
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: selective-distribution-application-valid
         environment_predicate:
           kind: environment-ref
@@ -228,10 +278,20 @@ contracts:
           target:
             kind: observation_field
             value: rollbackStatus
+      - id: diagnostic-details-application
+        when: diagnostic-required-application
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-application
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-application]
       - id: selective-distribution-application-intent
         goal: >-
-          Plans bind product settings, manifest-resolved fixed callee references, source digests and generated bytes. Required pin companions are the complete projection of registry provider Action entries and declared companion fields, share caller ownership classifications and approval, and participate in the same transaction and rollback. YAML scalar generation rejects missing or unknown settings and leaves no placeholders. Schema 2 updates preserve declared settings from the installed caller and reject structural drift; earlier manifest schemas require explicit create migration with consumer-owned inventory, backup and restoration of the old lock and retired assets. The provider supplies templates and the generation script; consumers supply settings without implementing a renderer or copying provider runtime into Git. Missing Hosted acceptance evidence does not block generation, application or asset lock creation. Generated configuration does not prove successful execution in the consumer environment. Approved unchanged plans apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop. Asset lock generation after apply is outside this transaction.
+          Plans bind product settings, manifest-resolved fixed callee references, source digests and generated bytes. Required pin companions are the complete projection of registry provider Action entries and declared companion fields, share caller ownership classifications and diff review, and participate in the same transaction and rollback. YAML scalar generation rejects missing or unknown settings and leaves no placeholders. Schema 2 updates preserve declared settings from the installed caller and reject structural drift; earlier manifest schemas require explicit create migration with consumer-owned inventory, backup and restoration of the old lock and retired assets. The provider supplies templates and the generation script; consumers supply settings without implementing a renderer or copying provider runtime into Git. Missing Hosted acceptance evidence does not block generation, application or asset lock creation. Generated configuration does not prove successful execution in the consumer environment. Reviewed unchanged plans within the authorized scope apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop. Asset lock generation after apply is outside this transaction. The supplied plan digest binds review to application and is not human approval evidence. Authorized standard setup and updates require no additional user approval of the digest; unapproved scope expansion, custom implementation replacement or destructive changes require prior confirmation of the concrete diff.
         guarantee_refs:
           - selective-distribution-plan-exposed
           - selective-distribution-transaction-exposed

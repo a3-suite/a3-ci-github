@@ -51,6 +51,50 @@ describe("contract.ci-release-publisher.outputs", () => {
       const verified = await verifyAfter({ ...options, receiptPath: result.receiptPath, readbackPath: result.readbackPath }, independent);
       expect(verified.receipt).toStrictEqual(result.receipt);
     });
+
+    test('publisher preserves approved identity across canonical repository casing', async (t) => {
+      const state = await setup(t);
+      const json = state.client.json;
+      state.client.json = async (endpoint) => {
+        const value = await json(endpoint);
+        return endpoint === '/repos/owner/project' ? { ...value, full_name: 'Owner/Project' } : value;
+      };
+      const result = await publishRelease(state.options, state.client);
+      expect(result.receipt.identity).toEqual(state.f.identity);
+      expect(state.writes.filter(([operation]) => operation === 'create')).toHaveLength(1);
+    });
+
+    test('publisher rejects handoff changes during final absence observation before create', async (t) => {
+      const state = await setup(t);
+      const list = state.client.list;
+      state.client.list = async (endpoint) => {
+        const value = await list(endpoint);
+        if (endpoint.endsWith('/releases') && state.writes.length === 0) {
+          state.f.put(`handoff/assets/${state.f.name}`, 'changed during observation');
+        }
+        return value;
+      };
+      await expect(publishRelease(state.options, state.client)).rejects.toThrow(/checksum-mismatch/);
+      expect(state.writes).toEqual([]);
+      expect(fs.existsSync(state.options.outputRoot)).toBe(false);
+    });
+
+    test('publisher waits for uploaded asset inventory without repeating publication writes', async (t) => {
+      const state = await setup(t);
+      const list = state.client.list;
+      let inventories = 0;
+      state.client.list = async (endpoint) => {
+        if (endpoint.endsWith('/assets') && ++inventories < 3) return [];
+        return list(endpoint);
+      };
+      const result = await publishRelease(state.options, state.client);
+      expect(result.receipt.release_id).toBe('42');
+      expect(inventories).toBeGreaterThanOrEqual(3);
+      expect(state.writes.map(([operation]) => operation)).toEqual([
+        'create', ...state.assembly.assets.map(() => 'upload'), 'finalize',
+      ]);
+      expect(fs.readdirSync(state.options.outputRoot).sort()).toEqual(['readback.json', 'receipt.json']);
+    });
   });
 });
 

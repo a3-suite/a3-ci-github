@@ -27,3 +27,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected publish version step.
+  - id: observation.ci-publish-version.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "plan読取・exact/ciGenerated選択・template展開・version検証・書込を区別し、plan相対path、選択方式、違反field/component、期待する形式と安全な観測値、書込前後の確定状態を残す。"

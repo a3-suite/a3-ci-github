@@ -149,4 +149,48 @@ test('entrypoint fails unresolved and invalid path relationships', () => {
   }
 });
 
+// contract_id: contract.ci-failure-diagnostics.actionable
+// integration_id: summary-failure-retention
+for (const mode of ['evidence-generation', 'summary-write', 'unknown'] as const) {
+  test(`retains source failure when ${mode} fails`, () => {
+    // Arrange
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-summary-failure-'));
+    const evidencePath = path.join(tempRoot, 'evidence.md');
+    const summaryPath = path.join(tempRoot, 'summary.md');
+    const outputPath = path.join(tempRoot, 'output');
+    fs.writeFileSync(outputPath, '');
+    if (mode === 'evidence-generation') fs.mkdirSync(evidencePath);
+    if (mode === 'summary-write') fs.mkdirSync(summaryPath);
+    const mock = path.join(tempRoot, 'failure.mjs');
+    fs.writeFileSync(mock, `import fs from 'node:fs';const append=fs.appendFileSync;fs.appendFileSync=(file,...args)=>{if(file===process.env.FAILURE_SUMMARY)throw new Error('private-token-must-not-appear');return append(file,...args);};`);
+    try {
+      // Act
+      const result = spawnSync(process.execPath, [...(mode === 'unknown' ? ['--import', mock] : []), ...bundledEntrypoint], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath,
+          GITHUB_STEP_SUMMARY: summaryPath, FAILURE_SUMMARY: summaryPath,
+          'INPUT_EVIDENCE-PATH': evidencePath, 'INPUT_SUMMARY-PATH': summaryPath,
+          'INPUT_SUMMARY-JSON': JSON.stringify({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'original-job-log' }] }),
+        },
+      });
+      // Assert
+      expect(result.status).toBe(1);
+      const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+      const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
+      expect(evidence.classification.stage).toBe(mode === 'evidence-generation' ? 'evidence-write' : 'summary-write');
+      expect(evidence.context.inputs.sourceOutcome).toBe('failed');
+      expect(evidence['execution-state'].write).toBe('write-may-be-partial');
+      expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
+      expect(evidence['next-check'].stage).toBe(evidence.classification.stage);
+      if (mode !== 'evidence-generation') {
+        expect(fs.readFileSync(evidencePath, 'utf8')).toContain('job result: failure');
+        expect(evidence['evidence-location'].file).toBe('configured-evidence-path');
+        expect(evidence['execution-state'].retention).toBe('log-and-file');
+      }
+      if (mode === 'unknown') expect(evidence.classification).toMatchObject({ reason: 'unknown-failure', cause: 'unknown' });
+      expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
+      expect(fs.readFileSync(outputPath, 'utf8')).not.toContain('success');
+    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
+  });
+}
+
 });

@@ -36,3 +36,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected handoff validation step.
+  - id: observation.ci-handoff-integrity.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "manifest読取・path/種別検証・inventory照合・size/digest照合を区別し、handoff identity、対象相対path、欠落/余剰/不正種別、期待/観測sizeとdigest、最初に失敗した検証を残す。"

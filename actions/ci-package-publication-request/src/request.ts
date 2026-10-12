@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -11,12 +12,12 @@ export type RequestFields = {
 
 const SHA = /^[a-f0-9]{40}$/;
 const scalar = (value: string, field: string): string => {
-  if (!value || /[\0\r\n]/.test(value)) throw new Error(`package-publication-${field}-invalid`);
+  if (!value || /[\0\r\n]/.test(value)) throw new DiagnosticError(`package-publication-${field}-invalid`);
   return value;
 };
 
 const validate = (fields: RequestFields): RequestFields => {
-  if (!SHA.test(fields.sourceSha)) throw new Error('package-publication-source-sha-invalid');
+  if (!SHA.test(fields.sourceSha)) throw new DiagnosticError('package-publication-source-sha-invalid');
   return {
     sourceSha: fields.sourceSha,
     version: scalar(fields.version, 'version'),
@@ -38,9 +39,9 @@ export const verifyRequest = (requestPath: string, expectedSourceSha: string): R
   try {
     value = JSON.parse(fs.readFileSync(requestPath, 'utf8'));
   } catch {
-    throw new Error('package-publication-request-unreadable');
+    throw new DiagnosticError('package-publication-request-unreadable');
   }
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('package-publication-request-schema-invalid');
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new DiagnosticError('package-publication-request-schema-invalid');
   const record = value as Record<string, unknown>;
   const fields = validate({
     sourceSha: typeof record.sourceSha === 'string' ? record.sourceSha : '',
@@ -49,7 +50,7 @@ export const verifyRequest = (requestPath: string, expectedSourceSha: string): R
     languageProfile: typeof record.languageProfile === 'string' ? record.languageProfile : '',
     toolchain: typeof record.toolchain === 'string' ? record.toolchain : '',
   });
-  if (record.schema !== 'ci.package-publication-request.v1') throw new Error('package-publication-request-schema-invalid');
-  if (!SHA.test(expectedSourceSha) || fields.sourceSha !== expectedSourceSha) throw new Error('package-publication-source-sha-mismatch');
+  if (record.schema !== 'ci.package-publication-request.v1') throw new DiagnosticError('package-publication-request-schema-invalid');
+  if (!SHA.test(expectedSourceSha) || fields.sourceSha !== expectedSourceSha) throw new DiagnosticError('package-publication-source-sha-mismatch');
   return fields;
 };

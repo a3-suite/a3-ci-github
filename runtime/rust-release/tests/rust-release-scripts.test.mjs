@@ -39,6 +39,13 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
 
 const sha256 = (content) => createHash('sha256').update(content.replaceAll('\r\n', '\n')).digest('hex');
 
+const failureEvidence = (stderr) => {
+  const prefix = 'ci-failure-diagnostic:';
+  const line = stderr.split(/\r?\n/).findLast((entry) => entry.startsWith(prefix));
+  expect(line, stderr).toBeDefined();
+  return JSON.parse(line.slice(prefix.length));
+};
+
 describe("contract.ci-rust-release-build.processing", () => {
   describe("rust-release-build-script", () => {
     // contract_id: contract.ci-rust-release-build.processing
@@ -57,14 +64,14 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
       expect(missingId.status).not.toBe(0);
-      expect(missingId.stderr).toMatch(/selected platform id is not present/);
+      expect(missingId.stderr).toMatch(/platform-selection-id-missing/);
       expect(missingId.stderr.length).toBeLessThan(4096);
       expect(wrongTarget.status).not.toBe(0);
-      expect(wrongTarget.stderr).toMatch(/selected platform target does not match/);
+      expect(wrongTarget.stderr).toMatch(/platform-selection-target-mismatch/);
       for (const args of [[], [manifest], [manifest, 'linux-x64'], [manifest, 'linux-x64', 'x86_64-unknown-linux-gnu']]) {
         const incomplete = run(process.execPath, [...invocation, ...args]);
         expect(incomplete.status).not.toBe(0);
-        expect(incomplete.stderr).toMatch(/usage:/);
+        expect(incomplete.stderr).toMatch(/platform-selection-arguments-invalid/);
       }
       const windowsManifest = 'platforms:\n  - {id: windows-x64, runner: windows-2022, target: x86_64-pc-windows-msvc}\n';
       for (const content of [windowsManifest, windowsManifest.replaceAll('\n', '\r\n'), windowsManifest.replace('\n', '\r\n')]) {
@@ -591,7 +598,10 @@ describe("contract.ci-rust-release-build.processing", () => {
       ]);
       // Assert
       expect(missingArtifact.status).not.toBe(0);
-      expect(missingArtifact.stderr).toMatch(/release archive missing/);
+      expect(failureEvidence(missingArtifact.stderr)).toMatchObject({
+        classification: { operation: 'verify-asset', stage: 'input-validation' },
+        'execution-state': { lastConfirmed: 'not-started', write: 'not-started', outcome: 'failure' },
+      });
 
       // Arrange
       rmSync(output, { recursive: true, force: true });
@@ -611,7 +621,10 @@ describe("contract.ci-rust-release-build.processing", () => {
       ]);
       // Assert
       expect(versionMismatch.status).not.toBe(0);
-      expect(versionMismatch.stderr).toMatch(/release asset manifest source or version mismatch/);
+      expect(failureEvidence(versionMismatch.stderr)).toMatchObject({
+        classification: { operation: 'verify-asset', stage: 'manifest-validation' },
+        'execution-state': { lastConfirmed: 'archive-inventory', write: 'not-started', outcome: 'failure' },
+      });
     }));
 
     // contract_id: contract.ci-rust-release-build.processing
@@ -654,7 +667,10 @@ describe("contract.ci-rust-release-build.processing", () => {
           const result = invoke();
           // Assert: a sentinel toolchain failure proves the real script passed manifest validation.
           expect(result.status).not.toBe(0);
-          expect(result.stderr, `${shell}: ${result.stderr.slice(-4000)}`).toMatch(/rust toolchain setup failed/);
+          expect(failureEvidence(result.stderr)).toMatchObject({
+            classification: { operation: 'build', stage: 'toolchain-install' },
+            'execution-state': { lastConfirmed: 'authority-binding', nativeExit: 1, write: 'not-started' },
+          });
           expect(existsSync(output)).toBe(false);
         }
         for (const content of [manifestText.replaceAll('\n', '\r'), `\uFEFF${manifestText}`, manifestText.trimEnd(), `${manifestText} `, Buffer.concat([Buffer.from(manifestText), Buffer.from([0xff])])]) {
@@ -663,8 +679,10 @@ describe("contract.ci-rust-release-build.processing", () => {
           const result = invoke();
           // Assert
           expect(result.status).not.toBe(0);
-          expect(result.stderr).toMatch(/platform manifest identity mismatch/);
-          expect(result.stderr).not.toMatch(/rust toolchain setup failed/);
+          expect(failureEvidence(result.stderr)).toMatchObject({
+            classification: { operation: 'build', stage: 'authority-binding' },
+            'execution-state': { lastConfirmed: 'input-validation', write: 'not-started' },
+          });
           expect(existsSync(output)).toBe(false);
         }
       }
@@ -683,7 +701,7 @@ describe("rust-release-scripts", () => {
       expect(script).toMatch(/\$package\.version -cne \$authority\.version/);
       expect(script).toMatch(/\$token -ceq \$authority\.version -or \$token -ceq "v\$\(\$authority\.version\)" -or \$token -ceq "V\$\(\$authority\.version\)"/);
       expect(script).toMatch(/\$binaryVersionOutput -split '\[\\x20\\x09\\x0A\\x0D\]\+'/);
-      expect(script).toMatch(/binary-version-mismatch: expected=\$\(\$authority\.version\) or v\$\(\$authority\.version\) or V\$\(\$authority\.version\) received=\$binaryVersionOutput/);
+      expect(script).toContain("throw 'binary-version-mismatch'");
     });
 
     // integration_id: rust-release-scripts-regression

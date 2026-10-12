@@ -1,5 +1,6 @@
 import { test, describe, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -29,7 +30,7 @@ describe("action-dist-gate", () => {
         if (action.name === 'ci-release-supplemental-asset') expect(action.companionDistPaths).toStrictEqual(['runtime/installer/dist']);
         if (action.runtime === 'composite') {
           expect(action.distPath).toBe(null);
-          if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual([]);
+          if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual(['runtime/diagnostics/failure.sh']);
           else expect(action.referencedPaths.length > 0).toBeTruthy();
           for (const relative of action.referencedPaths) expect(existsSync(path.join(root, relative))).toBe(true);
         }
@@ -40,6 +41,34 @@ describe("action-dist-gate", () => {
 
 describe("contract.repository-action-distribution.integrity", () => {
   describe("repository-action-distribution-gates", () => {
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-distribution-gates
+    test('diagnostic runtime regenerates native JavaScript and declarations from strict source', () => {
+      const temporaryRoot = path.join(root, 'tests/tmp');
+      mkdirSync(temporaryRoot, { recursive: true });
+      const fixture = mkdtempSync(path.join(temporaryRoot, 'diagnostic-generation-'));
+      const action = collectActions(root).find((entry) => entry.distPath);
+      const compiler = path.join(action.path, 'node_modules/typescript/bin/tsc');
+      const types = path.join(action.path, 'node_modules/@types');
+      try {
+        const generated = spawnSync(process.execPath, [compiler, '--project', path.join(root, 'runtime/diagnostics/tsconfig.json'),
+          '--typeRoots', types, '--outDir', path.join(fixture, 'generated'), '--listFiles'], { encoding: 'utf8' });
+        expect(generated.status, generated.stdout + generated.stderr).toBe(0);
+        expect(generated.stdout).toContain(path.join(root, 'runtime/diagnostics/failure.mts'));
+        for (const file of ['failure.mjs', 'failure.d.mts']) {
+          expect(readFileSync(path.join(fixture, 'generated', file))).toEqual(readFileSync(path.join(root, 'runtime/diagnostics', file)));
+        }
+        writeFileSync(path.join(fixture, 'untyped.mts'), 'export const invalid = (value) => value;\n');
+        writeFileSync(path.join(fixture, 'tsconfig.json'), JSON.stringify({
+          extends: path.join(root, 'runtime/diagnostics/tsconfig.json'),
+          compilerOptions: { rootDir: fixture, noEmit: true }, include: ['untyped.mts'],
+        }));
+        const rejected = spawnSync(process.execPath, [compiler, '--project', path.join(fixture, 'tsconfig.json'), '--typeRoots', types], { encoding: 'utf8' });
+        expect(rejected.status).not.toBe(0);
+        expect(rejected.stdout).toContain('TS7006');
+      } finally { rmSync(fixture, { recursive: true, force: true }); }
+    });
+
     // contract_id: contract.repository-action-distribution.integrity
     // integration_id: repository-action-distribution-gates
     test('every Action has contract coverage for its public outputs', () => {
@@ -74,8 +103,12 @@ describe("contract.repository-action-distribution.integrity", () => {
       // Assert
       expect(plan).toStrictEqual([
         { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/workspace/actions/first' },
+        { command: process.execPath, args: ['/workspace/actions/first/node_modules/typescript/bin/tsc',
+          '--project', '/workspace/runtime/diagnostics/tsconfig.json',
+          '--typeRoots', '/workspace/actions/first/node_modules/@types'], cwd: '/workspace' },
         { command: 'npm', args: ['run', 'build'], cwd: '/workspace/actions/first' },
-        { command: 'git', args: ['diff', '--exit-code', '--', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace' },
+        { command: 'git', args: ['diff', '--exit-code', '--', 'runtime/diagnostics/failure.mjs',
+          'runtime/diagnostics/failure.d.mts', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace' },
       ]);
     });
 

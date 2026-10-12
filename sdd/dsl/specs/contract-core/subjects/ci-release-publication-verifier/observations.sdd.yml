@@ -39,3 +39,24 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failed step outcome when remote observation or evidence verification is rejected.
+  - id: observation.ci-release-publication-verifier.diagnostics
+    summary: Secret-safe failure diagnostics on stderr, separate from successful outputs.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.stderr
+      kind: object
+      fields:
+        - selector: diagnostic
+          kind: observation_field
+          meaning: Stable failure code. Remote failures include allowlisted operation, phase, method, sanitized endpoint, status and request ID when available, and a reason distinguishing network, timeout, response, visibility and inventory failures; unavailable values are explicit. Raw exception messages, response bodies, tokens and signed redirects are never echoed.
+  - id: observation.ci-release-publication-verifier.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "observe-before/verify-afterとrequest・response・repository visibility・inventory・receipt/readback/schema/binding・asset checksumの検証を区別し、固定source/tag/Release ID、対象asset/evidence相対path、期待/観測digest/identity、method・安全なendpoint・HTTP status/request ID、観測の完全/不明を残す。checksum不一致と結果不明を同一分類にしない。"

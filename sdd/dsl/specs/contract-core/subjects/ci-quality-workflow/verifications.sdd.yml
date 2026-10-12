@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-quality-workflow.execution
     contract_id: contract.ci-quality-workflow.execution
     cases:
+      - id: detailed-failure-execution
+        intent_id: detailed-diagnostics-execution
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-execution}]
       - id: ci-quality-workflow-reusable-binding
         intent_id: ci-quality-workflow-reusable-binding-intent
         input:

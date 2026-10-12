@@ -24,3 +24,21 @@ test_maps:
         symbol: "dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT"
         check_refs:
           - check-config-snapshot-failure-status
+  - verification_id: verification.ci-config-snapshot.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: "source entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-config-snapshot failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > source retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > dist retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]

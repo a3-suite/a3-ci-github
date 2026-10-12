@@ -25,3 +25,13 @@ observations:
         - selector: diagnostic
           kind: observation_field
           meaning: Stable thrown diagnostic for an invalid source or conflicting destination.
+  - id: observation.ci-preset-materialization.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "bundle/source解決・destination検査・copy/reuse・rollbackを区別し、選択bundle、固定source revision、source/destination相対path、競合の期待/観測digest、変更済み範囲と復元状態を残す。"

@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'vitest';
+import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import { parseFutureRfc3339 } from '../../../runtime/release-publication/control.js';
 
 describe('parseFutureRfc3339(string)', () => {
@@ -16,6 +17,7 @@ describe('parseFutureRfc3339(string)', () => {
 
     // Assert
     expect(String(failure)).toMatch(/expired/);
+    expect(new FailureContext('ci-release-publication-control', 'publication-control').evidence(failure).classification).toMatchObject({ reason: 'approval-is-expired', cause: 'known' });
   });
 
   // target_id: parseFutureRfc3339(string)

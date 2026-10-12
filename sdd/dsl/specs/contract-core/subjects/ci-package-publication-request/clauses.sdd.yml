@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-package-publication-request.outputs
     summary: A package publication request operation exposes its completion status and verified source identity.
     conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: package-request-operation-present
         input_predicate:
           kind: input
@@ -53,7 +58,17 @@ contracts:
               kind: value_set
               values:
                 - failure
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-package-publication-request.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-outputs]
       - id: package-request-source-binding
         goal: The handoff source identity remains bound through create and verify.
         guarantee_refs:

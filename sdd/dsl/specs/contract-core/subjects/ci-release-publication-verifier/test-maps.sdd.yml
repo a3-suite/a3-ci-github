@@ -3,6 +3,30 @@ name: contract-test-maps
 subject_ref: subject.ci.release-publication-verifier
 test_maps:
   - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: standard-workflow-credential
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        check_refs: [status, path]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        check_refs: [status, path]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: credential-evidence-boundary
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        check_refs: [rejection]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: asset-inventory-boundary
+    tests:
+      - path: runtime/release-publication/tests/observation.test.mjs
+        symbol: "safe release diagnostics > GithubReadOnlyClient > asset inventory reobservation remains bounded and refuses invalid subsets immediately"
+        check_refs: [rejection]
+  - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: bundled-pre-observation
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
@@ -68,3 +92,144 @@ test_maps:
       - path: runtime/release-publication/tests/observation.test.mjs
         symbol: "contract.ci-release-publication-verifier.outputs > release-publication-receipt-binding > receipt and readback missing or mismatching bindings are rejected"
         check_refs: [rejection]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-network
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for network"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for network"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-body-timeout
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-timeout
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for timeout"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for timeout"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-http
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for http"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for http"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-json
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for json"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for json"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-empty
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for empty"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for empty"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-oversized
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for oversized"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for oversized"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-permissions
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for permissions"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for permissions"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-push-missing
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-missing"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-missing"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-push-denied
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-denied"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-denied"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-push-invalid
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-repository
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for repository"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for repository"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-inventory
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for inventory"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for inventory"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-duplicate
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for duplicate"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for duplicate"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: diagnostic-pagination
+    tests:
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for pagination"
+        check_refs: [diagnostic]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for pagination"
+        check_refs: [diagnostic]
+  - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-release-publication-verifier failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

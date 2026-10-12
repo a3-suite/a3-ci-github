@@ -1,3 +1,4 @@
+import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -10,7 +11,7 @@ const bundledFiles = ['package.json', 'src/index.ts', 'dist/index.js'];
 const runtimeFor = (actionPath) => {
   const content = readFileSync(path.join(actionPath, 'action.yml'), 'utf8');
   const match = content.match(/^\s{2}using:\s*['"]?([^'"\s]+)['"]?\s*$/m);
-  if (!match) throw new Error(`Action ${path.basename(actionPath)} is missing runs.using`);
+  if (!match) throw new DiagnosticError(`action-runtime-missing: Action ${path.basename(actionPath)} is missing runs.using`, { diagnostics: { field: 'runs.using', expected: 'declared-runtime', observed: 'missing' } });
   return match[1];
 };
 
@@ -74,11 +75,19 @@ export const collectScriptBundles = (root) => {
   return collectScriptBundleMetadata(root);
 };
 
-export const buildPlan = (root, actions, scriptBundles = []) => [
-  ...actions.filter((action) => action.distPath).flatMap((action) => [
-    { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: action.path },
-    { command: 'npm', args: ['run', 'build'], cwd: action.path },
-  ]),
+export const buildPlan = (root, actions, scriptBundles = []) => {
+  const bundled = actions.filter((action) => action.distPath);
+  const generatedDiagnostics = bundled.length ? ['runtime/diagnostics/failure.mjs', 'runtime/diagnostics/failure.d.mts'] : [];
+  return [
+  ...bundled.map((action) => ({ command: 'npm', args: ['ci', '--ignore-scripts'], cwd: action.path })),
+  ...(bundled.length ? [{
+    command: process.execPath,
+    args: [path.join(bundled[0].path, 'node_modules/typescript/bin/tsc'),
+      '--project', path.join(root, 'runtime/diagnostics/tsconfig.json'),
+      '--typeRoots', path.join(bundled[0].path, 'node_modules/@types')],
+    cwd: root,
+  }] : []),
+  ...bundled.map((action) => ({ command: 'npm', args: ['run', 'build'], cwd: action.path })),
   ...scriptBundles.flatMap((bundle) => [
     { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: bundle.path },
     { command: 'npm', args: ['run', 'build'], cwd: bundle.path },
@@ -89,12 +98,14 @@ export const buildPlan = (root, actions, scriptBundles = []) => [
       'diff',
       '--exit-code',
       '--',
+      ...generatedDiagnostics,
       ...actions.filter((action) => action.distPath).flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]),
       ...scriptBundles.map((bundle) => bundle.distPath),
     ],
     cwd: root,
   },
-];
+  ];
+};
 
 export const runPlan = (plan, execute = execFileSync) => {
   for (const step of plan) execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' });
@@ -102,6 +113,7 @@ export const runPlan = (plan, execute = execFileSync) => {
 
 export const assertNoUntrackedDist = (root, actions, scriptBundles = [], execute = execFileSync) => {
   const distPaths = [
+    ...(actions.some((action) => action.distPath) ? ['runtime/diagnostics/failure.mjs', 'runtime/diagnostics/failure.d.mts'] : []),
     ...actions.filter((action) => action.distPath).flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]),
     ...scriptBundles.map((bundle) => bundle.distPath),
   ];
@@ -129,13 +141,29 @@ export const assertTrackedReferences = (root, actions, execute = execFileSync) =
 };
 
 export const checkActionDist = (root = defaultRoot) => {
+  const diagnostic = new FailureContext('repository-action-distribution', 'check-distribution');
+  try {
+  diagnostic.at('action-metadata', { input: 'action-and-runtime-source-inventory' });
   const actions = collectActions(root);
   const scriptBundles = collectScriptBundles(root);
+  diagnostic.confirmed();
+  diagnostic.at('execution-closure', { input: 'composite-entrypoints' });
   assertTrackedReferences(root, actions);
+  diagnostic.confirmed();
+  diagnostic.at('build-and-identity', { input: 'source-and-dist', actions: actions.length, bundles: scriptBundles.length });
+  diagnostic.writeState = 'generated-dist-may-be-partial';
   runPlan(buildPlan(root, actions, scriptBundles));
+  diagnostic.confirmed();
+  diagnostic.at('distribution-inventory', { input: 'tracked-dist' });
   assertNoUntrackedDist(root, actions, scriptBundles);
   console.log(`Distribution is synchronized (${actions.length} actions, ${scriptBundles.length} script bundle).`);
+  } catch (error) { throw diagnostic.capture(error); }
 };
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
-if (invokedPath === fileURLToPath(import.meta.url)) checkActionDist();
+if (invokedPath === fileURLToPath(import.meta.url)) {
+  try { checkActionDist(); } catch (error) {
+    new FailureContext('repository-action-distribution', 'check-distribution').report(error);
+    completeFailure(safeErrorReason(error));
+  }
+}

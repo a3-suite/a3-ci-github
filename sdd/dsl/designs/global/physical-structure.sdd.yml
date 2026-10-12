@@ -30,6 +30,13 @@ elements:
     area_kinds: [implementation, verification]
     source_control: managed
     placement_purpose: workflow の配置・preflight、Action から再利用する定型処理、このリポジトリ自身の delivery workflow から呼び出す検証可能な処理を所有する
+  - element_id: failure-diagnostics-runtime
+    element_kind: directory
+    path: runtime/diagnostics
+    primary_area_kind: implementation
+    area_kinds: [implementation, verification]
+    source_control: managed
+    placement_purpose: Actionとruntimeの公開失敗境界で安全な理由・段階・照合・確定状態をlogへ保持し、元の失敗結果を維持する共通処理と検証を所有する
   - element_id: installer-runtime
     element_kind: directory
     path: runtime/installer

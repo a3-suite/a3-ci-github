@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -23,7 +24,7 @@ export const writeLine = (line: string, outputPath?: string): void => {
 export const resolveOutputPath = (value?: string): string | undefined => {
   if (value === undefined) return undefined;
   if (value.length === 0 || /[\0\r\n]/.test(value)) {
-    throw new Error('output-path-invalid');
+    throw new DiagnosticError('output-path-invalid');
   }
   return value;
 };

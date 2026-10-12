@@ -1,6 +1,7 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { completeFailure, DiagnosticError, FailureContext } from '../diagnostics/failure.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, '../..');
@@ -10,7 +11,7 @@ const endMarker = '<!-- action-catalog:end -->';
 
 const parseScalar = (content, key) => {
   const match = content.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
-  if (!match) throw new Error(`action.yml is missing ${key}`);
+  if (!match) throw new DiagnosticError(`action.yml is missing ${key}`, { diagnosticCode: 'action-catalog-metadata-missing', diagnostics: { field: key, expected: 'present', observed: 'missing' } });
   return match[1].trim().replace(/^['"]|['"]$/g, '');
 };
 
@@ -18,16 +19,22 @@ const actionNameFromRow = (row) => row.match(/^\|\s*\[`([^`]+)`\]\(/)?.[1] ?? nu
 
 const tableCell = (value) => value.replace(/\s+/g, ' ').trim().replaceAll('|', '\\|');
 
-const readActions = async (root) => {
+const readActions = async (root, diagnostic) => {
   const actionsRoot = path.join(root, 'actions');
+  diagnostic.at('action-inventory', { input: 'actions' });
   const entries = await readdir(actionsRoot, { withFileTypes: true });
   const actions = [];
   for (const entry of entries.filter((item) => item.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
+    diagnostic.at('action-metadata-read', { input: `actions/${entry.name}/action.yml` });
     const actionPath = path.join(actionsRoot, entry.name);
     const actionFile = await readFile(path.join(actionPath, 'action.yml'), 'utf8');
+    diagnostic.confirmed();
+    diagnostic.at('action-readme-read', { input: `actions/${entry.name}/README.md` });
     const actionReadme = await readFile(path.join(actionPath, 'README.md'), 'utf8');
+    diagnostic.confirmed();
+    diagnostic.at('action-metadata-validation', { input: `actions/${entry.name}/action.yml` });
     const name = parseScalar(actionFile, 'name');
-    if (name !== entry.name) throw new Error(`Action directory/name mismatch: ${entry.name} != ${name}`);
+    if (name !== entry.name) throw new DiagnosticError(`Action directory/name mismatch: ${entry.name} != ${name}`, { diagnosticCode: 'action-catalog-name-mismatch' });
     actions.push({
       directory: entry.name,
       name,
@@ -40,7 +47,7 @@ const readActions = async (root) => {
 
 const existingRows = (readme) => {
   const sectionStart = readme.indexOf(tableHeading);
-  if (sectionStart < 0) throw new Error(`README.md is missing: ${tableHeading}`);
+  if (sectionStart < 0) throw new DiagnosticError(`README.md is missing: ${tableHeading}`, { diagnosticCode: 'action-catalog-section-missing' });
   const nextSection = readme.indexOf('\n## ', sectionStart + tableHeading.length);
   const section = readme.slice(sectionStart, nextSection < 0 ? readme.length : nextSection);
   return section.split('\n').filter((line) => actionNameFromRow(line));
@@ -76,7 +83,7 @@ export const updateActionTable = (readme, actions) => {
     : tableEnd >= 0 && (nextSection < 0 || tableEnd < nextSection)
       ? tableEnd
       : nextSection;
-  if (tableStart < 1 || end < 0) throw new Error('README.md Action table could not be located');
+  if (tableStart < 1 || end < 0) throw new DiagnosticError('README.md Action table could not be located', { diagnosticCode: 'action-catalog-table-missing' });
 
   const header = '| Action | 用途 | 概要 |\n| --- | --- | --- |';
   const markerStart = readme.lastIndexOf(startMarker, tableStart);
@@ -87,28 +94,46 @@ export const updateActionTable = (readme, actions) => {
   return `${readme.slice(0, replacementStart)}${replacement}${readme.slice(end)}`;
 };
 
-const main = async () => {
+const main = async (diagnostic) => {
+  diagnostic.at('input-validation', { input: 'check-or-write-mode' });
   const args = new Set(process.argv.slice(2));
   const mode = args.has('--write') ? 'write' : args.has('--check') ? 'check' : null;
-  if (!mode) throw new Error('usage: node runtime/repository/update-action-index.mjs (--check|--write)');
+  if (!mode) throw new DiagnosticError('usage: node runtime/repository/update-action-index.mjs (--check|--write)', { diagnosticCode: 'action-catalog-arguments-invalid', diagnostics: { field: 'mode', expected: 'check-or-write', observed: 'missing' } });
   const root = defaultRoot;
   const readmePath = path.join(root, 'README.md');
-  const [readme, actions] = await Promise.all([readFile(readmePath, 'utf8'), readActions(root)]);
+  diagnostic.confirmed();
+  diagnostic.at('catalog-input-read', { input: 'README.md' });
+  const readme = await readFile(readmePath, 'utf8');
+  diagnostic.confirmed();
+  const actions = await readActions(root, diagnostic);
+  diagnostic.confirmed();
+  diagnostic.at('catalog-projection', { input: 'README.md', actionCount: actions.length });
   const updated = updateActionTable(readme, actions);
+  diagnostic.confirmed();
   if (updated === readme) {
     console.log(`Action catalog is synchronized (${actions.length} actions).`);
     return;
   }
   if (mode === 'check') {
-    console.error('README.md Action catalog is stale; run --write before committing.');
-    process.exitCode = 1;
-    return;
+    throw new DiagnosticError('README.md Action catalog is stale; run --write before committing.', {
+      diagnosticCode: 'action-catalog-stale', diagnostics: { field: 'README.md', expected: 'current-action-catalog', observed: 'stale' },
+    });
   }
+  diagnostic.at('catalog-write', { output: 'README.md' });
+  diagnostic.writeState = 'catalog-write-may-be-partial';
   await writeFile(readmePath, updated, 'utf8');
+  diagnostic.confirmed();
+  diagnostic.writeState = 'catalog-updated';
   console.log(`Updated README.md Action catalog (${actions.length} actions).`);
 };
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
-  await main();
+  const diagnostic = new FailureContext('repository-action-distribution', 'action-catalog');
+  try { await main(diagnostic); }
+  catch (error) {
+    process.exitCode = 1;
+    const reason = diagnostic.report(error);
+    completeFailure(reason, 1);
+  }
 }

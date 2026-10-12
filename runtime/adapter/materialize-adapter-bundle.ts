@@ -1,3 +1,5 @@
+import { completeFailure, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -39,9 +41,9 @@ const require = createRequire(import.meta.url);
 
 const resolveYamlRuntime = (): { parseDocument: (input: string, options?: { prettyErrors?: boolean }) => YamlDocument } => {
   const runtimeRoot = process.env.CI_FIXED_RUNTIME_ROOT;
-  if (!runtimeRoot) throw new Error('adapter-materializer-yaml-runtime-root-required');
+  if (!runtimeRoot) throw new DiagnosticError('adapter-materializer-yaml-runtime-root-required');
   const yamlRuntimePath = path.resolve(runtimeRoot, 'node_modules/yaml');
-  if (!fs.existsSync(yamlRuntimePath)) throw new Error('adapter-materializer-yaml-runtime-missing');
+  if (!fs.existsSync(yamlRuntimePath)) throw new DiagnosticError('adapter-materializer-yaml-runtime-missing');
   return require(yamlRuntimePath) as {
     parseDocument: (input: string, options?: { prettyErrors?: boolean }) => YamlDocument;
   };
@@ -52,21 +54,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const nonEmptyString = (value: unknown, field: string): string => {
   if (typeof value !== 'string' || value.length === 0 || /[\0\r\n]/.test(value)) {
-    throw new Error(`adapter-materializer-${field}-invalid`);
+    throw new DiagnosticError(`adapter-materializer-${field}-invalid`);
   }
   return value;
 };
 
 const stringList = (value: unknown, field: string, allowEmpty = false): string[] => {
   if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
-    throw new Error(`adapter-materializer-${field}-invalid`);
+    throw new DiagnosticError(`adapter-materializer-${field}-invalid`);
   }
   return value.map((item) => nonEmptyString(item, field));
 };
 
 const resourceRelativePath = (source: ResourceSource, field: string): string => {
   if (typeof source === 'string') return nonEmptyString(source, field);
-  if (!isRecord(source)) throw new Error(`adapter-materializer-${field}-invalid`);
+  if (!isRecord(source)) throw new DiagnosticError(`adapter-materializer-${field}-invalid`);
   return nonEmptyString(source.path, field);
 };
 
@@ -78,7 +80,7 @@ const resourceSkill = (source: ResourceSource): string | undefined => {
 
 const parseResourceSource = (value: unknown, field: string): ResourceSource => {
   if (typeof value === 'string') return nonEmptyString(value, field);
-  if (!isRecord(value)) throw new Error(`adapter-materializer-${field}-invalid`);
+  if (!isRecord(value)) throw new DiagnosticError(`adapter-materializer-${field}-invalid`);
   const parsed: { skill?: string; path: string } = {
     path: nonEmptyString(value.path, field),
   };
@@ -103,14 +105,14 @@ const resolveResource = (sourceRoot: string, source: ResourceSource): string => 
     const nested = path.join(sourceRoot, entry.name, skill);
     if (fs.existsSync(path.join(nested, 'SKILL.md'))) return resolveInside(nested, relative);
   }
-  throw new Error(`adapter-materializer-skill-not-found:${skill}`);
+  throw new DiagnosticError(`adapter-materializer-skill-not-found:${skill}`);
 };
 
 const resolveContainedPath = (absoluteRoot: string, requested: string): string => {
   const candidate = path.resolve(absoluteRoot, requested);
   const relative = path.relative(absoluteRoot, candidate);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new Error(`adapter-materializer-path-outside-root:${requested}`);
+    throw new DiagnosticError(`adapter-materializer-path-outside-root:${requested}`);
   }
   return candidate;
 };
@@ -134,11 +136,11 @@ const resolveInside = (root: string, requested: string): string => {
     try {
       realLink = fs.realpathSync(cursor);
     } catch {
-      throw new Error(`adapter-materializer-symlink-outside-root:${requested}`);
+      throw new DiagnosticError(`adapter-materializer-symlink-outside-root:${requested}`);
     }
     const realRelative = path.relative(realRoot, realLink);
     if (realRelative === '..' || realRelative.startsWith(`..${path.sep}`) || path.isAbsolute(realRelative)) {
-      throw new Error(`adapter-materializer-symlink-outside-root:${requested}`);
+      throw new DiagnosticError(`adapter-materializer-symlink-outside-root:${requested}`);
     }
   }
   return candidate;
@@ -146,41 +148,41 @@ const resolveInside = (root: string, requested: string): string => {
 
 const parseYaml = (filePath: string): unknown => {
   const document = resolveYamlRuntime().parseDocument(fs.readFileSync(filePath, 'utf8'), { prettyErrors: false });
-  if (document.errors.length > 0) throw new Error(`adapter-materializer-yaml-invalid:${filePath}`);
+  if (document.errors.length > 0) throw new DiagnosticError(`adapter-materializer-yaml-invalid:${filePath}`);
   return document.toJS();
 };
 
 const parseDescriptor = (filePath: string, content?: string): AdapterDescriptor => {
   const document = content === undefined ? undefined : resolveYamlRuntime().parseDocument(content, { prettyErrors: false });
-  if (document?.errors.length) throw new Error('adapter-materializer-yaml-invalid');
+  if (document?.errors.length) throw new DiagnosticError('adapter-materializer-yaml-invalid');
   const value = document ? document.toJS() : parseYaml(filePath);
   if (!isRecord(value) || value.schemaVersion !== '1' || value.kind !== 'ci-adapter-bundle') {
-    throw new Error('adapter-materializer-descriptor-invalid');
+    throw new DiagnosticError('adapter-materializer-descriptor-invalid');
   }
   if (value.contract !== 'quality-scripts'
     || value.provider !== 'provider-neutral'
     || value.executionBoundary !== 'read-only'
     || value.sourceCheckout !== 'fixed-source'
     || value.copyable !== true) {
-    throw new Error('adapter-materializer-descriptor-contract-invalid');
+    throw new DiagnosticError('adapter-materializer-descriptor-contract-invalid');
   }
   stringList(value.languageProfiles, 'language-profiles');
   nonEmptyString(value.owner, 'descriptor-owner');
   const assetsValue = value.assets;
-  if (!Array.isArray(assetsValue)) throw new Error('adapter-materializer-assets-invalid');
+  if (!Array.isArray(assetsValue)) throw new DiagnosticError('adapter-materializer-assets-invalid');
   const assets = assetsValue.map((item) => {
-    if (!isRecord(item) || item.source !== undefined) throw new Error('adapter-materializer-source-field-forbidden');
+    if (!isRecord(item) || item.source !== undefined) throw new DiagnosticError('adapter-materializer-source-field-forbidden');
     return {
       id: nonEmptyString(item.id, 'asset-id'),
       destination: nonEmptyString(item.destination, 'asset-destination'),
     };
   });
   const projectSettings = isRecord(value.projectSettings) ? value.projectSettings : undefined;
-  if (!projectSettings) throw new Error('adapter-materializer-project-settings-invalid');
+  if (!projectSettings) throw new DiagnosticError('adapter-materializer-project-settings-invalid');
   const parseCommands = (items: unknown, field: string): AdapterCommand[] => {
-    if (!Array.isArray(items) || items.length === 0) throw new Error(`adapter-materializer-${field}-invalid`);
+    if (!Array.isArray(items) || items.length === 0) throw new DiagnosticError(`adapter-materializer-${field}-invalid`);
     return items.map((item) => {
-    if (!isRecord(item)) throw new Error('adapter-materializer-command-invalid');
+    if (!isRecord(item)) throw new DiagnosticError('adapter-materializer-command-invalid');
     return {
       ...(item.id === undefined ? {} : { id: nonEmptyString(item.id, 'command-id') }),
       command: nonEmptyString(item.command, 'command'),
@@ -191,7 +193,7 @@ const parseDescriptor = (filePath: string, content?: string): AdapterDescriptor 
   const commands = parseCommands(value.commands, 'commands');
   const preparation = parseCommands(value.preparation, 'preparation');
   if (!isRecord(value.toolchain) || value.toolchain.versionEnv !== 'CI_TOOLCHAIN_VERSION' || !isRecord(value.toolchain.verify)) {
-    throw new Error('adapter-materializer-toolchain-invalid');
+    throw new DiagnosticError('adapter-materializer-toolchain-invalid');
   }
   const verify = value.toolchain.verify;
   const toolchain = {
@@ -205,7 +207,7 @@ const parseDescriptor = (filePath: string, content?: string): AdapterDescriptor 
   const commandIds = [...commands, ...preparation, toolchain.verify]
     .flatMap((command) => command.id === undefined ? [] : [command.id]);
   if (new Set(commandIds).size !== commandIds.length) {
-    throw new Error('adapter-materializer-command-duplicate');
+    throw new DiagnosticError('adapter-materializer-command-duplicate');
   }
   return {
     schemaVersion: '1',
@@ -223,7 +225,7 @@ const parseDescriptor = (filePath: string, content?: string): AdapterDescriptor 
 };
 
 const sourceAssetMap = (value: unknown): Map<string, SourceAsset> => {
-  if (!isRecord(value) || !Array.isArray(value.assets)) throw new Error('adapter-materializer-inventory-invalid');
+  if (!isRecord(value) || !Array.isArray(value.assets)) throw new DiagnosticError('adapter-materializer-inventory-invalid');
   const map = new Map<string, SourceAsset>();
   for (const item of value.assets) {
     if (!isRecord(item)) continue;
@@ -231,17 +233,17 @@ const sourceAssetMap = (value: unknown): Map<string, SourceAsset> => {
     const entrypoints = item.entrypoints === undefined ? [] : stringList(item.entrypoints, 'entrypoints', true);
     const source = item.source === undefined ? undefined : parseResourceSource(item.source, 'source');
     const copyable = item.copyable === true;
-    if (map.has(id)) throw new Error(`adapter-materializer-source-asset-duplicate:${id}`);
+    if (map.has(id)) throw new DiagnosticError(`adapter-materializer-source-asset-duplicate:${id}`);
     map.set(id, { id, entrypoints, source, copyable });
   }
   return map;
 };
 
 const findBundle = (value: unknown, bundleId: string): BundleInventory => {
-  if (!isRecord(value) || !Array.isArray(value.adapterBundles)) throw new Error('adapter-materializer-inventory-invalid');
+  if (!isRecord(value) || !Array.isArray(value.adapterBundles)) throw new DiagnosticError('adapter-materializer-inventory-invalid');
   const item = value.adapterBundles.find((candidate) => isRecord(candidate) && candidate.id === bundleId);
-  if (!isRecord(item)) throw new Error(`adapter-materializer-bundle-not-found:${bundleId}`);
-  if (isStandardQualityBundle(item.id) && item.delivery !== 'action') throw new Error('adapter-materializer-standard-delivery-required');
+  if (!isRecord(item)) throw new DiagnosticError(`adapter-materializer-bundle-not-found:${bundleId}`);
+  if (isStandardQualityBundle(item.id) && item.delivery !== 'action') throw new DiagnosticError('adapter-materializer-standard-delivery-required');
   return {
     id: nonEmptyString(item.id, 'bundle-id'),
     source: parseResourceSource(item.source, 'bundle-source'),
@@ -252,14 +254,14 @@ const findBundle = (value: unknown, bundleId: string): BundleInventory => {
 
 const readPackageScripts = (root: string): Map<string, unknown> => {
   const packagePath = resolveInside(root, 'package.json');
-  if (!fs.existsSync(packagePath)) throw new Error('adapter-materializer-project-file-missing:package.json');
+  if (!fs.existsSync(packagePath)) throw new DiagnosticError('adapter-materializer-project-file-missing:package.json');
   let value: unknown;
   try {
     value = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
   } catch {
-    throw new Error('adapter-materializer-project-file-invalid:package.json');
+    throw new DiagnosticError('adapter-materializer-project-file-invalid:package.json');
   }
-  if (!isRecord(value) || !isRecord(value.scripts)) throw new Error('adapter-materializer-project-scripts-invalid');
+  if (!isRecord(value) || !isRecord(value.scripts)) throw new DiagnosticError('adapter-materializer-project-scripts-invalid');
   const scripts = new Map<string, unknown>();
   for (const [name, command] of Object.entries(value.scripts)) {
     scripts.set(name, command);
@@ -285,23 +287,23 @@ const validateProjectSettings = (root: string, settings: AdapterDescriptor['proj
   for (const requiredFile of settings.requiredFiles) {
     const filePath = resolveInside(root, requiredFile);
     if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-      throw new Error(`adapter-materializer-project-file-missing:${requiredFile}`);
+      throw new DiagnosticError(`adapter-materializer-project-file-missing:${requiredFile}`);
     }
   }
   if (settings.requiredScripts.length > 0) {
     const scripts = readPackageScripts(root);
     const missing = settings.requiredScripts.filter((script) => !scripts.has(script));
-    if (missing.length > 0) throw new Error(`adapter-materializer-project-scripts-missing:${missing.join(',')}`);
+    if (missing.length > 0) throw new DiagnosticError(`adapter-materializer-project-scripts-missing:${missing.join(',')}`);
     const visited = new Set<string>();
     const validateScript = (script: string): void => {
-      if (visited.has(script)) throw new Error(`adapter-materializer-project-script-cycle:${script}`);
+      if (visited.has(script)) throw new DiagnosticError(`adapter-materializer-project-script-cycle:${script}`);
       visited.add(script);
       const command = scripts.get(script);
       if (typeof command !== 'string' || command.trim().length === 0) {
-        throw new Error(`adapter-materializer-project-script-invalid:${script}`);
+        throw new DiagnosticError(`adapter-materializer-project-script-invalid:${script}`);
       }
       if (unresolvedSourcePathReferences(root, command).length > 0) {
-        throw new Error(`adapter-materializer-project-script-source-reference:${script}`);
+        throw new DiagnosticError(`adapter-materializer-project-script-source-reference:${script}`);
       }
       for (const match of command.matchAll(/\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?([A-Za-z0-9:_-]+)/g)) {
         if (scripts.has(match[1])) validateScript(match[1]);
@@ -319,10 +321,10 @@ const copyWithoutOverwrite = (source: string, destination: string): 'copied' | '
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-  if (destinationStat?.isSymbolicLink()) throw new Error(`adapter-materializer-destination-symlink:${destination}`);
+  if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destination}`);
   if (destinationStat) {
     if (!destinationStat.isFile() || !fs.readFileSync(source).equals(fs.readFileSync(destination))) {
-      throw new Error(`adapter-materializer-destination-conflict:${destination}`);
+      throw new DiagnosticError(`adapter-materializer-destination-conflict:${destination}`);
     }
     return 'reused';
   }
@@ -356,50 +358,50 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
     const standard = standardQualityBundle(bundle.id);
     if (resourceSkill(bundle.source) !== standard.owner
       || !standard.sourcePath.endsWith(`/${standard.owner}/${resourceRelativePath(bundle.source, 'bundle-source')}`)) {
-      throw new Error('adapter-materializer-standard-provenance-mismatch');
+      throw new DiagnosticError('adapter-materializer-standard-provenance-mismatch');
     }
-    if (options.outputPath && fs.lstatSync(path.resolve(options.outputPath), { throwIfNoEntry: false })) throw new Error('adapter-materializer-output-conflict');
+    if (options.outputPath && fs.lstatSync(path.resolve(options.outputPath), { throwIfNoEntry: false })) throw new DiagnosticError('adapter-materializer-output-conflict');
     const descriptor = parseDescriptor(bundle.id, standard.descriptor);
-    if (descriptor.id !== bundle.id || descriptor.assets.length !== 0) throw new Error('adapter-materializer-standard-bundle-invalid');
+    if (descriptor.id !== bundle.id || descriptor.assets.length !== 0) throw new DiagnosticError('adapter-materializer-standard-bundle-invalid');
     validateProjectSettings(targetRoot, descriptor.projectSettings);
     return { schema: 'ci.adapter-materializer.v1', bundle: bundle.id, descriptor: '', files: [],
       binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourceRevision: standard.sourceRevision, sha256: standard.sha256 } };
   }
-  if (bundle.delivery !== undefined) throw new Error('adapter-materializer-delivery-invalid');
-  if (!options.sourceRoot) throw new Error('adapter-materializer-source-root-required');
+  if (bundle.delivery !== undefined) throw new DiagnosticError('adapter-materializer-delivery-invalid');
+  if (!options.sourceRoot) throw new DiagnosticError('adapter-materializer-source-root-required');
   const sourceRoot = path.resolve(options.sourceRoot);
   const descriptorSource = resolveResource(sourceRoot, bundle.source);
   const descriptor = parseDescriptor(descriptorSource);
-  if (descriptor.id !== bundle.id) throw new Error(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`);
+  if (descriptor.id !== bundle.id) throw new DiagnosticError(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`);
   for (const command of [...descriptor.preparation, ...descriptor.commands, descriptor.toolchain.verify]) {
     if (unresolvedSourcePathReferences(targetRoot, command.command).length > 0 || command.args.some((arg) => unresolvedSourcePathReferences(targetRoot, arg).length > 0)) {
-      throw new Error('adapter-materializer-command-source-reference');
+      throw new DiagnosticError('adapter-materializer-command-source-reference');
     }
   }
   const assets = sourceAssetMap(inventory);
 
   const plan: Array<{ source: ResourceSource; destination: string }> = [];
   for (const asset of descriptor.assets) {
-    if (!asset.destination.startsWith('.ci/')) throw new Error(`adapter-materializer-destination-invalid:${asset.destination}`);
+    if (!asset.destination.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-destination-invalid:${asset.destination}`);
     const sourceAsset = assets.get(asset.id);
     const assetSource = sourceAsset === undefined
       ? undefined
       : sourceAsset.source ?? (sourceAsset.entrypoints.length === 1 ? sourceAsset.entrypoints[0] : undefined);
     if (!sourceAsset || !sourceAsset.copyable || assetSource === undefined) {
-      throw new Error(`adapter-materializer-source-asset-unavailable:${asset.id}`);
+      throw new DiagnosticError(`adapter-materializer-source-asset-unavailable:${asset.id}`);
     }
     plan.push({
       source: assetSource,
       destination: asset.destination,
     });
   }
-  if (!bundle.targetDescriptor || !bundle.targetDescriptor.startsWith('.ci/')) throw new Error(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
+  if (!bundle.targetDescriptor || !bundle.targetDescriptor.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
   plan.push({ source: bundle.source, destination: bundle.targetDescriptor });
 
   const sourcePlan = plan.map((item) => {
     const sourcePath = resolveResource(sourceRoot, item.source);
     if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
-      throw new Error(`adapter-materializer-source-missing:${resourceDisplay(item.source)}`);
+      throw new DiagnosticError(`adapter-materializer-source-missing:${resourceDisplay(item.source)}`);
     }
     return { ...item, sourcePath };
   });
@@ -409,7 +411,7 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       item.sourcePath,
       resolveContainedPath(targetRoot, item.destination),
     ])].some((candidate) => pathsReferToSameFile(outputPath, candidate, 'adapter-materializer-output-path-invalid'));
-    if (conflict) throw new Error(`adapter-materializer-output-conflict:${outputPath}`);
+    if (conflict) throw new DiagnosticError(`adapter-materializer-output-conflict:${outputPath}`);
   }
 
   fs.mkdirSync(targetRoot, { recursive: true });
@@ -422,15 +424,15 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    if (destinationStat?.isSymbolicLink()) throw new Error(`adapter-materializer-destination-symlink:${destinationPath}`);
+    if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destinationPath}`);
     if (destinationStat && (!destinationStat.isFile() || !fs.readFileSync(item.sourcePath).equals(fs.readFileSync(destinationPath)))) {
-      throw new Error(`adapter-materializer-destination-conflict:${destinationPath}`);
+      throw new DiagnosticError(`adapter-materializer-destination-conflict:${destinationPath}`);
     }
     return { ...item, destinationPath, action: destinationStat ? 'reused' as const : 'copied' as const };
   });
   const destinations = new Set<string>();
   for (const item of preparedPlan) {
-    if (destinations.has(item.destinationPath)) throw new Error(`adapter-materializer-destination-duplicate:${item.destination}`);
+    if (destinations.has(item.destinationPath)) throw new DiagnosticError(`adapter-materializer-destination-duplicate:${item.destination}`);
     destinations.add(item.destinationPath);
   }
   const files: MaterializeAdapterBundleReport['files'] = [];
@@ -448,14 +450,14 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
 
 const parseArgs = (args: string[]): MaterializeAdapterBundleOptions & { output?: string } => {
   if (args.length < 6 || args.length > 10) {
-    throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
+    throw new DiagnosticError('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)', { diagnosticCode: 'materialization-arguments-invalid' });
   }
   const options: Partial<MaterializeAdapterBundleOptions> & { output?: string } = {};
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
     if (!value || !['--source-root', '--inventory', '--bundle', '--target-root', '--output'].includes(flag)) {
-      throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
+      throw new DiagnosticError('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)', { diagnosticCode: 'materialization-arguments-invalid' });
     }
     if (flag === '--source-root') options.sourceRoot = value;
     if (flag === '--inventory') options.inventoryPath = value;
@@ -464,22 +466,26 @@ const parseArgs = (args: string[]): MaterializeAdapterBundleOptions & { output?:
     if (flag === '--output') options.output = value;
   }
   if (!options.inventoryPath || !options.bundleId || !options.targetRoot) {
-    throw new Error('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)');
+    throw new DiagnosticError('usage: materialize-adapter-bundle.ts [--source-root ROOT] --inventory PATH --bundle ID --target-root ROOT [--output PATH] (source-root required for custom bundles)', { diagnosticCode: 'materialization-arguments-invalid' });
   }
   return options as MaterializeAdapterBundleOptions & { output?: string };
 };
 
 const main = (): void => {
+  const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
   try {
     const options = parseArgs(process.argv.slice(2));
     const outputPath = resolveOutputPath(options.output);
+    diagnostic.confirmed();
+    diagnostic.at('materialization', { input: 'bundle-and-selection', output: 'managed-destinations' });
+    diagnostic.writeState = 'managed-destinations-may-be-partial';
     const report = materializeAdapterBundle({ ...options, outputPath });
     const output = `${JSON.stringify(report, null, 2)}\n`;
     if (outputPath) fs.writeFileSync(outputPath, output, 'utf8');
     else process.stdout.write(output);
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : 'adapter-materializer-failed'}\n`);
-    process.exitCode = 1;
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 1);
   }
 };
 

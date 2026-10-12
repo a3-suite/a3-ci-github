@@ -134,3 +134,9 @@ test_maps:
       - path: runtime/adapter/tests/vitest-summary-conformance.test.mjs
         symbol: "vitest-summary-conformance > Action and CLI agree on zero-tests"
         check_refs: [check-vitest-summary-unresolved-status, check-vitest-cli-unresolved-status]
+  - verification_id: verification.ci.vitest-summary.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-vitest-summary failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

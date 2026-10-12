@@ -12,8 +12,8 @@ export default defineConfig({
     hookTimeout: 60000,
     coverage: {
       enabled: false,
-      include: ['actions/*/src/**/*.ts', 'runtime/**/*.ts', 'runtime/**/*.mjs'],
-      exclude: ['**/tests/**', '**/*.test.*', '**/dist/**', '**/*.d.ts', '**/*.types.ts', '**/*.constants.ts'],
+      include: ['actions/*/src/**/*.ts', 'runtime/**/*.ts', 'runtime/**/*.mts', 'runtime/**/*.mjs'],
+      exclude: ['**/tests/**', '**/*.test.*', '**/dist/**', '**/*.d.ts', '**/*.d.mts', '**/*.types.ts', '**/*.constants.ts', 'runtime/diagnostics/failure.mjs'],
     },
   },
 });

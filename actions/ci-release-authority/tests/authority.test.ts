@@ -22,6 +22,18 @@ import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-m
 import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 
 describe('ci-release-authority-runtime', () => {
+  test('authority accepts canonical repository casing while preserving approved identity', async () => {
+    const f = fixture();
+    try {
+      (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = repository.toUpperCase();
+      for (const id of ['11', '22']) {
+        const run = f.responses[`/repos/${repository}/actions/runs/${id}`] as Record<string, unknown>;
+        (run.repository as Record<string, unknown>).full_name = repository.toUpperCase();
+      }
+      const result = await createAuthority(f.options, f.client);
+      expect(JSON.parse(fs.readFileSync(result.authorityPath, 'utf8')).publication.repository).toBe(repository);
+    } finally { fs.rmSync(f.root, { recursive: true }); }
+  });
   test('authority binds LF source identity for CRLF and mixed platform manifests', async () => {
     // Arrange
     for (const endings of ['crlf', 'mixed']) {
@@ -81,6 +93,7 @@ describe('ci-release-authority-runtime', () => {
       (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}/commits/main`] = { sha: 'd'.repeat(40) }; },
       (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}`] = []; },
       (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).archived = true; },
+      (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = 'another/repository'; },
       (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}/contents/${OWNER_HANDOFF_PATH}?ref=${'a'.repeat(40)}`] = { type: 'file', encoding: 'base64', content: 'invalid!' }; },
       (f: ReturnType<typeof fixture>) => { fs.mkdirSync(f.options.outputDirectory); fs.writeFileSync(path.join(f.options.outputDirectory, 'owner-file'), 'preserve'); },
       (f: ReturnType<typeof fixture>) => { fs.mkdirSync(path.join(f.root, 'run-metadata')); },

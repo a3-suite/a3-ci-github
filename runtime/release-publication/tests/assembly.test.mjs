@@ -20,7 +20,7 @@ describe("contract.ci-release-assembly.outputs", () => {
       expect(result.assets.length).toBe(2);
       expect(result.identity.source_sha).toBe(f.identity.source_sha);
       expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.asset_digest).toBe(result.asset_digest);
-      expect(f.assemble).toThrow(/EEXIST/);
+      expect(f.assemble).toThrow(/filesystem-eexist/);
       const digest = sha256(fs.readFileSync(path.join(f.options.buildRoot, 'release-build-linux', f.name)));
       const checksumPath = path.join(f.options.buildRoot, 'release-build-linux', `${f.name}.sha256`);
       const records = [

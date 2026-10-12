@@ -64,7 +64,7 @@ describe('ci-release-publication-control-source', () => {
     const create = () => runControl({ ...common, rootDirectory: collision });
     // Assert
     try {
-      expect(create).toThrow(/EEXIST/);
+      expect(create).toThrow(/EEXIST|filesystem-eexist/);
     } finally {
       spy.mockRestore();
     }

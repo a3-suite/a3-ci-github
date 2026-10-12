@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-rust-release-build.processing
     contract_id: contract.ci-rust-release-build.processing
     cases:
+      - id: detailed-failure-processing
+        intent_id: detailed-diagnostics-processing
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-processing}]
       - id: matching-rust-release-processing
         intent_id: rust-release-processing-verified
         input:
@@ -44,6 +48,10 @@ verifications:
   - id: verification.ci-rust-release-build.outputs
     contract_id: contract.ci-rust-release-build.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: matching-authority-bound-build-inputs
         intent_id: rust-release-build-completed
         input:

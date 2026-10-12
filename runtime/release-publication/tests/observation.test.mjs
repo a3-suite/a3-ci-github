@@ -1,8 +1,8 @@
-import { test, describe, expect } from 'vitest';
+import { test, describe, expect, vi } from 'vitest';
 import fs from 'node:fs';
-import { fixture, remoteClient } from './fixtures.mjs';
-import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly } from '../observation.ts';
-import { LIMITS, sha256 } from '../io.ts';
+import { fixture, remoteClient, standardPublicationTokenEnvironment } from './fixtures.mjs';
+import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly, draftVisibilityFailure, observeAssets } from '../observation.ts';
+import { LIMITS, sha256, releaseErrorMessage } from '../io.ts';
 
 const publication = async (t) => {
   const f = fixture(t);
@@ -151,5 +151,120 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
       const foreign = new GithubReadOnlyClient('secret', async () => new Response(null, { status: 302, headers: { location: 'https://evil.example/secret' } }));
       await expect(foreign.assetDigest('/repos/owner/project/releases/assets/1', bytes.length)).rejects.toThrow(/remote-state-unknown/);
     });
+  });
+});
+
+
+describe('safe release diagnostics', () => {
+  describe('GithubReadOnlyClient', () => {
+  test('standard workflow token evidence binds caller context capability token and repository', async (t) => {
+    const f = fixture(t);
+    try {
+      const context = standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret');
+      for (const [changes, allowed] of [
+        [{}, true], [{ GITHUB_EVENT_NAME: 'workflow_dispatch' }, false],
+        [{ GITHUB_ACTIONS: 'false' }, false], [{ GITHUB_EVENT_NAME: 'pull_request' }, false],
+        [{ CI_RELEASE_CREDENTIAL_SOURCE: '' }, false], [{ CI_RELEASE_CONTENTS_PERMISSION: 'read' }, false],
+        [{ GITHUB_TOKEN: 'another-token' }, false], [{ GITHUB_REPOSITORY: 'another/project' }, false],
+        [{ GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/custom.yml@refs/heads/main' }, false],
+        [{ GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/release-publication-caller.yml@refs/heads/Main' }, false],
+      ]) {
+        for (const [key, value] of Object.entries({ ...context, ...changes })) vi.stubEnv(key, value);
+        const client = new GithubReadOnlyClient('synthetic-secret');
+        expect(client.hasStandardGithubTokenWriteAccess(f.identity.repository)).toBe(allowed);
+        expect(client.hasStandardGithubTokenWriteAccess('another/repository')).toBe(false);
+        for (const repository of [{}, { permissions: {} }]) {
+          expect(draftVisibilityFailure(repository, f.identity, client)).toBe(allowed ? undefined : repository.permissions ? 'push-permission-missing' : 'permissions-missing');
+        }
+        expect(draftVisibilityFailure({ permissions: { push: false } }, f.identity, client)).toBe('push-permission-denied');
+        expect(draftVisibilityFailure({ permissions: { push: 'invalid' } }, f.identity, client)).toBe('push-permission-invalid');
+        expect(draftVisibilityFailure({ permissions: [] }, f.identity, client)).toBe('permissions-missing');
+      }
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  test('asset inventory reobservation remains bounded and refuses invalid subsets immediately', async (t) => {
+    const f = fixture(t);
+    const assembly = f.assemble();
+    for (const [assets, expectedReads] of [[[], 3], [[{ id: '100', name: 'unexpected', size: 1, state: 'uploaded' }], 1]]) {
+      let reads = 0;
+      const client = { list: async () => { reads++; return assets; }, assetDigest: async () => { throw new Error('readback-before-complete-inventory'); } };
+      await expect(observeAssets(f.identity, '42', assembly, client)).rejects.toThrow(/asset-set-mismatch/);
+      expect(reads).toBe(expectedReads);
+    }
+  });
+  test('inventory diagnostics retain the failing page correlation after later pages', async (t) => {
+    // Arrange
+    const f = fixture(t);
+    f.assemble();
+    const client = new GithubReadOnlyClient('synthetic-secret', async (url) => {
+      const parsed = new URL(String(url));
+      if (parsed.pathname.includes('/git/ref/tags/')) return Response.json({ object: { type: 'tag', sha: f.identity.tag_object_sha } });
+      if (parsed.pathname.includes('/git/tags/')) return Response.json({ sha: f.identity.tag_object_sha, object: { type: 'commit', sha: f.identity.source_sha } });
+      if (parsed.pathname.endsWith('/releases')) return parsed.searchParams.get('page') === '1'
+        ? Response.json(Array.from({ length: 100 }, (_, i) => ({ id: i + 1, tag_name: i === 0 ? null : 'other', draft: false })), { headers: { 'x-github-request-id': 'first:123' } })
+        : Response.json([], { headers: { 'x-github-request-id': 'last:456' } });
+      return Response.json({ full_name: f.identity.repository, permissions: { push: true } });
+    });
+    // Act
+    const result = observeBefore({ ...f.options, handoffRoot: f.options.outputRoot }, client);
+    // Assert
+    await expect(result).rejects.toSatisfy((error) => {
+      const diagnostic = JSON.parse(releaseErrorMessage(error).slice('remote-state-unknown:'.length));
+      expect(diagnostic['sanitized-reason']).toBe('response-shape-invalid');
+      expect(diagnostic['http-status']).toBe(200);
+      expect(diagnostic['request-id']).toBe('first:123');
+      return true;
+    });
+  });
+  test('body timeouts retain response correlation for JSON and asset readback', async () => {
+    for (const binary of [false, true]) {
+      const client = new GithubReadOnlyClient('synthetic-secret', async () => new Response(new ReadableStream({
+        start(controller) { controller.error(new DOMException('synthetic-secret', 'AbortError')); },
+      }), { headers: { 'x-github-request-id': 'safe:123' } }));
+      const endpoint = binary ? '/repos/owner/project/releases/assets/1' : '/repos/owner/project';
+      await expect(binary ? client.assetDigest(endpoint, 1) : client.json(endpoint)).rejects.toSatisfy((error) => {
+        const message = releaseErrorMessage(error);
+        const diagnostic = JSON.parse(message.slice('remote-state-unknown:'.length));
+        expect(diagnostic.phase).toBe('response');
+        expect(diagnostic.operation).toBe(binary ? 'asset-readback' : 'remote-observation');
+        expect(diagnostic['sanitized-reason']).toBe('request-timeout');
+        expect(diagnostic['http-status']).toBe(200);
+        expect(diagnostic['request-id']).toBe('safe:123');
+        expect(message).not.toContain('synthetic-secret');
+        return true;
+      });
+    }
+  });
+  });
+  describe('releaseErrorMessage', () => {
+  test('final diagnostic boundary rejects arbitrary fields and malformed envelopes', () => {
+    const diagnostic = { operation: 'remote-observation', phase: 'request', method: 'GET',
+      'sanitized-endpoint': '/repos/owner/project', 'http-status': 403, 'request-id': 'safe:123', 'sanitized-reason': 'provider-read-failed' };
+    const valid = `remote-state-unknown:${JSON.stringify(diagnostic)}`;
+    expect(releaseErrorMessage(new Error(valid))).toBe(valid);
+    for (const value of [{ ...diagnostic, token: 'synthetic-secret' }, { ...diagnostic, operation: 'synthetic-secret' },
+      { ...diagnostic, 'sanitized-endpoint': 'https://example.invalid/synthetic-secret' },
+      { ...diagnostic, 'request-id': 'unsafe\nsynthetic-secret' }, { ...diagnostic, phase: { toString: 'request', secret: 'synthetic-secret' } }]) {
+      expect(releaseErrorMessage(new Error(`remote-state-unknown:${JSON.stringify(value)}`))).toBe('remote-state-unknown');
+    }
+    expect(releaseErrorMessage(new Error('remote-state-unknown:{synthetic-secret'))).toBe('remote-state-unknown');
+  });
+  });
+  describe('assetDigest', () => {
+  test('asset readback diagnoses unsafe redirects without disclosing signed locations', async () => {
+    for (const location of [null, 'invalid-secret', 'https://evil.example/signed-secret']) {
+      const client = new GithubReadOnlyClient('synthetic-secret', async () => new Response(null, { status: 302,
+        headers: location === null ? {} : { location } }));
+      await expect(client.assetDigest('/repos/owner/project/releases/assets/1', 1)).rejects.toSatisfy((error) => {
+        const message = releaseErrorMessage(error);
+        const diagnostic = JSON.parse(message.slice('remote-state-unknown:'.length));
+        expect(diagnostic.operation).toBe('asset-readback');
+        expect(diagnostic['sanitized-reason']).toBe(location === null ? 'redirect-missing' : 'redirect-invalid');
+        expect(message).not.toContain('secret');
+        return true;
+      });
+    }
+  });
   });
 });

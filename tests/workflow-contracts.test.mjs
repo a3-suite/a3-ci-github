@@ -612,6 +612,19 @@ describe("workflow-contracts", () => {
       expect(qualityVerification.if).toBe(qualityCheckout.if);
       includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify standard Release authority/]);
       const provider = yaml.parse(publication);
+      expect(provider.jobs.publish.permissions.contents).toBe('write');
+      expect(provider.jobs.publish.env).toMatchObject({
+        CI_RELEASE_CREDENTIAL_SOURCE: 'standard-workflow-github-token',
+        CI_RELEASE_CONTENTS_PERMISSION: 'write',
+      });
+      for (const id of ['publication_before', 'publish', 'verify_publication']) {
+        expect(provider.jobs.publish.steps.find(step => step.id === id).env).toMatchObject({
+          GH_TOKEN: '${{ github.token }}', GITHUB_TOKEN: '${{ github.token }}',
+        });
+      }
+      for (const [id, job] of Object.entries(provider.jobs)) {
+        if (id !== 'publish') expect(job.env?.CI_RELEASE_CREDENTIAL_SOURCE).toBeUndefined();
+      }
       for (const [jobId, actionId] of [
         ['authority', 'ci-release-authority'], ['source-gate', 'ci-rust-source-gate'],
         ['build', 'ci-rust-release-build'], ['assemble', 'ci-release-assembly'], ['publish', 'ci-release-publisher'],
@@ -733,6 +746,11 @@ describe("workflow-contracts", () => {
       const caller = read('workflows/package/package-publication-caller.yml');
       const preparation = read('.github/workflows/ci-package-preparation.yml');
       const publication = read('.github/workflows/ci-package-publication.yml');
+      expect(yaml.parse(publication).concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
       expect(request).toMatch(/workflow_dispatch:/);
       includesAll(jobBlock(request, 'request'), [/permissions: \{\}/, /operation: create/]);
       includesAll(jobBlock(request, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
@@ -963,7 +981,7 @@ describe("workflow-contracts", () => {
       const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--preparation'], { cwd: fixture, encoding: 'utf8' });
       // Assert
       expect(result.status, result.stdout).toBe(2);
-      expect(result.stderr).toContain('Action contract execution unavailable');
+      expect(result.stderr).toContain('action-contract-execution-unavailable');
     });
 
     // integration_id: repository-action-reference-contracts
@@ -1273,7 +1291,7 @@ describe("workflow-contracts", () => {
         // Assert
         expect(rejectedReference.status).toBe(1);
         expect(JSON.parse(rejectedReference.stdout).diagnostics).toHaveLength(1);
-        expect(rejectedReference.stderr).toBe('');
+        expect(rejectedReference.stderr).toContain('repository-binding-rejected');
         // Arrange
         writeFileSync(path.join(fixture, '.github/workflows/ci-quality.yml'), workflow(`actions/checkout@${sha}`));
         const validRegistry = read(registryPath);
@@ -1282,11 +1300,11 @@ describe("workflow-contracts", () => {
         const invalidPin = yaml.parse(validRegistry);
         invalidPin.providerActions.entries[0].commitSha = 'main';
         const registryCases = [
-          ['YAML syntax', 'providerActions: [', /Invalid provider registry YAML/],
-          ['duplicate action', yaml.stringify(duplicate), /Invalid provider pin registry/],
-          ['invalid SHA', yaml.stringify(invalidPin), /Invalid provider pin registry/],
+          ['YAML syntax', 'providerActions: [', /Invalid provider registry YAML/, /provider-registry-yaml-invalid/],
+          ['duplicate action', yaml.stringify(duplicate), /Invalid provider pin registry/, /provider-pin-registry-invalid/],
+          ['invalid SHA', yaml.stringify(invalidPin), /Invalid provider pin registry/, /provider-pin-registry-invalid/],
         ];
-        for (const [label, content, diagnostic] of registryCases) {
+        for (const [label, content, diagnostic, publicReason] of registryCases) {
           writeFileSync(path.join(fixture, registryPath), content);
           // Act
           const result = cli();
@@ -1294,7 +1312,7 @@ describe("workflow-contracts", () => {
           expect(() => checkRepository(fixture), label).toThrow(diagnostic);
           expect(result.status, label).toBe(2);
           expect(result.stdout, label).toBe('');
-          expect(result.stderr, label).toMatch(diagnostic);
+          expect(result.stderr, label).toMatch(publicReason);
         }
         // Arrange
         writeFileSync(path.join(fixture, registryPath), validRegistry);
@@ -1305,7 +1323,8 @@ describe("workflow-contracts", () => {
         // Assert
         expect(missing.status).toBe(2);
         expect(missing.stdout).toBe('');
-        expect(missing.stderr).toMatch(/Missing provider callee: ci-quality/);
+        expect(missing.stderr).toContain('provider-callee-missing');
+        expect(missing.stderr).toContain('ci-quality');
         // Arrange
         writeFileSync(missingCallee, workflow(`actions/checkout@${sha}`));
         // Act
@@ -1397,6 +1416,55 @@ describe("workflow-contracts", () => {
 
 describe("workflow-contracts", () => {
   describe("failure-diagnostics-contract", () => {
+    // contract_id: contract.ci-failure-diagnostics.actionable
+    // integration_id: failure-diagnostics-contract
+    // evidence_role: contract
+    // test_level: integration
+    test('every packaged contract defines subject-specific diagnostics under the shared minimum', () => {
+      // Arrange
+      const base = 'sdd/dsl/specs/contract-core';
+      const packageData = yaml.parse(read(`${base}/contract-package.sdd.yml`));
+      const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/clauses.sdd.yml`)).contracts[0];
+      const commonObservation = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/observations.sdd.yml`))
+        .observations.find((entry) => entry.id === 'observation.ci-failure-diagnostics.failure-evidence');
+      // Act
+      const subjects = packageData.subject_scopes.map((scope) => ({
+        id: scope.subject_id,
+        clauses: yaml.parse(read(`${base}/${scope.path}clauses.sdd.yml`)),
+        observations: yaml.parse(read(`${base}/${scope.path}observations.sdd.yml`)),
+        verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
+      }));
+      // Assert
+      expect(commonObservation.value.fields.map((field) => field.selector)).toStrictEqual([
+        'classification', 'context', 'comparison', 'evidence-location', 'execution-state', 'next-check',
+      ]);
+      for (const subject of subjects) {
+        if (subject.id === 'subject.ci.failure-diagnostics') {
+          expect(shared.verification_intents.find((entry) => entry.id === 'detailed-failure-evidence').guarantee_refs).toHaveLength(6);
+          continue;
+        }
+        for (const contract of subject.clauses.contracts) {
+          const intent = contract.verification_intents.find((entry) => entry.id.startsWith('detailed-diagnostics-'));
+          expect(intent, contract.id).toBeDefined();
+          expect(intent.goal, contract.id).toContain(shared.id);
+          expect(intent.goal, contract.id).toContain('actual failure evidence requires execution');
+          const guarantee = contract.guarantees.find((entry) => intent.guarantee_refs.includes(entry.id));
+          expect(guarantee.claim.target.value, contract.id).toBe('details');
+          const condition = contract.conditions.find((entry) => entry.id === guarantee.when);
+          expect(condition.environment_predicate.target_ref, contract.id).toBe('runtime-context.failure-diagnostic-required');
+          const observation = subject.observations.observations.find((entry) => entry.id === guarantee.observation_ref);
+          expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
+          const detail = observation.value.fields.find((entry) => entry.selector === 'details');
+          expect(detail.meaning.length, contract.id).toBeGreaterThan(50);
+          expect(detail.meaning, contract.id).not.toMatch(/^Failure|^失敗終了/);
+          const verification = subject.verifications.verifications.find((entry) => entry.contract_id === contract.id);
+          const failureCase = verification.cases.find((entry) => entry.intent_id === intent.id);
+          expect(failureCase, contract.id).toBeDefined();
+          expect(failureCase.checks.map((entry) => entry.guarantee_ref), contract.id).toContain(guarantee.id);
+        }
+      }
+    });
+
     // integration_id: failure-diagnostics-contract
     test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
       const workflows = [

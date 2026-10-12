@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-release-publication-workflow.publication
     summary: The canonical release workflows order unprivileged request creation, trusted request and publication entry validation, handoff production, privileged publication, and publication readback. Standard-installer platform artifact transfer preserves the exact declared evidence filenames and bytes, including hidden source snapshots, until final owner verification; missing, modified, or undeclared evidence blocks publication.
     conditions:
+      - id: diagnostic-required-publication
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: ci-release-publication-workflow-canonical-source-available
         input_predicate:
           kind: input
@@ -41,7 +46,17 @@ contracts:
           kind: observable-result
           op: present
           target: {kind: observation_field, value: evidence-transfer}
+      - id: diagnostic-details-publication
+        when: diagnostic-required-publication
+        observation_ref: observation.ci-release-publication-workflow.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-publication
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-publication]
       - id: ci-release-publication-workflow-success-intent
         goal: Verify the provider publication workflow is called through a registered full SHA with typed static owner configuration, default-branch workflow_run caller entry, authority success dependencies, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and readback.
         guarantee_refs:

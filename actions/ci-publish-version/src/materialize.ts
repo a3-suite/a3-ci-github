@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 type ExactVersionPlan = {
   strategy: 'exact';
   publishVersion: string;
@@ -21,19 +22,19 @@ const assertKeys = (value: Record<string, unknown>, expected: string[]): void =>
   const actual = Object.keys(value).sort();
   const allowed = [...expected].sort();
   if (actual.length !== allowed.length || actual.some((key, index) => key !== allowed[index])) {
-    throw new Error('publish-version-plan-fields-invalid');
+    throw new DiagnosticError('publish-version-plan-fields-invalid', { diagnostics: { stage: 'plan-validation', field: 'plan-fields', expected: allowed, observed: actual.map(key => COMPONENT_NAME.test(key) ? key : 'invalid-or-protected') } });
   }
 };
 
 const requireSafeText = (value: unknown, error: string): string => {
   if (typeof value !== 'string' || value.length === 0 || /[\0\r\n]/.test(value)) {
-    throw new Error(error);
+    throw new DiagnosticError(error);
   }
   return value;
 };
 
 const parseVersionPlan = (value: unknown): VersionPlan => {
-  if (!isRecord(value)) throw new Error('publish-version-plan-invalid');
+  if (!isRecord(value)) throw new DiagnosticError('publish-version-plan-invalid');
 
   if (value.strategy === 'exact') {
     assertKeys(value, ['publishVersion', 'strategy']);
@@ -46,17 +47,17 @@ const parseVersionPlan = (value: unknown): VersionPlan => {
   if (value.strategy === 'ciGenerated') {
     assertKeys(value, ['components', 'strategy', 'template']);
     const template = requireSafeText(value.template, 'publish-version-plan-template-invalid');
-    if (!isRecord(value.components)) throw new Error('publish-version-plan-components-invalid');
+    if (!isRecord(value.components)) throw new DiagnosticError('publish-version-plan-components-invalid');
 
     const components: Record<string, string> = {};
     for (const [name, component] of Object.entries(value.components)) {
-      if (!COMPONENT_NAME.test(name)) throw new Error('publish-version-plan-component-name-invalid');
+      if (!COMPONENT_NAME.test(name)) throw new DiagnosticError('publish-version-plan-component-name-invalid');
       components[name] = requireSafeText(component, 'publish-version-plan-component-invalid');
     }
     return { strategy: 'ciGenerated', template, components };
   }
 
-  throw new Error('publish-version-plan-strategy-invalid');
+  throw new DiagnosticError('publish-version-plan-strategy-invalid');
 };
 
 export const materializePublishVersion = (value: unknown): string => {
@@ -67,16 +68,16 @@ export const materializePublishVersion = (value: unknown): string => {
   const publishVersion = plan.template.replace(PLACEHOLDER, (_placeholder, name: string) => {
     referenced.add(name);
     const component = plan.components[name];
-    if (component === undefined) throw new Error('publish-version-plan-component-missing');
+    if (component === undefined) throw new DiagnosticError('publish-version-plan-component-missing', { diagnostics: { stage: 'template-expansion', strategy: plan.strategy, field: name, expected: 'declared-component', observed: 'missing' } });
     return component;
   });
 
   if (publishVersion.includes('{') || publishVersion.includes('}')) {
-    throw new Error('publish-version-plan-placeholder-invalid');
+    throw new DiagnosticError('publish-version-plan-placeholder-invalid');
   }
-  if (referenced.size === 0) throw new Error('publish-version-plan-components-invalid');
+  if (referenced.size === 0) throw new DiagnosticError('publish-version-plan-components-invalid');
   if (Object.keys(plan.components).some((name) => !referenced.has(name))) {
-    throw new Error('publish-version-plan-component-unused');
+    throw new DiagnosticError('publish-version-plan-component-unused', { diagnostics: { stage: 'template-expansion', strategy: plan.strategy, field: 'components', expected: 'referenced-components-only', observed: Object.keys(plan.components).filter(name => !referenced.has(name)) } });
   }
   return requireSafeText(publishVersion, 'publish-version-invalid');
 };

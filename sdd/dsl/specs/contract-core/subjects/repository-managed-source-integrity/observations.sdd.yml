@@ -19,3 +19,13 @@ observations:
         - selector: contract-execution
           kind: observation_field
           meaning: Every packaged contract subject is mapped to explicit active or excluded execution segments and repository-contained test paths.
+  - id: observation.repository-managed-source-integrity.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "canonical source・legacy location・contract subject/execution mappingの検査を区別し、問題のasset/subject/segment identity、対象相対path、欠落/二重正本/範囲外/未対応の理由、期待するowner/locationと観測状態を残す。"

@@ -1,36 +1,45 @@
+import { completeFailure, FailureContext, safeErrorReason, DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import fs from 'node:fs';
 import { MAX_MANIFEST_BYTES, resolvePlatformMatrix, resolveQualityMatrix } from './matrix.js';
 
 const readManifest = (manifestPath: string): string => {
   if (!manifestPath || /[\0\r\n]/.test(manifestPath)) {
-    throw new Error('platform-matrix-manifest-path-invalid');
+    throw new DiagnosticError('platform-matrix-manifest-path-invalid');
   }
   const stat = fs.statSync(manifestPath);
-  if (!stat.isFile()) throw new Error('platform-matrix-manifest-not-file');
-  if (stat.size > MAX_MANIFEST_BYTES) throw new Error('platform-matrix-manifest-too-large');
+  if (!stat.isFile()) throw new DiagnosticError('platform-matrix-manifest-not-file');
+  if (stat.size > MAX_MANIFEST_BYTES) throw new DiagnosticError('platform-matrix-manifest-too-large');
   return fs.readFileSync(manifestPath, 'utf8');
 };
 
 export const run = (): void => {
+  const diagnostic = new FailureContext('ci-platform-matrix', 'platform-matrix');
   try {
     const manifestPath = process.env['INPUT_MANIFEST-PATH'] ?? '';
     const outputPath = process.env.GITHUB_OUTPUT ?? '';
     if (!outputPath || /[\0\r\n]/.test(outputPath)) {
-      throw new Error('platform-matrix-output-path-invalid');
+      throw new DiagnosticError('platform-matrix-output-path-invalid');
     }
+    diagnostic.confirmed();
+    diagnostic.at('manifest-validation', {"input": "manifest-path"});
     const matrix = resolvePlatformMatrix(readManifest(manifestPath));
     const selectionPath = process.env['INPUT_SELECTION-PATH'] ?? '';
     let outputs = `matrix=${JSON.stringify(matrix)}\n`;
     if (selectionPath !== '') {
-      if (/[\0\r\n]/.test(selectionPath)) throw new Error('platform-matrix-selection-path-invalid');
-      if (!fs.statSync(selectionPath).isFile()) throw new Error('platform-matrix-selection-not-file');
+      if (/[\0\r\n]/.test(selectionPath)) throw new DiagnosticError('platform-matrix-selection-path-invalid');
+      if (!fs.statSync(selectionPath).isFile()) throw new DiagnosticError('platform-matrix-selection-not-file');
+    diagnostic.confirmed();
+    diagnostic.at('selection-validation', {"input": "selection-path"});
       const quality = resolveQualityMatrix(matrix, fs.readFileSync(selectionPath, 'utf8'));
       outputs += `quality-matrix=${JSON.stringify(quality.matrix)}\nexpected-platforms=${quality.expectedPlatforms}\n`;
     }
+    diagnostic.confirmed();
+    diagnostic.at('output-write', {"output": "GITHUB_OUTPUT"});
+    diagnostic.writeState = 'write-may-be-partial';
     fs.appendFileSync(outputPath, outputs, 'utf8');
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 1;
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 1);
   }
 };
 

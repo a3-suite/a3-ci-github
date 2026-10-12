@@ -8,7 +8,7 @@
 ## 入力
 
 - 監査モード
-- `{ci-github-source-root}`: `distribute-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
+- `{ci-github-source-root}`: `references/distribute-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
 - 任意の `{skill-collection-root}`: 外部 language skill の資材を参照する adapter bundle を使う場合に指定するスキル集合 root。標準bundleと外部資材を参照しない構成では省略する。
 - 導入先 project root
 - `{project-root}/.a3-skills/ci-github/` のスキル専用ローカル状態 root
@@ -38,7 +38,7 @@ node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
   --repo-root "{project-root}"
 ```
 
-bootstrap の `cannot-start`、TypeScript validator が報告した配置済み資産の不一致、validator 起動後の `cannot-complete` は、それぞれ観測事実と stderr の診断を保持し、`ci-audit-contract.reference.yml` の `statusClassification` で provider preflight の status を導出する。監査中に runtime、lock、依存を生成して補完しない。
+bootstrap の `cannot-start`、TypeScript validator が報告した配置済み資産の不一致、validator 起動後の `cannot-complete` は、それぞれ観測事実と stderr の診断を保持し、`references/ci-audit-contract.reference.yml` の `statusClassification` で provider preflight の status を導出する。監査中に runtime、lock、依存を生成して補完しない。
 
 ### remediation
 
@@ -101,14 +101,14 @@ node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
 - write 権限を持つ job で a3 Action を使う場合は、対象 Action の `privilegedJobs` に `workflow-id/job-id` が完全一致で登録されていることを確認する。`trust: read-only` または workflow 単位の登録だけで許可を補完しない。
 - 標準実装を選択した場合は、必要な extension と Action binding、language profile、project設定、依存閉包を照合する。未登録の実装識別子は、同名のローカル entrypoint が存在しても不一致とする。
 - registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。配置経路の標準descriptorとoptional workflowも同じ照合対象に含める。固定Action参照の標準bundleは配置assetに含めない。
-- qualityの選択・配置・固定参照は `ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を参照し、配布同一性lockとcanonical構造を照合する。
+- qualityの選択・配置・固定参照は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を参照し、配布同一性lockとcanonical構造を照合する。
 - 標準IDはprofileに対応した登録済みAction bundleに限定する。パスによる標準bundleの既存経路はregistryのtargetDescriptorと配置digestを検証する。標準bundleがないprofileのproject-owned descriptorの意味はCI意味監査の `project-owned-ci-adapter` subjectで確認する。
 - project-owned extension は、canonical workflow から entrypoint への直接接続、参照する直接・間接 asset の存在、project root 内での解決を確認する。project-owned asset 内部の構造と処理契約の意味は preflight の保証対象外とし、CI 意味監査の `project-owned-ci-adapter` subject で project の契約テスト証拠を確認する。実行環境での成立は必要な hosted 証拠で確認する。
 - release publication は consumer の request と `workflow_run` caller の2 workflow、および登録済み固定 SHA の provider `workflow_call` publication を必須とし、request artifact と notes handoff の生成、caller の default branch provenance、run ID の受渡し、publication の再検証を確認する。
 - release／package は callee の `workflow_call` から必須 input／secret を導出し、caller の接続と権限上限を確認する。
 - request workflow は必須 input、操作対象sourceのcheckout禁止、公開 write 権限禁止を確認する。release publication request と caller は source や trusted snapshot を checkout せず、event metadata と immutable handoff だけを検証・転送する。project-local trusted control の checkout は、その control を実行する publication job に限定する。
 
-Release publication の処理順と trust boundary の詳細は、`implement-release-asset-publication-workflow.guide.md` を参照する。
+Release publication の処理順と trust boundary の詳細は、`references/implement-release-asset-publication-workflow.guide.md` を参照する。
 
 出力は `phase: "provider-preflight"`、`inspectedPresets`、`excludedPresets`、`inspectedWorkflows`、
 `excludedWorkflows`、lockのsource revisionと検査件数を含む`evidence`、findings、
@@ -120,11 +120,11 @@ Release publication の処理順と trust boundary の詳細は、`implement-rel
 候補ごとの `retain`、`remove`、`replace` の判断と根拠が記録されるまで、意味監査を完了扱いにしない。
 この JSON は監査前の事前機械検証の証拠であり、機械監査、意味監査、監査全体の結果ではない。監査者または上位のレビュー実行経路は、
 `target-resolution` の監査モード・対象 identity、各フェーズの status と provenance、条件付きフェーズを対象外とした理由、
-および `ci-audit-contract.reference.yml` の集約結果を別途保持する。validator の `status` だけで監査全体の適合を判定しない。
+および `references/ci-audit-contract.reference.yml` の集約結果を別途保持する。validator の `status` だけで監査全体の適合を判定しない。
 
 ## 判定
 
-個別 status と全体結果は `ci-audit-contract.reference.yml` の `statusClassification` と `result` へ写像し、監査完了条件は同契約の `completion` に委譲する。
+個別 status と全体結果は `references/ci-audit-contract.reference.yml` の `statusClassification` と `result` へ写像し、監査完了条件は同契約の `completion` に委譲する。
 
 - bootstrap の `cannot-start` は、必須 preflight を開始または継続できない観測として記録する。
 - validator 起動後に観測した workflow、設定、asset、契約接続の不一致は、対象契約違反として記録する。

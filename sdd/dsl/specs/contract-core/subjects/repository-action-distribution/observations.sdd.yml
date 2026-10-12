@@ -24,4 +24,14 @@ observations:
           meaning: Every discovered bundled Action contributes typecheck and no-rebuild test steps, and shared Action runtime cores contribute focused tests, after the distribution build has prepared package dependencies.
         - selector: release-version
           kind: observation_field
-          meaning: An annotated exact release tag is accepted only when its version matches VERSION in the tagged main-integrated commit.
+          meaning: An annotated exact release tag matches VERSION in the tagged source; integration admissibility follows contract.ci-selective-distribution.publication.
+  - id: observation.repository-action-distribution.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "distribution plan/rebuild/比較・catalog・contract coverage・source verification・release version/tag bindingのgateを区別し、Action/runtime identity、問題のsource/dist/script相対path、tracked状態、期待/観測Git object/digest/version、失敗command/検査owner、残る未実行gateを残す。"

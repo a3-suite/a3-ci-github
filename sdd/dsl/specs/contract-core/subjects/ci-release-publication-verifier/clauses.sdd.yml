@@ -3,8 +3,13 @@ name: contract-clauses
 subject_ref: subject.ci.release-publication-verifier
 contracts:
   - id: contract.ci-release-publication-verifier.outputs
-    summary: Observe-before requires authoritative draft visibility and complete Release absence. Verify-after binds schema-validated owner receipt and readback to authority, handoff, asset inventory and immutable create-result Release ID, then independently checks remote tag/source, body, non-draft state and exact asset/checksum bytes. Requests are GET-only; observation does not replace owner immediate pre-write reobservation or non-overwrite create.
+    summary: Observe-before requires authoritative draft visibility and complete Release absence. Visibility is established by repository permissions.push=true, or, only when permission metadata is absent, by the fixed standard publication workflow's contents-write declaration and same-job GITHUB_TOKEN binding. The latter requires matching repository, the standard release-publication-caller.yml at the current branch ref, workflow_run, CI_RELEASE_CREDENTIAL_SOURCE=standard-workflow-github-token, CI_RELEASE_CONTENTS_PERMISSION=write and equality of the selected credential with GITHUB_TOKEN; these are trusted workflow evidence, not arbitrary caller permission claims. Explicit denied or malformed permission metadata is rejected. Verify-after independently binds receipt/readback to authority, handoff, immutable Release ID, tag/source, body and exact asset bytes. Requests are GET-only. Release and valid-subset asset inventory may be reobserved at most three times at one-second intervals; unknown or conflicting inventory is never accepted and writes are not replayed.
     conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: observation-valid
         environment_predicate:
           kind: environment-ref
@@ -105,7 +110,24 @@ contracts:
             right:
               kind: value_set
               values: [failure]
+      - id: verification-diagnostic
+        when: verification-invalid
+        observation_ref: observation.ci-release-publication-verifier.diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: diagnostic}
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-release-publication-verifier.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-outputs]
       - id: observe-absence
         goal: Read-only absence observation emits only pre-create outputs bound to authority and handoff.
         guarantee_refs: [observation-status, observation-file, observation-digest]
@@ -115,3 +137,6 @@ contracts:
       - id: fail-closed
         goal: Reject unavailable credentials, incomplete remote knowledge, existing Release or mismatching receipt/readback without success evidence.
         guarantee_refs: [verification-rejected]
+      - id: safe-diagnostics
+        goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
+        guarantee_refs: [verification-diagnostic]

@@ -115,6 +115,7 @@
    - project override classificationに従い、必要性・許容条件の根拠不足は構成監査のfindingとする。実行結果の不足は選択した証跡監査へ保持し、構成上の例外成立と動作検証の成立を混同しない。
 3. 契約 surface へ対応付ける。
    - manifest contract、execution request contract、source mode contract、asset 組立証跡契約、state machine、audit log contract、audit event contract、fixture baseline のどれを各成果物が満たすべきかを対応付ける。
+   - CIでの組立・転送・最終検証の失敗診断はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics`から正本を解決し、同subjectの`stageChecks`と`evidenceOwnership`で診断・保持導線と実行証跡を分ける。インストール実行時の失敗はinstallerの該当owner契約へ対応付け、CI固有の形式を一律に要求しない。installer単独監査でもこの対応付けを行い、CIから委譲された場合は同じ比較基準・対象identityの確認結果を再利用して返す。
    - installer が runtime script を配置または生成する場合は、runtime-script スキルの監査結果、または runtime-script 監査ガイドの最低証跡セットと代替証跡条件を満たす同等証跡を service runtime 境界の証跡として対応付ける。
    - 必須の構成や検査導線の欠落と、実候補・組立証跡・実行結果の未取得を分け、該当段階の根拠不足として扱う。未生成の実候補だけで構成不適合にしない。
 4. blocker を先に確認する。

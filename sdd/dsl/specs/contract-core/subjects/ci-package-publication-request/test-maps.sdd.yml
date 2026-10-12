@@ -26,3 +26,9 @@ test_maps:
         symbol: "dist entrypoint > entrypoint rejects a source SHA mismatch"
         check_refs:
           - check-package-request-failure-status
+  - verification_id: verification.ci-package-publication-request.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-package-publication-request failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

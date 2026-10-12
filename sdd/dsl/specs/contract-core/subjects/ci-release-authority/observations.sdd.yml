@@ -40,3 +40,13 @@ observations:
         - selector: successful-output-state
           kind: observation_field
           meaning: Successful outputs are absent on rejection.
+  - id: observation.ci-release-authority.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "decision・request provenance・tag/source・workflow binding・snapshot・notes approval・provider suitabilityの検証を区別し、対象repository/tag/source/run/approval identity、違反field、期待/観測identityまたは期限状態、provider HTTP相関情報を残す。notes本文やcredentialを出力しない。"

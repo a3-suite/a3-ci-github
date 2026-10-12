@@ -5,6 +5,22 @@ verifications:
   - id: verification.ci-release-publisher.outputs
     contract_id: contract.ci-release-publisher.outputs
     cases:
+      - id: canonical-repository-identity
+        intent_id: publish-evidence
+        input: {repository-response: canonical-casing}
+        checks: [{id: receipt, guarantee_ref: receipt-file}]
+      - id: pre-create-handoff-change
+        intent_id: fail-closed
+        input: {handoff: changed-during-final-absence-observation}
+        checks: [{id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
+      - id: asset-inventory-propagation
+        intent_id: publish-evidence
+        input: {asset-inventory: initially-valid-subset-then-complete, writes: once}
+        checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: bundle-publish
         intent_id: publish-evidence
         input:

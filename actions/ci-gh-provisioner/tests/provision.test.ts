@@ -98,7 +98,7 @@ describe('GitHub CLI provisioning', () => {
     await expect(() => provisionGhOnPath({
       version: fixtureVersion, runnerOs: 'Linux', runnerArch: 'X64', tempRoot,
       fetchAsset: async () => { throw new Error('HTTP 404'); },
-    }, githubPath)).rejects.toThrow(/gh-provision-failed: download: Error: HTTP 404/);
+    }, githubPath)).rejects.toThrow(/gh-provision-failed: download failed/);
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 

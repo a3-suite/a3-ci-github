@@ -22,3 +22,13 @@ observations:
         - selector: optional-platform-chain
           kind: observation_field
           meaning: Declared trusted platform resolution, matrix execution, and aggregate platform decision chain when the optional asset is selected.
+  - id: observation.ci-quality-workflow.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "identity/preflight・asset解決・toolchain・quality adapter・platform job・aggregate summaryの失敗段階、matrix/platform、元のneeds result、欠落/unresolvedの理由、当該run/job/step logと既存evidenceへの参照を残す。"

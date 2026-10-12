@@ -23,3 +23,9 @@ test_maps:
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
         symbol: "contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures"
         check_refs: [check-failed-quality-toolchain-setup]
+  - verification_id: verification.ci-quality-toolchain.preparation
+    case_id: detailed-failure-preparation
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: "contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup"
+        check_refs: [diagnostic-details]

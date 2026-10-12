@@ -1,22 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
+ci_failure_subject=ci-rust-release-build
+ci_failure_operation=package
+ci_failure_script_dir=${BASH_SOURCE[0]%/*}
+if [[ "$ci_failure_script_dir" == "${BASH_SOURCE[0]}" ]]; then ci_failure_script_dir=.; fi
+source "$ci_failure_script_dir/../diagnostics/failure.sh"
+if (( $# < 8 )); then echo 'arguments-missing' >&2; exit 1; fi
+for ci_required_argument in "${@:1:8}"; do
+  if [[ -z "$ci_required_argument" ]]; then echo 'arguments-missing' >&2; exit 1; fi
+done
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-binary_path=${1:?binary path is required}
-binary_name=${2:?binary name is required}
-asset_prefix=${3:?asset prefix is required}
-version=${4:?version is required}
-platform_id=${5:?platform id is required}
-platform_target=${6:?platform target is required}
-source_sha=${7:?source SHA is required}
-output_dir=${8:?output directory is required}
+binary_path=${1}
+binary_name=${2}
+asset_prefix=${3}
+version=${4}
+platform_id=${5}
+platform_target=${6}
+source_sha=${7}
+output_dir=${8}
 while [[ "$output_dir" != "/" && "$output_dir" == */ ]]; do
   output_dir=${output_dir%/}
 done
 
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=binary-read
+ci_failure_field=release-binary
+ci_failure_expected=unavailable
+ci_failure_observed=unavailable
 test -f "$binary_path"
 test ! -e "$output_dir"
 if ! [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]; then exit 1; fi
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=archive-create
+ci_failure_field=release-archive
+ci_failure_expected=unavailable
+ci_failure_observed=unavailable
 mkdir -p "$(dirname "$output_dir")"
 archive_name="${asset_prefix}-${version}-${platform_id}.tar.gz"
 artifact_names=("$archive_name" "$archive_name.sha256" "asset-manifest.json")
@@ -32,7 +51,8 @@ cleanup() {
   if [[ -d "$staging_dir" ]]; then rmdir "$staging_dir"; fi
   if [[ "$output_claimed" == true && -d "$output_dir" ]]; then rmdir "$output_dir"; fi
 }
-trap cleanup EXIT
+ci_failure_write=staging-may-be-partial
+trap 'ci_original_exit=$?; cleanup_status=0; cleanup || cleanup_status=$?; if (( cleanup_status == 0 )); then ci_failure_write=owned-staging-and-output-removed; else ci_failure_write=cleanup-incomplete; fi; ci_failure_log "$ci_original_exit" "$ci_failure_line"' EXIT
 
 COPYFILE_DISABLE=1 tar -C "$(dirname "$binary_path")" -czf "$staging_dir/$archive_name" "$binary_name"
 if command -v sha256sum >/dev/null 2>&1; then
@@ -65,8 +85,14 @@ jq -n \
 bash "$script_dir/verify-release-asset-unix.sh" \
   "$binary_name" "$asset_prefix" "$version" "$platform_id" \
   "$platform_target" "$source_sha" "$staging_dir"
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=output-create
+ci_failure_field=output-directory
+ci_failure_expected=unavailable
+ci_failure_observed=unavailable
 if ! mkdir "$output_dir"; then exit 1; fi
 output_claimed=true
+ci_failure_write=output-may-be-partial
 for name in "${artifact_names[@]}"; do
   mv "$staging_dir/$name" "$output_dir/$name"
 done

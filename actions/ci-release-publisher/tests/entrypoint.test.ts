@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { fixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
+import { fixture, standardPublicationTokenEnvironment } from '../../../runtime/release-publication/tests/fixtures.mjs';
 import { observeBefore } from '../../../runtime/release-publication/observation';
 import { remoteClient } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
@@ -15,6 +15,7 @@ const bundle = entrypointArgs;
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-flow
 test('publisher entrypoint writes once by immutable ID and emits evidence paths', async (t) => {
+  for (const permissionMetadata of ['present', 'absent', 'empty']) {
   const f = fixture(t);
   const assembly = f.assemble();
   const before = await observeBefore({ authorityPath: f.options.authorityPath, repository: f.identity.repository, handoffRoot: f.options.outputRoot }, remoteClient(f, assembly, { ids: [] }).client);
@@ -58,15 +59,17 @@ globalThis.fetch = async (url, init) => {
   else if (endpoint.endsWith('/releases/42')) data = { id: 42, tag_name: assembly.identity.tag, draft: !finalized, body: 'approved notes' };
   else if (endpoint.endsWith('/releases')) data = created ? [{ id: 42, tag_name: assembly.identity.tag, draft: !finalized }] : [];
   else data = { full_name: assembly.identity.repository, permissions: { push: true }, default_branch: 'main' };
+  if (Object.hasOwn(data, 'permissions') && process.env.MOCK_PERMISSION_METADATA === 'absent') delete data.permissions;
+  if (Object.hasOwn(data, 'permissions') && process.env.MOCK_PERMISSION_METADATA === 'empty') data.permissions = {};
   return new Response(JSON.stringify(data), { status });
 };
 `);
   const output = f.put('github-output', '');
   const calls = f.put('calls', '');
   const outputRoot = path.join(f.root, 'write');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: f.identity.repository, GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
+  const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output,
     'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot, 'INPUT_PRE-OBSERVATION-PATH': beforePath,
-    'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls };
+    'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls, MOCK_PERMISSION_METADATA: permissionMetadata };
   const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, cwd: f.root, encoding: 'utf8' });
   expect(result.status, result.stderr).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toBe(`receipt-path=${outputRoot}/receipt.json\nreadback-path=${outputRoot}/readback.json\n`);
@@ -84,6 +87,17 @@ globalThis.fetch = async (url, init) => {
   expect(fs.existsSync(`${failedRoot}/readback.json`)).toBe(false);
   expect(failed.stderr.includes('synthetic-secret')).toBe(false);
   expect(failed.stderr).toMatch(/asset-upload/);
+  const evidence = JSON.parse(failed.stderr.split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
+  expect(evidence.classification.stage).toBe('asset-upload');
+  expect(evidence.comparison['http-status']).toBe(502);
+  expect(evidence.comparison.method).toBe('POST');
+  expect(evidence.context.inputs.releaseId).toBe('42');
+  expect(evidence['execution-state'].write).toBe('draft-created-assets-may-be-partial');
+  expect(evidence['execution-state'].rollback).toBe('unavailable');
+  const failedWrites = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { method: string; endpoint: string });
+  expect(failedWrites.filter(entry => entry.endpoint.endsWith('/releases'))).toHaveLength(1);
+  expect(failedWrites.some(entry => entry.method === 'PATCH')).toBe(false);
+  }
 });
 
 // contract_id: contract.ci-release-publisher.outputs

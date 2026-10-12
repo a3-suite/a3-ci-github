@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { execFileSync } from 'node:child_process';
 
 export const normalizePath = (value: string): string => value.replace(/\\/g, '/').trim();
@@ -52,6 +53,6 @@ export const detectChangeScope = (baseSha: string, headSha: string, matcher: (va
 };
 
 export const runGitDiff = (base: string, head: string): string => {
-  if (!isCommitSha(base) || !isCommitSha(head)) throw new Error('change-scope-sha-invalid');
+  if (!isCommitSha(base) || !isCommitSha(head)) throw new DiagnosticError('change-scope-sha-invalid');
   return execFileSync('git', ['diff', '--name-only', '-z', base, head], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 };

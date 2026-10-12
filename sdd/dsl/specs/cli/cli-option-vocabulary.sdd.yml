@@ -84,7 +84,7 @@ options:
     long: --approve
     kind: value
     value_name: SHA256
-    summary: Explicit approval of one unchanged distribution plan digest
+    summary: Expected digest of the reviewed distribution plan; not evidence of human approval
   - id: transaction
     long: --transaction
     kind: value

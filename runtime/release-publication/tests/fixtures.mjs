@@ -5,6 +5,14 @@ import { sha256, canonicalJson } from '../io.ts';
 import { assembleRelease } from '../assembly.ts';
 import { decodePlatformManifest } from '../../../actions/ci-release-assembly/src/platform-manifest-decoder.ts';
 
+export const standardPublicationTokenEnvironment = (repository, token) => ({
+  GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'workflow_run', GITHUB_REPOSITORY: repository,
+  GITHUB_REF: 'refs/heads/main',
+  GITHUB_WORKFLOW_REF: `${repository}/.github/workflows/release-publication-caller.yml@refs/heads/main`,
+  CI_RELEASE_CREDENTIAL_SOURCE: 'standard-workflow-github-token', CI_RELEASE_CONTENTS_PERMISSION: 'write',
+  GITHUB_TOKEN: token, GH_TOKEN: token,
+});
+
 export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' }) => {
   const parent = fileURLToPath(new URL('../../../tests/tmp/', import.meta.url));
   fs.mkdirSync(parent, { recursive: true });

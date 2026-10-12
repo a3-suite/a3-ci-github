@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -18,7 +19,7 @@ const PYTHON_IMPORT = /(?:^|\n)\s*(?:from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import|i
 const inside = (root: string, relativePath: string): string => {
   const absolute = path.resolve(root, relativePath);
   const relative = path.relative(path.resolve(root), absolute);
-  if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('path escapes repository root');
+  if (relative.startsWith('..') || path.isAbsolute(relative)) throw new DiagnosticError('path escapes repository root', { diagnosticCode: 'path-escapes-repository-root' });
   return absolute;
 };
 

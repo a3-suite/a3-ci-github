@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -49,17 +50,17 @@ export const FULL_SHA = /^[0-9a-f]{40}$/;
 
 export const minuteTimestamp = (value: string | Date): string => {
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) throw new Error('generatedAt must be a valid timestamp');
+  if (Number.isNaN(date.getTime())) throw new DiagnosticError('generatedAt must be a valid timestamp', { diagnosticCode: 'generatedat-must-be-a-valid-timestamp' });
   return `${date.toISOString().slice(0, 16)}Z`;
 };
 
 export const writeAssetLock = (options: WriteAssetLockOptions): AssetLock => {
   if (!FULL_SHA.test(options.sourceRevision)) {
-    throw new Error('sourceRevision must be a full commit SHA');
+    throw new DiagnosticError('sourceRevision must be a full commit SHA', { diagnosticCode: 'sourcerevision-must-be-a-full-commit-sha' });
   }
   const validation = options.validate();
   if (validation.status !== 'success') {
-    throw new Error(`cannot write asset lock for an invalid preset: ${JSON.stringify({
+    throw new DiagnosticError(`cannot write asset lock for an invalid preset: ${JSON.stringify({
       missingSettings: validation.missingSettings,
       mismatches: validation.mismatches,
     })}`);

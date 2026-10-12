@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-package-publication-request.outputs
     contract_id: contract.ci-package-publication-request.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: package-request-round-trip
         intent_id: package-request-source-binding
         input:
