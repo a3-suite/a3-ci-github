@@ -59,12 +59,20 @@ try {
   assert.equal(direct.id, createdId, 'probe-direct-id-mismatch');
   assert.equal(direct.tag_name, tag, 'probe-direct-tag-mismatch');
   assert.equal(direct.draft, true, 'probe-direct-not-draft');
-  const inventory = await releases();
-  const listed = inventory.entries.filter(entry => entry.id === createdId);
+  report.draft = { id: createdId, tag, get_by_id: true, full_list: false, matched_ids: null, pages: null, observations: 0 };
+  let inventory;
+  let listed;
+  for (let observation = 1; observation <= 3; observation++) {
+    inventory = await releases();
+    listed = inventory.entries.filter(entry => entry.id === createdId);
+    report.draft = { id: createdId, tag, get_by_id: true, full_list: listed.length === 1,
+      matched_ids: listed.length, pages: inventory.pages, observations: observation };
+    if (listed.length > 0) break;
+    if (observation < 3) await new Promise(resolve => setTimeout(resolve, 1000));
+  }
   assert.equal(listed.length, 1, 'probe-draft-not-listed');
   assert.equal(listed[0].tag_name, tag, 'probe-listed-tag-mismatch');
   assert.equal(listed[0].draft, true, 'probe-listed-not-draft');
-  report.draft = { id: createdId, tag, get_by_id: true, full_list: true, pages: inventory.pages };
   report.observed_write_access = true;
   report.status = 'success';
 } catch (error) {
@@ -73,7 +81,8 @@ try {
     'probe-identity-already-present', 'probe-release-id-invalid', 'probe-created-identity-mismatch',
     'probe-direct-id-mismatch', 'probe-direct-tag-mismatch', 'probe-direct-not-draft',
     'probe-draft-not-listed', 'probe-listed-tag-mismatch', 'probe-listed-not-draft']);
-  report.reason = error instanceof Error && reasons.has(error.message) ? error.message : 'probe-transport-or-response-invalid';
+  const reason = error instanceof Error ? error.message.split('\n')[0] : '';
+  report.reason = reasons.has(reason) ? reason : 'probe-transport-or-response-invalid';
   process.exitCode = 1;
 } finally {
   if (createdId) {
