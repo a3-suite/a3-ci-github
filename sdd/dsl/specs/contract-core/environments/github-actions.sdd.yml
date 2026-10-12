@@ -68,9 +68,9 @@ runtime_contexts:
   - id: runtime-context.supplemental-phase-invalid
     summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change.
   - id: runtime-context.release-assembly-valid
-    summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed.
+    summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed. Selected public skills satisfy ci-github.release-skills-contract and bind to the same Release source and version.
   - id: runtime-context.release-assembly-invalid
-    summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists.
+    summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists. Selected public skills can also violate fixed source, required inventory, safe paths or publication name constraints.
   - id: runtime-context.release-pre-observation-valid
     summary: GitHub credentials establish draft visibility and complete GET-only inventory observes no Release for the bound tag, source and handoff identity.
   - id: runtime-context.release-post-verification-valid

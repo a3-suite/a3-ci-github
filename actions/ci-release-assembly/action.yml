@@ -23,6 +23,10 @@ inputs:
     required: false
     default: ''
     description: Owner-verified supplemental handoff, required only when selected in the snapshot.
+  skills-source-root:
+    required: false
+    default: ''
+    description: Separate checkout of authority.source_sha, required only for the selected release skills declaration. No source scripts are executed.
   output-directory:
     required: true
     description: New directory for the handoff; existing paths are never overwritten.

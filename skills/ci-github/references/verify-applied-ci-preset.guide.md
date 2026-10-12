@@ -167,3 +167,7 @@ preflight 後の GitHub Actions 固有の必須確認を上表の一つの共通
 ## 適合 success 条件
 
 適合は `references/ci-audit-contract.reference.yml` の `conformanceSuccess` だけから導出する。`.ci/README.md` の必須確認や `repository-root-readme` の委譲結果を含む GitHub Actions 固有の結果は、対応する共通監査フェーズへ集約済みでなければならず、provider 固有の適合条件を別に追加しない。
+
+## 製品スキルの同時Release
+
+選択された場合だけ`references/release-project-skills.guide.md`の構成・証跡監査を実施する。公開宣言、固定source、禁止資材の除外、必須file、installerとの併用時の各owner証跡、READMEの同じ製品Releaseへの案内を比較する。未選択の製品にZIPや外部配備を要求しない。

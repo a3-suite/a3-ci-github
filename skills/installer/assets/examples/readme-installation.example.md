@@ -6,6 +6,8 @@
 
 前提の記載は`references/use-standard-installer.guide.md`の「READMEに残す内容」に従う。追加準備が不要なら前提の段落自体を削除し、通常使えるツールの説明を補わない。これらの転用説明は製品READMEへ掲載しない。
 
+Agent Skill節は、製品と同じReleaseに対応ZIPを提供する場合だけ使う。案内先は実際に利用できる取得・検証・配備手順へ置換し、外部skill rootや他製品のスキルを削除する例は書かない。
+
 ---
 
 ## インストール
@@ -39,6 +41,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -c "irm 'https://github.com/<owner
 ```
 
 期待する結果：<出力または動作>。
+
+### Agent Skill（任意）
+
+同じ版の[対応スキルZIP](https://github.com/<owner>/<repository>/releases/download/<release-tag>/<repository>-skills.zip)を[スキル導入手順](<skill-setup-guide>)に従って配備してください。削除する場合は、配備した`<skill-root>/<skill-name>/`だけを削除します。
 
 ## アンインストール
 

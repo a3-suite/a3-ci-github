@@ -679,6 +679,7 @@ describe("workflow-contracts", () => {
             values['inputs.supplemental_release_asset_enabled'] = enabled;
             values['inputs.supplemental_release_asset_implementation'] = 'owner-adapter';
             values['inputs.supplemental_release_asset_config_path'] = '__unset__';
+            values['inputs.release_skills_config_path'] = '__unset__';
             values[expression] = value;
             const rendered = sourcesTemplate.replace(/\$\{\{\s*(toJSON\((?:env|inputs)\.[A-Za-z_]+\)|(?:env|inputs)\.[A-Za-z_]+)\s*\}\}/g, (_, entry) =>
               entry.startsWith('toJSON(') ? JSON.stringify(values[entry.slice(7, -1)]) : String(values[entry]));

@@ -1,0 +1,55 @@
+{
+  "excludedDirectories": [
+    "_build",
+    "tmp",
+    "__pycache__",
+    "node_modules",
+    ".git",
+    ".hg",
+    ".svn",
+    ".a3-skills",
+    ".a3-lint",
+    ".a3-sdd",
+    "logs",
+    "coverage",
+    ".nyc_output",
+    "tests",
+    "test",
+    "build",
+    "dist",
+    "target",
+    ".cache",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "backup",
+    "backups"
+  ],
+  "excludedSuffixes": [
+    ".pyc",
+    ".pyo",
+    ".tsbuildinfo",
+    ".log",
+    ".tmp",
+    ".temp",
+    ".bak",
+    ".orig",
+    ".rej",
+    ".swp",
+    "~",
+    ".backup"
+  ],
+  "excludedNames": [
+    ".DS_Store",
+    "Thumbs.db"
+  ],
+  "maximumFiles": 1024,
+  "maximumFileBytes": 8388608,
+  "maximumTotalBytes": 67108864,
+  "compiledArtifactSuffixes": [
+    ".o",
+    ".obj",
+    ".class",
+    ".map"
+  ]
+}

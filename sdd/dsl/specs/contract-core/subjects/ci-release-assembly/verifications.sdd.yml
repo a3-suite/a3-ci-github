@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-assembly.outputs
     contract_id: contract.ci-release-assembly.outputs
     cases:
+      - id: same-release-skills
+        intent_id: same-release-skills
+        input: {selection: public-skills-with-or-without-installer}
+        checks: [{id: handoff, guarantee_ref: bound-handoff}, {id: digest, guarantee_ref: bound-asset-digest}, {id: rejection, guarantee_ref: assembly-rejected}]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
         input: {scenario: rejected-failed-or-unresolved-public-invocation}

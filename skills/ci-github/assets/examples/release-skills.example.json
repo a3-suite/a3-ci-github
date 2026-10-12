@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "ci.release-skills.v1",
+  "skills": [
+    {
+      "path": "skills/example-tool",
+      "include": ["SKILL.md", "references", "scripts"],
+      "requiredFiles": ["SKILL.md", "references/setup.guide.md", "scripts/run.py"]
+    }
+  ]
+}

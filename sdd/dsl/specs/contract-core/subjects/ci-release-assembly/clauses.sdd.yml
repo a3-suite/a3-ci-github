@@ -79,6 +79,9 @@ contracts:
       - id: bound-assembly
         goal: Complete validation produces the authority-bound handoff, asset digest and success output without overwriting an existing destination.
         guarantee_refs: [assembly-success, bound-handoff, bound-asset-digest]
+      - id: same-release-skills
+        goal: When selected by the authority-bound snapshot, package only declared public skills from authority.source_sha as one OS-independent ZIP with per-file size and SHA-256 inventory, declaration identity and ci.release-skills-package owner evidence. Reject missing required files, unsafe paths, symlinks, collisions or identity mismatches before successful handoff; exclude development and compiled leftovers according to ci-github.release-skills-contract. Preserve installer and skills owner attestations separately. Source scripts are not executed and external skill roots are not modified.
+        guarantee_refs: [bound-handoff, bound-asset-digest, assembly-rejected]
       - id: fail-closed
         goal: Reject identity, platform, checksum, unsafe path, extra asset or supplemental binding mismatches without successful outputs.
         guarantee_refs: [assembly-rejected]

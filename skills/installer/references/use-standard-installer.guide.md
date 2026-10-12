@@ -49,6 +49,10 @@ Windows PowerShell 5.1以降に対応する構成では、実行ファイルを`
 
 固定版が未対応なら、未対応の宣言を適用せず、現在使える構成・不足機能・提供元のリリース後に必要な移行を差分表へ記録する。既存の有効な対象別入口やPowerShell 7要件は、提供元の対応待ちとして根拠を残す。対応済みproviderへの更新なしに共有入口・5.1対応を完了と扱わず、共通runtimeを利用側で再実装して補わない。
 
+## 製品と対応スキルを同梱する場合
+
+公開対象・ZIP生成・転送・owner証跡はci-githubの`references/release-project-skills.guide.md`へ委譲する。READMEは同じ製品ReleaseのZIPと実際に利用できる配備手順を短く案内し、配備したスキルrootだけの削除方法を記載する。製品installerは外部skill rootへ自動配備しない。同梱しない製品にはこの節を追加しない。
+
 ## 手順
 
 1. 「標準構成からのセットアップ」と「固定providerの対応確認」に従い、利用可能なuse caseとplatformを選ぶ。既存の固有実装がある場合は、必要性と採用方針を利用者と確認する。入力の正本は `references/installer-standard-assembly-contract.reference.yml`。
