@@ -8,9 +8,9 @@
 
 | 単位 | 責務 |
 | --- | --- |
-| `ci-audit-contract.reference.yml` | 監査モード、フェーズ、status、集約、監査完了、適合の正本 |
-| `ci-audit-subjects.reference.yml` | 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目の正本 |
-| `verify-applied-ci-assets.guide.md` | 対象解決と共通監査フェーズの実行 |
+| `references/ci-audit-contract.reference.yml` | 監査モード、フェーズ、status、集約、監査完了、適合の正本 |
+| `references/ci-audit-subjects.reference.yml` | 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目の正本 |
+| `references/verify-applied-ci-assets.guide.md` | 対象解決と共通監査フェーズの実行 |
 | provider 固有の検証ガイド | preflight 後の provider 固有検査と証拠を、一つの共通監査フェーズへ写像 |
 | provider preflight | 監査開始前の機械検証。監査全体の代替にはしない |
 | 本ガイドと review スキル | テーマ別確認、finding、修正案、最終報告 |
@@ -58,7 +58,7 @@
    - 配布スクリプトの用途は `references/ci-script-catalog.reference.md` と一致しているか確認する。
    - 日時・timezone 系テストが UTC runner と local timezone の差で変わらないか確認し、詳細なテスト原則は test スキルへ戻す。
    - ログ、レポート、アーティファクトが追跡対象と混在していないか確認する。
-   - 各ジョブが `単位`・`実施`・`結果` の3列によるジョブサマリを必ず出力し、失敗・判定不能・未実施でも理由を追跡できるか確認する。失敗時も出力される終了処理があり、skip/cancelされたジョブは workflow runtime の実施状態として理由付きで記録する。条件または owner 契約により実行しないジョブは `対象外` として理由付きで記録し、実行すべきジョブの skip/cancel（`未実施`）と区別する。監査フェーズの status は、runtime の結果と証拠を `ci-audit-contract.reference.yml` の `statusClassification` へ渡して導出し、本ガイドでは分類条件を補完しない。
+   - 各ジョブが `単位`・`実施`・`結果` の3列によるジョブサマリを必ず出力し、失敗・判定不能・未実施でも理由を追跡できるか確認する。失敗時も出力される終了処理があり、skip/cancelされたジョブは workflow runtime の実施状態として理由付きで記録する。条件または owner 契約により実行しないジョブは `対象外` として理由付きで記録し、実行すべきジョブの skip/cancel（`未実施`）と区別する。監査フェーズの status は、runtime の結果と証拠を `references/ci-audit-contract.reference.yml` の `statusClassification` へ渡して導出し、本ガイドでは分類条件を補完しない。
    - テストサマリも同じ3列形式で出力し、`結果` がジョブstatusの転記ではなく、実施した処理のoutcomeとevidenceから導出されているか確認する。
 9. artifact公開がある場合だけ確認する。
    - 公開要否、公開経路、publish範囲、registry、version、channel、credential route が対象プロジェクトの owner 契約で解決され、CIで再選択されていないか確認する。
@@ -83,7 +83,7 @@
 10. 修正案を整理する。
    - テーマ別確認で対象契約違反、監査不能、証拠不足を観測した場合は、それぞれ共通契約の `statusClassification` へ戻し、意味監査または機械監査のstatusと監査全体を再集約する。findingの存在だけから監査statusを変更せず、共通分類と集約の結果に従う。
    - reviewスキルが、CI監査で得た finding、重大度、保証レベル、合否、推奨修正案、理想の根本解決案、具体的な修正計画、最終判断を保持する。
-   - 監査報告の先頭では、事前検証、機械監査、意味監査、監査全体、適合を `ci-summary-format.reference.md` の順序で別行に示す。事前検証の `success` を機械監査、意味監査、監査全体、適合の `success` に読み替えない。
+   - 監査報告の先頭では、事前検証、機械監査、意味監査、監査全体、適合を `references/ci-summary-format.reference.md` の順序で別行に示す。事前検証の `success` を機械監査、意味監査、監査全体、適合の `success` に読み替えない。
    - 問題点、未確認範囲、推奨修正案、理想案、具体的な修正計画はreview スキルのレポート要件を正本とし、CI固有のフェーズ、証拠provenance、意味候補の判断結果を追加する。
    - `installer-distribution` の修正候補は、同 subject の `remediationPriority` を適用して順位付けする。それ以外の候補は runtime dependency、runner trust、authority 重複、trigger、無料枠、外部化、成果物管理を比較し、package publication の事故リスクがある場合は publish を止める条件を確認する。
    - 候補が複数ある、または SSOT破壊・責務境界逸脱・互換性や安全性への重大な影響など高リスクで除外する候補がある場合だけ、reviewスキルから change-proposal スキルへ候補整理を委譲する。入力には owner、SSOT、対象範囲、非対象、完了条件、CI固有の証跡を固定して渡す。

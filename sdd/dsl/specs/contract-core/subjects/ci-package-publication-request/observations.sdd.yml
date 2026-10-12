@@ -42,3 +42,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected package publication request step.
+  - id: observation.ci-package-publication-request.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "create/verifyのoperation、workflow/source/runの解決・要求作成・要求照合を区別し、repository、固定source/ref、request run ID、必要なpermission種別、期待/観測identity、HTTP相関情報と要求作成の確定/不明状態を残す。"

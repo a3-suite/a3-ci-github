@@ -32,7 +32,7 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 
 ## 選択配布
 
-Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分plan、plan digestの明示承認、applyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。
+Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分planの確認、同じdigestでのapplyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。具体的な手順は[配布ガイド](skills/ci-github/references/distribute-ci-assets.guide.md)に従います。
 
 操作契約は[`distribute-ci-assets.guide.md`](skills/ci-github/references/distribute-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.reference.yml`](skills/ci-github/references/ci-distribution-assets.reference.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
 

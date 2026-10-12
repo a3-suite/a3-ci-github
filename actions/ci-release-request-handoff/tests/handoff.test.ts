@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, test, vi, expect } from 'vitest';
+import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import { writeReleaseRequestHandoff } from '../src/handoff.js';
 
 const base = { tagSourceSha: 'a'.repeat(40), tagObjectSha: 'b'.repeat(40), requestRunId: '42', requestActor: 'release-operator' };
@@ -55,7 +56,14 @@ describe('ci-release-request-handoff-source', () => {
     const create = () => writeReleaseRequestHandoff({ ...input, outputDirectory: collision });
     // Assert
     try {
-      expect(create).toThrow(/EEXIST/);
+      let failure: unknown;
+      try { create(); } catch (error) { failure = error; }
+      expect(String(failure)).toMatch(/EEXIST|filesystem-eexist/);
+      const evidence = new FailureContext('ci-release-request-handoff', 'release-request-handoff').evidence(failure);
+      expect(evidence.classification.stage).toBe('request-digest-write');
+      expect(evidence['execution-state'].write).toBe('request-output-may-be-partial');
+      expect(evidence['evidence-location'].file).toBe('configured-output-directory/release-request.json');
+      expect(evidence.context.inputs).toMatchObject({ sourceSha: base.tagSourceSha, tagObjectSha: base.tagObjectSha, requestRunId: '42' });
     } finally {
       spy.mockRestore();
     }

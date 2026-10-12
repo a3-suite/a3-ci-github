@@ -20,3 +20,9 @@ test_maps:
         symbol: "workflow-contracts > package-publication-workflow-contract > package workflows preserve failed and unknown outcomes"
         check_refs:
           - check-ci-package-publication-workflow-failure
+  - verification_id: verification.ci-package-publication-workflow.publication
+    case_id: detailed-failure-publication
+    tests:
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > package-publication aggregate retains failed job identity and run evidence"
+        check_refs: [diagnostic-details]

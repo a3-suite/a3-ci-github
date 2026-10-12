@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-supplemental-asset.outputs
     contract_id: contract.ci-release-supplemental-asset.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: platform-phase
         intent_id: bound-phase
         input: {operation: build-platform}
@@ -142,3 +146,11 @@ verifications:
         input: {implementation: standard-installer, transferred-evidence: extra}
         checks:
           - {id: refusal, guarantee_ref: phase-rejected}
+      - id: diagnostic-standard-installer-diagnostic
+        intent_id: safe-diagnostics
+        input: {failure: standard-installer-diagnostic}
+        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]
+      - id: diagnostic-owner-process-diagnostic
+        intent_id: safe-diagnostics
+        input: {failure: owner-process-diagnostic}
+        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]

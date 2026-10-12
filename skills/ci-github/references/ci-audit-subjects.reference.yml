@@ -223,6 +223,45 @@ subjects:
       handling: excluded-from-aggregation
       discoveryScope: required
       reason: required
+  - id: ci-failure-diagnostics
+    requirement: required
+    phase: contract-evidence
+    discovery: reachable-workflows-actions-public-cli-and-owner-adapters
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns: [authority-resolution, failure-route-to-check-mapping, stage-specific-evidence-review]
+      excludes: [diagnostic-minimum-definition, subject-specific-diagnostic-semantics]
+    authorityResolution:
+      standardProvider:
+        repository: a3-suite/a3-ci-github
+        revision: latest-standard-alignment.baselineResolutionの比較基準commit
+        pathBase: fixed-provider-repository-root
+        contractId: contract.ci-failure-diagnostics.actionable
+        observationId: observation.ci-failure-diagnostics.failure-evidence
+        paths:
+          - sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/clauses.sdd.yml
+          - sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/observations.sdd.yml
+        subjectDetails: 同じrevisionのcontract packageから対象subjectの固有診断契約を解決する。
+        sourceAccess: 検証済みprovider sourceに含まれなければ、同じcommitのrepository内容を読み取りで取得する。Skill配備先やconsumer rootから上記pathを解決しない。
+      projectOwned: 対象ownerの現行契約と標準との差分を解決する。標準providerの実装形式を独自ownerへ一律に要求しない。
+      unavailable: 正本の欠落・未解決と観測済みの違反を分け、既存statusClassificationへ渡す。作業ツリーやサンプルを公開済み標準の代替にしない。
+    stageChecks:
+      configuration: 各到達境界の診断契約・実装・失敗後のログ/必要な証跡保持経路・実行可能な検査を対応付ける。正本の保証や必要な導線の欠落を記録し、実行済みとは扱わない。
+      execution-evidence: 対象revisionと境界に結合した失敗実行の最終ログと必要な既存証跡を正本へ照合する。元の理由/終了状態/残存状態、子処理伝播と診断/保持失敗の検証結果を確認し、未実行OS・未注入条件を分ける。
+    evidenceOwnership:
+      provider: 共通境界の契約テスト結果を固定実装identityへ結合して再利用する。consumerへ共通テストやhelperをコピーさせない。
+      project: 固有adapterとworkflow接続の差分を対象にする。providerの共通回帰をprojectごとに再実装しない。
+    reviewRequirements:
+      - summary成功だけで元の失敗診断の保持を代替しない。正本の観測保証を確認し、JSON形式やartifactの一律新設を要求しない。
+      - provider操作のHTTP診断はreferences/release-asset-publication-contract.reference.ymlのfailureAttributionも照合する。HTTP項目だけで全失敗境界の診断保証を満たしたとしない。
+      - 証拠取得は既存の副作用判定に従い、実公開・診断目的の追加retryを要求しない。秘密値や生のchild/provider出力を監査レポートへ転載しない。
+      - 保持失敗の注入は許可されたfixture内で行い、実CIのログ保存障害を意図的に発生させない。静的確認・直接実行・未確認の範囲を区別する。
+    reportingFields:
+      - owner-contract-and-fixed-source-identity
+      - failure-boundary-to-retention-route-and-check-mapping
+      - stage-specific-result-and-safe-evidence-reference
+      - untested-platforms-and-fault-conditions
+      - status
   - id: project-owned-ci-adapter
     requirement: conditional
     appliesWhen: selected-preset-requires-project-owned-adapter

@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -17,14 +18,14 @@ export function selectAsset(runnerOs: string, runnerArch: string): string {
     Windows: { X64: 'jq-windows-amd64.exe' },
   };
   const asset = assets[runnerOs]?.[runnerArch];
-  if (!asset) throw new Error(`${FAILURE_PREFIX}: unsupported runner ${runnerOs}/${runnerArch}`);
+  if (!asset) throw new DiagnosticError(`${FAILURE_PREFIX}: unsupported runner ${runnerOs}/${runnerArch}`);
   return asset;
 }
 
 export async function provisionJq(request: ProvisionRequest): Promise<string> {
   const { version, runnerOs, runnerArch, tempRoot, fetchAsset } = request;
   if (!/^\d+\.\d+(?:\.\d+)?$/.test(version)) {
-    throw new Error(`${FAILURE_PREFIX}: invalid exact version`);
+    throw new DiagnosticError(`${FAILURE_PREFIX}: invalid exact version`, { diagnostics: { stage: 'version-validation', field: 'version', expected: 'exact-numeric-version', observed: 'invalid exact version' } });
   }
   const asset = selectAsset(runnerOs, runnerArch);
   const releaseUrl = `https://github.com/jqlang/jq/releases/download/jq-${version}`;
@@ -40,15 +41,16 @@ export async function provisionJq(request: ProvisionRequest): Promise<string> {
   try {
     directory = await mkdtemp(path.join(tempRoot, 'ci-jq-'));
   } catch (error) {
-    throw new Error(`${FAILURE_PREFIX}: install: ${String(error)}`);
+    throw new DiagnosticError(`${FAILURE_PREFIX}: install failed`, { cause: error, diagnostics: { stage: 'install-directory', field: 'RUNNER_TEMP', expected: 'writable-directory', observed: 'create-failed' } });
   }
   const installed = path.join(directory, runnerOs === 'Windows' ? 'jq.exe' : 'jq');
   try {
     await writeFile(installed, binary, { mode: 0o700 });
     if (runnerOs !== 'Windows') await chmod(installed, 0o755);
   } catch (error) {
-    await rm(directory, { recursive: true, force: true });
-    throw new Error(`${FAILURE_PREFIX}: install: ${String(error)}`);
+    let rollback = 'removed';
+    try { await rm(directory, { recursive: true, force: true }); } catch { rollback = 'cleanup-failed'; }
+    throw new DiagnosticError(`${FAILURE_PREFIX}: install failed`, { cause: error, diagnostics: { stage: 'asset-install', field: 'installed-tool', expected: 'usable-file', observed: 'install-failed', rollback } });
   }
   return installed;
 }

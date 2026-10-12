@@ -81,10 +81,10 @@ export const checkoutLineEndings = (root: string, endings: string): void => {
   }
 };
 
-export const runDistributedAction = (f: ReturnType<typeof fixture>, options = f.options) => {
+export const runDistributedAction = (f: ReturnType<typeof fixture>, options = f.options, entrypointArgs = [path.join(repository, 'actions/ci-release-supplemental-asset/dist/index.js')]) => {
   const output = path.join(f.root, 'runner-output');
   fs.writeFileSync(output, '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, A3_INSTALLER_PROVIDER_REVISION: 'a'.repeat(40), INPUT_OPERATION: options.operation, 'INPUT_SOURCE-ROOT': f.root, 'INPUT_AUTHORITY-PATH': 'authority.json', 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot, 'INPUT_OUTPUT-DIRECTORY': options.outputDirectory, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '' };
-  const result = spawnSync(process.execPath, [path.join(repository, 'actions/ci-release-supplemental-asset/dist/index.js')], { cwd: f.root, encoding: 'utf8', env });
+  const result = spawnSync(process.execPath, entrypointArgs, { cwd: f.root, encoding: 'utf8', env });
   return { result, output };
 };

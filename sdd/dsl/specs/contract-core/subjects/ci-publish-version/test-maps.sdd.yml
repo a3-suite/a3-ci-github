@@ -24,3 +24,15 @@ test_maps:
         symbol: "dist entrypoint > entrypoint fails invalid plan input"
         check_refs:
           - check-publish-version-failure
+  - verification_id: verification.ci-publish-version.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-publish-version failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > source retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > dist retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]

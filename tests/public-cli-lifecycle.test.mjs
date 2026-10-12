@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   loadReleaseRequestFixtureModel,
@@ -78,6 +78,138 @@ const generateAssetLock = (consumerRoot, skillArguments) => execute(tsxPath, [
   ...skillArguments,
   '--source-revision', 'c'.repeat(40),
 ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
+
+describe('repository-maintenance-cli', () => {
+  // evidence_role: contract
+  // test_level: e2e
+  // flow_id: repository-maintenance-cli
+  // contract_id: contract.repository-action-distribution.integrity
+  // contract_id: contract.repository-managed-source-integrity.integrity
+  test('maintenance entrypoints retain safe failure context and primary exits when sinks fail', () => {
+    withFixture('maintenance-diagnostics-', (fixture) => {
+      writeFileSync(path.join(fixture, 'existing-state'), 'preserved\n');
+      const before = snapshotTree(fixture);
+      const protectedValue = 'private-maintenance-value-must-not-appear';
+      const cases = [
+        ['update-action-references.mjs', 'repository-managed-source-integrity', 'input-validation', 2, 'action-reference-arguments-invalid', ''],
+        ['update-action-index.mjs', 'repository-action-distribution', 'input-validation', 1, 'action-catalog-arguments-invalid', ''],
+        ['verify-action-packages.mjs', 'repository-action-distribution', 'action-inventory', 1, 'filesystem-eacces', `
+          import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+          fs.readdirSync = () => { const error = new Error(${JSON.stringify(protectedValue)}); error.code = 'EACCES'; throw error; };
+          syncBuiltinESMExports();`],
+      ];
+      for (const [file, subject, stage, exit, reason, fault] of cases) {
+        const cli = path.join(repositoryRoot, 'runtime/repository', file);
+        const driver = `${fault}\nprocess.argv = [process.execPath, ${JSON.stringify(cli)}];
+          await import(${JSON.stringify(pathToFileURL(cli).href)});`;
+        const result = execute(process.execPath, ['--input-type=module', '-e', driver], { cwd: fixture });
+        expect(result.status, result.stderr).toBe(exit);
+        const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+        const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+        expect(evidence.classification).toMatchObject({ subject, stage, reason });
+        expect(evidence['execution-state']).toMatchObject({ outcome: 'failure', write: 'not-started' });
+        expect(evidence['next-check'].stage).toBe(stage);
+        expect(result.stdout + result.stderr).not.toContain(protectedValue);
+        expect(result.stderr).not.toMatch(/\n\s*at /);
+        const sinkDriver = `${fault}\nprocess.argv = [process.execPath, ${JSON.stringify(cli)}];
+          process.stderr.write = () => { throw new Error('diagnostic-sink-failed'); };
+          await import(${JSON.stringify(pathToFileURL(cli).href)});`;
+        const sink = execute(process.execPath, ['--input-type=module', '-e', sinkDriver], { cwd: fixture });
+        expect(sink.status).toBe(exit);
+        expect(sink.stdout + sink.stderr).toBe('');
+      }
+      const alias = execute('bash', [path.join(repositoryRoot, 'runtime/repository/update-release-aliases.sh')], {
+        cwd: fixture, env: { ...process.env, RELEASE_TAG: protectedValue, RELEASE_SHA: '', CI_RELEASE_VALIDATE_ONLY: 'true' },
+      });
+      expect(alias.status).toBe(1);
+      expect(alias.stdout + alias.stderr).not.toContain(protectedValue);
+      const line = alias.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+      const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      expect(evidence.classification).toMatchObject({ subject: 'repository-action-distribution', stage: 'input-validation' });
+      expect(evidence.comparison).toMatchObject({ field: 'RELEASE_TAG', expected: 'vX.Y.Z' });
+      expect(evidence['execution-state']).toMatchObject({ exit: 1, lastConfirmed: 'not-started', write: 'not-started' });
+      expect(snapshotTree(fixture)).toEqual(before);
+    });
+  });
+
+  // evidence_role: contract
+  // test_level: e2e
+  // flow_id: repository-maintenance-cli
+  // contract_id: contract.repository-action-distribution.integrity
+  test('source verification retains child status and completed stage when group output fails', () => {
+    const cli = path.join(repositoryRoot, 'runtime/repository/verify-action-packages.mjs');
+    for (const [fault, observed] of [['error.status = 7;', 7], ["error.code = 'ENOENT';", 'filesystem-enoent']]) {
+    const driver = `import childProcess from 'node:child_process'; import { syncBuiltinESMExports } from 'node:module';
+      childProcess.execFileSync = () => { const error = new Error('private-child-command-output'); ${fault} throw error; };
+      syncBuiltinESMExports();
+      process.stdout.write = () => { throw new Error('group-output-failed'); };
+      process.argv = [process.execPath, ${JSON.stringify(cli)}];
+      await import(${JSON.stringify(pathToFileURL(cli).href)});`;
+    const result = execute(process.execPath, ['--input-type=module', '-e', driver], { cwd: repositoryRoot });
+    expect(result.status).toBe(1);
+    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+    const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+    expect(evidence.classification).toMatchObject({ stage: 'typecheck', reason: 'action-source-verification-failed' });
+    expect(evidence.comparison).toMatchObject({ expected: 'zero-exit', observed, completedSteps: 0 });
+    expect(evidence.comparison.remainingSteps).toBeGreaterThan(0);
+    expect(evidence['execution-state'].lastConfirmed).toBe('verification-plan');
+    expect(result.stdout).toBe('');
+    expect(result.stderr).not.toMatch(/private-child-command-output|group-output-failed/);
+    }
+  });
+
+  // evidence_role: contract
+  // test_level: e2e
+  // flow_id: repository-maintenance-cli
+  // contract_id: contract.repository-action-distribution.integrity
+  test('catalog write failure retains known write state without changing existing README', () => {
+    const readme = path.join(repositoryRoot, 'README.md');
+    const before = readFileSync(readme);
+    const cli = path.join(repositoryRoot, 'runtime/repository/update-action-index.mjs');
+    const source = '# project\n\n## Action一覧\n\n| Action | 用途 | 概要 |\n| --- | --- | --- |\n\n';
+    const driver = `import fs from 'node:fs/promises'; import { syncBuiltinESMExports } from 'node:module';
+      const read = fs.readFile;
+      fs.readFile = (file, ...args) => file === ${JSON.stringify(readme)} ? Promise.resolve(${JSON.stringify(source)}) : read(file, ...args);
+      fs.writeFile = async () => { const error = new Error('private-write-failure'); error.code = 'EACCES'; throw error; };
+      syncBuiltinESMExports(); process.argv = [process.execPath, ${JSON.stringify(cli)}, '--write'];
+      await import(${JSON.stringify(pathToFileURL(cli).href)});`;
+    const result = execute(process.execPath, ['--input-type=module', '-e', driver]);
+    expect(result.status).toBe(1);
+    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+    const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+    expect(evidence.classification).toMatchObject({ stage: 'catalog-write', reason: 'filesystem-eacces' });
+    expect(evidence['execution-state']).toMatchObject({ lastConfirmed: 'catalog-projection', write: 'catalog-write-may-be-partial' });
+    expect(result.stderr).not.toContain('private-write-failure');
+    expect(readFileSync(readme)).toEqual(before);
+  });
+});
+
+describe('contract.ci-selective-distribution.delivery', () => {
+  describe('distribution-bootstrap-cli', () => {
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: distribution-bootstrap-cli
+    // contract_id: contract.ci-selective-distribution.delivery
+    test('distribution CLI retains exit 2 when its diagnostic sink fails', () => {
+      withFixture('distribution-diagnostic-sink-', (consumerRoot) => {
+        writeFileSync(path.join(consumerRoot, 'existing-state'), 'preserved\n');
+        const before = snapshotTree(consumerRoot);
+        const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+        const normal = execute(process.execPath, [cli, 'not-a-command'], { cwd: consumerRoot });
+        expect(normal.status).toBe(2);
+        expect(JSON.parse(normal.stderr).diagnostic).toBe('distribution-command-unknown');
+        const driver = `process.argv = [process.execPath, ${JSON.stringify(cli)}, 'not-a-command'];
+          process.stderr.write = () => { throw new Error('diagnostic sink failed'); };
+          await import(${JSON.stringify(pathToFileURL(cli).href)});`;
+        const failedSink = execute(process.execPath, ['--input-type=module', '-e', driver], { cwd: consumerRoot });
+        expect(failedSink.status, failedSink.stderr).toBe(2);
+        expect(failedSink.stdout).toBe('');
+        expect(failedSink.stderr).toBe('');
+        expect(snapshotTree(consumerRoot)).toEqual(before);
+      });
+    });
+  });
+});
 
 describe("contract.ci-preset-assurance.asset-lock", () => {
   describe("consumer-preset-asset-lock-cli", () => {
@@ -204,7 +336,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         // Assert
         expect(failedValidation.status).toBe(1);
         expect(JSON.parse(failedValidation.stdout).status).toBe('failed');
-        expect(JSON.parse(failedValidation.stderr.trim()).reason).toBe('tool-state-cleanup-failed');
+        expect(JSON.parse(failedValidation.stderr.split('\n').find((line) => line.startsWith('{'))).reason).toBe('tool-state-cleanup-failed');
         cleanupLeakedState();
       });
     });

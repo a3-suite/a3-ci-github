@@ -3,6 +3,24 @@ name: contract-test-maps
 subject_ref: subject.ci.release-publisher
 test_maps:
   - verification_id: verification.ci-release-publisher.outputs
+    case_id: canonical-repository-identity
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher preserves approved identity across canonical repository casing"
+        check_refs: [receipt]
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: pre-create-handoff-change
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher rejects handoff changes during final absence observation before create"
+        check_refs: [rejection, no-outputs]
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: asset-inventory-propagation
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded asset inventory without repeating publication writes"
+        check_refs: [receipt, readback]
+  - verification_id: verification.ci-release-publisher.outputs
     case_id: bundle-publish
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
@@ -64,3 +82,9 @@ test_maps:
         symbol: "publisher > publisher > publisher transport bounds write operations and sanitizes uncertain provider results"
         check_refs:
           - rejection
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-release-publisher failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

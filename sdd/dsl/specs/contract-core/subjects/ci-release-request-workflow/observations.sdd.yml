@@ -16,3 +16,13 @@ observations:
         - selector: failure-summary
           kind: observation_field
           meaning: Declared summary route for request handoff failure.
+  - id: observation.ci-release-request-workflow.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "tag解決・source照合・handoff生成・artifact upload・summaryの失敗job/step、tag/source/request run identity、元のneeds result、保存済みrequest/digestと当該log/artifact参照、未生成または未転送理由を残す。"

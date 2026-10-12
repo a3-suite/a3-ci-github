@@ -1,21 +1,28 @@
+import { completeFailure, FailureContext, safeErrorReason, readActionInput } from '../../../runtime/diagnostics/failure.mjs';
 import * as core from '@actions/core';
 import { writeReleaseRequestHandoff } from './handoff.js';
 
 export const run = (): void => {
+  const diagnostic = new FailureContext('ci-release-request-handoff', 'release-request-handoff');
   try {
+    diagnostic.at('request-write', {"input": "annotated-tag-and-source", "output": "output-directory"});
     const result = writeReleaseRequestHandoff({
-      outputDirectory: core.getInput('output-directory', { required: true }),
-      tagSourceSha: core.getInput('tag-source-sha', { required: true }),
-      tagObjectSha: core.getInput('tag-object-sha', { required: true }),
-      githubRef: core.getInput('github-ref', { required: true }),
-      githubRefName: core.getInput('github-ref-name', { required: true }),
-      requestRunId: core.getInput('request-run-id', { required: true }),
-      requestActor: core.getInput('request-actor', { required: true }),
+      outputDirectory: readActionInput(core.getInput, 'output-directory', { required: true }),
+      tagSourceSha: readActionInput(core.getInput, 'tag-source-sha', { required: true }),
+      tagObjectSha: readActionInput(core.getInput, 'tag-object-sha', { required: true }),
+      githubRef: readActionInput(core.getInput, 'github-ref', { required: true }),
+      githubRefName: readActionInput(core.getInput, 'github-ref-name', { required: true }),
+      requestRunId: readActionInput(core.getInput, 'request-run-id', { required: true }),
+      requestActor: readActionInput(core.getInput, 'request-actor', { required: true }),
     });
+    diagnostic.confirmed();
+    diagnostic.at('output-write', {"output": "GITHUB_OUTPUT"});
+    diagnostic.writeState = 'write-may-be-partial';
     core.setOutput('request-path', result.requestPath);
     core.setOutput('request-digest', result.requestDigestPath);
   } catch (error) {
-    core.setFailed(error instanceof Error ? error.message : String(error));
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 1, core.setFailed);
   }
 };
 

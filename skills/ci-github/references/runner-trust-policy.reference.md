@@ -133,5 +133,5 @@
 - [ ] write 権限を持つ job で使う a3 Action が、対象 Action の `privilegedJobs` に `workflow-id/job-id` で明示登録されている
 
 ### 関連
-- `design-ci-workflow.guide.md`
-- `review-ci-workflow.guide.md`
+- `references/design-ci-workflow.guide.md`
+- `references/review-ci-workflow.guide.md`

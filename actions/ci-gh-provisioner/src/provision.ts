@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { execFile } from 'node:child_process';
 import { chmod, mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -16,7 +17,7 @@ export function selectAsset(version: string, runnerOs: string, runnerArch: strin
     Linux: { X64: 'linux_amd64', ARM64: 'linux_arm64' },
   };
   const platform = platforms[runnerOs]?.[runnerArch];
-  if (!platform) throw new Error(`${FAILURE_PREFIX}: unsupported runner ${runnerOs}/${runnerArch}`);
+  if (!platform) throw new DiagnosticError(`${FAILURE_PREFIX}: unsupported runner ${runnerOs}/${runnerArch}`);
   return `gh_${version}_${platform}.tar.gz`;
 }
 
@@ -34,7 +35,7 @@ async function installGh(archive: Buffer, asset: string, tempRoot: string): Prom
   try {
     directory = await mkdtemp(path.join(tempRoot, 'ci-gh-'));
   } catch (error) {
-    throw new Error(`${FAILURE_PREFIX}: install: ${String(error)}`);
+    throw new DiagnosticError(`${FAILURE_PREFIX}: install failed`, { cause: error, diagnostics: { stage: 'install-directory', field: 'RUNNER_TEMP', expected: 'writable-directory', observed: 'create-failed' } });
   }
   const archivePath = path.join(directory, 'gh-release.tar.gz');
   const installed = path.join(directory, 'gh');
@@ -44,8 +45,9 @@ async function installGh(archive: Buffer, asset: string, tempRoot: string): Prom
     await chmod(installed, 0o755);
     await unlink(archivePath);
   } catch (error) {
-    await rm(directory, { recursive: true, force: true });
-    throw new Error(`${FAILURE_PREFIX}: install: ${String(error)}`);
+    let rollback = 'removed';
+    try { await rm(directory, { recursive: true, force: true }); } catch { rollback = 'cleanup-failed'; }
+    throw new DiagnosticError(`${FAILURE_PREFIX}: install failed`, { cause: error, diagnostics: { stage: 'asset-install', field: 'installed-tool', expected: 'usable-file', observed: 'install-failed', rollback } });
   }
   return installed;
 }
@@ -53,7 +55,7 @@ async function installGh(archive: Buffer, asset: string, tempRoot: string): Prom
 export async function provisionGh(request: ProvisionRequest): Promise<string> {
   const { version, runnerOs, runnerArch, tempRoot, fetchAsset } = request;
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
-    throw new Error(`${FAILURE_PREFIX}: invalid exact version`);
+    throw new DiagnosticError(`${FAILURE_PREFIX}: invalid exact version`, { diagnostics: { stage: 'version-validation', field: 'version', expected: 'exact-numeric-version', observed: 'invalid exact version' } });
   }
   const asset = selectAsset(version, runnerOs, runnerArch);
   const releaseUrl = `https://github.com/cli/cli/releases/download/v${version}`;

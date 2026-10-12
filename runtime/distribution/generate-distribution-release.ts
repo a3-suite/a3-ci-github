@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node --import tsx
+import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -35,7 +36,7 @@ const sha256 = (bytes: Buffer): string => createHash('sha256').update(bytes).dig
 const normalizeRelative = (value: string): string => {
   const normalized = value.replaceAll('\\', '/').replace(/^\.\//, '');
   if (!normalized || path.posix.isAbsolute(normalized) || normalized.split('/').includes('..')) {
-    throw new Error(`distribution-path-invalid:${value}`);
+    throw new DiagnosticError(`distribution-path-invalid:${value}`);
   }
   return normalized;
 };
@@ -47,7 +48,7 @@ const gitBytes = (repositoryRoot: string, args: string[]): Buffer => {
   });
   if (result.status !== 0 || !(result.stdout instanceof Buffer)) {
     const diagnostic = result.stderr instanceof Buffer ? result.stderr.toString('utf8').trim() : '';
-    throw new Error(`distribution-release-git-read-failed:${diagnostic}`);
+    throw new DiagnosticError(`distribution-release-git-read-failed:${diagnostic}`);
   }
   return result.stdout;
 };
@@ -65,8 +66,8 @@ const filesUnder = (repositoryRoot: string, revision: string, relativeRoot: stri
   return records.map((record) => {
     const [metadata, sourcePath] = record.split('\t');
     const [mode, type] = metadata!.split(' ');
-    if (mode === '120000') throw new Error(`distribution-source-symlink:${sourcePath}`);
-    if (type !== 'blob' || !sourcePath) throw new Error(`distribution-source-not-regular:${sourcePath ?? root}`);
+    if (mode === '120000') throw new DiagnosticError(`distribution-source-symlink:${sourcePath}`);
+    if (type !== 'blob' || !sourcePath) throw new DiagnosticError(`distribution-source-not-regular:${sourcePath ?? root}`);
     return normalizeRelative(sourcePath);
   }).sort();
 };
@@ -82,12 +83,12 @@ const parseArgs = (argv: string[]): { repositoryRoot: string; outputDirectory: s
     const flag = argv[index]!;
     const value = argv[index + 1];
     const field = fields[flag];
-    if (!field || !value || value.startsWith('--')) throw new Error(`distribution-release-argument-invalid:${flag}`);
+    if (!field || !value || value.startsWith('--')) throw new DiagnosticError(`distribution-release-argument-invalid:${flag}`);
     result[field] = value;
   }
-  if (!result.outputDirectory) throw new Error('distribution-release-output-required');
-  if (!FULL_SHA.test(result.sourceRevision)) throw new Error('distribution-release-source-revision-invalid');
-  if (!RELEASE_TAG.test(result.releaseTag)) throw new Error('distribution-release-tag-invalid');
+  if (!result.outputDirectory) throw new DiagnosticError('distribution-release-output-required');
+  if (!FULL_SHA.test(result.sourceRevision)) throw new DiagnosticError('distribution-release-source-revision-invalid');
+  if (!RELEASE_TAG.test(result.releaseTag)) throw new DiagnosticError('distribution-release-tag-invalid');
   return result;
 };
 
@@ -99,13 +100,13 @@ export const prepareDistributionRelease = (options: {
 }): ValueMap => {
   const repositoryRoot = path.resolve(options.repositoryRoot);
   const outputDirectory = path.resolve(options.outputDirectory);
-  if (fs.existsSync(outputDirectory)) throw new Error('distribution-release-output-exists');
+  if (fs.existsSync(outputDirectory)) throw new DiagnosticError('distribution-release-output-exists');
   const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repositoryRoot, encoding: 'utf8' });
   if (head.status !== 0 || head.stdout.trim() !== options.sourceRevision) {
-    throw new Error('distribution-release-source-head-mismatch');
+    throw new DiagnosticError('distribution-release-source-head-mismatch');
   }
   const version = sourceBytes(repositoryRoot, options.sourceRevision, 'VERSION').toString('utf8').trim();
-  if (options.releaseTag !== `v${version}`) throw new Error('distribution-release-version-mismatch');
+  if (options.releaseTag !== `v${version}`) throw new DiagnosticError('distribution-release-version-mismatch');
   const distributionRegistry = readYaml(
     repositoryRoot,
     options.sourceRevision,
@@ -156,16 +157,16 @@ export const prepareDistributionRelease = (options: {
     }
   }
   for (const id of Object.keys(workflowDependencies)) {
-    if (!workflowIds.has(id)) throw new Error(`distribution-workflow-unknown:${id}`);
+    if (!workflowIds.has(id)) throw new DiagnosticError(`distribution-workflow-unknown:${id}`);
   }
   const assetIds = new Set<string>();
   for (const asset of assets) {
-    if (!asset.id || assetIds.has(asset.id) || asset.files.length === 0) throw new Error(`distribution-asset-invalid:${asset.id}`);
+    if (!asset.id || assetIds.has(asset.id) || asset.files.length === 0) throw new DiagnosticError(`distribution-asset-invalid:${asset.id}`);
     assetIds.add(asset.id);
   }
   for (const asset of assets) {
     for (const dependency of asset.dependencies) {
-      if (!assetIds.has(dependency)) throw new Error(`distribution-dependency-unknown:${dependency}`);
+      if (!assetIds.has(dependency)) throw new DiagnosticError(`distribution-dependency-unknown:${dependency}`);
     }
   }
   const configuredPresets = new Map((Array.isArray(distributionRegistry.presets) ? distributionRegistry.presets : [])
@@ -181,7 +182,7 @@ export const prepareDistributionRelease = (options: {
     ];
     const optionalAssets = optionalWorkflows.map((workflow) => `workflow.${String(workflow.id ?? '')}`);
     if ([...requiredAssets, ...optionalAssets].some((assetId) => !assetIds.has(assetId))) {
-      throw new Error(`distribution-preset-invalid:${id}`);
+      throw new DiagnosticError(`distribution-preset-invalid:${id}`);
     }
     return { id, requiredAssets, optionalAssets };
   });
@@ -213,7 +214,7 @@ export const prepareDistributionRelease = (options: {
       const observed = { sha256: sha256(bytes), size: bytes.length };
       const existing = files[file.sourcePath];
       if (existing && (existing.sha256 !== observed.sha256 || existing.size !== observed.size)) {
-        throw new Error(`distribution-source-identity-conflict:${file.sourcePath}`);
+        throw new DiagnosticError(`distribution-source-identity-conflict:${file.sourcePath}`);
       }
       files[file.sourcePath] = observed;
     }
@@ -251,11 +252,14 @@ export const prepareDistributionRelease = (options: {
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const diagnostic = new FailureContext('ci-selective-distribution', 'generate');
+  diagnostic.at('distribution-generation', { input: 'source-revision-and-registry', output: 'distribution-release-assets' });
+  diagnostic.writeState = 'output-may-be-partial';
   try {
     const result = prepareDistributionRelease(parseArgs(process.argv.slice(2)));
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    process.exitCode = 2;
+    diagnostic.report(error);
+    completeFailure(safeErrorReason(error), 2);
   }
 }

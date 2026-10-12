@@ -66,3 +66,15 @@ test_maps:
           - check-invalid-selection-failure
           - check-invalid-selection-no-matrix
           - check-invalid-selection-no-quality-outputs
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-platform-matrix failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > source retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "owner validation comparisons > dist retains owner field comparisons without private values"
+        check_refs: [diagnostic-details]

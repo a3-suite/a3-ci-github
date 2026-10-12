@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import crypto from 'node:crypto';
 import { supplementalSelection } from '../../../runtime/release-publication/selection';
 
@@ -16,12 +17,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const parseValues = (value: unknown, source: string): ConfigValues => {
   if (value === undefined) return {};
-  if (!isRecord(value)) throw new Error(`config-snapshot-${source}-invalid`);
+  if (!isRecord(value)) throw new DiagnosticError(`config-snapshot-${source}-invalid`, { diagnostics: { stage: 'source-shape-validation', source, field: source, expected: 'setting-object', observed: typeof value } });
   const values: ConfigValues = Object.create(null) as ConfigValues;
   for (const [key, entry] of Object.entries(value)) {
-    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) throw new Error('config-snapshot-key-invalid');
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) throw new DiagnosticError('config-snapshot-key-invalid', { diagnostics: { stage: 'key-validation', source, field: 'setting-key', expected: 'identifier', observed: 'invalid-or-protected' } });
     if (typeof entry !== 'string' || entry.length === 0 || /[\0\r\n]/.test(entry)) {
-      throw new Error(`config-snapshot-${source}-value-invalid`);
+      throw new DiagnosticError(`config-snapshot-${source}-value-invalid`, { diagnostics: { stage: 'value-validation', source, field: key, expected: 'nonempty-single-line-string', observed: typeof entry === 'string' ? 'invalid-or-protected' : typeof entry } });
     }
     values[key] = entry;
   }
@@ -37,7 +38,7 @@ const stableJson = (value: unknown): string => {
 };
 
 export const resolveConfigSnapshot = (input: unknown): ConfigSnapshot => {
-  if (!isRecord(input)) throw new Error('config-snapshot-input-invalid');
+  if (!isRecord(input)) throw new DiagnosticError('config-snapshot-input-invalid');
   const sources: Record<string, keyof ConfigSources> = Object.create(null) as Record<string, keyof ConfigSources>;
   const values: ConfigValues = Object.create(null) as ConfigValues;
   for (const [source, sourceValues] of [

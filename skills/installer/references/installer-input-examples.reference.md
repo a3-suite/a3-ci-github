@@ -14,7 +14,7 @@
 - checksum 値は説明用の短縮表記であり、実際は project が定める完全な checksum 形式を使う。
 
 ## use case 別 sample bundle
-- use case と sample path の対応、選択可能な全 platform、use case ごとの追加必須入力は `installer-use-case-contract.reference.yml` を正本とする。
+- use case と sample path の対応、選択可能な全 platform、use case ごとの追加必須入力は `references/installer-use-case-contract.reference.yml` を正本とする。
 - sample はコピーして project 固有値へ適合させる入力例であり、実行可能な installer 本体ではない。manifest を変更した場合は execution request の manifest checksum も再計算する。
 
 ## 製品READMEのサンプル

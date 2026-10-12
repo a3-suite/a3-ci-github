@@ -1,6 +1,7 @@
 """Provider assembly checks; mocked host labels do not establish native OS proof."""
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import subprocess
@@ -17,6 +18,32 @@ import test_runtime_installer
 
 
 class StandardAssemblyTest(unittest.TestCase):
+    def test_main_emits_only_known_diagnostic_reasons(self) -> None:
+        for error, reason in [
+            (ValueError("installer-artifact-checksum-invalid"), "installer-artifact-checksum-invalid"),
+            (ValueError("synthetic-secret"), "installer-unknown-failure"),
+            (KeyError("synthetic-secret"), "installer-unknown-failure"),
+            (FileNotFoundError(2, "synthetic-secret", "powershell"), "process-start-failed"),
+            (FileNotFoundError(2, "synthetic-secret", "synthetic-secret"), "installer-input-invalid"),
+            (subprocess.CalledProcessError(23, ["synthetic-secret"], stderr="synthetic-secret"), "process-failed"),
+        ]:
+            with self.subTest(reason=reason), patch.object(assembly, "run", side_effect=error), patch.object(sys, "stdin", io.StringIO('{"operation":"assemble"}')), patch.object(sys, "stderr", io.StringIO()) as output:
+                self.assertEqual(assembly.main(), 1)
+                diagnostic = json.loads(output.getvalue())
+                self.assertEqual(diagnostic, {"phase": "assemble", "sanitized-reason": reason})
+                self.assertNotIn("synthetic-secret", output.getvalue())
+
+    def test_cleanup_failure_preserves_primary_assembly_diagnostic(self) -> None:
+        temporary_root = ROOT / "tests/tmp"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as directory:
+            primary = ValueError("installer-artifact-checksum-invalid")
+            request = {"operation": "build-platform", "outputDirectory": str(Path(directory) / "output")}
+            with patch.object(assembly, "config_for", return_value={}), patch.object(assembly, "platform_record", side_effect=primary), patch.object(Path, "rmdir", side_effect=OSError("private cleanup detail")):
+                with self.assertRaises(ValueError) as failure:
+                    assembly.run(request)
+            self.assertIs(failure.exception, primary)
+
     def test_profiles_reject_unsupported_inputs_and_colliding_assets(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -120,6 +147,24 @@ class StandardAssemblyTest(unittest.TestCase):
             self.assertEqual(success.returncode, 0, success.stderr)
             self.assertEqual(len(assembly.read_json(root / "handoff/supplemental-manifest.json")["assets"]), 2)
             self.assertFalse((root / "managed").exists())
+            source_archive = output / "candidate/.installer-source.zip"
+            source_bytes = source_archive.read_bytes()
+            for mutation in ["missing", "changed"]:
+                with self.subTest(source_archive=mutation):
+                    try:
+                        if mutation == "missing":
+                            source_archive.unlink()
+                        else:
+                            source_archive.write_bytes(b"modified-evidence")
+                        rejected = root / ("source-archive-" + mutation)
+                        attempt = self._run_provider({**assemble_request, "outputDirectory": str(rejected)})
+                        self.assertEqual(attempt.returncode, 1, attempt.stderr)
+                        diagnostic = json.loads(attempt.stderr)
+                        self.assertEqual(diagnostic["sanitized-reason"], "installer-platform-evidence-invalid")
+                        self.assertEqual(diagnostic["comparison"][mutation], [".installer-source.zip"])
+                        self.assertFalse((rejected / "supplemental-manifest.json").exists())
+                    finally:
+                        source_archive.write_bytes(source_bytes)
             cases = [
                 (output / "platform-record.json", "sourceSha", "b" * 40),
                 (output / "platform-record.json", "platformId", "other-release"),
@@ -148,7 +193,16 @@ class StandardAssemblyTest(unittest.TestCase):
                     failed = root / f"failed-{index}"
                     attempt = self._run_provider({**assemble_request, "outputDirectory": str(failed)})
                     self.assertEqual(attempt.returncode, 1, attempt.stderr)
-                    self.assertIn("installer-assembly-failed", attempt.stderr)
+                    expected_reason = {"artifactChecksum": "installer-artifact-checksum-invalid", "assembly_id": "installer-provider-candidate-mismatch", "assets": "installer-build-assets-invalid", "version": "installer-build-identity-invalid"}.get(field, "installer-platform-evidence-invalid")
+                    diagnostic = json.loads(attempt.stderr)
+                    self.assertEqual(diagnostic["phase"], "assemble")
+                    self.assertEqual(diagnostic["sanitized-reason"], expected_reason)
+                    if field == "files":
+                        self.assertEqual(diagnostic["comparison"]["field"], "installer-candidate-files")
+                        self.assertEqual(diagnostic["comparison"]["expected"], [])
+                        self.assertIn(".installer-source.zip", diagnostic["comparison"]["extra"])
+                    elif field == "assembly_id":
+                        self.assertIn("installer-asset-evidence.json", diagnostic["comparison"]["changed"])
                     self.assertFalse((failed / "supplemental-manifest.json").exists())
                     self.assertFalse((failed / "tmp").exists())
                     filename.write_bytes(original)

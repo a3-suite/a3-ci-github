@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-selective-distribution.selection
     contract_id: contract.ci-selective-distribution.selection
     cases:
+      - id: detailed-failure-selection
+        intent_id: detailed-diagnostics-selection
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-selection}]
       - id: selective-distribution-selection
         intent_id: selective-distribution-selection-intent
         input:
@@ -17,6 +21,10 @@ verifications:
   - id: verification.ci-selective-distribution.delivery
     contract_id: contract.ci-selective-distribution.delivery
     cases:
+      - id: detailed-failure-delivery
+        intent_id: detailed-diagnostics-delivery
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-delivery}]
       - id: selective-distribution-delivery
         intent_id: selective-distribution-delivery-intent
         input:
@@ -31,6 +39,10 @@ verifications:
   - id: verification.ci-selective-distribution.publication
     contract_id: contract.ci-selective-distribution.publication
     cases:
+      - id: detailed-failure-publication
+        intent_id: detailed-diagnostics-publication
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-publication}]
       - id: selective-distribution-publication
         intent_id: selective-distribution-publication-intent
         input:
@@ -75,6 +87,10 @@ verifications:
   - id: verification.ci-selective-distribution.application
     contract_id: contract.ci-selective-distribution.application
     cases:
+      - id: detailed-failure-application
+        intent_id: detailed-diagnostics-application
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-application}]
       - id: selective-distribution-application
         intent_id: selective-distribution-application-intent
         input:

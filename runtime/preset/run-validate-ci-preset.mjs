@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -11,14 +12,20 @@ const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const canonicalRuntimeRoot = path.join(sourceRoot, 'runtime', 'preset');
 const validatorPath = path.join(canonicalRuntimeRoot, 'validate-ci-preset.ts');
 
-const diagnostic = (reason, message, outcome = 'cannot-start') => {
-  process.stderr.write(`${JSON.stringify({
+const diagnostic = (reason, message, outcome = 'cannot-start', details = {}) => {
+  try { process.stderr.write(`${JSON.stringify({
     schemaVersion: '1',
     kind: 'ci-github-preflight-bootstrap',
     outcome,
     reason,
-    message,
-  })}\n`);
+    message: typeof message === 'string' && /^(?:--(?:audit-mode|repo-root|output) (?:must be read-only or remediation|is required|is not allowed in read-only mode)|missing value for argument|unknown argument)$/.test(message) ? message : 'See failureEvidence and the preceding runtime log.',
+    failureEvidence: (() => {
+      const context = new FailureContext('ci-preset-assurance', 'preflight-bootstrap');
+      context.outcome = outcome;
+      context.at(reason, { input: 'project-local-runtime-and-bootstrap-configuration' });
+      return context.evidence(new DiagnosticError(reason, { diagnostics: { field: 'runtime-execution', expected: 'available-and-complete', observed: reason, ...details } }), reason);
+    })(),
+  })}\n`); } catch { /* Retain the bootstrap failure if the diagnostic sink is unavailable. */ }
   return 2;
 };
 
@@ -32,28 +39,28 @@ const parseArgs = (argv) => {
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (!value || value.startsWith('--')) throw new Error(`missing value for ${flag}`);
+    if (!value || value.startsWith('--')) throw new DiagnosticError('missing value for argument', { diagnosticCode: 'missing-value-for-argument' });
     if (flag === '--audit-mode') options.auditMode = value;
     else if (flag === '--repo-root') options.repoRoot = value;
     else if (flag === '--skill-collection-root') options.skillCollectionRoot = value;
     else if (flag === '--preset') options.presets.push(value);
     else if (flag === '--output') options.output = value;
-    else throw new Error(`unknown argument: ${flag}`);
+    else throw new DiagnosticError('unknown argument', { diagnosticCode: 'unknown-argument' });
     index += 1;
   }
   if (!['read-only', 'remediation'].includes(options.auditMode)) {
-    throw new Error('--audit-mode must be read-only or remediation');
+    throw new DiagnosticError('--audit-mode must be read-only or remediation', { diagnosticCode: 'audit-mode-must-be-read-only-or-remediation' });
   }
-  if (!options.repoRoot) throw new Error('--repo-root is required');
+  if (!options.repoRoot) throw new DiagnosticError('--repo-root is required', { diagnosticCode: 'repo-root-is-required' });
   if (options.auditMode === 'read-only' && options.output) {
-    throw new Error('--output is not allowed in read-only mode');
+    throw new DiagnosticError('--output is not allowed in read-only mode', { diagnosticCode: 'output-is-not-allowed-in-read-only-mode' });
   }
   return options;
 };
 
 const realDirectory = (value, label) => {
   const resolved = fs.realpathSync(value);
-  if (!fs.statSync(resolved).isDirectory()) throw new Error(`${label} must be a directory`);
+  if (!fs.statSync(resolved).isDirectory()) throw new DiagnosticError(`${label} must be a directory`);
   return resolved;
 };
 
@@ -206,7 +213,7 @@ const run = () => {
       fs.mkdirSync(directory);
       const resolved = realDirectory(directory, 'isolated child state');
       if (!isWithin(runStateRoot, resolved)) {
-        throw new Error('child process state must resolve inside the process temp root');
+        throw new DiagnosticError('child process state must resolve inside the process temp root', { diagnosticCode: 'child-process-state-must-resolve-inside-the-process-temp-root' });
       }
     }
     if (process.platform !== 'win32') {
@@ -214,7 +221,7 @@ const run = () => {
       const userId = typeof process.getuid === 'function' ? process.getuid() : process.pid;
       const longestSocketPath = path.join(childTempRoot, `tsx-${userId}`, '2147483647.pipe');
       if (Buffer.byteLength(longestSocketPath) > socketLimit) {
-        throw new Error('process temp root is too long for the tsx IPC socket');
+        throw new DiagnosticError('process temp root is too long for the tsx IPC socket', { diagnosticCode: 'process-temp-root-is-too-long-for-the-tsx-ipc-socket' });
       }
     }
     childEnv = {
@@ -249,7 +256,7 @@ const run = () => {
         || 'npm dependency tree validation failed';
       return diagnostic(
         'runtime-dependency-tree-invalid',
-        message,
+        message, 'cannot-start', { 'cause-code': npmResult.error ? safeErrorReason(npmResult.error) : 'child-process-failed', 'native-exit': npmResult.status ?? 'unavailable' },
       );
     }
 
@@ -264,15 +271,15 @@ const run = () => {
       encoding: 'utf8',
       env: { ...childEnv, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot },
     });
-    if (result.error) return diagnostic('validator-cannot-start', result.error.message);
+    if (result.error) return diagnostic('validator-cannot-start', result.error.message, 'cannot-start', { 'cause-code': safeErrorReason(result.error) });
     if (result.status === null) {
-      return diagnostic('validator-cannot-start', 'validator terminated without an exit status');
+      return diagnostic('validator-cannot-start', 'validator terminated without an exit status', 'cannot-start', { 'native-exit': 'unavailable', signal: result.signal ?? 'unavailable' });
     }
     if (result.status === 2) {
       return diagnostic(
         'validator-cannot-complete',
         result.stderr.trim() || 'validator terminated without a report',
-        'cannot-complete',
+        'cannot-complete', { 'native-exit': 2 },
       );
     }
     return { status: result.status, stdout: result.stdout, stderr: result.stderr };
@@ -303,9 +310,15 @@ const run = () => {
   }
   if (executionError) throw executionError;
   if (typeof execution === 'number') return execution;
-  if (execution.stdout) process.stdout.write(execution.stdout);
-  if (execution.stderr) process.stderr.write(execution.stderr);
+  try {
+    if (execution.stdout) process.stdout.write(execution.stdout);
+    if (execution.stderr) process.stderr.write(execution.stderr);
+  } catch (error) {
+    diagnostic('report-output-failed', undefined, 'cannot-complete', { 'cause-code': safeErrorReason(error), 'native-exit': execution.status, primaryFailureRetained: execution.status !== 0 });
+    return execution.status || 2;
+  }
   return execution.status;
 };
 
-process.exitCode = run();
+try { process.exitCode = run(); }
+catch (error) { process.exitCode = diagnostic('bootstrap-cannot-complete', undefined, 'cannot-complete', { 'cause-code': safeErrorReason(error) }); }

@@ -1,13 +1,13 @@
 import { fail, record, equal } from './io';
-import { repositoryEndpoint } from './observation';
+import { repositoryEndpoint, draftVisibilityFailure } from './observation';
 import type { ReadOnlyClientType } from './observation';
 import type { ReleaseIdentityType } from './schema';
 
 const verifyProvider = async (identity: ReleaseIdentityType, client: ReadOnlyClientType, requireWriteAccess: boolean): Promise<void> => {
   const endpoint = repositoryEndpoint(identity);
   const repository = await client.json(endpoint);
-  if (!record(repository) || repository.full_name !== identity.repository || typeof repository.default_branch !== 'string'
-    || (requireWriteAccess && (!record(repository.permissions) || repository.permissions.push !== true))) fail('provider-publication-suitability-unknown-or-unsupported');
+  if (!record(repository) || typeof repository.full_name !== 'string' || repository.full_name.toLowerCase() !== identity.repository.toLowerCase() || typeof repository.default_branch !== 'string'
+    || (requireWriteAccess && draftVisibilityFailure(repository, identity, client))) fail('provider-publication-suitability-unknown-or-unsupported');
   const head = await client.json(`${endpoint}/commits/${encodeURIComponent(repository.default_branch)}`);
   if (!record(head) || typeof head.sha !== 'string' || !/^[a-f0-9]{40}$/.test(head.sha)) fail('provider-publication-suitability-unknown-or-unsupported');
   if (head.sha === identity.source_sha) return;

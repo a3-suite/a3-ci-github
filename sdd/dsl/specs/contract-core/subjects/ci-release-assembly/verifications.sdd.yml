@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-assembly.outputs
     contract_id: contract.ci-release-assembly.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: bundled-assembly
         intent_id: bound-assembly
         input:

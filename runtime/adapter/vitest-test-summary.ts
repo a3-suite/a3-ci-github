@@ -1,3 +1,4 @@
+import { DiagnosticError, FailureContext } from '../diagnostics/failure.mjs';
 import fs from 'node:fs';
 
 import { classifyVitestReport, parseVitestReport } from '../vitest/vitest-summary-core.mjs';
@@ -88,10 +89,14 @@ const renderMissingReport = (summaryName: string, note: string, scope?: string):
   return lines.join('\n');
 };
 
+const diagnostic = new FailureContext('ci-vitest-summary', 'report-summary');
+diagnostic.at('report-read', { input: 'log' });
 const logPath = getArgValue('log');
 const summaryName = getArgValue('name') ?? 'テスト';
 if (!logPath || !fs.existsSync(logPath)) {
   console.log(renderMissingReport(summaryName, 'テストレポートが見つかりません', logPath));
+  diagnostic.outcome = 'unresolved';
+  diagnostic.report(new DiagnosticError('vitest-report-missing', { diagnostics: { field: 'report', expected: 'available', observed: 'missing' } }));
   process.exit(0);
 }
 
@@ -109,6 +114,11 @@ const outcome = classification.status === 'passed'
     ? 'failed'
     : 'indeterminate';
 const collection = classification.collection;
+if (outcome !== 'passed') {
+  diagnostic.outcome = outcome;
+  diagnostic.at('report-classification', { input: 'log' });
+  diagnostic.report(new DiagnosticError(`vitest-report-${outcome}`, { diagnostics: { field: 'report-status', expected: 'passed', observed: outcome, collection } }));
+}
 const { counts } = classification;
 const resultDetail = outcome === 'failed'
   ? counts.failed === null ? undefined : `${counts.failed}件`

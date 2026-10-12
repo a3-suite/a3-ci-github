@@ -43,7 +43,7 @@ command:
         - option_id: set
           presence: optional
     - id: apply
-      summary: Apply one explicitly approved unchanged plan under an exclusive transaction
+      summary: Apply one reviewed unchanged plan within the authorized scope under an exclusive transaction
       option_bindings:
         - option_id: repo-root
           presence: optional

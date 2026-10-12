@@ -93,6 +93,7 @@ describe("repository-contract-subject-execution", () => {
         ['integration-source-entrypoint', 'integration', 'active'],
         ['integration-bundle', 'integration', 'active'],
         ['e2e', 'e2e', 'excluded'],
+        ['integration-diagnostics', 'integration', 'active'],
       ]);
     expect(platform.segments[0].coverage.include).toStrictEqual(['src/**/*.ts']);
     expect(platform.segments[2].coverage.include).toStrictEqual(['dist/**/*.js']);

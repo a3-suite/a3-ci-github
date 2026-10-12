@@ -63,4 +63,24 @@ test('entrypoint fails an identity mismatch', () => {
   fs.rmSync(handoffRoot, { recursive: true, force: true });
 });
 
+// contract_id: contract.ci-handoff-integrity.outputs
+// integration_id: ci-handoff-integrity-contract-entrypoint
+test('entrypoint retains the failed artifact path and digest comparison', (t) => {
+  const handoffRoot = createHandoff();
+  t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));
+  const expected = crypto.createHash('sha256').update('payload').digest('hex');
+  fs.writeFileSync(path.join(handoffRoot, 'artifact.bin'), 'changed');
+  const before = fs.readFileSync(path.join(handoffRoot, 'manifest.json'));
+  const run = runBundled(handoffRoot, 'source');
+  const diagnosticLine = run.result.stderr.split('\n').find(line => line.startsWith('ci-failure-diagnostic:'));
+  const evidence = JSON.parse(diagnosticLine?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+  expect(run.result.status).toBe(1);
+  expect(evidence.classification).toMatchObject({ stage: 'artifact-digest-comparison', reason: 'handoff-manifest-checksum-mismatch' });
+  expect(evidence.comparison).toEqual({ field: 'artifact-sha256', path: 'artifact.bin', expected, observed: crypto.createHash('sha256').update('changed').digest('hex'), observedSize: 7, expectedSize: 'not-declared' });
+  expect(evidence.context.inputs).toMatchObject({ source: 'source', version: '1.0.0', target: 'linux' });
+  expect(fs.readFileSync(path.join(handoffRoot, 'manifest.json'))).toEqual(before);
+  expect(fs.readFileSync(path.join(handoffRoot, 'artifact.bin'), 'utf8')).toBe('changed');
+  expect(fs.readFileSync(run.output, 'utf8')).not.toMatch(/^(descriptor|manifest|manifest-digest|entries)<</m);
+});
+
 });

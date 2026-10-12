@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -23,7 +24,7 @@ export function verifyActionReferenceContracts(root, references, snapshot) {
         const environment = Object.fromEntries(['PATH', 'SystemRoot', 'WINDIR'].filter((key) => process.env[key]).map((key) => [key, process.env[key]]));
         const result = spawnSync(process.execPath, [entrypoint], { cwd: working, encoding: 'utf8', timeout: 30_000,
           env: { ...environment, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, ...inputs(working) } });
-        if (result.error || result.signal || result.status === null || ['custom', 'valid'].includes(name) && result.status !== 0) throw new Error(`Action contract execution unavailable: ${uses}:${name}`);
+        if (result.error || result.signal || result.status === null || ['custom', 'valid'].includes(name) && result.status !== 0) throw new DiagnosticError(`action-contract-execution-unavailable: ${uses}:${name}`, { diagnostics: { stage: 'referenced-action-execution', field: 'fixed-action-entrypoint', reference: uses, case: name, expected: 'executable-contract-fixture', observed: 'execution-unavailable', 'native-exit': result.status ?? 'unavailable', signal: result.signal ?? 'none' } });
         return { result, working, output: readFileSync(output, 'utf8'), log: `${result.stdout}${result.stderr}` };
       };
       if (actionPath === 'actions/ci-quality-adapter') {
@@ -47,8 +48,11 @@ export function verifyActionReferenceContracts(root, references, snapshot) {
             ? { 'INPUT_RELEASE-VERSION': '', 'INPUT_TARGET-IDENTITY': '' } : missing ? { [missing]: '' } : {}) }));
           const request = path.join(runResult.working, 'release-publication-request/request.json');
           const error = missing === 'INPUT_RELEASE-VERSION' || missing === 'owner-decision' ? 'release-publication-releaseVersion-invalid' : 'release-publication-targetIdentity-invalid';
+          const failureEvidence = runResult.result.stderr.split('\n').filter((line) => line.startsWith('ci-failure-diagnostic:')).map((line) => JSON.parse(line.slice('ci-failure-diagnostic:'.length)));
+          const missingField = missing === 'INPUT_TARGET-IDENTITY' ? 'target-identity' : 'release-version';
+          const diagnosedInput = failureEvidence.some((evidence) => evidence.classification.reason === 'input-missing' && evidence.comparison.field === missingField);
           const passed = missing
-            ? runResult.result.status === 1 && runResult.log.includes(error) && !existsSync(path.dirname(request)) && !existsSync(path.join(runResult.working, 'release-notes-handoff'))
+            ? runResult.result.status === 1 && (runResult.log.includes(error) || diagnosedInput) && !existsSync(path.dirname(request)) && !existsSync(path.join(runResult.working, 'release-notes-handoff'))
             : runResult.result.status === 0 && JSON.parse(readFileSync(request, 'utf8')).schema === 'ci.release-publication-request.v2';
           observations.push({ uses, case: `publication-${name}`, passed });
         }

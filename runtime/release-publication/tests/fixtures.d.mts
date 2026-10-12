@@ -1,6 +1,7 @@
 import type { TestContext } from 'vitest';
 import type { AssemblyType, ReleaseIdentityType } from '../schema';
 import type { ReadOnlyClientType } from '../observation';
+export function standardPublicationTokenEnvironment(repository: string, token: string): Record<string, string>;
 export function fixture(t: TestContext): {
   root: string;
   identity: ReleaseIdentityType;

@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-preset-assurance.verification
     summary: Preset assurance validates applied canonical assets without modifying the consumer project and rejects invalid invocation boundaries.
     conditions:
+      - id: diagnostic-required-verification
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: ci-preset-assurance-roots-missing
         environment_predicate:
           kind: environment-ref
@@ -130,7 +135,17 @@ contracts:
             right:
               kind: value_set
               values: [failed]
+      - id: diagnostic-details-verification
+        when: diagnostic-required-verification
+        observation_ref: observation.ci-preset-assurance.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-verification
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-verification]
       - id: ci-preset-assurance-explicit-roots-intent
         goal: Missing explicit repository root produces a stable invalid-input diagnostic before validation starts.
         guarantee_refs: [ci-preset-assurance-explicit-roots-required]
@@ -158,6 +173,11 @@ contracts:
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation binds validated applied assets to one full distribution revision and rejects invalid revision identity.
     conditions:
+      - id: diagnostic-required-asset-lock
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: ci-preset-assurance-lock-input-valid
         input_predicate:
           kind: input
@@ -196,7 +216,17 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
+      - id: diagnostic-details-asset-lock
+        when: diagnostic-required-asset-lock
+        observation_ref: observation.ci-preset-assurance.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-asset-lock
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-asset-lock]
       - id: ci-preset-assurance-lock-generation-intent
         goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests. Required generated pin companions record their registry input as the canonical digest and installed bytes as the applied digest; invalid projections cannot be blessed by generating a new lock.
         guarantee_refs:

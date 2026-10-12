@@ -41,9 +41,9 @@ provider の step/job summary と、CI 外で確認する標準出力を、人�
 | 監査全体 (`overall-audit`) | {成功 / 失敗 / blocked / 判定不能 / 未実施} |
 | 適合 (`conformance`) | {適合 / 不適合 / 判定不能 / 未実施} |
 
-`provider-preflight` しか完了していない場合、機械監査、意味監査、監査全体、適合を `成功` や `適合` として表示しない。各区分のstatusは `ci-audit-contract.reference.yml` の `statusClassification`、`statusAggregation`、`reporting` から導出する。
+`provider-preflight` しか完了していない場合、機械監査、意味監査、監査全体、適合を `成功` や `適合` として表示しない。各区分のstatusは `references/ci-audit-contract.reference.yml` の `statusClassification`、`statusAggregation`、`reporting` から導出する。
 
-各区分の入力、owner、status導出、集約順序、適合条件は `ci-audit-contract.reference.yml` を正本とし、本書では再定義しない。意味監査subjectの報告項目は `ci-audit-subjects.reference.yml` を正本とする。問題点、未確認範囲、推奨修正案、理想案、具体的な修正計画の必須項目は、review スキルのレポート要件を正本とする。CI監査では上表と、各statusに対応するフェーズ、証拠provenance、意味監査subjectの結果、意味候補の判断結果をreview報告へ追加する。repository 内の CI 関連文書は、subject catalog の `repository-ci-documentation.reportingFields` に従って適用対象ごとに報告し、対象がない場合は同 subject の `inapplicable` に従う。事前検証の `success` や文書の存在確認だけを監査報告の結論にしない。
+各区分の入力、owner、status導出、集約順序、適合条件は `references/ci-audit-contract.reference.yml` を正本とし、本書では再定義しない。意味監査subjectの報告項目は `references/ci-audit-subjects.reference.yml` を正本とする。問題点、未確認範囲、推奨修正案、理想案、具体的な修正計画の必須項目は、review スキルのレポート要件を正本とする。CI監査では上表と、各statusに対応するフェーズ、証拠provenance、意味監査subjectの結果、意味候補の判断結果をreview報告へ追加する。repository 内の CI 関連文書は、subject catalog の `repository-ci-documentation.reportingFields` に従って適用対象ごとに報告し、対象がない場合は同 subject の `inapplicable` に従う。事前検証の `success` や文書の存在確認だけを監査報告の結論にしない。
 
 各フェーズと意味監査subjectの詳細には、証拠取得の実施区分を `executed` または `reused` で表示する。`reused` は今回の対象、契約、実行条件へ適用できることを確認した証拠を示し、監査statusを変更しない。cache miss は証拠を取得し直した後のstatusと分離し、キャッシュ保存失敗は監査結果を変更しない警告として詳細へ記録する。
 

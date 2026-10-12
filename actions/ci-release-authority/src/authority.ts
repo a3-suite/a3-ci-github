@@ -27,7 +27,7 @@ const remote = async (client: ReadOnlyClientType, endpoint: string): Promise<Rec
 };
 const verifyRun = (run: Record<string, unknown>, id: string, repository: string, event: string, name: string, workflowPath: string): void => {
   if (remoteId(run.id) !== id || run.conclusion !== 'success' || run.event !== event || run.name !== name
-    || !record(run.repository) || run.repository.full_name !== repository || typeof run.path !== 'string'
+    || !record(run.repository) || typeof run.repository.full_name !== 'string' || run.repository.full_name.toLowerCase() !== repository.toLowerCase() || typeof run.path !== 'string'
     || run.path.split('@', 1)[0] !== workflowPath) fail('request-run-provenance-invalid');
   hex(run.head_sha, 40);
 };
@@ -49,7 +49,7 @@ export const createAuthority = async (options: AuthorityOptions, client: ReadOnl
   if (request.tag_object_type !== 'tag' || (request.version === null ? request.version_resolution !== 'authority' : request.version !== decision.version)) fail('release-request-invalid');
   const endpoint = `/repos/${repository}`;
   const metadata = await remote(client, endpoint);
-  if (metadata.full_name !== repository || metadata.archived !== false || metadata.disabled !== false) fail('provider-publication-suitability-unknown-or-unsupported');
+  if (typeof metadata.full_name !== 'string' || metadata.full_name.toLowerCase() !== repository.toLowerCase() || metadata.archived !== false || metadata.disabled !== false) fail('provider-publication-suitability-unknown-or-unsupported');
   const defaultBranch = text(metadata.default_branch, 'default-branch-unknown');
   const publicationRun = await remote(client, `${endpoint}/actions/runs/${options.publicationRequestRunId}`);
   const requestRun = await remote(client, `${endpoint}/actions/runs/${options.requestRunId}`);

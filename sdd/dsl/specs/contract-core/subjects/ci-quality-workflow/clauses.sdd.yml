@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-quality-workflow.execution
     summary: The main and optional platform quality callers pass explicit project settings to fixed reusable workflows, which order trusted source resolution before adapter execution and aggregate every applicable result. Each caller retains its summary check and propagates failed, cancelled, skipped, and missing callee results. Installation requires fixed publication of the selected workflows and their dependencies. Missing Hosted acceptance evidence does not block caller generation, application or asset lock creation. Consumer Hosted acceptance follows installation and establishes required-check compatibility before the generated callers are adopted as required checks.
     conditions:
+      - id: diagnostic-required-execution
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: ci-quality-workflow-caller-selected
         input_predicate:
           kind: input
@@ -62,7 +67,17 @@ contracts:
           target:
             kind: observation_field
             value: optional-platform-chain
+      - id: diagnostic-details-execution
+        when: diagnostic-required-execution
+        observation_ref: observation.ci-quality-workflow.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-execution
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-execution]
       - id: ci-quality-workflow-reusable-binding-intent
         goal: Verify explicit typed inputs, read permissions, a registered fixed reusable target, no consumer callee copy, and an always-run caller summary. Local evidence does not establish Hosted check-name compatibility.
         guarantee_refs: [ci-quality-workflow-reusable-binding-observed]

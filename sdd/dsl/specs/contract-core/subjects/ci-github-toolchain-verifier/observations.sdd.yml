@@ -35,3 +35,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: The success or failure outcome of the verification step.
+  - id: observation.ci-github-toolchain-verifier.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "mode選択・実行ファイル探索・version起動・version照合を区別し、tool名、要求version、観測versionまたは取得不可、終了状態、選択modeを残す。argvや環境変数全体を出力しない。"

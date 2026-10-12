@@ -30,3 +30,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failed step outcome when assembly is rejected.
+  - id: observation.ci-release-assembly.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "authority/snapshot検証・platform/build inventory・checksum・supplemental binding・handoff生成を区別し、固定source/version/platform、対象asset/evidence相対path、欠落/余剰/重複、期待/観測size/digest/identity、出力の未生成/部分生成を残す。"

@@ -10,7 +10,7 @@
 - release version、artifact URL、artifact checksum、runtime requirement は manifest contract を正本とする。
 - execution request は検証済み manifest の場所と checksum、実行 mode、対象 instance などを束ねる。
 - execution request の checksum を記録する場合も、manifest checksum と artifact checksum は別に保持する。
-- source mode ごとの manifest source、artifact source、network 可否、fallback 禁止の正本は `installer-source-mode-contract.reference.yml` とする。
+- source mode ごとの manifest source、artifact source、network 可否、fallback 禁止の正本は `references/installer-source-mode-contract.reference.yml` とする。
 
 ## 標準境界
 - `install`、`upgrade`、`repair`、`dry-run` は明示 mode とする。

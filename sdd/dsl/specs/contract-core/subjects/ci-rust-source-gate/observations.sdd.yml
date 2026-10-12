@@ -35,3 +35,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: The success or failure outcome of the source verification step.
+  - id: observation.ci-rust-source-gate.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "authority読取・language profile・source SHA・checkout照合を区別し、authority相対path、要求/観測language profileと固定source SHA、checkoutの取得可否、検証前後の状態を残す。"

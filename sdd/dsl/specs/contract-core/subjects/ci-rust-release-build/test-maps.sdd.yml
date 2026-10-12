@@ -71,3 +71,15 @@ test_maps:
       - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-scripts-regression > Windows build stops when native toolchain setup fails"
         check_refs: [failure, output]
+  - verification_id: verification.ci-rust-release-build.processing
+    case_id: detailed-failure-processing
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-rust-release-build.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: "runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]

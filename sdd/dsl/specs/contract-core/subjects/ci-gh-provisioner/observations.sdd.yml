@@ -24,3 +24,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Success after checksum verification, extraction, and PATH handoff, or failure before handoff.
+  - id: observation.ci-gh-provisioner.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "version選択・platform選択・取得・checksum・展開・配置・version確認を区別し、tool名、要求version、OS/arch、asset名、期待/観測digestまたはversion、HTTP相関情報、失敗した配置段階を残す。"

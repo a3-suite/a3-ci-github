@@ -1,3 +1,4 @@
+import { DiagnosticError } from '../diagnostics/failure.mjs';
 import { conditionalExtensionSelected } from './preset-model.ts';
 import fs from 'node:fs';
 import { PlatformSelectionError, resolveQualityPlatforms } from '../platform/platform-selection-core.ts';
@@ -71,7 +72,7 @@ const validateQualityWorkflow = (
     try {
       const standard = standardQualityBundle(standardId);
       if (typeof registered.source === 'string' || registered.source.skill !== standard.owner
-        || !standard.sourcePath.endsWith(`/${standard.owner}/${registered.source.path}`)) throw new Error('standard quality bundle source provenance mismatch');
+        || !standard.sourcePath.endsWith(`/${standard.owner}/${registered.source.path}`)) throw new DiagnosticError('standard quality bundle source provenance mismatch', { diagnosticCode: 'standard-quality-bundle-source-provenance-mismatch' });
       validateDescriptor(root, `.ci/adapters/${standard.id}.yml`, report, workflowEnv, registry.providerId, standard.descriptor);
     } catch (error) {
       add(report.mismatches, { path: `${workflowPath}:env.CI_STANDARD_BUNDLE_ID`, message: error instanceof Error ? error.message : 'standard bundle integrity failure', settingLocation: workflowPath });

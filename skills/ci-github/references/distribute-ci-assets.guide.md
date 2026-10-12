@@ -12,7 +12,7 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 
 ## 境界
 
-- 配布assetと依存閉包の正本は`ci-distribution-assets.reference.yml`と`ci-github-preset-assets.reference.yml`とする。
+- 配布assetと依存閉包の正本は`references/ci-distribution-assets.reference.yml`と`references/ci-github-preset-assets.reference.yml`とする。
 - Releaseはmanifest、単独実行できるfetch CLI、`SHA256SUMS`だけを公開する。
 - checksumは取得byteの完全性を検証する。発行者の真正性はGitHub repositoryのRelease公開権限、protected source、exact tag、TLSを信頼境界とする。
 - workflow以外のruntime、lint rule、registryは`{project-root}/.a3-skills/ci-github/distributions/{sourceRevision}/`から導入・保守・検証時だけ参照する。
@@ -83,7 +83,7 @@ node fetch-a3-ci-github.mjs verify \
 
 この生成経路はmanifest schemaVersion `2`を使用する。旧`1`は受理しない。既存の旧配布を暗黙に変換せず、新manifestと差分を確認して移行する。
 
-取得結果が返した`sourceRevision`と、取得時と同じpresetまたはassetを指定する。先に`configure-ci-preset.guide.md`の導入時runtimeを準備する。生成処理は既存runtimeのYAML依存を使用し、導入先に個別の生成スクリプトや追加の設定ファイルは作らない。
+取得結果が返した`sourceRevision`と、取得時と同じpresetまたはassetを指定する。先に`references/configure-ci-preset.guide.md`の導入時runtimeを準備する。生成処理は既存runtimeのYAML依存を使用し、導入先に個別の生成スクリプトや追加の設定ファイルは作らない。
 
 `--set 'workflow.{asset名}:{placeholder名}={JSON値}'`を繰り返して製品設定を渡す。設定名は選択したtemplateを正本とし、文字列、真偽値、branch配列をJSONで指定する。未知・未指定の必須設定、型不一致は停止する。Action pinとcalleeのSHAはmanifestから自動解決し、利用者は指定しない。
 
@@ -99,7 +99,7 @@ node fetch-a3-ci-github.mjs plan \
   --repo-root "{project-root}"
 ```
 
-planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分類する。直接参照する外部Actionがあるcallerには、provider CLIがregistryの`providerActions.entries`と`pinCompanion.fields`から完全なpin companionを生成し、同じ分類・承認対象に含める。companionは独自編集しない。品質callerだけを持つprojectでは生成しない。既存asset lockが現在のdestination digestを所有する場合だけ`update`とし、それ以外の差分は`conflict`とする。所有権判定に使ったasset lockの存在状態とdigestもplanへ固定する。過去のlockにあり今回選択されないpathは`stale`として報告するが削除しない。
+planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分類する。直接参照する外部Actionがあるcallerには、provider CLIがregistryの`providerActions.entries`と`pinCompanion.fields`から完全なpin companionを生成し、同じ分類・差分確認対象に含める。companionは独自編集しない。品質callerだけを持つprojectでは生成しない。既存asset lockが現在のdestination digestを所有する場合だけ`update`とし、それ以外の差分は`conflict`とする。所有権判定に使ったasset lockの存在状態とdigestもplanへ固定する。過去のlockにあり今回選択されないpathは`stale`として報告するが削除しない。
 
 ### 旧配布からの初回移行（create経路）
 
@@ -107,16 +107,16 @@ planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分�
 
 1. 新しいexact Releaseを取得し、旧lock、置換対象caller、retired資産を棚卸しする。retiredの定義はpreset registryを参照し、製品設定・owner adapter・Secretsを移行対象と混同しない。旧callerの許可された設定値を確認して、後述のplanへ`--set`で明示する。
 2. consumerの運用者が退避・除去対象の正確なpathを承認する。consumerのGit除外された`tmp/`配下に専用退避先を作り、各対象を元の相対pathを維持してcopyする。元path・退避path・SHA-256を記録し、退避byteとの一致を確認する。退避対象外は変更しない。
-3. 確認済みの旧lock、置換対象caller、retired資産だけを作業ツリーから除去する。旧distributionと退避は保持する。旧lockが存在しない状態で取得した新revisionを指定してplanし、製品設定を`--set`で渡す。対象callerと必要なcompanionが`create`となること、`conflict`や意図しない対象がないことを確認し、digestを承認してapplyする。
+3. 確認済みの旧lock、置換対象caller、retired資産だけを作業ツリーから除去する。旧distributionと退避は保持する。旧lockが存在しない状態で取得した新revisionを指定してplanし、製品設定を`--set`で渡す。対象callerと必要なcompanionが`create`となること、`conflict`や意図しない対象がないことを確認し、確認したplanのdigestを指定してapplyする。
 4. 「適用後」のlock生成、lint、preflight、consumer契約テストまで実行する。lock生成直後に新lockのpath・sourceRevision・SHA-256を退避記録へ追記し、後続検証の前に復旧用のidentityを確定する。初回移行の完了はこの検証がすべて成功した時点とし、Hosted受入は別途記録する。
 
 検証完了前に失敗した場合はその先へ進めず、次の順で旧状態を復旧する。apply transactionが存在する場合はtransaction記録の状態と各pathの復旧byteを確認する。`rolled-back`で今回の変更が復旧済みならCLI rollbackを再実行せず、手動復旧へ進む。`applied`、`applying`、`rolling-back`、`rollback-required`ならCLI rollbackを先に実行し、成功と復旧byteを確認する。それ以外の状態や復旧不一致は停止する。新lockが生成されていれば、記録した今回の新lockのdigestと現在byteが一致することを確認して、そのlockだけを除去する。その後、退避SHA-256を再確認して旧caller・retired資産・旧lockを元pathへ戻し、復元後もdigestを確認する。applyの自動rollbackや明示rollbackが復旧するのはplan内の変更だけであり、手動退避した旧資産とapply後に生成したlockは運用者が復旧する。現在pathに想定外のbyteや第三者の変更がある場合は上書きせず停止する。退避と旧distributionの削除はこの移行に含めない。
 
 ## Apply
 
-planはsourceと生成後fileのdigestを別々に保持し、生成byteも承認digestに含める。schema `2`同士の更新では旧distributionと既存lockを使い、設置済みcallerの許可された製品設定を引き継ぐ。job・step・permissions等の構造変更は停止する。追加の`--set`だけが設定を上書きする。選択calleeの固定参照は検証済みmanifestから解決する。
+planはsourceと生成後fileのdigestを別々に保持し、生成byteもplan digestに含める。schema `2`同士の更新では旧distributionと既存lockを使い、設置済みcallerの許可された製品設定を引き継ぐ。job・step・permissions等の構造変更は停止する。追加の`--set`だけが設定を上書きする。選択calleeの固定参照は検証済みmanifestから解決する。
 
-`conflict`がないplanの内容とdigestを確認し、同じdigestを明示して適用する。
+`conflict`がないplanの内容とdigestを確認し、同じdigestを明示して適用する。標準セットアップ・更新が依頼で許可された範囲なら、digestについて追加のユーザ承認は求めない。`--approve`は確認したplanと適用するplanを照合する引数であり、人の承認証跡ではない。範囲の拡張、固有実装の置換、破壊的変更など未許可の変更は、具体的な差分について事前確認する。
 
 ```bash
 node fetch-a3-ci-github.mjs apply \
@@ -130,10 +130,10 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 ## 適用後
 
 1. 生成済みcallerを製品設定の正本として読み返し、必要なVariablesとSecretsを登録する。placeholderを手動置換しない。
-2. 標準bundleの配置は不要。独自adapter配置またはbinding検査が必要な場合だけmaterializerを追加取得し、`configure-ci-preset.guide.md`の準備済みruntimeで実行する。external skillを利用する場合はそのidentityとdigestも確認する。
+2. 標準bundleの配置は不要。独自adapter配置またはbinding検査が必要な場合だけmaterializerを追加取得し、`references/configure-ci-preset.guide.md`の準備済みruntimeで実行する。external skillを利用する場合はそのidentityとdigestも確認する。
 3. `generate-ci-asset-lock.ts`で`.ci/ci-assets.lock.json`を生成する。必要なcompanionも管理対象となり、registry入力のcanonical digestと設置byteのapplied digestを記録する。使用中・未使用を問わず全entryの欠落・追加・独自編集は拒否する。
 4. a3-lintとactionlintを実行する。
-5. `validate-ci-preset.guide.md`のpreflightを実行する。
+5. `references/validate-ci-preset.guide.md`のpreflightを実行する。
 6. project-owned adapterがある場合はその確認を行い、consumer契約テストは常に実行する。
 7. GitHub上でしか確認できない契約だけhosted evidenceを取得する。
 

@@ -27,3 +27,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Failure outcome of the rejected quality adapter step.
+  - id: observation.ci-quality-adapter.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "bundle選択・toolchain確認・lint/test/build実行・report読取・結果保存を区別し、選択profile/bundle、失敗task/tool、要求/観測version、元の終了状態、生成済みreport/logの相対pathと未生成理由を残す。独自adapterの未検査stderrや保護入力を公開しない。"

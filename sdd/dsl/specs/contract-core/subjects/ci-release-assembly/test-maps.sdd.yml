@@ -65,3 +65,9 @@ test_maps:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: "standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly"
         check_refs: [handoff, digest]
+  - verification_id: verification.ci-release-assembly.outputs
+    case_id: detailed-failure-outputs
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-release-assembly failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

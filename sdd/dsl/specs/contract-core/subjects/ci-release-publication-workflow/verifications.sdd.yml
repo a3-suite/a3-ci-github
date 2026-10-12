@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-publication-workflow.publication
     contract_id: contract.ci-release-publication-workflow.publication
     cases:
+      - id: detailed-failure-publication
+        intent_id: detailed-diagnostics-publication
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-publication}]
       - id: ci-release-publication-workflow-success
         intent_id: ci-release-publication-workflow-success-intent
         input:

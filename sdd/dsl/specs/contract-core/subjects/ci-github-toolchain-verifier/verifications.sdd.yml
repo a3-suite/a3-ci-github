@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-github-toolchain-verifier.processing
     contract_id: contract.ci-github-toolchain-verifier.processing
     cases:
+      - id: detailed-failure-processing
+        intent_id: detailed-diagnostics-processing
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-processing}]
       - id: matching-exact-toolchain-processing
         intent_id: exact-toolchain-processing-verified
         input:
@@ -38,6 +42,10 @@ verifications:
   - id: verification.ci-github-toolchain-verifier.outputs
     contract_id: contract.ci-github-toolchain-verifier.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: matching-selected-tool-versions
         intent_id: exact-toolchain-verified
         input:

@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-quality-summary.outputs
     contract_id: contract.ci-quality-summary.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: successful-quality-result
         intent_id: quality-summary-output-set
         input:

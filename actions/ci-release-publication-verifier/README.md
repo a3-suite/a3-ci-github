@@ -6,7 +6,7 @@ GitHub Release の不在を観測し、owner write が返した receipt / readba
 
 公開 I/O は [action.yml](action.yml)、JSON shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。意味は `ci.release-asset-publication-contract` に従います。`runs.using: node24` と bundle 済み `dist/index.js` を提供し、consumer に Node 準備を要求しません。公開状態と固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とします。
 
-workflow は選択済み credential を `GH_TOKEN` 環境変数で注入します。Action は credential の選択・保存・fallback を行わず、GET だけを実行します。token に write 能力があってもこの Action は write しません。draft を含む不在を証明するため GitHub が返す repository permissions.push が true であることを要求します。published-only/read-only token では不在を推測せず停止します。対象 provider は github.com のみです。
+workflow は選択済み credential を `GH_TOKEN` 環境変数で注入します。Action は credential の選択・保存・fallback を行わず、GET だけを実行します。draft を含む閲覧能力の証拠は[固有契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-publication-verifier/clauses.sdd.yml)を正本とします。標準の固定 publication workflow は、同じjobのGITHUB_TOKENとcontents-writeの能力証拠を接続するため、APIの権限metadataが省略されても正常な公開経路を継続できます。任意tokenの権限不明、証拠の不一致、明示的な権限拒否では停止します。対象 provider は github.com のみです。
 
 ## 接続順
 
@@ -20,7 +20,7 @@ write adapter は required extension のままです。早期観測は write 直
 
 ## inventory / readback
 
-一覧は100件/page、最大100 page。終端 page を確認できない場合や ID 重複は unknown として停止。作成直後の inventory のみ最大3回・1秒間隔で再観測し、別 ID / 複数 Release は即停止。Release ID は tag lookup から推測しません。created_at は判断に使いません。
+一覧は100件/page、最大100 page。終端 page を確認できない場合や ID 重複は unknown として停止。作成直後のRelease inventoryと、転送後の正常な部分asset一覧は最大3回・1秒間隔で再観測します。別 ID、複数 Release、余分なassetや値の不一致は即停止します。Release ID は tag lookup から推測しません。created_at は判断に使いません。
 
 asset は API の immutable asset ID から取得し、実バイトの SHA-256 と size を照合します。API token を送信する先は api.github.com のみ。asset redirect は HTTPS の release-assets.githubusercontent.com だけを許可し、credential を転送しません。
 

@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-rust-source-gate.processing
     contract_id: contract.ci-rust-source-gate.processing
     cases:
+      - id: detailed-failure-processing
+        intent_id: detailed-diagnostics-processing
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-processing}]
       - id: matching-rust-source-processing
         intent_id: rust-source-processing-verified
         input:
@@ -24,6 +28,10 @@ verifications:
   - id: verification.ci-rust-source-gate.outputs
     contract_id: contract.ci-rust-source-gate.outputs
     cases:
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: matching-rust-source-authority
         intent_id: rust-source-identity-verified
         input:

@@ -5,6 +5,11 @@ contracts:
   - id: contract.ci-rust-release-build.processing
     summary: The shared scripts build, package, and verify an authority-bound Rust release asset or fail closed. Both Unix and PowerShell build scripts verify platform identity using the source-text identity rule of contract.ci-release-authority.outputs before toolchain execution. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
     conditions:
+      - id: diagnostic-required-processing
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: rust-release-build-inputs-match-authority
         environment_predicate:
           kind: environment-ref
@@ -90,7 +95,17 @@ contracts:
           target:
             kind: diagnostic_code
             value: binary-version-mismatch
+      - id: diagnostic-details-processing
+        when: diagnostic-required-processing
+        observation_ref: observation.ci-rust-release-build.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-processing
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-processing]
       - id: rust-release-processing-verified
         goal: Matching authority-bound inputs produce a verified Rust release asset or fail without publishing an unverified final asset.
         guarantee_refs:
@@ -108,6 +123,11 @@ contracts:
   - id: contract.ci-rust-release-build.outputs
     summary: The Composite Action maps shared script success to completed output and propagates script failure.
     conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
       - id: rust-release-build-script-succeeded
         environment_predicate:
           kind: environment-ref
@@ -147,7 +167,17 @@ contracts:
               kind: value_set
               values:
                 - failure
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-rust-release-build.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: details}
     verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        guarantee_refs: [diagnostic-details-outputs]
       - id: rust-release-build-completed
         goal: Shared script success exposes completed=true.
         guarantee_refs:

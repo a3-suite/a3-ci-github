@@ -132,4 +132,21 @@ test('entrypoint rejects a non-read-only descriptor', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+// contract_id: contract.ci-quality-adapter.outputs
+// integration_id: ci-quality-adapter-contract-entrypoint
+test('entrypoint keeps unsafe child output out of logs and the public result', (t) => {
+  fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-private-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const content = descriptor().replace('process.exit(0)', "process.stderr.write('private-child-sentinel'); process.exit(7)");
+  const run = runAction(root, content);
+  expect(run.result.status).toBe(1);
+  const saved = fs.readFileSync(run.resultPath, 'utf8');
+  const payload = JSON.parse(saved);
+  expect(payload.status).toBe('failed');
+  expect(payload.results.at(-1).exitCode).toBe(7);
+  expect(payload.results.at(-1).stderr).toBe('protected-child-output');
+  expect(saved + run.result.stdout + run.result.stderr).not.toContain('private-child-sentinel');
+});
+
 });

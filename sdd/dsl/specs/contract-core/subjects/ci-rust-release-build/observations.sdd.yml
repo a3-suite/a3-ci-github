@@ -38,3 +38,13 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: The success or failure outcome of the release build step.
+  - id: observation.ci-rust-release-build.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "authority/source・toolchain/platform/package解決・build・version command・package・checksum・artifact検証・final配置を区別し、固定source/version、platform/target、toolchain、失敗commandの安全な識別子と終了状態、期待/観測version/size/digest、scratch/final出力の状態を残す。"

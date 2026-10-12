@@ -69,3 +69,9 @@ test_maps:
         symbol: "jq provisioning > removes the installed binary when PATH update fails"
         check_refs:
           - check-path-update-failure
+  - verification_id: verification.ci-jq-provisioner.provision
+    case_id: detailed-failure-provision
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: "ci-jq-provisioner failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]

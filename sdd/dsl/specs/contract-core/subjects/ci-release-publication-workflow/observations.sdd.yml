@@ -19,3 +19,13 @@ observations:
         - selector: evidence-transfer
           kind: observation_field
           meaning: Declared standard-installer-only hidden-file upload from the selected supplemental build directory, download into the supplemental build root, and required final assemble handoff before publication.
+  - id: observation.ci-release-publication-workflow.detailed-diagnostics
+    summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
+    boundary: {ref: boundary.diagnostic-result}
+    value:
+      root: failure-evidence
+      kind: object
+      fields:
+        - selector: details
+          kind: observation_field
+          meaning: "request・authority・source/quality・platform build・supplemental生成/転送/final assemble・absence観測・create/upload/finalize・readbackの失敗job/step、matrix identity、元のneeds result、log/artifact参照、最後に確定したRelease ID/公開段階を残す。公開前failureと部分公開/公開結果不明を区別し、転送欠落は宣言したevidenceと実体の差を追跡できる。"

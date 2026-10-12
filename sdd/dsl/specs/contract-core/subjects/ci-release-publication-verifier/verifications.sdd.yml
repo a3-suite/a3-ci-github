@@ -5,6 +5,22 @@ verifications:
   - id: verification.ci-release-publication-verifier.outputs
     contract_id: contract.ci-release-publication-verifier.outputs
     cases:
+      - id: standard-workflow-credential
+        intent_id: observe-absence
+        input: {credential: bound-standard-workflow-github-token, permission-metadata: absent-or-empty}
+        checks: [{id: status, guarantee_ref: observation-status}, {id: path, guarantee_ref: observation-file}]
+      - id: credential-evidence-boundary
+        intent_id: fail-closed
+        input: {credential-evidence: mismatching-context-token-capability-repository-or-denied-metadata}
+        checks: [{id: rejection, guarantee_ref: verification-rejected}]
+      - id: asset-inventory-boundary
+        intent_id: fail-closed
+        input: {assets: persistently-incomplete-or-conflicting}
+        checks: [{id: rejection, guarantee_ref: verification-rejected}]
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: bundled-pre-observation
         intent_id: observe-absence
         input:
@@ -91,3 +107,63 @@ verifications:
         checks:
           - id: rejection
             guarantee_ref: verification-rejected
+      - id: diagnostic-network
+        intent_id: safe-diagnostics
+        input: {failure: network}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-body-timeout
+        intent_id: safe-diagnostics
+        input: {failure: body-timeout}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-timeout
+        intent_id: safe-diagnostics
+        input: {failure: timeout}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-http
+        intent_id: safe-diagnostics
+        input: {failure: http}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-json
+        intent_id: safe-diagnostics
+        input: {failure: json}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-empty
+        intent_id: safe-diagnostics
+        input: {failure: empty}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-oversized
+        intent_id: safe-diagnostics
+        input: {failure: oversized}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-permissions
+        intent_id: safe-diagnostics
+        input: {failure: permissions}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-push-missing
+        intent_id: safe-diagnostics
+        input: {failure: push-missing}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-push-denied
+        intent_id: safe-diagnostics
+        input: {failure: push-denied}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-push-invalid
+        intent_id: safe-diagnostics
+        input: {failure: push-invalid}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-repository
+        intent_id: safe-diagnostics
+        input: {failure: repository}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-inventory
+        intent_id: safe-diagnostics
+        input: {failure: inventory}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-duplicate
+        intent_id: safe-diagnostics
+        input: {failure: duplicate}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+      - id: diagnostic-pagination
+        intent_id: safe-diagnostics
+        input: {failure: pagination}
+        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]

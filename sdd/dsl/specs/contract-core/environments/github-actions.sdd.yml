@@ -53,6 +53,8 @@ boundaries:
     direction: output
     externality: caller-owned
 runtime_contexts:
+  - id: runtime-context.failure-diagnostic-required
+    summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
   - id: runtime-context.annotated-tag-resolution-valid
     summary: Repository and tag inputs are valid, credentials permit access to the configured provider, and its tag records identify an annotated tag and referenced commit with canonical SHAs.
   - id: runtime-context.publish-version-plan-valid
