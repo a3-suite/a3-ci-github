@@ -47,7 +47,7 @@ describe('repository-contract-subject-execution', () => {
   // integration_id: repository-contract-subject-execution
   // evidence_role: supplemental
   // test_level: integration
-  test('default source measurement separates project E2E and preserves all seven maintenance files', () => {
+  test('default source measurement separates project E2E and preserves all maintenance files', () => {
     // Arrange
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const tests = globSync(['actions/*/tests/**/*.test.{ts,mjs}', 'runtime/*/tests/**/*.test.{ts,mjs}', 'tests/*.test.mjs'], { cwd: root });
@@ -67,7 +67,8 @@ describe('repository-contract-subject-execution', () => {
     expect(selected).not.toContain('runtime/installer/tests/common-regression.test.mjs');
     expect(selected).toHaveLength(tests.length - 6);
     const maintenance = tests.filter((file) => !registered.has(file));
-    expect(maintenance).toHaveLength(7);
+    expect(maintenance).toHaveLength(8);
+    expect(maintenance).toContain('tests/release-token-capability-probe.test.mjs');
     expect(maintenance.every((file) => selected.includes(file))).toBe(true);
   });
 });
