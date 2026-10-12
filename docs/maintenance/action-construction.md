@@ -52,6 +52,17 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致は要求せず、正本の包含・同一性を確認します。rebaseやsquashで参照先が変わる、または実行資材が変わる場合は接続・検証を確定し直します。
 
+接続候補の版は未公開でなければなりません。同名のtagが存在する版は、実装SHAを含まない場合も候補にしません。tagの再作成は既存tagの削除を伴う別承認の操作であり、削除後に通常の候補として検証します。
+
+### 公開済みtagへ接続した状態からの回復
+
+registryの接続先版のtagが既に別のcommitで公開済みで、既存参照検査が`implementation-source-not-contained`、候補検査が`implementation-candidate-release-tag-exists`で停止する状態は、上記の順序から外れています。版運用の正本（ブランチ戦略）に従って未公開の対象版を決め、通常の順序のまま次の手順で回復します。
+
+1. 実装コミットAで`VERSION`を対象版へ更新します。既存参照検査の`implementation-source-not-contained`は引き継いだ不整合として記録し、Aの判定はsource検証、dist同一性、関連テストで行います。既存参照検査の成功へ読み替えません。
+2. 直後の接続コミットBで対象版とAの確定済みSHAへ接続し、候補検査の成功を必須とします。Bが成功するまでAを単独で公開・統合しません。
+
+上記以外の停止理由はこの回復の対象外とし、通常どおり停止します。
+
 接続の更新には、対象版の`RELEASE_TAG`と確定済みAの`IMPLEMENTATION_SHA`を明示します。事前のtag・Releaseは不要です。
 
 ```sh

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { fixture, remoteClient, standardPublicationTokenEnvironment } from './fixtures.mjs';
 import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly, draftVisibilityFailure, observeAssets } from '../observation.ts';
 import { LIMITS, sha256, releaseErrorMessage } from '../io.ts';
+import { verifySourceCompatibility, verifySuitability } from '../provider.ts';
 
 const publication = async (t) => {
   const f = fixture(t);
@@ -176,6 +177,70 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
 
 
 describe('safe release diagnostics', () => {
+  describe('provider suitability', () => {
+    // evidence_role: supplemental
+    // integration_id: provider-suitability-diagnostics
+    test('source and publication checks retain rejection metadata and workflow digests', async () => {
+      // Arrange
+      const identity = { repository: 'owner/project', source_sha: 'a'.repeat(40) };
+      const cases = [
+        ['head', 'source-head-invalid'], ['commit', 'commit-response-invalid'],
+        ['tree', 'workflow-tree-invalid'], ['truncated', 'workflow-tree-incomplete'],
+        ['entry', 'workflow-tree-entry-invalid'], ['duplicate', 'workflow-tree-duplicate-path'],
+        ['moved', 'workflow-source-mismatch'],
+      ];
+      for (const verify of [verifySourceCompatibility, verifySuitability]) {
+        for (const [kind, reason] of cases) {
+          const client = {
+            async json(endpoint) {
+              if (endpoint === '/repos/owner/project') return { full_name: identity.repository, default_branch: 'main', permissions: { push: true } };
+              if (endpoint.endsWith('/commits/main')) return { sha: kind === 'head' ? 'invalid' : 'b'.repeat(40) };
+              const sha = endpoint.split('/').at(-1).split('?')[0];
+              if (endpoint.includes('/git/commits/')) return kind === 'commit' ? {} : { sha, tree: { sha } };
+              const entry = { path: '.github/workflows/release.yml', sha: kind === 'moved' && sha === identity.source_sha ? 'd'.repeat(40) : 'c'.repeat(40), mode: '100644', type: 'blob' };
+              return kind === 'tree' ? {} : { sha, truncated: kind === 'truncated', tree: kind === 'entry' ? [{}] : kind === 'duplicate' ? [entry, entry] : [entry] };
+            },
+            responseMetadata: () => ({ status: 200, requestId: 'safe:123' }),
+          };
+          // Act
+          const result = verify(identity, client);
+          // Assert
+          await expect(result).rejects.toSatisfy(error => {
+            expect(releaseErrorMessage(error)).toBe('provider-publication-suitability-unknown-or-unsupported');
+            expect(error.details).toMatchObject({ method: 'GET', 'http-status': 200, 'request-id': 'safe:123', 'sanitized-reason': reason });
+            if (kind === 'moved') {
+              expect(error.details.expected_sha256).toBe(sha256(Buffer.from(JSON.stringify({ '.github/workflows/release.yml': `blob:100644:${'d'.repeat(40)}` }))));
+              expect(error.details.observed_sha256).toBe(sha256(Buffer.from(JSON.stringify({ '.github/workflows/release.yml': `blob:100644:${'c'.repeat(40)}` }))));
+            }
+            return true;
+          });
+        }
+      }
+    });
+
+    // evidence_role: supplemental
+    // integration_id: provider-suitability-diagnostics
+    test('read-only source compatibility preserves permission semantics and safely masks unavailable metadata', async () => {
+      // Arrange
+      const identity = { repository: 'owner/project', source_sha: 'a'.repeat(40) };
+      const client = { json: async endpoint => endpoint === '/repos/owner/project'
+        ? { full_name: identity.repository, default_branch: 'main', permissions: { push: false } } : { sha: identity.source_sha } };
+      // Act
+      const readOnly = verifySourceCompatibility(identity, client);
+      const writeCheck = verifySuitability(identity, client);
+      // Assert
+      await expect(readOnly).resolves.toBeUndefined();
+      await expect(writeCheck).rejects.toSatisfy(error => {
+        expect(error.details).toMatchObject({ 'sanitized-reason': 'push-permission-denied', 'http-status': 'unavailable', 'request-id': 'unavailable' });
+        return true;
+      });
+      await expect(verifySuitability(identity, { ...client, responseMetadata: () => ({ status: 200, requestId: 'unsafe synthetic-secret' }) })).rejects.toSatisfy(error => {
+        expect(JSON.stringify(error.details)).not.toContain('synthetic-secret');
+        expect(error.details['request-id']).toBe('unavailable');
+        return true;
+      });
+    });
+  });
   describe('GithubReadOnlyClient', () => {
   test('standard workflow token evidence binds caller context capability token and repository', async (t) => {
     const f = fixture(t);

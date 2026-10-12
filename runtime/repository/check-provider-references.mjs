@@ -9,7 +9,7 @@ import { verifyImplementationBinding } from './verify-implementation-binding.mjs
 export const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
 export const parseYaml = (text, relative) => {
   const document = parseDocument(text, { uniqueKeys: true });
-  if (document.errors.length) throw new Error(`${relative}: ${document.errors.map((error) => error.message).join('; ')}`);
+  if (document.errors.length) throw new DiagnosticError(`provider-yaml-invalid: ${relative}: ${document.errors.map((error) => error.message).join('; ')}`, { diagnostics: { field: 'yaml', expected: 'valid-yaml', observed: 'parse-failed', path: relative } });
   return document;
 };
 
@@ -74,15 +74,15 @@ export function repositorySnapshot(root, staged = false) {
   const canonicalTargets = paths.filter((relative) => /^workflows\/.+\.ya?ml$/.test(relative));
   const targets = [...providerTargets, ...canonicalTargets];
   return { read, registry: value, approved, targets, providerTargets, before, assertUnchanged: () => {
-    if (staged && git('write-tree') !== before) throw new Error('Staged snapshot changed during provider validation');
-    if (!staged && [...contents].some(([relative, content]) => rawRead(relative) !== content)) throw new Error('Worktree snapshot changed during provider validation');
+    if (staged && git('write-tree') !== before) throw new DiagnosticError('provider-snapshot-changed: Staged snapshot changed during provider validation', { diagnostics: { field: 'staged-snapshot', expected: 'unchanged', observed: 'changed' } });
+    if (!staged && [...contents].some(([relative, content]) => rawRead(relative) !== content)) throw new DiagnosticError('provider-snapshot-changed: Worktree snapshot changed during provider validation', { diagnostics: { field: 'worktree-snapshot', expected: 'unchanged', observed: 'changed' } });
   } };
 }
 
 export function checkRepository(root, staged = false, options = {}) {
   const snapshot = repositorySnapshot(root, staged);
   const binding = snapshot.registry.actionization.implementationSource;
-  if (!/^[0-9a-f]{40}$/.test(binding.exactRef) || binding.repository !== 'a3-suite/a3-ci-github') throw new Error('Invalid first-party Action binding');
+  if (!/^[0-9a-f]{40}$/.test(binding.exactRef) || binding.repository !== 'a3-suite/a3-ci-github') throw new DiagnosticError('implementation-binding-identity-invalid: Invalid first-party Action binding', { diagnostics: { field: 'implementation-binding', expected: 'a3-suite/a3-ci-github-full-sha', observed: 'invalid' } });
   const diagnostics = snapshot.providerTargets.flatMap((relative) => checkProviderReferences(snapshot.read(relative), relative, snapshot.approved, binding));
   const connection = checkActionReferences(root, snapshot, options);
   diagnostics.push(...connection.diagnostics);
@@ -160,19 +160,21 @@ export function checkActionReferences(root, snapshot, options = {}) {
     if (options.candidate) {
       sourceRevision = git('rev-parse', 'HEAD');
       sourceTree = snapshot.before ?? git('rev-parse', 'HEAD^{tree}');
-      if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...new Set([...actionPaths, 'runtime']))) throw new Error('implementation-candidate-execution-assets-dirty');
-      if (snapshot.read('VERSION').trim() !== git('show', `${sourceTree}:VERSION`)) throw new Error('implementation-candidate-version-dirty');
+      if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...new Set([...actionPaths, 'runtime']))) throw new DiagnosticError('implementation-candidate-execution-assets-dirty', { diagnostics: { field: 'execution-assets', expected: 'committed-actions-and-runtime', observed: 'uncommitted-changes' } });
+      if (snapshot.read('VERSION').trim() !== git('show', `${sourceTree}:VERSION`)) throw new DiagnosticError('implementation-candidate-version-dirty', { diagnostics: { field: 'VERSION', expected: 'committed-version', observed: 'uncommitted-change' } });
+      // A published tag cannot become a connection candidate; recreation removes the tag before validation.
+      if (git('tag', '--list', binding.releaseTag)) throw new DiagnosticError('implementation-candidate-release-tag-exists', { diagnostics: { field: 'release-tag', expected: 'unpublished-release-tag', observed: 'existing-tag' } });
     } else {
       const tag = options.releaseTag ?? binding.releaseTag;
-      if (tag !== binding.releaseTag) throw new Error('implementation-binding-release-tag-mismatch');
-      if (git('cat-file', '-t', `refs/tags/${tag}`) !== 'tag') throw new Error('implementation-binding-annotated-tag-required');
+      if (tag !== binding.releaseTag) throw new DiagnosticError('implementation-binding-release-tag-mismatch', { diagnostics: { field: 'release-tag', expected: 'registry-release-tag', observed: 'differs' } });
+      if (git('cat-file', '-t', `refs/tags/${tag}`) !== 'tag') throw new DiagnosticError('implementation-binding-annotated-tag-required', { diagnostics: { field: 'release-tag', expected: 'annotated-tag', observed: 'missing-or-lightweight' } });
       sourceRevision = git('rev-parse', `refs/tags/${tag}^{commit}`);
-      if (options.releaseTag && (snapshot.before || sourceRevision !== git('rev-parse', 'HEAD'))) throw new Error('implementation-publication-source-mismatch');
-      if (options.releaseTag && git('status', '--porcelain', '--untracked-files=all', '--', 'VERSION', registryPath, ...snapshot.targets, ...new Set([...actionPaths, 'runtime']))) throw new Error('implementation-publication-source-dirty');
+      if (options.releaseTag && (snapshot.before || sourceRevision !== git('rev-parse', 'HEAD'))) throw new DiagnosticError('implementation-publication-source-mismatch', { diagnostics: { field: 'source-revision', expected: 'release-tag-commit-at-head', observed: 'differs' } });
+      if (options.releaseTag && git('status', '--porcelain', '--untracked-files=all', '--', 'VERSION', registryPath, ...snapshot.targets, ...new Set([...actionPaths, 'runtime']))) throw new DiagnosticError('implementation-publication-source-dirty', { diagnostics: { field: 'publication-source', expected: 'clean-tag-checkout', observed: 'uncommitted-changes' } });
       sourceTree = sourceRevision;
     }
     implementationBinding = verifyImplementationBinding(root, binding, actionPaths, { sourceRevision, sourceTree });
-  } else if (options.releaseTag || options.candidate) throw new Error('implementation-binding-references-missing');
+  } else if (options.releaseTag || options.candidate) throw new DiagnosticError('implementation-binding-references-missing', { diagnostics: { field: 'action-references', expected: 'first-party-action-references', observed: 'missing' } });
   return { diagnostics, interfaceDiagnostics, references, implementationBinding };
 }
 

@@ -91,7 +91,7 @@ jobs:
       supplemental_release_asset_owner_contract: <supplemental-release-asset-owner-contract>
       supplemental_release_asset_implementation: <supplemental-release-asset-implementation>
       supplemental_release_asset_config_path: <supplemental-release-asset-config-path>
-      release_skills_config_path: __unset__
+      release_skills_config_path: <release-skills-config-path>
 
   summary:
     needs: [validate-request, publish]

@@ -592,6 +592,7 @@ describe("preset-validation-contract", () => {
       const caller = parseYaml(readFileSync(path.join(repositoryRoot, asset.source), 'utf8'), asset.source);
       caller.jobs.publish.with.supplemental_release_asset_implementation = 'owner-adapter';
       caller.jobs.publish.with.supplemental_release_asset_config_path = '__unset__';
+      caller.jobs.publish.with.release_skills_config_path = '__unset__';
       const request = preset.workflowAssets.find(a => a.id === 'release-publication-request');
       writeFileSync(path.join(root, request.destination), readFileSync(path.join(repositoryRoot, request.source), 'utf8'));
       mkdirSync(path.dirname(filename), { recursive: true });

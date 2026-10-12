@@ -67,13 +67,13 @@ describe('contract.ci-selective-distribution.publication', () => {
     const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
     expect(script).toBeDefined();
     const code = script.split('\n').filter((line) => !line.startsWith('import ')).join('\n');
-    for (const [version, releaseTag, tagPresent, contained, mode] of [['0.3.0\n', 'v0.2.11', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.10', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.11', false, null, '--candidate'], ['0.2.11\n', 'v0.2.11', true, 0, '--preparation'], ['0.2.11\n', 'v0.2.11', true, 1, '--candidate']]) {
+    // A same-named tag is published state even when it does not contain the bound implementation.
+    for (const [version, releaseTag, tagPresent, mode] of [['0.3.0\n', 'v0.2.11', true, '--preparation'], ['0.2.11\n', 'v0.2.10', true, '--preparation'], ['0.2.11\n', 'v0.2.11', false, '--candidate'], ['0.2.11\n', 'v0.2.11', true, '--preparation']]) {
       const calls = [];
       const context = {
         process: { cwd: () => root, execPath: process.execPath },
         readFileSync: (filename) => { expect(filename).toBe('VERSION'); return version; },
         repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag, exactRef: actionRef } } } }),
-        spawnSync: (command, args) => { expect(command).toBe('git'); expect(args).toEqual(['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`]); return { status: contained }; },
         execFileSync: (command, ...args) => {
           if (command === 'git') {
             expect(args).toEqual([['tag', '--list', releaseTag], { encoding: 'utf8' }]);
@@ -636,6 +636,7 @@ describe("workflow-contracts", () => {
         supplemental_release_asset_owner_contract: '<supplemental-release-asset-owner-contract>',
         supplemental_release_asset_implementation: '<supplemental-release-asset-implementation>',
         supplemental_release_asset_config_path: '<supplemental-release-asset-config-path>',
+        release_skills_config_path: '<release-skills-config-path>',
       });
       const callerSummary = jobBlock(caller, 'summary');
       assertNeeds(callerSummary, ['validate-request', 'publish']);
@@ -1033,6 +1034,37 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-action-reference-contracts
+    test('candidate gate reports uncommitted execution assets as an actionable reason', (t) => {
+      // Arrange
+      const fixture = referenceFixture(t);
+      // Act
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      // Assert
+      expect(result.status, result.stderr).toBe(2);
+      expect(evidence.classification?.reason).toBe('implementation-candidate-execution-assets-dirty');
+      expect(evidence.comparison).toMatchObject({ field: 'execution-assets', observed: 'uncommitted-changes' });
+    });
+
+    // integration_id: repository-action-reference-contracts
+    test('candidate gate rejects a release tag that is already published', (t) => {
+      // Arrange
+      mkdirSync(path.join(root, 'tmp'), { recursive: true });
+      const fixture = mkdtempSync(path.join(root, 'tmp/published-tag-candidate-'));
+      t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
+      execFileSync('git', ['clone', '--shared', '--quiet', root, fixture], { stdio: 'pipe' });
+      const releaseTag = repositorySnapshot(fixture).registry.actionization.implementationSource.releaseTag;
+      execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD^'], { cwd: fixture, stdio: 'pipe' });
+      // Act
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      // Assert
+      expect(result.status, result.stderr).toBe(2);
+      expect(evidence.classification?.reason).toBe('implementation-candidate-release-tag-exists');
+      expect(evidence.comparison).toMatchObject({ field: 'release-tag', observed: 'existing-tag' });
+    });
+
+    // integration_id: repository-action-reference-contracts
     test('fixed Action metadata rejects input output and installer binding drift', () => {
       // Arrange
       const snapshot = repositorySnapshot(root);
@@ -1049,7 +1081,7 @@ describe("workflow-contracts", () => {
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
       const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: root }).status !== 0;
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
       const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
@@ -1168,7 +1200,7 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: root }).status !== 0;
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
       const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);

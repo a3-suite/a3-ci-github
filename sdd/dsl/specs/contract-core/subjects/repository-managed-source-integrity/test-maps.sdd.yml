@@ -26,6 +26,9 @@ test_maps:
   - verification_id: verification.repository-managed-source-integrity.integrity
     case_id: detailed-failure-integrity
     tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > candidate gate reports uncommitted execution assets as an actionable reason"
+        check_refs: [diagnostic-details]
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > managed-source rejects invalid invocation with retained shell failure context"
         check_refs: [diagnostic-details]

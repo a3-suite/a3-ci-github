@@ -72,5 +72,5 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ### 製品と対応スキルを同じReleaseで提供したい
 
-- 公開対象を固定製品sourceへ宣言し、installerと独立したowner証跡を持つOS共通ZIPを同じReleaseへ含める。生成・転送・公開検証はCI、スキル内容は製品owner、取得後の外部配備はproject-skill-deployへ委譲する。
+- 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。同梱する場合は公開対象を固定製品sourceへ宣言し、installerと独立したowner証跡を持つOS共通ZIPを同じReleaseへ含める。生成・転送・公開検証はCI、スキル内容は製品ownerが担う。利用者はZIPとchecksumをダウンロードし、SHA-256を照合して展開し、各スキルを利用者環境の適切なスキルフォルダへ配置する。
 - 参照: `references/release-project-skills.guide.md`

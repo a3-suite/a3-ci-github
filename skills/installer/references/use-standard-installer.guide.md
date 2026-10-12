@@ -51,7 +51,7 @@ Windows PowerShell 5.1以降に対応する構成では、実行ファイルを`
 
 ## 製品と対応スキルを同梱する場合
 
-公開対象・ZIP生成・転送・owner証跡はci-githubの`references/release-project-skills.guide.md`へ委譲する。READMEは同じ製品ReleaseのZIPと実際に利用できる配備手順を短く案内し、配備したスキルrootだけの削除方法を記載する。製品installerは外部skill rootへ自動配備しない。同梱しない製品にはこの節を追加しない。
+公開対象・ZIP生成・転送・owner証跡はci-githubの`references/release-project-skills.guide.md`へ委譲する。製品と対応スキルはセットで導入する。READMEではスキルのインストールを任意扱いにせず、同じ製品ReleaseのZIPとchecksumをダウンロードし、SHA-256を照合してから展開して利用者環境の適切なスキルフォルダへ配置するよう短く案内し、配備したスキルrootだけの削除方法を記載する。製品installerは外部skill rootへ自動配備しない。同梱しない製品にはこの節を追加しない。
 
 ## 手順
 

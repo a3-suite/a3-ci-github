@@ -52,9 +52,13 @@ describe('repository-contract-subject-execution', () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const tests = globSync(['actions/*/tests/**/*.test.{ts,mjs}', 'runtime/*/tests/**/*.test.{ts,mjs}', 'tests/*.test.mjs'], { cwd: root });
     const definition = loadDefinition();
-    const registered = new Set(definition.subjects.flatMap((subject) => subject.segments
-      .filter((segment) => segment.status !== 'excluded')
-      .flatMap((segment) => segment.tests.map((file) => path.relative(root, path.resolve(root, segment.cwd, file))))));
+    const segments = definition.subjects.flatMap((subject) => subject.segments
+      .filter((segment) => segment.status !== 'excluded'));
+    const registered = new Set(segments.flatMap((segment) => segment.tests
+      .map((file) => path.relative(root, path.resolve(root, segment.cwd, file)))));
+    const e2e = new Set(segments.filter((segment) => segment.level === 'e2e')
+      .flatMap((segment) => segment.tests.map((file) => path.relative(root, path.resolve(root, segment.cwd, file)))));
+    const expected = tests.filter((file) => !e2e.has(file));
     // Act
     const selected = selectUnitIntegrationTests(definition, tests, root);
     // Assert
@@ -65,9 +69,8 @@ describe('repository-contract-subject-execution', () => {
     expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts');
     expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/entrypoint.test.ts');
     expect(selected).not.toContain('runtime/installer/tests/common-regression.test.mjs');
-    expect(selected).toHaveLength(tests.length - 6);
+    expect(selected.toSorted()).toStrictEqual(expected.toSorted());
     const maintenance = tests.filter((file) => !registered.has(file));
-    expect(maintenance).toHaveLength(8);
     expect(maintenance).toContain('tests/release-token-capability-probe.test.mjs');
     expect(maintenance.every((file) => selected.includes(file))).toBe(true);
   });

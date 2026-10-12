@@ -8,8 +8,10 @@ import {
   assertTrackedReferences,
   buildPlan,
   collectActions,
+  runPlan,
   collectScriptBundles,
 } from '../runtime/repository/check-action-dist.mjs';
+import { safeErrorReason } from '../runtime/diagnostics/failure.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -107,8 +109,8 @@ describe("contract.repository-action-distribution.integrity", () => {
           '--project', '/workspace/runtime/diagnostics/tsconfig.json',
           '--typeRoots', '/workspace/actions/first/node_modules/@types'], cwd: '/workspace' },
         { command: 'npm', args: ['run', 'build'], cwd: '/workspace/actions/first' },
-        { command: 'git', args: ['diff', '--exit-code', '--', 'runtime/diagnostics/failure.mjs',
-          'runtime/diagnostics/failure.d.mts', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace' },
+        { command: 'git', args: ['diff', '--exit-code', '--name-only', '--', 'runtime/diagnostics/failure.mjs',
+          'runtime/diagnostics/failure.d.mts', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace', failure: 'dist-identity-mismatch' },
       ]);
     });
 
@@ -130,7 +132,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(plan).toStrictEqual([
         { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/workspace/runtime/rust-release' },
         { command: 'npm', args: ['run', 'build'], cwd: '/workspace/runtime/rust-release' },
-        { command: 'git', args: ['diff', '--exit-code', '--', 'runtime/rust-release/dist'], cwd: '/workspace' },
+        { command: 'git', args: ['diff', '--exit-code', '--name-only', '--', 'runtime/rust-release/dist'], cwd: '/workspace', failure: 'dist-identity-mismatch' },
       ]);
     });
 
@@ -148,6 +150,24 @@ describe("contract.repository-action-distribution.integrity", () => {
       try { assertNoUntrackedDist('/workspace', actions, [], execute); } catch (error) { failure = error; }
       // Assert
       expect(String(failure)).toMatch(/Untracked distribution files/);
+      expect(safeErrorReason(failure)).toBe('dist-untracked');
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-distribution-gates
+    test('reports a dist identity mismatch reason and keeps other step failures unchanged', () => {
+      // Arrange
+      const childFailure = new Error('exit status 1');
+      const execute = () => { throw childFailure; };
+      let mismatch;
+      let build;
+      // Act
+      try { runPlan([{ command: 'git', args: ['diff'], cwd: '/workspace', failure: 'dist-identity-mismatch' }], execute); } catch (error) { mismatch = error; }
+      try { runPlan([{ command: 'npm', args: ['run', 'build'], cwd: '/workspace' }], execute); } catch (error) { build = error; }
+      // Assert
+      expect(safeErrorReason(mismatch)).toBe('dist-identity-mismatch');
+      expect(mismatch.details).toMatchObject({ field: 'dist', observed: 'differs' });
+      expect(build).toBe(childFailure);
     });
 
     // contract_id: contract.repository-action-distribution.integrity
@@ -166,6 +186,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       try { assertTrackedReferences('/workspace', actions, execute); } catch (error) { failure = error; }
       // Assert
       expect(String(failure)).toMatch(/untracked referenced paths.*scripts\/example\/run\.sh/is);
+      expect(safeErrorReason(failure)).toBe('composite-reference-untracked');
     });
   });
 });

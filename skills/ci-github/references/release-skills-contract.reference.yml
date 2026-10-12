@@ -12,6 +12,8 @@ usage:
   consumers: [human, agent, validator]
 selection:
   input: release_skills_config_path
+  decision: 公開用skills/<skill-name>/SKILL.mdの有無を確認し、ある場合は製品ownerが同梱する・同梱しないを選ぶ。開発用.agents/skills/は対象外。
+  audit: 公開スキルの有無、同梱の選択と未同梱理由を既存監査レポートへ記録し、CI設定・公開宣言・READMEとの一致を確認する。選択未確認は未同梱へ読み替えず未確認として報告する。
   disabled: __unset__
   declarationPlacement: skills/release.json
   source: authority.source_shaで固定した別checkout。制御checkout・作業ツリー・別版を生成元にしない。
@@ -41,6 +43,6 @@ evidence:
   rejection: 必須file欠落・改変・版またはSHA不一致・公開名衝突で成功handoffと公開を拒否する。
 adoption:
   source: 製品と同じ固定ReleaseのZIPとchecksum。
-  deployment: 取得・検証・展開後、既存project-skill-deployへ明示したsource rootとtarget rootで委譲する。
+  deployment: 取得・検証・展開後、各スキルrootを利用者環境の適切なスキルフォルダへ配置する。専用の配備CLIは前提にしない。
   noAutomaticDeployment: 製品installerは外部skill rootへ自動配備しない。
-  readme: 同梱する場合だけ取得・配備・削除の短い案内を掲載し、詳細は専用ガイドへ委譲する。スキル本文へ固定versionを埋め込まない。
+  readme: 同梱する対応スキルは製品とセットで導入するものとして取得・配備・削除の短い案内を掲載し、任意扱いにしない。READMEではZIPと同じReleaseのchecksumを取得し、SHA-256を照合してから展開して利用者環境の適切なスキルフォルダへ配置するよう案内し、専用導入ガイドや配備CLIを必須にしない。スキル本文へ固定versionを埋め込まない。
