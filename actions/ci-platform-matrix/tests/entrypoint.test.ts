@@ -10,7 +10,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
-const runBundled = (manifest: string, selection?: string) => {
+const runBundled = (manifest: string, selection?: string, runnerPolicy?: string) => {
   const temporaryParent = path.resolve(root, '../../tmp');
   fs.mkdirSync(temporaryParent, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(temporaryParent, 'ci-platform-matrix-'));
@@ -20,6 +20,8 @@ const runBundled = (manifest: string, selection?: string) => {
   fs.writeFileSync(outputPath, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath } as Record<string, string>;
   env['INPUT_MANIFEST-PATH'] = manifestPath;
+  delete env['INPUT_RUNNER-POLICY'];
+  if (runnerPolicy !== undefined) env['INPUT_RUNNER-POLICY'] = runnerPolicy;
   delete env['INPUT_SELECTION-PATH'];
   if (selection !== undefined) {
     const selectionPath = path.join(tempRoot, 'selection.yml');
@@ -60,6 +62,29 @@ test('entrypoint fails closed for an unsupported runner', () => {
   expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   expect(`${run.result.stdout}\n${run.result.stderr}`).toMatch(/platform-matrix-platform-0-runner-invalid/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-contract-entrypoint
+test('entrypoint accepts consumer versioned runners only with trusted policy', () => {
+  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, 'trusted');
+  try {
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-15","target":"aarch64-apple-darwin"}]}');
+  } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-contract-entrypoint
+test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
+  for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
+    const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
+    try {
+      expect(run.result.status).not.toBe(0);
+      expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
+      expect(run.result.stderr).toMatch(/platform-matrix-(?:platform-0-runner|runner-policy)-invalid/);
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
 });
 
 // contract_id: contract.ci-platform-matrix.outputs

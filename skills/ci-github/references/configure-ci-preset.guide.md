@@ -301,7 +301,7 @@ trusted PR check は標準で base SHA の trusted CI assets を使用する。b
 
 platform 固有の runtime、artifact、installer の検証が必要な project だけが、次の順で optional asset を導入する。
 
-1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`。runner は registry の allowlist 内の versioned label）。
+1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](runner-trust-policy.reference.md#platform-別-quality-check)に従う。
 2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。
 3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。

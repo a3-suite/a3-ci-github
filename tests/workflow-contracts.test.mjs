@@ -1135,7 +1135,7 @@ describe("workflow-contracts", () => {
         ]);
       }
       includesAll(installerMacos, [
-        /^    runs-on: macos-14$/m,
+        /^    runs-on: macos-15$/m,
         /test "\$\(uname -m\)" = arm64/,
         /python3 -m unittest discover -s runtime\/installer\/tests -p 'test_\*\.py' -v/,
       ]);
@@ -1613,8 +1613,9 @@ describe("workflow-contracts", () => {
         const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
         expect(call.length, file).toBe(1);
         expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
-        expect(Object.keys(call[0].with).sort()).toStrictEqual(Object.keys(contract.inputs).sort());
-        expect(call[0].with).toStrictEqual({ 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}' });
+        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', ...(call[0].with['version-policy'] !== undefined ? { 'version-policy': file.includes('ci-quality.yml') ? 'compatible' : 'exact' } : {}) };
+        expect(call[0].with).toStrictEqual(expected);
+        expect(contract.inputs['version-policy'].default).toBe('exact');
         expect(call[0].if).toBe(file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);
         expect(call[0]['continue-on-error']).toBe(undefined);
         expect(job.steps.some((step) => step.uses?.includes('/actions/ci-quality-adapter@'))).toBeTruthy();

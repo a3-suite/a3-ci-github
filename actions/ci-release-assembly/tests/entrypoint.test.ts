@@ -62,7 +62,7 @@ test('assembly bundle packages selected release skills', (t) => {
 // contract_id: contract.ci-release-assembly.outputs
 // integration_id: release-assembly-entrypoint
 test('assembly bundle emits bound outputs only on complete success', (t) => {
-  const f = fixture(t);
+  const f = fixture(t, { id: 'linux', runner: 'ubuntu-22.04', target: 'x86_64-unknown-linux-gnu' });
   const output = f.put('github-output', '');
   const payload = Buffer.from('verified archive bytes');
   const payloadDigest = crypto.createHash('sha256').update(payload).digest('hex');

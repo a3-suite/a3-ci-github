@@ -12,4 +12,5 @@ export class PlatformManifestSemanticError extends Error {
   constructor(code: string, message: string, index?: number);
 }
 
-export function validatePlatformManifestValue(manifest: unknown): Platform[];
+export type RunnerPolicy = 'bootstrap' | 'trusted';
+export function validatePlatformManifestValue(manifest: unknown, runnerPolicy?: RunnerPolicy): Platform[];

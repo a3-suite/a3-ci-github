@@ -156,7 +156,7 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
       const bytes = readBytes(platformPath, 65536);
       if (config.CI_PLATFORM_MANIFEST !== authority.platform_manifest
         || sourceTextSha256(bytes) !== authority.platform_manifest_sha256) fail('platform-mismatch');
-      releasePlatforms = validatePlatformManifestValue(parse(bytes.toString('utf8'), { maxAliasCount: 20, uniqueKeys: true }));
+      releasePlatforms = validatePlatformManifestValue(parse(bytes.toString('utf8'), { maxAliasCount: 20, uniqueKeys: true }), 'trusted');
     }
     const platformDigest = (): string | undefined => {
       if (!platformPath) return undefined;

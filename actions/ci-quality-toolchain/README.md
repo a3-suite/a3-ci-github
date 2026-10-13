@@ -3,9 +3,11 @@
 品質検証で選択した固定toolchainを準備するcomposite Actionです。公開入力の正本は
 [action.yml](action.yml)です。TypeScriptはNode、PythonはPythonとuv、Rustはrustfmt／clippyを含むRustとcargo-auditを準備します。
 
-入力の検証を準備処理より先に実行します。toolchainの版は3成分の固定版（必要ならprerelease suffix）を指定し、Pythonではuv、Rustではcargo-auditの版も必要です。未選択の補助toolchain入力は使用しません。未知のprofile、版の不足・不正、選択した準備処理の失敗でActionを失敗させます。
+入力の検証を準備処理より先に実行します。既定の`version-policy: exact`は3成分の完全版（必要ならprerelease suffix）を要求します。通常の品質CIで`compatible`を選ぶと、Nodeのmajor/minorとPythonのmajor.minorも指定できます。Pythonではuv、Rustではcargo-auditの完全版も必要です。未選択の補助toolchain入力は使用しません。
 
-Nodeのnpm cache設定とRustの`RUSTUP_TOOLCHAIN`設定を維持します。準備後の完全一致バージョン確認と品質command実行は[ci-quality-adapter](../ci-quality-adapter/README.md)が担当します。
+固定setup Actionの出力から実際の版を取得し、指定範囲と照合します。Pythonのuvにはその解決版を渡します。すべての準備が成功してから`resolved-toolchain-version`を出力し、要求値と解決版をlogへ記録します。callerはこの完全版をadapterと関連jobへ渡し、別jobで範囲を再解決しません。完全版指定なら制御jobでの追加準備は不要です。空の解決結果、範囲外の版、未知のprofile、版の不足・不正、準備処理の失敗で停止し、要求値へのfallbackは行いません。
+
+Nodeのnpm cache設定とRustの`RUSTUP_TOOLCHAIN`設定を維持します。準備後の完全一致バージョン確認と品質command実行は[ci-quality-adapter](../ci-quality-adapter/README.md)が担当します。Release品質とauthority/buildは`exact`を維持します。
 checkout、runner、実行条件、権限、credential、品質結果・公開判断はworkflowが所有します。
 
 公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とし、preflightはそのavailability gateに従います。

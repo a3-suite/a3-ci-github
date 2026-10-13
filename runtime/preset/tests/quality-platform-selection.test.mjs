@@ -39,6 +39,7 @@ describe("contract.ci-platform-matrix.outputs", () => {
           [aliasedManifest(19), 'platforms: [{id: platform-0}]', true],
           [aliasedManifest(20), 'platforms: [{id: platform-0}]', false],
           [manifest, 'platforms: [{id: macos-arm64}]', true],
+          [manifest.replace('macos-14', 'macos-15'), 'platforms: [{id: macos-arm64}]', true],
           [manifest, 'platforms: [{id: macos-arm64}, {id: linux-x64}]', true],
           [manifest, 'platforms: []', false],
           [manifest, 'platforms: [{id: linux-x64}, {id: linux-x64}]', false],
@@ -64,6 +65,7 @@ describe("contract.ci-platform-matrix.outputs", () => {
           fs.writeFileSync(outputPath, '');
           const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath,
             'INPUT_MANIFEST-PATH': path.join(fixture, '.ci/platforms.yml'),
+            'INPUT_RUNNER-POLICY': 'trusted',
             'INPUT_SELECTION-PATH': path.join(fixture, '.ci/selection.yml') };
           const report = { missingSettings: [], mismatches: [] };
           // Act

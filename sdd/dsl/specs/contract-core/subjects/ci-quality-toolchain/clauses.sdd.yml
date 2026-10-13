@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-toolchain
 contracts:
   - id: contract.ci-quality-toolchain.preparation
-    summary: Prepare only the selected fixed language toolchain, preserve Node npm cache and Rust environment setup, and leave source identity, permissions and quality commands to the workflow and adapter.
+    summary: Prepare only the selected language toolchain, resolve permitted bounded Node/Python selectors to an exact output, preserve exact Release/Rust inputs, Node npm cache and Rust environment setup, and leave source identity, permissions and quality commands to the workflow and adapter.
     conditions:
       - id: diagnostic-required-preparation
         environment_predicate:
@@ -21,6 +21,13 @@ contracts:
           target_ref: runtime-context.quality-toolchain-preparation-fails
           op: available
     guarantees:
+      - id: resolved-quality-toolchain-produced
+        when: quality-toolchain-preparation-succeeds
+        observation_ref: observation.ci-quality-toolchain.result
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: resolved-toolchain-version}
       - id: selected-quality-toolchain-ready
         when: quality-toolchain-preparation-succeeds
         observation_ref: observation.ci-quality-toolchain.result
@@ -52,7 +59,7 @@ contracts:
         guarantee_refs: [diagnostic-details-preparation]
       - id: quality-toolchain-selection-verified
         goal: Validate inputs before setup, select only the requested language dependencies with fixed Action pins, and retain pinned command arguments and Rust environment setup.
-        guarantee_refs: [selected-quality-toolchain-ready]
+        guarantee_refs: [selected-quality-toolchain-ready, resolved-quality-toolchain-produced]
       - id: quality-toolchain-failure-verified
-        goal: Reject unsupported profiles, missing or nonfixed selected versions before setup, and propagate setup failures.
+        goal: Reject unsupported profiles/policies, missing or malformed versions before setup, missing or mismatched resolved versions, and propagate setup failures without successful resolved output.
         guarantee_refs: [invalid-or-failed-quality-toolchain-stops]

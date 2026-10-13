@@ -7,7 +7,15 @@ inputs:
       Path to a regular YAML file no larger than 64 KiB whose only root key is a non-empty
       platforms list. Every entry must contain only id, runner, and target. id must match
       [a-z0-9][a-z0-9-]*, target must match [A-Za-z0-9][A-Za-z0-9._+-]*, runner must be
-      ubuntu-24.04, macos-14, or windows-2022, and id and target values must each be unique.
+      allowed by runner-policy, and id and target values must each be unique.
+  runner-policy:
+    required: false
+    default: bootstrap
+    description: >-
+      bootstrap permits only ubuntu-24.04, macos-14, or windows-2022. trusted permits
+      versioned Ubuntu, macOS, or Windows Hosted label syntax. Only a fixed caller that
+      verified base/control configuration may select trusted; never derive it from PR head,
+      the manifest, or event/manual input. Syntax does not prove Hosted origin or availability.
   selection-path:
     required: false
     description: >-

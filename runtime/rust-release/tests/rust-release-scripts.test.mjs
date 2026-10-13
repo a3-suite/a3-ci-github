@@ -53,7 +53,7 @@ describe("contract.ci-rust-release-build.processing", () => {
     test.each(['src/verify-platform-manifest.mjs', 'dist/index.mjs'])('platform verifier %s rejects an unbound selection', (entrypoint) => withFixture((fixture) => {
       // Arrange
       const manifest = path.join(fixture, 'platforms.yml');
-      writeFileSync(manifest, 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n');
+      writeFileSync(manifest, 'platforms: [{id: linux-x64, runner: ubuntu-22.04, target: x86_64-unknown-linux-gnu}]\n');
       const executable = path.join(scriptRoot, entrypoint);
       const invocation = [executable];
       // Act

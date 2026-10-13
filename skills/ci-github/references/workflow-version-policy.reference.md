@@ -1,6 +1,6 @@
 # CI ワークフローのバージョン指定ポリシー
 
-> この文書は GitHub Actions provider profile である。provider-neutral な version 固定条件は `ci` の CIプリセット契約で定義し、GitHub 固有の `uses`、runner、workflow path を本スキルへ写像する。
+> この文書は GitHub Actions provider profile である。一般的なCIの責務は `ci` スキル、GitHub固有の版指定と解決条件は本ポリシー、製品の版運用は git-branch-strategy スキルが所有する。
 
 ## 理解できること
 - workflow が使用する Action、runner/host、runtime、toolchain、container、外部ツールの版指定
@@ -28,6 +28,8 @@
 - 版を持つ入力は省略せず、実行時に `latest`、`stable`、未指定の既定値、mutable な branch/tag alias へ暗黙 fallback しない。
 - 動的な matrix を使う場合も、各候補は repository 内でレビュー可能な versioned value とし、event payload や手動入力を任意の version selector として実行しない。
 - 同じ実行で使う Action、runner、runtime、依存、外部資材の版を別の job や script が再選択しない。解決済みの値を job 境界で渡す。
+- 固定粒度は、資材同一性、再現性、API・ABI互換性など必要な保証から決める。完全一致、major・minor単位、互換範囲、consumer指定を比較し、必要な保証を満たす最小の制約を選ぶ。検証済みの版一覧をそのまま受理範囲にしない。
+- 選択する範囲と実際に解決した版を区別し、選択のowner、粒度の理由、検証方法と見直し条件をworkflowの正本または既存の設計に記録する。利用するActionの公開入力契約がexact指定を要求する場合は、その入力契約に従う。
 
 ### 対象別の指定
 
@@ -37,7 +39,7 @@
 | repository-local Action / reusable workflow | workflow と同じ commit に含まれる path reference | 外部 repository の mutable ref を追加しない。path reference の資材を別 commit から取得する場合は、その取得元 commit を別途固定して検証する。 |
 | GitHub-hosted runner の `runs-on` | OS と世代を含む versioned label（例: `ubuntu-24.04`） | `ubuntu-latest` などの moving label、OS 名だけの未指定 label、任意の event/input 由来 label を使わない。matrix の全候補にも適用する。 |
 | self-hosted runner | owner が管理する immutable image/toolchain の識別子と、versioned label・更新 owner の証跡 | label だけを version の証拠にしない。untrusted PR へ使わず、採用可否は runner trust policy で判定する。 |
-| 言語 runtime / toolchain | 選択機能が許す範囲で major.minor.patch の exact version | `latest`、`*`、`x`、未指定を使わない。patch 固定ができない tool は、許容範囲、更新 owner、検証方法を workflow の正本で明示する。 |
+| 言語 runtime / toolchain | 必要な保証と利用するActionの入力契約に応じた、consumerが明示する固定粒度・許容範囲 | `latest`、`*`、`x`、未指定を使わない。範囲を許容する経路は信頼済み制御で一度解決したexact版を関連jobへ渡し、実行版を照合する。解決版を伝搬できない経路はexact指定を維持する。 |
 | package manager / dependency | package manager の version を明示し、lockfile による解決を使う | lockfile を無視する install、暗黙の global tool、実行ごとに変わる解決範囲を使わない。 |
 | container / service image（`docker://` の container Action を含む） | immutable digest（`@sha256:<64桁hex>`） | tag や `latest` だけで指定しない。digest を取得できない場合は実行を許可しない。 |
 | 外部バイナリ・installer・OS package | exact version と checksum または署名を検証できる取得元 | version のない download、取得後に検証しない実行、`curl ... | sh` のような未固定経路を使わない。 |
@@ -58,6 +60,7 @@
 - registry の availability gate を満たす `available` の Action だけを workflow へ接続する。Hosted 実行は別の運用証拠として扱う。
 
 ### runner/host の扱い
+- consumerが信頼済み設定で選ぶOS世代をproviderの検証済み世代へ限定しない。platform manifestの信頼経路と初回導入の制約はrunner trust policyに従い、labelの形式だけでHosted originを証明しない。
 - versioned GitHub-hosted label は OS 世代を固定するための契約であり、image 内の全 package が immutable になることを意味しない。toolchain、package manager、container は別途固定する。
 - runner image の変更、廃止、提供状況を確認できない場合は、実行済み・適合済みと判断しない。
 - trust boundary と version の判断を混ぜない。安全な runner でも version が未指定なら不適合であり、version が固定されても untrusted input を安全に実行できる証拠にはならない。

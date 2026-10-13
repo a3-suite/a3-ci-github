@@ -13,6 +13,9 @@ observations:
         - selector: outcome
           kind: observation_field
           meaning: Success only after all selected preparation steps succeed; failure on invalid input or setup failure.
+        - selector: resolved-toolchain-version
+          kind: observation_field
+          meaning: Exact version matching the requested selector, emitted only after all selected setup steps succeed and passed by the caller to related jobs and adapters.
   - id: observation.ci-quality-toolchain.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
     boundary: {ref: boundary.diagnostic-result}

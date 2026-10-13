@@ -6,7 +6,11 @@ inputs:
     description: Selected quality language profile (typescript, python, or rust).
   toolchain-version:
     required: true
-    description: Exact three-component Node, Python, or Rust version, optionally including a prerelease suffix.
+    description: Explicit Node, Python, or Rust version. exact requires three components; compatible additionally permits Node major/minor and Python major.minor.
+  version-policy:
+    required: false
+    default: exact
+    description: exact preserves Release/legacy inputs. compatible permits bounded Node/Python selectors for ordinary quality CI; resolve once and pass the resolved exact version to every related job and adapter.
   uv-version:
     required: false
     default: ''
@@ -15,6 +19,10 @@ inputs:
     required: false
     default: ''
     description: Exact cargo-audit version; required for rust and ignored otherwise.
+outputs:
+  resolved-toolchain-version:
+    description: Exact selected toolchain version, produced only after all selected setup steps succeed. A failed or mismatched resolution has no successful output.
+    value: ${{ steps.publish-version.outputs.version }}
 runs:
   using: composite
   steps:
@@ -24,13 +32,22 @@ runs:
       env:
         CI_LANGUAGE_PROFILE: ${{ inputs.language-profile }}
         CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+        CI_VERSION_POLICY: ${{ inputs.version-policy }}
         CI_UV_VERSION: ${{ inputs.uv-version }}
         CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
       run: |
         set -euo pipefail
         exact_version() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; }
         case "$CI_LANGUAGE_PROFILE" in typescript|python|rust) ;; *) echo 'quality-toolchain-profile-invalid' >&2; exit 1 ;; esac
-        exact_version "$CI_TOOLCHAIN_VERSION" || { echo 'quality-toolchain-version-invalid' >&2; exit 1; }
+        case "${CI_VERSION_POLICY:-exact}" in exact|compatible) ;; *) echo 'quality-toolchain-version-policy-invalid' >&2; exit 1 ;; esac
+        if ! exact_version "$CI_TOOLCHAIN_VERSION"; then
+          [[ "${CI_VERSION_POLICY:-exact}" == compatible ]] || { echo 'quality-toolchain-version-invalid' >&2; exit 1; }
+          case "$CI_LANGUAGE_PROFILE" in
+            typescript) [[ "$CI_TOOLCHAIN_VERSION" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo 'quality-toolchain-version-invalid' >&2; exit 1; } ;;
+            python) [[ "$CI_TOOLCHAIN_VERSION" =~ ^[0-9]+\.[0-9]+$ ]] || { echo 'quality-toolchain-version-invalid' >&2; exit 1; } ;;
+            rust) echo 'quality-toolchain-version-invalid' >&2; exit 1 ;;
+          esac
+        fi
         if [[ "$CI_LANGUAGE_PROFILE" == python ]]; then exact_version "$CI_UV_VERSION" || { echo 'quality-toolchain-uv-version-invalid' >&2; exit 1; }; fi
         if [[ "$CI_LANGUAGE_PROFILE" == rust ]]; then exact_version "$CI_CARGO_AUDIT_VERSION" || { echo 'quality-toolchain-cargo-audit-version-invalid' >&2; exit 1; }; fi
     - name: Set up TypeScript toolchain
@@ -46,13 +63,37 @@ runs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
       with:
         python-version: ${{ inputs.toolchain-version }}
+    - name: Validate resolved toolchain version
+      id: resolve-version
+      shell: bash
+      env:
+        CI_LANGUAGE_PROFILE: ${{ inputs.language-profile }}
+        CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
+        CI_NODE_VERSION: ${{ steps.typescript.outputs.node-version }}
+        CI_PYTHON_VERSION: ${{ steps.python.outputs.python-version }}
+      run: |
+        set -euo pipefail
+        case "$CI_LANGUAGE_PROFILE" in
+          typescript) resolved="${CI_NODE_VERSION#v}" ;;
+          python) resolved="$CI_PYTHON_VERSION" ;;
+          rust) resolved="$CI_TOOLCHAIN_VERSION" ;;
+          *) echo 'quality-toolchain-profile-invalid' >&2; exit 1 ;;
+        esac
+        [[ "$resolved" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]] || { echo 'quality-toolchain-resolved-version-invalid' >&2; exit 1; }
+        if [[ "$CI_TOOLCHAIN_VERSION" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+          [[ "$resolved" == "$CI_TOOLCHAIN_VERSION."* ]] || { echo 'quality-toolchain-resolved-version-mismatch' >&2; exit 1; }
+        else
+          [[ "$resolved" == "$CI_TOOLCHAIN_VERSION" ]] || { echo 'quality-toolchain-resolved-version-mismatch' >&2; exit 1; }
+        fi
+        echo "version=$resolved" >> "$GITHUB_OUTPUT"
+        echo "quality-toolchain-version: requested=$CI_TOOLCHAIN_VERSION resolved=$resolved"
     - name: Set up uv
       id: uv
       if: inputs.language-profile == 'python'
       uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
       with:
         version: ${{ inputs.uv-version }}
-        python-version: ${{ inputs.toolchain-version }}
+        python-version: ${{ steps.resolve-version.outputs.version }}
     - name: Set up Rust toolchain
       id: rust
       if: inputs.language-profile == 'rust'
@@ -70,6 +111,12 @@ runs:
       env:
         CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
       run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
+    - name: Publish resolved toolchain version
+      id: publish-version
+      shell: bash
+      env:
+        CI_RESOLVED_VERSION: ${{ steps.resolve-version.outputs.version }}
+      run: echo "version=$CI_RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
     - name: Retain toolchain failure context
       if: failure()
       shell: bash
@@ -77,9 +124,11 @@ runs:
         VALIDATE_RESULT: ${{ steps.validate-inputs.outcome }}
         TYPESCRIPT_RESULT: ${{ steps.typescript.outcome }}
         PYTHON_RESULT: ${{ steps.python.outcome }}
+        RESOLVE_RESULT: ${{ steps.resolve-version.outcome }}
         UV_RESULT: ${{ steps.uv.outcome }}
         RUST_RESULT: ${{ steps.rust.outcome }}
         CARGO_AUDIT_RESULT: ${{ steps.cargo-audit.outcome }}
+        PUBLISH_RESULT: ${{ steps.publish-version.outcome }}
       run: |
         ci_failure_subject=ci-quality-toolchain
         ci_failure_operation=prepare
@@ -87,7 +136,7 @@ runs:
         ci_failure_stage=toolchain-preparation
         ci_failure_field=selected-toolchain
         ci_failure_write=runner-toolchain-may-be-partial
-        for result in "input-validation:$VALIDATE_RESULT" "typescript-setup:$TYPESCRIPT_RESULT" "python-setup:$PYTHON_RESULT" "uv-setup:$UV_RESULT" "rust-setup:$RUST_RESULT" "cargo-audit-setup:$CARGO_AUDIT_RESULT"; do
+        for result in "input-validation:$VALIDATE_RESULT" "typescript-setup:$TYPESCRIPT_RESULT" "python-setup:$PYTHON_RESULT" "version-resolution:$RESOLVE_RESULT" "uv-setup:$UV_RESULT" "rust-setup:$RUST_RESULT" "cargo-audit-setup:$CARGO_AUDIT_RESULT" "resolved-version-output:$PUBLISH_RESULT"; do
           if [[ "${result#*:}" == failure ]]; then ci_failure_stage=${result%%:*}; break; fi
         done
         ci_failure_log 1 unavailable || true

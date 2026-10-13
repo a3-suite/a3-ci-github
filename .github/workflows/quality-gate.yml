@@ -579,7 +579,7 @@ jobs:
     name: Installer contract / macOS ARM64
     outputs:
       source-sha: ${{ steps.installer-handoff.outputs.source-sha }}
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:

@@ -6,14 +6,29 @@ test_maps:
     case_id: selected-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
+        check_refs: [check-resolved-quality-toolchain]
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
         symbol: "contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution"
         check_refs: [check-selected-quality-toolchain]
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
         symbol: "contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures"
         check_refs: [check-selected-quality-toolchain]
   - verification_id: verification.ci-quality-toolchain.preparation
+    case_id: compatible-quality-toolchain
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: "contract.ci-quality-toolchain.preparation > compatible policy accepts bounded Node and Python selectors while exact policy stays strict"
+        check_refs: [check-compatible-quality-toolchain]
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
+        check_refs: [check-compatible-resolved-version]
+  - verification_id: verification.ci-quality-toolchain.preparation
     case_id: invalid-quality-toolchain
     tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
+        check_refs: [check-invalid-quality-toolchain]
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
         symbol: "contract.ci-quality-toolchain.preparation > quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup"
         check_refs: [check-invalid-quality-toolchain]

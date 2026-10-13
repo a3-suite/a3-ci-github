@@ -13,8 +13,18 @@ verifications:
         intent_id: quality-toolchain-selection-verified
         input: {language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0}
         checks:
+          - id: check-resolved-quality-toolchain
+            guarantee_ref: resolved-quality-toolchain-produced
           - id: check-selected-quality-toolchain
             guarantee_ref: selected-quality-toolchain-ready
+      - id: compatible-quality-toolchain
+        intent_id: quality-toolchain-selection-verified
+        input: {language-profile: typescript, toolchain-version: '24', version-policy: compatible}
+        checks:
+          - id: check-compatible-quality-toolchain
+            guarantee_ref: selected-quality-toolchain-ready
+          - id: check-compatible-resolved-version
+            guarantee_ref: resolved-quality-toolchain-produced
       - id: invalid-quality-toolchain
         intent_id: quality-toolchain-failure-verified
         input: {language-profile: unsupported, toolchain-version: latest}
