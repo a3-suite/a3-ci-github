@@ -273,6 +273,14 @@ const validateSupplementalOwnerContract = (
       message: 'supplemental implementation, enabled selection, owner contract and declaration path must agree',
       settingLocation: callerPath,
     });
+  const skillsPath = publishWith.release_skills_config_path ?? '__unset__';
+  if (skillsPath !== '__unset__' && (typeof skillsPath !== 'string' || !skillsPath || skillsPath.length > 512
+    || !skillsPath.split('/').every(part => /^[A-Za-z0-9_.+-]+$/.test(part) && part !== '.' && part !== '..'
+      && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) && !part.endsWith('.')))) add(report.mismatches, {
+      path: `${callerPath}:jobs.publish.with.release_skills_config_path`,
+      message: 'release skills require one static safe declaration path or __unset__',
+      settingLocation: callerPath,
+    });
   const supplementalAssetOwnerContract = publishWith.supplemental_release_asset_owner_contract;
   const ownerContractPath = `${callerPath}:jobs.publish.with.supplemental_release_asset_owner_contract`;
   if (supplementalAssetEnabled === true) {
@@ -413,7 +421,7 @@ const resolveAuthoritySnapshotValues = (
         resolved = publicationEnv[binding[2]];
         path = `${publicationPath}:env.${binding[2]}`;
       } else if (binding?.[1] === 'inputs') {
-        resolved = publishWith[binding[2]] ?? ({ supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__' } as Record<string, string>)[binding[2]];
+        resolved = publishWith[binding[2]] ?? ({ supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__', release_skills_config_path: '__unset__' } as Record<string, string>)[binding[2]];
         path = `${callerPath}:jobs.publish.with.${binding[2]}`;
         settingLocation = callerPath;
       }
@@ -504,6 +512,12 @@ const validatePublicationControlSurface = (
     report,
   );
 
+  if ((publishWith.release_skills_config_path ?? '__unset__') !== '__unset__'
+    && map(map(snapshotSources).workflow).CI_RELEASE_SKILLS_CONFIG_PATH !== '${{ inputs.release_skills_config_path }}') add(report.mismatches, {
+      path: `${publicationPath}:jobs.authority.steps.config.with.sources-json.workflow.CI_RELEASE_SKILLS_CONFIG_PATH`,
+      message: 'selected release skills must be bound into the authority snapshot from the trusted caller',
+      settingLocation: publicationPath,
+    });
   for (const [key, value] of Object.entries(expectedSupplementalAssetSnapshot)) {
     if (workflowSnapshot[key] !== value) add(report.mismatches, {
       path: `${publicationPath}:jobs.authority.steps.config.with.sources-json.workflow.${key}`,

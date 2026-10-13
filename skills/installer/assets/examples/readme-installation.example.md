@@ -6,6 +6,8 @@
 
 前提の記載は`references/use-standard-installer.guide.md`の「READMEに残す内容」に従う。追加準備が不要なら前提の段落自体を削除し、通常使えるツールの説明を補わない。これらの転用説明は製品READMEへ掲載しない。
 
+Agent Skill節は、製品と同じReleaseに対応ZIPを提供する場合だけ使う。ZIPリンクを実際の製品Releaseへ置換し、外部skill rootや他製品のスキルを削除する例は書かない。
+
 ---
 
 ## インストール
@@ -17,7 +19,7 @@
 ### Linux・macOS
 
 ```sh
-curl -fsSL --proto '=https' --proto-redir '=https' '<固定Releaseの共有wrapper HTTPS URL>' | sh
+curl -fsSL --proto '=https' --proto-redir '=https' 'https://github.com/<owner>/<repository>/releases/download/<release-tag>/install.sh' | sh
 ```
 
 ### Windows
@@ -25,7 +27,7 @@ curl -fsSL --proto '=https' --proto-redir '=https' '<固定Releaseの共有wrapp
 Windows PowerShell 5.1以降で実行します。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -c "irm '<固定Releaseの対象別PowerShell installer HTTPS URL>' | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -c "irm 'https://github.com/<owner>/<repository>/releases/download/<release-tag>/install.ps1' | iex"
 ```
 
 ### 起動確認
@@ -39,6 +41,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -c "irm '<固定Releaseの対象�
 ```
 
 期待する結果：<出力または動作>。
+
+### Agent Skillのインストール
+
+本製品は対応スキルとセットで使用します。同じ版の[対応スキルZIP](https://github.com/<owner>/<repository>/releases/download/<release-tag>/<repository>-skills.zip)と同じReleaseの`.sha256`をダウンロードし、SHA-256を照合してから展開して、利用者環境の適切なスキルフォルダに配置してください。削除する場合は、配備した`<skill-root>/<skill-name>/`だけを削除します。
 
 ## アンインストール
 

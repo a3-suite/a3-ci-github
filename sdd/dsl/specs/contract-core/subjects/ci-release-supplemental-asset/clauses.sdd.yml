@@ -92,6 +92,9 @@ contracts:
       - id: standard-installer-evidence-transfer
         goal: Final assemble verifies the exact transported candidate inventory and SHA-256 bytes including hidden source evidence, rejects missing, modified or undeclared files without a successful supplemental handoff, and excludes verification-only source snapshots from publication assets.
         guarantee_refs: [standard-installer-evidence-preserved, standard-installer-publication-assets-produced, phase-rejected]
+      - id: standard-installer-public-entry-names
+        goal: Standard-installer mode validates declaration entry names against installer.standard-assembly-contract.publicEntryNames before creating output. Both phases reject nonstandard Windows or Unix shared entry names with a safe expected-name diagnostic. Target-specific Unix names and owner-adapter mode are unchanged. Publication assets and evidence bind to the validated names.
+        guarantee_refs: [phase-rejected, phase-diagnostic, standard-installer-publication-assets-produced]
       - id: safe-diagnostics
         goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
         guarantee_refs: [phase-diagnostic]

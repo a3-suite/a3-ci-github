@@ -13,7 +13,7 @@
     },
     "windows-x86_64": {
       "manifest": "installer/manifests/windows-x86_64.json",
-      "assetName": "install-windows-x86_64.ps1"
+      "assetName": "install.ps1"
     }
   },
   "sharedWrapper": {

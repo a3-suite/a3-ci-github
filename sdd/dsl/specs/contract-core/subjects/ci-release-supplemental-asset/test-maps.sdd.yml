@@ -3,6 +3,18 @@ name: contract-test-maps
 subject_ref: subject.ci.release-supplemental-asset
 test_maps:
   - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-entry-name-rejection
+    tests:
+      - path: runtime/installer/tests/common-regression.test.mjs
+        symbol: "contract.ci-release-supplemental-asset.outputs > standard entry names > rejects nonstandard public names before generating output"
+        check_refs: [refusal, diagnostic]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics"
+        check_refs: [refusal, diagnostic]
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics"
+        check_refs: [refusal, diagnostic]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: platform-phase
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts

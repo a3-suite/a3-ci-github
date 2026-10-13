@@ -102,6 +102,59 @@ globalThis.fetch = async (url, init) => {
 
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-rejection
+test('publisher entrypoint preserves provider rejection metadata before writes', async (t) => {
+  // Arrange
+  const f = fixture(t);
+  const assembly = f.assemble();
+  const before = await observeBefore({ authorityPath: f.options.authorityPath, repository: f.identity.repository, handoffRoot: f.options.outputRoot }, remoteClient(f, assembly, { ids: [] }).client);
+  const beforePath = f.put('before.json', before);
+  f.put('release-notes.json', { schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body: 'approved notes', body_sha256: f.identity.body_sha256 });
+  f.put('release-notes-approval.json', { schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body_sha256: f.identity.body_sha256, approval_id: 'approved-1' });
+  f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', releaseVersion: f.identity.version, targetIdentity: f.identity.target_identity, approvalId: 'approved-1', approvalExpiresAt: '2099-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 });
+  const cases = [
+    { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: false } }, reason: 'push-permission-denied' },
+    { metadata: { full_name: 'another/project', default_branch: 'main', permissions: { push: true } }, reason: 'repository-identity-mismatch' },
+    { metadata: { full_name: 'owner/project', permissions: { push: true } }, reason: 'default-branch-invalid' },
+    { metadata: null, reason: 'response-shape-invalid' },
+    { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: 'invalid' } }, reason: 'push-permission-invalid' },
+    { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: true } }, reason: 'source-head-invalid' },
+  ];
+  for (const { metadata, reason } of cases) {
+    const calls = f.put(`calls-${reason}`, '');
+    const output = f.put(`output-${reason}`, '');
+    const writeRoot = path.join(f.root, `write-${reason}`);
+    const mock = f.put(`mock-${reason}.mjs`, `
+      import fs from 'node:fs';
+      globalThis.fetch = async (url, init) => {
+        fs.appendFileSync(process.env.MOCK_CALLS, init.method + '\\n');
+        if (init.method !== 'GET') throw new Error('unexpected write synthetic-secret');
+        return Response.json(new URL(url).pathname === '/repos/owner/project' ? ${JSON.stringify(metadata)} : { sha: 'invalid' },
+          { status: 200, headers: { 'x-github-request-id': 'safe:123' } });
+      };`);
+    // Act
+    const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { cwd: f.root, encoding: 'utf8', env: {
+      ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'),
+      CI_RELEASE_CONTENTS_PERMISSION: 'read', GITHUB_OUTPUT: output, MOCK_CALLS: calls,
+      'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot,
+      'INPUT_PRE-OBSERVATION-PATH': beforePath, 'INPUT_WRITE-OUTPUT-DIRECTORY': writeRoot,
+    } });
+    // Assert
+    expect(result.status).toBe(1);
+    expect(fs.readFileSync(output, 'utf8')).toBe('');
+    expect(fs.existsSync(writeRoot)).toBe(false);
+    expect(fs.readFileSync(calls, 'utf8').trim().split('\n').every(method => method === 'GET')).toBe(true);
+    expect(result.stderr).not.toContain('synthetic-secret');
+    expect(result.stderr).toContain('provider-publication-suitability-unknown-or-unsupported');
+    const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
+    expect(diagnostic.classification.stage).toBe('pre-write-validation');
+    expect(diagnostic.comparison).toMatchObject({ method: 'GET', 'http-status': 200, 'request-id': 'safe:123', 'sanitized-reason': reason });
+    expect(diagnostic.comparison['sanitized-endpoint']).toBe(reason === 'source-head-invalid' ? 'unavailable' : '/repos/owner/project');
+    expect(diagnostic['execution-state'].write).toBe('not-started');
+  }
+});
+
+// contract_id: contract.ci-release-publisher.outputs
+// integration_id: release-publisher-bundled-rejection
 test('publisher entrypoint rejects missing credential and path injection without outputs', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');

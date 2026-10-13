@@ -6,7 +6,7 @@ summary: 製品宣言だけを利用側で保持し、固定providerが実候補
 placementRole: public_reference
 authority:
   role: authoritative-definition
-  owns: [standard declaration fields, verification profile semantics, provider and product ownership boundary]
+  owns: [standard declaration fields, public entry names, verification profile semantics, provider and product ownership boundary]
 usage:
   whenToRead: [標準installerの製品宣言と検証profileを選ぶとき]
   consumers: [human, agent, validator]
@@ -18,6 +18,17 @@ fields:
   platforms: installer native idをkey、manifestとassetNameだけを持つobjectをvalueとする。shared useCaseは両Unix対象が必須で、Windows対象別installerを併用できる
   sharedWrapper: shared useCaseだけで必須。assetNameと両Unix対象だけの固定HTTPS deliveryUrlsを持つ。Windowsはこの入口へ含めない
 unknownFields: reject
+publicEntryNames:
+  windows:
+    platform: windows-x86_64
+    assetName: install.ps1
+    appliesTo: [github-release-native, github-release-native-shared]
+  unixShared:
+    assetName: install.sh
+    appliesTo: [github-release-native-shared]
+  enforcement: 標準組立の入力検証で固定名との不一致を生成前に拒否する。既存宣言の名前を標準名の根拠にせず、旧名のaliasを生成しない
+  targetSpecificUnix: 既存の対象別公開名と選択可否を維持する
+  identity: 公開入口名とnative id・Release id・build targetを分離し、CPUの束縛はmanifestとRelease platformで保持する
 platforms:
   native: [linux-x86_64, macos-arm64, windows-x86_64]
   shared: [linux-x86_64, macos-arm64]

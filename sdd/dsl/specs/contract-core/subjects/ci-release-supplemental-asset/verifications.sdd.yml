@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-supplemental-asset.outputs
     contract_id: contract.ci-release-supplemental-asset.outputs
     cases:
+      - id: standard-entry-name-rejection
+        intent_id: standard-installer-public-entry-names
+        input: {implementation: standard-installer, declaration: nonstandard-windows-or-unix-shared-entry-name}
+        checks: [{id: refusal, guarantee_ref: phase-rejected}, {id: diagnostic, guarantee_ref: phase-diagnostic}]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
         input: {scenario: rejected-failed-or-unresolved-public-invocation}

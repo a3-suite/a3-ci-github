@@ -1,6 +1,6 @@
 ---
 name: ci-github
-description: GitHub Actions向けCIの設計、セットアップ・更新、canonical workflowの選択・配置、固定SHA Actionの接続、preflight、品質検証、Release／package公開、構成監査・証跡監査・失敗時の診断可能性確認、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、復旧を行うときに使う。
+description: GitHub Actions向けCIの設計、セットアップ・更新、canonical workflowの選択・配置、固定SHA Actionの接続、preflight、品質検証、Release／package公開、製品と対応スキルの同時Release、構成監査・証跡監査・失敗時の診断可能性確認、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、復旧を行うときに使う。
 ---
 
 # ci-github / SKILL
@@ -69,3 +69,8 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 - authority、固定source、handoff、非上書き、公開後readbackを確認し、状態不明や部分公開では自動上書きしない。
 - 参照: `references/implement-release-asset-publication-workflow.guide.md`
 - 参照: `references/implement-package-publish-workflow.guide.md`
+
+### 製品と対応スキルを同じReleaseで提供したい
+
+- 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。同梱する場合は公開対象を固定製品sourceへ宣言し、installerと独立したowner証跡を持つOS共通ZIPを同じReleaseへ含める。生成・転送・公開検証はCI、スキル内容は製品ownerが担う。利用者はZIPとchecksumをダウンロードし、SHA-256を照合して展開し、各スキルを利用者環境の適切なスキルフォルダへ配置する。
+- 参照: `references/release-project-skills.guide.md`

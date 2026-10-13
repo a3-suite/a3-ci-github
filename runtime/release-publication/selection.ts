@@ -1,4 +1,19 @@
 import { DiagnosticError } from '../diagnostics/failure.mjs';
+
+export const releaseSkillsPath = (input: unknown): string => {
+  if (typeof input !== 'string' || input.length === 0 || input.length > 512
+    || !input.split('/').every(part => /^[A-Za-z0-9_.+-]+$/.test(part) && part !== '.' && part !== '..'
+      && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part) && !part.endsWith('.'))) {
+    throw new DiagnosticError('skills-path-invalid');
+  }
+  return input;
+};
+
+export const releaseSkillsConfigPath = (values: Record<string, unknown>): string | undefined => {
+  const value = values.CI_RELEASE_SKILLS_CONFIG_PATH;
+  return value === undefined || value === '__unset__' ? undefined : releaseSkillsPath(value);
+};
+
 export type SupplementalSelectionType = { implementation: 'owner-adapter' | 'standard-installer'; configPath?: string };
 
 /** Resolve only authority snapshot values; never infer an implementation from files. */

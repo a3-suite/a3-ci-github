@@ -53,6 +53,8 @@ Hosted E2E は、外部 repository への書き込みや公開を暗黙に行い
 
 Quality 以外は専用 fixture repository または承認済み test target を使用します。Production Release、production registry、公開 alias を通常の PR テストから更新しません。
 
+Hosted検証では、本番のAPI取得条件（ページサイズを含む）、token種別、workflow権限に合わせます。異常系のために条件を変える場合は、その差分と検証範囲を記録します。実行前に、変更が影響するローカル検査を済ませ、配布物と固定参照の確認は [Action構築方針の検証手順](action-construction.md#検証と公開前状態) に従います。
+
 ## 実行
 
 固定 runtime の依存を復元した後、ローカル E2E を実行します。
@@ -66,8 +68,9 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
 契約対象別定義を検証します。
 
 ```sh
+npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
 node tests/coverage-tools/contract-subject-coverage.mjs --check
-npm test -- tests/contract-subject-execution.test.mjs
+npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
 ```
 
 SDD 正本は CI runtime へ `a3-*` を持ち込まず、ローカル保守・リリース前受入として workspace ルートから検証します。手順と生成状態の扱いは [DEVELOPMENT.md](../../DEVELOPMENT.md) を参照してください。
@@ -91,5 +94,7 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 リポジトリ保守テストのrunnerはルートのVitest設定です。契約対象別実行定義のテスト参照とレベル境界は維持します。カバレッジ除外は `vitest.config.mjs` と契約対象別実行定義で管理します。カバレッジ取得は保守専用の標準Istanbul計測をVitestへ接続し、子プロセス・workerも同じカウンタで集計します。標準V8 providerのautoAttachSubprocessは未実行関数の誤計数を再現したため採用しません。
 
 `npm test` はE2Eを含む通常のテスト集合を実行します。`npm run test:coverage` は同じ集合から契約対象別実行定義のE2Eを分離し、unit/integrationと契約対象外のリポジトリ保守テストをソース計測へ含めます。同じファイルをE2Eと計測対象レベルへ重複登録した場合は、ファイル単位で分離できないため計測を停止します。
+
+テストファイルを追加・削除した場合は、`tests/contract-subject-execution.test.mjs` で、保守テストの包含と実行定義に基づくE2Eの除外をローカルで確認します。件数を固定せず、収集集合からE2Eを除いた集合と計測対象集合の一致を検証します。
 
 上記のIstanbul計測はJavaScript／TypeScriptソースだけを測ります。installer の Python ソースは `npm run test:coverage:installer` で子プロセスを含めて別計測します。Python の statement／branch と JS／TS の C0／C1 は合算しません。対象・実行前提・証跡は [installer 保守](installer-maintenance.md) を参照してください。

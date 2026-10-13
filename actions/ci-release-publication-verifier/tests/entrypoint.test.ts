@@ -112,7 +112,8 @@ test('publication entrypoint binds standard workflow credential evidence before 
     ['absent', { GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/release-publication-caller.yml@refs/heads/Main' }, 1],
     ['absent', { GITHUB_EVENT_NAME: 'pull_request' }, 1],
     ['absent', { GITHUB_EVENT_NAME: 'workflow_dispatch' }, 1],
-    ['denied', {}, 1], ['malformed', {}, 1],
+    ['denied', {}, 0], ['denied', { CI_RELEASE_CONTENTS_PERMISSION: 'read' }, 1],
+    ['denied', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1], ['malformed', {}, 1],
   ];
   for (const [metadata, context, expectedStatus] of cases) {
     const f = fixture(t);

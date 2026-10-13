@@ -32,6 +32,7 @@ const fixtureSettings = {
   'release-implementation': 'rust-cli', 'release-binary-name': '', 'release-asset-prefix': '',
   'supplemental-release-asset-enabled': false, 'supplemental-release-asset-owner-contract': 'owner-v2',
   'supplemental-release-asset-implementation': 'owner-adapter', 'supplemental-release-asset-config-path': '.ci/installer.yml',
+  'release-skills-config-path': '__unset__',
 };
 const planDistributionApplication = (options) => {
   const distributionRoot = path.join(options.projectRoot, '.a3-skills/ci-github/distributions', options.sourceRevision);

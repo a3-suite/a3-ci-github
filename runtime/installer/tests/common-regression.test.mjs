@@ -18,3 +18,20 @@ describe('provider installer', () => {
     }, 60000);
   });
 });
+
+describe('contract.ci-release-supplemental-asset.outputs', () => {
+  // evidence_role: contract
+  // flow_id: standard-installer-entry-names
+  // test_level: e2e
+  describe('standard entry names', () => {
+    test('rejects nonstandard public names before generating output', () => {
+      // Arrange
+      const directory = fileURLToPath(new URL('.', import.meta.url));
+      const python = process.platform === 'win32' ? 'python' : 'python3';
+      // Act
+      const result = execFileSync(python, ['-m', 'unittest', 'discover', '-s', directory, '-p', 'test_assembly.py', '-k', 'standard_entry_names_rejected'], { env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, encoding: 'utf8' });
+      // Assert
+      expect(typeof result).toBe('string');
+    });
+  });
+});

@@ -43,6 +43,6 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6cae7e07b9af9789c8a5ce46ef903bddff0335fb
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
         with:
           summary-json: '{"jobs":[{"unit":"platforms","execution":"fixed reusable platform quality workflow","rawResult":"${{ needs.platforms.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"reusable platform workflow result: ${{ needs.platforms.result }}"}]}'

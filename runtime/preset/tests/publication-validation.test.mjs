@@ -20,8 +20,10 @@ const model = () => {
   const selection = workflows.get('.github/workflows/release-publication-caller.yml').jobs.publish.with;
   expect(selection).toHaveProperty('supplemental_release_asset_implementation', '<supplemental-release-asset-implementation>');
   expect(selection).toHaveProperty('supplemental_release_asset_config_path', '<supplemental-release-asset-config-path>');
+  expect(selection).toHaveProperty('release_skills_config_path', '<release-skills-config-path>');
   selection.supplemental_release_asset_implementation = 'owner-adapter';
   selection.supplemental_release_asset_config_path = '__unset__';
+  selection.release_skills_config_path = '__unset__';
   workflows.set('.github/workflows/release-publication.yml', resolvePublicationWorkflow(
     workflows.get('.github/workflows/release-publication-caller.yml'), loadRegistry(createReport())));
   return workflows;
@@ -426,6 +428,43 @@ describe("publication-validation", () => {
       const full = validateCiPresetInternal({ repoRoot: root, presets: ['package-publication'] }, false);
       expect(full.missingSettings.some(item => item.message.includes('publication reusable workflow is pending-release'))).toBeTruthy();
       expect([...full.mismatches, ...full.missingSettings].some(item => item.path.startsWith('.github/workflows/package-publication.yml:'))).toBe(false);
+    });
+
+    // Supplemental coverage: the caller exposes the release skills selection as a project setting.
+    test('release skills selection is a caller setting accepted by canonical comparison', (t) => {
+      // Arrange
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const parent = path.join(repository, 'tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const root = fs.mkdtempSync(path.join(parent, 'release-skills-selection-'));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      const registry = loadRegistry(createReport());
+      const preset = registry.presets.find(item => item.id === 'release-publication');
+      const asset = preset.workflowAssets.find(item => item.id === 'release-publication-caller');
+      const filename = path.join(root, asset.destination);
+      fs.mkdirSync(path.dirname(filename), { recursive: true });
+      const run = (value) => {
+        const caller = parse(fs.readFileSync(path.join(repository, asset.source), 'utf8'));
+        caller.jobs.publish.with.release_skills_config_path = value;
+        fs.writeFileSync(filename, stringify(caller));
+        const report = createReport();
+        const parsed = new Map();
+        inspectWorkflowAsset({ root, registry, parsed, report,
+          actionByPath: new Map(registry.actionTargets.map(target => [`${registry.actionRepository}/${target.actionPath}`, target])) }, preset, asset, new Set());
+        const workflows = model();
+        workflows.get(asset.destination).jobs.publish.with.release_skills_config_path = value;
+        const flow = inspect(workflows);
+        return [...report.mismatches, ...report.missingSettings, ...flow.mismatches, ...flow.missingSettings].filter(item => String(item.path).includes('release_skills_config_path'));
+      };
+      // Act
+      const enabled = run('skills/release.json');
+      const disabled = run('__unset__');
+      const unsafe = run('../release.json');
+      // Assert
+      expect(enabled).toEqual([]);
+      expect(disabled).toEqual([]);
+      expect(unsafe.some(item => item.message.includes('release skills require one static safe declaration path'))).toBe(true);
+      expect(unsafe.some(item => item.message.startsWith('canonical drift:'))).toBe(false);
     });
   });
 });

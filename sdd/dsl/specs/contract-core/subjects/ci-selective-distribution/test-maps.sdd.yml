@@ -117,6 +117,9 @@ test_maps:
     case_id: selective-distribution-single-release-binding
     tests:
       - path: tests/workflow-contracts.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > candidate gate rejects a release tag that is already published"
+        check_refs: [check-selective-distribution-single-release-rejection]
+      - path: tests/workflow-contracts.test.mjs
         symbol: "contract.ci-selective-distribution.publication > repository-provider-binding > repository CI validates untagged connection candidates and preserves implementation preparation"
         check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-implementation-binding, check-selective-distribution-single-release-rejection]
       - path: runtime/repository/tests/single-release-binding.test.mjs
