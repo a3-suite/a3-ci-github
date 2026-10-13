@@ -456,6 +456,7 @@ describe("workflow-contracts", () => {
         new RegExp(`uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@${actionRef}`),
         /manifest-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_PLATFORM_MANIFEST/,
         /selection-path: .*steps\.trusted-assets\.outputs\.root.*env\.CI_QUALITY_PLATFORM_SELECTION/,
+        /runner-policy: \$\{\{ steps\.trusted-assets\.outputs\.source == 'base' && 'trusted' \|\| 'bootstrap' \}\}/,
         /bootstrap is limited to same-repository pull requests/,
 
       ]);
@@ -970,9 +971,14 @@ describe("workflow-contracts", () => {
       // Assert
       expect(strict.status, strict.stderr).toBe(1);
       expect(preparation.status, preparation.stderr).toBe(1);
-      expect(JSON.parse(preparation.stdout).preparationOnly).toBe(false);
-      expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(3);
-      expect(JSON.parse(preparation.stdout).connection.diagnostics.join('\n')).toContain('skills-source-root');
+      const rejected = JSON.parse(preparation.stdout);
+      expect(rejected.preparationOnly).toBe(false);
+      const contractFailures = rejected.connection.diagnostics.filter((diagnostic) => diagnostic.includes(': referenced Action contract failed: '));
+      expect(contractFailures.map((diagnostic) => diagnostic.split(': referenced Action contract failed: ')[1])).toEqual(['quality-reserved', 'publication-owner-decision']);
+      expect(rejected.connection.diagnostics).toEqual([...contractFailures, ...rejected.interfaceDiagnostics]);
+      for (const field of ['skills-source-root', 'runner-policy', 'version-policy', 'resolved-toolchain-version']) {
+        expect(rejected.interfaceDiagnostics).toContainEqual(expect.stringContaining(field));
+      }
       // Arrange
       const registry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
       registry.actionization.availabilityGate.status = 'pending-release';
@@ -1622,6 +1628,26 @@ describe("workflow-contracts", () => {
         expect(job.steps.every((step) => step.name !== 'Report project quality adapter result' && !step.env?.CI_QUALITY_RESULT_PATH)).toBeTruthy();
         expect(!job.steps.some((step) => step.run?.includes('rustup toolchain install') || step.uses?.startsWith('actions/setup-node@') || step.uses?.startsWith('actions/setup-python@') || step.uses?.startsWith('astral-sh/setup-uv@'))).toBeTruthy();
       }
+    });
+
+    // integration_id: quality-workflow-contract
+    test('quality ranges resolve once and exact versions propagate to adapters and platform jobs', () => {
+      const main = yaml.parse(read('.github/workflows/ci-quality.yml'));
+      for (const id of ['trusted', 'untrusted-pr']) {
+        const steps = main.jobs[id].steps;
+        expect(steps.find(step => step.id === 'quality-toolchain').with['version-policy']).toBe('compatible');
+        expect(steps.find(step => step.id === 'quality-adapter').with['toolchain-version']).toBe('${{ steps.quality-toolchain.outputs.resolved-toolchain-version }}');
+      }
+      const jobs = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs;
+      const resolver = jobs['resolve-platforms'];
+      expect(resolver.steps.filter(step => step.id === 'toolchain-resolution')).toHaveLength(1);
+      expect(resolver.steps.find(step => step.id === 'toolchain-resolution').if).toContain("steps.configuration.outputs['resolve-toolchain'] == 'true'");
+      expect(resolver.outputs['toolchain-version']).toBe("${{ steps.configuration.outputs['resolve-toolchain'] == 'true' && steps.toolchain-resolution.outputs.resolved-toolchain-version || steps.configuration.outputs['toolchain-version'] }}");
+      expect(jobs.platform.env.CI_TOOLCHAIN_VERSION).toBe('${{ needs.resolve-platforms.outputs.toolchain-version }}');
+      expect(jobs.platform.steps.find(step => step.uses?.includes('/ci-quality-toolchain@')).with['version-policy']).toBeUndefined();
+      const release = yaml.parse(read('.github/workflows/ci-release-publication.yml')).jobs;
+      expect(release.quality.steps.find(step => step.uses?.includes('/ci-quality-toolchain@')).with['version-policy']).toBeUndefined();
+      expect(release.authority.steps.find(step => step.id === 'platform-matrix').with['runner-policy']).toBe('trusted');
     });
   });
 });
