@@ -22,10 +22,10 @@ const compositeReferences = (root, actionPath) => {
   for (const reference of references) {
     const relative = path.relative(root, reference);
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
-      throw new Error(`Composite Action ${path.basename(actionPath)} references a path outside the repository`);
+      throw new DiagnosticError(`composite-reference-outside-repository: Composite Action ${path.basename(actionPath)} references a path outside the repository`, { diagnostics: { field: 'composite-reference', expected: 'inside-repository', observed: 'outside-repository' } });
     }
     if (!existsSync(reference)) {
-      throw new Error(`Composite Action ${path.basename(actionPath)} is missing referenced path ${relative}`);
+      throw new DiagnosticError(`composite-reference-missing: Composite Action ${path.basename(actionPath)} is missing referenced path ${relative}`, { diagnostics: { field: 'composite-reference', expected: 'existing-path', observed: 'missing' } });
     }
   }
   return references.map((reference) => path.relative(root, reference));
@@ -41,7 +41,7 @@ export const collectActionMetadata = (root) => {
       const actionPath = path.join(actionsRoot, entry.name);
       const runtime = runtimeFor(actionPath);
       const bundled = runtime.startsWith('node');
-      if (!bundled && runtime !== 'composite') throw new Error(`Action ${entry.name} uses unsupported runtime ${runtime}`);
+      if (!bundled && runtime !== 'composite') throw new DiagnosticError(`action-runtime-unsupported: Action ${entry.name} uses unsupported runtime ${runtime}`, { diagnostics: { field: 'runs.using', expected: 'node-or-composite', observed: 'unsupported' } });
       return {
         name: entry.name,
         path: actionPath,
@@ -50,13 +50,13 @@ export const collectActionMetadata = (root) => {
         companionDistPaths: entry.name === 'ci-release-supplemental-asset' ? ['runtime/installer/dist'] : [],
       };
     });
-  if (actions.length === 0) throw new Error('No Action directories were found');
+  if (actions.length === 0) throw new DiagnosticError('action-inventory-empty: No Action directories were found', { diagnostics: { field: 'actions', expected: 'one-or-more', observed: 0 } });
   return actions;
 };
 
 export const collectActions = (root) => collectActionMetadata(root).map((action) => {
   for (const file of ['action.yml', 'README.md', ...(action.distPath ? bundledFiles : [])]) {
-    if (!existsSync(path.join(action.path, file))) throw new Error(`Action ${action.name} is missing ${file}`);
+    if (!existsSync(path.join(action.path, file))) throw new DiagnosticError(`action-package-file-missing: Action ${action.name} is missing ${file}`, { diagnostics: { field: 'action-package', expected: file, observed: 'missing' } });
   }
   return { ...action, referencedPaths: action.distPath ? [] : compositeReferences(root, action.path) };
 });
@@ -70,7 +70,7 @@ export const collectScriptBundleMetadata = (root) => [{
 export const collectScriptBundles = (root) => {
   const scriptPath = path.join(root, 'runtime/rust-release');
   for (const file of ['package.json', 'src/verify-platform-manifest.mjs', 'dist/index.mjs']) {
-    if (!existsSync(path.join(scriptPath, file))) throw new Error(`Rust release scripts are missing ${file}`);
+    if (!existsSync(path.join(scriptPath, file))) throw new DiagnosticError(`script-bundle-file-missing: Rust release scripts are missing ${file}`, { diagnostics: { field: 'script-bundle', expected: file, observed: 'missing' } });
   }
   return collectScriptBundleMetadata(root);
 };
@@ -97,18 +97,25 @@ export const buildPlan = (root, actions, scriptBundles = []) => {
     args: [
       'diff',
       '--exit-code',
+      '--name-only',
       '--',
       ...generatedDiagnostics,
       ...actions.filter((action) => action.distPath).flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]),
       ...scriptBundles.map((bundle) => bundle.distPath),
     ],
     cwd: root,
+    failure: 'dist-identity-mismatch',
   },
   ];
 };
 
 export const runPlan = (plan, execute = execFileSync) => {
-  for (const step of plan) execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' });
+  for (const step of plan) {
+    try { execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' }); } catch (error) {
+      if (!step.failure) throw error;
+      throw new DiagnosticError(`${step.failure}: Generated distribution differs from the committed files`, { cause: error, diagnostics: { field: 'dist', expected: 'committed-dist', observed: 'differs', evidence: 'stdout-changed-paths' } });
+    }
+  }
 };
 
 export const assertNoUntrackedDist = (root, actions, scriptBundles = [], execute = execFileSync) => {
@@ -123,7 +130,7 @@ export const assertNoUntrackedDist = (root, actions, scriptBundles = [], execute
     { cwd: root, encoding: 'utf8' },
   );
   const untracked = String(output).trim();
-  if (untracked) throw new Error(`Untracked distribution files were found:\n${untracked}`);
+  if (untracked) throw new DiagnosticError(`dist-untracked: Untracked distribution files were found:\n${untracked}`, { diagnostics: { field: 'tracked-dist', expected: 'tracked', observed: 'untracked', paths: untracked.split('\n') } });
 };
 
 export const assertTrackedReferences = (root, actions, execute = execFileSync) => {
@@ -136,7 +143,7 @@ export const assertTrackedReferences = (root, actions, execute = execFileSync) =
       { cwd: root, stdio: 'pipe' },
     );
   } catch {
-    throw new Error(`Composite Actions contain untracked referenced paths:\n${referencedPaths.join('\n')}`);
+    throw new DiagnosticError(`composite-reference-untracked: Composite Actions contain untracked referenced paths:\n${referencedPaths.join('\n')}`, { diagnostics: { field: 'composite-reference', expected: 'tracked', observed: 'untracked' } });
   }
 };
 

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { sha256, canonicalJson } from '../io.ts';
 import { assembleRelease } from '../assembly.ts';
@@ -38,6 +39,44 @@ export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', tar
   put(`build/release-build-${platform.id}/asset-manifest.json`, buildManifest);
   const options = { repository: identity.repository, authorityPath: put('authority.json', authority), snapshotPath: put('snapshot.json', snapshot), platformManifestPath, platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(root, 'build'), outputRoot: path.join(root, 'handoff') };
   return { root, put, identity, authority, snapshot, name, payload, buildManifest, options, assemble: () => assembleRelease(options, decodePlatformManifest) };
+};
+
+export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}) => {
+  const f = fixture(t);
+  const configuration = { schemaVersion: 'ci.release-skills.v1', skills: [{ path: 'skills/example-tool', include: ['SKILL.md', 'references', 'scripts', 'assets'], requiredFiles: ['SKILL.md', 'references/setup.guide.md', 'scripts/run.py'] }] };
+  f.put('skills/example-tool/SKILL.md', '---\nname: example-tool\ndescription: Read the product using its public CLI.\n---\nRead `references/setup.guide.md` and use `scripts/run.py`.\n');
+  f.put('skills/example-tool/references/setup.guide.md', '# Setup\n');
+  f.put('skills/example-tool/scripts/run.py', 'raise RuntimeError("skill source must not execute while packaging")\n');
+  f.put('skills/example-tool/scripts/__init__.py', '');
+  f.put('skills/example-tool/scripts/_helper.py', 'print("public helper")\n');
+  f.put('skills/example-tool/scripts/runtime.js', 'throw new Error("public runtime retained");\n');
+  f.put('skills/example-tool/assets/example.txt', 'example\n');
+  for (const name of ['_build/notes.md', 'tmp/work.py', 'tests/test.py', 'scripts/__pycache__/run.pyc', 'scripts/runtime.js.map', 'scripts/compiler.tsbuildinfo', 'assets/target/output.obj', 'assets/notes.log', 'assets/.DS_Store', 'references/_build/draft.md', 'scripts/tmp/residual.py', 'scripts/tests/test_runtime.py']) f.put(`skills/example-tool/${name}`, 'not public\n');
+  f.put('skills/unselected/SKILL.md', 'not selected');
+  mutate(configuration, f.root);
+  f.put('skills/release.json', configuration);
+  const git = (args) => execFileSync('git', ['-C', f.root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  git(['init', '-q']);
+  git(['config', 'user.name', 'Fixture']);
+  git(['config', 'user.email', 'fixture@example.invalid']);
+  git(['config', 'core.autocrlf', 'false']);
+  git(['add', '-f', '--', 'skills']);
+  git(['update-index', '--chmod=+x', 'skills/example-tool/scripts/run.py']);
+  mutateIndex(git);
+  git(['commit', '-qm', 'Fixture']);
+  const sourceSha = git(['rev-parse', 'HEAD']);
+  f.identity.source_sha = sourceSha;
+  f.authority.source_sha = sourceSha;
+  f.buildManifest.source_sha = sourceSha;
+  f.snapshot.values.CI_RELEASE_SKILLS_CONFIG_PATH = 'skills/release.json';
+  f.snapshot.digest = sha256(Buffer.from(canonicalJson({ sources: f.snapshot.sources, values: f.snapshot.values })));
+  f.authority.config_snapshot_digest = f.snapshot.digest;
+  f.put('snapshot.json', f.snapshot);
+  f.put('authority.json', f.authority);
+  f.put('build/release-build-linux/asset-manifest.json', f.buildManifest);
+  f.options.skillsSourceRoot = f.root;
+  f.put('skills/example-tool/tmp/untracked.py', 'untracked residual');
+  return f;
 };
 
 export const remoteClient = (f, assembly, changes = {}) => {

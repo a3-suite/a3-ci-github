@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
 import { checkActionReferences, checkProviderReferences, checkRepository, registryPath, repositorySnapshot } from '../runtime/repository/check-provider-references.mjs';
@@ -10,10 +10,55 @@ import { fileURLToPath } from 'node:url';
 import { createDocsOnlyMatcher, detectChangeScope } from '../actions/ci-change-scope/src/scope.ts';
 import { materializePublishVersion } from '../actions/ci-publish-version/src/materialize.ts';
 import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapshot.ts';
+import { releaseSkillsFixture } from '../runtime/release-publication/tests/fixtures.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
 const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
+
+describe('contract.ci-release-assembly.outputs', () => {
+  describe('same-release-skills', () => {
+    // evidence_role: supplemental
+    // integration_id: same-release-skills-asset-collision
+    test('skills ZIP rejects a collision with a product asset before output', (t) => {
+      // Arrange
+      const f = releaseSkillsFixture(t);
+      const directory = path.join(f.root, 'build/release-build-linux');
+      const name = 'project-skills.zip';
+      renameSync(path.join(directory, f.name), path.join(directory, name));
+      renameSync(path.join(directory, `${f.name}.sha256`), path.join(directory, `${name}.sha256`));
+      f.put(`build/release-build-linux/${name}.sha256`, `${f.buildManifest.assets[0].sha256}  ${name}\n`);
+      f.buildManifest.assets[0].path = name;
+      f.buildManifest.assets[0].checksum_path = `${name}.sha256`;
+      f.put('build/release-build-linux/asset-manifest.json', f.buildManifest);
+      // Act
+      const assemble = f.assemble;
+      // Assert
+      expect(assemble).toThrow(/asset-name-collision/);
+      expect(existsSync(f.options.outputRoot)).toBe(false);
+    });
+  });
+});
+
+describe('installer public naming references', () => {
+  // evidence_role: supplemental
+  // target_id: standard-installer-entry-samples
+  // test_level: integration
+  describe('samples', () => {
+  test('README and assembly samples use the authoritative public entry names', () => {
+    // Arrange
+    const contract = yaml.parse(read('skills/installer/references/installer-standard-assembly-contract.reference.yml'));
+    // Act
+    const declaration = JSON.parse(read('skills/installer/assets/examples/standard-assembly.example.json'));
+    const readme = read('skills/installer/assets/examples/readme-installation.example.md');
+    // Assert
+    expect(declaration.platforms[contract.publicEntryNames.windows.platform].assetName).toBe(contract.publicEntryNames.windows.assetName);
+    expect(declaration.sharedWrapper.assetName).toBe(contract.publicEntryNames.unixShared.assetName);
+    expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.windows.assetName}' | iex`);
+    expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.unixShared.assetName}' | sh`);
+  });
+  });
+});
 
 describe('contract.ci-selective-distribution.publication', () => {
   describe('repository-provider-binding', () => {
@@ -22,12 +67,13 @@ describe('contract.ci-selective-distribution.publication', () => {
     const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
     expect(script).toBeDefined();
     const code = script.split('\n').filter((line) => !line.startsWith('import ')).join('\n');
+    // A same-named tag is published state even when it does not contain the bound implementation.
     for (const [version, releaseTag, tagPresent, mode] of [['0.3.0\n', 'v0.2.11', true, '--preparation'], ['0.2.11\n', 'v0.2.10', true, '--preparation'], ['0.2.11\n', 'v0.2.11', false, '--candidate'], ['0.2.11\n', 'v0.2.11', true, '--preparation']]) {
       const calls = [];
       const context = {
         process: { cwd: () => root, execPath: process.execPath },
         readFileSync: (filename) => { expect(filename).toBe('VERSION'); return version; },
-        repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag } } } }),
+        repositorySnapshot: () => ({ registry: { actionization: { implementationSource: { releaseTag, exactRef: actionRef } } } }),
         execFileSync: (command, ...args) => {
           if (command === 'git') {
             expect(args).toEqual([['tag', '--list', releaseTag], { encoding: 'utf8' }]);
@@ -590,6 +636,7 @@ describe("workflow-contracts", () => {
         supplemental_release_asset_owner_contract: '<supplemental-release-asset-owner-contract>',
         supplemental_release_asset_implementation: '<supplemental-release-asset-implementation>',
         supplemental_release_asset_config_path: '<supplemental-release-asset-config-path>',
+        release_skills_config_path: '<release-skills-config-path>',
       });
       const callerSummary = jobBlock(caller, 'summary');
       assertNeeds(callerSummary, ['validate-request', 'publish']);
@@ -659,6 +706,7 @@ describe("workflow-contracts", () => {
             values['inputs.supplemental_release_asset_enabled'] = enabled;
             values['inputs.supplemental_release_asset_implementation'] = 'owner-adapter';
             values['inputs.supplemental_release_asset_config_path'] = '__unset__';
+            values['inputs.release_skills_config_path'] = '__unset__';
             values[expression] = value;
             const rendered = sourcesTemplate.replace(/\$\{\{\s*(toJSON\((?:env|inputs)\.[A-Za-z_]+\)|(?:env|inputs)\.[A-Za-z_]+)\s*\}\}/g, (_, entry) =>
               entry.startsWith('toJSON(') ? JSON.stringify(values[entry.slice(7, -1)]) : String(values[entry]));
@@ -835,8 +883,8 @@ describe("workflow-contracts", () => {
       t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
       execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe' });
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      if (execFileSync('git', ['tag', '--list', releaseTag], { cwd: fixture, encoding: 'utf8' }).trim() === '') {
-        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
+      if (spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: fixture }).status !== 0) {
+        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
       }
       mkdirSync(path.join(fixture, 'actions'));
       for (const relative of [registryPath, ...repositorySnapshot(root).targets]) {
@@ -923,7 +971,8 @@ describe("workflow-contracts", () => {
       expect(strict.status, strict.stderr).toBe(1);
       expect(preparation.status, preparation.stderr).toBe(1);
       expect(JSON.parse(preparation.stdout).preparationOnly).toBe(false);
-      expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(2);
+      expect(JSON.parse(preparation.stdout).connection.diagnostics).toHaveLength(3);
+      expect(JSON.parse(preparation.stdout).connection.diagnostics.join('\n')).toContain('skills-source-root');
       // Arrange
       const registry = yaml.parse(readFileSync(path.join(fixture, registryPath), 'utf8'));
       registry.actionization.availabilityGate.status = 'pending-release';
@@ -985,6 +1034,37 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-action-reference-contracts
+    test('candidate gate reports uncommitted execution assets as an actionable reason', (t) => {
+      // Arrange
+      const fixture = referenceFixture(t);
+      // Act
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      // Assert
+      expect(result.status, result.stderr).toBe(2);
+      expect(evidence.classification?.reason).toBe('implementation-candidate-execution-assets-dirty');
+      expect(evidence.comparison).toMatchObject({ field: 'execution-assets', observed: 'uncommitted-changes' });
+    });
+
+    // integration_id: repository-action-reference-contracts
+    test('candidate gate rejects a release tag that is already published', (t) => {
+      // Arrange
+      mkdirSync(path.join(root, 'tmp'), { recursive: true });
+      const fixture = mkdtempSync(path.join(root, 'tmp/published-tag-candidate-'));
+      t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
+      execFileSync('git', ['clone', '--shared', '--quiet', root, fixture], { stdio: 'pipe' });
+      const releaseTag = repositorySnapshot(fixture).registry.actionization.implementationSource.releaseTag;
+      execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD^'], { cwd: fixture, stdio: 'pipe' });
+      // Act
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      // Assert
+      expect(result.status, result.stderr).toBe(2);
+      expect(evidence.classification?.reason).toBe('implementation-candidate-release-tag-exists');
+      expect(evidence.comparison).toMatchObject({ field: 'release-tag', observed: 'existing-tag' });
+    });
+
+    // integration_id: repository-action-reference-contracts
     test('fixed Action metadata rejects input output and installer binding drift', () => {
       // Arrange
       const snapshot = repositorySnapshot(root);
@@ -1001,7 +1081,7 @@ describe("workflow-contracts", () => {
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
       const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
       const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
@@ -1120,7 +1200,7 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim() === '';
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
       const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);

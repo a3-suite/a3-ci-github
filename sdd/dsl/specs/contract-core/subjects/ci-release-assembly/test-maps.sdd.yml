@@ -3,6 +3,18 @@ name: contract-test-maps
 subject_ref: subject.ci.release-assembly
 test_maps:
   - verification_id: verification.ci-release-assembly.outputs
+    case_id: same-release-skills
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages"
+        check_refs: [handoff, digest, rejection]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "source entrypoint > assembly bundle packages selected release skills"
+        check_refs: [handoff, digest, rejection]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > assembly bundle packages selected release skills"
+        check_refs: [handoff, digest, rejection]
+  - verification_id: verification.ci-release-assembly.outputs
     case_id: bundled-assembly
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts

@@ -5,6 +5,14 @@ verifications:
   - id: verification.ci-release-publisher.outputs
     contract_id: contract.ci-release-publisher.outputs
     cases:
+      - id: provider-rejection-diagnostics
+        intent_id: detailed-diagnostics-outputs
+        input: {provider: invalid-identity-shape-default-branch-head-or-unbound-write-permission}
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}, {id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
+      - id: standard-workflow-capability
+        intent_id: publish-evidence
+        input: {credential: bound-standard-workflow-github-token, permission-metadata: boolean-false}
+        checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
       - id: canonical-repository-identity
         intent_id: publish-evidence
         input: {repository-response: canonical-casing}

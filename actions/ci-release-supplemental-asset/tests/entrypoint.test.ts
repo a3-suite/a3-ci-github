@@ -79,6 +79,32 @@ test('supplemental entrypoint rejects mutated standard inputs and retains partia
 // evidence_role: contract
 // flow_id: supplemental-safe-diagnostics
 // test_level: e2e
+test('supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics', (t) => {
+  // Arrange
+  for (const operation of ['build-platform', 'assemble']) {
+    const f = standardFixture(t, 'native-offline-dry-run-v1', 'install-windows-x86_64.ps1');
+    const options = { ...f.options, operation };
+    if (operation === 'assemble') {
+      fs.mkdirSync(path.join(f.root, 'supplemental-download'));
+      fs.writeFileSync(path.join(f.root, 'supplemental-download/input'), 'unverified');
+      Object.assign(options, { supplementalBuildRoot: 'supplemental-download' });
+    }
+    // Act
+    const { result, output } = runDistributedAction(f, options, entrypointArgs);
+    // Assert
+    expect(result.status).toBe(1);
+    const line = result.stderr.split('\n').find((entry: string) => entry.startsWith('standard-installer-failed:'))!;
+    const diagnostic = JSON.parse(line.slice('standard-installer-failed:'.length));
+    expect(diagnostic.phase).toBe(operation);
+    expect(diagnostic['sanitized-reason']).toBe('installer-windows-entry-name-invalid');
+    expect(diagnostic.comparison.expected).toEqual(['install.ps1']);
+    expect(fs.readFileSync(output, 'utf8')).toBe('');
+    expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
+  }
+});
+
+// flow_id: supplemental-safe-diagnostics
+// test_level: e2e
 test('supplemental entrypoint preserves safe standard installer diagnostics', (t) => {
   const f = standardFixture(t);
   fs.writeFileSync(path.join(f.root, 'standard', `${archiveName}.sha256`), 'synthetic-secret');

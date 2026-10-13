@@ -17,9 +17,10 @@ export const draftVisibilityFailure = (repository: Record<string, unknown>, iden
   if (Object.hasOwn(repository, 'permissions') && !record(repository.permissions)) return 'permissions-missing';
   if (record(repository.permissions) && Object.hasOwn(repository.permissions, 'push')) {
     if (repository.permissions.push === true) return undefined;
-    return repository.permissions.push === false ? 'push-permission-denied' : 'push-permission-invalid';
+    if (repository.permissions.push !== false) return 'push-permission-invalid';
   }
   if (client.hasStandardGithubTokenWriteAccess?.(identity.repository) === true) return undefined;
+  if (record(repository.permissions) && repository.permissions.push === false) return 'push-permission-denied';
   return record(repository.permissions) ? 'push-permission-missing' : 'permissions-missing';
 };
 const observationAttempts = 3;
@@ -202,6 +203,9 @@ const observeInventory = async (client: ReadOnlyClientType, identity: ReleaseIde
   if (typeof repository.full_name !== 'string' || repository.full_name.toLowerCase() !== identity.repository.toLowerCase()) remoteFailure(endpoint, 'repository', 'repository-identity-mismatch', response);
   const visibilityFailure = draftVisibilityFailure(repository, identity, client);
   if (visibilityFailure) remoteFailure(endpoint, 'repository', visibilityFailure, response);
+  if (!(record(repository.permissions) && repository.permissions.push === true)) {
+    process.stdout.write(`ci-release-capability:${JSON.stringify({ repository: identity.repository, evidence: 'bound-standard-workflow-github-token', contents_permission: 'write' })}\n`);
+  }
   return (await client.list(`${endpoint}/releases`)).filter((release) => {
     if (typeof release.tag_name !== 'string' || typeof release.draft !== 'boolean') remoteFailure(`${endpoint}/releases`, 'inventory', 'response-shape-invalid', client.responseMetadata?.(`${endpoint}/releases`, release));
     return release.tag_name === identity.tag;
@@ -221,9 +225,12 @@ const observation = (identity: ReleaseIdentityType, handoffDigest: string, phase
 export const observeBefore = async (options: ObservationOptionsType, client: ReadOnlyClientType): Promise<ObservationType> => {
   const { identity, handoffDigest } = loadAssembly(options);
   await verifyTag(client, identity);
-  const ids = await observeInventory(client, identity);
-  if (ids.length !== 0) fail('existing-release-or-asset');
-  return observation(identity, handoffDigest, 'pre-create', ids);
+  for (let attempt = 0; attempt < observationAttempts; attempt++) {
+    const ids = await observeInventory(client, identity);
+    if (ids.length !== 0) fail('existing-release-or-asset');
+    if (attempt + 1 < observationAttempts) await new Promise(resolve => setTimeout(resolve, observationDelayMs));
+  }
+  return observation(identity, handoffDigest, 'pre-create', []);
 };
 export const verifyCreatedRelease = async (identity: ReleaseIdentityType, releaseId: string, client: ReadOnlyClientType): Promise<void> => {
   await verifyTag(client, identity);

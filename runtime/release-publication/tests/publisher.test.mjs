@@ -40,6 +40,24 @@ describe("contract.ci-release-publisher.outputs", () => {
     // contract_id: contract.ci-release-publisher.outputs
     // integration_id: release-publisher-source-flow
 
+    // contract_id: contract.ci-release-publisher.outputs
+    // integration_id: release-publisher-source-flow
+    test('bound standard capability permits false API push through publication and independent readback', async (t) => {
+      // Arrange
+      const { f, writes, client, options } = await setup(t);
+      const original = client.json;
+      client.hasStandardGithubTokenWriteAccess = repository => repository === f.identity.repository;
+      client.json = async endpoint => endpoint === '/repos/owner/project'
+        ? { full_name: f.identity.repository, permissions: { push: false }, default_branch: 'main' } : original(endpoint);
+      // Act
+      const result = await publishRelease(options, client);
+      const verified = await verifyAfter({ ...options, receiptPath: result.receiptPath, readbackPath: result.readbackPath }, client);
+      // Assert
+      expect(writes.filter(([operation]) => operation === 'create')).toHaveLength(1);
+      expect(writes.some(([operation]) => operation === 'upload')).toBe(true);
+      expect(writes.filter(([operation]) => operation === 'finalize')).toHaveLength(1);
+      expect(verified.receipt.release_id).toBe('42');
+    });
     test('publisher creates once and emits evidence accepted by independent verifier', async (t) => {
       const { f, writes, client, options } = await setup(t);
       const result = await publishRelease(options, client);
@@ -123,10 +141,10 @@ describe("publisher", () => {
     });
 
     test('publisher rejects moved source, existing draft and unsupported provider before create', async (t) => {
-      for (const kind of ['source', 'existing', 'permission', 'permission-missing', 'workflow', 'truncated']) {
+      for (const kind of ['source', 'existing', 'existing-public', 'permission', 'permission-missing', 'workflow', 'truncated']) {
         const state = await setup(t);
         const original = state.client.json;
-        if (kind === 'existing') state.client.list = async () => [{ id: '9', tag_name: state.f.identity.tag, draft: true }];
+        if (kind === 'existing' || kind === 'existing-public') state.client.list = async () => [{ id: '9', tag_name: state.f.identity.tag, draft: kind === 'existing' }];
         else state.client.json = async (endpoint) => {
           if (kind === 'source' && endpoint.includes('/git/tags/')) return { sha: state.f.identity.tag_object_sha, object: { type: 'commit', sha: 'f'.repeat(40) } };
           if (kind === 'permission-missing' && endpoint === '/repos/owner/project') return { full_name: 'owner/project', default_branch: 'main' };

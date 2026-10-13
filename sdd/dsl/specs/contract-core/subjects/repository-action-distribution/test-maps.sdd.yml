@@ -87,6 +87,9 @@ test_maps:
   - verification_id: verification.repository-action-distribution.integrity
     case_id: detailed-failure-integrity
     tests:
+      - path: tests/action-dist-gate.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > reports a dist identity mismatch reason and keeps other step failures unchanged"
+        check_refs: [diagnostic-details]
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > repository distribution retains the failing metadata gate before build"
         check_refs: [diagnostic-details]

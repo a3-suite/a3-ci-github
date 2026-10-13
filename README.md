@@ -36,6 +36,10 @@ Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけ�
 
 操作契約は[`distribute-ci-assets.guide.md`](skills/ci-github/references/distribute-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.reference.yml`](skills/ci-github/references/ci-distribution-assets.reference.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
 
+## 製品と対応スキルの同時Release
+
+製品の公開スキルを固定sourceへ宣言し、OS共通の`<repository-name>-skills.zip`とchecksumを製品と同じReleaseへ含められます。開発・一時資材を除外し、installerと併用しても各ownerの証跡を保持します。セットアップとREADMEへの導入・削除案内は[同時Releaseガイド](skills/ci-github/references/release-project-skills.guide.md)を参照してください。
+
 ## Action一覧
 
 <!-- action-catalog:start -->

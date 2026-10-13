@@ -51,6 +51,7 @@ node runtime/repository/check-provider-references.mjs --staged --contracts --pre
 
 - 適用条件に該当しなければ`非適用`。
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
+- [公開済みtagへ接続した状態からの回復](../../../../docs/maintenance/action-construction.md#公開済みtagへ接続した状態からの回復)の実装コミットAに限り、`--preparation`の停止理由が`implementation-source-not-contained`だけで、staged snapshotの`VERSION`が同名tagのない対象版へ更新されている場合は`PASS`とする。停止理由と後続の接続コミットBが必要なことを証拠へ記録する。それ以外の停止理由は通常どおり扱う。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
 - `preparationOnly: true` は全Action targetとavailabilityGateがpendingの準備コミットだけの許容であり、接続契約は未達。`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。Actionのavailable targetがある場合、この許容は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新には上記の候補検査を使い、`--preparation`を付けない。
 
@@ -64,7 +65,7 @@ node runtime/repository/check-provider-references.mjs --staged --contracts --pre
 
 ### 終了条件
 - 適用条件を満たさない場合は`非適用`。
-- 正本の順序と接続先の証拠が整合し候補検査が成功する、または既存固定参照の検査と実装検証が成功した実装準備コミットとして整合する場合は`PASS`。最終tag作成後の公開検査はRelease workflowで再実行する。
+- 正本の順序と接続先の証拠が整合し候補検査が成功する、または既存固定参照の検査と実装検証が成功した実装準備コミットとして整合する場合は`PASS`。公開済みtagへ接続した状態からの回復の実装コミットAは、provider固定参照ゲートの回復条件と実装検証が成功し、後続Bの必要を確認結果へ記録した場合に`PASS`。最終tag作成後の公開検査はRelease workflowで再実行する。
 - 将来SHAの自己参照、未確定・不適合なActionへの接続、registryとcanonical sourceのAction参照不一致、manifestとcalleeの固定参照不一致は`STOP`。templateのcallee placeholderは導入時生成の入力として維持する。
 - 必要な正本・参照先・証拠を確認できなければ`判定不能`。未確認の段階を成功として補完しない。
 

@@ -3,6 +3,12 @@ name: contract-test-maps
 subject_ref: subject.ci.release-publication-verifier
 test_maps:
   - verification_id: verification.ci-release-publication-verifier.outputs
+    case_id: inventory-propagation-before-create
+    tests:
+      - path: runtime/release-publication/tests/observation.test.mjs
+        symbol: "contract.ci-release-publication-verifier.outputs > release-publication-rejection > pre-create reobserves absence and rejects a newly visible draft using GET only"
+        check_refs: [rejection]
+  - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: standard-workflow-credential
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts

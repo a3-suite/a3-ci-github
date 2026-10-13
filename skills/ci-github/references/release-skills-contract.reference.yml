@@ -1,0 +1,48 @@
+schemaVersion: "1"
+kind: ci-github-release-skills-contract
+id: ci-github.release-skills-contract
+title: 製品Releaseの公開スキル同梱契約
+summary: 製品と同じ固定sourceの公開スキルだけを単一ZIPにし、独立したowner証跡とともに同じReleaseへ公開する。
+placementRole: public_reference
+authority:
+  role: authoritative-definition
+  owns: [release skill declaration, skill packaging ownership, publication identity]
+usage:
+  whenToRead: [製品Releaseへスキルを同梱するとき, 同梱内容とREADMEの整合を確認するとき]
+  consumers: [human, agent, validator]
+selection:
+  input: release_skills_config_path
+  decision: 公開用skills/<skill-name>/SKILL.mdの有無を確認し、ある場合は製品ownerが同梱する・同梱しないを選ぶ。開発用.agents/skills/は対象外。
+  audit: 公開スキルの有無、同梱の選択と未同梱理由を既存監査レポートへ記録し、CI設定・公開宣言・READMEとの一致を確認する。選択未確認は未同梱へ読み替えず未確認として報告する。
+  disabled: __unset__
+  declarationPlacement: skills/release.json
+  source: authority.source_shaで固定した別checkout。制御checkout・作業ツリー・別版を生成元にしない。
+declaration:
+  schemaVersion: ci.release-skills.v1
+  fields: [schemaVersion, skills]
+  skillFields: [path, include, requiredFiles]
+  path: skills直下の公開スキルroot。root名とSKILL.mdのnameが一致し、重複しない。
+  include: root相対の通常ファイルまたはディレクトリを明示する。未追跡ファイルと選択外rootを含めない。
+  requiredFiles: root相対の必須ファイル。SKILL.mdに加え、利用に必須な参照・実行資材を指定する。除外・欠落は停止。
+  unknownFields: reject
+packaging:
+  assetName: <repository-name>-skills.zip
+  archiveLayout: スキル名を直下のrootとして相対構造を保持する。OS共通で一度だけ生成する。
+  fileSelectionPolicySource:
+    rootRole: provider-repository
+    path: runtime/release-publication/skill-package-policy.json
+  policyAuthority: 除外名・除外suffix・収録上限はこのJSONを正本とし、providerへ同梱する。
+  publicRuntime: 公開scriptsと必要な実行資材はincludeへ明示する。通常は除外するコンパイル出力suffixでもrequiredFilesへ明示したruntimeは保持する。禁止配置・キャッシュ・残骸の除外は解除しない。
+  localReferences: SKILL.md内のinline codeとMarkdown linkで明示されたreferences・scripts・assets相対pathを収録一覧へ照合する。変数・placeholder等の動的参照はownerがrequiredFilesへ具体化する。
+  safety: 不正相対path・symlink・非通常file・大文字小文字で衝突する収録名を拒否する。sourceのscriptは実行しない。
+evidence:
+  ownerContract: ci.release-skills-package
+  fields: [source_sha, version, declaration_sha256, files, asset_sha256]
+  files: 収録path・size・SHA-256を保持し、ZIPの生成内容と同一であることを検証する。
+  aggregation: installerや他supplemental ownerの証跡を置き換えず、個別の証跡を既存Release handoffへ含める。
+  rejection: 必須file欠落・改変・版またはSHA不一致・公開名衝突で成功handoffと公開を拒否する。
+adoption:
+  source: 製品と同じ固定ReleaseのZIPとchecksum。
+  deployment: 取得・検証・展開後、各スキルrootを利用者環境の適切なスキルフォルダへ配置する。専用の配備CLIは前提にしない。
+  noAutomaticDeployment: 製品installerは外部skill rootへ自動配備しない。
+  readme: 同梱する対応スキルは製品とセットで導入するものとして取得・配備・削除の短い案内を掲載し、任意扱いにしない。READMEではZIPと同じReleaseのchecksumを取得し、SHA-256を照合してから展開して利用者環境の適切なスキルフォルダへ配置するよう案内し、専用導入ガイドや配備CLIを必須にしない。スキル本文へ固定versionを埋め込まない。

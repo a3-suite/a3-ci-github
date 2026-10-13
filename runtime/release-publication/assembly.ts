@@ -7,13 +7,15 @@ import { LIMITS, fail, record, equal, hex, assetName, safePath, readBytes, readR
 import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } from './schema';
 import type { AssemblyType } from './schema';
 import { validateSnapshot } from './snapshot';
+import { buildReleaseSkills } from './skill-package';
+import { releaseSkillsConfigPath } from './selection';
 
 export type AssemblyOptionsType = {
   authorityPath: string; repository: string; snapshotPath: string; platformManifestPath: string;
-  platformMatrix: string; buildRoot: string; supplementalRoot?: string; outputRoot: string;
+  platformMatrix: string; buildRoot: string; supplementalRoot?: string; skillsSourceRoot?: string; outputRoot: string;
 };
 export type ManifestDecoderType = (text: string) => unknown;
-type FileType = { filename: string; name: string; sha256: string; size?: number };
+type FileType = { name: string; sha256: string; size?: number } & ({ filename: string; bytes?: never } | { bytes: Buffer; filename?: never });
 
 function exactKeys(value: unknown, keys: string[]): asserts value is Record<string, unknown> {
   if (!record(value) || Object.keys(value).sort().join(',') !== [...keys].sort().join(',')) fail('manifest-shape-invalid');
@@ -35,6 +37,8 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     if (config.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED !== 'true' && config.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED !== 'false') fail('supplemental-selection-invalid');
     const supplementalEnabled = config.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED === 'true';
     if (supplementalEnabled !== Boolean(options.supplementalRoot)) fail(supplementalEnabled ? 'selected-supplemental-asset-missing' : 'unexpected-supplemental-asset');
+    const skillsConfigPath = releaseSkillsConfigPath(config);
+    if (Boolean(skillsConfigPath) !== Boolean(options.skillsSourceRoot)) fail('skills-source-selection-mismatch');
     diagnostic.confirmed();
     diagnostic.at('platform-validation', { input: 'platform-manifest-path' });
     const platformBytes = readBytes(options.platformManifestPath, 65536);
@@ -134,6 +138,18 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
       diagnostic.at('supplemental-inventory', { input: 'supplemental-root' });
       exactInventory(fs.readdirSync(supplementalRoot), [...allowed], 'supplemental-files', 'unexpected-supplemental-asset');
     }
+    if (skillsConfigPath && options.skillsSourceRoot) {
+      diagnostic.at('skills-package', { input: 'release-skills-declaration', source: identity.source_sha, version: identity.version });
+      const skillPackage = buildReleaseSkills(options.skillsSourceRoot, skillsConfigPath, identity.source_sha, identity.version, identity.repository);
+      for (const file of skillPackage.assets) {
+        const name = assetName(file.name);
+        if (files.some(existing => existing.name.toLowerCase() === name.toLowerCase())) fail('asset-name-collision');
+        totalBytes += file.bytes.length;
+        if (files.length >= LIMITS.assets || totalBytes > LIMITS.totalBytes) fail('asset-limit-exceeded');
+        files.push({ name, bytes: file.bytes, sha256: sha256(file.bytes), size: file.bytes.length });
+      }
+      for (const file of skillPackage.evidence) metadata.push({ name: `evidence-${files.length}-${file.name}`, bytes: file.bytes, sha256: sha256(file.bytes) });
+    }
     const assets = sortedAssets(files.map(({ name, sha256: digest, size }) => ({ name, sha256: digest, size })));
     const manifest = [...assets.map((asset) => ({ path: `assets/${asset.name}`, sha256: asset.sha256 })), ...metadata.map((file) => ({ path: `evidence/${file.name}`, sha256: file.sha256 }))];
     const manifestBytes = Buffer.from(`${JSON.stringify(manifest)}\n`);
@@ -149,7 +165,8 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     fs.mkdirSync(path.join(options.outputRoot, 'evidence'));
     for (const file of [...files, ...metadata]) {
       const destination = path.join(options.outputRoot, files.some((asset) => asset === file) ? 'assets' : 'evidence', file.name);
-      fs.copyFileSync(file.filename, destination, fs.constants.COPYFILE_EXCL);
+      if (file.bytes) fs.writeFileSync(destination, file.bytes, { flag: 'wx' });
+      else fs.copyFileSync(file.filename, destination, fs.constants.COPYFILE_EXCL);
       const copiedDigest = hashFile(destination);
       if (copiedDigest !== file.sha256) fail('checksum-mismatch', { field: 'copied-sha256', asset: file.name, expected: file.sha256, observed: copiedDigest });
     }

@@ -21,7 +21,7 @@ export const run = async (): Promise<void> => {
     const assembly = assembleRelease({
       repository: input('repository'), authorityPath: input('authority-path'), snapshotPath: input('snapshot-path'),
       platformManifestPath: input('platform-manifest-path'), platformMatrix: input('platform-matrix'),
-      buildRoot: input('build-root'), supplementalRoot: input('supplemental-root', false), outputRoot,
+      buildRoot: input('build-root'), supplementalRoot: input('supplemental-root', false), skillsSourceRoot: input('skills-source-root', false), outputRoot,
     }, decodePlatformManifest);
     diagnostic.retainedEvidence = 'configured-output-directory/assembly.json';
     const outputs = { status: 'success', 'release-handoff': outputRoot, 'asset-digest': assembly.asset_digest };

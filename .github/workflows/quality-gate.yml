@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop, 'release/**', 'hotfix/**']
   workflow_dispatch:
+    inputs:
+      release-token-capability-probe:
+        description: Verify draft visibility using an isolated provider-owned Release
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -48,7 +53,8 @@ jobs:
           const { registry } = repositorySnapshot(process.cwd());
           const version = readFileSync('VERSION', 'utf8').trim();
           const releaseTag = registry.actionization.implementationSource.releaseTag;
-          const candidate = releaseTag === `v${version}` && execFileSync('git', ['tag', '--list', releaseTag], { encoding: 'utf8' }).trim() === '';
+          const tagPresent = execFileSync('git', ['tag', '--list', releaseTag], { encoding: 'utf8' }).trim() !== '';
+          const candidate = releaseTag === `v${version}` && !tagPresent;
           execFileSync(process.execPath, ['runtime/repository/check-provider-references.mjs', '--contracts', candidate ? '--candidate' : '--preparation'], { stdio: 'inherit' });
           NODE
 
@@ -699,3 +705,30 @@ jobs:
           test "$INSTALLER_WINDOWS_RESULT" = success
           test "$INSTALLER_MACOS_RESULT" = success
           test "$INSTALLER_HANDOFF_RESULT" = success
+
+  release-token-capability:
+    if: github.event_name == 'workflow_dispatch' && inputs.release-token-capability-probe == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout fixed probe source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+      - name: Verify same-job token draft visibility
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_RELEASE_CONTENTS_PERMISSION: write
+        run: node tests/support/release-token-capability-probe.mjs
+      - name: Retain capability evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-token-capability
+          path: logs/release-token-capability.json
+          if-no-files-found: error

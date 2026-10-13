@@ -18,6 +18,44 @@ import test_runtime_installer
 
 
 class StandardAssemblyTest(unittest.TestCase):
+    def test_standard_entry_names_rejected_before_output(self) -> None:
+        temporary_root = ROOT / "tests/tmp"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as temporary:
+            root = Path(temporary)
+            config_path = root / "assembly.json"
+            unix = {target: {"manifest": "product.json", "assetName": f"custom-{target}.sh"} for target in ["linux-x86_64", "macos-arm64"]}
+            for use_case in ["github-release-native", "github-release-native-shared"]:
+                for operation in ["build-platform", "assemble"]:
+                    for entry_name in ["install-windows-x86_64.ps1", "Install.ps1", "private-token"]:
+                        with self.subTest(use_case=use_case, operation=operation, entry_name=entry_name):
+                            shared = use_case.endswith("-shared")
+                            config = {"schemaVersion": "installer.assembly.v1", "useCase": use_case, "verificationProfile": "shared-exact-payload-v1" if shared else "native-offline-dry-run-v1", "platforms": {**(unix if shared else {}), "windows-x86_64": {"manifest": "windows.json", "assetName": entry_name}}}
+                            if shared:
+                                config["sharedWrapper"] = {"assetName": "install.sh", "deliveryUrls": {target: f"https://example.invalid/{entry['assetName']}" for target, entry in unix.items()}}
+                            config_path.write_text(json.dumps(config))
+                            accepted = json.loads(json.dumps(config))
+                            accepted["platforms"]["windows-x86_64"]["assetName"] = "install.ps1"
+                            config_path.write_text(json.dumps(accepted))
+                            self.assertEqual(assembly.config_for({"configPath": str(config_path)}), accepted)
+                            config_path.write_text(json.dumps(config))
+                            output = root / "output"
+                            request = {"operation": operation, "configPath": str(config_path), "outputDirectory": str(output)}
+                            with patch.object(assembly, "platform_record") as build, patch.object(assembly, "assemble") as finalize, patch.object(sys, "stdin", io.StringIO(json.dumps(request))), patch.object(sys, "stderr", io.StringIO()) as stderr:
+                                self.assertEqual(assembly.main(), 1)
+                                diagnostic = json.loads(stderr.getvalue())
+                                self.assertEqual(diagnostic["sanitized-reason"], "installer-windows-entry-name-invalid")
+                                self.assertEqual(diagnostic["comparison"]["expected"], ["install.ps1"])
+                                self.assertNotIn("private-token", stderr.getvalue())
+                                build.assert_not_called()
+                                finalize.assert_not_called()
+                            self.assertFalse(output.exists())
+
+            config = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native-shared", "verificationProfile": "shared-exact-payload-v1", "platforms": unix, "sharedWrapper": {"assetName": "setup.sh", "deliveryUrls": {target: f"https://example.invalid/{entry['assetName']}" for target, entry in unix.items()}}}
+            config_path.write_text(json.dumps(config))
+            with self.assertRaisesRegex(ValueError, "installer-unix-shared-entry-name-invalid"):
+                assembly.config_for({"configPath": str(config_path)})
+
     def test_main_emits_only_known_diagnostic_reasons(self) -> None:
         for error, reason in [
             (ValueError("installer-artifact-checksum-invalid"), "installer-artifact-checksum-invalid"),
@@ -53,7 +91,7 @@ class StandardAssemblyTest(unittest.TestCase):
             config_path.write_text(json.dumps(native))
             self.assertEqual(assembly.config_for({"configPath": str(config_path)}), native)
             unix = {"linux-x86_64", "macos-arm64"}
-            platforms = {target: {"manifest": f"{target}.json", "assetName": f"install-{target}.ps1" if target.startswith("windows") else f"install-{target}.sh"} for target in ["linux-x86_64", "macos-arm64", "windows-x86_64"]}
+            platforms = {target: {"manifest": f"{target}.json", "assetName": "install.ps1" if target.startswith("windows") else f"install-{target}.sh"} for target in ["linux-x86_64", "macos-arm64", "windows-x86_64"]}
             shared = {"schemaVersion": "installer.assembly.v1", "useCase": "github-release-native-shared", "verificationProfile": "shared-exact-payload-v1", "platforms": platforms, "sharedWrapper": {"assetName": "install.sh", "deliveryUrls": {target: f"https://example.invalid/{platforms[target]['assetName']}" for target in unix}}}
             for selected in [platforms, {target: platforms[target] for target in unix}]:
                 with self.subTest(selected=selected):
@@ -286,7 +324,7 @@ class StandardAssemblyTest(unittest.TestCase):
             windows_root.mkdir()
             windows_bundle, windows_artifact = legacy._per_user_windows_bundle(windows_root)
             shutil.copyfile(windows_bundle / "manifest-windows-x86_64.json", root / "windows.json")
-            platforms["windows-x86_64"] = {"manifest": "windows.json", "assetName": "install-windows-x86_64.ps1"}
+            platforms["windows-x86_64"] = {"manifest": "windows.json", "assetName": "install.ps1"}
             (root / "assembly.json").write_text(json.dumps(config))
             release_platforms = [{"id": "release-linux", "target": "x86_64-unknown-linux-gnu"}, {"id": "release-macos", "target": "aarch64-apple-darwin"}, {"id": "release-windows", "target": "x86_64-pc-windows-msvc"}]
             standard_root, supplemental_root = root / "standard", root / "supplemental"
@@ -324,7 +362,7 @@ class StandardAssemblyTest(unittest.TestCase):
             self.assertEqual({entry["path"] for entry in handoff["assets"]}, {"install.sh", *(entry["assetName"] for entry in platforms.values()), *(f"manifest-{target}.json" for target in platforms)})
             wrapper_evidence = assembly.read_json(root / "handoff/install.sh.owner.json")["installerEvidence"]
             self.assertEqual(set(wrapper_evidence["platform_installers"]), {"linux-x86_64", "macos-arm64"})
-            windows_script = supplemental_root / "supplemental-build-release-windows/candidate/install-windows-x86_64.ps1"
+            windows_script = supplemental_root / "supplemental-build-release-windows/candidate/install.ps1"
             windows_script.write_bytes(windows_script.read_bytes() + b"\n# changed after verification\n")
             with self.assertRaisesRegex(ValueError, "installer-platform-evidence-invalid"):
                 assembly.run({**assembly_request, "outputDirectory": str(root / "failed-windows")})

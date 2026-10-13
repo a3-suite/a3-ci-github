@@ -3,6 +3,21 @@ name: contract-test-maps
 subject_ref: subject.ci.release-publisher
 test_maps:
   - verification_id: verification.ci-release-publisher.outputs
+    case_id: provider-rejection-diagnostics
+    tests:
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [diagnostic-details, rejection, no-outputs]
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [diagnostic-details, rejection, no-outputs]
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: standard-workflow-capability
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > bound standard capability permits false API push through publication and independent readback"
+        check_refs: [receipt, readback]
+  - verification_id: verification.ci-release-publisher.outputs
     case_id: canonical-repository-identity
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs

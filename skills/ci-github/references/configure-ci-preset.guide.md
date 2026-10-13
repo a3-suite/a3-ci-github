@@ -321,6 +321,9 @@ JSON booleanの`false`、`<supplemental-release-asset-owner-contract>`へJSON文
 `<supplemental-release-asset-config-path>`へは`"__unset__"`を渡す。この場合は
 補助adapterを配置せず、assembleは共通のauthorityとconfig snapshotだけを受け取り、補助handoffを
 受け取らない。固定SHAの`ci-config-snapshot`は空値を拒否するため、無効値を空文字へ戻さない。
+
+対応スキルを同梱しないprojectは、planの`--set`で`<release-skills-config-path>`へJSON文字列`"__unset__"`を渡す。
+同梱する場合の値と準備は`references/release-project-skills.guide.md`に従う。
 補助Release assetとしてinstallerを配布するprojectは、installerスキルへセットアップを委譲し、標準runtimeの適用範囲と固有実装の必要性を確認して、製品宣言・manifest・組立・製品READMEへのインストール手順追記を進める。確定した実装選択・契約ID・製品宣言pathをplanの`--set`で渡し、生成済みcallerの補助asset入力と照合する。workflow接続・権限・認証・公開とpreflightはCI側が担当する。
 
 非標準のowner adapterは既定の `owner-adapter` とconfig path `__unset__` を使い、
