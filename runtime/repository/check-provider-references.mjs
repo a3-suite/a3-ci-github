@@ -157,7 +157,16 @@ export function checkActionReferences(root, snapshot, options = {}) {
     const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
     let sourceRevision;
     let sourceTree;
-    if (options.candidate) {
+    if (options.preparation) {
+      // Preparation checks the existing binding; the new implementation cannot be bound before its commit exists.
+      try { git('merge-base', '--is-ancestor', binding.exactRef, git('rev-parse', 'HEAD')); }
+      catch (error) {
+        if (error.status === 1) throw new DiagnosticError('implementation-source-not-contained', { diagnostics: { field: 'source-revision', expected: 'contains-existing-implementation-sha', observed: 'not-contained' } });
+        throw error;
+      }
+      sourceRevision = binding.exactRef;
+      sourceTree = binding.exactRef;
+    } else if (options.candidate) {
       sourceRevision = git('rev-parse', 'HEAD');
       sourceTree = snapshot.before ?? git('rev-parse', 'HEAD^{tree}');
       if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...new Set([...actionPaths, 'runtime']))) throw new DiagnosticError('implementation-candidate-execution-assets-dirty', { diagnostics: { field: 'execution-assets', expected: 'committed-actions-and-runtime', observed: 'uncommitted-changes' } });
@@ -191,6 +200,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       if (arg === '--release-tag') { options.releaseTag = args[++index]; if (!/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(options.releaseTag ?? '')) throw new DiagnosticError('provider-reference-release-tag-invalid', { diagnostics: { field: 'release-tag', expected: 'vX.Y.Z', observed: 'invalid' } }); }
     }
     options.candidate = flags.has('--candidate');
+    options.preparation = flags.has('--preparation');
     if (flags.has('--preparation') && (!flags.has('--contracts') || options.candidate) || options.releaseTag && (!flags.has('--contracts') || options.candidate || flags.has('--staged') || flags.has('--preparation'))) throw new DiagnosticError('provider-reference-mode-invalid', { diagnostics: { field: 'validation-mode', expected: 'preparation-or-candidate-or-release', observed: 'invalid-combination' } });
     diagnostic.confirmed();
     diagnostic.at('repository-binding', { input: 'registry-workflows-and-action-metadata' });
@@ -206,10 +216,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       const actionization = result.snapshot.registry.actionization;
       const pending = actionization.availabilityGate.status === 'pending-release'
         && actionization.targets.every((target) => target.status === 'pending-release');
-      report.preparationOnly = args.includes('--preparation') && pending && report.connection.diagnostics.length > 0;
+      report.preparationOnly = options.preparation && (pending || report.connection.diagnostics.length === 0);
     }
     result.snapshot.assertUnchanged();
-    if (!flags.has('--contracts') && report.implementationBinding) {
+    if ((!flags.has('--contracts') || report.preparationOnly) && report.implementationBinding) {
       report.implementationBindingStatus = 'unverified';
       report.implementationBinding.implementationBindingStatus = 'unverified';
     }

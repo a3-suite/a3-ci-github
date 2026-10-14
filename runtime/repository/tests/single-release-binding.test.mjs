@@ -37,6 +37,40 @@ const fixture = () => {
 
 // flow_id: single-release-binding
 describe('contract.ci-selective-distribution.publication', () => {
+  test('implementation preparation validates existing references without a final tag or new binding', () => {
+    const f = fixture();
+    applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    f.git('add', '.'); f.git('commit', '-m', 'existing connection');
+    f.write('runtime/payload.mjs', 'export const payload = 2;\n');
+    f.git('add', '.');
+    const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', ...args], { cwd: f.directory, encoding: 'utf8' });
+
+    const prepared = cli('--preparation');
+    expect(prepared.status, prepared.stderr).toBe(0);
+    const report = JSON.parse(prepared.stdout);
+    expect(report).toMatchObject({ preparationOnly: true, implementationBindingStatus: 'unverified', implementationSourceRevision: f.implementation });
+    expect(report.connection.diagnostics).toEqual([]);
+    expect(f.git('tag', '--list')).toBe('');
+    const candidate = cli('--candidate');
+    expect(candidate.status).not.toBe(0);
+    expect(candidate.stderr).toContain('implementation-execution-closure-mismatch');
+
+    const relative = '.github/workflows/ci-quality.yml';
+    const workflow = yaml.parse(readFileSync(path.join(f.directory, relative), 'utf8'));
+    workflow.jobs.checked.steps[0].with['undeclared-input'] = 'invalid';
+    f.write(relative, yaml.stringify(workflow)); f.git('add', '.');
+    const invalidInterface = cli('--preparation');
+    expect(invalidInterface.status).toBe(1);
+    expect(JSON.parse(invalidInterface.stdout).interfaceDiagnostics).toContainEqual(expect.stringContaining('undeclared-input'));
+    expect(JSON.parse(invalidInterface.stdout).preparationOnly).toBe(false);
+
+    workflow.jobs.checked.steps.push({ uses: `actions/checkout@${'f'.repeat(40)}` });
+    f.write(relative, yaml.stringify(workflow)); f.git('add', '.');
+    const invalidPin = cli('--preparation');
+    expect(invalidPin.status).toBe(1);
+    expect(JSON.parse(invalidPin.stdout).diagnostics).toContainEqual(expect.stringContaining('registry-approved provider pin'));
+  });
+
   test.each(['release/0.2.11', 'hotfix/0.2.11'])('one Release connects an untagged implementation on %s', (branch) => {
     // Arrange
     const f = fixture(); f.git('switch', '-c', branch);

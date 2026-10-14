@@ -188,11 +188,11 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 | 表記 | 意味 |
 | --- | --- |
 | `{ci-github-source-root}` | `references/distribute-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
-| `{skill-collection-root}` | adapter bundle の `source.skill` を解決できる外部スキル集合 root |
+| `{skill-collection-root}` | 独自adapter bundle の `source.skill` を解決する場合の外部スキル集合 root |
 | `{ci-github-skill-root}` | `project-skill-deploy`で別途配備した、導線と参照文書だけを持つ`ci-github` Agent Skill root |
 | `{project-root}` | CI を導入する project の root |
 
-`{skill-collection-root}` は、選択した言語スキルを identity で解決する場合だけ使用する。
+`{skill-collection-root}` は、独自bundleの外部スキルを identity で解決する場合だけ使用する。標準bundleの生成・導入・実行には使用しない。
 repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
 `{ci-github-skill-root}` 配下へ複製しない。取得とworkflow copyは
 `references/distribute-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
@@ -261,7 +261,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
      --target-root "{project-root}"
    ```
 
-   成功時は `ci.adapter-materializer.v1` のJSONが出力される。標準経路は `files: []` と固定生成元identityを含むbindingを返し、consumerへファイルを追加しない。独自配置経路の衝突は従来どおり停止する。
+   成功時は `ci.adapter-materializer.v2` のJSONが出力される。標準経路は `files: []` とrepository正本pathとSHA256を含むbindingを返し、consumerへファイルを追加しない。独自配置経路の衝突は従来どおり停止する。
 
 4. 固定標準bundleまたは独自descriptorの `projectSettings` を確認し、project側に不足する
    ファイルまたはコマンドだけを追加する。標準bundleのコマンド自体はproject側で再定義しない。
@@ -301,8 +301,8 @@ trusted PR check は標準で base SHA の trusted CI assets を使用する。b
 
 platform 固有の runtime、artifact、installer の検証が必要な project だけが、次の順で optional asset を導入する。
 
-1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`。runner は registry の allowlist 内の versioned label）。
-2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。
+1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](runner-trust-policy.reference.md#platform-別-quality-check)に従う。
+2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。 任意の `sharedStandardChecks: true` は、標準Rustのformat/securityについてHOMEとprojectの設定・OS/architecture対象が全runnerで同等と利用projectが確認した場合だけ指定する。未指定/falseは全検査を維持し、trueは信頼済みbaseの宣言だけ有効になる。先頭platformが全検査、残りがnative検査を実行し、全platform成功を要求する。PR headだけの宣言やbootstrapでは省略しない。
 3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。
 5. callerの `platform-summary` は `quality-gate-platforms / summary` の固定名で、calleeの失敗・中断・未実施・結果欠落を成功に読み替えない。provider側は期待platformの欠落、docs-only時の対象外記録、matrix結果を集約する。Hostedでrequired check名と失敗伝播を受け入れるまで利用可能扱いにせず、受入後にbase `quality-gate` のrequired checkと別に登録する。

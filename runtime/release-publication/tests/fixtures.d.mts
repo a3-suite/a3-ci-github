@@ -1,8 +1,9 @@
 import type { TestContext } from 'vitest';
 import type { AssemblyType, ReleaseIdentityType } from '../schema';
 import type { ReadOnlyClientType } from '../observation';
+import type { Platform } from '../../platform/platform-manifest-core.mjs';
 export function standardPublicationTokenEnvironment(repository: string, token: string): Record<string, string>;
-export function fixture(t: TestContext): {
+export function fixture(t: TestContext, platform?: Platform): {
   root: string;
   identity: ReleaseIdentityType;
   options: Record<string, string> & { repository: string; authorityPath: string; snapshotPath: string; platformManifestPath: string; platformMatrix: string; buildRoot: string; outputRoot: string };

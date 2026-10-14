@@ -6,11 +6,20 @@ test_maps:
     case_id: provider-rejection-diagnostics
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publisher entrypoint preserves provider rejection metadata before writes"
-        check_refs: [diagnostic-details, rejection, no-outputs]
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [diagnostic-details]
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publisher entrypoint preserves provider rejection metadata before writes"
-        check_refs: [diagnostic-details, rejection, no-outputs]
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: provider-identity-rejection
+    tests:
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [rejection, no-outputs]
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes"
+        check_refs: [rejection, no-outputs]
   - verification_id: verification.ci-release-publisher.outputs
     case_id: standard-workflow-capability
     tests:
@@ -39,12 +48,32 @@ test_maps:
     case_id: bundle-publish
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
         check_refs:
           - receipt
           - readback
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        check_refs:
+          - receipt
+          - readback
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
         check_refs:
           - receipt
           - readback
@@ -60,12 +89,12 @@ test_maps:
     case_id: bundle-rejection
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
         check_refs:
           - rejection
           - no-outputs
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
+        symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint rejects missing credential and path injection without outputs"
         check_refs:
           - rejection
           - no-outputs
@@ -89,7 +118,42 @@ test_maps:
     case_id: partial-failure
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback"
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-expiry"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-notes"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-expiry"
+        check_refs:
+          - rejection
+          - no-outputs
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-notes"
         check_refs:
           - rejection
           - no-outputs

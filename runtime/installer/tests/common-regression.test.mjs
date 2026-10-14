@@ -12,10 +12,13 @@ describe('provider installer', () => {
       const directory = fileURLToPath(new URL('.', import.meta.url));
       const python = process.platform === 'win32' ? 'python' : 'python3';
       // Act
-      const result = execFileSync(python, ['-m', 'unittest', 'discover', '-s', directory, '-p', 'test_*.py'], { env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
+      const coverageOutput = process.env.A3_CI_INSTALLER_COVERAGE_OUTPUT;
+      const result = coverageOutput === undefined
+        ? execFileSync(python, ['-m', 'unittest', 'discover', '-s', directory, '-p', 'test_*.py'], { env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] })
+        : execFileSync(process.execPath, [fileURLToPath(new URL('../../../tests/coverage-tools/measure-installer-coverage.mjs', import.meta.url)), 'run', coverageOutput], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
       // Assert
       expect(typeof result).toBe('string');
-    }, 60000);
+    }, 120000);
   });
 });
 

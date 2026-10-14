@@ -78,8 +78,10 @@ jobs:
       trusted_root: ${{ steps.trusted-assets.outputs.root }}
       matrix: ${{ steps.resolve.outputs['quality-matrix'] }}
       expected: ${{ steps.resolve.outputs['expected-platforms'] }}
+      toolchain-version: ${{ steps.configuration.outputs['resolve-toolchain'] == 'true' && steps.toolchain-resolution.outputs.resolved-toolchain-version || steps.configuration.outputs['toolchain-version'] }}
     steps:
       - name: Check resolved configuration
+        id: configuration
         shell: bash
         run: |
           set -euo pipefail
@@ -94,6 +96,12 @@ jobs:
             }
           fi
           [[ -n "${CI_TOOLCHAIN_VERSION:-}" && "${CI_TOOLCHAIN_VERSION:-}" != *'<'* && "${CI_TOOLCHAIN_VERSION:-}" != *'>'* ]]
+          if [[ "$CI_TOOLCHAIN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "toolchain-version=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_OUTPUT"
+            echo "resolve-toolchain=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "resolve-toolchain=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -110,7 +118,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@a1b57c40551a1860e372e2c5b0c9401041478da0
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -166,10 +174,21 @@ jobs:
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
       - name: Resolve platform matrix
         id: resolve
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@a1b57c40551a1860e372e2c5b0c9401041478da0
         with:
           manifest-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_PLATFORM_MANIFEST }}
           selection-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_QUALITY_PLATFORM_SELECTION }}
+          runner-policy: ${{ steps.trusted-assets.outputs.source == 'base' && 'trusted' || 'bootstrap' }}
+      - name: Resolve selected toolchain once
+        id: toolchain-resolution
+        if: steps.change-scope.outputs['run-ci'] != 'false' && steps.configuration.outputs['resolve-toolchain'] == 'true'
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@a1b57c40551a1860e372e2c5b0c9401041478da0
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          uv-version: ${{ env.CI_UV_VERSION }}
+          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+          version-policy: compatible
 
   platform:
     name: quality-gate-platforms / ${{ matrix.platform_id }}
@@ -179,6 +198,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.resolve-platforms.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
+    env:
+      CI_TOOLCHAIN_VERSION: ${{ needs.resolve-platforms.outputs.toolchain-version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -197,17 +218,35 @@ jobs:
             package.json
             package-lock.json
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@a1b57c40551a1860e372e2c5b0c9401041478da0
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
           uv-version: ${{ env.CI_UV_VERSION }}
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+      - name: Select quality execution scope
+        id: execution-scope
+        shell: bash
+        env:
+          TRUSTED_ROOT: ${{ needs.resolve-platforms.outputs['trusted_root'] }}
+          SHARED_STANDARD_CHECKS: ${{ matrix.shared_standard_checks }}
+          PLATFORM_ID: ${{ matrix.platform_id }}
+          FIRST_PLATFORM_ID: ${{ fromJSON(needs.resolve-platforms.outputs.matrix).include[0].platform_id }}
+        run: |
+          set -euo pipefail
+          scope=all
+          if [[ "$TRUSTED_ROOT" == .ci-base && "$SHARED_STANDARD_CHECKS" == true &&
+                "$CI_STANDARD_BUNDLE_ID" == rust-cargo-quality && "$CI_LANGUAGE_PROFILE" == rust &&
+                -z "$CI_ADAPTER_DESCRIPTOR" && -n "$FIRST_PLATFORM_ID" && "$PLATFORM_ID" != "$FIRST_PLATFORM_ID" ]]; then
+            scope=native
+          fi
+          printf 'scope=%s\n' "$scope" >> "$GITHUB_OUTPUT"
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@a1b57c40551a1860e372e2c5b0c9401041478da0
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
+          execution-scope: ${{ steps.execution-scope.outputs.scope }}
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', needs.resolve-platforms.outputs['trusted_root'], env.CI_ADAPTER_DESCRIPTOR) || '' }}
           source-root: .
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
@@ -296,6 +335,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@4365cfcec913c4111d22eb1b37ed3a9d8e4075bb
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a1b57c40551a1860e372e2c5b0c9401041478da0
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}

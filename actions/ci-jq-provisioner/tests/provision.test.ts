@@ -6,7 +6,7 @@ import { provisionJq, provisionJqOnPath, selectAsset } from '../src/provision.js
 
 const ownedTemporaryPaths: string[] = [];
 async function testTempRoot(): Promise<string> {
-  const parent = path.resolve('tests/tmp');
+  const parent = path.resolve(__dirname, 'tmp');
   await mkdir(parent, { recursive: true });
   const root = await mkdtemp(path.join(parent, 'ci-jq-provision-'));
   ownedTemporaryPaths.push(root);

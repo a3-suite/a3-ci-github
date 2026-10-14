@@ -76,7 +76,7 @@ describe("materialize-adapter-bundle", () => {
           targetRoot,
         });
 
-        expect(report.schema).toBe('ci.adapter-materializer.v1');
+        expect(report.schema).toBe('ci.adapter-materializer.v2');
         expect(report.files.map((file) => file.source)).toStrictEqual([
           'runtime/adapter/vitest-test-summary.ts',
           'rust/assets/test-bundle.json',

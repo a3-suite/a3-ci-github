@@ -436,7 +436,7 @@ describe("contract.ci-preset-materialization.application", () => {
         // Assert
         expect(result.status, result.stderr).toBe(0);
         const report = JSON.parse(result.stdout);
-        expect(report.schema).toBe('ci.adapter-materializer.v1');
+        expect(report.schema).toBe('ci.adapter-materializer.v2');
         expect(report.files.map((entry) => entry.action)).toStrictEqual(['copied', 'copied']);
         expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'));
         expect(JSON.parse(readFileSync(path.join(targetRoot, '.ci/adapters/test-bundle.json'), 'utf8')).id).toBe('test-bundle');

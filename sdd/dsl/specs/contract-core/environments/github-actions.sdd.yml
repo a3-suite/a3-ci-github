@@ -78,7 +78,7 @@ runtime_contexts:
   - id: runtime-context.release-observation-invalid
     summary: Credentials or remote visibility are insufficient, a Release already exists before create, remote knowledge is incomplete, or owner evidence or independent post-create observations do not match their schema, identity or digest bindings.
   - id: runtime-context.platform-manifest-valid
-    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted.
+    summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted. Runner policy defaults to the bounded bootstrap catalog; a fixed caller may select trusted versioned Hosted label syntax only for verified base or publication control configuration. Label syntax is not proof of Hosted origin or availability.
   - id: runtime-context.platform-manifest-invalid
     summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
   - id: runtime-context.quality-platform-selection-valid
@@ -86,9 +86,9 @@ runtime_contexts:
   - id: runtime-context.quality-platform-selection-invalid
     summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.quality-toolchain-preparation-succeeds
-    summary: The selected language profile is supported, its required tool versions are exact, and every selected toolchain setup step succeeds.
+    summary: The selected language profile and version policy are supported, auxiliary tools are exact, the toolchain is exact or a bounded Node/Python selector under compatible policy, its resolved exact version matches the request, and every selected setup step succeeds. Release and legacy callers retain the default exact policy.
   - id: runtime-context.quality-toolchain-preparation-fails
-    summary: The selected language profile is unsupported, a required selected tool version is missing or nonexact, or a selected toolchain setup step fails.
+    summary: The profile or policy is unsupported, a selected required version violates its input contract, resolution is missing or outside the requested selector, or a selected setup step fails.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid

@@ -54,6 +54,8 @@
 
 #### platform 別 quality check
 - platform 別 quality job の runner は platform manifest の allowlist 済み versioned label だけを使い、未信頼入力から runner 値を解決しない。
+- 採用済みbaseまたは検証済みpublication controlのmanifestはconsumerがレビューしたrunner選択の正本とする。固定callerだけがci-platform-matrixの`runner-policy: trusted`を選び、providerの検証済みOS世代カタログへ限定しない。consumerは提供されるHosted labelとarchitectureを確認する。labelの構文検査はHosted originや提供状況の証明ではない。
+- same-repo headを使う初回導入は`runner-policy: bootstrap`を維持する。policyはmanifestやevent/manual入力から選ばず、固定callerが資産の取得元を判定して渡す。信頼を確認できない単体呼び出しも既定のbootstrap制約を使う。
 - same-repo / fork の双方で固定名の集約 check が起動し、platform job の skip、cancel、runner 不提供、matrix の欠落を成功に読み替えない。
 - trusted CI assets bootstrap（後述）を除き、platform 選択データと CI 資産は base SHA から取得し、PR head 側の変更で検証対象 platform を無効化または追加できないようにする。
 - opt-in の platform 検証は base `quality-gate` とは別の固定名 check として required にし、base check の判定へ暗黙に混ぜない。

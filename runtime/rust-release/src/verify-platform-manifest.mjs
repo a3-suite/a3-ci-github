@@ -7,9 +7,9 @@ import { parse } from 'yaml';
 import { validatePlatformManifestValue } from '../../platform/platform-manifest-core.mjs';
 import { sourceTextSha256 } from '../../platform/source-text.mjs';
 
-export const verifyPlatformSelection = (manifestText, selectedId, selectedTarget) => {
+export const verifyPlatformSelection = (manifestText, selectedId, selectedTarget, runnerPolicy = 'bootstrap') => {
   const manifest = parse(manifestText);
-  const platforms = validatePlatformManifestValue(manifest);
+  const platforms = validatePlatformManifestValue(manifest, runnerPolicy);
   const selected = platforms.find((platform) => platform.id === selectedId) ?? null;
 
   if (selected === null) throw new DiagnosticError('platform-selection-id-missing', { diagnostics: { field: 'platform-id', expected: 'declared-id', observed: 'unknown-id' } });
@@ -23,7 +23,7 @@ const main = () => {
   }
   const bytes = fs.readFileSync(manifestPath);
   if (sourceTextSha256(bytes) !== expectedDigest) throw new DiagnosticError('platform-manifest-identity-mismatch', { diagnostics: { field: 'platform-manifest-sha256', expected: expectedDigest, observed: sourceTextSha256(bytes) } });
-  verifyPlatformSelection(bytes.toString('utf8'), selectedId, selectedTarget);
+  verifyPlatformSelection(bytes.toString('utf8'), selectedId, selectedTarget, 'trusted');
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

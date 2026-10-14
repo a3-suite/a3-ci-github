@@ -19,8 +19,8 @@ test('Action rejects an invalid version as provisioning failure', () => {
       'INPUT_JQ-VERSION': 'not-exact',
       RUNNER_OS: 'Linux',
       RUNNER_ARCH: 'X64',
-      RUNNER_TEMP: path.resolve('tests/tmp'),
-      GITHUB_PATH: path.resolve('tests/tmp/unused-github-path'),
+      RUNNER_TEMP: path.join(actionRoot, 'tests/tmp'),
+      GITHUB_PATH: path.join(actionRoot, 'tests/tmp/unused-github-path'),
       GITHUB_ACTIONS: 'true',
     },
   });

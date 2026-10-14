@@ -292,7 +292,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     interpretActionization(actionization, report);
   const targets = actionization.targets;
   // Omitted `source.skill` identifies a repository-owned asset. Explicit skill
-  // identities remain reserved for externally owned language adapter bundles.
+  // identities resolve separately for custom externally owned resources.
   const commonSourceSkill = SELF_SKILL;
   const registeredAssets = [
     ...(Array.isArray(providerAssets) ? providerAssets : [])

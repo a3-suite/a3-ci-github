@@ -19,5 +19,5 @@ export const validatePlatformManifest = (manifestText: string): Platform[] => {
     throw new DiagnosticError('platform manifest exceeds 64 KiB', { diagnosticCode: 'platform-manifest-exceeds-64-kib' });
   }
   const manifest = yaml.parse(manifestText, { maxAliasCount: 20, uniqueKeys: true });
-  return validatePlatformManifestValue(manifest);
+  return validatePlatformManifestValue(manifest, 'trusted');
 };

@@ -49,8 +49,8 @@ test('entrypoint writes snapshot and outputs', () => {
 // integration_id: ci-config-snapshot-entrypoint-regression
 test('retains saved snapshot evidence when GITHUB_OUTPUT fails', () => {
   // Arrange
-  fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
-  const fixture = fs.mkdtempSync(path.resolve('tests/tmp/snapshot-output-failure-'));
+  fs.mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
+  const fixture = fs.mkdtempSync(path.join(root, 'tests/tmp/snapshot-output-failure-'));
   onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
   const snapshot = path.join(fixture, 'snapshot.json');
   const sentinel = path.join(fixture, 'existing-state');

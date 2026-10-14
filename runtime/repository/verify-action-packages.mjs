@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { collectActions } from './check-action-dist.mjs';
 import { assertRuntimeBoundaries } from './check-runtime-boundaries.mjs';
 import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
+import { classifyVitestReport, parseVitestReport } from '../vitest/vitest-summary-core.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, '../..');
@@ -76,6 +78,31 @@ export const cliTypecheckPlan = (root, packages, nodePath = process.execPath) =>
   }];
 };
 
+export const batchActionTypecheckPlan = (plan, packages, nodePath = process.execPath) => {
+  const candidates = packages.filter((entry) => {
+    const config = JSON.parse(readFileSync(path.join(entry.path, 'tsconfig.json'), 'utf8'));
+    return Object.keys(config).sort().join(',') === 'extends,include'
+      && config.extends === '../../tsconfig.action.json'
+      && JSON.stringify(config.include) === '["src/**/*.ts","tests/**/*.ts"]';
+  }).map((entry) => {
+    const require = createRequire(path.join(entry.path, 'package.json'));
+    const versions = ['typescript/package.json', '@types/node/package.json'].map((name) => JSON.parse(readFileSync(require.resolve(name), 'utf8')).version);
+    return { ...entry, compiler: require.resolve('typescript/bin/tsc'), versions: JSON.stringify(versions) };
+  });
+  if (candidates.length < 2) return plan;
+  const selected = candidates.filter((entry) => entry.versions === candidates[0].versions);
+  if (selected.length < 2) return plan;
+  const names = new Set(selected.map((entry) => entry.name));
+  // Keep each original project boundary; --force never substitutes a cached successful typecheck.
+  return plan.flatMap((step) => {
+    if (step.phase !== 'typecheck' || !names.has(step.action)) return [step];
+    if (step.action !== selected[0].name) return [];
+    return [{ command: nodePath,
+      args: [selected[0].compiler, '--build', ...selected.map((entry) => path.join(entry.path, 'tsconfig.json')), '--force'],
+      cwd: path.resolve(selected[0].path, '../..'), action: 'standard-action-projects', phase: 'typecheck' }];
+  });
+};
+
 export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath) => {
   const actionRoot = path.join(root, 'actions/ci-gh-provisioner');
   const testPath = path.join(root, 'runtime/provisioner/tests/provision-core.test.ts');
@@ -110,6 +137,35 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
   }];
 };
 
+export const batchTestVerificationPlan = (plan, root, reportPath) => {
+  const testSteps = plan.filter((step) => step.phase === 'test');
+  const tests = [...new Set(testSteps.flatMap((step) => step.args.slice(4)))];
+  assert(tests.length > 0, 'source verification must include tests');
+  return [...plan.filter((step) => step.phase !== 'test'), {
+    command: testSteps[0].command,
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...tests,
+      '--reporter=default', '--reporter=json', '--outputFile=' + reportPath],
+    cwd: root,
+    action: 'bundled-actions-and-shared-runtime',
+    phase: 'test',
+    tests,
+    reportPath,
+  }];
+};
+
+export const assertVerificationReport = (report, tests) => {
+  const result = classifyVitestReport(report);
+  assert(report?.success === true && result.status === 'passed' && result.collection === 'complete', 'source tests did not produce a complete successful report');
+  assert(result.counts.todo === 0, 'source tests must not be todo');
+  const suites = report.testResults;
+  assert(Array.isArray(suites), 'source test file results are missing');
+  assert.deepEqual(suites.map((suite) => path.resolve(suite.name)).sort(), tests.map((file) => path.resolve(file)).sort(), 'source test file inventory differs from the verification plan');
+  for (const suite of suites) {
+    // Preserve capability-conditional cases while rejecting an entirely unexecuted file.
+    assert(suite.status === 'passed' && suite.assertionResults.some((test) => test.status === 'passed'), 'source test file did not execute successfully: ' + suite.name);
+  }
+};
+
 export const runVerificationPlan = (plan, execute = execFileSync, diagnostic = new FailureContext('repository-action-distribution', 'source-verification')) => {
   for (const [index, step] of plan.entries()) {
     diagnostic.at(step.phase, { action: step.action, input: 'action-source-and-contract-tests', completedSteps: index, remainingSteps: plan.length - index });
@@ -117,11 +173,19 @@ export const runVerificationPlan = (plan, execute = execFileSync, diagnostic = n
     try {
       diagnostic.writeState = 'verification-local-artifacts-possible';
       execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' });
+      if (step.reportPath) {
+        const report = parseVitestReport(readFileSync(step.reportPath, 'utf8'));
+        try { assertVerificationReport(report, step.tests); }
+        catch (error) {
+          throw new DiagnosticError('Action source test report is invalid', { diagnosticCode: 'action-source-test-report-invalid', cause: error,
+            diagnostics: { field: 'source-test-report', expected: 'complete-planned-file-results', file: path.relative(step.cwd, step.reportPath) } });
+        }
+      }
       diagnostic.confirmed();
     } catch (error) {
       throw new DiagnosticError('Action source verification failed', {
         diagnosticCode: 'action-source-verification-failed', cause: error,
-        diagnostics: { field: step.action, expected: 'zero-exit', observed: typeof error?.status === 'number' ? error.status : safeErrorReason(error), completedSteps: index, remainingSteps: plan.length - index },
+        diagnostics: { field: step.action, expected: 'zero-exit', ...(error instanceof DiagnosticError ? error.details : {}), observed: typeof error?.status === 'number' ? error.status : safeErrorReason(error), completedSteps: index, remainingSteps: plan.length - index },
       });
     } finally {
       try { process.stdout.write('::endgroup::\n'); } catch { /* Preserve a child failure when closing the log group fails. */ }
@@ -137,11 +201,15 @@ export const verifyActionPackages = (root = defaultRoot, diagnostic = new Failur
   assertRuntimeBoundaries(root, packages);
   diagnostic.confirmed();
   diagnostic.at('verification-plan', { input: 'source-typechecks-and-contract-tests' });
-  const plan = [
+  const originalPlan = [
     ...verificationPlan(packages),
     ...cliTypecheckPlan(root, packages),
     ...sharedRuntimeVerificationPlan(root),
   ];
+  const outputRoot = path.join(root, 'tests/tmp/source-verification');
+  mkdirSync(outputRoot, { recursive: true });
+  const reportPath = path.join(mkdtempSync(path.join(outputRoot, 'run-')), 'test-results.json');
+  const plan = batchTestVerificationPlan(batchActionTypecheckPlan(originalPlan, packages), root, reportPath);
   diagnostic.confirmed();
   runVerificationPlan(plan, execFileSync, diagnostic);
   diagnostic.at('result-output', { output: 'stdout-verification-result' });

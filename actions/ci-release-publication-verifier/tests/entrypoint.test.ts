@@ -2,20 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
 import { fixture, standardPublicationTokenEnvironment } from '../../../runtime/release-publication/tests/fixtures.mjs';
 import { LIMITS } from '../../../runtime/release-publication/io';
 
-import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { actionEntrypointArguments, runActionEntrypoint } from '../../../tests/support/action-entrypoint';
 
-describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }, (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = entrypointArgs;
 const hash = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest('hex');
 
+describe('runActionEntrypoint', () => {
+
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-verifier-entrypoint
-test('publication entrypoint observes absence then verifies owner evidence independently', (t) => {
+test('publication entrypoint observes absence then verifies owner evidence independently', async (t) => {
   const f = fixture(t);
   f.assemble();
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
@@ -40,7 +41,7 @@ globalThis.fetch = async (url, init) => {
   const beforePath = path.join(f.root, 'before.json');
   const output = f.put('github-output', '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
-  const beforeResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
+  const beforeResult = await runActionEntrypoint(['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
   expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
   expect(beforeOutputs).toMatch(/^status=success\n/);
@@ -55,7 +56,7 @@ globalThis.fetch = async (url, init) => {
   const receiptPath = f.put('receipt.json', receipt);
   const readbackPath = f.put('readback.json', readback);
   fs.writeFileSync(output, '');
-  const afterResult = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
+  const afterResult = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
   expect(afterResult.status, afterResult.stderr).toBe(0);
   const outputs = fs.readFileSync(output, 'utf8');
   expect(outputs).toMatch(/^status=success\n/);
@@ -69,11 +70,11 @@ globalThis.fetch = async (url, init) => {
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-output-injection-rejection
-test('publication entrypoint rejects output path line injection before remote observation', (t) => {
+test('publication entrypoint rejects output path line injection before remote observation', async (t) => {
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [...bundle], {
+  const result = await runActionEntrypoint([...bundle], {
     env: {
       ...process.env, GH_TOKEN: 'synthetic-secret', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
@@ -89,11 +90,11 @@ test('publication entrypoint rejects output path line injection before remote ob
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-verifier-entrypoint-rejection
-test('publication entrypoint refuses missing credentials without success evidence', (t) => {
+test('publication entrypoint refuses missing credentials without success evidence', async (t) => {
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [...bundle], { env: { ...process.env, GH_TOKEN: '', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json') }, encoding: 'utf8', cwd: f.root });
+  const result = await runActionEntrypoint([...bundle], { env: { ...process.env, GH_TOKEN: '', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json') }, encoding: 'utf8', cwd: f.root });
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(result.stderr).toMatch(/credential-missing/);
@@ -101,21 +102,25 @@ test('publication entrypoint refuses missing credentials without success evidenc
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-safe-diagnostics
-test('publication entrypoint binds standard workflow credential evidence before observing absence', (t) => {
-  const cases: Array<[string, Record<string, string>, number]> = [
-    ['absent', {}, 0], ['empty', {}, 0],
-    ['absent', { CI_RELEASE_CREDENTIAL_SOURCE: 'other-caller' }, 1],
-    ['absent', { CI_RELEASE_CONTENTS_PERMISSION: 'read' }, 1],
-    ['absent', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1],
-    ['absent', { GITHUB_REPOSITORY: 'another/project' }, 1],
-    ['absent', { GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/custom.yml@refs/heads/main' }, 1],
-    ['absent', { GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/release-publication-caller.yml@refs/heads/Main' }, 1],
-    ['absent', { GITHUB_EVENT_NAME: 'pull_request' }, 1],
-    ['absent', { GITHUB_EVENT_NAME: 'workflow_dispatch' }, 1],
-    ['denied', {}, 0], ['denied', { CI_RELEASE_CONTENTS_PERMISSION: 'read' }, 1],
-    ['denied', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1], ['malformed', {}, 1],
+  const cases: Array<[string, string, Record<string, string>, number]> = [
+    ['metadata-absent', 'absent', {}, 0], ['metadata-empty', 'empty', {}, 0],
+    ['source-mismatch', 'absent', { CI_RELEASE_CREDENTIAL_SOURCE: 'other-caller' }, 1],
+    ['contents-read', 'absent', { CI_RELEASE_CONTENTS_PERMISSION: 'read' }, 1],
+    ['token-mismatch', 'absent', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1],
+    ['repository-mismatch', 'absent', { GITHUB_REPOSITORY: 'another/project' }, 1],
+    ['workflow-path-mismatch', 'absent', { GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/custom.yml@refs/heads/main' }, 1],
+    ['workflow-ref-case', 'absent', { GITHUB_WORKFLOW_REF: 'owner/project/.github/workflows/release-publication-caller.yml@refs/heads/Main' }, 1],
+    ['pull-request', 'absent', { GITHUB_EVENT_NAME: 'pull_request' }, 1],
+    ['workflow-dispatch', 'absent', { GITHUB_EVENT_NAME: 'workflow_dispatch' }, 1],
+    ['metadata-false-bound', 'denied', {}, 0],
+    ['metadata-false-read', 'denied', { CI_RELEASE_CONTENTS_PERMISSION: 'read' }, 1],
+    ['metadata-false-token-mismatch', 'denied', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1],
+    ['metadata-malformed', 'malformed', {}, 1],
   ];
-  for (const [metadata, context, expectedStatus] of cases) {
+  for (const [label, metadata, context, expectedStatus] of cases) {
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    // integration_id: release-publication-safe-diagnostics
+    test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, async (t) => {
     const f = fixture(t);
     f.assemble();
     const output = f.put('github-output', '');
@@ -132,7 +137,7 @@ globalThis.fetch = async (url, init) => {
     : metadata === 'denied' ? { permissions: { push: false } }
     : metadata === 'malformed' ? { permissions: { push: 'synthetic-secret' } } : {}) });
 };`);
-    const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: {
+    const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'),
       ...context,
       GITHUB_OUTPUT: output, INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.identity.repository,
@@ -150,8 +155,8 @@ globalThis.fetch = async (url, init) => {
       expect(result.stderr).toContain(`"sanitized-reason":"${reason}"`);
     }
     expect(`${result.stdout}${result.stderr}${fs.readFileSync(output, 'utf8')}`).not.toContain('synthetic-secret');
+    });
   }
-});
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // integration_id: release-publication-safe-diagnostics
@@ -165,7 +170,7 @@ for (const [failure, reason, phase] of [
   ['repository', 'repository-identity-mismatch', 'repository'],
   ['inventory', 'response-shape-invalid', 'inventory'], ['duplicate', 'inventory-duplicate-id', 'inventory'],
   ['pagination', 'pagination-limit', 'inventory'],
-]) test(`publication entrypoint exposes safe diagnostics for ${failure}`, (t) => {
+]) test(`publication entrypoint exposes safe diagnostics for ${failure}`, async (t) => {
   for (const httpStatus of failure === 'http' ? [401, 403, 404, 429, 500, 503] : [403]) {
     const f = fixture(t);
     f.assemble();
@@ -203,7 +208,7 @@ globalThis.fetch = async (url, init) => {
     if (kind === 'repository') repository.full_name = 'synthetic-secret';
     return Response.json(repository, { headers });
   };`);
-    const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: {
+    const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot,
@@ -239,4 +244,5 @@ globalThis.fetch = async (url, init) => {
   }
 });
 
+});
 });

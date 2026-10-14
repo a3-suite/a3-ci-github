@@ -17,7 +17,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('repository-cli-source-verification', () => {
   describe('cliTypecheckPlan', () => {
-    // evidence_role: supplemental
+    // contract_id: contract.repository-action-distribution.integrity
     // test_level: integration
     // integration_id: repository-cli-source-verification
     test('the CLI verification plan accepts valid sources and rejects type errors in every CLI source family', (t) => {
@@ -57,6 +57,93 @@ describe("contract.repository-action-distribution.integrity", () => {
   describe("repository-action-source-verification", () => {
     // contract_id: contract.repository-action-distribution.integrity
     // integration_id: repository-action-source-verification
+    test('retains the known report rejection reason after a zero child exit', (t) => {
+      // Arrange
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const directory = fs.mkdtempSync(path.join(parent, 'report-rejection-'));
+      t.onTestFinished(() => fs.rmSync(directory, { recursive: true }));
+      const reportPath = path.join(directory, 'test-results.json');
+      fs.writeFileSync(reportPath, JSON.stringify({ success: true, testResults: [] }));
+      const step = { command: '/node', args: [], cwd: root, action: 'bundled-actions-and-shared-runtime', phase: 'test', tests: [path.join(root, 'tests/missing.test.mjs')], reportPath };
+      // Act
+      let failure;
+      try { runVerificationPlan([step], () => undefined); } catch (error) { failure = error; }
+      // Assert
+      expect(failure?.details).toMatchObject({ field: 'source-test-report', expected: 'complete-planned-file-results', observed: 'action-source-test-report-invalid', file: path.relative(root, reportPath) });
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
+    test('batched typechecks keep project globals isolated and reject errors after a previous successful build', (t) => {
+      // Arrange
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const fixture = fs.mkdtempSync(path.join(parent, 'batched-typecheck-'));
+      t.onTestFinished(() => fs.rmSync(fixture, { recursive: true }));
+      fs.copyFileSync(path.join(root, 'tsconfig.action.json'), path.join(fixture, 'tsconfig.action.json'));
+      const dependencyRoot = path.join(collectActionPackages(root)[0].path, 'node_modules');
+      const packages = ['alpha', 'beta'].map((name) => {
+        const directory = path.join(fixture, 'actions', name);
+        fs.mkdirSync(path.join(directory, 'src'), { recursive: true });
+        fs.symlinkSync(dependencyRoot, path.join(directory, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+        fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ scripts: { lint: 'tsc --noEmit' } }));
+        fs.writeFileSync(path.join(directory, 'tsconfig.json'), JSON.stringify({ extends: '../../tsconfig.action.json', include: ['src/**/*.ts', 'tests/**/*.ts'] }));
+        fs.writeFileSync(path.join(directory, 'src/global.ts'), 'const isolated: string = "valid";\n');
+        return { name, path: directory, tests: [] };
+      });
+      // Act
+      const plan = sourceVerification.batchActionTypecheckPlan(verificationPlan(packages), packages);
+      const step = plan.find((entry) => entry.phase === 'typecheck');
+      const valid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      for (const entry of packages) fs.writeFileSync(path.join(entry.path, 'src/global.ts'), 'const isolated: string = 1;\n');
+      const invalid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      // Assert
+      expect(plan.filter((entry) => entry.phase === 'typecheck')).toHaveLength(1);
+      expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+      expect(invalid.status).not.toBe(0);
+      for (const entry of packages) expect(invalid.stdout.replaceAll('\\', '/')).toContain('actions/' + entry.name + '/src/global.ts');
+      expect(invalid.stdout).toContain('TS2322');
+      expect(step.args).toContain('--force');
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
+    test('batches every Action and shared test once while retaining all typechecks', () => {
+      // Arrange
+      const packages = collectActionPackages(root);
+      const original = [...verificationPlan(packages), ...sourceVerification.cliTypecheckPlan(root, packages), ...sharedRuntimeVerificationPlan(root)];
+      const reportPath = path.join(root, 'tests/tmp/source-results.json');
+      // Act
+      const plan = sourceVerification.batchTestVerificationPlan(original, root, reportPath);
+      // Assert
+      expect(plan.filter((step) => step.phase === 'typecheck')).toStrictEqual(original.filter((step) => step.phase === 'typecheck'));
+      const tests = plan.filter((step) => step.phase === 'test');
+      expect(tests).toHaveLength(1);
+      expect(tests[0].cwd).toBe(root);
+      expect(tests[0].tests).toStrictEqual([...new Set(original.filter((step) => step.phase === 'test').flatMap((step) => step.args.slice(4)))]);
+      expect(tests[0].args.slice(4, 4 + tests[0].tests.length)).toStrictEqual(tests[0].tests);
+      expect(tests[0].args).toContain('--outputFile=' + reportPath);
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
+    test('rejects missing files, empty, entirely skipped and unknown test results despite a zero child exit', () => {
+      // Arrange
+      const files = ['/checkout/actions/alpha/tests/a.test.ts', '/checkout/runtime/core/tests/b.test.ts'];
+      const report = { success: true, testResults: files.map((name) => ({ name, status: 'passed', assertionResults: [{ fullName: 'contract > succeeds', status: 'passed' }] })) };
+      // Act / Assert
+      expect(() => sourceVerification.assertVerificationReport(report, files)).not.toThrow();
+      expect(() => sourceVerification.assertVerificationReport({ ...report, testResults: [{ ...report.testResults[0], assertionResults: [...report.testResults[0].assertionResults, { status: 'skipped' }] }, report.testResults[1]] }, files)).not.toThrow();
+      expect(() => sourceVerification.assertVerificationReport({ ...report, testResults: report.testResults.slice(0, 1) }, files)).toThrow();
+      for (const status of ['skipped', 'cancelled', 'todo', 'pending']) {
+        expect(() => sourceVerification.assertVerificationReport({ ...report, testResults: [{ ...report.testResults[0], assertionResults: [{ status }] }, report.testResults[1]] }, files)).toThrow();
+      }
+      expect(() => sourceVerification.assertVerificationReport({ ...report, testResults: [{ ...report.testResults[0], assertionResults: [] }, report.testResults[1]] }, files)).toThrow();
+      expect(() => sourceVerification.assertVerificationReport(null, files)).toThrow();
+    });
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
     test('derives typecheck and no-rebuild test steps for every bundled Action', () => {
       // Arrange
       const bundledActions = collectActions(root).filter((action) => action.distPath);
@@ -76,6 +163,30 @@ describe("contract.repository-action-distribution.integrity", () => {
         expect(testStep.args).toStrictEqual([path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...entry.tests.map((file) => path.join(entry.path, file))]);
         expect(steps.some((step) => step.args.includes('ci') || step.args.includes('build'))).toBe(false);
       }
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
+    test('the formal Action source gate rejects type errors independently of bundling', (t) => {
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const fixture = fs.mkdtempSync(path.join(parent, 'action-typecheck-'));
+      t.onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
+      const action = path.join(fixture, 'actions/example');
+      fs.mkdirSync(path.join(action, 'node_modules/.bin'), { recursive: true });
+      const compiler = path.join(collectActionPackages(root)[0].path, 'node_modules/typescript/bin/tsc');
+      fs.symlinkSync(compiler, path.join(action, 'node_modules/.bin/tsc'));
+      fs.writeFileSync(path.join(action, 'package.json'), JSON.stringify({ scripts: { lint: 'tsc --noEmit' } }));
+      fs.writeFileSync(path.join(action, 'tsconfig.json'), JSON.stringify({ compilerOptions: { strict: true, types: [] }, include: ['source.ts'] }));
+      const source = path.join(action, 'source.ts');
+      const step = verificationPlan([{ name: 'example', path: action, tests: [] }])[0];
+      fs.writeFileSync(source, 'export const value: string = "valid";\n');
+      const valid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      fs.writeFileSync(source, 'export const value: string = 1;\n');
+      const invalid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+      expect(invalid.status).not.toBe(0);
+      expect(invalid.stdout).toContain('TS2322');
     });
   });
 });
