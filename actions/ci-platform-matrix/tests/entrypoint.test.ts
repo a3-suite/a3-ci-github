@@ -10,7 +10,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
-const runBundled = (manifest: string, selection?: string) => {
+const runBundled = (manifest: string, selection?: string, runnerPolicy?: string) => {
   const temporaryParent = path.resolve(root, '../../tmp');
   fs.mkdirSync(temporaryParent, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(temporaryParent, 'ci-platform-matrix-'));
@@ -20,6 +20,8 @@ const runBundled = (manifest: string, selection?: string) => {
   fs.writeFileSync(outputPath, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath } as Record<string, string>;
   env['INPUT_MANIFEST-PATH'] = manifestPath;
+  delete env['INPUT_RUNNER-POLICY'];
+  if (runnerPolicy !== undefined) env['INPUT_RUNNER-POLICY'] = runnerPolicy;
   delete env['INPUT_SELECTION-PATH'];
   if (selection !== undefined) {
     const selectionPath = path.join(tempRoot, 'selection.yml');
@@ -64,6 +66,29 @@ test('entrypoint fails closed for an unsupported runner', () => {
 
 // contract_id: contract.ci-platform-matrix.outputs
 // integration_id: ci-platform-matrix-contract-entrypoint
+test('entrypoint accepts consumer versioned runners only with trusted policy', () => {
+  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, 'trusted');
+  try {
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-15","target":"aarch64-apple-darwin"}]}');
+  } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-contract-entrypoint
+test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
+  for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
+    const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
+    try {
+      expect(run.result.status).not.toBe(0);
+      expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
+      expect(run.result.stderr).toMatch(/platform-matrix-(?:platform-0-runner|runner-policy)-invalid/);
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint rejects an oversized manifest before parsing', () => {
   // Arrange
   // Act
@@ -97,6 +122,45 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
     ] });
     expect(outputs['expected-platforms']).toBe('macos-arm64,linux-x64');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-shared-checks
+test('entrypoint projects explicit shared checks without changing build identities or selection order', () => {
+  // Arrange
+  const manifest = 'platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]';
+  // Act
+  for (const enabled of [false, true]) {
+    const run = runBundled(manifest, `sharedStandardChecks: ${enabled}\nplatforms: [{id: macos-arm64}]`, 'trusted');
+    try {
+      const outputs = Object.fromEntries(fs.readFileSync(run.outputPath, 'utf8').trim().split('\n').map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
+      // Assert
+      expect(run.result.status, run.result.stderr).toBe(0);
+      expect(JSON.parse(outputs.matrix)).toStrictEqual({ include: [{ id: 'macos-arm64', runner: 'macos-15', target: 'aarch64-apple-darwin' }] });
+      expect(JSON.parse(outputs['quality-matrix'])).toStrictEqual({ include: [{ platform_id: 'macos-arm64', runner: 'macos-15', shared_standard_checks: enabled }] });
+      expect(outputs['expected-platforms']).toBe('macos-arm64');
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+// integration_id: ci-platform-matrix-shared-checks
+test('entrypoint rejects malformed shared checks and unknown selection fields without outputs', () => {
+  // Arrange
+  const manifest = 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]';
+  // Act
+  for (const value of ['"true"', '1', 'null', '[]', '{}']) {
+    const run = runBundled(manifest, `platforms: [{id: linux-x64}]\nsharedStandardChecks: ${value}`);
+    try {
+      // Assert
+      expect(run.result.status).not.toBe(0);
+      expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
+      expect(run.result.stderr).toContain('sharedStandardChecks must be a boolean');
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
+  const run = runBundled(manifest, 'platforms: [{id: linux-x64}]\nsharedStandardChecks: true\nunknown: false');
+  try { expect(run.result.status).not.toBe(0); expect(fs.readFileSync(run.outputPath, 'utf8')).toBe(''); }
+  finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
 // contract_id: contract.ci-platform-matrix.outputs

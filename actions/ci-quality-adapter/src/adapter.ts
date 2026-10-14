@@ -2,10 +2,12 @@ import { DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { parseDocument } from 'yaml';
 
 type CommandSpec = { id: string; command: string; args?: string[] };
 type CommandResult = CommandSpec & { status: 'success' | 'failed' | '判定不能'; exitCode: number | null; stdout: string; stderr: string };
+export type AdapterCommandTiming = { phase: 'toolchain' | 'preparation' | 'command'; id: string; elapsedMs: number; status: CommandResult['status']; exitCode: number | null };
 type ProjectSettings = { requiredFiles: string[]; requiredScripts: string[]; requiredEnvironmentPaths: string[] };
 type Toolchain = { versionEnv: string; verify: CommandSpec };
 export type AdapterBundle = {
@@ -17,6 +19,7 @@ export type AdapterBundle = {
 export type AdapterOptions = {
   sourceRoot: string; languageProfile?: string; toolchainVersion: string;
   requireTrustedProjectScripts: boolean; trustedProjectRoot?: string; environment?: NodeJS.ProcessEnv;
+  commandTimings?: AdapterCommandTiming[];
 };
 export type AdapterPayload = { schema: 'ci.adapter-runner.v1'; adapter: string; contract: string; languageProfiles: string[]; status: 'success' | 'failed' | '判定不能'; results: CommandResult[] };
 
@@ -135,9 +138,10 @@ const prepareCommand = (spec: CommandSpec, environment: NodeJS.ProcessEnv, allow
   return { ...spec, args };
 };
 
-const runCommand = (spec: CommandSpec & { args: string[] }, root: string, environment: NodeJS.ProcessEnv): CommandResult => {
+const runCommand = (spec: CommandSpec & { args: string[] }, root: string, environment: NodeJS.ProcessEnv): { result: CommandResult; elapsedMs: number } => {
+  const started = performance.now();
   const result = spawnSync(spec.command, spec.args, { cwd: root, encoding: 'utf8', shell: false, env: environment });
-  return { ...spec, status: result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed', exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' };
+  return { elapsedMs: performance.now() - started, result: { ...spec, status: result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed', exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' } };
 };
 
 export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload => {
@@ -156,7 +160,12 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
   const preparationCommands = bundle.preparation.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
   const commands = bundle.commands.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
   const results: CommandResult[] = [];
-  const verify = runCommand(verifyCommand, sourceRoot, environment);
+  const recordResult = (phase: AdapterCommandTiming['phase'], timed: ReturnType<typeof runCommand>): void => {
+    results.push(timed.result);
+    options.commandTimings?.push({ phase, id: timed.result.id, elapsedMs: timed.elapsedMs, status: timed.result.status, exitCode: timed.result.exitCode });
+  };
+  const timedVerify = runCommand(verifyCommand, sourceRoot, environment);
+  const verify = timedVerify.result;
   if (verify.status !== '判定不能') {
     const received = `${verify.stdout}\n${verify.stderr}`;
     const reportsVersion = verify.status === 'success' && versionTokenPresent(received, options.toolchainVersion);
@@ -167,14 +176,14 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
       });
     }
   }
-  results.push(verify);
+  recordResult('toolchain', timedVerify);
   if (verify.status === 'success') {
     for (const spec of preparationCommands) {
-      const result = runCommand(spec, sourceRoot, environment);
-      results.push(result);
-      if (result.status !== 'success') break;
+      const timed = runCommand(spec, sourceRoot, environment);
+      recordResult('preparation', timed);
+      if (timed.result.status !== 'success') break;
     }
-    if (results.every((result) => result.status === 'success')) for (const spec of commands) results.push(runCommand(spec, sourceRoot, environment));
+    if (results.every((result) => result.status === 'success')) for (const spec of commands) recordResult('command', runCommand(spec, sourceRoot, environment));
   }
   const status = results.some((result) => result.status === 'failed') ? 'failed' : results.some((result) => result.status === '判定不能') ? '判定不能' : 'success';
   return { schema: 'ci.adapter-runner.v1', adapter: bundle.id, contract: bundle.contract, languageProfiles: bundle.languageProfiles, status, results };

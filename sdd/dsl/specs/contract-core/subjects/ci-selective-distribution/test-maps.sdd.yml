@@ -153,6 +153,9 @@ test_maps:
         symbol: "contract.ci-selective-distribution.publication > single Release rejects changed execution file modes"
         check_refs: [check-selective-distribution-single-release-rejection]
       - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: "contract.ci-selective-distribution.publication > implementation preparation validates existing references without a final tag or new binding"
+        check_refs: [check-selective-distribution-single-release-success, check-selective-distribution-single-release-rejection]
+      - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: "contract.ci-selective-distribution.publication > single Release rejects stale workflow and installer bindings and invalid interfaces"
         check_refs: [check-selective-distribution-single-release-rejection]
       - path: runtime/repository/tests/single-release-binding.test.mjs

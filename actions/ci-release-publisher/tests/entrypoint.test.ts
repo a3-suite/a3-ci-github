@@ -1,21 +1,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, test, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
 import { fixture, standardPublicationTokenEnvironment } from '../../../runtime/release-publication/tests/fixtures.mjs';
 import { observeBefore } from '../../../runtime/release-publication/observation';
 import { remoteClient } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
-import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { actionEntrypointArguments, runActionEntrypoint } from '../../../tests/support/action-entrypoint';
 
-describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
+describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }, (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = entrypointArgs;
 
+describe('runActionEntrypoint', () => {
+
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-flow
-test('publisher entrypoint writes once by immutable ID and emits evidence paths', async (t) => {
   for (const permissionMetadata of ['present', 'absent', 'empty']) {
+  // contract_id: contract.ci-release-publisher.outputs
+  // integration_id: release-publisher-bundled-flow
+  test(`publisher entrypoint writes once by immutable ID and emits evidence paths: ${permissionMetadata}`, async (t) => {
   const f = fixture(t);
   const assembly = f.assemble();
   const before = await observeBefore({ authorityPath: f.options.authorityPath, repository: f.identity.repository, handoffRoot: f.options.outputRoot }, remoteClient(f, assembly, { ids: [] }).client);
@@ -67,10 +70,10 @@ globalThis.fetch = async (url, init) => {
   const output = f.put('github-output', '');
   const calls = f.put('calls', '');
   const outputRoot = path.join(f.root, 'write');
-  const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output,
+  const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output, PATH: path.join(f.root, 'no-cli'),
     'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot, 'INPUT_PRE-OBSERVATION-PATH': beforePath,
     'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls, MOCK_PERMISSION_METADATA: permissionMetadata };
-  const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { env, cwd: f.root, encoding: 'utf8' });
+  const result = await runActionEntrypoint(['--import', mock, ...bundle], { env, cwd: f.root, encoding: 'utf8' });
   expect(result.status, result.stderr).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toBe(`receipt-path=${outputRoot}/receipt.json\nreadback-path=${outputRoot}/readback.json\n`);
   const writes = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { method: string; endpoint: string });
@@ -80,7 +83,7 @@ globalThis.fetch = async (url, init) => {
   expect((result.stdout + result.stderr + fs.readFileSync(output, 'utf8')).includes('synthetic-secret')).toBe(false);
   fs.writeFileSync(output, ''); fs.writeFileSync(calls, '');
   const failedRoot = path.join(f.root, 'failed-write');
-  const failed = spawnSync(process.execPath, ['--import', mock, ...bundle], { env: { ...env, MOCK_FAILURE: 'upload', 'INPUT_WRITE-OUTPUT-DIRECTORY': failedRoot }, cwd: f.root, encoding: 'utf8' });
+  const failed = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, MOCK_FAILURE: 'upload', 'INPUT_WRITE-OUTPUT-DIRECTORY': failedRoot }, cwd: f.root, encoding: 'utf8' });
   expect(failed.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(`${failedRoot}/receipt.json`)).toBe(false);
@@ -97,8 +100,8 @@ globalThis.fetch = async (url, init) => {
   const failedWrites = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { method: string; endpoint: string });
   expect(failedWrites.filter(entry => entry.endpoint.endsWith('/releases'))).toHaveLength(1);
   expect(failedWrites.some(entry => entry.method === 'PATCH')).toBe(false);
+  });
   }
-});
 
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-rejection
@@ -132,7 +135,7 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
           { status: 200, headers: { 'x-github-request-id': 'safe:123' } });
       };`);
     // Act
-    const result = spawnSync(process.execPath, ['--import', mock, ...bundle], { cwd: f.root, encoding: 'utf8', env: {
+    const result = await runActionEntrypoint(['--import', mock, ...bundle], { cwd: f.root, encoding: 'utf8', env: {
       ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'),
       CI_RELEASE_CONTENTS_PERMISSION: 'read', GITHUB_OUTPUT: output, MOCK_CALLS: calls,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot,
@@ -155,11 +158,11 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
 
 // contract_id: contract.ci-release-publisher.outputs
 // integration_id: release-publisher-bundled-rejection
-test('publisher entrypoint rejects missing credential and path injection without outputs', (t) => {
+test('publisher entrypoint rejects missing credential and path injection without outputs', async (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
   for (const token of ['', 'synthetic-secret']) {
-    const result = spawnSync(process.execPath, [...bundle], { env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: token,
+    const result = await runActionEntrypoint([...bundle], { env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: token,
       'INPUT_AUTHORITY-PATH': 'bad\npath', 'INPUT_RELEASE-HANDOFF-ROOT': 'handoff', 'INPUT_PRE-OBSERVATION-PATH': 'before.json', 'INPUT_WRITE-OUTPUT-DIRECTORY': 'write', GITHUB_REPOSITORY: 'owner/project' }, encoding: 'utf8' });
     expect(result.status).toBe(1);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
@@ -167,4 +170,5 @@ test('publisher entrypoint rejects missing credential and path injection without
   }
 });
 
+});
 });

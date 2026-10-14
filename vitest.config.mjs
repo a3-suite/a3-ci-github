@@ -8,6 +8,7 @@ export default defineConfig({
     include: ['actions/*/tests/**/*.test.{ts,mjs}', 'runtime/*/tests/**/*.test.{ts,mjs}', 'tests/*.test.mjs'],
     pool: 'forks',
     maxWorkers: 4,
+    maxConcurrency: 4,
     testTimeout: 60000,
     hookTimeout: 60000,
     coverage: {

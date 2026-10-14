@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-adapter
 contracts:
   - id: contract.ci-quality-adapter.outputs
-    summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve language-owner provenance and require no consumer descriptor; their IDs are rejected in local descriptors.
+    summary: Exactly one fixed standard bundle ID or trusted read-only descriptor selects quality commands and produces aggregate execution status. Standard bundles preserve repository-owned source path and content digest and require no consumer descriptor; their IDs are rejected in local descriptors. execution-scope defaults to all; native is accepted only for fixed standard Rust and omits its provider-classified format/security commands while preserving toolchain verification, preparation and native checks. Native success covers only the executed command set; the caller must also establish shared-check success.
     conditions:
       - id: diagnostic-required-outputs
         environment_predicate:
@@ -92,7 +92,7 @@ contracts:
         guarantee_refs:
           - quality-adapter-failure-propagated
       - id: quality-adapter-standard-execution
-        goal: A fixed owner-generated standard bundle executes without reading a consumer descriptor; ambiguous, unknown or integrity-invalid selections are rejected before commands.
+        goal: A fixed Action containing a repository-generated standard bundle executes without reading a consumer descriptor; ambiguous, unknown or integrity-invalid selections and unsupported execution scopes are rejected before commands. Default/all preserve the entire bundle, while native Rust retains toolchain/preparation/clippy/test/metadata and returns only executed results.
         guarantee_refs:
           - quality-adapter-standard-status-produced
       - id: quality-adapter-toolchain-version-report-rejected

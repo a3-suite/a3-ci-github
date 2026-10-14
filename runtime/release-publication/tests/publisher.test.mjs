@@ -3,14 +3,22 @@ import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { fixture, remoteClient } from './fixtures.mjs';
 import { publishRelease, GithubPublisherClient } from '../../../actions/ci-release-publisher/src/publisher.ts';
-import { observeBefore, verifyAfter } from '../observation.ts';
+import { loadAssembly, observeBefore, verifyAfter } from '../observation.ts';
+import { validateEvidence } from '../schema.ts';
 
-const setup = async (t, changes = {}) => {
+// The preparation observation is schema-validated from the assembled handoff; the independent-evidence case below keeps the real observation.
+const preObservationFixture = (options) => {
+  const { identity, handoffDigest } = loadAssembly(options);
+  return validateEvidence('observation', { schema_version: '1', kind: 'ci-github-release-observation', identity, handoff_digest: handoffDigest,
+    phase: 'pre-create', complete: true, visibility: 'public-and-non-public', release_ids: [] });
+};
+
+const setup = async (t, changes = {}, { realObservation = false } = {}) => {
   const f = fixture(t);
   const assembly = f.assemble();
   const beforeClient = remoteClient(f, assembly, { ids: [] }).client;
   const options = { authorityPath: f.options.authorityPath, repository: f.identity.repository, handoffRoot: f.options.outputRoot };
-  const before = await observeBefore(options, beforeClient);
+  const before = realObservation ? await observeBefore(options, beforeClient) : preObservationFixture(options);
   const beforePath = f.put('before.json', before);
   f.put('release-notes.json', { schema: 'ci.release-notes.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body: 'approved notes', body_sha256: f.identity.body_sha256 });
   f.put('release-notes-approval.json', { schema: 'ci.release-notes-approval.v1', source_contract: 'git.release-flow', source_field: 'body', release_identity: f.identity.tag, body_sha256: f.identity.body_sha256, approval_id: 'approved-1' });
@@ -36,7 +44,7 @@ const setup = async (t, changes = {}) => {
 };
 
 describe("contract.ci-release-publisher.outputs", () => {
-  describe("release-publisher-source-flow", () => {
+  describe("release-publisher-source-flow", { concurrent: true }, () => {
     // contract_id: contract.ci-release-publisher.outputs
     // integration_id: release-publisher-source-flow
 
@@ -59,7 +67,7 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(verified.receipt.release_id).toBe('42');
     });
     test('publisher creates once and emits evidence accepted by independent verifier', async (t) => {
-      const { f, writes, client, options } = await setup(t);
+      const { f, writes, client, options } = await setup(t, {}, { realObservation: true });
       const result = await publishRelease(options, client);
       expect(result.receipt.release_id).toBe('42');
       expect(writes.filter(([op]) => op === 'create').length).toBe(1);
@@ -117,7 +125,7 @@ describe("contract.ci-release-publisher.outputs", () => {
 });
 
 describe("publisher", () => {
-  describe("publisher", () => {
+  describe("publisher", { concurrent: true }, () => {
     test('publisher rejects invalid approval, handoff and pre-observation before writes', async (t) => {
       for (const mutation of [
         ({ f }) => f.put('publication-request.json', { schema: 'ci.release-publication-request.v2', releaseVersion: f.identity.version, targetIdentity: f.identity.target_identity, approvalId: 'approved-1', approvalExpiresAt: '2000-01-01T00:00:00Z', releaseIdentity: f.identity.tag, releaseNotesBodySha256: f.identity.body_sha256 }),
@@ -176,8 +184,10 @@ describe("publisher", () => {
       expect(result.receipt.release_id).toBe('42');
     });
 
-    test('publisher does not retry or recover failed create upload finalize and readback', async (t) => {
-      for (const phase of ['create', 'upload', 'finalize', 'readback']) {
+    for (const phase of ['create', 'upload', 'finalize', 'readback']) {
+      // contract_id: contract.ci-release-publisher.outputs
+      // integration_id: release-publisher-partial-failure
+      test(`publisher does not retry or recover failed create upload finalize and readback: ${phase}`, async (t) => {
         const state = await setup(t);
         let failures = 0;
         const method = phase === 'readback' ? 'assetDigest' : phase;
@@ -186,9 +196,13 @@ describe("publisher", () => {
         expect(failures).toBe(1);
         expect(fs.existsSync(path.join(state.options.outputRoot, 'receipt.json'))).toBe(false);
         expect(fs.existsSync(path.join(state.options.outputRoot, 'readback.json'))).toBe(false);
-      }
-      for (const phase of ['provider', 'tag']) {
-        for (const change of ['expiry', 'notes']) {
+      });
+    }
+    for (const phase of ['provider', 'tag']) {
+      for (const change of ['expiry', 'notes']) {
+        // contract_id: contract.ci-release-publisher.outputs
+        // integration_id: release-publisher-partial-failure
+        test(`publisher does not retry or recover failed create upload finalize and readback: ${phase}-${change}`, async (t) => {
           const state = await setup(t);
           const json = state.client.json;
           let changed = false;
@@ -209,10 +223,9 @@ describe("publisher", () => {
           expect(state.writes.map(([operation]) => operation)).toStrictEqual(['create', ...state.assembly.assets.map(() => 'upload')]);
           expect(fs.existsSync(path.join(state.options.outputRoot, 'receipt.json'))).toBe(false);
           expect(fs.existsSync(path.join(state.options.outputRoot, 'readback.json'))).toBe(false);
-        }
+        });
       }
-    });
-
+    }
 
     test('publisher transport bounds write operations and sanitizes uncertain provider results', async (t) => {
       const state = await setup(t);

@@ -63,6 +63,6 @@ npm run test:coverage:installer
 
 保守環境に `uv` とPythonが必要です。固定版coverage.pyを保守用の隔離環境で使い、runtime／consumerの依存には追加しません。`runtime/installer/tests/coverage.ini` がPythonソースと子プロセス計測を定め、runごとの `tests/tmp/coverage/installer/` にdataとJSONを保存します。未ロードのPython sourceも分母に含め、`dist/`・テスト・OS scriptはPython計測対象にしません。JS／TSソースは通常の `npm run test:coverage` で別に計測します。
 
-Linux CIも同じ計測コマンドを実行し、JSONレポートをartifactとして保存します。Python計測値はOS scriptのカバレッジやWindows native実行を表しません。
+Linux CIはprovider regressionをcoverage付きで一度実行し、後続stepで同じ実行のdataからJSONレポートを生成してartifactへ保存します。実行失敗・未完了・過去の出力をレポート生成の成功へ読み替えません。通常のローカル回帰とmacOS／Windowsのnative検査は維持します。Python計測値はOS scriptのカバレッジやWindows native実行を表しません。
 
 このローカル検証は公開、配備、Hosted workflowや未実行OSの受入を代替しません。

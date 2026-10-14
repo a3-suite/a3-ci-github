@@ -1,0 +1,49 @@
+schemaVersion: "1"
+kind: ci-adapter-bundle
+id: python-uv-quality
+contract: quality-scripts
+languageProfiles: [python]
+provider: provider-neutral
+executionBoundary: read-only
+sourceCheckout: fixed-source
+copyable: true
+owner: ci-github
+assets: []
+projectSettings:
+  requiredFiles: [pyproject.toml, uv.lock]
+  requiredScripts: []
+toolchain:
+  versionEnv: CI_TOOLCHAIN_VERSION
+  verify:
+    command: python
+    args: [--version]
+preparation:
+  - id: dependency-restore
+    command: uv
+    args: [sync, --locked, --python, "${CI_TOOLCHAIN_VERSION}"]
+commands:
+  - id: format
+    command: uv
+    args: [run, --no-sync, ruff, format, --check, .]
+  - id: lint
+    command: uv
+    args: [run, --no-sync, ruff, check, .]
+  - id: test
+    command: uv
+    args: [run, pytest]
+  - id: security
+    command: uv
+    args: [run, pip-audit]
+  - id: structure
+    command: uv
+    args:
+      - run
+      - --no-sync
+      - python
+      - -c
+      - >-
+        import compileall, os, sys; from pathlib import Path;
+        environment = Path(sys.prefix).resolve() if sys.prefix != sys.base_prefix else None;
+        success = True;
+        exec('def walk_error(error):\n    raise error\nfor directory, subdirectories, _ in os.walk(".", onerror=walk_error):\n    subdirectories[:] = sorted(name for name in subdirectories if name != "__pycache__" and Path(directory, name).resolve() != environment)\n    success = compileall.compile_dir(directory, maxlevels=0, quiet=1) and success');
+        sys.exit(not success)

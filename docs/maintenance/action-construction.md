@@ -135,7 +135,7 @@ provider固定参照の保守用入口は`npm run lint:provider`です。接続�
 
 1. SDD の subject、observation、guarantee、verification、test map と契約対象別実行定義を接続。
 2. 型検査、処理の正常系・停止条件、公開 entrypoint の出力と失敗伝播を検証。
-3. `runtime/repository/verify-action-packages.mjs` で標準 package 構成、Action の source 検証と公開 CLI の strict 型検査を確認。CLI の対象は `tsconfig.cli.json` とし、復元済み Action の compiler・Node 型定義を再利用する。
+3. `runtime/repository/verify-action-packages.mjs` で標準 package 構成、Action の source 検証と公開 CLI の strict 型検査を確認。同一の標準構成・compiler／Node型定義のActionは元のproject境界を保った強制型検査へまとめ、その他のActionとCLIは個別に検査する。CLI の対象は `tsconfig.cli.json` とし、復元済み Action の compiler・Node 型定義を再利用する。探索したAction／shared runtimeのテストは1回のVitest起動で実行し、予定した全ファイルの成功をレポートで確認する。
 4. `runtime/repository/check-action-dist.mjs` で配布物再生成・一致を確認。
 5. workflow を変更した場合は canonical mapping・registry・preflight・配布閉包も確認。
 

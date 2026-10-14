@@ -32,7 +32,10 @@ describe("action-dist-gate", () => {
         if (action.name === 'ci-release-supplemental-asset') expect(action.companionDistPaths).toStrictEqual(['runtime/installer/dist']);
         if (action.runtime === 'composite') {
           expect(action.distPath).toBe(null);
-          if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual(['runtime/diagnostics/failure.sh']);
+          if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual([
+            'actions/ci-quality-toolchain/scripts/setup-cargo-audit.sh',
+            'runtime/diagnostics/failure.sh',
+          ]);
           else expect(action.referencedPaths.length > 0).toBeTruthy();
           for (const relative of action.referencedPaths) expect(existsSync(path.join(root, relative))).toBe(true);
         }
@@ -134,6 +137,54 @@ describe("contract.repository-action-distribution.integrity", () => {
         { command: 'npm', args: ['run', 'build'], cwd: '/workspace/runtime/rust-release' },
         { command: 'git', args: ['diff', '--exit-code', '--name-only', '--', 'runtime/rust-release/dist'], cwd: '/workspace', failure: 'dist-identity-mismatch' },
       ]);
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-distribution-gates
+    test('CI rebuild skips duplicate ncc typechecking while standard build remains unchanged', () => {
+      const actions = collectActions(root);
+      const bundles = collectScriptBundles(root);
+      const standard = buildPlan(root, actions, bundles);
+      const ci = buildPlan(root, actions, bundles, { transpileOnly: true });
+      const builds = ci.filter((step) => step.command === 'npm' && step.args[0] === 'run');
+      for (const action of actions.filter((entry) => entry.distPath)) {
+        expect(builds.find((step) => step.cwd === action.path).args).toEqual(['run', 'build', '--', '--transpile-only']);
+      }
+      expect(builds.find((step) => step.cwd === bundles[0].path).args).toEqual(['run', 'build']);
+      expect(standard.filter((step) => step.command === 'npm' && step.args[0] === 'run').every((step) => step.args.length === 2)).toBe(true);
+      expect(ci.at(-1)).toEqual(standard.at(-1));
+      expect(ci.filter((step) => step.command === process.execPath)).toEqual(standard.filter((step) => step.command === process.execPath));
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-distribution-gates
+    test('installer build forwards the CI option to both ncc entries without changing normal builds', (t) => {
+      const parent = path.join(root, 'tests/tmp');
+      mkdirSync(parent, { recursive: true });
+      const fixture = mkdtempSync(path.join(parent, 'installer-build-options-'));
+      t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
+      const installer = path.join(fixture, 'runtime/installer');
+      const action = path.join(fixture, 'actions/ci-release-supplemental-asset');
+      const compiler = path.join(action, 'node_modules/@vercel/ncc/dist/ncc/cli.js');
+      mkdirSync(installer, { recursive: true });
+      mkdirSync(path.dirname(compiler), { recursive: true });
+      writeFileSync(path.join(installer, 'build-distribution.mjs'), readFileSync(path.join(root, 'runtime/installer/build-distribution.mjs')));
+      writeFileSync(compiler, `require('node:fs').appendFileSync(process.env.BUILD_CALLS, JSON.stringify(process.argv.slice(2)) + '\\n');`);
+      for (const file of ['src/diagnostic-reasons.json', 'src/assembly.py', 'src/build-installer.py', 'src/build-shared-wrapper.py', 'src/builder_common.py', 'src/platform/install.sh', 'src/platform/install.ps1', 'src/wrapper/install.sh']) {
+        const filename = path.join(installer, file);
+        mkdirSync(path.dirname(filename), { recursive: true });
+        writeFileSync(filename, 'fixture');
+      }
+      for (const flags of [[], ['--transpile-only']]) {
+        const calls = path.join(fixture, flags.length ? 'ci.jsonl' : 'normal.jsonl');
+        const result = spawnSync(process.execPath, [path.join(installer, 'build-distribution.mjs'), ...flags], {
+          encoding: 'utf8', env: { ...process.env, BUILD_CALLS: calls },
+        });
+        expect(result.status, result.stderr).toBe(0);
+        const entries = readFileSync(calls, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+        expect(entries).toHaveLength(2);
+        for (const args of entries) expect(args.includes('--transpile-only')).toBe(flags.length === 1);
+      }
     });
 
     // contract_id: contract.repository-action-distribution.integrity

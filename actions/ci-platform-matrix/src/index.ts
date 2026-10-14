@@ -22,7 +22,11 @@ export const run = (): void => {
     }
     diagnostic.confirmed();
     diagnostic.at('manifest-validation', {"input": "manifest-path"});
-    const matrix = resolvePlatformMatrix(readManifest(manifestPath));
+    const runnerPolicy = process.env['INPUT_RUNNER-POLICY'] || 'bootstrap';
+    if (runnerPolicy !== 'bootstrap' && runnerPolicy !== 'trusted') {
+      throw new DiagnosticError('platform-matrix-runner-policy-invalid');
+    }
+    const matrix = resolvePlatformMatrix(readManifest(manifestPath), runnerPolicy);
     const selectionPath = process.env['INPUT_SELECTION-PATH'] ?? '';
     let outputs = `matrix=${JSON.stringify(matrix)}\n`;
     if (selectionPath !== '') {

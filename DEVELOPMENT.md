@@ -43,15 +43,15 @@ npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
 
-標準品質bundleは言語ownerの固定Git objectから生成します。生成前にsource checkoutのoriginがowner repositoryへ対応することを確認します。生成物のmetadataが生成元repository、full revision、source path、digestを保持します。通常のbuildとconsumerは外部skill checkoutを必要としません。commandを生成物側で手書き更新しません。
+標準品質bundleの正本は `runtime/adapter/bundles/` です。言語共通の規約・lintルールは言語ownerに残し、標準CIで実行するcommandと準備・実行境界はこのリポジトリで保守します。生成物は正本pathとSHA256を保持し、固定Actionへ同梱します。通常のbuild、生成、consumerは外部skill checkoutを必要としません。commandを生成物側で手書き更新しません。
 
-```sh
-node runtime/adapter/generate-standard-quality-bundles.mjs --source-root <owner-repository-root> --source-revision <full-owner-commit-sha>
-node runtime/adapter/generate-standard-quality-bundles.mjs --source-root <owner-repository-root> --source-revision <full-owner-commit-sha> --check
-npm test -- runtime/adapter/tests/standard-quality-footprint.test.mjs runtime/preset/tests/standard-quality-bundles.test.mjs
+```bash
+node runtime/adapter/generate-standard-quality-bundles.mjs
+node runtime/adapter/generate-standard-quality-bundles.mjs --check
+npm test -- runtime/adapter/tests/generate-standard-quality-bundles.test.mjs runtime/adapter/tests/standard-quality-footprint.test.mjs runtime/preset/tests/standard-quality-bundles.test.mjs
 ```
 
-コピー0の受入は、consumerの固有設定・依存・lockを保存し、標準bindingだけを返すことを検証します。`A3_CI_GITHUB_QUALITY_SKILL_ROOT` を明示した場合はそのowner資材が不変であることも確認します。Hosted実行と正式版提供は別の受入です。
+コピー0の受入は、consumerの固有設定・依存・lockを保存し、標準bindingだけを返すことを検証します。repository正本のbundleが不変であることも確認します。Hosted実行と正式版提供は別の受入です。
 
 主品質workflowの実行本体は `.github/workflows/ci-quality.yml`、導入先のcallerは `workflows/quality/quality-gate.yml` が所有します。callerの明示inputをcalleeの環境変数へ接続し、preflightの固定source依存としてのみcalleeを配布します。consumerのworkflow directoryや管理asset lockへcalleeをコピーしません。callerの短いsummary jobは既存check identityを維持し、calleeの非成功を成功へ読み替えないために残します。正式refとHosted check-name互換性はローカル検証の成功だけで確定しません。
 

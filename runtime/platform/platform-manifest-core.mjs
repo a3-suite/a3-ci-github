@@ -3,6 +3,8 @@ export const PLATFORM_RUNNERS = Object.freeze(['ubuntu-24.04', 'macos-14', 'wind
 const PLATFORM_ID = /^[a-z0-9][a-z0-9-]*$/;
 const TARGET = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
 const ALLOWED_RUNNERS = new Set(PLATFORM_RUNNERS);
+// This checks label syntax, not Hosted origin. Only a caller with trusted CI configuration may select this policy.
+const VERSIONED_RUNNER = /^(?:ubuntu-[0-9]{2}\.[0-9]{2}(?:-arm)?|macos-[0-9]+(?:-intel|-large|-xlarge)?|windows-[0-9]{4}|windows-[0-9]+-arm)$/;
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export class PlatformManifestSemanticError extends Error {
@@ -14,7 +16,10 @@ export class PlatformManifestSemanticError extends Error {
   }
 }
 
-export const validatePlatformManifestValue = (manifest) => {
+export const validatePlatformManifestValue = (manifest, runnerPolicy = 'bootstrap') => {
+  if (runnerPolicy !== 'bootstrap' && runnerPolicy !== 'trusted') {
+    throw new PlatformManifestSemanticError('runner-policy-invalid', 'runner policy is invalid');
+  }
   if (!isRecord(manifest) || Object.keys(manifest).join(',') !== 'platforms') {
     throw new PlatformManifestSemanticError(
       'root-invalid',
@@ -46,7 +51,8 @@ export const validatePlatformManifestValue = (manifest) => {
         index,
       );
     }
-    if (typeof runner !== 'string' || !ALLOWED_RUNNERS.has(runner)) {
+    if (typeof runner !== 'string' || runner.length > 200 || /[\0\r\n]/.test(runner)
+      || !(runnerPolicy === 'trusted' ? VERSIONED_RUNNER.test(runner) : ALLOWED_RUNNERS.has(runner))) {
       throw new PlatformManifestSemanticError(
         'platform-runner-invalid',
         `platforms[${index}].runner is not allowed`,

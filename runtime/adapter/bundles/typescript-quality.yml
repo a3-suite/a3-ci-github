@@ -1,0 +1,42 @@
+schemaVersion: "1"
+kind: ci-adapter-bundle
+id: typescript-npm-quality
+contract: quality-scripts
+languageProfiles: [typescript]
+provider: provider-neutral
+executionBoundary: read-only
+sourceCheckout: fixed-source
+copyable: true
+owner: ci-github
+assets: []
+projectSettings:
+  requiredFiles: [package.json, package-lock.json]
+  requiredScripts: ["format:check", lint, typecheck, test]
+toolchain:
+  versionEnv: CI_TOOLCHAIN_VERSION
+  verify:
+    command: node
+    args: [--version]
+preparation:
+  - id: dependency-restore
+    command: npm
+    args: [ci, --ignore-scripts, --no-audit, --no-fund]
+commands:
+  - id: format
+    command: npm
+    args: [run, format:check]
+  - id: lint
+    command: npm
+    args: [run, lint]
+  - id: typecheck
+    command: npm
+    args: [run, typecheck]
+  - id: test
+    command: npm
+    args: [test]
+  - id: security
+    command: npm
+    args: [audit, --audit-level=high]
+  - id: structure
+    command: npm
+    args: [pack, --dry-run]

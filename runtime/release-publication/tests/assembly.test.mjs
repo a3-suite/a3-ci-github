@@ -123,7 +123,7 @@ describe("contract.ci-release-assembly.outputs", () => {
     // contract_id: contract.ci-release-assembly.outputs
     // integration_id: release-assembly-contract
     test('assembly produces a bound handoff and rejects invalid build inputs', (t) => {
-      const f = fixture(t);
+      const f = fixture(t, { id: 'linux', runner: 'ubuntu-22.04', target: 'x86_64-unknown-linux-gnu' });
       const result = f.assemble();
       expect(result.assets.length).toBe(2);
       expect(result.identity.source_sha).toBe(f.identity.source_sha);

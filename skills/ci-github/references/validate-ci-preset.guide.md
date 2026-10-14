@@ -100,9 +100,9 @@ node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
 - 共通処理の候補比較、非採用理由、owner、証拠 identity は review フェーズの証拠として記録する。preflight は Action の登録・固定 ref・workflow mapping、asset の到達性・配置同一性を検証し、コードの意味的同一性を推測しない。
 - write 権限を持つ job で a3 Action を使う場合は、対象 Action の `privilegedJobs` に `workflow-id/job-id` が完全一致で登録されていることを確認する。`trust: read-only` または workflow 単位の登録だけで許可を補完しない。
 - 標準実装を選択した場合は、必要な extension と Action binding、language profile、project設定、依存閉包を照合する。未登録の実装識別子は、同名のローカル entrypoint が存在しても不一致とする。
-- registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。配置経路の標準descriptorとoptional workflowも同じ照合対象に含める。固定Action参照の標準bundleは配置assetに含めない。
+- registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。配置対象の独自descriptorとoptional workflowも同じ照合対象に含める。固定Action参照の標準bundleは配置assetに含めない。
 - qualityの選択・配置・固定参照は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を参照し、配布同一性lockとcanonical構造を照合する。
-- 標準IDはprofileに対応した登録済みAction bundleに限定する。パスによる標準bundleの既存経路はregistryのtargetDescriptorと配置digestを検証する。標準bundleがないprofileのproject-owned descriptorの意味はCI意味監査の `project-owned-ci-adapter` subjectで確認する。
+- 標準IDはprofileに対応した登録済みAction bundleに限定する。選択・配置の可否は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` に従い、標準IDのdescriptor配置経路は拒否する。project-owned descriptorの意味はCI意味監査の `project-owned-ci-adapter` subjectで確認する。
 - project-owned extension は、canonical workflow から entrypoint への直接接続、参照する直接・間接 asset の存在、project root 内での解決を確認する。project-owned asset 内部の構造と処理契約の意味は preflight の保証対象外とし、CI 意味監査の `project-owned-ci-adapter` subject で project の契約テスト証拠を確認する。実行環境での成立は必要な hosted 証拠で確認する。
 - release publication は consumer の request と `workflow_run` caller の2 workflow、および登録済み固定 SHA の provider `workflow_call` publication を必須とし、request artifact と notes handoff の生成、caller の default branch provenance、run ID の受渡し、publication の再検証を確認する。
 - release／package は callee の `workflow_call` から必須 input／secret を導出し、caller の接続と権限上限を確認する。

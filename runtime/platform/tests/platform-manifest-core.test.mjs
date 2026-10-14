@@ -13,6 +13,23 @@ const platform = (overrides = {}) => ({
 });
 
 describe("platform-manifest-core", () => {
+  test.each(['macos-15', 'windows-2025', 'ubuntu-22.04', 'ubuntu-24.04-arm', 'macos-15-intel'])('trusted manifest accepts the consumer-selected versioned runner %s', (runner) => {
+    expect(validatePlatformManifestValue({ platforms: [platform({ runner })] }, 'trusted'))
+      .toStrictEqual([platform({ runner })]);
+    expect(() => validatePlatformManifestValue({ platforms: [platform({ runner })] }))
+      .toThrow('runner is not allowed');
+  });
+
+  test.each(['self-hosted', 'macos-latest', 'ubuntu-latest', 'windows-latest', 'macos-15\n', '${{ github.event.runner }}', 'custom-runner'])('trusted manifest rejects unsafe or unversioned runner %s', (runner) => {
+    expect(() => validatePlatformManifestValue({ platforms: [platform({ runner })] }, 'trusted'))
+      .toThrow('runner is not allowed');
+  });
+
+  test('unknown runner policy fails closed', () => {
+    expect(() => validatePlatformManifestValue({ platforms: [platform()] }, 'unknown'))
+      .toThrow('runner policy is invalid');
+  });
+
   for (const [label, entry, code] of [
     ['invalid ID syntax', platform({ id: 'INVALID' }), 'platform-id-invalid'],
     ['target path traversal', platform({ target: '../escape' }), 'platform-target-invalid'],

@@ -8,7 +8,11 @@ verifications:
       - id: provider-rejection-diagnostics
         intent_id: detailed-diagnostics-outputs
         input: {provider: invalid-identity-shape-default-branch-head-or-unbound-write-permission}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}, {id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
+        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+      - id: provider-identity-rejection
+        intent_id: fail-closed
+        input: {provider: invalid-identity-shape-default-branch-head-or-unbound-write-permission}
+        checks: [{id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
       - id: standard-workflow-capability
         intent_id: publish-evidence
         input: {credential: bound-standard-workflow-github-token, permission-metadata: boolean-false}

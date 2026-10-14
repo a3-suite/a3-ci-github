@@ -75,7 +75,7 @@ export const collectScriptBundles = (root) => {
   return collectScriptBundleMetadata(root);
 };
 
-export const buildPlan = (root, actions, scriptBundles = []) => {
+export const buildPlan = (root, actions, scriptBundles = [], { transpileOnly = false } = {}) => {
   const bundled = actions.filter((action) => action.distPath);
   const generatedDiagnostics = bundled.length ? ['runtime/diagnostics/failure.mjs', 'runtime/diagnostics/failure.d.mts'] : [];
   return [
@@ -87,7 +87,7 @@ export const buildPlan = (root, actions, scriptBundles = []) => {
       '--typeRoots', path.join(bundled[0].path, 'node_modules/@types')],
     cwd: root,
   }] : []),
-  ...bundled.map((action) => ({ command: 'npm', args: ['run', 'build'], cwd: action.path })),
+  ...bundled.map((action) => ({ command: 'npm', args: ['run', 'build', ...(transpileOnly ? ['--', '--transpile-only'] : [])], cwd: action.path })),
   ...scriptBundles.flatMap((bundle) => [
     { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: bundle.path },
     { command: 'npm', args: ['run', 'build'], cwd: bundle.path },
@@ -147,7 +147,7 @@ export const assertTrackedReferences = (root, actions, execute = execFileSync) =
   }
 };
 
-export const checkActionDist = (root = defaultRoot) => {
+export const checkActionDist = (root = defaultRoot, { transpileOnly = false } = {}) => {
   const diagnostic = new FailureContext('repository-action-distribution', 'check-distribution');
   try {
   diagnostic.at('action-metadata', { input: 'action-and-runtime-source-inventory' });
@@ -159,7 +159,7 @@ export const checkActionDist = (root = defaultRoot) => {
   diagnostic.confirmed();
   diagnostic.at('build-and-identity', { input: 'source-and-dist', actions: actions.length, bundles: scriptBundles.length });
   diagnostic.writeState = 'generated-dist-may-be-partial';
-  runPlan(buildPlan(root, actions, scriptBundles));
+  runPlan(buildPlan(root, actions, scriptBundles, { transpileOnly }));
   diagnostic.confirmed();
   diagnostic.at('distribution-inventory', { input: 'tracked-dist' });
   assertNoUntrackedDist(root, actions, scriptBundles);
@@ -169,7 +169,13 @@ export const checkActionDist = (root = defaultRoot) => {
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
-  try { checkActionDist(); } catch (error) {
+    try {
+      const args = process.argv.slice(2);
+      if (args.length > 1 || args.length === 1 && args[0] !== '--transpile-only') {
+        throw new DiagnosticError('action-dist-arguments-invalid: Expected no arguments or --transpile-only');
+      }
+      checkActionDist(defaultRoot, { transpileOnly: args.length === 1 });
+    } catch (error) {
     new FailureContext('repository-action-distribution', 'check-distribution').report(error);
     completeFailure(safeErrorReason(error));
   }

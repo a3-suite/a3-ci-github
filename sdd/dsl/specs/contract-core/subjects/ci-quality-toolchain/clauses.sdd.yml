@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-toolchain
 contracts:
   - id: contract.ci-quality-toolchain.preparation
-    summary: Prepare only the selected fixed language toolchain, preserve Node npm cache and Rust environment setup, and leave source identity, permissions and quality commands to the workflow and adapter.
+    summary: Prepare only the selected language toolchain, resolve permitted bounded Node/Python selectors to an exact output, preserve exact Release/Rust inputs, Node npm cache and Rust environment setup, and leave source identity, permissions and quality commands to the workflow and adapter.
     conditions:
       - id: diagnostic-required-preparation
         environment_predicate:
@@ -21,6 +21,13 @@ contracts:
           target_ref: runtime-context.quality-toolchain-preparation-fails
           op: available
     guarantees:
+      - id: resolved-quality-toolchain-produced
+        when: quality-toolchain-preparation-succeeds
+        observation_ref: observation.ci-quality-toolchain.result
+        claim:
+          kind: observable-result
+          op: present
+          target: {kind: observation_field, value: resolved-toolchain-version}
       - id: selected-quality-toolchain-ready
         when: quality-toolchain-preparation-succeeds
         observation_ref: observation.ci-quality-toolchain.result
@@ -51,8 +58,8 @@ contracts:
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
         guarantee_refs: [diagnostic-details-preparation]
       - id: quality-toolchain-selection-verified
-        goal: Validate inputs before setup, select only the requested language dependencies with fixed Action pins, and retain pinned command arguments and Rust environment setup.
-        guarantee_refs: [selected-quality-toolchain-ready]
+        goal: Validate inputs before setup, select only the requested language dependencies with fixed Action pins, and retain pinned command arguments and Rust environment setup. For registered cargo-audit binaries, verify the provider-pinned archive digest before extraction and the exact executable version before PATH export; retain source installation for unregistered versions or targets without narrowing valid inputs.
+        guarantee_refs: [selected-quality-toolchain-ready, resolved-quality-toolchain-produced]
       - id: quality-toolchain-failure-verified
-        goal: Reject unsupported profiles, missing or nonfixed selected versions before setup, and propagate setup failures.
+        goal: Reject unsupported profiles/policies, missing or malformed versions before setup, missing or mismatched resolved versions, and propagate setup failures without successful resolved output. Registered cargo-audit download, checksum, extraction, executable version or PATH export failure must stop without source fallback.
         guarantee_refs: [invalid-or-failed-quality-toolchain-stops]

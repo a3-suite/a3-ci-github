@@ -2,8 +2,8 @@ import { completeFailure, FailureContext, writeFailureOutputs, safeErrorReason, 
 import * as core from '@actions/core';
 import fs from 'node:fs';
 import path from 'node:path';
-import { executeAdapter, loadAdapterBundle, parseAdapterBundle } from './adapter.js';
-import { isStandardQualityBundle, standardQualityBundle } from '../../../runtime/adapter/standard-quality-bundles.js';
+import { executeAdapter, loadAdapterBundle, parseAdapterBundle, type AdapterCommandTiming } from './adapter.js';
+import { isStandardQualityBundle, standardQualityBundle, standardSharedQualityCommandIds } from '../../../runtime/adapter/standard-quality-bundles.js';
 
 export const run = (): void => {
   const diagnostic = new FailureContext('ci-quality-adapter', 'quality-adapter');
@@ -20,17 +20,36 @@ export const run = (): void => {
     if (standard && (bundle.id !== standard.id || bundle.owner !== standard.owner || bundle.assets.length !== 0)) {
       throw new DiagnosticError('quality-adapter-standard-bundle-metadata-invalid');
     }
+    const scope = readActionInput(core.getInput, 'execution-scope') || 'all';
+    if (scope !== 'all' && scope !== 'native') throw new DiagnosticError('quality-adapter-execution-scope-invalid');
+    if (scope === 'native') {
+      if (!standard) throw new DiagnosticError('quality-adapter-native-scope-unsupported');
+      const sharedIds = standardSharedQualityCommandIds(standard.id);
+      if (sharedIds.some(id => !bundle.commands.some(command => command.id === id))) {
+        throw new DiagnosticError('quality-adapter-standard-bundle-metadata-invalid');
+      }
+      bundle.commands = bundle.commands.filter(command => !sharedIds.includes(command.id));
+    }
     const resultPath = path.resolve(readActionInput(core.getInput, 'result-path', { required: true }));
     diagnostic.confirmed();
     diagnostic.at('adapter-execution', {"input": "selected-bundle-and-source-root"});
     diagnostic.details.bundle = /^[A-Za-z0-9_.-]{1,100}$/.test(bundle.id) ? bundle.id : 'protected-or-invalid';
+    const commandTimings: AdapterCommandTiming[] = [];
     const payload = executeAdapter(bundle, {
       sourceRoot: path.resolve(readActionInput(core.getInput, 'source-root', { required: true })),
       languageProfile: readActionInput(core.getInput, 'language-profile') || undefined,
       toolchainVersion: readActionInput(core.getInput, 'toolchain-version', { required: true }),
       requireTrustedProjectScripts: core.getBooleanInput('require-trusted-project-scripts'),
       trustedProjectRoot: readActionInput(core.getInput, 'trusted-project-root') || undefined,
+      commandTimings,
     });
+    for (const timing of commandTimings) process.stderr.write(`ci-quality-command-timing:${JSON.stringify({
+      phase: timing.phase,
+      id: /^[A-Za-z0-9_.-]{1,100}$/.test(timing.id) ? timing.id : 'protected-or-invalid',
+      elapsed_ms: timing.elapsedMs,
+      status: timing.status,
+      exit_code: timing.exitCode,
+    })}\n`);
     diagnostic.confirmed();
     diagnostic.at('result-write', {"output": "result-path"});
     diagnostic.writeState = 'write-may-be-partial';

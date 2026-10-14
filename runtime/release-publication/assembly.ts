@@ -45,7 +45,7 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     if (sourceTextSha256(platformBytes) !== authority.platform_manifest_sha256 || config.CI_PLATFORM_MANIFEST !== authority.platform_manifest) fail('platform-mismatch');
     const matrix: unknown = JSON.parse(options.platformMatrix);
     exactKeys(matrix, ['include']);
-    const expectedMatrix = { include: validatePlatformManifestValue(decodeManifest(platformBytes.toString('utf8'))) };
+    const expectedMatrix = { include: validatePlatformManifestValue(decodeManifest(platformBytes.toString('utf8')), 'trusted') };
     equal(matrix, expectedMatrix, 'platform-mismatch');
     const platforms = expectedMatrix.include;
     if (platforms.length > LIMITS.assets / 2) fail('platform-limit-exceeded');

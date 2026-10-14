@@ -510,6 +510,7 @@ const validateCommon = (
   report: Report,
   registry: RegistryData,
   excludedReferences: ReadonlySet<string> = new Set(),
+  qualityVersionPolicy: 'exact' | 'compatible' = 'exact',
 ): void => {
   if (PLACEHOLDER.test(text)) add(report.missingSettings, {
     path: displayPath,
@@ -561,16 +562,19 @@ const validateCommon = (
     for (const step of Array.isArray(map(job).steps) ? map(job).steps as unknown[] : []) {
       const value = map(step);
       if (typeof value.uses !== 'string' || !value.uses.startsWith(`${registry.actionRepository}/actions/ci-quality-toolchain@`)) continue;
-      const expected = {
+      const expected: Record<string, string> = {
         'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}',
         'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}',
         'uv-version': '${{ env.CI_UV_VERSION }}',
         'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}',
       };
       const inputs = map(value.with);
+      if (inputs['version-policy'] !== undefined) {
+        expected['version-policy'] = qualityVersionPolicy;
+      }
       if (Object.keys(inputs).length !== Object.keys(expected).length
         || Object.entries(expected).some(([name, expression]) => inputs[name] !== expression)) add(report.mismatches, {
-        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its four explicit workflow settings', settingLocation: displayPath,
+        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its four explicit workflow settings and the permitted version policy', settingLocation: displayPath,
       });
     }
   }
@@ -835,7 +839,7 @@ const inspectWorkflowAsset = (
       for (const [name, definition] of Object.entries(definitions)) if (map(definition).required === true && !(name in map(call.with))) add(report.missingSettings, {
         path: `${asset.destination}:jobs.${jobId}.with.${name}`, message: `required ${label} reusable workflow input is missing`, settingLocation: asset.destination,
       });
-      validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry);
+      validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry, new Set(), 'compatible');
     }
   }
   for (const value of new Set([...actionUses(workflow), ...actionUses(execution)].filter((item) =>

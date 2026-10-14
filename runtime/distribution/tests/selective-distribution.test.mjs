@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { afterAll, expect, test, vi, describe } from 'vitest';
+import { beforeAll, afterAll, expect, test, vi, describe } from 'vitest';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -93,7 +93,11 @@ runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
 runFixtureGit(['add', '--all']);
 runFixtureGit(['commit', '-qm', 'fixture']);
 const sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
-afterAll(() => fs.rmSync(committedSourceRoot, { recursive: true, force: true }));
+let baselineRoot;
+afterAll(() => {
+  if (baselineRoot) fs.rmSync(baselineRoot, { recursive: true, force: true });
+  fs.rmSync(committedSourceRoot, { recursive: true, force: true });
+});
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 const withFixture = async (name, callback) => {
@@ -105,7 +109,14 @@ const withFixture = async (name, callback) => {
   }
 };
 
-const prepareRelease = (root) => {
+const readRelease = (output) => ({
+  output,
+  manifestPath: path.join(output, 'a3-ci-github-distribution-manifest.json'),
+  manifestBytes: fs.readFileSync(path.join(output, 'a3-ci-github-distribution-manifest.json')),
+  manifest: JSON.parse(fs.readFileSync(path.join(output, 'a3-ci-github-distribution-manifest.json'), 'utf8')),
+});
+
+const generateRelease = (root) => {
   const output = path.join(root, 'release');
   const result = spawnSync(tsx, [
     path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts'),
@@ -115,20 +126,60 @@ const prepareRelease = (root) => {
     '--release-tag', releaseTag,
   ], { encoding: 'utf8' });
   expect(result.status, result.stderr).toBe(0);
-  return {
-    output,
-    manifestPath: path.join(output, 'a3-ci-github-distribution-manifest.json'),
-    manifestBytes: fs.readFileSync(path.join(output, 'a3-ci-github-distribution-manifest.json')),
-    manifest: JSON.parse(fs.readFileSync(path.join(output, 'a3-ci-github-distribution-manifest.json'), 'utf8')),
-  };
+  return readRelease(output);
 };
+
+let baseline;
+beforeAll(() => {
+  baselineRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-baseline-'));
+  baseline = generateRelease(baselineRoot);
+});
+
+const prepareRelease = (root) => {
+  const output = path.join(root, 'release');
+  expect(fs.existsSync(output)).toBe(false);
+  fs.cpSync(baseline.output, output, { recursive: true, force: false, errorOnExist: true });
+  return readRelease(output);
+};
+
+describe('distribution test fixtures', () => {
+  describe('prepareRelease', () => {
+    // evidence_role: supplemental
+    // test_level: integration
+    // integration_id: distribution-fixture-isolation
+    test('consumer copies isolate manifest objects and all release bytes from later cases', async () => {
+      // Arrange
+      await withFixture('distribution-mutated-copy-', async (firstRoot) => {
+        const first = prepareRelease(firstRoot);
+        const bytes = new Map(fs.readdirSync(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
+        // Act
+        first.manifest.sourceRevision = 'mutated';
+        first.manifestBytes.fill(0);
+        for (const name of bytes.keys()) fs.writeFileSync(path.join(first.output, name), 'mutated');
+        await withFixture('distribution-clean-copy-', (secondRoot) => {
+          const second = prepareRelease(secondRoot);
+          // Assert
+          expect(second.manifest.sourceRevision).toBe(sourceRevision);
+          expect(second.manifest).not.toBe(first.manifest);
+          expect(second.manifestBytes).not.toBe(first.manifestBytes);
+          expect(second.manifestBytes).toEqual(bytes.get('a3-ci-github-distribution-manifest.json'));
+          expect(fs.readdirSync(second.output).sort()).toEqual([...bytes.keys()].sort());
+          for (const [name, expected] of bytes) expect(fs.readFileSync(path.join(second.output, name))).toEqual(expected);
+        });
+      });
+    });
+  });
+});
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
     test('release generator derives deterministic selective assets and checksums from registries', async () => {
       await withFixture('a3-ci-github-distribution-release-', (root) => {
-        const first = prepareRelease(root);
+        const first = generateRelease(root);
+        for (const filename of fs.readdirSync(first.output)) {
+          expect(fs.readFileSync(path.join(first.output, filename))).toEqual(fs.readFileSync(path.join(baseline.output, filename)));
+        }
         const manifest = validateDistributionManifest(first.manifest);
         expect(manifest.sourceRevision).toBe(sourceRevision);
         for (const binding of Object.values(manifest.reusableWorkflows)) {
@@ -258,7 +309,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const committedBytes = fs.readFileSync(workingPath);
         try {
           fs.writeFileSync(workingPath, 'working-tree-only-change\n');
-          const release = prepareRelease(root);
+          const release = generateRelease(root);
           expect(release.manifest.files[sourcePath].sha256).toBe(sha256(committedBytes));
           expect(release.manifest.files[sourcePath].sha256).not.toBe(sha256(Buffer.from('working-tree-only-change\n')));
         } finally {

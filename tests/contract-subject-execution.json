@@ -1266,6 +1266,20 @@
             "exclude": [],
             "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
           }
+        },
+        {
+          "id": "integration-shared-trust",
+          "level": "integration",
+          "cwd": ".",
+          "tests": [
+            "tests/shared-quality-checks.test.mjs",
+            "runtime/preset/tests/quality-platform-selection.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Workflow Bash and matrix projection jointly establish trusted declaration boundaries; Node source coverage is not attributed across this segment."
+          }
         }
       ]
     },
@@ -1812,7 +1826,8 @@
           "cwd": "actions/ci-quality-adapter",
           "tests": [
             "tests/adapter.test.ts",
-            "tests/standard-bundles.test.ts"
+            "tests/standard-bundles.test.ts",
+            "tests/python-standard-bundle.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1852,7 +1867,8 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.test.mjs"
+            "tests/workflow-contracts.test.mjs",
+            "tests/shared-quality-checks.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2307,7 +2323,8 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.test.mjs"
+            "tests/workflow-contracts.test.mjs",
+            "tests/control-checkout.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2719,19 +2736,20 @@
           "id": "unit",
           "level": "unit",
           "status": "excluded",
-          "reason": "The preparation boundary is composite YAML and shell; local tests exercise the actual Action scripts."
+          "reason": "The preparation boundary is composite YAML and its delegated installer; local integration tests exercise the executable preparation boundary and asset selection."
         },
         {
           "id": "integration-action",
           "level": "integration",
           "cwd": "actions/ci-quality-toolchain",
           "tests": [
-            "tests/action-contract.test.mjs"
+            "tests/action-contract.test.mjs",
+            "tests/cargo-audit.test.mjs"
           ],
           "coverage": {
             "enabled": false,
             "scope": "composite-action",
-            "reason": "Node coverage does not measure composite YAML or Bash; executable scripts and dependency bindings provide local contract evidence."
+            "reason": "Composite YAML and Bash are outside Node coverage; executable preparation scripts, verified archive integration and dependency bindings provide local contract evidence."
           }
         },
         {

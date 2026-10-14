@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.platform-matrix
 contracts:
   - id: contract.ci-platform-matrix.outputs
-    summary: A valid manifest preserves the full build matrix; a valid optional quality selection additionally produces ordered quality matrix and expected platform outputs.
+    summary: A valid manifest preserves the full build matrix; a valid optional quality selection additionally produces ordered quality matrix and expected platform outputs. Optional boolean sharedStandardChecks is projected as shared_standard_checks only when declared; absence preserves the old quality matrix shape. This projection does not authorize the caller to trust PR head or bootstrap declarations.
     conditions:
       - id: diagnostic-required-outputs
         environment_predicate:
@@ -158,7 +158,7 @@ contracts:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
       - id: quality-selection-output-set
-        goal: A valid selection retains the full manifest matrix and produces platform_id/runner and comma-separated expected IDs in selection order.
+        goal: A valid selection retains the full manifest matrix and produces platform_id/runner and comma-separated expected IDs in selection order. Declared sharedStandardChecks must be a boolean and is projected to each quality entry; malformed values and unknown fields fail without outputs.
         guarantee_refs:
           - selected-full-matrix-produced
           - ordered-quality-matrix-produced

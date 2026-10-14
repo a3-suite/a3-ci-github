@@ -4,7 +4,7 @@ import {
   PlatformManifestSemanticError,
   validatePlatformManifestValue,
 } from '../../../runtime/platform/platform-manifest-core.mjs';
-import type { Platform } from '../../../runtime/platform/platform-manifest-core.mjs';
+import type { Platform, RunnerPolicy } from '../../../runtime/platform/platform-manifest-core.mjs';
 import { PlatformSelectionError, resolveQualityPlatforms } from '../../../runtime/platform/platform-selection-core.js';
 
 export type { Platform };
@@ -24,6 +24,7 @@ const actionError = (error: unknown, manifest: unknown): Error => {
   if (!(error instanceof PlatformManifestSemanticError)) return error as Error;
   const suffix = error.index === undefined ? '' : `-${error.index}`;
   const code = {
+    'runner-policy-invalid': 'platform-matrix-runner-policy-invalid',
     'root-invalid': 'platform-matrix-root-invalid',
     'platforms-empty': 'platform-matrix-platforms-empty',
     'platform-shape-invalid': `platform-matrix-platform${suffix}-shape-invalid`,
@@ -39,14 +40,14 @@ const actionError = (error: unknown, manifest: unknown): Error => {
   return new DiagnosticError(code ?? 'platform-matrix-invalid', { diagnostics: { stage: 'manifest-identity-validation', field: error.index === undefined ? field : `platforms[${error.index}].${field}`, index: error.index ?? 'unavailable', expected: field === 'runner' ? 'supported-runner' : 'unique-valid-platform-identity', observed: safeActual, duplicate: error.index !== undefined && platforms.slice(0, error.index).some(item => item && typeof item === 'object' && item[field] === actual) } });
 };
 
-export const resolvePlatformMatrix = (manifestText: string): PlatformMatrix => {
+export const resolvePlatformMatrix = (manifestText: string, runnerPolicy: RunnerPolicy = 'bootstrap'): PlatformMatrix => {
   if (Buffer.byteLength(manifestText, 'utf8') > MAX_MANIFEST_BYTES) {
     throw new DiagnosticError('platform-matrix-manifest-too-large');
   }
 
   const manifest = parsePlatformYaml(manifestText, 20);
   try {
-    return { include: validatePlatformManifestValue(manifest) };
+    return { include: validatePlatformManifestValue(manifest, runnerPolicy) };
   } catch (error) {
     throw actionError(error, manifest);
   }

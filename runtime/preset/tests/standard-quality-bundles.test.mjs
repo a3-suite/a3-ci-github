@@ -42,6 +42,12 @@ describe("contract.ci-preset-assurance.verification", () => {
           expect(context.report.mismatches).toStrictEqual([]);
           expect(managedAssets(root, registry, [preset]).map((asset) => asset.path)).toStrictEqual([workflowPath]);
           expect(fs.existsSync(path.join(root, '.ci/adapters'))).toBe(false);
+          for (const source of [{ skill: profile, path: 'runtime/adapter/bundles/rust-quality.yml' }, { path: 'runtime/adapter/bundles/other-quality.yml' }]) {
+            const changedRegistry = { ...registry, adapterBundles: registry.adapterBundles.map(bundle => bundle.id === id ? { ...bundle, source } : bundle) };
+            const rejected = { ...context, registry: changedRegistry, report: createReport() };
+            validateQualityPreset(rejected, preset);
+            expect(rejected.report.mismatches.some(item => item.message.includes('source provenance mismatch'))).toBe(true);
+          }
           for (const mutation of [
             (value) => { value.env.CI_STANDARD_BUNDLE_ID = 'unknown'; },
             (value) => { value.env.CI_STANDARD_BUNDLE_ID = 123; },
