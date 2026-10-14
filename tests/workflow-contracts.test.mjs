@@ -1157,11 +1157,17 @@ describe("workflow-contracts", () => {
         /python3 -m unittest discover -s runtime\/installer\/tests -p 'test_\*\.py' -v/,
       ]);
       includesAll(linux, [
-        /npm run test:coverage:installer/,
+        /node tests\/coverage-tools\/measure-installer-coverage\.mjs report "\$A3_CI_INSTALLER_COVERAGE_OUTPUT"/,
         /name: installer-python-source-coverage/,
-        /path: tests\/tmp\/coverage\/installer\/run-\*\/coverage\.json/,
+        /path: tests\/tmp\/coverage\/installer\/run-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}\/coverage\.json/,
         /if-no-files-found: error/,
       ]);
+      expect(linux.indexOf('name: Set up Python source coverage tool')).toBeLessThan(linux.indexOf('name: Verify all bundled Action sources'));
+      const sourceStep = stepContaining(linux, '- name: Verify all bundled Action sources');
+      const reportStep = stepContaining(linux, '- name: Report installer Python source coverage');
+      for (const step of [sourceStep, reportStep]) expect(step).toContain('A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}');
+      expect(sourceStep).toContain('node runtime/repository/verify-action-packages.mjs');
+      expect(reportStep).not.toContain('test:coverage:installer');
       expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
       includesAll(installerHandoff, [
         /producer: contract-linux/,

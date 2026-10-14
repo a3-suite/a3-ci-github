@@ -59,6 +59,15 @@ test_maps:
     case_id: maintained-action-source-verification
     tests:
       - path: tests/action-package-verification.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > batches every Action and shared test once while retaining all typechecks"
+        check_refs: [check-action-source-verification-plan]
+      - path: tests/action-package-verification.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > rejects missing files, empty, entirely skipped and unknown test results despite a zero child exit"
+        check_refs: [check-action-source-verification-plan]
+      - path: tests/action-package-verification.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > batched typechecks keep project globals isolated and reject errors after a previous successful build"
+        check_refs: [check-action-source-verification-plan]
+      - path: tests/action-package-verification.test.mjs
         symbol: "repository-cli-source-verification > cliTypecheckPlan > the CLI verification plan accepts valid sources and rejects type errors in every CLI source family"
         check_refs: [check-action-source-verification-plan]
       - path: tests/action-package-verification.test.mjs
@@ -99,6 +108,9 @@ test_maps:
   - verification_id: verification.repository-action-distribution.integrity
     case_id: detailed-failure-integrity
     tests:
+      - path: tests/action-package-verification.test.mjs
+        symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > retains the known report rejection reason after a zero child exit"
+        check_refs: [diagnostic-details]
       - path: tests/action-dist-gate.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > reports a dist identity mismatch reason and keeps other step failures unchanged"
         check_refs: [diagnostic-details]

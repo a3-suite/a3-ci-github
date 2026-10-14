@@ -152,13 +152,20 @@ jobs:
           actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
 
+      - name: Set up Python source coverage tool
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        with:
+          version: '0.11.15'
+
       - name: Verify all bundled Action sources
         shell: bash
+        env:
+          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
         run: node runtime/repository/verify-action-packages.mjs
 
       - name: Test Action source and runtime boundary gates
         shell: bash
-        run: npm test -- tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs tests/action-entrypoint-process.test.mjs
+        run: npm test -- tests/action-package-verification.test.mjs tests/installer-coverage.test.mjs tests/runtime-boundaries.test.mjs tests/action-entrypoint-process.test.mjs
 
       - name: Provision jq 1.7.1
         uses: ./actions/ci-jq-provisioner
@@ -449,19 +456,16 @@ jobs:
           test "$STATUS" = passed
           test "$COLLECTION" = complete
 
-      - name: Set up Python source coverage tool
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-        with:
-          version: '0.11.15'
-
-      - name: Measure installer Python source coverage
-        run: npm run test:coverage:installer
+      - name: Report installer Python source coverage
+        env:
+          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node tests/coverage-tools/measure-installer-coverage.mjs report "$A3_CI_INSTALLER_COVERAGE_OUTPUT"
 
       - name: Preserve installer source coverage report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: installer-python-source-coverage
-          path: tests/tmp/coverage/installer/run-*/coverage.json
+          path: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}/coverage.json
           if-no-files-found: error
 
       - name: Prepare Linux installer transport acceptance
