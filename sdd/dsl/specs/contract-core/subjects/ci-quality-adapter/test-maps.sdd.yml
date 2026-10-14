@@ -20,6 +20,9 @@ test_maps:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: "dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands"
         check_refs: [check-quality-adapter-rust-scope-status]
+      - path: tests/shared-quality-checks.test.mjs
+        symbol: "shared standard quality checks > only trusted declared standard Rust secondary platforms select native"
+        check_refs: [check-quality-adapter-rust-scope-status]
   - verification_id: verification.ci-quality-adapter.outputs
     case_id: standard-selection-rejected
     tests:

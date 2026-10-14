@@ -48,13 +48,15 @@ pathResolution:
     shape: "source: {path: <a3-ci-github repository root 相対>}"
     fields:
       - assets[].source（skill を省略した resource）
+      - adapterBundles[].source（skill を省略した resource）
     rule: >-
-      repository-owned runtime は a3-ci-github repository root 相対 path で表す。
+      repository-owned resource は a3-ci-github repository root 相対 path で表す。
       Agent Skill root からは解決せず、導入先 project の entrypoint とも区別する。
   externalSkillSource:
     shape: "source: {skill: <skill 名>, path: <所有スキル root 相対>}"
     fields:
-      - adapterBundles[].source
+      - assets[].source（skill を明示した resource）
+      - adapterBundles[].source（skill を明示した resource）
     rule: >-
       外部 owner の resource だけを skill identity と skill root 相対 path で表す。
       ソース管理上の category と配備後の平坦化は tooling が解決し、source へ含めない。

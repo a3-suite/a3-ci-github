@@ -176,7 +176,8 @@ contracts:
     stopConditions: [partial, different, unknown-permission-denied, availability-unknown, metadata-mismatch, checksum-mismatch, version-binding-mismatch, overwrite-request]
 ownershipBoundary:
   ci: 汎用 CI の目的選択、責務境界、信頼境界、実行効率。具体的な script 処理契約は所有しない。
-  languageSkill: format、lint、test、build、package の具体 command
+  languageSkill: 言語共通の規約・lintルール、および標準品質bundle以外の言語固有command
+  providerRepository: 標準品質bundleの具体command。所有・正本・配布境界は ci.adapter-bundles#profilePolicy.standardDelivery に従う。
   projectOwner: metadata、availability、credential route、publish command、trusted control
   providerSkill: 本 reference の script ユースケースと処理契約、および選択した provider の output、summary、artifact、権限、trigger の写像
   inventory: ci-script-assets が共通 asset の ID、kind、status、scope、owner、entrypoint、copyability を所有し、provider 固有 asset は選択した provider registry が所有する。
