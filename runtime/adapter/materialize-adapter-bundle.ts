@@ -342,11 +342,11 @@ export type MaterializeAdapterBundleOptions = {
 };
 
 export type MaterializeAdapterBundleReport = {
-  schema: 'ci.adapter-materializer.v1';
+  schema: 'ci.adapter-materializer.v2';
   bundle: string;
   descriptor: string;
   files: Array<{ source: string; destination: string; action: 'copied' | 'reused' }>;
-  binding?: { action: 'ci-quality-adapter'; standardBundleId: string; sourceRevision: string; sha256: string };
+  binding?: { action: 'ci-quality-adapter'; standardBundleId: string; sourcePath: string; sha256: string };
 };
 
 export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions): MaterializeAdapterBundleReport => {
@@ -356,16 +356,16 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
   const bundle = findBundle(inventory, options.bundleId);
   if (bundle.delivery === 'action') {
     const standard = standardQualityBundle(bundle.id);
-    if (resourceSkill(bundle.source) !== standard.owner
-      || !standard.sourcePath.endsWith(`/${standard.owner}/${resourceRelativePath(bundle.source, 'bundle-source')}`)) {
+    if (resourceSkill(bundle.source) !== undefined
+      || standard.sourcePath !== resourceRelativePath(bundle.source, 'bundle-source')) {
       throw new DiagnosticError('adapter-materializer-standard-provenance-mismatch');
     }
     if (options.outputPath && fs.lstatSync(path.resolve(options.outputPath), { throwIfNoEntry: false })) throw new DiagnosticError('adapter-materializer-output-conflict');
     const descriptor = parseDescriptor(bundle.id, standard.descriptor);
     if (descriptor.id !== bundle.id || descriptor.assets.length !== 0) throw new DiagnosticError('adapter-materializer-standard-bundle-invalid');
     validateProjectSettings(targetRoot, descriptor.projectSettings);
-    return { schema: 'ci.adapter-materializer.v1', bundle: bundle.id, descriptor: '', files: [],
-      binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourceRevision: standard.sourceRevision, sha256: standard.sha256 } };
+    return { schema: 'ci.adapter-materializer.v2', bundle: bundle.id, descriptor: '', files: [],
+      binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourcePath: standard.sourcePath, sha256: standard.sha256 } };
   }
   if (bundle.delivery !== undefined) throw new DiagnosticError('adapter-materializer-delivery-invalid');
   if (!options.sourceRoot) throw new DiagnosticError('adapter-materializer-source-root-required');
@@ -441,7 +441,7 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
     files.push({ source: resourceDisplay(item.source), destination: item.destination, action });
   }
   return {
-    schema: 'ci.adapter-materializer.v1',
+    schema: 'ci.adapter-materializer.v2',
     bundle: bundle.id,
     descriptor: bundle.targetDescriptor,
     files,

@@ -7,6 +7,10 @@ inputs:
   standard-bundle-id:
     required: false
     description: Registered standard bundle embedded in this fixed Action revision. Exclusive with bundle-path.
+  execution-scope:
+    required: false
+    default: all
+    description: all runs every check. native runs standard Rust without format/security; requires shared checks to succeed separately.
   source-root:
     required: true
     description: Fixed source checkout used as the command working directory.

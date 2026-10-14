@@ -72,7 +72,7 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
     { name: 'project-1.0.0-linux.tar.gz.sha256', sha256: crypto.createHash('sha256').update(checksum).digest('hex'), size: checksum.length },
   ];
   const digest = crypto.createHash('sha256').update(JSON.stringify(assets)).digest('hex');
-  const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
+  const result = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), PATH: path.join(f.root, 'no-cli') }, encoding: 'utf8', cwd: f.root });
   expect(result.status, result.stderr).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toBe(`status=success\nrelease-handoff=${f.options.outputRoot}\nasset-digest=${digest}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
@@ -101,7 +101,7 @@ test('assembly bundle rejects output path line injection before assembly', (t) =
 test('assembly bundle rejects invalid input without successful outputs', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
-  const result = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), INPUT_REPOSITORY: 'other/repository' }, encoding: 'utf8', cwd: f.root });
+  const result = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), PATH: path.join(f.root, 'no-cli'), INPUT_REPOSITORY: 'other/repository' }, encoding: 'utf8', cwd: f.root });
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(result.stderr).toMatch(/authority-handoff-binding-mismatch/);

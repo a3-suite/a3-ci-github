@@ -8,7 +8,6 @@ import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
 import { standardQualityBundle } from '../standard-quality-bundles.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const skillRoot = process.env.A3_CI_GITHUB_QUALITY_SKILL_ROOT;
 const require = createRequire(import.meta.url);
 const yaml = require(path.join(root, 'runtime/preset/node_modules/yaml'));
 const inventoryPath = 'skills/ci-github/references/ci-script-assets.reference.yml';
@@ -28,7 +27,7 @@ describe("adapter-bundle-materialization-contract", () => {
           const bundle = inventory.adapterBundles.find((item) => item.languageProfiles.includes(profile));
           expect(bundle, `unregistered standard profile: ${profile}`).toBeTruthy();
           expect(bundle.targetDescriptor).toBeUndefined();
-          const source = skillRoot ? path.join(skillRoot, bundle.source.skill, bundle.source.path) : undefined;
+          const source = path.join(root, bundle.source.path);
           const original = standardQualityBundle(bundle.id).descriptor;
           for (const delivery of [undefined, 'copy']) {
             const downgraded = structuredClone(inventory);
@@ -41,7 +40,7 @@ describe("adapter-bundle-materialization-contract", () => {
             expect(fs.existsSync(path.join(fixture, 'rejected'))).toBe(false);
           }
 
-          const ownerBefore = source ? fs.readFileSync(source, 'utf8') : undefined;
+          const ownerBefore = fs.readFileSync(source, 'utf8');
           const descriptor = yaml.parse(original);
           expect(descriptor.assets, `${profile} unexpectedly requires common scripts`).toStrictEqual([]);
           const project = path.join(fixture, profile);
@@ -58,7 +57,7 @@ describe("adapter-bundle-materialization-contract", () => {
           const options = { inventoryPath, bundleId: bundle.id, targetRoot: project };
           const report = materializeAdapterBundle(options);
           expect(materializeAdapterBundle({ ...options,
-            sourceRoot: skillRoot ?? path.join(fixture, 'unavailable-owner-collection') })).toStrictEqual(report);
+            sourceRoot: path.join(fixture, 'unavailable-owner-collection') })).toStrictEqual(report);
           const cli = spawnSync(process.execPath, [
             '--import', require.resolve('tsx', { paths: [path.join(root, 'runtime/preset')] }),
             path.join(root, 'runtime/adapter/materialize-adapter-bundle.ts'),
@@ -66,13 +65,24 @@ describe("adapter-bundle-materialization-contract", () => {
           ], { encoding: 'utf8', cwd: root });
           expect(cli.status, cli.stderr).toBe(0);
           expect(JSON.parse(cli.stdout)).toStrictEqual(report);
-          expect(report.schema).toBe('ci.adapter-materializer.v1');
+          expect(report.schema).toBe('ci.adapter-materializer.v2');
           expect(report.files).toStrictEqual([]);
           expect(report.descriptor).toBe('');
-          expect(report.binding.standardBundleId).toBe(bundle.id);
+          expect(report.binding).toStrictEqual({ action: 'ci-quality-adapter', standardBundleId: bundle.id,
+            sourcePath: bundle.source.path, sha256: standardQualityBundle(bundle.id).sha256 });
+          for (const mutation of [
+            source => { source.skill = profile; },
+            source => { source.path = 'runtime/adapter/bundles/other-quality.yml'; },
+          ]) {
+            const changed = structuredClone(inventory);
+            mutation(changed.adapterBundles.find(item => item.id === bundle.id).source);
+            const changedPath = path.join(fixture, `wrong-provenance-${profile}.json`);
+            fs.writeFileSync(changedPath, JSON.stringify(changed));
+            expect(() => materializeAdapterBundle({ ...options, inventoryPath: changedPath })).toThrow(/standard-provenance-mismatch/);
+          }
           expect(filesIn(project).filter((file) => !before.has(file))).toStrictEqual([]);
           for (const [file, bytes] of before) expect(fs.readFileSync(file)).toStrictEqual(bytes);
-          if (source) expect(fs.readFileSync(source, 'utf8')).toBe(ownerBefore);
+          expect(fs.readFileSync(source, 'utf8')).toBe(ownerBefore);
           expect(materializeAdapterBundle(options)).toStrictEqual(report);
           expect(() => materializeAdapterBundle({ ...options, outputPath: path.join(project, 'README.md') })).toThrow(/output-conflict/);
           expect(fs.readFileSync(path.join(project, 'README.md'), 'utf8')).toBe('consumer-owned documentation\n');

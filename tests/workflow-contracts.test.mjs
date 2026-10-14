@@ -660,6 +660,16 @@ describe("workflow-contracts", () => {
       expect(qualityVerification.if).toBe(qualityCheckout.if);
       includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify standard Release authority/]);
       const provider = yaml.parse(publication);
+      for (const jobId of ['assemble', 'publish']) {
+        expect(provider.jobs[jobId].steps.some(step => /actions\/ci-(?:gh-provisioner|jq-provisioner|github-toolchain-verifier)@/.test(step.uses ?? '')), jobId).toBe(false);
+      }
+      for (const jobId of ['source-gate', 'build']) {
+        expect(provider.jobs[jobId].steps.some(step => /actions\/ci-jq-provisioner@/.test(step.uses ?? '')), jobId).toBe(true);
+      }
+      const uploads = Object.values(provider.jobs).flatMap(job => job.steps ?? []).filter(step => step.uses?.startsWith('actions/upload-artifact@'));
+      for (const upload of uploads) {
+        expect(upload.with['compression-level'], upload.with.name).toBe(upload.with.name === 'release-build-${{ matrix.id }}' ? 0 : undefined);
+      }
       expect(provider.jobs.publish.permissions.contents).toBe('write');
       expect(provider.jobs.publish.env).toMatchObject({
         CI_RELEASE_CREDENTIAL_SOURCE: 'standard-workflow-github-token',
@@ -739,6 +749,7 @@ describe("workflow-contracts", () => {
         /actions\/upload-artifact@/,
         /^          path: build\/\$\{\{ matrix\.id \}\}$/m,
         /^          if-no-files-found: error$/m,
+        /^          compression-level: 0$/m,
       ]);
       expect(publication.match(/include-hidden-files:/g)).toHaveLength(1);
       const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');

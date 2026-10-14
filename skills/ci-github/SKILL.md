@@ -17,7 +17,7 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 - スキル内へ workflow、Action、runtime、lint rule を複製しない。
 - Action は利用可能性と公開契約を確認し、固定 commit SHA で接続する。
 - job境界、permissions、credential注入、runner trust、artifact handoff、publish判断はworkflow側に保持する。
-- languageまたはproject固有のcommandは、そのownerが提供するadapter契約へ委譲する。
+- 標準品質commandはこのproviderのbundleとして提供する。言語一般の規約・lintルールは言語owner、project固有のcommandはproject ownerが所有するadapter契約へ委譲する。
 
 ## 関連スキル
 

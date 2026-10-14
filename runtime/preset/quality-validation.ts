@@ -6,10 +6,10 @@ import type { Platform } from '../platform/platform-manifest-core.mjs';
 import { validateActionAvailability } from './action-availability.ts';
 import path from 'node:path';
 import { validatePlatformManifest as validatePlatformManifestContent } from './validate-platform-manifest.ts';
-import { adapterBundleAssets, installedPresetWorkflows } from './ci-preset-assets.ts';
+import { adapterBundleAssets, canonicalSourcePath, installedPresetWorkflows } from './ci-preset-assets.ts';
 import { add } from './validation-report.ts';
 import { map, standardQualityBundles, strings, valueAtPath } from './preset-model.ts';
-import { parseYaml } from './preset-registry.ts';
+import { parseYaml, SOURCE_ROOT } from './preset-registry.ts';
 import type { Preset, ValueMap, WorkflowAsset } from './preset-model.ts';
 import type { InspectionContext } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside } from './workflow-assets.ts';
@@ -71,8 +71,7 @@ const validateQualityWorkflow = (
     }
     try {
       const standard = standardQualityBundle(standardId);
-      if (typeof registered.source === 'string' || registered.source.skill !== standard.owner
-        || !standard.sourcePath.endsWith(`/${standard.owner}/${registered.source.path}`)) throw new DiagnosticError('standard quality bundle source provenance mismatch', { diagnosticCode: 'standard-quality-bundle-source-provenance-mismatch' });
+      if (canonicalSourcePath(registered.source) !== path.resolve(SOURCE_ROOT, standard.sourcePath)) throw new DiagnosticError('standard quality bundle source provenance mismatch', { diagnosticCode: 'standard-quality-bundle-source-provenance-mismatch' });
       validateDescriptor(root, `.ci/adapters/${standard.id}.yml`, report, workflowEnv, registry.providerId, standard.descriptor);
     } catch (error) {
       add(report.mismatches, { path: `${workflowPath}:env.CI_STANDARD_BUNDLE_ID`, message: error instanceof Error ? error.message : 'standard bundle integrity failure', settingLocation: workflowPath });

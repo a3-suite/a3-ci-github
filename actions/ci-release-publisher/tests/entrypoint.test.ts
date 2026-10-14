@@ -70,7 +70,7 @@ globalThis.fetch = async (url, init) => {
   const output = f.put('github-output', '');
   const calls = f.put('calls', '');
   const outputRoot = path.join(f.root, 'write');
-  const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output,
+  const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output, PATH: path.join(f.root, 'no-cli'),
     'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot, 'INPUT_PRE-OBSERVATION-PATH': beforePath,
     'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls, MOCK_PERMISSION_METADATA: permissionMetadata };
   const result = await runActionEntrypoint(['--import', mock, ...bundle], { env, cwd: f.root, encoding: 'utf8' });

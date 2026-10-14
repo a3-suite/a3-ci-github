@@ -357,6 +357,7 @@ jobs:
           name: release-build-${{ matrix.id }}
           path: build/${{ matrix.id }}
           if-no-files-found: error
+          compression-level: 0
       - name: Build and verify supplemental Release asset platform
         if: inputs.supplemental_release_asset_enabled
         uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@204d9749e5e335a95988f72b580af9ff187dde25
@@ -439,30 +440,37 @@ jobs:
     outputs:
       artifact_transfer_id: ${{ steps.upload_release_handoff.outputs.artifact-id }}
     steps:
+      - name: Resolve assembly control checkout scope
+        id: control-checkout-scope
+        shell: bash
+        env:
+          LC_ALL: C
+        run: |
+          set -euo pipefail
+          if [[ "$CI_PLATFORM_MANIFEST" == *$'\n'* || "$CI_PLATFORM_MANIFEST" == *$'\r'* ]]; then
+            echo "invalid platform manifest path" >&2
+            exit 1
+          fi
+          pattern=""
+          if [[ -n "$CI_PLATFORM_MANIFEST" && "$CI_PLATFORM_MANIFEST" != /* && "$CI_PLATFORM_MANIFEST" != *\\* && "$CI_PLATFORM_MANIFEST" != *[![:graph:]] ]]; then
+            pattern="$CI_PLATFORM_MANIFEST"
+            for character in '[' ']' '*' '?' ' ' $'\t' '#' '!'; do
+              pattern=${pattern//"$character"/\\$character}
+            done
+            pattern="/$pattern"
+          fi
+          printf 'pattern=%s\n' "$pattern" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
+          sparse-checkout: ${{ steps.control-checkout-scope.outputs.pattern }}
+          sparse-checkout-cone-mode: false
       - name: Verify trusted control checkout
         shell: bash
         env:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
-      - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          jq-version: ${{ env.CI_JQ_VERSION }}
-      - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          gh-version: ${{ env.CI_GH_VERSION }}
-      - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          mode: gh-jq-sha256
-          gh-version: ${{ env.CI_GH_VERSION }}
-          jq-version: ${{ env.CI_JQ_VERSION }}
-          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
@@ -526,26 +534,13 @@ jobs:
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.workflow_sha }}
+          sparse-checkout: '!/*'
+          sparse-checkout-cone-mode: false
       - name: Verify trusted control checkout
         shell: bash
         env:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
-      - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          jq-version: ${{ env.CI_JQ_VERSION }}
-      - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          gh-version: ${{ env.CI_GH_VERSION }}
-      - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@204d9749e5e335a95988f72b580af9ff187dde25
-        with:
-          mode: gh-jq-sha256
-          gh-version: ${{ env.CI_GH_VERSION }}
-          jq-version: ${{ env.CI_JQ_VERSION }}
-          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority

@@ -52,6 +52,12 @@ test_maps:
     case_id: valid-quality-selection
     tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order"
+        check_refs: [check-selected-full-matrix, check-ordered-quality-matrix, check-ordered-expected-platforms]
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order"
+        check_refs: [check-selected-full-matrix, check-ordered-quality-matrix, check-ordered-expected-platforms]
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix"
         check_refs:
           - check-selected-full-matrix
@@ -66,6 +72,12 @@ test_maps:
   - verification_id: verification.ci-platform-matrix.outputs
     case_id: invalid-quality-selection
     tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs"
+        check_refs: [check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs]
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs"
+        check_refs: [check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint fails without any outputs for invalid selection"
         check_refs:
