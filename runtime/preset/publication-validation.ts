@@ -602,6 +602,7 @@ const validateReleaseJobGraph = (
 ): void => {
   const publicationJobs = map(publication.jobs);
   const qualityJob = map(publicationJobs.quality);
+  const buildJob = map(publicationJobs.build);
   const assembleJob = map(publicationJobs.assemble);
   const summaryJob = map(publicationJobs.summary);
   if (Object.keys(qualityJob).length === 0) add(report.missingSettings, {
@@ -614,12 +615,21 @@ const validateReleaseJobGraph = (
     message: 'release publication quality adapter invocation is missing',
     settingLocation: publicationPath,
   });
-  validateSupplementalBuildStep(publicationPath, map(publicationJobs.build), report);
+  for (const prerequisite of ['authority', 'source-gate']) {
+    if (!strings(buildJob.needs).includes(prerequisite)) add(report.mismatches, {
+      path: `${publicationPath}:jobs.build.needs`,
+      message: `release build must wait for the ${prerequisite} result`,
+      settingLocation: publicationPath,
+    });
+  }
+  validateSupplementalBuildStep(publicationPath, buildJob, report);
   validateSupplementalAssemblyStep(publicationPath, map(publicationJobs['supplemental-asset']), report);
   const assembleCondition = typeof assembleJob.if === 'string' ? assembleJob.if : '';
   for (const token of [
     '!cancelled()',
     "needs.authority.result == 'success'",
+    "needs.source-gate.result == 'success'",
+    "needs.quality.result == 'success'",
     "needs.build.result == 'success'",
     "needs.supplemental-asset.result == 'success'",
     "needs.supplemental-asset.result == 'skipped'",
@@ -635,6 +645,13 @@ const validateReleaseJobGraph = (
     message: 'release assembly must wait for the supplemental asset selection result',
     settingLocation: publicationPath,
   });
+  for (const prerequisite of ['authority', 'source-gate', 'quality', 'build']) {
+    if (!strings(assembleJob.needs).includes(prerequisite)) add(report.mismatches, {
+      path: `${publicationPath}:jobs.assemble.needs`,
+      message: `release assembly must wait for the ${prerequisite} result`,
+      settingLocation: publicationPath,
+    });
+  }
   if (!strings(summaryJob.needs).includes('quality')
     || !strings(summaryJob.needs).includes('supplemental-asset')
     || summaryJob.if !== 'always()') add(report.mismatches, {

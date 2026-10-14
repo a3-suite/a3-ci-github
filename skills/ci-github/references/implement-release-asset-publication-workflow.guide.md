@@ -33,7 +33,7 @@
    - source identity の確定後、build 前に公開 source の provider 適合を観測する。不適合または判定不能は後続 stage へ進めず停止し、この早期観測を write 直前の再観測の代替にしない。判定規則と credential route の限界は `references/workflow-authoring-policy.reference.md` の Release 公開の provider 適合を正本とする。
 3. 書込権限を持たない quality job で固定 source を検証する。
    - source gate は authority と checkout の identity だけを検証し、format、lint、test は quality job が trusted control の runner、runtime、adapter descriptor から実行する。
-   - quality の failure、skip、cancel は build を開始させない。
+   - source gate の成功後は quality と read-only build を並列に実行する。assemble は quality、source gate、全OS build の成功を明示的に要求し、quality の failure、skip、cancel は assemble と publication を開始させない。
 4. 書込権限を持たないbuild / validate jobでrelease資材を作る。
    - 採用済み installer asset の組立を担当する 標準runtimeまたは非標準adapterは、本スキルの workflow 設計で installer スキルへ委譲して解決した契約に接続する。このガイドから直接着手した場合も adapter を決める前に同じ委譲を行い、委譲先の契約または owner 契約が未解決なら構成しない。
    - build / validate jobは`contents: read`とし、`contents: write`、release token、署名用秘密鍵を持たせない。

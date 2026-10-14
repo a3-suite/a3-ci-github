@@ -626,7 +626,8 @@ describe("workflow-contracts", () => {
       const publication = read('.github/workflows/ci-release-publication.yml');
       expect(request).toMatch(/workflow_dispatch:/);
       includesAll(jobBlock(request, 'request'), [/contents: read/, /operation: create-request/]);
-      includesAll(jobBlock(request, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
+      includesAll(jobBlock(request, 'request'), [/if: always\(\)/, /ci-quality-summary@/]);
+      expect(yaml.parse(request).jobs.summary).toBeUndefined();
       expect(caller).toMatch(/workflow_run:/);
       includesAll(jobBlock(caller, 'validate-request'), [/actions: read/, /contents: read/, /operation: verify-publication-request/]);
       const callerPublish = jobBlock(caller, 'publish');
@@ -730,7 +731,7 @@ describe("workflow-contracts", () => {
         }
       }
       const buildJob = jobBlock(publication, 'build');
-      assertNeeds(buildJob, ['authority', 'source-gate', 'quality']);
+      assertNeeds(buildJob, ['authority', 'source-gate']);
       includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
         /^        if: inputs\.supplemental_release_asset_enabled$/m,
         new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
@@ -789,10 +790,40 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: release-publication-workflow-contract
+    test('release builds overlap quality while assembly rejects every unsuccessful prerequisite', () => {
+      // Arrange
+      const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
+      const required = ['authority', 'source-gate', 'quality', 'build'];
+      const assemble = (results, enabled = false, cancelled = false) => runInNewContext(
+        jobs.assemble.if.trim().slice(3, -2).replace(/needs\.([a-zA-Z0-9_-]+)/g, "needs['$1']"),
+        { needs: Object.fromEntries(Object.entries(results).map(([id, result]) => [id, { result }])),
+          inputs: { supplemental_release_asset_enabled: enabled }, cancelled: () => cancelled },
+      );
+      const successful = Object.fromEntries(required.map(id => [id, 'success']));
+      // Act
+      const canAssemble = assemble({ ...successful, 'supplemental-asset': 'skipped' });
+      // Assert
+      expect(jobs.build.needs).toStrictEqual(['authority', 'source-gate']);
+      expect(jobs.build.permissions.contents).toBe('read');
+      for (const id of required) expect(jobs.assemble.needs).toContain(id);
+      expect(canAssemble).toBe(true);
+      expect(assemble({ ...successful, 'supplemental-asset': 'success' }, true)).toBe(true);
+      for (const id of required) {
+        for (const result of ['failure', 'cancelled', 'skipped', '']) {
+          expect(assemble({ ...successful, [id]: result, 'supplemental-asset': 'skipped' }), `${id}:${result}`).toBe(false);
+        }
+      }
+      expect(assemble({ ...successful, 'supplemental-asset': 'failure' }, true)).toBe(false);
+      expect(assemble({ ...successful, 'supplemental-asset': 'skipped' }, true)).toBe(false);
+      expect(assemble({ ...successful, 'supplemental-asset': 'skipped' }, false, true)).toBe(false);
+      expect(jobs.publish.needs).toContain('assemble');
+    });
+
+    // integration_id: release-publication-workflow-contract
     test('release publication workflows preserve failed and unknown outcomes', () => {
-      const request = jobBlock(read('workflows/release/release-publication-request.yml'), 'summary');
+      const request = jobBlock(read('workflows/release/release-publication-request.yml'), 'request');
       const publication = jobBlock(read('workflows/release/release-publication-caller.yml'), 'summary');
-      for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]) expect(request).toMatch(pattern);
+      for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ job\.status \}\}"/]) expect(request).toMatch(pattern);
       for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.publish\.result \}\}"/]) expect(publication).toMatch(pattern);
     });
   });
@@ -1497,7 +1528,6 @@ describe("workflow-contracts", () => {
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/release/release-request-tag.yml', 'summary'],
-        ['workflows/release/release-publication-request.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
         ['workflows/package/package-publication-request.yml', 'summary'],
@@ -1576,7 +1606,6 @@ describe("workflow-contracts", () => {
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
         ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
         ['workflows/release/release-request-tag.yml', 'summary'],
-        ['workflows/release/release-publication-request.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
         ['workflows/package/package-publication-request.yml', 'summary'],

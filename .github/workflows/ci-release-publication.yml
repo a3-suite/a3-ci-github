@@ -309,7 +309,7 @@ jobs:
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
 
   build:
-    needs: [authority, source-gate, quality]
+    needs: [authority, source-gate]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.authority.outputs.platform_matrix) }}
@@ -424,11 +424,13 @@ jobs:
           if-no-files-found: error
 
   assemble:
-    needs: [authority, build, supplemental-asset]
+    needs: [authority, source-gate, quality, build, supplemental-asset]
     if: >-
       ${{
         !cancelled() &&
         needs.authority.result == 'success' &&
+        needs.source-gate.result == 'success' &&
+        needs.quality.result == 'success' &&
         needs.build.result == 'success' &&
         ((inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'success') ||
         (!inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'skipped'))
