@@ -53,7 +53,7 @@ test_maps:
     case_id: external-request-failure
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for http"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http"
         check_refs: [classification, context, comparison, retention, state, next-check]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: child-process-failure
@@ -83,5 +83,11 @@ test_maps:
     case_id: partial-write-failure
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths"
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+        check_refs: [classification, context, comparison, retention, state, next-check]
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        check_refs: [classification, context, comparison, retention, state, next-check]
+      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
         check_refs: [classification, context, comparison, retention, state, next-check]

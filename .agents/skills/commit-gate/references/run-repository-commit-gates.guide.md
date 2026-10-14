@@ -41,6 +41,8 @@ node runtime/repository/check-provider-references.mjs --staged --candidate --con
 
 実装準備コミットでは、既存の固定参照に対する検査を実行する。対象版の実装資材とdistの検証は別途実行し、既存固定参照の成功を新しい実装の成功と取り違えない。
 
+`--preparation`は既存の実装SHAの包含・版・実行資材・固定参照先の契約を検証し、最終tagを要求しない。成功時も`preparationOnly: true`、`implementationBindingStatus: unverified`を返す。新しいstaged実装の資材同一性と接続は、実装コミット確定後の接続候補検査で確認する。
+
 ```sh
 node runtime/repository/check-provider-references.mjs --staged --contracts --preparation
 ```
@@ -53,7 +55,7 @@ node runtime/repository/check-provider-references.mjs --staged --contracts --pre
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
 - [公開済みtagへ接続した状態からの回復](../../../../docs/maintenance/action-construction.md#公開済みtagへ接続した状態からの回復)の実装コミットAに限り、`--preparation`の停止理由が`implementation-source-not-contained`だけで、staged snapshotの`VERSION`が同名tagのない対象版へ更新されている場合は`PASS`とする。停止理由と後続の接続コミットBが必要なことを証拠へ記録する。それ以外の停止理由は通常どおり扱う。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
-- `preparationOnly: true` は全Action targetとavailabilityGateがpendingの準備コミットだけの許容であり、接続契約は未達。`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。Actionのavailable targetがある場合、この許容は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新には上記の候補検査を使い、`--preparation`を付けない。
+- `preparationOnly: true` は実装準備を示し、新実装の接続・利用可能化を証明しない。既存固定参照の検査成功と、全Action targetとavailabilityGateがpendingで接続診断を残す状態を区別し、`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。接続診断の免除は後者の準備コミットだけに限り、Actionのavailable targetがある場合は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新には上記の候補検査を使い、`--preparation`を付けない。
 
 ## 固定参照更新順序ゲート
 

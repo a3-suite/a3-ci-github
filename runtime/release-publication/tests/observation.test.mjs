@@ -19,7 +19,7 @@ const publication = async (t) => {
   return { f, options, assembly, receipt, readback };
 };
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-evidence", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-evidence
@@ -36,7 +36,7 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   });
 });
 
-describe("observation", () => {
+describe("observation", { concurrent: true }, () => {
   describe("observation", () => {
     for (const [label, changes, error] of [
       ['draft', { draft: true }, /tag-version-asset-checksum-or-body-mismatch/],
@@ -58,7 +58,7 @@ describe("observation", () => {
   });
 });
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-rejection", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-rejection
@@ -90,7 +90,7 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   });
 });
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-receipt-binding", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-receipt-binding
@@ -111,7 +111,7 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   });
 });
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-transport", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-transport
@@ -143,7 +143,7 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   });
 });
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-rejection", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-rejection
@@ -156,7 +156,7 @@ describe("contract.ci-release-publication-verifier.outputs", () => {
   });
 });
 
-describe("contract.ci-release-publication-verifier.outputs", () => {
+describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-transport", () => {
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-transport

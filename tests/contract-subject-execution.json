@@ -2719,19 +2719,20 @@
           "id": "unit",
           "level": "unit",
           "status": "excluded",
-          "reason": "The preparation boundary is composite YAML and shell; local tests exercise the actual Action scripts."
+          "reason": "The preparation boundary is composite YAML and its delegated installer; local integration tests exercise the executable preparation boundary and asset selection."
         },
         {
           "id": "integration-action",
           "level": "integration",
           "cwd": "actions/ci-quality-toolchain",
           "tests": [
-            "tests/action-contract.test.mjs"
+            "tests/action-contract.test.mjs",
+            "tests/cargo-audit.test.mjs"
           ],
           "coverage": {
             "enabled": false,
             "scope": "composite-action",
-            "reason": "Node coverage does not measure composite YAML or Bash; executable scripts and dependency bindings provide local contract evidence."
+            "reason": "Composite YAML and Bash are outside Node coverage; executable preparation scripts, verified archive integration and dependency bindings provide local contract evidence."
           }
         },
         {

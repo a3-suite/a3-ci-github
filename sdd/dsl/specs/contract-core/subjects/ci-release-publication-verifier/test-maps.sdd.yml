@@ -12,19 +12,91 @@ test_maps:
     case_id: standard-workflow-credential
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent"
         check_refs: [status, path]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-empty"
+        check_refs: [status, path]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-bound"
+        check_refs: [status, path]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent"
+        check_refs: [status, path]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-empty"
+        check_refs: [status, path]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-bound"
         check_refs: [status, path]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: credential-evidence-boundary
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
         check_refs: [rejection]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint binds standard workflow credential evidence before observing absence"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-malformed"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        check_refs: [rejection]
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-malformed"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: asset-inventory-boundary
@@ -36,37 +108,37 @@ test_maps:
     case_id: bundled-pre-observation
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, path, digest]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, path, digest]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: bundled-post-verification
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, release-id, receipt, readback]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint observes absence then verifies owner evidence independently"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently"
         check_refs: [status, release-id, receipt, readback]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: output-line-injection
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint rejects output path line injection before remote observation"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint rejects output path line injection before remote observation"
         check_refs: [rejection]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint rejects output path line injection before remote observation"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint rejects output path line injection before remote observation"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: missing-credentials
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint refuses missing credentials without success evidence"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint refuses missing credentials without success evidence"
         check_refs: [rejection]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint refuses missing credentials without success evidence"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint refuses missing credentials without success evidence"
         check_refs: [rejection]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: independent-readback
@@ -102,136 +174,136 @@ test_maps:
     case_id: diagnostic-network
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for network"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for network"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for network"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for network"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-body-timeout
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for body-timeout"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-timeout
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for timeout"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for timeout"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for timeout"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for timeout"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-http
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for http"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for http"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-json
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for json"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for json"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for json"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for json"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-empty
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for empty"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for empty"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for empty"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for empty"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-oversized
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for oversized"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for oversized"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for oversized"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for oversized"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-permissions
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for permissions"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for permissions"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for permissions"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for permissions"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-push-missing
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-missing"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-missing"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-missing"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-missing"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-push-denied
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-denied"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-denied"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-denied"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-denied"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-push-invalid
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-invalid"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-repository
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for repository"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for repository"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for repository"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for repository"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-inventory
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for inventory"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for inventory"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for inventory"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for inventory"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-duplicate
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for duplicate"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for duplicate"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for duplicate"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for duplicate"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: diagnostic-pagination
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > publication entrypoint exposes safe diagnostics for pagination"
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination"
         check_refs: [diagnostic]
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > publication entrypoint exposes safe diagnostics for pagination"
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination"
         check_refs: [diagnostic]
   - verification_id: verification.ci-release-publication-verifier.outputs
     case_id: detailed-failure-outputs

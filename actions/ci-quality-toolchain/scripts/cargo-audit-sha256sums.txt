@@ -1,0 +1,6 @@
+ec7ca4263769593df4d909be85b94a6b79efa2897be5d2bb8ebd516e823175af  cargo-audit-aarch64-apple-darwin-v0.22.2.tgz
+c6603814ddaa45e51263dafd31c0ac98808f688d26f7395804f9670b0fd599dd  cargo-audit-aarch64-unknown-linux-gnu-v0.22.2.tgz
+847831323de932155b226ab60ee4a180e13e5d007a019f0d4b7b4d89a6de2ab2  cargo-audit-x86_64-apple-darwin-v0.22.2.tgz
+0a7316540862c13d954f648917ceacca593747baed6eec180fafa590be2710ab  cargo-audit-x86_64-pc-windows-msvc-v0.22.2.zip
+ab28a1bdb54db4d5d8ad5981cf1f959410370b3d28250dbd35f6a44248620e39  cargo-audit-x86_64-unknown-linux-gnu-v0.22.2.tgz
+7fb9497f8594b389e5fce5ef9b92db08432996895b2e0c5a0167a69ed445c428  cargo-audit-x86_64-unknown-linux-musl-v0.22.2.tgz

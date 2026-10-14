@@ -121,7 +121,7 @@ contracts:
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
         guarantee_refs: [diagnostic-details-integrity]
       - id: distribution-plan-derived
-        goal: Maintained Action and script bundles produce a complete distribution rebuild and comparison plan.
+        goal: Maintained Action and script bundles produce a complete distribution rebuild and comparison plan. Normal builds retain compiler typechecking; CI may opt into transpile-only TypeScript bundling when the formal Action and public CLI source typechecks remain mandatory. Diagnostic generation, non-TypeScript bundles, companion files and byte/inventory comparison are retained.
         guarantee_refs:
           - distribution-plan-produced
       - id: inconsistent-distribution-stopped

@@ -17,7 +17,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('repository-cli-source-verification', () => {
   describe('cliTypecheckPlan', () => {
-    // evidence_role: supplemental
+    // contract_id: contract.repository-action-distribution.integrity
     // test_level: integration
     // integration_id: repository-cli-source-verification
     test('the CLI verification plan accepts valid sources and rejects type errors in every CLI source family', (t) => {
@@ -76,6 +76,30 @@ describe("contract.repository-action-distribution.integrity", () => {
         expect(testStep.args).toStrictEqual([path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...entry.tests.map((file) => path.join(entry.path, file))]);
         expect(steps.some((step) => step.args.includes('ci') || step.args.includes('build'))).toBe(false);
       }
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // integration_id: repository-action-source-verification
+    test('the formal Action source gate rejects type errors independently of bundling', (t) => {
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const fixture = fs.mkdtempSync(path.join(parent, 'action-typecheck-'));
+      t.onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
+      const action = path.join(fixture, 'actions/example');
+      fs.mkdirSync(path.join(action, 'node_modules/.bin'), { recursive: true });
+      const compiler = path.join(collectActionPackages(root)[0].path, 'node_modules/typescript/bin/tsc');
+      fs.symlinkSync(compiler, path.join(action, 'node_modules/.bin/tsc'));
+      fs.writeFileSync(path.join(action, 'package.json'), JSON.stringify({ scripts: { lint: 'tsc --noEmit' } }));
+      fs.writeFileSync(path.join(action, 'tsconfig.json'), JSON.stringify({ compilerOptions: { strict: true, types: [] }, include: ['source.ts'] }));
+      const source = path.join(action, 'source.ts');
+      const step = verificationPlan([{ name: 'example', path: action, tests: [] }])[0];
+      fs.writeFileSync(source, 'export const value: string = "valid";\n');
+      const valid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      fs.writeFileSync(source, 'export const value: string = 1;\n');
+      const invalid = spawnSync(step.command, step.args, { cwd: step.cwd, encoding: 'utf8' });
+      expect(valid.status, valid.stdout + valid.stderr).toBe(0);
+      expect(invalid.status).not.toBe(0);
+      expect(invalid.stdout).toContain('TS2322');
     });
   });
 });

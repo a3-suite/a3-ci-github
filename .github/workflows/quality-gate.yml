@@ -60,7 +60,7 @@ jobs:
 
       - name: Verify bundled Action distributions
         shell: bash
-        run: node runtime/repository/check-action-dist.mjs
+        run: node runtime/repository/check-action-dist.mjs --transpile-only
 
       - name: Test bundled Action distribution gate
         shell: bash
@@ -158,7 +158,7 @@ jobs:
 
       - name: Test Action source and runtime boundary gates
         shell: bash
-        run: npm test -- tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs
+        run: npm test -- tests/action-package-verification.test.mjs tests/runtime-boundaries.test.mjs tests/action-entrypoint-process.test.mjs
 
       - name: Provision jq 1.7.1
         uses: ./actions/ci-jq-provisioner

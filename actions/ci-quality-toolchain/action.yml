@@ -110,7 +110,7 @@ runs:
       shell: bash
       env:
         CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
-      run: cargo install cargo-audit --locked --version "$CI_CARGO_AUDIT_VERSION"
+      run: bash "${GITHUB_ACTION_PATH}/scripts/setup-cargo-audit.sh"
     - name: Publish resolved toolchain version
       id: publish-version
       shell: bash

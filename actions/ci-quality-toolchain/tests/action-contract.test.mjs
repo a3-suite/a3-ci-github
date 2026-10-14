@@ -107,7 +107,8 @@ describe("contract.ci-quality-toolchain.preparation", () => {
         fs.writeFileSync(path.join(bin, name), '#!/bin/bash\nprintf "%s\\n" "$*" >> "$CAPTURE_LOG"\nexit "${' + variable + ':-0}"\n', { mode: 0o700 });
       }
       const log = path.join(directory, 'calls'); const output = path.join(directory, 'github-env');
-      const env = { ...selected('rust', '1.90.0', '', '0.21.0'), PATH: bin + path.delimiter + process.env.PATH, CAPTURE_LOG: log, GITHUB_ENV: output };
+      const env = { ...selected('rust', '1.90.0', '', '0.21.0'), PATH: bin + path.delimiter + process.env.PATH, CAPTURE_LOG: log, GITHUB_ENV: output,
+        GITHUB_ACTION_PATH: path.join(root, 'actions/ci-quality-toolchain') };
       const rust = action.runs.steps.find((step) => step.name === 'Set up Rust toolchain').run;
       const audit = action.runs.steps.find((step) => step.name === 'Set up cargo-audit').run;
       expect(run(rust, env, directory).status).toBe(0);
