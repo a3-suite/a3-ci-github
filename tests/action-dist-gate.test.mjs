@@ -107,7 +107,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       const plan = buildPlan('/workspace', actions);
       // Assert
       expect(plan).toStrictEqual([
-        { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/workspace/actions/first' },
+        { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/workspace/actions/first', parallelGroup: 'action-install' },
         { command: process.execPath, args: ['/workspace/actions/first/node_modules/typescript/bin/tsc',
           '--project', '/workspace/runtime/diagnostics/tsconfig.json',
           '--typeRoots', '/workspace/actions/first/node_modules/@types'], cwd: '/workspace' },
@@ -248,14 +248,14 @@ describe('bounded distribution builds', () => {
     // evidence_role: supplemental
     // test_level: unit
     // target_id: runPlan
-    test.each([false, true])('bounds active builds and drains before completion (failure=%s)', async (fail) => {
+    test.each(['action-install', 'action-build'].flatMap(group => [false, true].map(fail => [group, fail])))('bounds active steps and drains before completion (%s, failure=%s)', async (group, fail) => {
       // Arrange
       const calls = [];
       const pending = new Map();
       let active = 0;
       let peak = 0;
       let completed = false;
-      const build = (name) => ({ command: 'build', args: [], cwd: `/actions/${name}`, parallelGroup: 'action-build' });
+      const build = (name) => ({ command: 'build', args: [], cwd: `/actions/${name}`, parallelGroup: group });
       const execute = async (command, args, options) => {
         calls.push(command === 'build' ? options.cwd : command);
         if (command !== 'build') return;

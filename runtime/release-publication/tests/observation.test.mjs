@@ -1,15 +1,15 @@
 import { test, describe, expect, vi } from 'vitest';
 import fs from 'node:fs';
-import { fixture, remoteClient, standardPublicationTokenEnvironment } from './fixtures.mjs';
+import { fixture, remoteClient, standardPublicationTokenEnvironment, preObservationFixture } from './fixtures.mjs';
 import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly, draftVisibilityFailure, observeAssets } from '../observation.ts';
 import { LIMITS, sha256, releaseErrorMessage } from '../io.ts';
 import { verifySourceCompatibility, verifySuitability } from '../provider.ts';
 
-const publication = async (t) => {
+const publication = async (t, { realObservation = false } = {}) => {
   const f = fixture(t);
   const assembly = f.assemble();
   const options = { ...f.options, handoffRoot: f.options.outputRoot };
-  const before = await observeBefore(options, remoteClient(f, assembly, { ids: [] }).client);
+  const before = realObservation ? await observeBefore(options, remoteClient(f, assembly, { ids: [] }).client) : preObservationFixture(options);
   options.beforePath = f.put('before.json', before);
   const { handoffDigest } = loadAssembly(options);
   const receipt = { schema_version: '1', kind: 'ci-github-release-publish-receipt', identity: f.identity, handoff_digest: handoffDigest, asset_digest: assembly.asset_digest, release_id: '42', pre_observation_sha256: sha256(fs.readFileSync(options.beforePath)) };
@@ -24,7 +24,7 @@ describe("contract.ci-release-publication-verifier.outputs", { concurrent: true 
     // contract_id: contract.ci-release-publication-verifier.outputs
     // integration_id: release-publication-evidence
     test('publication evidence matches independent immutable ID readback', async (t) => {
-      const { f, options, assembly } = await publication(t);
+      const { f, options, assembly } = await publication(t, { realObservation: true });
       const { client, calls } = remoteClient(f, assembly);
       const result = await verifyAfter(options, client);
       expect(result.receipt.release_id).toBe('42');

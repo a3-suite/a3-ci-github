@@ -89,7 +89,7 @@ export const buildPlan = (root, actions, scriptBundles = [], { transpileOnly = f
   }
   const generatedDiagnostics = bundled.length ? ['runtime/diagnostics/failure.mjs', 'runtime/diagnostics/failure.d.mts'] : [];
   return [
-  ...bundled.map((action) => ({ command: 'npm', args: ['ci', '--ignore-scripts'], cwd: action.path })),
+  ...bundled.map((action) => ({ command: 'npm', args: ['ci', '--ignore-scripts'], cwd: action.path, parallelGroup: 'action-install' })),
   ...(bundled.length ? [{
     command: process.execPath,
     args: [path.join(bundled[0].path, 'node_modules/typescript/bin/tsc'),
@@ -132,24 +132,25 @@ export const runPlan = async (plan, execute = executePlanStep) => {
   const run = async (step) => {
     try { await execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' }); } catch (error) {
       if (step.failure) throw new DiagnosticError(`${step.failure}: Generated distribution differs from the committed files`, { cause: error, diagnostics: { field: 'dist', expected: 'committed-dist', observed: 'differs', evidence: 'stdout-changed-paths' } });
-      if (step.parallelGroup) throw new DiagnosticError('action-build-failed: Action build failed', { cause: error,
-        diagnostics: { field: 'action-build', action: path.basename(step.cwd), expected: 'zero-exit', observed: error?.status ?? 'process-error', ...(error?.signal ? { signal: error.signal } : {}) } });
+      if (step.parallelGroup) throw new DiagnosticError(`${step.parallelGroup}-failed: Action ${step.parallelGroup === 'action-install' ? 'dependency installation' : 'build'} failed`, { cause: error,
+        diagnostics: { field: step.parallelGroup, action: path.basename(step.cwd), expected: 'zero-exit', observed: error?.status ?? 'process-error', ...(error?.signal ? { signal: error.signal } : {}) } });
       throw error;
     }
   };
   for (let index = 0; index < plan.length;) {
-    if (plan[index].parallelGroup !== 'action-build') { await run(plan[index++]); continue; }
-    const builds = [];
-    while (index < plan.length && plan[index].parallelGroup === 'action-build') builds.push(plan[index++]);
+    const group = plan[index].parallelGroup;
+    if (!group) { await run(plan[index++]); continue; }
+    const steps = [];
+    while (index < plan.length && plan[index].parallelGroup === group) steps.push(plan[index++]);
     let next = 0;
     let failure;
     const worker = async () => {
-      while (!failure && next < builds.length) {
-        const step = builds[next++];
+      while (!failure && next < steps.length) {
+        const step = steps[next++];
         try { await run(step); } catch (error) { failure ??= error; }
       }
     };
-    // Drain already-started builds before failing; never compare a partially written distribution.
+    // Drain already-started work before failing; later phases require the whole group to succeed.
     await Promise.all([worker(), worker()]);
     if (failure) throw failure;
   }

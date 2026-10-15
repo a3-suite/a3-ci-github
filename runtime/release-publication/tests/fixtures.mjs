@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { sha256, canonicalJson } from '../io.ts';
 import { assembleRelease } from '../assembly.ts';
+import { loadAssembly } from '../observation.ts';
+import { validateEvidence } from '../schema.ts';
 import { decodePlatformManifest } from '../../../actions/ci-release-assembly/src/platform-manifest-decoder.ts';
 
 export const standardPublicationTokenEnvironment = (repository, token) => ({
@@ -13,6 +15,13 @@ export const standardPublicationTokenEnvironment = (repository, token) => ({
   CI_RELEASE_CREDENTIAL_SOURCE: 'standard-workflow-github-token', CI_RELEASE_CONTENTS_PERMISSION: 'write',
   GITHUB_TOKEN: token, GH_TOKEN: token,
 });
+
+// Use only when pre-create observation is setup rather than the behavior under test.
+export const preObservationFixture = (options) => {
+  const { identity, handoffDigest } = loadAssembly(options);
+  return validateEvidence('observation', { schema_version: '1', kind: 'ci-github-release-observation', identity, handoff_digest: handoffDigest,
+    phase: 'pre-create', complete: true, visibility: 'public-and-non-public', release_ids: [] });
+};
 
 export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' }) => {
   const parent = fileURLToPath(new URL('../../../tests/tmp/', import.meta.url));
