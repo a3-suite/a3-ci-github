@@ -43,8 +43,6 @@
     ".DS_Store",
     "Thumbs.db"
   ],
-  "maximumFiles": 1024,
-  "maximumFileBytes": 8388608,
   "maximumTotalBytes": 67108864,
   "compiledArtifactSuffixes": [
     ".o",

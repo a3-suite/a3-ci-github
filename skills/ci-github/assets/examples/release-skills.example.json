@@ -3,8 +3,25 @@
   "skills": [
     {
       "path": "skills/example-tool",
-      "include": ["SKILL.md", "references", "scripts"],
-      "requiredFiles": ["SKILL.md", "references/setup.guide.md", "scripts/run.py"]
+      "include": [
+        "SKILL.md",
+        "references",
+        "scripts"
+      ],
+      "requiredFiles": [
+        "SKILL.md",
+        "references/setup.guide.md",
+        "scripts/run.py"
+      ]
+    },
+    {
+      "path": ".agents/skills/release-helper",
+      "include": [
+        "SKILL.md"
+      ],
+      "requiredFiles": [
+        "SKILL.md"
+      ]
     }
   ]
 }

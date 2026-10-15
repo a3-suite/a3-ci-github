@@ -5,6 +5,7 @@
 ## Release ref
 
 - リリース ref の命名・起点、バージョンの表記・確定条件、公開後の統合・forward-port の可否は git-branch-strategy の正本で判定し、操作の承認は git の正本に従います。
+- 固定SHA接続を含むmain統合の判定単位と準備コミットの扱いは、下記のrepository固有条件を適用します。
 - 実際のタグ作成・push は、対象コミットと検証結果を確認した別の release 操作で行います。
 
 ## このrepositoryの公開実行
@@ -20,6 +21,20 @@ sourceとhotfix baseのmain統合証拠は、[publication契約](../../sdd/dsl/s
 公開処理はdraft作成、3資材の登録、asset IDとbytesのreadback、tag・Release identity・承認本文の再確認、draft解除の順です。既存資材を上書きせず、公開済みReleaseへ不足資材を追記しません。既存本文が承認本文と異なる場合も停止します。公開前に失敗したdraftは保持し、修正後の再実行で同じ資材を検証します。公開後の最終確認または独立readbackの失敗でもalias更新は停止し、公開物を上書きせず原因と次の対応を判断します。
 
 公開後の独立readbackが成功してからaliasを更新します。exact tagは移動しません。
+
+## 固定SHA接続を含むmain統合
+
+このrepositoryの統合条件は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とします。実装コミットAと接続コミットBを使う理由と準備手順は、[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)を参照してください。
+
+統合前に、取得したmainのSHAを`MAIN_SHA`、参照先Aを`IMPLEMENTATION_SHA`、検証済みBを`SOURCE_SHA`として記録します。publication契約に適合する方式で作成した実際の統合候補を`CANDIDATE_SHA`とし、次の結果を契約条件と照合します。
+
+```sh
+git rev-list "$MAIN_SHA..$CANDIDATE_SHA"
+git merge-base --is-ancestor "$IMPLEMENTATION_SHA" "$CANDIDATE_SHA"
+git rev-parse "$SOURCE_SHA^{tree}" "$CANDIDATE_SHA^{tree}"
+```
+
+候補checkoutの検証は[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)の該当段階で行います。統合直前に取得し直したmainと`MAIN_SHA`を照合し、統合後は実際のmain SHAを`CANDIDATE_SHA`として上記を再実行します。そのSHAのCI runと公開workflowの結果を別々に確認して報告します。
 
 ## Release公開と利用側受入の順序
 

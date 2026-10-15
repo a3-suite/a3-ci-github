@@ -13,3 +13,4 @@ export function fixture(t: TestContext, platform?: Platform): {
 export function remoteClient(f: ReturnType<typeof fixture>, assembly: AssemblyType, changes?: Record<string, unknown>): { client: ReadOnlyClientType; calls: unknown[] };
 
 export function releaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
+export function selectedReleaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
