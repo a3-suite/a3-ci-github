@@ -33,6 +33,79 @@ describe("contract.ci-release-publication-verifier.outputs", { concurrent: true 
       expect(calls.some(([, endpoint]) => endpoint.endsWith('/releases/42'))).toBeTruthy();
       expect(calls.every(([, endpoint]) => !endpoint.includes('/releases/tags/'))).toBeTruthy();
     });
+
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    // integration_id: release-publication-evidence
+    test('asset readback overlaps bounded downloads and retains the complete sorted evidence', async (t) => {
+      // Arrange
+      const f = fixture(t);
+      const assembly = { ...f.assemble(), assets: Array.from({ length: 7 }, (_, index) => ({
+        name: `asset-${index}.zip`, size: index + 1, sha256: sha256(Buffer.from(`asset-${index}`)),
+      })) };
+      const { client, calls } = remoteClient(f, assembly);
+      const list = client.list;
+      client.list = async endpoint => (await list(endpoint)).reverse();
+      let active = 0;
+      let peak = 0;
+      const reads = [];
+      client.assetDigest = async (endpoint, size) => {
+        const index = Number(endpoint.split('/').at(-1)) - 100;
+        reads.push(index);
+        expect(size).toBe(assembly.assets[index].size);
+        peak = Math.max(peak, ++active);
+        await Promise.resolve();
+        active--;
+        return assembly.assets[index].sha256;
+      };
+      // Act
+      const assets = await observeAssets(f.identity, '42', assembly, client);
+      // Assert
+      expect(peak).toBe(3);
+      expect(active).toBe(0);
+      expect(reads.toSorted((a, b) => a - b)).toStrictEqual([0, 1, 2, 3, 4, 5, 6]);
+      expect(assets).toStrictEqual(assembly.assets);
+      expect(calls.every(([method]) => method === 'GET')).toBe(true);
+    });
+
+  });
+});
+
+describe('contract.ci-release-publication-verifier.outputs', { concurrent: true }, () => {
+  describe('release-publication-rejection', () => {
+    for (const kind of ['checksum', 'transport']) {
+      // contract_id: contract.ci-release-publication-verifier.outputs
+      // integration_id: release-publication-rejection
+      test(`asset readback drains started downloads before rejecting ${kind} failure`, async (t) => {
+        // Arrange
+        const f = fixture(t);
+        const assembly = { ...f.assemble(), assets: Array.from({ length: 7 }, (_, index) => ({
+          name: `asset-${index}.zip`, size: 1, sha256: sha256(Buffer.from(`asset-${index}`)),
+        })) };
+        const { client } = remoteClient(f, assembly);
+        let active = 0;
+        const reads = [];
+        client.assetDigest = async endpoint => {
+          const index = Number(endpoint.split('/').at(-1)) - 100;
+          reads.push(index);
+          active++;
+          try {
+            await Promise.resolve();
+            if (index === 0) {
+              if (kind === 'transport') throw new Error('remote-state-unknown');
+              return 'f'.repeat(64);
+            }
+            await Promise.resolve();
+            return assembly.assets[index].sha256;
+          } finally { active--; }
+        };
+        // Act
+        const result = observeAssets(f.identity, '42', assembly, client);
+        // Assert
+        await expect(result).rejects.toThrow(kind === 'transport' ? /remote-state-unknown/ : /checksum-mismatch/);
+        expect(active).toBe(0);
+        expect(reads).toStrictEqual([0, 1, 2]);
+      });
+    }
   });
 });
 
@@ -323,6 +396,17 @@ describe('safe release diagnostics', () => {
   });
   });
   describe('releaseErrorMessage', () => {
+  test('final diagnostic boundary accepts only bounded standard installer cleanup evidence', () => {
+    const diagnostic = { operation: 'standard-installer', phase: 'assemble', 'sanitized-reason': 'installer-cleanup-failed',
+      cleanup: { status: 'failed', 'temporary-state': 'unknown' } };
+    const message = `standard-installer-failed:${JSON.stringify(diagnostic)}`;
+    expect(releaseErrorMessage(new Error(message))).toBe(message);
+    for (const cleanup of [null, { status: 'synthetic-secret', 'temporary-state': 'unknown' },
+      { status: 'failed', 'temporary-state': 'unknown', path: 'synthetic-secret' }]) {
+      expect(releaseErrorMessage(new Error(`standard-installer-failed:${JSON.stringify({ ...diagnostic, cleanup })}`))).toBe('standard-installer-failed');
+    }
+  });
+
   test('final diagnostic boundary rejects arbitrary fields and malformed envelopes', () => {
     const diagnostic = { operation: 'remote-observation', phase: 'request', method: 'GET',
       'sanitized-endpoint': '/repos/owner/project', 'http-status': 403, 'request-id': 'safe:123', 'sanitized-reason': 'provider-read-failed' };

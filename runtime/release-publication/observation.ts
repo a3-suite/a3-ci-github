@@ -25,6 +25,7 @@ export const draftVisibilityFailure = (repository: Record<string, unknown>, iden
 };
 const observationAttempts = 3;
 const observationDelayMs = 1000;
+const assetReadbackConcurrency = 3;
 const remoteRecord = async (client: ReadOnlyClientType, endpoint: string): Promise<Record<string, unknown>> => {
   const value = await client.json(endpoint);
   if (!record(value)) remoteFailure(endpoint, 'response', 'response-shape-invalid', client.responseMetadata?.(endpoint));
@@ -263,10 +264,17 @@ export const observeAssets = async (identity: ReleaseIdentityType, releaseId: st
     await new Promise((resolve) => setTimeout(resolve, observationDelayMs));
   }
   const assets: AssetType[] = [];
-  for (const { asset: expected, id } of candidates) {
-    const digest = await client.assetDigest(`${endpoint}/releases/assets/${id}`, expected.size);
-    if (digest !== expected.sha256) fail('checksum-mismatch');
-    assets.push({ name: expected.name, size: expected.size, sha256: digest });
+  for (let offset = 0; offset < candidates.length; offset += assetReadbackConcurrency) {
+    // Drain every started read before rejecting; publication must not outlive a failed verification.
+    const results = await Promise.allSettled(candidates.slice(offset, offset + assetReadbackConcurrency).map(async ({ asset: expected, id }) => {
+      const digest = await client.assetDigest(`${endpoint}/releases/assets/${id}`, expected.size);
+      if (digest !== expected.sha256) fail('checksum-mismatch');
+      return { name: expected.name, size: expected.size, sha256: digest };
+    }));
+    for (const result of results) {
+      if (result.status === 'rejected') throw result.reason;
+      assets.push(result.value);
+    }
   }
   return sortedAssets(assets);
 };

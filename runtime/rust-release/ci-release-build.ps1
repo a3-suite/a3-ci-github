@@ -36,7 +36,7 @@ try {
 
   $ciLastConfirmed = $ciStage
   $ciStage = 'toolchain-install'
-  rustup toolchain install $Toolchain --profile minimal
+  rustup toolchain install $Toolchain --profile minimal --target $PlatformTarget
   if ($LASTEXITCODE -ne 0) { throw 'rust toolchain setup failed' }
   $ciLastConfirmed = $ciStage
   $ciStage = 'cargo-metadata'
@@ -46,10 +46,6 @@ try {
   $package = $metadata.packages | Where-Object { $_.manifest_path -eq $resolvedManifest }
   if ($null -eq $package -or $package.version -cne $authority.version) { throw 'package version mismatch' }
 
-  $ciLastConfirmed = $ciStage
-  $ciStage = 'target-install'
-  rustup target add --toolchain $Toolchain $PlatformTarget
-  if ($LASTEXITCODE -ne 0) { throw 'rustup target setup failed' }
   $ciLastConfirmed = $ciStage
   $ciStage = 'cargo-build'
   cargo "+$Toolchain" build --manifest-path $manifestPath --locked --release --target $PlatformTarget --bin $binaryName
