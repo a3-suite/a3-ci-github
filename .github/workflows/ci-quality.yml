@@ -104,7 +104,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -161,7 +161,7 @@ jobs:
       - name: Set up quality toolchain
         id: quality-toolchain
         if: steps.change-scope.outputs['run-ci'] != 'false'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -170,19 +170,19 @@ jobs:
           version-policy: compatible
       - name: Provision fixed jq
         if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed GitHub tools
         if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
         if: steps.change-scope.outputs['run-ci'] != 'false'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('{0}/{1}', steps.trusted-assets.outputs.root, env.CI_ADAPTER_DESCRIPTOR) || '' }}
@@ -226,7 +226,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           base-sha: ${{ github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -247,7 +247,7 @@ jobs:
       - name: Set up quality toolchain
         id: quality-toolchain
         if: steps.change-scope.outputs['run-ci'] != 'false'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -256,19 +256,19 @@ jobs:
           version-policy: compatible
       - name: Provision fixed jq
         if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed GitHub tools
         if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_JQ_VERSION != ''
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
         if: steps.change-scope.outputs['run-ci'] != 'false'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}
@@ -287,7 +287,7 @@ jobs:
       SELECTED_RUN_CI: ${{ needs.trusted.result == 'skipped' && needs.untrusted-pr.outputs.run-ci || needs.trusted.outputs.run-ci }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           summary-json: >-
             {"jobs":[{"unit":"trusted","execution":"${{ needs.trusted.result == 'skipped' && 'untrusted trust branch excluded' || (env.SELECTED_RUN_CI == 'false' && 'docs-only change; adapter not run' || 'trusted language profile adapter') }}","rawResult":"${{ needs.trusted.result }}","applicable":${{ needs.trusted.result != 'skipped' }},"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"${{ needs.trusted.result == 'skipped' && 'untrusted-pr branch selected; trusted branch intentionally excluded' || (env.SELECTED_RUN_CI == 'false' && 'docs-only scope; adapter not run' || format('trusted job result: {0}', needs.trusted.result)) }}"},{"unit":"untrusted-pr","execution":"${{ needs.trusted.result != 'skipped' && 'untrusted trust branch excluded' || (env.SELECTED_RUN_CI == 'false' && 'docs-only change; adapter not run' || 'untrusted language profile adapter') }}","rawResult":"${{ needs.untrusted-pr.result }}","applicable":${{ needs.trusted.result == 'skipped' }},"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"${{ needs.trusted.result != 'skipped' && 'trusted branch selected; untrusted-pr branch intentionally excluded' || (env.SELECTED_RUN_CI == 'false' && 'docs-only scope; adapter not run' || format('untrusted-pr job result: {0}', needs.untrusted-pr.result)) }}"}]}
