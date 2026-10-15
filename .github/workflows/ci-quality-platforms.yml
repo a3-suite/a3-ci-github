@@ -118,7 +118,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -174,7 +174,7 @@ jobs:
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
       - name: Resolve platform matrix
         id: resolve
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           manifest-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_PLATFORM_MANIFEST }}
           selection-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_QUALITY_PLATFORM_SELECTION }}
@@ -182,7 +182,7 @@ jobs:
       - name: Resolve selected toolchain once
         id: toolchain-resolution
         if: steps.change-scope.outputs['run-ci'] != 'false' && steps.configuration.outputs['resolve-toolchain'] == 'true'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -218,7 +218,7 @@ jobs:
             package.json
             package-lock.json
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -243,7 +243,7 @@ jobs:
           printf 'scope=%s\n' "$scope" >> "$GITHUB_OUTPUT"
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           execution-scope: ${{ steps.execution-scope.outputs.scope }}
@@ -335,6 +335,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}

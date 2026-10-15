@@ -34,7 +34,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Validate and write request handoff
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           operation: create
           source-sha: ${{ inputs.source_sha }}
@@ -51,7 +51,7 @@ jobs:
 
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6534008572c2ef8f5fa532cb9e97037444db6844
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@c9dbc489d362b83950a436d53cd39fe5d7e9b81a
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ job.status }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ job.status }}"}]}
