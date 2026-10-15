@@ -3,15 +3,52 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { test, vi, describe, expect } from 'vitest';
-import { fixture, releaseSkillsFixture } from './fixtures.mjs';
+import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
 import { validateEvidence } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
+import skillPolicy from '../skill-package-policy.json';
 
 const hasPwsh = spawnSync('pwsh', ['--version'], { encoding: 'utf8' }).status === 0;
 
 describe('contract.ci-release-assembly.outputs', () => {
   describe('same-release-skills', () => {
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: same-release-skills
+    test('skills exceed former individual limits and retain the aggregate size boundary', (t) => {
+      const f = releaseSkillsFixture(t, (config, root) => {
+        for (let index = 0; index < 65; index++) {
+          const directory = `skills/sdd/tool-${index}`;
+          fs.mkdirSync(path.join(root, directory), { recursive: true });
+          fs.writeFileSync(path.join(root, directory, 'SKILL.md'), `---\nname: tool-${index}\ndescription: Public tool.\n---\n`);
+          config.skills.push({ path: directory, include: ['SKILL.md'], requiredFiles: ['SKILL.md'] });
+        }
+        const assets = path.join(root, 'skills/example-tool/assets');
+        fs.writeFileSync(path.join(assets, 'large.bin'), Buffer.alloc(8 * 1024 * 1024 + 1));
+        for (let index = 0; index < 1025; index++) fs.writeFileSync(path.join(assets, `item-${index}.txt`), 'data');
+      });
+      f.assemble();
+      const owner = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
+      expect(new Set(owner.files.map(entry => entry.path.split('/')[0])).size).toBe(66);
+      expect(owner.files.length).toBeGreaterThan(1024);
+      expect(owner.files.find(entry => entry.path.endsWith('/large.bin')).size).toBeGreaterThan(8 * 1024 * 1024);
+      const boundary = releaseSkillsFixture(t);
+      boundary.assemble();
+      const boundaryOwner = JSON.parse(fs.readFileSync(path.join(boundary.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
+      const total = boundaryOwner.files.reduce((sum, entry) => sum + entry.size, 0);
+      const originalLimit = skillPolicy.maximumTotalBytes;
+      try {
+        skillPolicy.maximumTotalBytes = total;
+        boundary.options.outputRoot = path.join(boundary.root, 'at-total-limit');
+        expect(boundary.assemble).not.toThrow();
+        skillPolicy.maximumTotalBytes = total - 1;
+        boundary.options.outputRoot = path.join(boundary.root, 'over-total-limit');
+        expect(boundary.assemble).toThrow(/skills-size-invalid/);
+        expect(fs.existsSync(boundary.options.outputRoot)).toBe(false);
+      } finally {
+        skillPolicy.maximumTotalBytes = originalLimit;
+      }
+    });
     // contract_id: contract.ci-release-assembly.outputs
     // integration_id: same-release-skills
     test('skills preserve fixed source bytes and reject incomplete or unsafe packages', (t) => {
@@ -41,6 +78,25 @@ describe('contract.ci-release-assembly.outputs', () => {
       fs.appendFileSync(path.join(f.options.outputRoot, 'assets/project-skills.zip'), 'changed');
       expect(() => loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot })).toThrow();
 
+      const chosen = selectedReleaseSkillsFixture(t);
+      chosen.put('SKILL.md', 'dirty source must not change the selected name');
+      chosen.assemble();
+      const chosenOwner = JSON.parse(fs.readFileSync(path.join(chosen.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
+      expect(chosenOwner.files.map(entry => entry.path)).toEqual(['child-tool/SKILL.md', 'nested-tool/SKILL.md', 'root-tool/SKILL.md', 'sdd/SKILL.md']);
+
+      const largeRepository = releaseSkillsFixture(t, (config, root) => {
+        fs.writeFileSync(path.join(root, 'SKILL.md'), '---\nname: root-tool\ndescription: Root skill in a large repository.\n---\n');
+        config.skills = [{ path: '.', include: ['SKILL.md'], requiredFiles: ['SKILL.md'] }];
+      }, git => {
+        const blob = git(['rev-parse', ':SKILL.md']);
+        const unselected = Array.from({ length: 7000 }, (_, index) => `100644 blob ${blob}\t${String(index).padStart(5, '0')}-${'x'.repeat(100)}.txt\n`).join('');
+        const tree = git(['mktree'], unselected);
+        git(['read-tree', '--prefix=unselected/', tree]);
+      });
+      largeRepository.assemble();
+      const largeOwner = JSON.parse(fs.readFileSync(path.join(largeRepository.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
+      expect(largeOwner.files.map(entry => entry.path)).toEqual(['root-tool/SKILL.md']);
+
       for (const [label, mutate, reason] of [
         ['required missing', config => config.skills[0].requiredFiles.push('scripts/missing.py'), /skills-required-file-missing/],
         ['required excluded', config => config.skills[0].requiredFiles.push('scripts/tmp/residual.py'), /skills-required-file-missing/],
@@ -51,10 +107,13 @@ describe('contract.ci-release-assembly.outputs', () => {
         ['duplicate root', config => config.skills.push(config.skills[0]), /skills-root-invalid/],
         ['unknown field', config => config.unknown = true, /skills-declaration-invalid/],
         ['missing SKILL', config => config.skills[0].include = ['scripts'], /skills-required-file-missing/],
-        ['root escape', config => config.skills[0].path = '.agents/skills/example-tool', /skills-root-invalid/],
+        ['root absolute', config => config.skills[0].path = '/private', /skills-path-invalid/],
+        ['root drive', config => config.skills[0].path = 'C:/private', /skills-path-invalid/],
+        ['root backslash', config => config.skills[0].path = 'skills\\example-tool', /skills-path-invalid/],
+        ['root escape', config => config.skills[0].path = '../private', /skills-path-invalid/],
         ['undeclared reference', (config, root) => fs.appendFileSync(path.join(root, 'skills/example-tool/SKILL.md'), '\nSee [required](references/missing.md).\n'), /skills-reference-missing/],
         ['undeclared script', (config, root) => fs.appendFileSync(path.join(root, 'skills/example-tool/SKILL.md'), '\nUse `python scripts/missing.py`.\n'), /skills-reference-missing/],
-        ['entry mismatch', (config, root) => fs.writeFileSync(path.join(root, 'skills/example-tool/SKILL.md'), '---\nname: different\ndescription: Wrong identity.\n---\n'), /skills-entry-invalid/],
+        ['invalid entry name', (config, root) => fs.writeFileSync(path.join(root, 'skills/example-tool/SKILL.md'), '---\nname: Invalid Name\ndescription: Invalid identity.\n---\n'), /skills-entry-invalid/],
 
       ]) {
         const invalid = releaseSkillsFixture(t, mutate);
@@ -69,6 +128,18 @@ describe('contract.ci-release-assembly.outputs', () => {
         expect(invalid.assemble).toThrow(reason);
         expect(fs.existsSync(invalid.options.outputRoot)).toBe(false);
       }
+      const duplicateName = releaseSkillsFixture(t, (config, root) => {
+        fs.mkdirSync(path.join(root, 'another'), { recursive: true });
+        fs.copyFileSync(path.join(root, 'skills/example-tool/SKILL.md'), path.join(root, 'another/SKILL.md'));
+        config.skills.push({ path: 'another', include: ['SKILL.md'], requiredFiles: ['SKILL.md'] });
+      });
+      expect(duplicateName.assemble).toThrow(/skills-file-name-collision/);
+      const linkedEntry = releaseSkillsFixture(t, () => {}, git => {
+        const blob = git(['rev-parse', ':skills/example-tool/SKILL.md']);
+        git(['update-index', '--cacheinfo', `120000,${blob},skills/example-tool/SKILL.md`]);
+      });
+      expect(linkedEntry.assemble).toThrow(/skills-file-kind-invalid/);
+
       const conflictingDirectory = releaseSkillsFixture(t, () => {}, git => {
         const blob = git(['rev-parse', ':skills/example-tool/scripts/run.py']);
         git(['update-index', '--add', '--cacheinfo', `100644,${blob},skills/example-tool/scripts/RUN.py/child.py`]);

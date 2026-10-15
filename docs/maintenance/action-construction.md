@@ -41,6 +41,8 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 このrepositoryでは、Action実装、providerの再利用workflow、consumerへ配置するcallerを別の固定参照として扱います。公開refと利用可能条件の正本はpreset registryです。
 
+実装コミットのfull SHAはコミット確定後に得られるため、そのSHAを参照する接続は後続コミットで確定します。自分自身のSHAを同じコミットへ埋め込むことはできません。このため、実装と接続の準備を分け、検証済みの最終候補を公開・統合の単位とします。
+
 以下は外部の固定SHAを使う接続の更新順序です。repository自身のCIで使う`uses: ./actions/...`は同一checkoutの検証であり、Actionと検証用workflowを同じコミットで更新できます。
 
 通常リリースとhotfixの公開単位、実装SHAの包含・同一性、公開前の接続保証は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とします。公開を1回にまとめる準備順序は次のとおりです。
@@ -51,6 +53,8 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 4. **Bを1回だけ公開する。** 承認済みannotated exact tagとReleaseをBに作成し、配布資材のreadbackまで確認します。consumerはそのReleaseからcallerを生成して環境を受け入れます。
 
 準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致は要求せず、正本の包含・同一性を確認します。rebaseやsquashで参照先が変わる、または実行資材が変わる場合は接続・検証を確定し直します。
+
+mainへの統合方式と確認操作は[固定SHA接続を含むmain統合](../release/README.md#固定sha接続を含むmain統合)を参照してください。
 
 接続候補の版は未公開でなければなりません。同名のtagが存在する版は、実装SHAを含まない場合も候補にしません。tagの再作成は既存tagの削除を伴う別承認の操作であり、削除後に通常の候補として検証します。
 
