@@ -47,8 +47,14 @@ export async function downloadVerifiedAsset(request: VerifiedAssetRequest): Prom
   let manifest: Buffer;
   let content: Buffer;
   try {
-    manifest = await fetchAsset(checksumUrl);
-    content = await fetchAsset(assetUrl);
+    // Settle both reads before returning, including when a fetcher throws synchronously.
+    const [manifestResult, contentResult] = await Promise.allSettled(
+      [checksumUrl, assetUrl].map((url) => Promise.resolve().then(() => fetchAsset(url))),
+    );
+    if (manifestResult.status === 'rejected') throw manifestResult.reason;
+    if (contentResult.status === 'rejected') throw contentResult.reason;
+    manifest = manifestResult.value;
+    content = contentResult.value;
   } catch (error) {
     throw new DiagnosticError(`${failurePrefix}: download failed`, { cause: error, diagnostics: { stage: 'asset-download', field: 'provider-release-asset', asset, observed: 'download-failed', expected: 'complete-download', ...(error instanceof DiagnosticError && error.details && typeof error.details === 'object' ? error.details : {}) } });
   }

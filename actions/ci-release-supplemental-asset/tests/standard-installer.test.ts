@@ -23,8 +23,15 @@ describe('standard installer', () => {
       // Act
       runSupplemental(f.options);
       const assembled = prepareAssembly(f);
-      runSupplemental(assembled);
-      const result = assembleRelease({ authorityPath: path.join(f.root, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(f.root, 'snapshot.json'), platformManifestPath: path.join(f.root, 'platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(f.root, assembled.standardBuildRoot), supplementalRoot: path.join(f.root, 'handoff'), outputRoot: path.join(f.root, 'release-handoff') }, decodePlatformManifest);
+      // The assembly job retains a control manifest outside the fixed product checkout.
+      const source = path.join(f.root, 'release-source');
+      fs.mkdirSync(source);
+      fs.copyFileSync(path.join(f.root, 'platform.yml'), path.join(f.root, 'control-platform.yml'));
+      for (const item of ['.git', 'installer', 'platform.yml', 'authority.json', 'snapshot.json', assembled.standardBuildRoot, assembled.supplementalBuildRoot!]) {
+        fs.renameSync(path.join(f.root, item), path.join(source, item));
+      }
+      runSupplemental({ ...assembled, sourceRoot: source });
+      const result = assembleRelease({ authorityPath: path.join(source, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(source, 'snapshot.json'), platformManifestPath: path.join(f.root, 'control-platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(source, assembled.standardBuildRoot), supplementalRoot: path.join(source, 'handoff'), outputRoot: path.join(f.root, 'release-handoff') }, decodePlatformManifest);
       // Assert
       expect(result.assets.map((asset) => asset.name)).toContain(assetName);
     });

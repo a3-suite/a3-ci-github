@@ -189,11 +189,15 @@ describe("publisher", () => {
       // integration_id: release-publisher-partial-failure
       test(`publisher does not retry or recover failed create upload finalize and readback: ${phase}`, async (t) => {
         const state = await setup(t);
-        let failures = 0;
+        const failures = [];
         const method = phase === 'readback' ? 'assetDigest' : phase;
-        state.client[method] = async () => { failures += 1; throw new Error('provider-state-unknown'); };
+        state.client[method] = async (...args) => { failures.push(args); throw new Error('provider-state-unknown'); };
         await expect(publishRelease(state.options, state.client)).rejects.toThrow();
-        expect(failures).toBe(1);
+        expect(failures).toHaveLength(phase === 'readback' ? state.assembly.assets.length : 1);
+        if (phase === 'readback') {
+          expect(new Set(failures.map(([endpoint]) => endpoint)).size).toBe(failures.length);
+          expect(state.writes.some(([operation]) => operation === 'finalize')).toBe(false);
+        }
         expect(fs.existsSync(path.join(state.options.outputRoot, 'receipt.json'))).toBe(false);
         expect(fs.existsSync(path.join(state.options.outputRoot, 'readback.json'))).toBe(false);
       });

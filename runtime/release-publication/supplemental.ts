@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { parse } from 'yaml';
 import { validatePlatformManifestValue } from '../platform/platform-manifest-core.mjs';
 import { sourceTextSha256 } from '../platform/source-text.mjs';
-import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text, record, diagnosticFailure, installerFailureReasons, safeInstallerComparison } from './io';
+import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text, record, diagnosticFailure, installerFailureReasons, safeInstallerComparison, safeInstallerCleanup } from './io';
 import type { DiagnosticType } from './io';
 import { validateSnapshot } from './snapshot';
 import { supplementalSelection } from './selection';
@@ -70,19 +70,22 @@ const processFailure = (error: unknown, operation: string, phase: string): never
   const signal = 'signal' in failure && typeof failure.signal === 'string' && ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV'].includes(failure.signal) ? failure.signal : undefined;
   let reason = 'code' in failure && ['ENOENT', 'EACCES'].includes(String(failure.code)) ? 'process-start-failed' : signal ? 'process-signaled' : 'process-failed';
   let comparison: DiagnosticType['comparison'];
+  let cleanup: DiagnosticType['cleanup'];
   if (operation === 'standard-installer' && 'stderr' in failure && Buffer.isBuffer(failure.stderr) && failure.stderr.length <= 16384) {
     try {
       const diagnostic: unknown = JSON.parse(failure.stderr.toString('utf8'));
-      if (record(diagnostic) && ['phase,sanitized-reason', 'comparison,phase,sanitized-reason'].includes(Object.keys(diagnostic).sort().join(','))
+      if (record(diagnostic) && Object.keys(diagnostic).every(key => ['phase', 'sanitized-reason', 'comparison', 'cleanup'].includes(key))
+        && (diagnostic.cleanup === undefined || safeInstallerCleanup(diagnostic.cleanup))
         && diagnostic.phase === phase && typeof diagnostic['sanitized-reason'] === 'string'
         && [...installerFailureReasons, 'installer-unknown-failure', 'process-failed', 'process-start-failed'].includes(diagnostic['sanitized-reason'])) {
+        if (safeInstallerCleanup(diagnostic.cleanup)) cleanup = diagnostic.cleanup;
         reason = diagnostic['sanitized-reason'];
         if (safeInstallerComparison(diagnostic.comparison)) comparison = diagnostic.comparison;
       }
     } catch { /* Owner output is not a trusted diagnostic. */ }
   }
   return diagnosticFailure(operation === 'standard-installer' ? 'standard-installer-failed' : 'owner-adapter-failed', {
-    operation, phase, 'sanitized-reason': reason, 'exit-status': status, ...(signal ? { signal } : {}), ...(comparison ? { comparison } : {}),
+    operation, phase, 'sanitized-reason': reason, 'exit-status': status, ...(signal ? { signal } : {}), ...(comparison ? { comparison } : {}), ...(cleanup ? { cleanup } : {}),
   }, error);
 };
 

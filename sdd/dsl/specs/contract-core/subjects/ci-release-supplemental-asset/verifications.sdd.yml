@@ -5,6 +5,10 @@ verifications:
   - id: verification.ci-release-supplemental-asset.outputs
     contract_id: contract.ci-release-supplemental-asset.outputs
     cases:
+      - id: standard-entry-name-publication
+        intent_id: standard-installer-public-entry-names
+        input: {implementation: standard-installer, declaration: standard-public-entry-name}
+        checks: [{id: assets, guarantee_ref: standard-installer-publication-assets-produced}]
       - id: standard-entry-name-rejection
         intent_id: standard-installer-public-entry-names
         input: {implementation: standard-installer, declaration: nonstandard-windows-or-unix-shared-entry-name}

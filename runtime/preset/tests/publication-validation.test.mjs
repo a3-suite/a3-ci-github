@@ -92,6 +92,39 @@ describe("contract.ci-preset-assurance.verification", () => {
       expect(report.mismatches).toStrictEqual([]);
       expect(report.missingSettings).toStrictEqual([]);
     });
+
+    // contract_id: contract.ci-preset-assurance.verification
+    // integration_id: supplemental-phase-workflow-assurance
+    test('preflight rejects builds that omit an authority or source gate prerequisite', () => {
+      // Arrange
+      for (const id of ['authority', 'source-gate']) {
+        const workflows = model();
+        const build = workflows.get('.github/workflows/release-publication.yml').jobs.build;
+        build.needs = build.needs.filter(value => value !== id);
+        // Act
+        const report = inspect(workflows);
+        // Assert
+        expect(report.mismatches.some(item => item.path.endsWith('jobs.build.needs')), id).toBe(true);
+      }
+    });
+
+    // contract_id: contract.ci-preset-assurance.verification
+    // integration_id: supplemental-phase-workflow-assurance
+    test('preflight rejects assembly that omits a quality or source gate success prerequisite', () => {
+      // Arrange
+      for (const id of ['quality', 'source-gate']) {
+        for (const field of ['needs', 'if']) {
+          const workflows = model();
+          const assemble = workflows.get('.github/workflows/release-publication.yml').jobs.assemble;
+          if (field === 'needs') assemble.needs = assemble.needs.filter(value => value !== id);
+          else assemble.if = assemble.if.replace(`needs.${id}.result == 'success' &&`, '');
+          // Act
+          const report = inspect(workflows);
+          // Assert
+          expect(report.mismatches.some(item => item.path.endsWith(`jobs.assemble.${field}`)), `${id}:${field}`).toBe(true);
+        }
+      }
+    });
   });
 });
 
@@ -146,6 +179,9 @@ describe("contract.ci-preset-assurance.verification", () => {
 describe("publication-validation", () => {
   describe('preflight rejects supplemental phase bypasses and mismatched Action inputs', () => {
     const cases = [
+      ['assemble', (step) => { step.with['source-root'] = '.'; }],
+      ['assemble', (step) => { step.if = 'always()'; }],
+      ['assemble', (step) => { step['continue-on-error'] = true; }],
       ['build', (step) => { step.with.operation = 'assemble'; }],
       ['build', (step) => { step.with['standard-build-root'] = 'other'; }],
       ['build', (step) => { step.if = 'always()'; }],
@@ -159,7 +195,7 @@ describe("publication-validation", () => {
       const workflows = model();
       mutate(phase(workflows, job));
       const report = inspect(workflows);
-      expect(report.mismatches.some((item) => item.message.includes('current adapter interface'))).toBeTruthy();
+      expect(report.mismatches.some((item) => item.message.includes('adapter interface'))).toBeTruthy();
     });
   });
 });
