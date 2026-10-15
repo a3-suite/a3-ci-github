@@ -119,10 +119,11 @@ describe('release control checkout', () => {
 
     test('keeps public skill source complete with credentials removed', () => {
       // Arrange
-      const step = workflow.jobs.assemble.steps.find(entry => entry.name === 'Checkout fixed public skill source');
+      const step = workflow.jobs.assemble.steps.find(entry => entry.name === 'Checkout fixed assembly source');
       // Act
       const settings = step.with;
       // Assert
+      expect(settings.path).toBe('release-source');
       expect(settings.ref).toBe('${{ needs.authority.outputs.source_sha }}');
       expect(settings['persist-credentials']).toBe(false);
       expect(settings['sparse-checkout']).toBeUndefined();

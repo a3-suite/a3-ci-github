@@ -378,7 +378,7 @@ jobs:
           if-no-files-found: error
 
   supplemental-asset:
-    if: inputs.supplemental_release_asset_enabled
+    if: inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter'
     needs: [authority, source-gate, quality, build]
     runs-on: ${{ inputs.runner }}
     permissions:
@@ -432,8 +432,8 @@ jobs:
         needs.source-gate.result == 'success' &&
         needs.quality.result == 'success' &&
         needs.build.result == 'success' &&
-        ((inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'success') ||
-        (!inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'skipped'))
+        ((inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter' && needs.supplemental-asset.result == 'success') ||
+        ((!inputs.supplemental_release_asset_enabled || inputs.supplemental_release_asset_implementation == 'standard-installer') && needs.supplemental-asset.result == 'skipped'))
       }}
     runs-on: ${{ inputs.runner }}
     permissions:
@@ -473,43 +473,63 @@ jobs:
         env:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
+      - name: Checkout fixed assembly source
+        if: inputs.release_skills_config_path != '__unset__' || (inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'standard-installer')
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.authority.outputs.source_sha }}
+          path: release-source
+          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-authority
-          path: authority
+          path: release-source/authority
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: release-build-*
-          path: build
+          path: release-source/build
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        if: inputs.supplemental_release_asset_enabled
+        if: inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter'
         with:
           name: release-supplemental-asset
-          path: supplemental-asset
+          path: release-source/supplemental-asset
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
-      - name: Checkout fixed public skill source
-        if: inputs.release_skills_config_path != '__unset__'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        if: inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'standard-installer'
         with:
-          ref: ${{ needs.authority.outputs.source_sha }}
-          path: release-skills-source
-          persist-credentials: false
+          pattern: supplemental-build-*
+          path: release-source/supplemental-build
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+      - name: Assemble standard installer
+        if: inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'standard-installer'
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@6534008572c2ef8f5fa532cb9e97037444db6844
+        env:
+          A3_INSTALLER_PROVIDER_REVISION: 6534008572c2ef8f5fa532cb9e97037444db6844
+        with:
+          operation: assemble
+          source-root: release-source
+          authority-path: authority/authority.json
+          snapshot-path: authority/config-snapshot.json
+          standard-build-root: build
+          supplemental-build-root: supplemental-build
+          output-directory: supplemental-asset
       - name: Assemble release handoff
         uses: a3-suite/a3-ci-github/actions/ci-release-assembly@6534008572c2ef8f5fa532cb9e97037444db6844
         with:
           repository: ${{ github.repository }}
-          authority-path: authority/authority.json
-          snapshot-path: authority/config-snapshot.json
+          authority-path: release-source/authority/authority.json
+          snapshot-path: release-source/authority/config-snapshot.json
           platform-manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
           platform-matrix: ${{ needs.authority.outputs.platform_matrix }}
-          build-root: build
-          supplemental-root: ${{ inputs.supplemental_release_asset_enabled && 'supplemental-asset' || '' }}
-          skills-source-root: ${{ inputs.release_skills_config_path != '__unset__' && 'release-skills-source' || '' }}
+          build-root: release-source/build
+          supplemental-root: ${{ inputs.supplemental_release_asset_enabled && 'release-source/supplemental-asset' || '' }}
+          skills-source-root: ${{ inputs.release_skills_config_path != '__unset__' && 'release-source' || '' }}
           output-directory: release-handoff
       - id: upload_release_handoff
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -621,4 +641,4 @@ jobs:
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6534008572c2ef8f5fa532cb9e97037444db6844
         with:
           summary-json: >-
-            {"jobs":[{"unit":"authority","execution":"manual release publication / trusted control","rawResult":"${{ needs.authority.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"authority job result: ${{ needs.authority.result }}"},{"unit":"source-gate","execution":"fixed source SHA identity","rawResult":"${{ needs.source-gate.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"source-gate result: ${{ needs.source-gate.result }}"},{"unit":"quality","execution":"fixed source / trusted adapter","rawResult":"${{ needs.quality.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"quality result: ${{ needs.quality.result }}"},{"unit":"build","execution":"platform manifest","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build result: ${{ needs.build.result }}"},{"unit":"supplemental-asset","execution":"owner-selected supplemental Release asset","rawResult":"${{ needs.supplemental-asset.result }}","applicable":${{ !(needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) }},"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"${{ (needs.supplemental-asset.result == 'skipped' && !inputs.supplemental_release_asset_enabled) && 'supplemental asset disabled by workflow input' || format('supplemental-asset result: {0}', needs.supplemental-asset.result) }}"},{"unit":"assemble","execution":"trusted handoff","rawResult":"${{ needs.assemble.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"assemble result: ${{ needs.assemble.result }}"},{"unit":"publish","execution":"Release remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"authority","execution":"manual release publication / trusted control","rawResult":"${{ needs.authority.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"authority job result: ${{ needs.authority.result }}"},{"unit":"source-gate","execution":"fixed source SHA identity","rawResult":"${{ needs.source-gate.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"source-gate result: ${{ needs.source-gate.result }}"},{"unit":"quality","execution":"fixed source / trusted adapter","rawResult":"${{ needs.quality.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"quality result: ${{ needs.quality.result }}"},{"unit":"build","execution":"platform manifest","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build result: ${{ needs.build.result }}"},{"unit":"supplemental-asset","execution":"owner-selected supplemental Release asset","rawResult":"${{ needs.supplemental-asset.result }}","applicable":${{ !(needs.supplemental-asset.result == 'skipped' && (!inputs.supplemental_release_asset_enabled || inputs.supplemental_release_asset_implementation == 'standard-installer')) }},"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"${{ (needs.supplemental-asset.result == 'skipped' && (!inputs.supplemental_release_asset_enabled || inputs.supplemental_release_asset_implementation == 'standard-installer')) && 'supplemental asset disabled or assembled in assemble job' || format('supplemental-asset result: {0}', needs.supplemental-asset.result) }}"},{"unit":"assemble","execution":"trusted handoff","rawResult":"${{ needs.assemble.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"assemble result: ${{ needs.assemble.result }}"},{"unit":"publish","execution":"Release remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}

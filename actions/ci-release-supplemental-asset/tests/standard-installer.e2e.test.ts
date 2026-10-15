@@ -32,6 +32,40 @@ describe('standard installer', () => {
     });
 
     // contract_id: contract.ci-failure-diagnostics.actionable
+    // flow_id: standard-installer-cleanup-diagnostics
+    // test_level: e2e
+    test.for(['Action', 'CLI'])('distributed %s retains primary and cleanup failures safely', (surface, t) => {
+      for (const primary of [true, false]) {
+        const f = fixture(t);
+        const distribution = path.join(f.root, 'provider');
+        const source = surface === 'Action' ? 'actions/ci-release-supplemental-asset' : 'runtime/installer';
+        fs.cpSync(path.join(repository, source, 'dist'), path.join(distribution, 'dist'), { recursive: true });
+        const assembly = path.join(distribution, 'dist/installer/src/assembly.py');
+        fs.writeFileSync(assembly, fs.readFileSync(assembly, 'utf8').replace('    raise SystemExit(main())',
+          '    from unittest.mock import patch\n    with patch.object(Path, "rmdir", side_effect=OSError("synthetic-secret")):\n        raise SystemExit(main())'));
+        if (primary) fs.writeFileSync(path.join(f.root, 'standard', `${archiveName}.sha256`), 'invalid');
+        let result;
+        if (surface === 'Action') {
+          result = runDistributedAction(f, f.options, [path.join(distribution, 'dist/index.js')]).result;
+        } else {
+          fs.copyFileSync(path.join(repository, 'runtime/installer/run-installer.mjs'), path.join(distribution, 'run-installer.mjs'));
+          result = spawnSync(process.execPath, [path.join(distribution, 'run-installer.mjs'),
+            '--operation', f.options.operation, '--source-root', f.root, '--authority-path', 'authority.json',
+            '--snapshot-path', 'snapshot.json', '--standard-build-root', f.options.standardBuildRoot,
+            '--output-directory', f.options.outputDirectory, '--provider-revision', 'a'.repeat(40)], { encoding: 'utf8' });
+        }
+        expect(result.status).toBe(1);
+        expect(result.stderr).not.toContain('synthetic-secret');
+        expect(result.stderr).not.toContain(f.root);
+        const line = result.stderr.split('\n').find(value => value.startsWith('standard-installer-failed:'))!;
+        const diagnostic = JSON.parse(line.slice('standard-installer-failed:'.length));
+        expect(diagnostic['sanitized-reason']).toBe(primary ? 'installer-artifact-checksum-invalid' : 'installer-cleanup-failed');
+        expect(diagnostic.cleanup).toEqual({ status: 'failed', 'temporary-state': 'unknown' });
+        expect(diagnostic['exit-status']).toBe(1);
+      }
+    });
+
+    // contract_id: contract.ci-failure-diagnostics.actionable
     // flow_id: installer-transfer-diagnostics
     // test_level: e2e
     test('distributed Action diagnoses transferred installer evidence missing or changed', (t) => {
@@ -76,7 +110,9 @@ describe('standard installer', () => {
       const runner = path.join(installerRoot, 'src/assembly.py');
       for (const value of ['synthetic-secret', JSON.stringify({ phase: 'build-platform', 'sanitized-reason': 'synthetic-secret' }),
         JSON.stringify({ phase: 'assemble', 'sanitized-reason': 'installer-input-invalid' }),
-        JSON.stringify({ phase: 'build-platform', 'sanitized-reason': 'installer-input-invalid', token: 'synthetic-secret' })]) {
+        JSON.stringify({ phase: 'build-platform', 'sanitized-reason': 'installer-input-invalid', token: 'synthetic-secret' }),
+        ...[{ status: 'failed', 'temporary-state': 'synthetic-secret' }, { status: 'failed', 'temporary-state': 'unknown', path: 'synthetic-secret' }].map(cleanup =>
+          JSON.stringify({ phase: 'build-platform', 'sanitized-reason': 'installer-cleanup-failed', cleanup }))]) {
         fs.writeFileSync(runner, `import sys\nsys.stderr.write(${JSON.stringify(value)})\nsys.exit(23)\n`);
         // Act
         let error: unknown;

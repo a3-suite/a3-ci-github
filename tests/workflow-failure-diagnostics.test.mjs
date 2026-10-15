@@ -6,7 +6,6 @@ import { describe, expect, test, onTestFinished } from 'vitest';
 
 const workflows = [
   ['quality', '.github/workflows/ci-quality.yml'],
-  ['release-request', 'workflows/release/release-request-tag.yml'],
   ['release-publication', '.github/workflows/ci-release-publication.yml'],
   ['package-publication', '.github/workflows/ci-package-publication.yml'],
 ];
@@ -14,14 +13,21 @@ const workflows = [
 describe('workflow failure diagnostics', () => {
   // contract_id: contract.ci-failure-diagnostics.actionable
   // integration_id: workflow-summary-failure-retention
-  test.each(['success', 'failure', 'cancelled'])('publication request summary preserves the current job %s result', (status) => {
+  test.each(['workflows/release/release-publication-request.yml', 'workflows/release/release-request-tag.yml', 'workflows/package/package-publication-request.yml'].flatMap(file => ['success', 'failure', 'cancelled'].map(status => [file, status])))('%s summary preserves the current job %s result', (file, status) => {
     // Arrange
-    const workflow = parse(fs.readFileSync('workflows/release/release-publication-request.yml', 'utf8'));
-    const step = workflow.jobs.request.steps.at(-1);
-    expect(Object.keys(workflow.jobs)).toStrictEqual(['request']);
-    expect(step.if).toBe('always()');
+    const workflow = parse(fs.readFileSync(file, 'utf8'));
+    const separate = file === 'workflows/release/release-request-tag.yml';
+    const summary = separate ? workflow.jobs.summary : workflow.jobs.request;
+    const step = summary.steps.at(-1);
+    expect(Object.keys(workflow.jobs)).toStrictEqual(separate ? ['request', 'summary'] : ['request']);
+    expect(separate ? summary.if : step.if).toBe('always()');
+    if (separate) {
+      expect(summary.needs).toBe('request');
+      expect(summary.permissions).toEqual({ contents: 'read' });
+    }
     const runUrl = 'https://github.com/owner/product/actions/runs/123';
     const input = step.with['summary-json'].replaceAll('${{ job.status }}', status)
+      .replaceAll('${{ needs.request.result }}', status)
       .replaceAll('${{ env.WORKFLOW_RUN_URL }}', runUrl);
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const directory = fs.mkdtempSync(path.resolve('tests/tmp/publication-request-summary-'));

@@ -240,3 +240,28 @@ describe("action-package-verification", () => {
     });
   });
 });
+
+
+describe('source verification CI partition', () => {
+  describe('selectVerificationScope', () => {
+    // evidence_role: supplemental
+    // test_level: unit
+    // target_id: selectVerificationScope
+    test('partitions the complete plan without dropping or duplicating tests and keeps all as default', () => {
+      // Arrange
+      const packages = collectActionPackages(root);
+      const complete = [...verificationPlan(packages), ...sourceVerification.cliTypecheckPlan(root, packages), ...sharedRuntimeVerificationPlan(root)];
+      // Act
+      const actions = sourceVerification.selectVerificationScope(complete, 'actions');
+      const installer = complete.filter((step) => step.action === 'shared-installer');
+      // Assert
+      expect(sourceVerification.selectVerificationScope(complete)).toBe(complete);
+      expect(installer).toHaveLength(1);
+      expect(installer[0].args.slice(4)).toEqual([path.join(root, 'runtime/installer/tests/common-regression.test.mjs')]);
+      expect(actions.length + installer.length).toBe(complete.length);
+      expect(actions.some((step) => installer.includes(step))).toBe(false);
+      expect(complete.every((step) => actions.includes(step) || installer.includes(step))).toBe(true);
+      expect(() => sourceVerification.selectVerificationScope(complete, 'typo')).toThrow('source-verification-scope-invalid');
+    });
+  });
+});

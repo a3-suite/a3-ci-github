@@ -179,6 +179,9 @@ describe("contract.ci-preset-assurance.verification", () => {
 describe("publication-validation", () => {
   describe('preflight rejects supplemental phase bypasses and mismatched Action inputs', () => {
     const cases = [
+      ['assemble', (step) => { step.with['source-root'] = '.'; }],
+      ['assemble', (step) => { step.if = 'always()'; }],
+      ['assemble', (step) => { step['continue-on-error'] = true; }],
       ['build', (step) => { step.with.operation = 'assemble'; }],
       ['build', (step) => { step.with['standard-build-root'] = 'other'; }],
       ['build', (step) => { step.if = 'always()'; }],
@@ -192,7 +195,7 @@ describe("publication-validation", () => {
       const workflows = model();
       mutate(phase(workflows, job));
       const report = inspect(workflows);
-      expect(report.mismatches.some((item) => item.message.includes('current adapter interface'))).toBeTruthy();
+      expect(report.mismatches.some((item) => item.message.includes('adapter interface'))).toBeTruthy();
     });
   });
 });

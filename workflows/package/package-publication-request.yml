@@ -30,6 +30,8 @@ jobs:
   request:
     runs-on: <versioned-runner>
     permissions: {}
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Validate and write request handoff
         uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@6534008572c2ef8f5fa532cb9e97037444db6844
@@ -47,17 +49,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  summary:
-    needs: request
-    if: always()
-    runs-on: <versioned-runner>
-    permissions:
-      contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    steps:
       - name: Write workflow summary
+        if: always()
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6534008572c2ef8f5fa532cb9e97037444db6844
         with:
           summary-json: >-
-            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}
+            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ job.status }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ job.status }}"}]}

@@ -82,6 +82,19 @@ class StandardAssemblyTest(unittest.TestCase):
                     assembly.run(request)
             self.assertIs(failure.exception, primary)
 
+    def test_main_reports_cleanup_failure_without_replacing_primary_reason(self) -> None:
+        for primary, reason in [(ValueError("installer-artifact-checksum-invalid"), "installer-artifact-checksum-invalid"),
+                                (None, "installer-cleanup-failed")]:
+            with self.subTest(primary=primary), tempfile.TemporaryDirectory(dir=ROOT / "tests/tmp") as directory:
+                request = {"operation": "build-platform", "outputDirectory": str(Path(directory) / "output")}
+                with patch.object(assembly, "config_for", return_value={}), patch.object(assembly, "platform_record", side_effect=primary), patch.object(Path, "rmdir", side_effect=OSError("synthetic-secret")), patch.object(sys, "stdin", io.StringIO(json.dumps(request))), patch.object(sys, "stderr", io.StringIO()) as output:
+                    self.assertEqual(assembly.main(), 1)
+                diagnostic = json.loads(output.getvalue())
+                self.assertEqual(diagnostic, {"phase": "build-platform", "sanitized-reason": reason,
+                                             "cleanup": {"status": "failed", "temporary-state": "unknown"}})
+                self.assertNotIn("synthetic-secret", output.getvalue())
+                self.assertNotIn(directory, output.getvalue())
+
     def test_profiles_reject_unsupported_inputs_and_colliding_assets(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)

@@ -53,6 +53,7 @@
    - upload actionが返すActions artifact IDをRelease作成jobへ渡し、取得した一時artifactの descriptor、manifest、成果物 digest、source/version/target identity を `ci-handoff-integrity` で検証する。Actions artifact transfer API の別 digest Action は使用しない。
    - Actions artifactはjob間の権限境界を越える一時handoffに限定し、利用者向け配布先にしない。
    - 各matrix buildは`release-build-{platform-id}`を一意な一時artifact名としてuploadし、assemble jobは全`release-build-*` artifactをartifact名ごとのsubdirectoryを保って取得する。いずれかのbuild、検証、upload、downloadが失敗した場合はassembleとpublishへ進めない。
+   - 標準 installer の最終組立は read-only assemble job 内で行い、native 検証済みの platform artifact を直接受け取る。操作対象 source は制御 checkout と別の path に固定する。任意の owner-adapter は独立した supplemental job で実行し、検証済み artifact だけを assemble へ渡す。
    - Release作成jobはrelease authority contextと操作対象source由来のhandoffを別入力として受け取り、trusted CI controlからexpected platform集合とasset manifestを照合し、各assetのchecksumを再計算する。build jobのscriptや実行可能assetは実行しない。
    - 承認済みrelease notesは `references/release-asset-publication-contract.reference.yml` の `releaseNotesInput` に従う別のhandoff入力として受け取り、`git.release-flow.body`の出所、digest、release identityの結合を検証する。本文をタグ注釈や生成結果から再構成しない。
 7. Release作成jobで既存releaseとassetを確認する。

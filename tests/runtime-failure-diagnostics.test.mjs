@@ -74,7 +74,7 @@ describe('runtime failure diagnostics', () => {
     onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
     fs.mkdirSync(path.join(directory, 'actions/broken'), { recursive: true });
     fs.writeFileSync(path.join(directory, 'actions/broken/action.yml'), 'name: broken\n');
-    const driver = `import { checkActionDist } from ${JSON.stringify(path.join(root, 'runtime/repository/check-action-dist.mjs'))};import { FailureContext } from ${JSON.stringify(path.join(root, 'runtime/diagnostics/failure.mjs'))};try { checkActionDist(process.argv[1]); } catch(error) { new FailureContext('repository-action-distribution','check-distribution').report(error);process.exitCode=1; }`;
+    const driver = `import { checkActionDist } from ${JSON.stringify(path.join(root, 'runtime/repository/check-action-dist.mjs'))};import { FailureContext } from ${JSON.stringify(path.join(root, 'runtime/diagnostics/failure.mjs'))};try { await checkActionDist(process.argv[1]); } catch(error) { new FailureContext('repository-action-distribution','check-distribution').report(error);process.exitCode=1; }`;
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', driver, directory], { encoding: 'utf8' });
     const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
     const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));

@@ -567,7 +567,7 @@ const validateSupplementalAssemblyStep = (
     'supplemental-platform-build-root': 'supplemental-build',
     'output-directory': 'supplemental-asset',
   }, report);
-  if (supplementalAssetJob.if !== 'inputs.supplemental_release_asset_enabled'
+  if (supplementalAssetJob.if !== "inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter'"
     || supplementalAssembly?.if !== undefined
     || !supplementalActionMatches(supplementalAssembly, supplementalAssemblyInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.supplemental-asset.steps.Build and verify supplemental Release asset`,
@@ -624,6 +624,19 @@ const validateReleaseJobGraph = (
   }
   validateSupplementalBuildStep(publicationPath, buildJob, report);
   validateSupplementalAssemblyStep(publicationPath, map(publicationJobs['supplemental-asset']), report);
+  const standardInstaller = (Array.isArray(assembleJob.steps) ? assembleJob.steps.map(map) : [])
+    .find(step => step.name === 'Assemble standard installer');
+  if (standardInstaller?.if !== "inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'standard-installer'"
+    || !supplementalActionMatches(standardInstaller, {
+      operation: 'assemble', 'source-root': 'release-source',
+      'authority-path': 'authority/authority.json', 'snapshot-path': 'authority/config-snapshot.json',
+      'standard-build-root': 'build', 'supplemental-build-root': 'supplemental-build',
+      'output-directory': 'supplemental-asset',
+    })) add(report.mismatches, {
+    path: `${publicationPath}:jobs.assemble.steps.Assemble standard installer`,
+    message: 'standard installer assembly must use the fixed source checkout and standard adapter interface',
+    settingLocation: publicationPath,
+  });
   const assembleCondition = typeof assembleJob.if === 'string' ? assembleJob.if : '';
   for (const token of [
     '!cancelled()',
@@ -631,6 +644,8 @@ const validateReleaseJobGraph = (
     "needs.source-gate.result == 'success'",
     "needs.quality.result == 'success'",
     "needs.build.result == 'success'",
+    "inputs.supplemental_release_asset_implementation == 'owner-adapter'",
+    "inputs.supplemental_release_asset_implementation == 'standard-installer'",
     "needs.supplemental-asset.result == 'success'",
     "needs.supplemental-asset.result == 'skipped'",
   ]) {

@@ -1,5 +1,5 @@
 import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,6 +77,16 @@ export const collectScriptBundles = (root) => {
 
 export const buildPlan = (root, actions, scriptBundles = [], { transpileOnly = false } = {}) => {
   const bundled = actions.filter((action) => action.distPath);
+  const outputs = bundled.flatMap((action) => [action.distPath, ...(action.companionDistPaths ?? [])]
+    .map((output) => ({ owner: action.name, directory: path.resolve(root, output) })));
+  for (const [index, left] of outputs.entries()) {
+    for (const right of outputs.slice(index + 1)) {
+      if (left.owner !== right.owner && (left.directory === right.directory
+        || left.directory.startsWith(right.directory + path.sep) || right.directory.startsWith(left.directory + path.sep))) {
+        throw new DiagnosticError('action-build-output-overlap: Parallel builds require disjoint outputs');
+      }
+    }
+  }
   const generatedDiagnostics = bundled.length ? ['runtime/diagnostics/failure.mjs', 'runtime/diagnostics/failure.d.mts'] : [];
   return [
   ...bundled.map((action) => ({ command: 'npm', args: ['ci', '--ignore-scripts'], cwd: action.path })),
@@ -87,7 +97,7 @@ export const buildPlan = (root, actions, scriptBundles = [], { transpileOnly = f
       '--typeRoots', path.join(bundled[0].path, 'node_modules/@types')],
     cwd: root,
   }] : []),
-  ...bundled.map((action) => ({ command: 'npm', args: ['run', 'build', ...(transpileOnly ? ['--', '--transpile-only'] : [])], cwd: action.path })),
+  ...bundled.map((action) => ({ command: 'npm', args: ['run', 'build', ...(transpileOnly ? ['--', '--transpile-only'] : [])], cwd: action.path, parallelGroup: 'action-build' })),
   ...scriptBundles.flatMap((bundle) => [
     { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: bundle.path },
     { command: 'npm', args: ['run', 'build'], cwd: bundle.path },
@@ -109,12 +119,39 @@ export const buildPlan = (root, actions, scriptBundles = [], { transpileOnly = f
   ];
 };
 
-export const runPlan = (plan, execute = execFileSync) => {
-  for (const step of plan) {
-    try { execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' }); } catch (error) {
-      if (!step.failure) throw error;
-      throw new DiagnosticError(`${step.failure}: Generated distribution differs from the committed files`, { cause: error, diagnostics: { field: 'dist', expected: 'committed-dist', observed: 'differs', evidence: 'stdout-changed-paths' } });
+const executePlanStep = (command, args, options) => new Promise((resolve, reject) => {
+  const child = spawn(command, args, options);
+  child.once('error', reject);
+  child.once('close', (status, signal) => {
+    if (status === 0) resolve();
+    else reject(Object.assign(new Error('child process failed'), { status, signal }));
+  });
+});
+
+export const runPlan = async (plan, execute = executePlanStep) => {
+  const run = async (step) => {
+    try { await execute(step.command, step.args, { cwd: step.cwd, stdio: 'inherit' }); } catch (error) {
+      if (step.failure) throw new DiagnosticError(`${step.failure}: Generated distribution differs from the committed files`, { cause: error, diagnostics: { field: 'dist', expected: 'committed-dist', observed: 'differs', evidence: 'stdout-changed-paths' } });
+      if (step.parallelGroup) throw new DiagnosticError('action-build-failed: Action build failed', { cause: error,
+        diagnostics: { field: 'action-build', action: path.basename(step.cwd), expected: 'zero-exit', observed: error?.status ?? 'process-error', ...(error?.signal ? { signal: error.signal } : {}) } });
+      throw error;
     }
+  };
+  for (let index = 0; index < plan.length;) {
+    if (plan[index].parallelGroup !== 'action-build') { await run(plan[index++]); continue; }
+    const builds = [];
+    while (index < plan.length && plan[index].parallelGroup === 'action-build') builds.push(plan[index++]);
+    let next = 0;
+    let failure;
+    const worker = async () => {
+      while (!failure && next < builds.length) {
+        const step = builds[next++];
+        try { await run(step); } catch (error) { failure ??= error; }
+      }
+    };
+    // Drain already-started builds before failing; never compare a partially written distribution.
+    await Promise.all([worker(), worker()]);
+    if (failure) throw failure;
   }
 };
 
@@ -147,7 +184,7 @@ export const assertTrackedReferences = (root, actions, execute = execFileSync) =
   }
 };
 
-export const checkActionDist = (root = defaultRoot, { transpileOnly = false } = {}) => {
+export const checkActionDist = async (root = defaultRoot, { transpileOnly = false } = {}) => {
   const diagnostic = new FailureContext('repository-action-distribution', 'check-distribution');
   try {
   diagnostic.at('action-metadata', { input: 'action-and-runtime-source-inventory' });
@@ -159,7 +196,7 @@ export const checkActionDist = (root = defaultRoot, { transpileOnly = false } = 
   diagnostic.confirmed();
   diagnostic.at('build-and-identity', { input: 'source-and-dist', actions: actions.length, bundles: scriptBundles.length });
   diagnostic.writeState = 'generated-dist-may-be-partial';
-  runPlan(buildPlan(root, actions, scriptBundles, { transpileOnly }));
+  await runPlan(buildPlan(root, actions, scriptBundles, { transpileOnly }));
   diagnostic.confirmed();
   diagnostic.at('distribution-inventory', { input: 'tracked-dist' });
   assertNoUntrackedDist(root, actions, scriptBundles);
@@ -174,7 +211,7 @@ if (invokedPath === fileURLToPath(import.meta.url)) {
       if (args.length > 1 || args.length === 1 && args[0] !== '--transpile-only') {
         throw new DiagnosticError('action-dist-arguments-invalid: Expected no arguments or --transpile-only');
       }
-      checkActionDist(defaultRoot, { transpileOnly: args.length === 1 });
+      await checkActionDist(defaultRoot, { transpileOnly: args.length === 1 });
     } catch (error) {
     new FailureContext('repository-action-distribution', 'check-distribution').report(error);
     completeFailure(safeErrorReason(error));

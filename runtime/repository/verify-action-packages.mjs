@@ -193,7 +193,13 @@ export const runVerificationPlan = (plan, execute = execFileSync, diagnostic = n
   }
 };
 
-export const verifyActionPackages = (root = defaultRoot, diagnostic = new FailureContext('repository-action-distribution', 'source-verification')) => {
+export const selectVerificationScope = (plan, scope = 'all') => {
+  assert(['all', 'actions'].includes(scope), 'source-verification-scope-invalid');
+  return scope === 'all' ? plan : plan.filter((step) => step.action !== 'shared-installer');
+};
+
+export const verifyActionPackages = (root = defaultRoot, diagnostic = new FailureContext('repository-action-distribution', 'source-verification'), { scope = 'all' } = {}) => {
+  selectVerificationScope([], scope);
   diagnostic.at('action-inventory', { input: 'actions-and-package-metadata' });
   const packages = collectActionPackages(root);
   diagnostic.confirmed();
@@ -209,7 +215,7 @@ export const verifyActionPackages = (root = defaultRoot, diagnostic = new Failur
   const outputRoot = path.join(root, 'tests/tmp/source-verification');
   mkdirSync(outputRoot, { recursive: true });
   const reportPath = path.join(mkdtempSync(path.join(outputRoot, 'run-')), 'test-results.json');
-  const plan = batchTestVerificationPlan(batchActionTypecheckPlan(originalPlan, packages), root, reportPath);
+  const plan = batchTestVerificationPlan(batchActionTypecheckPlan(selectVerificationScope(originalPlan, scope), packages), root, reportPath);
   diagnostic.confirmed();
   runVerificationPlan(plan, execFileSync, diagnostic);
   diagnostic.at('result-output', { output: 'stdout-verification-result' });
@@ -219,7 +225,9 @@ export const verifyActionPackages = (root = defaultRoot, diagnostic = new Failur
 if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
   const diagnostic = new FailureContext('repository-action-distribution', 'source-verification');
   try {
-    verifyActionPackages(defaultRoot, diagnostic);
+    const args = process.argv.slice(2);
+    assert(args.length === 0 || (args.length === 1 && args[0] === '--scope=actions'), 'source-verification-arguments-invalid');
+    verifyActionPackages(defaultRoot, diagnostic, { scope: args.length ? 'actions' : 'all' });
   } catch (error) {
     process.exitCode = 1;
     const reason = diagnostic.report(error);

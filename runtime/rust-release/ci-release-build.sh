@@ -70,8 +70,6 @@ ci_failure_expected=unavailable
 ci_failure_observed=unavailable
 expected_manifest_digest=$(jq -er '.platform_manifest_sha256' "$authority_path")
 if ! [[ "$expected_manifest_digest" =~ ^[0-9a-f]{64}$ ]]; then exit 1; fi
-node "$script_dir/dist/index.mjs" \
-  "$platform_manifest" "$platform_id" "$platform_target" "$expected_manifest_digest"
 
 if [[ "$platform_target" == *-windows-* ]]; then
   command -v pwsh >/dev/null 2>&1
@@ -86,12 +84,15 @@ if [[ "$platform_target" == *-windows-* ]]; then
   exit
 fi
 
+node "$script_dir/dist/index.mjs" \
+  "$platform_manifest" "$platform_id" "$platform_target" "$expected_manifest_digest"
+
 ci_failure_last_confirmed=$ci_failure_stage
 ci_failure_stage=toolchain-install
 ci_failure_field=rust-toolchain
 ci_failure_expected=unavailable
 ci_failure_observed=unavailable
-rustup toolchain install "$toolchain" --profile minimal
+rustup toolchain install "$toolchain" --profile minimal --target "$platform_target"
 ci_failure_last_confirmed=$ci_failure_stage
 ci_failure_stage=cargo-metadata
 ci_failure_field=cargo-manifest
@@ -108,12 +109,6 @@ ci_failure_expected=unavailable
 ci_failure_observed=unavailable
 test "$package_version" = "$version"
 
-ci_failure_last_confirmed=$ci_failure_stage
-ci_failure_stage=target-install
-ci_failure_field=platform-target
-ci_failure_expected=unavailable
-ci_failure_observed=unavailable
-rustup target add --toolchain "$toolchain" "$platform_target"
 ci_failure_last_confirmed=$ci_failure_stage
 ci_failure_stage=cargo-build
 ci_failure_field=binary-name

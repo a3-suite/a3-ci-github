@@ -1,4 +1,5 @@
 [
+  "installer-cleanup-failed",
   "installer-artifact-checksum-invalid",
   "installer-asset-name-collision",
   "installer-build-assets-invalid",

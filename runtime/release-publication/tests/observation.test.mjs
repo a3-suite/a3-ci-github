@@ -396,6 +396,17 @@ describe('safe release diagnostics', () => {
   });
   });
   describe('releaseErrorMessage', () => {
+  test('final diagnostic boundary accepts only bounded standard installer cleanup evidence', () => {
+    const diagnostic = { operation: 'standard-installer', phase: 'assemble', 'sanitized-reason': 'installer-cleanup-failed',
+      cleanup: { status: 'failed', 'temporary-state': 'unknown' } };
+    const message = `standard-installer-failed:${JSON.stringify(diagnostic)}`;
+    expect(releaseErrorMessage(new Error(message))).toBe(message);
+    for (const cleanup of [null, { status: 'synthetic-secret', 'temporary-state': 'unknown' },
+      { status: 'failed', 'temporary-state': 'unknown', path: 'synthetic-secret' }]) {
+      expect(releaseErrorMessage(new Error(`standard-installer-failed:${JSON.stringify({ ...diagnostic, cleanup })}`))).toBe('standard-installer-failed');
+    }
+  });
+
   test('final diagnostic boundary rejects arbitrary fields and malformed envelopes', () => {
     const diagnostic = { operation: 'remote-observation', phase: 'request', method: 'GET',
       'sanitized-endpoint': '/repos/owner/project', 'http-status': 403, 'request-id': 'safe:123', 'sanitized-reason': 'provider-read-failed' };

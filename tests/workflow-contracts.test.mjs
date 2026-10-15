@@ -561,7 +561,8 @@ describe("workflow-contracts", () => {
       includesAll(jobBlock(workflow, 'request'), [/permissions:\n      actions: write\n      contents: read/, /ci-annotated-tag-resolver@/, /ci-release-request-handoff@/]);
       expect(workflow).not.toMatch(/contents: write/);
       expect(workflow).not.toMatch(/CI_(?:GH|JQ|SHA256SUM)_VERSION|ci-(?:gh-provisioner|jq-provisioner|github-toolchain-verifier)@/);
-      includesAll(jobBlock(workflow, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
+      includesAll(jobBlock(workflow, 'summary'), [/needs: request/, /if: always\(\)/, /permissions:\n      contents: read/, /ci-quality-summary@/]);
+      expect(jobBlock(workflow, 'request')).not.toMatch(/ci-quality-summary@/);
     });
 
     // integration_id: release-request-workflow-contract
@@ -756,7 +757,7 @@ describe("workflow-contracts", () => {
       const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');
       assertNeeds(supplementalAssetJob, ['authority', 'source-gate', 'quality', 'build']);
       includesAll(supplementalAssetJob, [
-        /^    if: inputs\.supplemental_release_asset_enabled$/m,
+        /^    if: inputs\.supplemental_release_asset_enabled && inputs\.supplemental_release_asset_implementation == 'owner-adapter'$/m,
       ]);
       includesAll(stepContaining(supplementalAssetJob, 'pattern: release-build-*'), [
         /actions\/download-artifact@/,
@@ -794,10 +795,10 @@ describe("workflow-contracts", () => {
       // Arrange
       const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
       const required = ['authority', 'source-gate', 'quality', 'build'];
-      const assemble = (results, enabled = false, cancelled = false) => runInNewContext(
+      const assemble = (results, enabled = false, cancelled = false, implementation = 'owner-adapter') => runInNewContext(
         jobs.assemble.if.trim().slice(3, -2).replace(/needs\.([a-zA-Z0-9_-]+)/g, "needs['$1']"),
         { needs: Object.fromEntries(Object.entries(results).map(([id, result]) => [id, { result }])),
-          inputs: { supplemental_release_asset_enabled: enabled }, cancelled: () => cancelled },
+          inputs: { supplemental_release_asset_enabled: enabled, supplemental_release_asset_implementation: implementation }, cancelled: () => cancelled },
       );
       const successful = Object.fromEntries(required.map(id => [id, 'success']));
       // Act
@@ -816,6 +817,30 @@ describe("workflow-contracts", () => {
       expect(assemble({ ...successful, 'supplemental-asset': 'failure' }, true)).toBe(false);
       expect(assemble({ ...successful, 'supplemental-asset': 'skipped' }, true)).toBe(false);
       expect(assemble({ ...successful, 'supplemental-asset': 'skipped' }, false, true)).toBe(false);
+      expect(assemble({ ...successful, 'supplemental-asset': 'skipped' }, true, false, 'standard-installer')).toBe(true);
+      expect(assemble({ ...successful, 'supplemental-asset': 'failure' }, true, false, 'standard-installer')).toBe(false);
+      const standard = jobs.assemble.steps.find(step => step.name === 'Assemble standard installer');
+      const source = jobs.assemble.steps.find(step => step.name === 'Checkout fixed assembly source');
+      const handoff = jobs.assemble.steps.find(step => step.name === 'Assemble release handoff');
+      const download = jobs.assemble.steps.find(step => step.with?.pattern === 'supplemental-build-*');
+      expect(source.with).toMatchObject({ ref: '${{ needs.authority.outputs.source_sha }}', path: 'release-source', 'persist-credentials': false });
+      expect(standard.with['source-root']).toBe(source.with.path);
+      expect(handoff.with['build-root']).toBe('release-source/build');
+      expect(handoff.with['authority-path']).toBe('release-source/authority/authority.json');
+      expect(download.with.path).toBe('release-source/supplemental-build');
+      expect(jobs.assemble.steps.indexOf(source)).toBeLessThan(jobs.assemble.steps.indexOf(download));
+      expect(jobs.assemble.steps.indexOf(standard)).toBeLessThan(jobs.assemble.steps.indexOf(handoff));
+      expect(jobs.assemble.permissions).toStrictEqual({ actions: 'read', contents: 'read' });
+      for (const implementation of ['owner-adapter', 'standard-installer']) {
+        for (const enabled of [true, false]) {
+          const context = { inputs: { supplemental_release_asset_enabled: enabled, supplemental_release_asset_implementation: implementation } };
+          expect(runInNewContext(jobs['supplemental-asset'].if, context)).toBe(enabled && implementation === 'owner-adapter');
+          expect(runInNewContext(standard.if, context)).toBe(enabled && implementation === 'standard-installer');
+          expect(runInNewContext(download.if, context)).toBe(enabled && implementation === 'standard-installer');
+          const transferred = jobs.assemble.steps.find(step => step.with?.name === 'release-supplemental-asset');
+          expect(runInNewContext(transferred.if, context)).toBe(enabled && implementation === 'owner-adapter');
+        }
+      }
       expect(jobs.publish.needs).toContain('assemble');
     });
 
@@ -844,7 +869,7 @@ describe("workflow-contracts", () => {
       });
       expect(request).toMatch(/workflow_dispatch:/);
       includesAll(jobBlock(request, 'request'), [/permissions: \{\}/, /operation: create/]);
-      includesAll(jobBlock(request, 'summary'), [/needs: request/, /if: always\(\)/, /ci-quality-summary@/]);
+      includesAll(jobBlock(request, 'request'), [/if: always\(\)/, /ci-quality-summary@/]);
       expect(caller).toMatch(/workflow_run:/);
       includesAll(jobBlock(caller, 'validate-request'), [/actions: read/, /operation: verify/]);
       const prepareJob = jobBlock(caller, 'prepare');
@@ -910,9 +935,9 @@ describe("workflow-contracts", () => {
 
     // integration_id: package-publication-workflow-contract
     test('package workflows preserve failed and unknown outcomes', () => {
-      const request = jobBlock(read('workflows/package/package-publication-request.yml'), 'summary');
+      const request = jobBlock(read('workflows/package/package-publication-request.yml'), 'request');
       const publication = jobBlock(read('workflows/package/package-publication-caller.yml'), 'summary');
-      for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]) expect(request).toMatch(pattern);
+      for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ job\.status \}\}"/]) expect(request).toMatch(pattern);
       for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.publish\.result \}\}"/]) expect(publication).toMatch(pattern);
     });
   });
@@ -1152,6 +1177,7 @@ describe("workflow-contracts", () => {
       const workflow = read('.github/workflows/quality-gate.yml');
       const linux = jobBlock(workflow, 'contract-linux');
       const windows = jobBlock(workflow, 'rust-windows');
+      const installerLinux = jobBlock(workflow, 'installer-linux');
       const installerWindows = jobBlock(workflow, 'installer-windows');
       const installerMacos = jobBlock(workflow, 'installer-macos');
       const installerHandoff = jobBlock(workflow, 'installer-handoff');
@@ -1187,19 +1213,34 @@ describe("workflow-contracts", () => {
         /test "\$\(uname -m\)" = arm64/,
         /python3 -m unittest discover -s runtime\/installer\/tests -p 'test_\*\.py' -v/,
       ]);
-      includesAll(linux, [
+      includesAll(installerLinux, [
         /node tests\/coverage-tools\/measure-installer-coverage\.mjs report "\$A3_CI_INSTALLER_COVERAGE_OUTPUT"/,
         /name: installer-python-source-coverage/,
-        /path: tests\/tmp\/coverage\/installer\/run-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}\/coverage\.json/,
         /if-no-files-found: error/,
       ]);
-      expect(linux.indexOf('name: Set up Python source coverage tool')).toBeLessThan(linux.indexOf('name: Verify all bundled Action sources'));
+      expect(installerLinux.indexOf('name: Set up Python source coverage tool')).toBeLessThan(installerLinux.indexOf('name: Test installer regression with source coverage'));
       const sourceStep = stepContaining(linux, '- name: Verify all bundled Action sources');
-      const reportStep = stepContaining(linux, '- name: Report installer Python source coverage');
-      for (const step of [sourceStep, reportStep]) expect(step).toContain('A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}');
-      expect(sourceStep).toContain('node runtime/repository/verify-action-packages.mjs');
+      const installerStep = stepContaining(installerLinux, '- name: Test installer regression with source coverage');
+      const reportStep = stepContaining(installerLinux, '- name: Report installer Python source coverage');
+      for (const step of [installerStep, reportStep]) expect(step).toContain('A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}');
+      expect(sourceStep).toContain('node runtime/repository/verify-action-packages.mjs --scope=actions');
+      expect(installerStep).toContain('npm test -- runtime/installer/tests/common-regression.test.mjs');
+      expect(linux).not.toContain('measure-installer-coverage.mjs');
+      expect(linux).not.toContain('common-regression.test.mjs');
       expect(reportStep).not.toContain('test:coverage:installer');
-      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
+      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'installer-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
+      expect(aggregate).toContain('INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}');
+      expect(aggregate).toContain('test "$INSTALLER_LINUX_RESULT" = success');
+      const diagnostics = stepContaining(linux, '- name: Test failure diagnostics');
+      for (const file of ['runtime/diagnostics/tests/failure.test.mjs', 'tests/action-failure-diagnostics.test.mjs', 'tests/runtime-failure-diagnostics.test.mjs', 'tests/workflow-failure-diagnostics.test.mjs']) {
+        expect(diagnostics).toContain(file);
+      }
+      expect(diagnostics).not.toMatch(/continue-on-error|if:/);
+      const cores = stepContaining(linux, '- name: Test shared verification cores');
+      for (const file of ['runtime/github-toolchain/tests/verify-github-toolchain.test.mjs', 'runtime/path/tests/same-file-core.test.mjs', 'runtime/platform/tests/platform-manifest-core.test.mjs', 'runtime/vitest/tests/vitest-summary-core.test.mjs']) {
+        expect(cores).toContain(file);
+        expect(linux.split(file)).toHaveLength(2);
+      }
       includesAll(installerHandoff, [
         /producer: contract-linux/,
         /name: installer-platform-\$\{\{ matrix\.platform \}\}/,
@@ -1524,13 +1565,12 @@ describe("workflow-contracts", () => {
     // integration_id: repository-quality-delivery-regression
     test('canonical workflow summaries cover exactly their needs jobs', () => {
       const workflows = [
+        ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
-        ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
-        ['workflows/package/package-publication-request.yml', 'summary'],
         ['workflows/package/package-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-package-preparation.yml', 'summary'],
         ['.github/workflows/ci-package-publication.yml', 'summary'],
@@ -1601,14 +1641,13 @@ describe("workflow-contracts", () => {
     // integration_id: failure-diagnostics-contract
     test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
       const workflows = [
+        ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
         ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
-        ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
-        ['workflows/package/package-publication-request.yml', 'summary'],
         ['workflows/package/package-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-package-preparation.yml', 'summary'],
         ['.github/workflows/ci-package-publication.yml', 'summary'],
@@ -1694,6 +1733,27 @@ describe("workflow-contracts", () => {
       const release = yaml.parse(read('.github/workflows/ci-release-publication.yml')).jobs;
       expect(release.quality.steps.find(step => step.uses?.includes('/ci-quality-toolchain@')).with['version-policy']).toBeUndefined();
       expect(release.authority.steps.find(step => step.id === 'platform-matrix').with['runner-policy']).toBe('trusted');
+    });
+  });
+});
+
+
+describe('repository installer CI result gate', () => {
+  describe('required hosted gate', () => {
+    // evidence_role: supplemental
+    // test_level: integration
+    // integration_id: repository-quality-delivery-regression
+    test('requires installer Linux success and rejects failure cancellation and skipped execution', () => {
+      // Arrange
+      const step = yaml.parse(read('.github/workflows/quality-gate.yml')).jobs.contract.steps[0];
+      const environment = { ...process.env, ...Object.fromEntries(Object.keys(step.env).map((key) => [key, 'success'])) };
+      // Act
+      const execute = (status) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
+        encoding: 'utf8', env: { ...environment, INSTALLER_LINUX_RESULT: status },
+      });
+      // Assert
+      expect(execute('success').status).toBe(0);
+      for (const status of ['failure', 'cancelled', 'skipped', '']) expect(execute(status).status, status).not.toBe(0);
     });
   });
 });

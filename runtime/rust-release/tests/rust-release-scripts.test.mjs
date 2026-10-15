@@ -127,6 +127,51 @@ describe("contract.ci-rust-release-build.processing", () => {
   describe("rust-release-build-script", () => {
     // contract_id: contract.ci-rust-release-build.processing
     // integration_id: rust-release-build-script
+    test('Windows wrapper delegates manifest validation without invoking Node twice', () => withFixture((fixture) => {
+      // Arrange
+      const sourceSha = initializeGitFixture(fixture);
+      const manifestPath = path.join(fixture, 'platform-manifest.yml');
+      const manifestText = 'platforms:\n  - {id: windows-x64, runner: windows-2022, target: x86_64-pc-windows-msvc}\n';
+      writeFileSync(manifestPath, manifestText);
+      const cargoManifest = path.join(fixture, 'Cargo.toml');
+      writeFileSync(cargoManifest, '[package]\nname="example-cli"\nversion="0.3.0"\n');
+      const authorityPath = path.join(fixture, 'authority.json');
+      writeFileSync(authorityPath, JSON.stringify({
+        language_profile: 'rust', toolchain_version: '1.90.0', platform_manifest: manifestPath,
+        platform_manifest_sha256: sha256(manifestText), source_sha: sourceSha, version: '0.3.0',
+      }));
+      const fakeBin = path.join(fixture, 'bin');
+      mkdirSync(fakeBin);
+      const delegationLog = path.join(fixture, 'delegation.log');
+      for (const [name, body] of Object.entries({
+        uname: 'echo MINGW64_NT',
+        node: 'exit 99',
+        pwsh: 'printf "%s\\n" "$@" > "$DELEGATION_LOG"\nexit 73',
+      })) {
+        const executable = path.join(fakeBin, name);
+        writeFileSync(executable, `#!/usr/bin/env bash\n${body}\n`);
+        chmodSync(executable, 0o755);
+      }
+      const output = path.join(fixture, 'release-output');
+      // Act
+      const result = run(path.join(scriptRoot, 'ci-release-build.sh'), [
+        'rust', manifestPath, '1.90.0', 'windows-x64', 'x86_64-pc-windows-msvc', authorityPath, output,
+      ], { cwd: fixture, env: {
+        ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}`,
+        CI_CARGO_MANIFEST_PATH: cargoManifest, CI_RELEASE_BINARY_NAME: 'example-cli',
+        CI_RELEASE_ASSET_PREFIX: 'example-cli', DELEGATION_LOG: delegationLog,
+      } });
+      // Assert: the delegated failure is propagated without an earlier Node invocation.
+      expect(result.status, result.stderr).toBe(73);
+      expect(readFileSync(delegationLog, 'utf8').trim().split('\n')).toEqual([
+        '-NoLogo', '-NoProfile', '-File', path.join(scriptRoot, 'ci-release-build.ps1'),
+        '-Profile', 'rust', '-PlatformManifest', manifestPath, '-Toolchain', '1.90.0',
+        '-PlatformId', 'windows-x64', '-PlatformTarget', 'x86_64-pc-windows-msvc',
+        '-AuthorityPath', authorityPath, '-OutputDirectory', output,
+      ]);
+      expect(existsSync(output)).toBe(false);
+    }));
+
     test('release build binds exact toolchain and a unique manifest platform before building', () => withFixture((fixture) => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);
@@ -157,7 +202,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       const targetDirectory = path.join(fixture, 'target');
       mkdirSync(fakeBin);
       const rustup = path.join(fakeBin, 'rustup');
-      writeFileSync(rustup, '#!/usr/bin/env bash\nexit 0\n');
+      writeFileSync(rustup, '#!/usr/bin/env bash\nprintf \'%s\\n\' \"$*\" >> \"$FAKE_RUSTUP_LOG\"\nexit \"${FAKE_RUSTUP_EXIT_CODE:-0}\"\n');
       chmodSync(rustup, 0o755);
       const cargo = path.join(fakeBin, 'cargo');
       writeFileSync(cargo, [
@@ -192,6 +237,7 @@ describe("contract.ci-rust-release-build.processing", () => {
         FAKE_MANIFEST: cargoManifest,
         FAKE_TARGET_DIR: targetDirectory,
         FAKE_TARGET: platformTarget,
+        FAKE_RUSTUP_LOG: path.join(fixture, 'rustup.log'),
         FAKE_VERSION_OUTPUT: 'a3-sdd 0.3.0',
       };
       const args = (toolchain, target, output) => [
@@ -209,6 +255,18 @@ describe("contract.ci-rust-release-build.processing", () => {
       ), { env: environment });
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
+      expect(readFileSync(environment.FAKE_RUSTUP_LOG, 'utf8').trim().split('\n')).toEqual([
+        `toolchain install 1.90.0 --profile minimal --target ${platformTarget}`,
+      ]);
+
+      const failedSetup = runBuild(args(
+        '1.90.0', platformTarget, path.join(fixture, 'setup-failed'),
+      ), { env: { ...environment, FAKE_RUSTUP_EXIT_CODE: '1', FAKE_MANIFEST: '/must-not-reach-cargo' } });
+      expect(failedSetup.status).not.toBe(0);
+      expect(failureEvidence(failedSetup.stderr)).toMatchObject({
+        classification: { operation: 'build', stage: 'toolchain-install' },
+      });
+      expect(existsSync(path.join(fixture, 'setup-failed'))).toBe(false);
 
       // Act / Assert: checkout EOL differences are permitted, other bytes remain bound.
       const acceptedManifests = [manifestText.replaceAll('\n', '\r\n'), manifestText.replace('\n', '\r\n')];

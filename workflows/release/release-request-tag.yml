@@ -14,6 +14,7 @@ jobs:
       actions: write
       contents: read
     env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       CI_GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Resolve annotated tag identity
