@@ -65,6 +65,29 @@
 - runner image の変更、廃止、提供状況を確認できない場合は、実行済み・適合済みと判断しない。
 - trust boundary と version の判断を混ぜない。安全な runner でも version が未指定なら不適合であり、version が固定されても untrusted input を安全に実行できる証拠にはならない。
 
+## OS・版の選定と廃止判断
+
+platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更・削除時と、CI監査時に次を判断する。providerは本基準・標準構成・結果集約を所有し、consumerは製品の対応範囲と検査の同等性を判断する。
+
+### 選定と固定粒度
+
+1. 製品が保証するOS/CPUと必要な検証を先に決め、共通化できる処理を確認した後に時間・費用を比較する。native build/test、path、権限、installer等のOS固有保証は対応構成ごとに維持する。
+2. 「なぜ固定が必要か」「どの幅まで許容できるか」を、前節の対象別指定と必要な保証に照らして自問する。完全一致を選ぶなら、同一性・互換性等の理由と、制約を緩めるための検証条件を残す。新しい版が出たことや未検証であることだけで既存の受理範囲を狭めない。
+3. 共通検査は、command、入力、source、依存解決、projectとHOMEの設定、toolchain、OS/CPUによる対象の差を照合する。format/securityという名前だけで同等と判断しない。代表OSは必要能力・実測時間・費用・保守性から選び、先頭platformに置く理由を残す。同等性が不明または崩れた場合は全OSの全検査へ戻す。
+4. 選定理由、固定粒度・許容幅、省略する検査と代替保証、証拠のidentity、owner、次回見直し日・条件を既存の設計またはissueへ記録する。manifestは実行設定に限定し、判断記録用の必須fieldを追加しない。`sharedStandardChecks`はこの判断を済ませたconsumerの宣言として扱う。
+
+### 廃止の線引きと見直し
+
+| 判断 | 根拠と扱い |
+| --- | --- |
+| 標準CIから除外する | Hosted providerのrunner廃止、OSのsecurity support終了、runtime/toolchainのEOL、必要能力との非互換、解消できない不具合を起点に代替構成と検証を決める。継続する場合は理由・緩和策・期限を記録する。 |
+| 製品の対応を終了する | consumerが利用者への影響、代替先、告知日と終了日を決める。標準CIからの除外だけで製品対応終了を決定しない。 |
+| validatorが入力を拒否する | 入力形式、必要能力、信頼境界に対する具体的な不適合を根拠にする。年齢、標準CIでの非採用、新版の登場だけを拒否条件にしない。 |
+
+- providerが廃止日を公表したら、90日前までの移行着手と30日前までの代替検証完了を運用目安とする。製品対応終了は原則90日前の告知を目安とする。短い予告期間、重大な脆弱性、突然の提供停止では例外理由・影響・代替策を記録する。これらの日数をvalidatorの固定閾値にしない。
+- 少なくとも各release時と監査時に固定理由・許容幅を見直す。対応範囲、依存、設定、toolchain、runner imageの変更時には検査の同等性も再確認する。監査では当日の公式な提供・サポート状況と判断記録を照合し、未確認を適合へ読み替えない。
+- 例えば新版runnerが登場しただけなら旧版を拒否しない。providerが旧runnerの提供終了を告知した場合は代替runnerで検証して移行する。HOME設定がOSごとに異なると判明した場合は共通検査の省略を解除する。
+
 ## テンプレートと例外
 - 配布templateのplaceholderは共通生成処理の入力である。製品設定を導入時に渡し、固定参照は配布元のmanifestとregistryから解決する。利用者はplaceholderを手動置換せず、生成済みcallerを設定の正本として読み返す。配置後のworkflowにplaceholderを残してはならない。
 - workflow `workflow_dispatch` の入力で runtime や runner を選ぶ場合は、repository 内でレビュー済みの allowlist へ写像し、入力値を `runs-on`、`uses`、download URL、shell source として直接再解釈しない。privileged workflow では trusted CI control が解決した値だけを受け取る。

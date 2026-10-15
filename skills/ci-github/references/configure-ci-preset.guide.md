@@ -301,6 +301,8 @@ trusted PR check は標準で base SHA の trusted CI assets を使用する。b
 
 platform 固有の runtime、artifact、installer の検証が必要な project だけが、次の順で optional asset を導入する。
 
+manifestの作成・追加・変更・削除前に、[OS・版の選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)を適用し、対応範囲・代表OS・共通検査・固定粒度の判断を既存の設計またはissueへ残す。
+
 1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](runner-trust-policy.reference.md#platform-別-quality-check)に従う。
 2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。 任意の `sharedStandardChecks: true` は、標準Rustのformat/securityについてHOMEとprojectの設定・OS/architecture対象が全runnerで同等と利用projectが確認した場合だけ指定する。未指定/falseは全検査を維持し、trueは信頼済みbaseの宣言だけ有効になる。先頭platformが全検査、残りがnative検査を実行し、全platform成功を要求する。PR headだけの宣言やbootstrapでは省略しない。
 3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
