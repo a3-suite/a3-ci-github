@@ -70,12 +70,6 @@ jobs:
         shell: bash
         run: node tests/coverage-tools/contract-subject-coverage.mjs --check
 
-      - name: Test contract-subject coverage reporter
-        shell: bash
-        run: |
-          npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
-          npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
-
       - name: Test workflow and repository capability contracts
         shell: bash
         run: >-
@@ -483,6 +477,12 @@ jobs:
           node-version: '24.21.0'
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test contract-subject coverage reporter
+        shell: bash
+        run: |
+          npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
+          npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
+
       - name: Set up Python source coverage tool
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
         with:

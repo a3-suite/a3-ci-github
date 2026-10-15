@@ -40,6 +40,7 @@
    - trusted CI controlと操作対象sourceのcheckout pathを分離する。
    - 操作対象sourceは検証済みrequestのsource SHAへ固定する。
    - 対応するOS / CPU architectureを1つ以上明示する。
+   - platform manifestを作成・変更・削除する際は、[OS・版の選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)を適用してから実行設定を記述する。
    - trusted controlのplatform manifestを検証してGitHub-hosted runnerのmatrixへ変換し、各platformをmanifestで指定したnative OS runner上でbuildする。
    - platform manifestは`platforms`だけをroot fieldに持ち、各要素を`id`、`runner`、`target`だけで構成する。`id`と`target`は重複不可、`runner`はci-githubのplatform manifest契約が許可するGitHub-hosted runner labelに限定し、空集合、未知field、不正値はfail closedとする。
    - canonical workflowはbuild adapterへ`language-profile`、platform manifest、toolchain、現在の`platform-id`、現在の`platform-target`、authority context、platform別output directoryの順で渡す。

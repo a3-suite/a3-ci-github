@@ -1,17 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
-import { fixture, remoteClient } from './fixtures.mjs';
+import { fixture, remoteClient, preObservationFixture } from './fixtures.mjs';
 import { publishRelease, GithubPublisherClient } from '../../../actions/ci-release-publisher/src/publisher.ts';
 import { loadAssembly, observeBefore, verifyAfter } from '../observation.ts';
-import { validateEvidence } from '../schema.ts';
-
-// The preparation observation is schema-validated from the assembled handoff; the independent-evidence case below keeps the real observation.
-const preObservationFixture = (options) => {
-  const { identity, handoffDigest } = loadAssembly(options);
-  return validateEvidence('observation', { schema_version: '1', kind: 'ci-github-release-observation', identity, handoff_digest: handoffDigest,
-    phase: 'pre-create', complete: true, visibility: 'public-and-non-public', release_ids: [] });
-};
 
 const setup = async (t, changes = {}, { realObservation = false } = {}) => {
   const f = fixture(t);

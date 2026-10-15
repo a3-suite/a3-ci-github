@@ -1227,6 +1227,11 @@ describe("workflow-contracts", () => {
       expect(installerStep).toContain('npm test -- runtime/installer/tests/common-regression.test.mjs');
       expect(linux).not.toContain('measure-installer-coverage.mjs');
       expect(linux).not.toContain('common-regression.test.mjs');
+      const reporter = stepContaining(installerLinux, '- name: Test contract-subject coverage reporter');
+      expect(reporter).toContain('npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund');
+      expect(reporter).toContain('npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs');
+      expect(reporter).not.toMatch(/continue-on-error|if:/);
+      expect(linux).not.toContain('Test contract-subject coverage reporter');
       expect(reportStep).not.toContain('test:coverage:installer');
       expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'installer-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
       expect(aggregate).toContain('INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}');

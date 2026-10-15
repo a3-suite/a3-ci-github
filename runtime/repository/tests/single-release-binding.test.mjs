@@ -1,6 +1,6 @@
-import { describe, test, expect, onTestFinished } from 'vitest';
+import { describe, test, expect, onTestFinished, beforeAll, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
@@ -9,12 +9,17 @@ import { planActionReferenceUpdate, applyActionReferenceUpdate } from '../update
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const failure = (operation) => { try { operation(); } catch (error) { return error.message; } };
-const fixture = () => {
+const access = (directory) => ({
+  directory,
+  git: (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: 'pipe' }).trim(),
+  write: (relative, bytes) => { mkdirSync(path.dirname(path.join(directory, relative)), { recursive: true }); writeFileSync(path.join(directory, relative), bytes); },
+});
+let seed;
+let implementation;
+beforeAll(() => {
   mkdirSync(path.join(root, 'tmp'), { recursive: true });
-  const directory = mkdtempSync(path.join(root, 'tmp/single-release-binding-'));
-  onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
-  const git = (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: 'pipe' }).trim();
-  const write = (relative, bytes) => { mkdirSync(path.dirname(path.join(directory, relative)), { recursive: true }); writeFileSync(path.join(directory, relative), bytes); };
+  seed = mkdtempSync(path.join(root, 'tmp/single-release-binding-seed-'));
+  const { git, write } = access(seed);
   git('init', '-b', 'main'); git('config', 'user.name', 'Binding Test'); git('config', 'user.email', 'binding@example.invalid'); git('config', 'commit.gpgsign', 'false'); git('config', 'core.autocrlf', 'false');
   const zero = '0'.repeat(40);
   const registry = yaml.parse(readFileSync(path.join(root, registryPath), 'utf8'));
@@ -32,7 +37,15 @@ const fixture = () => {
   for (const name of ['ci-quality', 'ci-quality-platforms', 'ci-package-preparation', 'ci-release-publication', 'ci-package-publication']) write(`.github/workflows/${name}.yml`, yaml.stringify({ jobs: { checked: { steps } } }));
   git('add', '.'); git('commit', '-m', 'base');
   write('VERSION', '0.2.11\n'); git('add', '.'); git('commit', '-m', 'implementation');
-  return { directory, git, write, implementation: git('rev-parse', 'HEAD') };
+  implementation = git('rev-parse', 'HEAD');
+});
+afterAll(() => { if (seed) rmSync(seed, { recursive: true, force: true }); });
+const fixture = () => {
+  const directory = mkdtempSync(path.join(root, 'tmp/single-release-binding-'));
+  onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
+  // Copy the index, refs and objects too: each case mutates a fully isolated real repository.
+  cpSync(seed, directory, { recursive: true });
+  return { ...access(directory), implementation };
 };
 
 // flow_id: single-release-binding
