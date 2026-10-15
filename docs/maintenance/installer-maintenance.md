@@ -29,6 +29,8 @@ ActionとCLIのPython payloadは同じ `src/` から生成します。利用側�
 
 共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
 
+組立とcleanupが併発する失敗の診断は[観測契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/observations.sdd.yml)に従います。Pythonの失敗からNodeのsanitizerを経てAction／CLIの最終ログへ届く経路を、配布物への障害注入テストで確認します。
+
 ## 検証と生成
 
 workspace rootで実行します。固定依存の復元は [DEVELOPMENT.md](../../DEVELOPMENT.md) に従います。
@@ -63,6 +65,6 @@ npm run test:coverage:installer
 
 保守環境に `uv` とPythonが必要です。固定版coverage.pyを保守用の隔離環境で使い、runtime／consumerの依存には追加しません。`runtime/installer/tests/coverage.ini` がPythonソースと子プロセス計測を定め、runごとの `tests/tmp/coverage/installer/` にdataとJSONを保存します。未ロードのPython sourceも分母に含め、`dist/`・テスト・OS scriptはPython計測対象にしません。JS／TSソースは通常の `npm run test:coverage` で別に計測します。
 
-Linux CIはprovider regressionをcoverage付きで一度実行し、後続stepで同じ実行のdataからJSONレポートを生成してartifactへ保存します。実行失敗・未完了・過去の出力をレポート生成の成功へ読み替えません。通常のローカル回帰とmacOS／Windowsのnative検査は維持します。Python計測値はOS scriptのカバレッジやWindows native実行を表しません。
+Linux CIの `installer-linux` jobはprovider regressionをcoverage付きで一度実行し、後続stepで同じ実行のdataからJSONレポートを生成してartifactへ保存します。実行失敗・未完了・過去の出力をレポート生成の成功へ読み替えません。通常のローカル回帰とmacOS／Windowsのnative検査は維持します。Python計測値はOS scriptのカバレッジやWindows native実行を表しません。
 
 このローカル検証は公開、配備、Hosted workflowや未実行OSの受入を代替しません。

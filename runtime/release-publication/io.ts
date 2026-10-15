@@ -75,6 +75,7 @@ export type DiagnosticType = {
   operation: string; phase: string; method?: string; 'sanitized-endpoint'?: string;
   'http-status'?: number | 'unavailable'; 'request-id'?: string; 'sanitized-reason': string;
   'exit-status'?: number | 'unavailable'; signal?: string;
+  cleanup?: { status: 'failed'; 'temporary-state': 'unknown' };
   comparison?: { field: 'installer-candidate-files'; expected: string[]; observed: string[]; missing: string[]; extra: string[]; changed: string[] };
 };
 export const safeInstallerComparison = (value: unknown): value is NonNullable<DiagnosticType['comparison']> => record(value)
@@ -82,8 +83,12 @@ export const safeInstallerComparison = (value: unknown): value is NonNullable<Di
   && value.field === 'installer-candidate-files'
   && ['expected', 'observed', 'missing', 'extra', 'changed'].every((key) => Array.isArray(value[key])
     && value[key].length <= 256 && value[key].every((entry: unknown) => typeof entry === 'string' && /^[A-Za-z0-9._+-]{1,200}$/.test(entry)));
+export const safeInstallerCleanup = (value: unknown): value is NonNullable<DiagnosticType['cleanup']> => record(value)
+  && Object.keys(value).sort().join(',') === 'status,temporary-state'
+  && value.status === 'failed' && value['temporary-state'] === 'unknown';
 const safeDiagnostic = (value: unknown): value is DiagnosticType => {
-  if (!record(value) || Object.keys(value).some((key) => !['operation', 'phase', 'method', 'sanitized-endpoint', 'http-status', 'request-id', 'sanitized-reason', 'exit-status', 'signal', 'comparison'].includes(key))) return false;
+  if (!record(value) || Object.keys(value).some((key) => !['operation', 'phase', 'method', 'sanitized-endpoint', 'http-status', 'request-id', 'sanitized-reason', 'exit-status', 'signal', 'comparison', 'cleanup'].includes(key))) return false;
+  if (value.cleanup !== undefined && (value.operation !== 'standard-installer' || !safeInstallerCleanup(value.cleanup))) return false;
   if (value.comparison !== undefined && !safeInstallerComparison(value.comparison)) return false;
   if (typeof value.operation !== 'string' || typeof value.phase !== 'string' || typeof value['sanitized-reason'] !== 'string' || !diagnosticOperations.includes(value.operation) || !diagnosticPhases.includes(value.phase) || !diagnosticReasons.includes(value['sanitized-reason'])) return false;
   if (value.method !== undefined && (typeof value.method !== 'string' || !['GET', 'POST', 'PATCH'].includes(value.method))) return false;

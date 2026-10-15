@@ -120,21 +120,21 @@ jobs:
             npm test -- tests/public-cli-lifecycle.test.mjs
           npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 
-      - name: Test shared GitHub toolchain verifier
+      - name: Test failure diagnostics
+        run: >-
+          node node_modules/vitest/vitest.mjs run
+          runtime/diagnostics/tests/failure.test.mjs
+          tests/action-failure-diagnostics.test.mjs
+          tests/runtime-failure-diagnostics.test.mjs
+          tests/workflow-failure-diagnostics.test.mjs
+      - name: Test shared verification cores
         shell: bash
-        run: npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-
-      - name: Test shared path identity core
-        shell: bash
-        run: npm test -- runtime/path/tests/same-file-core.test.mjs
-
-      - name: Test shared platform manifest core
-        shell: bash
-        run: npm test -- runtime/platform/tests/platform-manifest-core.test.mjs
-
-      - name: Test shared Vitest summary core
-        shell: bash
-        run: npm test -- runtime/vitest/tests/vitest-summary-core.test.mjs
+        run: >-
+          npm test --
+          runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+          runtime/path/tests/same-file-core.test.mjs
+          runtime/platform/tests/platform-manifest-core.test.mjs
+          runtime/vitest/tests/vitest-summary-core.test.mjs
 
       - name: Test Vitest summary CLI and conformance
         shell: bash
@@ -152,16 +152,9 @@ jobs:
           actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
 
-      - name: Set up Python source coverage tool
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
-        with:
-          version: '0.11.15'
-
       - name: Verify all bundled Action sources
         shell: bash
-        env:
-          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
-        run: node runtime/repository/verify-action-packages.mjs
+        run: node runtime/repository/verify-action-packages.mjs --scope=actions
 
       - name: Test Action source and runtime boundary gates
         shell: bash
@@ -456,18 +449,6 @@ jobs:
           test "$STATUS" = passed
           test "$COLLECTION" = complete
 
-      - name: Report installer Python source coverage
-        env:
-          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
-        run: node tests/coverage-tools/measure-installer-coverage.mjs report "$A3_CI_INSTALLER_COVERAGE_OUTPUT"
-
-      - name: Preserve installer source coverage report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: installer-python-source-coverage
-          path: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}/coverage.json
-          if-no-files-found: error
-
       - name: Prepare Linux installer transport acceptance
         id: installer-handoff
         env:
@@ -488,6 +469,40 @@ jobs:
         with:
           name: installer-handoff-${{ runner.os }}
           path: tests/tmp/installer-acceptance
+          if-no-files-found: error
+
+  installer-linux:
+    name: Installer contract / Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up verification Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24.21.0'
+      - name: Install maintenance test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Set up Python source coverage tool
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        with:
+          version: '0.11.15'
+
+      - name: Test installer regression with source coverage
+        env:
+          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: npm test -- runtime/installer/tests/common-regression.test.mjs
+
+      - name: Report installer Python source coverage
+        env:
+          A3_CI_INSTALLER_COVERAGE_OUTPUT: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: node tests/coverage-tools/measure-installer-coverage.mjs report "$A3_CI_INSTALLER_COVERAGE_OUTPUT"
+
+      - name: Preserve installer source coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installer-python-source-coverage
+          path: tests/tmp/coverage/installer/run-${{ github.run_id }}-${{ github.run_attempt }}/coverage.json
           if-no-files-found: error
 
   rust-windows:
@@ -692,12 +707,13 @@ jobs:
   contract:
     name: CI Action contract / hosted
     if: always()
-    needs: [contract-linux, rust-windows, installer-windows, installer-macos, installer-handoff]
+    needs: [contract-linux, installer-linux, rust-windows, installer-windows, installer-macos, installer-handoff]
     runs-on: ubuntu-24.04
     steps:
       - name: Require all platform contract evidence
         env:
           LINUX_RESULT: ${{ needs.contract-linux.result }}
+          INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}
           WINDOWS_RESULT: ${{ needs.rust-windows.result }}
           INSTALLER_WINDOWS_RESULT: ${{ needs.installer-windows.result }}
           INSTALLER_MACOS_RESULT: ${{ needs.installer-macos.result }}
@@ -705,6 +721,7 @@ jobs:
         shell: bash
         run: |
           test "$LINUX_RESULT" = success
+          test "$INSTALLER_LINUX_RESULT" = success
           test "$WINDOWS_RESULT" = success
           test "$INSTALLER_WINDOWS_RESULT" = success
           test "$INSTALLER_MACOS_RESULT" = success

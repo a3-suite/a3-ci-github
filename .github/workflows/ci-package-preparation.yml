@@ -45,7 +45,7 @@ jobs:
           test -n "$PUBLISH_VERSION"
           printf '{"strategy":"exact","publishVersion":%s}\n' "$PUBLISH_VERSION_JSON" > version-plan.json
       - id: version
-        uses: a3-suite/a3-ci-github/actions/ci-publish-version@a1b57c40551a1860e372e2c5b0c9401041478da0
+        uses: a3-suite/a3-ci-github/actions/ci-publish-version@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           version-plan-json: version-plan.json
 
@@ -90,7 +90,7 @@ jobs:
       WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a1b57c40551a1860e372e2c5b0c9401041478da0
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           summary-json: >-
             {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","rawResult":"${{ needs.version-plan.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build job result: ${{ needs.build.result }}"}]}

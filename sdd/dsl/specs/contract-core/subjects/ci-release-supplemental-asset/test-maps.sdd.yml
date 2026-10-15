@@ -3,6 +3,12 @@ name: contract-test-maps
 subject_ref: subject.ci.release-supplemental-asset
 test_maps:
   - verification_id: verification.ci-release-supplemental-asset.outputs
+    case_id: standard-entry-name-publication
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: "standard installer > assembly > verifies native candidate and produces handoff without consumer implementation"
+        check_refs: [assets]
+  - verification_id: verification.ci-release-supplemental-asset.outputs
     case_id: standard-entry-name-rejection
     tests:
       - path: runtime/installer/tests/common-regression.test.mjs

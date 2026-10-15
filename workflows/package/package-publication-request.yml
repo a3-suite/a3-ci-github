@@ -30,9 +30,11 @@ jobs:
   request:
     runs-on: <versioned-runner>
     permissions: {}
+    env:
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Validate and write request handoff
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@a1b57c40551a1860e372e2c5b0c9401041478da0
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           operation: create
           source-sha: ${{ inputs.source_sha }}
@@ -47,17 +49,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  summary:
-    needs: request
-    if: always()
-    runs-on: <versioned-runner>
-    permissions:
-      contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@a1b57c40551a1860e372e2c5b0c9401041478da0
+        if: always()
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@cb707b777287d03e1e980e327f0ab59e39d75e34
         with:
           summary-json: >-
-            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ needs.request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ needs.request.result }}"}]}
+            {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ job.status }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"request job result: ${{ job.status }}"}]}

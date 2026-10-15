@@ -350,8 +350,11 @@ def run(request: dict) -> None:
         try:
             temporary_root.rmdir()
         except OSError:
+            # Keep the original failure; cleanup evidence must not expose local paths.
+            failure = primary_error if primary_error is not None else ValueError("installer-cleanup-failed")
+            failure.installer_cleanup_failed = True
             if primary_error is None:
-                raise
+                raise failure from None
 
 
 def main() -> int:
@@ -370,6 +373,8 @@ def main() -> int:
         diagnostic = {"phase": phase, "sanitized-reason": reason}
         if isinstance(error, InstallerDiagnosticError):
             diagnostic["comparison"] = error.comparison
+        if getattr(error, "installer_cleanup_failed", False) is True:
+            diagnostic["cleanup"] = {"status": "failed", "temporary-state": "unknown"}
         sys.stderr.write(json.dumps(diagnostic) + "\n")
         return 1
     return 0

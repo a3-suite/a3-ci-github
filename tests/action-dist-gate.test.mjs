@@ -111,7 +111,7 @@ describe("contract.repository-action-distribution.integrity", () => {
         { command: process.execPath, args: ['/workspace/actions/first/node_modules/typescript/bin/tsc',
           '--project', '/workspace/runtime/diagnostics/tsconfig.json',
           '--typeRoots', '/workspace/actions/first/node_modules/@types'], cwd: '/workspace' },
-        { command: 'npm', args: ['run', 'build'], cwd: '/workspace/actions/first' },
+        { command: 'npm', args: ['run', 'build'], cwd: '/workspace/actions/first', parallelGroup: 'action-build' },
         { command: 'git', args: ['diff', '--exit-code', '--name-only', '--', 'runtime/diagnostics/failure.mjs',
           'runtime/diagnostics/failure.d.mts', 'actions/first/dist', 'runtime/installer/dist'], cwd: '/workspace', failure: 'dist-identity-mismatch' },
       ]);
@@ -206,15 +206,15 @@ describe("contract.repository-action-distribution.integrity", () => {
 
     // contract_id: contract.repository-action-distribution.integrity
     // integration_id: repository-action-distribution-gates
-    test('reports a dist identity mismatch reason and keeps other step failures unchanged', () => {
+    test('reports a dist identity mismatch reason and keeps other step failures unchanged', async () => {
       // Arrange
       const childFailure = new Error('exit status 1');
       const execute = () => { throw childFailure; };
       let mismatch;
       let build;
       // Act
-      try { runPlan([{ command: 'git', args: ['diff'], cwd: '/workspace', failure: 'dist-identity-mismatch' }], execute); } catch (error) { mismatch = error; }
-      try { runPlan([{ command: 'npm', args: ['run', 'build'], cwd: '/workspace' }], execute); } catch (error) { build = error; }
+      try { await runPlan([{ command: 'git', args: ['diff'], cwd: '/workspace', failure: 'dist-identity-mismatch' }], execute); } catch (error) { mismatch = error; }
+      try { await runPlan([{ command: 'npm', args: ['run', 'build'], cwd: '/workspace' }], execute); } catch (error) { build = error; }
       // Assert
       expect(safeErrorReason(mismatch)).toBe('dist-identity-mismatch');
       expect(mismatch.details).toMatchObject({ field: 'dist', observed: 'differs' });
@@ -238,6 +238,69 @@ describe("contract.repository-action-distribution.integrity", () => {
       // Assert
       expect(String(failure)).toMatch(/untracked referenced paths.*scripts\/example\/run\.sh/is);
       expect(safeErrorReason(failure)).toBe('composite-reference-untracked');
+    });
+  });
+});
+
+
+describe('bounded distribution builds', () => {
+  describe('runPlan and buildPlan', () => {
+    // evidence_role: supplemental
+    // test_level: unit
+    // target_id: runPlan
+    test.each([false, true])('bounds active builds and drains before completion (failure=%s)', async (fail) => {
+      // Arrange
+      const calls = [];
+      const pending = new Map();
+      let active = 0;
+      let peak = 0;
+      let completed = false;
+      const build = (name) => ({ command: 'build', args: [], cwd: `/actions/${name}`, parallelGroup: 'action-build' });
+      const execute = async (command, args, options) => {
+        calls.push(command === 'build' ? options.cwd : command);
+        if (command !== 'build') return;
+        active++;
+        peak = Math.max(peak, active);
+        try { await new Promise((resolve, reject) => pending.set(options.cwd, { resolve, reject })); }
+        finally { active--; }
+      };
+      // Act
+      const result = runPlan([{ command: 'prepare', args: [], cwd: '/' }, build('a'), build('b'), build('c'),
+        { command: 'compare', args: [], cwd: '/' }], execute)
+        .then(() => { completed = true; }, (error) => { completed = true; return error; });
+      await new Promise((resolve) => setImmediate(resolve));
+      // Assert
+      expect(calls).toEqual(['prepare', '/actions/a', '/actions/b']);
+      if (fail) pending.get('/actions/a').reject(Object.assign(new Error('failed'), { status: 7 }));
+      else pending.get('/actions/a').resolve();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(completed).toBe(false);
+      expect(calls).toEqual(fail ? ['prepare', '/actions/a', '/actions/b'] : ['prepare', '/actions/a', '/actions/b', '/actions/c']);
+      pending.get('/actions/b').resolve();
+      if (!fail) pending.get('/actions/c').resolve();
+      const outcome = await result;
+      expect(active).toBe(0);
+      expect(peak).toBe(2);
+      if (fail) {
+        expect(outcome.details).toMatchObject({ action: 'a', observed: 7 });
+        expect(calls).not.toContain('compare');
+      } else {
+        expect(outcome).toBeUndefined();
+        expect(calls.at(-1)).toBe('compare');
+      }
+    });
+
+    // evidence_role: supplemental
+    // test_level: unit
+    // target_id: buildPlan
+    test('rejects overlapping Action output directories before starting builds', () => {
+      // Arrange
+      const actions = [
+        { name: 'a', path: '/a', distPath: 'dist' },
+        { name: 'b', path: '/b', distPath: 'dist/nested' },
+      ];
+      // Act / Assert
+      expect(() => buildPlan('/workspace', actions)).toThrow('action-build-output-overlap');
     });
   });
 });

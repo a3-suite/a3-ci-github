@@ -136,7 +136,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
 
 - `.ci/` には workflow runtime、adapter、設定だけを置く。
 - Release／Package の実行資産は、選択した固定 SHA Action binding または `requiredExtensions` の直接接続を正本とし、未接続の用途別 descriptor を完了資産に含めない。管理対象集合は preset、Action binding、その依存閉包から導出し、固定本数で判定しない。
-- `release-publication` は source identity gate と固定 source quality job を分離し、build が両方の成功を要求することを確認する。`.ci/platform-manifest.yml` は `platforms[].{id,runner,target}` として検証し、選択された登録済み標準実装の Action 参照と依存資産を preflight で確認する。
+- `release-publication` は source identity gate と固定 source quality job を分離し、source gate 成功後の read-only build が quality と並列に実行され、assemble が source gate、quality、全OS build の成功を明示的に要求することを確認する。`.ci/platform-manifest.yml` は `platforms[].{id,runner,target}` として検証し、選択された登録済み標準実装の Action 参照と依存資産を preflight で確認する。
 - 契約テストと補助テストは project の既存 `tests/` 規約へ置き、必要な場合だけ `tests/ci/` を使用する。
 - preflight script、preflight runtime、導入元スキルの配置 path は project の実行時資産に含めない。
 

@@ -51,7 +51,7 @@ observations:
       fields:
         - selector: diagnostic
           kind: observation_field
-          meaning: Stable failure code. Process failures include operation, phase, exit status or allowed signal when available. Standard installer reasons are accepted only from a bounded strict provider diagnostic with an allowlisted reason and matching phase; unknown failures are classified without echoing stderr. Owner adapter diagnostics remain private.
+          meaning: Stable failure code. Process failures include operation, phase, exit status or allowed signal when available. Standard installer reasons are accepted only from a bounded strict provider diagnostic with an allowlisted reason and matching phase; unknown failures are classified without echoing stderr. Owner adapter diagnostics remain private. Cleanup failure retains the primary reason, or reports installer-cleanup-failed when it is the sole failure; optional cleanup contains only status=failed and temporary-state=unknown, without inferring residual files or exposing paths.
   - id: observation.ci-release-supplemental-asset.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
     boundary: {ref: boundary.diagnostic-result}
