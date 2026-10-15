@@ -19,17 +19,19 @@ describe('runtime failure diagnostics', () => {
   // contract_id: contract.ci-failure-diagnostics.actionable
   // integration_id: runtime-failure-diagnostics
   test.each(commands)('%s preserves its outcome and safe diagnostic context', (_name, subject, args, status) => {
-    const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8' });
-    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
-    const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
-    expect(result.status).toBe(status);
-    expect(evidence.classification.subject).toBe(subject);
-    expect(evidence.classification.stage).toBeTruthy();
-    expect(evidence.context).toBeTruthy();
-    expect(evidence.comparison).toBeTruthy();
-    expect(evidence['execution-state'].outcome).toBe(status === 0 ? 'unresolved' : 'failure');
-    expect(evidence['evidence-location'].log).toBe('stderr');
-    expect(evidence['next-check'].rule).toBe(evidence.classification.reason);
+    for (const [githubActions, log] of [['false', 'stderr'], ['true', 'workflow-run-job-step-log']]) {
+      const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: githubActions } });
+      const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+      const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+      expect(result.status).toBe(status);
+      expect(evidence.classification.subject).toBe(subject);
+      expect(evidence.classification.stage).toBeTruthy();
+      expect(evidence.context).toBeTruthy();
+      expect(evidence.comparison).toBeTruthy();
+      expect(evidence['execution-state'].outcome).toBe(status === 0 ? 'unresolved' : 'failure');
+      expect(evidence['evidence-location'].log).toBe(log);
+      expect(evidence['next-check'].rule).toBe(evidence.classification.reason);
+    }
   });
 
   // contract_id: contract.ci-failure-diagnostics.actionable

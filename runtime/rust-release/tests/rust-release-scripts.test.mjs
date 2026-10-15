@@ -127,7 +127,8 @@ describe("contract.ci-rust-release-build.processing", () => {
   describe("rust-release-build-script", () => {
     // contract_id: contract.ci-rust-release-build.processing
     // integration_id: rust-release-build-script
-    test('Windows wrapper delegates manifest validation without invoking Node twice', () => withFixture((fixture) => {
+    // This fixture simulates MINGW delegation with POSIX executables; native PowerShell is covered separately.
+    test('Windows wrapper delegates manifest validation without invoking Node twice', { skip: process.platform === 'win32' }, () => withFixture((fixture) => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);
       const manifestPath = path.join(fixture, 'platform-manifest.yml');
