@@ -50,7 +50,7 @@ export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', tar
   return { root, put, identity, authority, snapshot, name, payload, buildManifest, options, assemble: () => assembleRelease(options, decodePlatformManifest) };
 };
 
-export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}) => {
+export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}, configPath = 'skills/release.json') => {
   const f = fixture(t);
   const configuration = { schemaVersion: 'ci.release-skills.v1', skills: [{ path: 'skills/example-tool', include: ['SKILL.md', 'references', 'scripts', 'assets'], requiredFiles: ['SKILL.md', 'references/setup.guide.md', 'scripts/run.py'] }] };
   f.put('skills/example-tool/SKILL.md', '---\nname: example-tool\ndescription: Read the product using its public CLI.\n---\nRead `references/setup.guide.md` and use `scripts/run.py`.\n');
@@ -63,13 +63,13 @@ export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {
   for (const name of ['_build/notes.md', 'tmp/work.py', 'tests/test.py', 'scripts/__pycache__/run.pyc', 'scripts/runtime.js.map', 'scripts/compiler.tsbuildinfo', 'assets/target/output.obj', 'assets/notes.log', 'assets/.DS_Store', 'references/_build/draft.md', 'scripts/tmp/residual.py', 'scripts/tests/test_runtime.py']) f.put(`skills/example-tool/${name}`, 'not public\n');
   f.put('skills/unselected/SKILL.md', 'not selected');
   mutate(configuration, f.root);
-  f.put('skills/release.json', configuration);
-  const git = (args) => execFileSync('git', ['-C', f.root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  f.put(configPath, configuration);
+  const git = (args, input) => execFileSync('git', ['-C', f.root, ...args], { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
   git(['init', '-q']);
   git(['config', 'user.name', 'Fixture']);
   git(['config', 'user.email', 'fixture@example.invalid']);
   git(['config', 'core.autocrlf', 'false']);
-  git(['add', '-f', '--', 'skills']);
+  git(['add', '-f', '--', '.']);
   git(['update-index', '--chmod=+x', 'skills/example-tool/scripts/run.py']);
   mutateIndex(git);
   git(['commit', '-qm', 'Fixture']);
@@ -77,7 +77,7 @@ export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {
   f.identity.source_sha = sourceSha;
   f.authority.source_sha = sourceSha;
   f.buildManifest.source_sha = sourceSha;
-  f.snapshot.values.CI_RELEASE_SKILLS_CONFIG_PATH = 'skills/release.json';
+  f.snapshot.values.CI_RELEASE_SKILLS_CONFIG_PATH = configPath;
   f.snapshot.digest = sha256(Buffer.from(canonicalJson({ sources: f.snapshot.sources, values: f.snapshot.values })));
   f.authority.config_snapshot_digest = f.snapshot.digest;
   f.put('snapshot.json', f.snapshot);
@@ -87,6 +87,19 @@ export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {
   f.put('skills/example-tool/tmp/untracked.py', 'untracked residual');
   return f;
 };
+
+export const selectedReleaseSkillsFixture = (t) => releaseSkillsFixture(t, (config, root) => {
+  config.skills = [
+    { path: '.', name: 'root-tool' },
+    { path: '.agents/skills/sdd', name: 'sdd' },
+    { path: 'packages/[public]/日本語 tools', name: 'nested-tool' },
+    { path: 'packages/[public]/日本語 tools/child', name: 'child-tool' },
+  ].map(({ path: directory, name }) => {
+    fs.mkdirSync(path.join(root, directory), { recursive: true });
+    fs.writeFileSync(path.join(root, directory, 'SKILL.md'), `---\nname: ${name}\ndescription: Selected public skill.\n---\n`);
+    return { path: directory, include: ['SKILL.md'], requiredFiles: ['SKILL.md'] };
+  });
+}, () => {}, '.ci/selected-skills.json');
 
 export const remoteClient = (f, assembly, changes = {}) => {
   const releaseId = changes.releaseId ?? '42';

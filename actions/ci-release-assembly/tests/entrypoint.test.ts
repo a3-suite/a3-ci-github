@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { fixture, releaseSkillsFixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
+import { fixture, selectedReleaseSkillsFixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -40,7 +40,7 @@ test('missing build inventory retains the failing stage and exact missing entrie
 // integration_id: release-assembly-entrypoint
 test('assembly bundle packages selected release skills', (t) => {
   // Arrange
-  const f = releaseSkillsFixture(t);
+  const f = selectedReleaseSkillsFixture(t);
   const output = f.put('github-output', '');
   // Act
   const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
@@ -50,6 +50,8 @@ test('assembly bundle packages selected release skills', (t) => {
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets.map((asset: { name: string }) => asset.name)).toContain('project-skills.zip');
   expect(fs.readdirSync(path.join(f.options.outputRoot, 'evidence'))).toHaveLength(3);
+  const owner = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
+  expect(owner.files.map((entry: { path: string }) => entry.path)).toEqual(['child-tool/SKILL.md', 'nested-tool/SKILL.md', 'root-tool/SKILL.md', 'sdd/SKILL.md']);
   f.options.outputRoot = path.join(f.root, 'invalid-skills');
   fs.writeFileSync(output, '');
   const rejected = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), 'INPUT_SKILLS-SOURCE-ROOT': '' }, encoding: 'utf8', cwd: f.root });

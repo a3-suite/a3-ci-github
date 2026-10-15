@@ -12,26 +12,27 @@ usage:
   consumers: [human, agent, validator]
 selection:
   input: release_skills_config_path
-  decision: 公開用skills/<skill-name>/SKILL.mdの有無を確認し、ある場合は製品ownerが同梱する・同梱しないを選ぶ。開発用.agents/skills/は対象外。
+  decision: 製品repositoryで管理するSKILL.mdを配置場所にかかわらず確認し、製品ownerが同梱するスキルをskills配列へ明示する。複数選択でき、.agents/skills/も名前だけで除外しない。宣言外のスキルを自動追加しない。
   audit: 公開スキルの有無、同梱の選択と未同梱理由を既存監査レポートへ記録し、CI設定・公開宣言・READMEとの一致を確認する。選択未確認は未同梱へ読み替えず未確認として報告する。
   disabled: __unset__
-  declarationPlacement: skills/release.json
+  declarationPlacement: release_skills_config_pathで指定するrepository相対のJSON。skills/release.jsonは配置例。
   source: authority.source_shaで固定した別checkout。制御checkout・作業ツリー・別版を生成元にしない。
 declaration:
   schemaVersion: ci.release-skills.v1
   fields: [schemaVersion, skills]
   skillFields: [path, include, requiredFiles]
-  path: skills直下の公開スキルroot。root名とSKILL.mdのnameが一致し、重複しない。
-  include: root相対の通常ファイルまたはディレクトリを明示する。未追跡ファイルと選択外rootを含めない。
+  path: repository相対の任意のスキルroot。直下は.で指定し、入れ子・空白・Unicodeを含む配置も選択できる。同一rootの重複、絶対path、親参照、制御文字、backslashは拒否する。
+  include: root相対の通常ファイルまたはディレクトリを明示する。未追跡ファイルや明示されていないファイルを含めない。入れ子のスキルも別rootとして選択できるが、親側のincludeでディレクトリ全体を指定すればその中身も収録対象になる。
   requiredFiles: root相対の必須ファイル。SKILL.mdに加え、利用に必須な参照・実行資材を指定する。除外・欠落は停止。
   unknownFields: reject
 packaging:
   assetName: <repository-name>-skills.zip
-  archiveLayout: スキル名を直下のrootとして相対構造を保持する。OS共通で一度だけ生成する。
+  archiveLayout: 固定sourceのSKILL.mdのnameを直下のrootとして相対構造を保持する。nameは小文字英字で始まる英小文字・数字・hyphenの移植可能な名前とし、選択スキル間で重複させない。sourceディレクトリ名との一致は要求しない。OS共通で一度だけ生成する。
   fileSelectionPolicySource:
     rootRole: provider-repository
     path: runtime/release-publication/skill-package-policy.json
-  policyAuthority: 除外名・除外suffix・収録上限はこのJSONを正本とし、providerへ同梱する。
+  policyAuthority: 除外名・除外suffix・収録ファイルの合計容量上限はこのJSONを正本とし、providerへ同梱する。
+  limits: スキル数・ファイル数・個別ファイル容量に独立した上限を設けない。異常な収録を止める合計容量上限はpolicyAuthorityのJSONに従い、ZIP化前の収録ファイルのバイト数で判定する。
   publicRuntime: 公開scriptsと必要な実行資材はincludeへ明示する。通常は除外するコンパイル出力suffixでもrequiredFilesへ明示したruntimeは保持する。禁止配置・キャッシュ・残骸の除外は解除しない。
   localReferences: SKILL.md内のinline codeとMarkdown linkで明示されたreferences・scripts・assets相対pathを収録一覧へ照合する。変数・placeholder等の動的参照はownerがrequiredFilesへ具体化する。
   safety: 不正相対path・symlink・非通常file・大文字小文字で衝突する収録名を拒否する。sourceのscriptは実行しない。
