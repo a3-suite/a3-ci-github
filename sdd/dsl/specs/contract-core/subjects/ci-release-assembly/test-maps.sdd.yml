@@ -6,6 +6,9 @@ test_maps:
     case_id: same-release-skills
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills exceed former individual limits and retain the aggregate size boundary"
+        check_refs: [handoff, rejection]
+      - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages"
         check_refs: [handoff, digest, rejection]
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
