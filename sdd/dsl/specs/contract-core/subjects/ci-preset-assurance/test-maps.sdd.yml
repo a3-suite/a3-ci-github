@@ -155,5 +155,5 @@ test_maps:
     case_id: detailed-failure-asset-lock
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: "runtime failure diagnostics > preset-assurance preserves its outcome and safe diagnostic context"
+        symbol: "runtime failure diagnostics > asset-lock preserves its outcome and safe diagnostic context"
         check_refs: [diagnostic-details]
