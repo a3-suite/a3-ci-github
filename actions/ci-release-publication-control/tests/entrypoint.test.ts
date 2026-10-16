@@ -123,4 +123,26 @@ test('entrypoint rejects release notes that differ from the approved body digest
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint rejects the authority-internal provenance operation', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-operation-'));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-provenance', 'INPUT_ROOT-DIRECTORY': root } as Record<string, string>;
+
+  // Act
+  const result = spawnSync(process.execPath, [...entrypointArgs], { env, encoding: 'utf8' });
+
+  // Assert
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', stage: 'control-input', reason: 'release-publication-operation-invalid' },
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 });
