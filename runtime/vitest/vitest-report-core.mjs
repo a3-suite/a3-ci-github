@@ -2,7 +2,7 @@ const isRecord = (value) => typeof value === 'object' && value !== null && !Arra
 
 const count = (value) => (typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null);
 
-export const VITEST_ASSERTION_STATUSES = Object.freeze(['passed', 'failed', 'pending', 'skipped', 'todo']);
+const ASSERTION_STATUSES = ['passed', 'failed', 'pending', 'skipped', 'todo'];
 
 export const parseVitestReport = (raw) => {
   try {
@@ -14,14 +14,6 @@ export const parseVitestReport = (raw) => {
 };
 
 const emptyCounts = () => ({ total: null, passed: null, failed: null, skipped: null, todo: null });
-
-const resolveFailedName = (assertion) =>
-  (typeof assertion.fullName === 'string' && assertion.fullName)
-  || (typeof assertion.title === 'string' && assertion.title)
-  || (typeof assertion.name === 'string' && assertion.name)
-  || 'unknown';
-
-const diagnostic = (code, message) => ({ code, message });
 
 const collectProvidedCounts = (report) => {
   const providedFields = {
@@ -46,7 +38,6 @@ const collectProvidedCounts = (report) => {
 
 const deriveAssertionCounts = (testResults) => {
   const derived = { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 };
-  const failedNames = [];
   let structureValid = true;
   let derivedAvailable = false;
   if (testResults !== undefined) {
@@ -61,67 +52,19 @@ const deriveAssertionCounts = (testResults) => {
         }
         for (const assertion of suite.assertionResults) {
           derived.total += 1;
-          if (!isRecord(assertion) || typeof assertion.status !== 'string' || !VITEST_ASSERTION_STATUSES.includes(assertion.status)) {
+          if (!isRecord(assertion) || typeof assertion.status !== 'string' || !ASSERTION_STATUSES.includes(assertion.status)) {
             structureValid = false;
             continue;
           }
           if (assertion.status === 'passed') derived.passed += 1;
-          else if (assertion.status === 'failed') {
-            derived.failed += 1;
-            failedNames.push(resolveFailedName(assertion));
-          } else if (assertion.status === 'todo') derived.todo += 1;
+          else if (assertion.status === 'failed') derived.failed += 1;
+          else if (assertion.status === 'todo') derived.todo += 1;
           else derived.skipped += 1;
         }
       }
     }
   }
-  return { derived, failedNames, structureValid, derivedAvailable };
-};
-
-const classifyOutcome = ({
-  explicitFailure,
-  zero,
-  complete,
-  contradictory,
-  structureValid,
-  consistent,
-  hasAnyCount,
-  providedInvalid,
-}) => {
-  const diagnostics = [];
-  let status;
-  let collection;
-  if (explicitFailure) {
-    status = 'failed';
-    collection = complete ? 'complete' : hasAnyCount ? 'partial' : 'unavailable';
-    diagnostics.push(diagnostic('vitest-report-explicit-failure', 'テストレポートが失敗を報告しています'));
-    if (contradictory) {
-      diagnostics.push(diagnostic('vitest-report-counts-contradictory', '集計値と詳細結果の件数が一致しません'));
-    }
-  } else if (zero) {
-    status = 'unresolved';
-    collection = 'unavailable';
-    diagnostics.push(diagnostic('vitest-report-empty', 'テストレポートにテストが含まれていません'));
-  } else if (complete) {
-    status = 'passed';
-    collection = 'complete';
-  } else {
-    status = 'unresolved';
-    collection = hasAnyCount ? 'partial' : 'unavailable';
-    if (!structureValid) {
-      diagnostics.push(diagnostic('vitest-report-structure-invalid', 'テストレポートの結果構造が不正です'));
-    }
-    if (!consistent) {
-      diagnostics.push(diagnostic('vitest-report-counts-inconsistent', 'テスト件数が不足しているか、整合していません'));
-    }
-    if (contradictory) {
-      diagnostics.push(diagnostic('vitest-report-counts-contradictory', '集計値と詳細結果の件数が一致しません'));
-    }
-  }
-  if (providedInvalid) {
-    diagnostics.push(diagnostic('vitest-report-counts-invalid', 'テストレポートの集計値が不正です'));
-  }
-  return { status, collection, diagnostics };
+  return { derived, structureValid, derivedAvailable };
 };
 
 export const classifyVitestReport = (report) => {
@@ -130,14 +73,11 @@ export const classifyVitestReport = (report) => {
       status: 'unresolved',
       collection: 'unavailable',
       counts: emptyCounts(),
-      failedNames: [],
-      diagnostics: [diagnostic('vitest-report-missing', 'テストレポートが見つからないか、形式が不正です')],
     };
   }
 
   const { provided, providedInvalid } = collectProvidedCounts(report);
-  const { derived, failedNames, structureValid, derivedAvailable } =
-    deriveAssertionCounts(report.testResults);
+  const { derived, structureValid, derivedAvailable } = deriveAssertionCounts(report.testResults);
 
   const source = derivedAvailable ? derived : emptyCounts();
   const counts = {
@@ -156,16 +96,8 @@ export const classifyVitestReport = (report) => {
   const explicitFailure = (counts.failed ?? 0) > 0 || report.success === false;
   const zero = structureValid && !providedInvalid && !contradictory && counts.total === 0;
   const complete = structureValid && !providedInvalid && consistent && !contradictory;
-  const { status, collection, diagnostics } = classifyOutcome({
-    explicitFailure,
-    zero,
-    complete,
-    contradictory,
-    structureValid,
-    consistent,
-    hasAnyCount,
-    providedInvalid,
-  });
-
-  return { status, collection, counts, failedNames, diagnostics };
+  // An explicit failure wins over malformed or contradictory details; zero tests are never a success.
+  const status = explicitFailure ? 'failed' : zero ? 'unresolved' : complete ? 'passed' : 'unresolved';
+  const collection = !explicitFailure && zero ? 'unavailable' : complete ? 'complete' : hasAnyCount ? 'partial' : 'unavailable';
+  return { status, collection, counts };
 };

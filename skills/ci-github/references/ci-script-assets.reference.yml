@@ -65,7 +65,7 @@ pathResolution:
       - assets[].entrypoints（kind が project-adapter、trusted-control、provider-adapter）
     rule: 導入先 project root からの相対で解決する。
 statusValues: [available, required]
-kindValues: [reusable-asset, workflow-embedded, project-adapter, trusted-control, provider-adapter, helper, external-tool, skill-script]
+kindValues: [project-adapter, trusted-control, provider-adapter, skill-script]
 scopeValues: [workflow, shared, workflow-external]
 assets:
   - id: release-source-gate-adapter

@@ -2,12 +2,19 @@
 
 workflowの配置・preflightと、Actionから再利用する定型処理を管理します。
 
-- `adapter/`: language／project adapterのmaterializeと結果整形
+- `adapter/`: language／project adapterのmaterialize
 - `provisioner/`: gh／jq provisionerが共有するchecksum照合、download、PATH handoff
 - `preset/`: canonical workflowの配置同一性、lock、platform manifestの検証
 - `github-toolchain/`: GitHub CI toolchainの固定版検証
 - `rust-release/`: Rust CLI Releaseのsource identity、build、package、artifact検証
 - `repository/`: Action catalogと配布物を検証するリポジトリ保守処理
+- `diagnostics/`: 失敗診断の共通出力
+- `distribution/`: 選択配布の取得と適用
+- `installer/`: installerの組立と検証
+- `path/`: path同一性の判定
+- `platform/`: platform manifestの解釈と選択
+- `release-publication/`: Release資材の組立、公開、読み戻し検証
+- `vitest/`: リポジトリ検証が使うVitestレポートの判定
 
 契約対象別の実行定義とcoverageの検証入口は `tests/coverage-tools/contract-subject-coverage.mjs` です。
 

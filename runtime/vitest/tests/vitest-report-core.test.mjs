@@ -8,7 +8,6 @@ const classification = (report) => {
     status: result.status,
     collection: result.collection,
     counts: result.counts,
-    diagnostics: result.diagnostics.map((diagnostic) => diagnostic.code),
   };
 };
 
@@ -29,7 +28,6 @@ describe("vitest-report-core", () => {
       status: 'passed',
       collection: 'complete',
       counts: { total: 2, passed: 2, failed: 0, skipped: 0, todo: 0 },
-      diagnostics: [],
     });
   });
 
@@ -62,7 +60,6 @@ describe("vitest-report-core", () => {
     });
     expect(result.status).toBe('unresolved');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid', 'vitest-report-counts-contradictory']);
   });
 
   // evidence_role: supplemental
@@ -80,7 +77,6 @@ describe("vitest-report-core", () => {
     });
     expect(result.status).toBe('unresolved');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-counts-contradictory']);
   });
 
   // evidence_role: supplemental
@@ -90,7 +86,6 @@ describe("vitest-report-core", () => {
     const result = classification({ numTotalTests: 2 });
     expect(result.status).toBe('unresolved');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-counts-inconsistent']);
   });
 
   // evidence_role: supplemental
@@ -102,7 +97,6 @@ describe("vitest-report-core", () => {
     });
     expect(result.status).toBe('unresolved');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid', 'vitest-report-counts-inconsistent']);
   });
 
   // evidence_role: supplemental
@@ -120,7 +114,6 @@ describe("vitest-report-core", () => {
     });
     expect(result.status).toBe('failed');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-explicit-failure', 'vitest-report-counts-contradictory']);
   });
 
   // evidence_role: supplemental
@@ -131,25 +124,21 @@ describe("vitest-report-core", () => {
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 },
-      diagnostics: ['vitest-report-empty'],
     });
     expect(classification({})).toStrictEqual({
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: null, passed: null, failed: null, skipped: null, todo: null },
-      diagnostics: ['vitest-report-counts-inconsistent'],
     });
     expect(classification({ testResults: {} })).toStrictEqual({
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: null, passed: null, failed: null, skipped: null, todo: null },
-      diagnostics: ['vitest-report-structure-invalid', 'vitest-report-counts-inconsistent'],
     });
     expect(classification({ testResults: [] })).toStrictEqual({
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: 0, passed: 0, failed: 0, skipped: 0, todo: 0 },
-      diagnostics: ['vitest-report-empty'],
     });
   });
 
@@ -161,13 +150,11 @@ describe("vitest-report-core", () => {
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: null, passed: null, failed: null, skipped: null, todo: null },
-      diagnostics: ['vitest-report-missing'],
     });
     expect(classification([1, 2])).toStrictEqual({
       status: 'unresolved',
       collection: 'unavailable',
       counts: { total: null, passed: null, failed: null, skipped: null, todo: null },
-      diagnostics: ['vitest-report-missing'],
     });
   });
 
@@ -178,7 +165,6 @@ describe("vitest-report-core", () => {
     const result = classification({ testResults: [null, 'invalid'] });
     expect(result.status).toBe('unresolved');
     expect(result.collection).toBe('partial');
-    expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid']);
   });
 
   // evidence_role: supplemental

@@ -2,7 +2,7 @@
   "assets": [
     {
       "id": "repository-helper",
-      "kind": "external-tool",
+      "kind": "provider-adapter",
       "source": { "path": "runtime/adapter/cli-runtime.ts" },
       "copyable": true
     },
