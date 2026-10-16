@@ -75,3 +75,25 @@ test_maps:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when unknown fails"
         check_refs: [diagnostic-details]
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: omitted-evidence-uses-run-url
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint uses the workflow run URL for rows without evidence"
+        check_refs:
+          - check-quality-summary-default-evidence-status
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint uses the workflow run URL for rows without evidence"
+        check_refs:
+          - check-quality-summary-default-evidence-status
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: omitted-evidence-without-run-context-rejected
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid"
+        check_refs:
+          - check-quality-summary-default-evidence-failure
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid"
+        check_refs:
+          - check-quality-summary-default-evidence-failure
