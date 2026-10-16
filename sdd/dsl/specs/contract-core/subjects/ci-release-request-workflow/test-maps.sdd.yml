@@ -20,5 +20,8 @@ test_maps:
     case_id: detailed-failure-handoff
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > release-request aggregate retains failed job identity and run evidence"
+        symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result"
+        check_refs: [diagnostic-details]
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result"
         check_refs: [diagnostic-details]
