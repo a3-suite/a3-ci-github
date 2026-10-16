@@ -51,4 +51,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "create/verifyのoperation、workflow/source/runの解決・要求作成・要求照合を区別し、repository、固定source/ref、request run ID、必要なpermission種別、期待/観測identity、HTTP相関情報と要求作成の確定/不明状態を残す。"
+          meaning: "create/verifyのoperation、要求の選択・作成・照合・出力書き込みを区別し、createでは作成するsource SHA・version・target identity、verifyでは期待source SHA、および違反fieldと期待/観測値を残す。"

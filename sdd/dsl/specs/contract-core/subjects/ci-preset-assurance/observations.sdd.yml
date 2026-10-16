@@ -82,4 +82,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "bootstrap・lock生成・lint/preflightのoperationと検査ownerを区別し、repo/project rootの役割、provider revision、preset、対象workflow/asset相対path、欠落/改変/不一致と期待/観測identity、実行できなかった検査、read-only状態を残す。"
+          meaning: "bootstrap・lock生成・lint/preflightのoperationを区別し、provider revision、preset、対象workflow/asset相対path、欠落/改変/不一致と期待/観測identityを残す。preflightで検査・除外したpresetとworkflow、個々の欠落と不一致はvalidation reportに残し、診断はpresetの状態とreportを証拠の所在として示す。"
