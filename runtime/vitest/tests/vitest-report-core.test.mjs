@@ -1,6 +1,6 @@
 import { test, describe, expect } from 'vitest';
 
-import { classifyVitestReport, parseVitestReport } from '../vitest-summary-core.mjs';
+import { classifyVitestReport, parseVitestReport } from '../vitest-report-core.mjs';
 
 const classification = (report) => {
   const result = classifyVitestReport(report);
@@ -12,7 +12,10 @@ const classification = (report) => {
   };
 };
 
-describe("vitest-summary-core", () => {
+describe("vitest-report-core", () => {
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('classifies a complete report as passed with complete collection', () => {
     const result = classification({
       numTotalTests: 2,
@@ -30,6 +33,9 @@ describe("vitest-summary-core", () => {
     });
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('derives counts from valid test results when counts are missing', () => {
     const result = classification({
       testResults: [
@@ -41,6 +47,9 @@ describe("vitest-summary-core", () => {
     expect(result.collection).toBe('complete');
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('rejects assertion-level malformation even with complete counts', () => {
     const result = classification({
       numTotalTests: 2,
@@ -56,6 +65,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid', 'vitest-report-counts-contradictory']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('does not let summary counts hide a detail-level failure', () => {
     const result = classification({
       numTotalTests: 1,
@@ -71,6 +83,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-counts-contradictory']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('keeps a partial count as partial collection', () => {
     const result = classification({ numTotalTests: 2 });
     expect(result.status).toBe('unresolved');
@@ -78,6 +93,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-counts-inconsistent']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('rejects unknown assertion statuses', () => {
     const result = classification({
       testResults: [{ assertionResults: [{ status: 'mystery' }] }],
@@ -87,6 +105,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid', 'vitest-report-counts-inconsistent']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('keeps explicit failure precedence over malformed structure', () => {
     const result = classification({
       numTotalTests: 1,
@@ -102,6 +123,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-explicit-failure', 'vitest-report-counts-contradictory']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('treats zero tests as unresolved instead of a false success', () => {
     expect(classification({ numTotalTests: 0, numPassedTests: 0, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, success: true })).toStrictEqual({
       status: 'unresolved',
@@ -129,6 +153,9 @@ describe("vitest-summary-core", () => {
     });
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('rejects missing and malformed reports', () => {
     expect(classification(null)).toStrictEqual({
       status: 'unresolved',
@@ -144,6 +171,9 @@ describe("vitest-summary-core", () => {
     });
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('rejects malformed report elements with inconsistent counts', () => {
     const result = classification({ testResults: [null, 'invalid'] });
     expect(result.status).toBe('unresolved');
@@ -151,6 +181,9 @@ describe("vitest-summary-core", () => {
     expect(result.diagnostics).toStrictEqual(['vitest-report-structure-invalid']);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: classifyVitestReport(report)
   test('prefers pending over skipped as the alternative skipped count', () => {
     const result = classification({
       numTotalTests: 4,
@@ -164,6 +197,9 @@ describe("vitest-summary-core", () => {
     expect(result.counts.skipped).toBe(1);
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: parseVitestReport(text)
   test('parses JSON reports and rejects non-object values', () => {
     expect(parseVitestReport('{"success":true}')).toStrictEqual({ success: true });
     expect(parseVitestReport('[]')).toBe(null);

@@ -22,19 +22,12 @@
 - output を生成する entrypoint は明示した output path へ書き込み、path を省略した場合は stdout へ出力する。provider adapter は自分の output または summary sink の path を引数で渡す。
 
 ### ワークフロー内で使用するスクリプト
-共通処理のうち、変更範囲、quality adapter 実行、設定 snapshot、結果 summary、handoff integrity、release notes binding、version materialization、Vitest summary は、選択した provider 固有スキルの Action binding が提供する。Action または外部再利用単位の入力・出力・停止条件は provider registry と提供元の公開契約を参照し、Action 化された共通 script を project へコピーしない。
+共通処理のうち、変更範囲、quality adapter 実行、設定 snapshot、結果 summary、handoff integrity、release notes binding、version materialization は、選択した provider 固有スキルの Action binding が提供する。Action または外部再利用単位の入力・出力・停止条件は provider registry と提供元の公開契約を参照し、Action 化された共通 script を project へコピーしない。
 
 ### adapter bundle materializer（skill script）
 - 適用条件・取得・実行手順: `references/distribute-ci-assets.guide.md` と `references/configure-ci-preset.guide.md` の materializer 手順を参照する。
 - 実行時パス: `references/ci-script-assets.reference.yml` inventory の `ci-adapter-bundle-materializer` の `source`
 - 入出力・衝突時の扱い・配置境界: `references/ci-adapter-bundles.reference.yml` の `materialization` と `copyContract` を参照する。
-
-### ワークフロー外で使用するスクリプト
-- テスト結果解析（Vitest）: `runtime/adapter/vitest-test-summary.ts`
-  - ユースケース: workflow 外でアーティファクトの Vitest JSON を簡易要約する。
-  - 入力: `--log` でJSONレポートを指定し、必要に応じて `--name` で表のテスト単位名を指定する。
-  - サマリ形式: `references/ci-summary-format.reference.md`
-  - 位置づけ: workflow 外でのアーティファクト解析用。CI workflow runtime との境界は `references/ci-runtime-boundary.reference.md` に従う。
 
 ### 関連
 - `references/ci-runtime-boundary.reference.md`

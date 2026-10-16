@@ -68,7 +68,6 @@ for (const relative of [
   'runtime/release-publication/evidence.schema.json',
   'runtime/adapter',
   'runtime/path',
-  'runtime/vitest',
   'runtime/distribution',
   'runtime/diagnostics',
   'lint-rules/a3-lint',

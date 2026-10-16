@@ -113,13 +113,6 @@ assets:
       - runtime/adapter/standard-quality-bundles.generated.ts
       - runtime/path/same-file-core.d.mts
       - runtime/path/same-file-core.mjs
-  - id: runtime.vitest-summary
-    application: local-reference
-    dependencies: [runtime.diagnostics]
-    sourcePaths:
-      - runtime/adapter/vitest-test-summary.ts
-      - runtime/vitest/vitest-summary-core.d.mts
-      - runtime/vitest/vitest-summary-core.mjs
   - id: lint.github-actions
     application: local-reference
     sourceTree: lint-rules/a3-lint

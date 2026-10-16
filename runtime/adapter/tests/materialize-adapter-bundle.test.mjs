@@ -53,7 +53,7 @@ describe("materialize-adapter-bundle", () => {
         copyable: true,
         languageProfiles: ['rust'],
         owner: 'rust',
-        assets: [{ id: 'repository-helper', destination: '.ci/runtime/vitest-test-summary.ts' }],
+        assets: [{ id: 'repository-helper', destination: '.ci/runtime/cli-runtime.ts' }],
         commands: [{ id: 'test', command: 'echo', args: ['test'] }],
         preparation: [{ id: 'prepare', command: 'echo', args: ['prepare'] }],
         toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: { id: 'verify', command: 'echo', args: ['verify'] } },
@@ -78,12 +78,12 @@ describe("materialize-adapter-bundle", () => {
 
         expect(report.schema).toBe('ci.adapter-materializer.v2');
         expect(report.files.map((file) => file.source)).toStrictEqual([
-          'runtime/adapter/vitest-test-summary.ts',
+          'runtime/adapter/cli-runtime.ts',
           'rust/assets/test-bundle.json',
         ]);
-        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toMatch(/Vitest/);
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/cli-runtime.ts'), 'utf8')).toMatch(/DiagnosticError/);
         const targetDescriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
-        const targetAsset = path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts');
+        const targetAsset = path.join(targetRoot, '.ci/runtime/cli-runtime.ts');
         const materialized = JSON.parse(readFileSync(targetDescriptor, 'utf8'));
         expect(materialized.id).toBe('test-bundle');
         expect(materialized.preparation.map((command) => command.id)).toStrictEqual(['prepare']);
@@ -173,7 +173,7 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
     projectSettings: { requiredFiles: [], requiredScripts: [] },
   };
   const inventory = {
-    assets: [{ id: 'helper', copyable: true, entrypoints: ['runtime/adapter/vitest-test-summary.ts'] }],
+    assets: [{ id: 'helper', copyable: true, entrypoints: ['runtime/adapter/cli-runtime.ts'] }],
     adapterBundles: [{ id: descriptor.id, source: { skill: 'rust', path: 'assets/test-bundle.json' }, targetDescriptor: '.ci/adapters/test-bundle.json' }],
   };
   const options = { sourceRoot: skills, inventoryPath, bundleId: descriptor.id, targetRoot };

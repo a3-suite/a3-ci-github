@@ -3,7 +3,7 @@
     {
       "id": "repository-helper",
       "kind": "external-tool",
-      "source": { "path": "runtime/adapter/vitest-test-summary.ts" },
+      "source": { "path": "runtime/adapter/cli-runtime.ts" },
       "copyable": true
     },
     {

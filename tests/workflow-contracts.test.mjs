@@ -1242,7 +1242,7 @@ describe("workflow-contracts", () => {
       }
       expect(diagnostics).not.toMatch(/continue-on-error|if:/);
       const cores = stepContaining(linux, '- name: Test shared verification cores');
-      for (const file of ['runtime/github-toolchain/tests/verify-github-toolchain.test.mjs', 'runtime/path/tests/same-file-core.test.mjs', 'runtime/platform/tests/platform-manifest-core.test.mjs', 'runtime/vitest/tests/vitest-summary-core.test.mjs']) {
+      for (const file of ['runtime/github-toolchain/tests/verify-github-toolchain.test.mjs', 'runtime/path/tests/same-file-core.test.mjs', 'runtime/platform/tests/platform-manifest-core.test.mjs', 'runtime/vitest/tests/vitest-report-core.test.mjs']) {
         expect(cores).toContain(file);
         expect(linux.split(file)).toHaveLength(2);
       }

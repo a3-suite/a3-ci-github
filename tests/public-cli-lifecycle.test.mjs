@@ -360,7 +360,7 @@ const prepareMaterializer = (fixtureRoot) => {
     copyable: true,
     languageProfiles: ['rust'],
     owner: 'rust',
-    assets: [{ id: 'repository-helper', destination: '.ci/runtime/vitest-test-summary.ts' }],
+    assets: [{ id: 'repository-helper', destination: '.ci/runtime/cli-runtime.ts' }],
     commands: [{ command: 'echo', args: ['test'] }],
     preparation: [{ command: 'echo', args: ['prepare'] }],
     toolchain: {
@@ -397,7 +397,7 @@ describe("contract.ci-preset-materialization.application", () => {
         // Assert
         expect(first.status, first.stderr).toBe(0);
         expect(JSON.parse(first.stdout).files.map((entry) => entry.action)).toStrictEqual(['copied', 'copied']);
-        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'));
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/cli-runtime.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/cli-runtime.ts'), 'utf8'));
         const descriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
         expect(JSON.parse(readFileSync(descriptor, 'utf8')).id).toBe('test-bundle');
         const materialized = snapshotTree(targetRoot);
@@ -438,7 +438,7 @@ describe("contract.ci-preset-materialization.application", () => {
         const report = JSON.parse(result.stdout);
         expect(report.schema).toBe('ci.adapter-materializer.v2');
         expect(report.files.map((entry) => entry.action)).toStrictEqual(['copied', 'copied']);
-        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/vitest-test-summary.ts'), 'utf8'));
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/cli-runtime.ts'), 'utf8')).toBe(readFileSync(path.join(repositoryRoot, 'runtime/adapter/cli-runtime.ts'), 'utf8'));
         expect(JSON.parse(readFileSync(path.join(targetRoot, '.ci/adapters/test-bundle.json'), 'utf8')).id).toBe('test-bundle');
       });
     });

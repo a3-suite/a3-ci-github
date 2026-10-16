@@ -133,14 +133,6 @@ assets:
     entrypoints: [.ci/trusted/ci-package-publish.sh]
     copyable: false
     owner: provider-and-project-adapter
-  - id: vitest-result-summary-tool
-    useCases: []
-    kind: external-tool
-    status: available
-    scope: workflow-external
-    source: {path: runtime/adapter/vitest-test-summary.ts}
-    copyable: false
-    owner: ci
   - id: ci-adapter-bundle-materializer
     useCases: []
     kind: skill-script

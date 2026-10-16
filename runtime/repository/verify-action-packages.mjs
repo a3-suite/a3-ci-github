@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { collectActions } from './check-action-dist.mjs';
 import { assertRuntimeBoundaries } from './check-runtime-boundaries.mjs';
 import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
-import { classifyVitestReport, parseVitestReport } from '../vitest/vitest-summary-core.mjs';
+import { classifyVitestReport, parseVitestReport } from '../vitest/vitest-report-core.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDirectory, '../..');

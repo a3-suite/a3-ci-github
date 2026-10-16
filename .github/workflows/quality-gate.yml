@@ -128,16 +128,7 @@ jobs:
           runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
           runtime/path/tests/same-file-core.test.mjs
           runtime/platform/tests/platform-manifest-core.test.mjs
-          runtime/vitest/tests/vitest-summary-core.test.mjs
-
-      - name: Test Vitest summary CLI and conformance
-        shell: bash
-        env:
-          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
-        run: |
-          npm test -- \
-            runtime/adapter/tests/vitest-test-summary.test.mjs \
-            runtime/adapter/tests/vitest-summary-conformance.test.mjs
+          runtime/vitest/tests/vitest-report-core.test.mjs
 
       - name: Test quality toolchain Action contracts
         shell: bash
@@ -419,29 +410,6 @@ jobs:
           set -euo pipefail
           test "$INVALID_STATUS" = failed
           test "$INVALID_EXIT_CODE" -ne 0
-
-      - name: Prepare Vitest report fixture
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf '%s' '{"numTotalTests":2,"numPassedTests":2,"numFailedTests":0,"numPendingTests":0,"numTodoTests":0,"success":true}' > .ci/vitest.json
-
-      - name: Render Vitest summary
-        id: vitest
-        uses: ./actions/ci-vitest-summary
-        with:
-          report-json: .ci/vitest.json
-          label: hosted
-
-      - name: Verify Vitest summary outputs
-        env:
-          STATUS: ${{ steps.vitest.outputs.status }}
-          COLLECTION: ${{ steps.vitest.outputs.collection }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$STATUS" = passed
-          test "$COLLECTION" = complete
 
       - name: Prepare Linux installer transport acceptance
         id: installer-handoff
