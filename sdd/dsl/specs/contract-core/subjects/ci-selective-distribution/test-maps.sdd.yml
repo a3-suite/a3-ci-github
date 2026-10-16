@@ -305,8 +305,8 @@ test_maps:
   - verification_id: verification.ci-selective-distribution.selection
     case_id: detailed-failure-selection
     tests:
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: "runtime failure diagnostics > distribution selection rejection preserves state and diagnostic context"
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: "contract.ci-selective-distribution.selection > selective-distribution > selection rejection retains the rejected request and missing dependency as failure details"
         check_refs: [diagnostic-details]
   - verification_id: verification.ci-selective-distribution.delivery
     case_id: detailed-failure-delivery

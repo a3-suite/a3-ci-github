@@ -509,6 +509,33 @@ describe("contract.ci-selective-distribution.selection", () => {
         expect(directAssets.map((asset) => asset.id)).toStrictEqual(['registry.ci-github', 'runtime.diagnostics', 'runtime.preset']);
       });
     });
+
+    // contract_id: contract.ci-selective-distribution.selection
+    test('selection rejection retains the rejected request and missing dependency as failure details', async () => {
+      await withFixture('a3-ci-github-distribution-selection-diagnostic-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+        const cases = [
+          [['--preset', 'private-preset-value'], 'distribution-preset-unknown', { field: 'preset', expected: 'registered-preset', observed: 'unregistered' }],
+          [['--asset', 'runtime.preset'], 'distribution-dependency-missing', { field: 'runtime.preset.dependencies', expected: 'registry.ci-github', observed: 'not-selected' }],
+          [['--asset', 'private-asset-value'], 'distribution-asset-unknown', { field: 'asset', expected: 'registered-asset', observed: 'unregistered' }],
+        ];
+        for (const [selection, reason, comparison] of cases) {
+          const result = spawnSync(process.execPath, [
+            cli, 'fetch', '--manifest', release.manifestPath, '--source-root', repositoryRoot, ...selection, '--repo-root', projectRoot,
+          ], { encoding: 'utf8' });
+          expect(result.status, result.stderr).toBe(2);
+          const evidence = JSON.parse(result.stderr).failureEvidence;
+          expect(evidence.classification).toMatchObject({ subject: 'ci-selective-distribution', operation: 'fetch', stage: 'selection', reason });
+          expect(evidence.comparison).toStrictEqual(comparison);
+          expect(evidence['execution-state'].write).toBe('not-started');
+          expect(fs.readdirSync(projectRoot)).toEqual([]);
+          expect(result.stdout + result.stderr).not.toMatch(/private-(?:preset|asset)-value/);
+        }
+      });
+    });
   });
 });
 

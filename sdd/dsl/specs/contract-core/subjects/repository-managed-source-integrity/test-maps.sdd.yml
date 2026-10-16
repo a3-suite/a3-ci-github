@@ -38,6 +38,6 @@ test_maps:
   - verification_id: verification.repository-managed-source-integrity.execution-mapping
     case_id: detailed-failure-execution-mapping
     tests:
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: "runtime failure diagnostics > managed-source rejects invalid invocation with retained shell failure context"
+      - path: tests/contract-subject-execution.test.mjs
+        symbol: "repository-contract-subject-execution > definition check retains the rejected mapping as failure details without private parser text"
         check_refs: [diagnostic-details]
