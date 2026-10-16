@@ -25,7 +25,7 @@
 
 スキル文書へ workflow、Action、runtime の実装を複製しません。適用先へ配置するcaller・request workflowのsourceは`workflows/`に置き、個々のcanonical sourceとbindingは上記registryを参照します。
 
-`skills/ci-github/references/` と `skills/installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
+`skills/ci-github/references/` と `skills/ci-release-installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
 
 公開スキルの導入版の扱いは、[公開導入ガイドの版選定](docs/maintenance/README.md#公開導入ガイドの版選定)に従います。
 

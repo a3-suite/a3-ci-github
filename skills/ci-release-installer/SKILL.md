@@ -1,12 +1,12 @@
 ---
-name: installer
-description: GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材取得するインストーラ、インストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール・アンインストール手順と対応スキルの導入案内の作成・簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査・失敗時の診断可能性確認で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
+name: ci-release-installer
+description: CIで組み立ててReleaseへ公開するインストーラ（GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材を取得するもの）とインストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール・アンインストール手順と対応スキルの導入案内の作成・簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査・失敗時の診断可能性確認で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
 ---
 
-# installer / SKILL
+# ci-release-installer / SKILL
 
 ## 目的
-GitHub 管理のソース、Release asset、Packages、npm・Maven などの外部リポジトリから取得する資材を、検証済み入力として安全に対象環境へ収束させるための判断軸と導線を提供する。
+CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理のソース、Release asset、Packages、npm・Maven などの外部リポジトリから取得する資材を、検証済み入力として安全に対象環境へ収束させるための判断軸と導線を提供する。
 
 ## 原則
 - installer を導入すべきかの推奨判断は repository-audit スキル、採否は project SSOT が所有する。本スキルはインストーラ成果物の設計、実装、レビューと、作成済み、導入判断が `required`、または project SSOT で採用済みの場合の適合監査を所有する。`required` 判定や採用済みという事実は、実装または修正の許可を意味しない。

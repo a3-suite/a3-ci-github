@@ -20,10 +20,10 @@
 ## 選択条件
 - installer script、manifest schema、manifest、execution request、組立済み installer asset、asset 組立証跡 record、installer が配置または生成する runtime script、systemd unit または service manager 定義、運用ドキュメント、テスト、fixture、audit log などの成果物を監査する。
 - repository-audit の導入判断が `required`、または project SSOT が installer 成果物を要求しており、期待される成果物が存在しない状態を監査する。
-- 「このインストーラは installer スキル準拠か」を確認する。
+- 「このインストーラは ci-release-installer スキル準拠か」を確認する。
 
 ## 注意
-- 非対象: installer スキル文書そのものの監査。
+- 非対象: ci-release-installer スキル文書そのものの監査。
 - 非対象: 個別アプリケーションの release 方針、OS patch、runtime install、DB restore、secret 発行の妥当性そのもの。
 - サンプル入力は形を理解するための資料であり、監査証跡として扱わない。
 - 監査は読み取り専用とする。準拠のための導入・更新案を提示しても、実際の変更は明示依頼後に行う。
@@ -43,9 +43,9 @@
 
 ## 監査時の優先順位
 - project SSOT は命名、対象 platform、adapter、release 方針など project 固有の実装詳細を判断する正本として扱う。
-- 上記の物理配置以外については、installer スキルの標準経路を準拠監査の出発点として扱い、project SSOT が標準経路と異なる場合の分類はインストーラ契約 coverage matrix の project override classification に従う。
+- 上記の物理配置以外については、ci-release-installer スキルの標準経路を準拠監査の出発点として扱い、project SSOT が標準経路と異なる場合の分類はインストーラ契約 coverage matrix の project override classification に従う。
 - core safety invariant の定義はインストーラ契約 coverage matrix を正本とし、project SSOT が明示していても緩和しない。
-- project SSOT が installer スキルの契約より厳しいローカル条件を定める場合は、先に project override classification で必要性と証跡を確認する。採用中の条件は無断で無視せず監査基準に含め、必要性の証跡が欠ける条件は `project-specific exception` としてローカルルールの見直し対象にする。
+- project SSOT が ci-release-installer スキルの契約より厳しいローカル条件を定める場合は、先に project override classification で必要性と証跡を確認する。採用中の条件は無断で無視せず監査基準に含め、必要性の証跡が欠ける条件は `project-specific exception` としてローカルルールの見直し対象にする。
 - project SSOT が標準経路と異なる場合は、project override classification に従って分類し、分類結果と根拠を finding または audit note に含める。
 
 ## プロジェクト固有規則との競合確認

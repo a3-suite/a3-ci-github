@@ -5,7 +5,7 @@
 | 入力 | 値 |
 | --- | --- |
 | source root | `{project-root}/skills` |
-| selectable skill | source rootでSKILL.mdを持つ公開root（ci-github / installer） |
+| selectable skill | source rootでSKILL.mdを持つ公開root（ci-github / ci-release-installer） |
 | canonical source | `{project-root}/skills/{skill-name}` |
 | destination root | 利用者が明示した外部スキルルート |
 | destination skill root | `{destination-root}/{skill-name}` |

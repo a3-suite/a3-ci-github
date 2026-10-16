@@ -69,7 +69,7 @@ beforeAll(() => {
     '.github/workflows/ci-release-publication.yml',
     '.github/workflows/ci-package-publication.yml',
     'skills/ci-github',
-    'skills/installer',
+    'skills/ci-release-installer',
     'runtime/installer',
     'runtime/release-publication/selection.ts',
     'workflows',

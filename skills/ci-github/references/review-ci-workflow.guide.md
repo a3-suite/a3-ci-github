@@ -62,7 +62,7 @@
    - テストサマリも同じ3列形式で出力し、`結果` がジョブstatusの転記ではなく、実施した処理のoutcomeとevidenceから導出されているか確認する。
 9. artifact公開がある場合だけ確認する。
    - 公開要否、公開経路、publish範囲、registry、version、channel、credential route が対象プロジェクトの owner 契約で解決され、CIで再選択されていないか確認する。
-   - 共通検証で確定した `installer-distribution` の結果を再利用し、この手順から installer スキルへ再委譲しない。適用対象の場合は同 subject の `publicationPathCheck` を適用する。
+   - 共通検証で確定した `installer-distribution` の結果を再利用し、この手順から ci-release-installer スキルへ再委譲しない。適用対象の場合は同 subject の `publicationPathCheck` を適用する。
    - package publication 経路の実装順は `references/implement-package-publish-workflow.guide.md` に照らして追跡する。
    - 実行可能資材の Release assets 経路の実装順は選択した provider 固有スキルの Release assets workflow guide に照らして追跡する。
    - Release inventory、resource identity、成功状態は`references/release-asset-publication-contract.reference.yml`の機械可読契約と一致するか確認する。

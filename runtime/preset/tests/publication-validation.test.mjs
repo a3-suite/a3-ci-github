@@ -545,7 +545,7 @@ describe("publication-validation", () => {
       const registry = loadRegistry(createReport());
       const callerPath = '.github/workflows/release-publication-caller.yml';
       fs.mkdirSync(path.join(root, '.ci/installer/manifests'), { recursive: true });
-      const example = JSON.parse(fs.readFileSync(path.join(repository, 'skills/installer/assets/examples/standard-assembly.example.json'), 'utf8'));
+      const example = JSON.parse(fs.readFileSync(path.join(repository, 'skills/ci-release-installer/assets/examples/standard-assembly.example.json'), 'utf8'));
       fs.writeFileSync(path.join(root, '.ci/installer/assembly.json'), JSON.stringify(example));
       for (const platform of Object.values(example.platforms)) fs.writeFileSync(path.join(root, platform.manifest), '{}\n');
       fs.writeFileSync(path.join(root, '.ci/installer/unrelated.json'), '{}\n');

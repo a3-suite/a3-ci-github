@@ -7,7 +7,7 @@ summary: >-
 placementRole: public_reference
 usage:
   whenToRead: 固定revisionから必要なCI資材を選択して取得するとき。
-  consumers: [ci-github, installer]
+  consumers: [ci-github, ci-release-installer]
 authority:
   role: authoritative-definition
   owns:
@@ -132,9 +132,9 @@ assets:
       - runtime/installer/dist/installer/src/platform/install.sh
       - runtime/installer/dist/installer/src/platform/install.ps1
       - runtime/installer/dist/installer/src/wrapper/install.sh
-  - id: skill.installer
+  - id: skill.ci-release-installer
     application: skill-deploy-source
-    sourceTree: skills/installer
+    sourceTree: skills/ci-release-installer
 workflowDependencies:
   workflow.quality-gate: [runtime.quality-workflow]
   workflow.quality-gate-platforms: [runtime.quality-platforms-workflow]

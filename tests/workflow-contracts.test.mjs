@@ -53,10 +53,10 @@ describe('installer public naming references', () => {
   describe('samples', () => {
   test('README and assembly samples use the authoritative public entry names', () => {
     // Arrange
-    const contract = yaml.parse(read('skills/installer/references/installer-standard-assembly-contract.reference.yml'));
+    const contract = yaml.parse(read('skills/ci-release-installer/references/installer-standard-assembly-contract.reference.yml'));
     // Act
-    const declaration = JSON.parse(read('skills/installer/assets/examples/standard-assembly.example.json'));
-    const readme = read('skills/installer/assets/examples/readme-installation.example.md');
+    const declaration = JSON.parse(read('skills/ci-release-installer/assets/examples/standard-assembly.example.json'));
+    const readme = read('skills/ci-release-installer/assets/examples/readme-installation.example.md');
     // Assert
     expect(declaration.platforms[contract.publicEntryNames.windows.platform].assetName).toBe(contract.publicEntryNames.windows.assetName);
     expect(declaration.sharedWrapper.assetName).toBe(contract.publicEntryNames.unixShared.assetName);

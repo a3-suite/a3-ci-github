@@ -20,7 +20,7 @@ export const fixture = (t: TestContext, verificationProfile = 'native-offline-dr
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.realpathSync(fs.mkdtempSync(path.join(parent, 'standard-installer-')));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
-  const manifest = JSON.parse(fs.readFileSync(path.join(repository, 'skills/installer/assets/examples/native-manifest.template.json'), 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(repository, 'skills/ci-release-installer/assets/examples/native-manifest.template.json'), 'utf8'));
   const managed = path.join(root, 'managed');
   manifest.placement = { managedRoot: managed, releasePath: path.join(managed, 'releases/1.0.0'), currentLink: path.join(managed, 'current') };
   manifest.activation = { strategy: 'active-pointer' };

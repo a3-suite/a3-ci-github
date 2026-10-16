@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 
 BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 BUILDER_PATH = BUNDLE_ROOT / "src/build-installer.py"
-MANIFEST_TEMPLATE_PATH = BUNDLE_ROOT.parents[1] / "skills/installer/assets/examples/native-manifest.template.json"
+MANIFEST_TEMPLATE_PATH = BUNDLE_ROOT.parents[1] / "skills/ci-release-installer/assets/examples/native-manifest.template.json"
 SOURCE_REVISION = "0123456789abcdef0123456789abcdef01234567"
 # The security gate flags literal user-home paths even in fixtures, so build
 # synthetic home roots from path expressions instead of embedding the literals.
