@@ -48,6 +48,12 @@ export type WriteAssetLockOptions = {
 
 export const FULL_SHA = /^[0-9a-f]{40}$/;
 
+// Findings stay opaque to the writer; diagnostics keep only paths in repository-relative form.
+const relativePath = (value: unknown): string => typeof value === 'string' && /^(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(value) && !value.split('/').includes('..') ? value : 'invalid-format';
+const findingPaths = (findings: unknown): unknown => Array.isArray(findings)
+  ? findings.map((finding) => relativePath(finding && typeof finding === 'object' ? (finding as { path?: unknown }).path : undefined))
+  : 'unavailable';
+
 export const minuteTimestamp = (value: string | Date): string => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) throw new DiagnosticError('generatedAt must be a valid timestamp', { diagnosticCode: 'generatedat-must-be-a-valid-timestamp' });
@@ -56,14 +62,16 @@ export const minuteTimestamp = (value: string | Date): string => {
 
 export const writeAssetLock = (options: WriteAssetLockOptions): AssetLock => {
   if (!FULL_SHA.test(options.sourceRevision)) {
-    throw new DiagnosticError('sourceRevision must be a full commit SHA', { diagnosticCode: 'sourcerevision-must-be-a-full-commit-sha' });
+    throw new DiagnosticError('sourceRevision must be a full commit SHA', { diagnosticCode: 'sourcerevision-must-be-a-full-commit-sha',
+      diagnostics: { stage: 'source-revision-validation', field: 'source-revision', expected: 'full-commit-sha', observed: 'invalid-format' } });
   }
   const validation = options.validate();
   if (validation.status !== 'success') {
     throw new DiagnosticError(`cannot write asset lock for an invalid preset: ${JSON.stringify({
       missingSettings: validation.missingSettings,
       mismatches: validation.mismatches,
-    })}`);
+    })}`, { diagnostics: { stage: 'preset-validation', field: 'preset-status', expected: 'success', observed: validation.status,
+      missingSettings: findingPaths(validation.missingSettings), mismatches: findingPaths(validation.mismatches) } });
   }
   const plan = options.resolvePlan();
   const lock: AssetLock = {

@@ -306,6 +306,47 @@ describe("contract.ci-preset-assurance.verification", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: consumer-preset-assurance-cli
+    // contract_id: contract.ci-preset-assurance.asset-lock
+    test('public asset lock CLI retains the failing preset findings without writing a lock', () => {
+      withFixture('a3-ci-github-lock-drift-', (consumerRoot) => {
+        // Arrange
+        const skillArguments = preparePresetFixture(consumerRoot, false);
+        const workflow = path.join(consumerRoot, '.github/workflows/release-request-tag.yml');
+        writeFileSync(workflow, readFileSync(workflow, 'utf8').replace(/^on:/m, 'on-changed:'));
+        // Act
+        const lockResult = generateAssetLock(consumerRoot, skillArguments);
+        // Assert
+        expect(lockResult.status, lockResult.stderr).toBe(2);
+        const line = lockResult.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+        const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+        expect(evidence).toMatchObject({
+          classification: { subject: 'ci-preset-assurance', operation: 'lock', stage: 'preset-validation' },
+          context: { inputs: { sourceRevision: 'c'.repeat(40) } },
+          comparison: { field: 'preset-status', expected: 'success', observed: 'failed' },
+        });
+        expect([...evidence.comparison.missingSettings, ...evidence.comparison.mismatches].some((entry) => String(entry).includes('release-request-tag.yml'))).toBe(true);
+        expect(existsSync(path.join(consumerRoot, '.ci/ci-assets.lock.json'))).toBe(false);
+
+        // Act
+        const invalidRevision = execute(tsxPath, [
+          path.join(repositoryRoot, 'runtime/preset/generate-ci-asset-lock.ts'),
+          '--repo-root', consumerRoot, ...skillArguments, '--source-revision', '/private/secret-revision',
+        ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
+        // Assert
+        expect(invalidRevision.status).toBe(2);
+        const invalidLine = invalidRevision.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+        expect(JSON.parse(invalidLine?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+          classification: { stage: 'source-revision-validation' },
+          context: { inputs: { sourceRevision: 'invalid-format' } },
+          comparison: { field: 'source-revision', expected: 'full-commit-sha', observed: 'invalid-format' },
+        });
+        expect(invalidLine).not.toContain('secret-revision');
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-preset-assurance-cli
     // contract_id: contract.ci-preset-assurance.verification
     test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
       withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {

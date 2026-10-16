@@ -160,3 +160,6 @@ test_maps:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > asset-lock preserves its outcome and safe diagnostic context"
         check_refs: [diagnostic-details]
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: "contract.ci-preset-assurance.verification > consumer-preset-assurance-cli > public asset lock CLI retains the failing preset findings without writing a lock"
+        check_refs: [diagnostic-details]

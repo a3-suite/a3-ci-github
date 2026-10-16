@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { writeCiAssetLock } from './ci-asset-lock-plan.ts';
+import { FULL_SHA } from './ci-asset-lock.ts';
 import { parseFlagArguments } from './cli-args.ts';
 
 const parseArgs = (argv: string[]): {
@@ -28,7 +29,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const options = parseArgs(process.argv.slice(2));
     diagnostic.confirmed();
-    diagnostic.at('lock-generation', { input: 'workflows-registry-and-source-revision' });
+    diagnostic.at('lock-generation', { input: 'workflows-registry-and-source-revision', sourceRevision: FULL_SHA.test(options.sourceRevision) ? options.sourceRevision : 'invalid-format' });
     diagnostic.writeState = 'lock-write-may-have-started';
     const lock = writeCiAssetLock(options);
     process.stdout.write(`${JSON.stringify(lock, null, 2)}\n`);
