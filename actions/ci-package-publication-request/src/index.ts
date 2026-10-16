@@ -1,6 +1,7 @@
 import { completeFailure, FailureContext, writeFailureOutputs, safeErrorReason, readActionInput, DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import * as core from '@actions/core';
 import { createRequest, verifyRequest, type RequestFields } from './request.js';
+import { verifyRequestTrigger } from '../../../runtime/workflow-run/request-trigger.js';
 
 export const run = (): void => {
   const diagnostic = new FailureContext('ci-package-publication-request', 'package-publication-request');
@@ -9,6 +10,15 @@ export const run = (): void => {
     const requestPath = readActionInput(core.getInput, 'request-path', { required: true });
     diagnostic.confirmed();
     diagnostic.at('request-selection', {"input": "operation-and-request-path"});
+    if (operation === 'verify-trigger') {
+      diagnostic.at('request-trigger', {"input": "workflow-run-event"});
+      verifyRequestTrigger('package-publication-request');
+      diagnostic.confirmed();
+      diagnostic.at('output-write', {"output": "GITHUB_OUTPUT"});
+      diagnostic.writeState = 'write-may-be-partial';
+      core.setOutput('status', 'success');
+      return;
+    }
     let result: RequestFields;
     if (operation === 'create') {
     diagnostic.confirmed();

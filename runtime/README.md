@@ -15,6 +15,7 @@ workflowの配置・preflightと、Actionから再利用する定型処理を管
 - `platform/`: platform manifestの解釈と選択
 - `release-publication/`: Release資材の組立、公開、読み戻し検証
 - `vitest/`: リポジトリ検証が使うVitestレポートの判定
+- `workflow-run/`: 公開callerが起動元の `workflow_run` を検証する共通処理
 
 契約対象別の実行定義とcoverageの検証入口は `tests/coverage-tools/contract-subject-coverage.mjs` です。
 

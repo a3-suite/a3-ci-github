@@ -8,6 +8,7 @@ import { describe, test, expect } from 'vitest';
 import { publicationRequestInputs } from '../../../runtime/repository/action-reference-fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { requestTriggerEnvironment } from '../../../runtime/workflow-run/tests/request-trigger-fixture';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
@@ -141,6 +142,34 @@ test('entrypoint rejects the authority-internal provenance operation', () => {
   const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
   expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
     classification: { subject: 'ci-release-publication-control', stage: 'control-input', reason: 'release-publication-operation-invalid' },
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint verifies the triggering request workflow run before artifact download', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-trigger-'));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const base = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-trigger', 'INPUT_ROOT-DIRECTORY': root } as Record<string, string>;
+
+  // Act
+  const accepted = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'release-publication-request') }, encoding: 'utf8' });
+  const acceptedOutput = fs.readFileSync(output, 'utf8');
+  fs.writeFileSync(output, '');
+  const rejected = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'release-publication-request', { head_branch: 'feature' }) }, encoding: 'utf8' });
+
+  // Assert
+  expect(accepted.status).toBe(0);
+  expect(acceptedOutput).toMatch(/status<<[^\n]+\nsuccess\n/);
+  expect(rejected.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  const line = rejected.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', reason: 'request-trigger-mismatch' },
+    comparison: { field: 'head-branch', expected: 'default-branch', observed: 'other' },
   });
   fs.rmSync(root, { recursive: true, force: true });
 });

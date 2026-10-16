@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { requestTriggerEnvironment } from '../../../runtime/workflow-run/tests/request-trigger-fixture';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
@@ -75,6 +76,34 @@ test('entrypoint rejects a source SHA mismatch', () => {
     classification: { subject: 'ci-package-publication-request', stage: 'request-verify', reason: 'package-publication-source-sha-mismatch' },
     context: { inputs: { expectedSourceSha: 'b'.repeat(40) } },
     comparison: { field: 'source-sha', expected: 'b'.repeat(40), observed: 'a'.repeat(40) },
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-package-publication-request.outputs
+// integration_id: ci-package-publication-request-contract-entrypoint
+test('entrypoint verifies the triggering request workflow run before artifact download', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-trigger-'));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const base = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-trigger', 'INPUT_REQUEST-PATH': path.join(root, 'request.json') } as Record<string, string>;
+
+  // Act
+  const accepted = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'package-publication-request') }, encoding: 'utf8' });
+  const acceptedOutput = fs.readFileSync(output, 'utf8');
+  fs.writeFileSync(output, '');
+  const rejected = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'package-publication-request', { head_branch: 'feature' }) }, encoding: 'utf8' });
+
+  // Assert
+  expect(accepted.status).toBe(0);
+  expect(acceptedOutput).toMatch(/status<<[^\n]+\nsuccess\n/);
+  expect(rejected.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  const line = rejected.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-package-publication-request', reason: 'request-trigger-mismatch' },
+    comparison: { field: 'head-branch', expected: 'default-branch', observed: 'other' },
   });
   fs.rmSync(root, { recursive: true, force: true });
 });

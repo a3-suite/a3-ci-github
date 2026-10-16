@@ -3,7 +3,7 @@ description: Create and verify release publication request handoffs and approval
 inputs:
   operation:
     required: true
-    description: create-request, verify-publication-request, or verify-approval.
+    description: verify-trigger, create-request, verify-publication-request, or verify-approval.
   root-directory:
     required: false
     default: .

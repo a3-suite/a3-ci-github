@@ -66,6 +66,10 @@ contracts:
           op: present
           target: {kind: observation_field, value: details}
     verification_intents:
+      - id: request-trigger-verified
+        goal: Before downloading request artifacts, the caller accepts only a successful default-branch workflow_dispatch of its own request workflow.
+        guarantee_refs:
+          - package-request-status-produced
       - id: detailed-diagnostics-outputs
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
         guarantee_refs: [diagnostic-details-outputs]
@@ -75,6 +79,6 @@ contracts:
           - package-request-status-produced
           - package-request-source-produced
       - id: package-request-rejected
-        goal: A package publication request not bound to the expected source fails verification.
+        goal: A package publication request not bound to the expected source, or a trigger that is not a successful default-branch dispatch of the request workflow, fails verification.
         guarantee_refs:
           - package-request-failure-propagated
