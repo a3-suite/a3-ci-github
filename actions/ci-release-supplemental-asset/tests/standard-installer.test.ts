@@ -30,7 +30,7 @@ describe('standard installer', () => {
       const source = path.join(f.root, 'release-source');
       fs.mkdirSync(source);
       fs.copyFileSync(path.join(f.root, 'platform.yml'), path.join(f.root, 'control-platform.yml'));
-      for (const item of ['.git', 'installer', 'platform.yml', 'authority.json', 'snapshot.json', assembled.standardBuildRoot, assembled.supplementalBuildRoot!]) {
+      for (const item of ['.git', '.ci', 'platform.yml', 'authority.json', 'snapshot.json', assembled.standardBuildRoot, assembled.supplementalBuildRoot!]) {
         fs.renameSync(path.join(f.root, item), path.join(source, item));
       }
       runSupplemental({ ...assembled, sourceRoot: source });
@@ -48,7 +48,7 @@ describe('standard installer', () => {
         (bytes: Buffer): Buffer => Buffer.concat([bytes, Buffer.from([0xff])]),
         (bytes: Buffer): Buffer => Buffer.from(bytes.toString('utf8').replace(/("[^"]+": ")/, '$1changed-').replace(/^platforms:/, 'platforms: changed')),
       ];
-      for (const relative of ['installer/assembly.json', 'installer/product.json', 'platform.yml']) {
+      for (const relative of ['.ci/installer/assembly.json', '.ci/installer/product.json', 'platform.yml']) {
         for (const [index, change] of changes.entries()) {
           for (const operation of ['build-platform', 'assemble']) {
             const f = fixture(t);
@@ -59,7 +59,7 @@ describe('standard installer', () => {
             expect(change(original)).not.toEqual(original);
             fs.writeFileSync(filename, change(original));
             const code = index === 4 ? 'source-text-utf8-invalid' : relative === 'platform.yml' ? 'platform-mismatch'
-              : relative === 'installer/assembly.json' ? 'owner-adapter-source-mismatch' : 'installer-declaration-source-mismatch';
+              : relative === '.ci/installer/assembly.json' ? 'owner-adapter-source-mismatch' : 'installer-declaration-source-mismatch';
             // Act / Assert
             expect(() => runSupplemental(options)).toThrow(code);
             expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
@@ -69,7 +69,7 @@ describe('standard installer', () => {
     });
     test('rejects newline-only input mutation during provider execution in both phases', (t) => {
       // Arrange
-      for (const relative of ['installer/assembly.json', 'installer/product.json', 'platform.yml']) {
+      for (const relative of ['.ci/installer/assembly.json', '.ci/installer/product.json', 'platform.yml']) {
         for (const operation of ['build-platform', 'assemble']) {
           const f = fixture(t);
           let options = f.options;
@@ -119,7 +119,7 @@ describe('standard installer', () => {
         expect(fs.readFileSync(path.join(f.root, 'handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
       }
       expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
-      expect(fs.readdirSync(path.join(f.root, 'installer')).sort()).toEqual(['assembly.json', 'product.json']);
+      expect(fs.readdirSync(path.join(f.root, '.ci/installer')).sort()).toEqual(['assembly.json', 'product.json']);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
     test('revalidates downloaded platform evidence', (t) => {
@@ -147,7 +147,7 @@ describe('standard installer', () => {
       for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
       runInstallerCli(['--operation', 'assemble', '--source-root', root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard-download', '--supplemental-build-root', 'supplemental-download', '--output-directory', 'transport-handoff', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer/dist'));
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'transport-handoff/supplemental-manifest.json'), 'utf8'));
-      const declaration = JSON.parse(fs.readFileSync(path.join(root, 'installer/assembly.json'), 'utf8'));
+      const declaration = JSON.parse(fs.readFileSync(path.join(root, '.ci/installer/assembly.json'), 'utf8'));
       const declaredAssets = Object.entries(declaration.platforms).flatMap(([platformId, entry]) => [(entry as { assetName: string }).assetName, `manifest-${platformId}.json`]);
       expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual(declaredAssets.sort());
       expect(fs.readdirSync(path.join(root, 'transport-handoff')).some((name) => name.includes('installer-source'))).toBe(false);
@@ -246,7 +246,7 @@ describe('standard installer', () => {
     test('rejects changed product declaration before generating output', (t) => {
       // Arrange
       const f = fixture(t);
-      fs.appendFileSync(path.join(f.root, 'installer/product.json'), ' ');
+      fs.appendFileSync(path.join(f.root, '.ci/installer/product.json'), ' ');
       // Act
       const attempt = (): void => runSupplemental(f.options);
       // Assert
@@ -276,7 +276,7 @@ describe('standard installer', () => {
     test('rejects incompatible selections and malformed CLI arguments', () => {
       // Arrange
       const standard = { CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer', CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'true', CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract' };
-      const selections = [{ CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'unknown' }, { CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'installer/product.json' }, { CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer' }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'other.contract' }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 42 }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'bad\npath' }];
+      const selections = [{ CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'unknown' }, { CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '.ci/installer/product.json' }, { CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer' }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'other.contract' }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 42 }, { ...standard, CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'bad\npath' }];
       // Act
       const attempts = selections.map((values) => (): unknown => supplementalSelection(values));
       // Assert

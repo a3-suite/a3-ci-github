@@ -268,6 +268,7 @@ describe("preset-validation-contract", () => {
         const assets = [...preset.workflowAssets, ...(preset.optionalWorkflowAssets ?? [])];
         const installed = new Set(assets.map((asset) => asset.id));
         if (['release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
+        if (installed.has('package-publication-caller')) installed.add('package-preparation');
         const declared = new Set(registry.actionTargets
           .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
           .map((target) => target.id));

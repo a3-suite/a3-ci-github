@@ -142,7 +142,7 @@ describe('standard installer', () => {
       const result = spawnSync(python, ['-c', driver, path.join(repository, 'runtime/installer/src/assembly.py')], {
         env: { ...process.env, ...(process.platform === 'win32' ? { PSModulePath: path.join(f.root, 'unavailable-modules') } : {}) },
         cwd: f.root, encoding: 'utf8', input: JSON.stringify({ operation: 'build-platform', sourceRoot: f.root,
-          configPath: path.join(f.root, 'installer/assembly.json'), authority, releasePlatforms: [platform],
+          configPath: path.join(f.root, '.ci/installer/assembly.json'), authority, releasePlatforms: [platform],
           standardBuildRoot: path.join(f.root, 'standard'), outputDirectory: output,
           providerRevision: 'a'.repeat(40), assemblyId: 'native-boundary' }),
       });

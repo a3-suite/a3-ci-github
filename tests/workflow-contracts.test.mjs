@@ -567,7 +567,7 @@ describe("workflow-contracts", () => {
     test('release request workflow binds annotated tags without release publication permission', () => {
       const workflow = read('workflows/release/release-request-tag.yml');
       expect(workflow).toMatch(/push:\n    tags:/);
-      includesAll(jobBlock(workflow, 'request'), [/permissions:\n      actions: write\n      contents: read/, /ci-annotated-tag-resolver@/, /ci-release-request-handoff@/]);
+      includesAll(jobBlock(workflow, 'request'), [/permissions:\n      contents: read\n    env:/, /ci-annotated-tag-resolver@/, /ci-release-request-handoff@/]);
       expect(workflow).not.toMatch(/contents: write/);
       expect(workflow).not.toMatch(/CI_(?:GH|JQ|SHA256SUM)_VERSION|ci-(?:gh-provisioner|jq-provisioner|github-toolchain-verifier)@/);
       includesAll(jobBlock(workflow, 'summary'), [/needs: request/, /if: always\(\)/, /permissions:\n      contents: read/, /ci-quality-summary@/]);
