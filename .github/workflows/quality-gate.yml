@@ -2,7 +2,8 @@ name: quality-gate
 
 on:
   push:
-    branches: [main, develop, 'release/**', 'hotfix/**']
+    # Release sources are verified on main after integration; a hotfix tip may be published first, so its exact SHA is verified here.
+    branches: [main, develop, 'hotfix/**']
   pull_request:
     branches: [main, develop, 'release/**', 'hotfix/**']
   workflow_dispatch:

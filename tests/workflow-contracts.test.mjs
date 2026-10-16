@@ -1175,7 +1175,7 @@ describe("workflow-contracts", () => {
     // integration_id: repository-quality-delivery-regression
     test('repository quality workflow scopes branch events and cancels only stale PR runs', () => {
       const workflow = read('.github/workflows/quality-gate.yml');
-      expect(workflow).toMatch(/^  push:\n    branches: \[main, develop, 'release\/\*\*', 'hotfix\/\*\*'\]$/m);
+      expect(workflow).toMatch(/^  push:\n(?:    #.*\n)?    branches: \[main, develop, 'hotfix\/\*\*'\]$/m);
       expect(workflow).toMatch(/^  pull_request:\n    branches: \[main, develop, 'release\/\*\*', 'hotfix\/\*\*'\]$/m);
       expect(workflow).toMatch(/^  group: quality-gate-\$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name == 'pull_request' && format\('pr-\{0\}', github\.event\.pull_request\.number\) \|\| format\('run-\{0\}', github\.run_id\) \}\}$/m);
       expect(workflow).toMatch(/^  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m);
