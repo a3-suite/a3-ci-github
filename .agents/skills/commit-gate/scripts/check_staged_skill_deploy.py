@@ -79,9 +79,37 @@ def deployable_staged_changes() -> list[tuple[str, Path]]:
     ]
 
 
-def index_has_skill_root() -> bool:
+def indexed(pathspec: Path) -> bool:
+    # root 名の記号を Git の pathspec として解釈させない。
+    return bool(git_paths("--literal-pathspecs", "ls-files", "--cached", "-z", "--", pathspec.as_posix()))
+
+
+def roots_without_skill_md() -> list[Path]:
     changed_roots = {Path(*path.parts[:2]) for _, path in deployable_staged_changes()}
-    return all(git_paths("ls-files", "--cached", "-z", "--", f"{root.as_posix()}/SKILL.md") for root in changed_roots)
+    return sorted(root for root in changed_roots if not indexed(root / "SKILL.md"))
+
+
+def deleted_skill_mds() -> list[Path]:
+    return [path for status, path in staged_changes() if status == "D" and path.name == "SKILL.md"]
+
+
+def removed_skill_roots() -> list[Path]:
+    # ゲートが扱う公開 root は skills/<name> の1階層とし、その root 全体の削除だけを配備先の確認対象にする。
+    return sorted({
+        path.parent
+        for path in deleted_skill_mds()
+        if len(path.parts) == 3 and not indexed(path)
+    })
+
+
+def removes_nested_skill() -> bool:
+    # 入れ子のスキルは配備先で別名の root にもなるため、削除時の確認範囲を確定できず停止する。
+    return any(len(path.parts) > 3 for path in deleted_skill_mds())
+
+
+def is_removed_root(root: Path) -> bool:
+    # 改名・廃止で root 全体が index から消えた場合だけを削除として扱い、SKILL.md だけの欠落は停止する。
+    return not indexed(root)
 
 
 def unstaged_overlaps() -> list[str]:
@@ -158,7 +186,14 @@ def main() -> int:
                 "(no staged commit)"
             )
             return 0
-        if not index_has_skill_root():
+        removed_roots = removed_skill_roots()
+        if removes_nested_skill():
+            print(
+                "skill-deploy-parity: STOP: 入れ子のスキルを含む公開スキル root の削除は自動確認の対象外です。",
+                file=sys.stderr,
+            )
+            return 1
+        if any(root not in removed_roots or not is_removed_root(root) for root in roots_without_skill_md()):
             print(
                 "skill-deploy-parity: STOP: "
                 "staged snapshot no longer contains a changed public skill SKILL.md",
@@ -188,6 +223,17 @@ def main() -> int:
         destination = Path(destination_value).expanduser()
         if not destination.is_absolute():
             raise ValueError("skill deployment destination must be an absolute path")
+        # 削除した root の配備先からの削除は自動反映しない。明示操作で削除済みの場合だけ続行する。
+        remaining = [root.name for root in removed_roots if (destination / root.name).exists()]
+        if remaining:
+            print(
+                "skill-deploy-parity: STOP: 削除した公開スキルが配備先に残っています。"
+                "skills-deploy の明示操作で削除してください。",
+                file=sys.stderr,
+            )
+            for name in remaining:
+                print(f"- {destination / name}", file=sys.stderr)
+            return 1
         cli = resolve_cli(destination)
         if not cli.is_file():
             print(

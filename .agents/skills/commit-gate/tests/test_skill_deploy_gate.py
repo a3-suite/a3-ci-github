@@ -119,6 +119,89 @@ print(json.dumps({'updates': updates, 'stale_files': stale}))
         self.assertFalse((self.target / "demo").exists())
         self.assertTrue((self.target / "stale.txt").exists())
 
+    def commit_and_stage_removed_skill(self, keep_asset: bool = False) -> None:
+        old = self.repo / "skills/old"
+        (old / "references").mkdir(parents=True)
+        (old / "SKILL.md").write_text("old public skill\n", encoding="utf-8")
+        (old / "references/guide.md").write_text("guide\n", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "old skill")
+        if keep_asset:
+            self.git("rm", "-q", "skills/old/SKILL.md")
+        else:
+            self.git("rm", "-q", "-r", "skills/old")
+
+    def test_removed_skill_still_deployed_stops_before_updates(self) -> None:
+        self.configure_destination()
+        self.commit_and_stage_removed_skill()
+        (self.target / "old").mkdir()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("配備先に残っています", result.stderr)
+        self.assertTrue((self.target / "old").exists())
+        self.assertFalse((self.target / "demo").exists())
+
+    def test_removed_skill_absent_from_destination_continues(self) -> None:
+        self.configure_destination()
+        self.commit_and_stage_removed_skill()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_removed_nested_skill_still_deployed_stops(self) -> None:
+        self.configure_destination()
+        child = self.repo / "skills/old/child/SKILL.md"
+        child.parent.mkdir(parents=True)
+        child.write_text("nested public skill\n", encoding="utf-8")
+        self.commit_and_stage_removed_skill()
+        (self.target / "child").mkdir()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("入れ子", result.stderr)
+
+    def test_removed_group_without_skill_md_stops(self) -> None:
+        self.configure_destination()
+        child = self.repo / "skills/group/child/SKILL.md"
+        child.parent.mkdir(parents=True)
+        child.write_text("nested public skill\n", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "group skill")
+        self.git("rm", "-q", "-r", "skills/group")
+        (self.target / "child").mkdir()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertTrue((self.target / "child").exists())
+
+    def test_removed_nested_skill_under_kept_parent_stops(self) -> None:
+        self.configure_destination()
+        child = self.repo / "skills/demo/child/SKILL.md"
+        child.parent.mkdir(parents=True)
+        child.write_text("nested public skill\n", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "nested skill")
+        self.git("rm", "-q", "-r", "skills/demo/child")
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("入れ子", result.stderr)
+
+    def test_removed_root_name_is_matched_literally(self) -> None:
+        self.configure_destination()
+        literal = self.repo / "skills/old*/SKILL.md"
+        literal.parent.mkdir(parents=True)
+        literal.write_text("symbol public skill\n", encoding="utf-8")
+        (self.repo / "skills/old-notes.md").write_text("notes\n", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "symbol skill")
+        self.git("rm", "-q", "-r", "--", ":(literal)skills/old*")
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_missing_skill_md_with_remaining_assets_stops(self) -> None:
+        self.configure_destination()
+        self.commit_and_stage_removed_skill(keep_asset=True)
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no longer contains", result.stderr)
+
     def test_ignored_untracked_public_source_is_not_deployed(self) -> None:
         self.configure_destination()
         self.stage_repository_change()
