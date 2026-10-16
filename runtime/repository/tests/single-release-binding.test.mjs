@@ -7,9 +7,9 @@ import yaml from 'yaml';
 import { checkRepository, repositorySnapshot, registryPath } from '../check-provider-references.mjs';
 import { planActionReferenceUpdate, applyActionReferenceUpdate } from '../update-action-references.mjs';
 // Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
-// Measured max 1.3s per call; the limit is about 5x that. A timeout means the call regressed:
-// investigate its performance or split it before raising the limit.
-const spawnTimeoutMs = 7000;
+// Calls take up to 1.7s alone but over 7s under full-regression load; the limit is about 5x that load maximum.
+// A timeout means the call regressed: investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 35000;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const failure = (operation) => { try { operation(); } catch (error) { return error.message; } };
