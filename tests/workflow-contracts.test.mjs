@@ -11,6 +11,12 @@ import { createDocsOnlyMatcher, detectChangeScope } from '../actions/ci-change-s
 import { materializePublishVersion } from '../actions/ci-publish-version/src/materialize.ts';
 import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapshot.ts';
 import { releaseSkillsFixture } from '../runtime/release-publication/tests/fixtures.mjs';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Limits are about 5x the measured max of each call group (5s floor). A timeout means the call regressed:
+// investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 5000; // git and shell steps: measured max 0.17s
+const mediumSpawnTimeoutMs = 11000; // provider reference checks in a cloned fixture: measured max 2.0s
+const slowSpawnTimeoutMs = 35000; // provider reference check over the full contract set: measured max 6.4s
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
@@ -100,7 +106,7 @@ describe("workflow-contracts", () => {
       const directory = mkdtempSync(path.join(root, 'tmp/quality-diff-'));
       const origin = path.join(directory, 'origin');
       mkdirSync(origin);
-      const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+      const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: spawnTimeoutMs }).trim();
       const headExpression = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}";
       const baseExpression = "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before || '' }}";
       try {
@@ -130,12 +136,13 @@ describe("workflow-contracts", () => {
             const consumer = mkdtempSync(path.join(directory, 'consumer-'));
             git(consumer, 'init'); git(consumer, 'remote', 'add', 'origin', `file://${origin}`);
             git(consumer, 'fetch', '--no-tags', '--depth=1', 'origin', head); git(consumer, 'checkout', '--detach', 'FETCH_HEAD');
-            const before = spawnSync('git', ['cat-file', '-e', `${base}^{commit}`], { cwd: consumer });
+            const before = spawnSync('git', ['cat-file', '-e', `${base}^{commit}`], { cwd: consumer, timeout: spawnTimeoutMs });
+            expect(before.error).toBeUndefined();
             expect(before.status).not.toBe(0);
             const trace = path.join(consumer, 'fetch.trace');
             // Act
-            const prepared = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', preparation.run], { cwd: consumer, encoding: 'utf8', env: { ...process.env, CI_DIFF_BASE_SHA: comparison, GIT_TRACE: trace } });
-            const result = detectChangeScope(comparison, head, createDocsOnlyMatcher(['**/*.md']), (from, to) => execFileSync('git', ['diff', '--name-only', '-z', from, to], { cwd: consumer, encoding: 'utf8' }));
+            const prepared = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', preparation.run], { cwd: consumer, encoding: 'utf8', env: { ...process.env, CI_DIFF_BASE_SHA: comparison, GIT_TRACE: trace }, timeout: spawnTimeoutMs });
+            const result = detectChangeScope(comparison, head, createDocsOnlyMatcher(['**/*.md']), (from, to) => execFileSync('git', ['diff', '--name-only', '-z', from, to], { cwd: consumer, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: spawnTimeoutMs }));
             // Assert
             expect(prepared.status, prepared.stderr).toBe(0);
             expect(result.runCi, `${file}/${job}/${comparison}`).toBe(runCi);
@@ -146,7 +153,7 @@ describe("workflow-contracts", () => {
             expect((existsSync(trace) ? readFileSync(trace, 'utf8') : '').split('built-in: git fetch ').length - 1).toBe(comparison === base || comparison === '1'.repeat(40) ? 1 : 0);
             if (comparison === base) {
               // Act
-              const cached = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', preparation.run], { cwd: consumer, encoding: 'utf8', env: { ...process.env, CI_DIFF_BASE_SHA: comparison, GIT_TRACE: trace } });
+              const cached = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', preparation.run], { cwd: consumer, encoding: 'utf8', env: { ...process.env, CI_DIFF_BASE_SHA: comparison, GIT_TRACE: trace }, timeout: spawnTimeoutMs });
               // Assert
               expect(cached.status, cached.stderr).toBe(0);
               expect(readFileSync(trace, 'utf8').split('built-in: git fetch ').length - 1).toBe(1);
@@ -205,8 +212,9 @@ describe("workflow-contracts", () => {
             cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
               'INPUT_SUMMARY-JSON': payload, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'),
               'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md'),
-            },
+            }, timeout: spawnTimeoutMs,
           });
+          expect(run.error, `${result}: the process did not finish`).toBeUndefined();
           expect(run.status === 0, `${result}: ${run.stderr}`).toBe(result === 'success');
         }
       } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -246,7 +254,7 @@ describe("workflow-contracts", () => {
                 CI_PLATFORM_MANIFEST: '.ci/platform-manifest.yml',
                 CI_QUALITY_PLATFORM_SELECTION: '.ci/quality-platforms.yml',
                 CI_SAME_REPO: String(scenario.same), GITHUB_OUTPUT: output,
-              },
+              }, timeout: spawnTimeoutMs,
             });
             expect(result.status, `${file}: ${JSON.stringify(scenario)}: ${result.stderr}`).toBe(scenario.status);
             if (scenario.status === 0) expect(readFileSync(output, 'utf8').split('\n').includes(`root=${scenario.root}`)).toBeTruthy();
@@ -426,8 +434,8 @@ describe("workflow-contracts", () => {
           writeFileSync(output, '');
           const env = { ...process.env, RESOLVE_RESULT: resolve, PLATFORM_RESULT: platform,
             RUN_CI: runCi, EXPECTED_PLATFORMS: expected, WORKFLOW_RUN_URL: 'https://github.com/example/project/actions/runs/1', GITHUB_OUTPUT: output };
-          const enforcement = spawnSync('bash', ['-c', enforce], { cwd: directory, env, encoding: 'utf8' });
-          const result = spawnSync('bash', ['-c', build], { cwd: directory, env, encoding: 'utf8' });
+          const enforcement = spawnSync('bash', ['-c', enforce], { cwd: directory, env, encoding: 'utf8', timeout: spawnTimeoutMs });
+          const result = spawnSync('bash', ['-c', build], { cwd: directory, env, encoding: 'utf8', timeout: spawnTimeoutMs });
           expect(result.status, result.stderr).toBe(0);
           const payload = readFileSync(output, 'utf8').trim().slice('summary='.length);
           const records = JSON.parse(payload).jobs;
@@ -437,8 +445,9 @@ describe("workflow-contracts", () => {
           if (accepted && runCi === 'false') expect(records.slice(1).map((entry) => [entry.unit, entry.result])).toStrictEqual([['platform:linux-x64', '対象外'], ['platform:macos-arm64', '対象外']]);
           const action = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
             cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', 'INPUT_SUMMARY-JSON': payload,
-              'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'), 'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md') },
+              'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'), 'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md') }, timeout: spawnTimeoutMs,
           });
+          expect([enforcement.error, action.error], 'a process did not finish').toEqual([undefined, undefined]);
           expect(enforcement.status === 0 && action.status === 0, JSON.stringify({ resolve, platform, runCi, expected })).toBe(accepted);
         }
       } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -591,7 +600,7 @@ const assertPublicationControl = (text, kind) => {
     CALLER_WORKFLOW_REF: `example/consumer/.github/workflows/${kind}-publication-caller.yml@refs/heads/main`,
     CONTROL_SHA: 'a'.repeat(40),
   };
-  const run = (env) => spawnSync('bash', ['-c', entry.run], { encoding: 'utf8', env: { PATH: process.env.PATH, ...env } });
+  const run = (env) => spawnSync('bash', ['-c', entry.run], { encoding: 'utf8', env: { PATH: process.env.PATH, ...env }, timeout: spawnTimeoutMs });
   expect(run(valid).status).toBe(0);
   for (const [field, values] of Object.entries({
     REPOSITORY: ['', 'other/consumer'], DEFAULT_BRANCH: ['', 'feature'],
@@ -903,7 +912,7 @@ describe("workflow-contracts", () => {
           // Act
           const result = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', versionPlanStep.run], {
             cwd: directory, encoding: 'utf8',
-            env: { ...process.env, PUBLISH_VERSION: version, PUBLISH_VERSION_JSON: JSON.stringify(version) },
+            env: { ...process.env, PUBLISH_VERSION: version, PUBLISH_VERSION_JSON: JSON.stringify(version) }, timeout: spawnTimeoutMs,
           });
           // Assert
           expect(result.status, result.stderr).toBe(0);
@@ -949,10 +958,10 @@ describe("workflow-contracts", () => {
       mkdirSync(path.join(root, 'tmp'), { recursive: true });
       const fixture = mkdtempSync(path.join(root, 'tmp/action-reference-gate-'));
       t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
-      execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe' });
+      execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe', timeout: spawnTimeoutMs });
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      if (spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: fixture }).status !== 0) {
-        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe' });
+      if (spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: fixture, timeout: spawnTimeoutMs }).status !== 0) {
+        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe', timeout: spawnTimeoutMs });
       }
       mkdirSync(path.join(fixture, 'actions'));
       for (const relative of [registryPath, ...repositorySnapshot(root).targets]) {
@@ -963,7 +972,7 @@ describe("workflow-contracts", () => {
     };
 
     const pinOldActionReferences = (fixture) => {
-      const old = execFileSync('git', ['rev-parse', 'refs/tags/v0.2.0^{commit}'], { cwd: fixture, encoding: 'utf8' }).trim();
+      const old = execFileSync('git', ['rev-parse', 'refs/tags/v0.2.0^{commit}'], { cwd: fixture, encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
       for (const relative of [registryPath, ...repositorySnapshot(fixture).targets]) {
         writeFileSync(path.join(fixture, relative), readFileSync(path.join(fixture, relative), 'utf8').replaceAll(actionRef, old));
       }
@@ -1031,7 +1040,7 @@ describe("workflow-contracts", () => {
       expect(accepted.diagnostics).toEqual([]);
       // Arrange
       pinOldActionReferences(fixture);
-      const command = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', ...args], { cwd: fixture, encoding: 'utf8' });
+      const command = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', ...args], { cwd: fixture, encoding: 'utf8', timeout: slowSpawnTimeoutMs });
       // Act
       const strict = command();
       const preparation = command('--preparation');
@@ -1080,7 +1089,7 @@ describe("workflow-contracts", () => {
     test.each(['const = ;', "require('a3-reference-test-missing-module');"])('preparation gate rejects an unexecutable fixed bundle: %s', (bundle) => {
       // Arrange
       const fixture = referenceFixture({ onTestFinished });
-      const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe' }).trim();
+      const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe', timeout: spawnTimeoutMs }).trim();
       const entrypoint = 'actions/ci-quality-adapter/dist/index.js';
       git('read-tree', 'HEAD');
       mkdirSync(path.dirname(path.join(fixture, entrypoint)), { recursive: true });
@@ -1100,7 +1109,7 @@ describe("workflow-contracts", () => {
       registry.actionization.implementationSource.releaseTag = tag;
       writeFileSync(path.join(fixture, registryPath), yaml.stringify(registry));
       // Act
-      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--preparation'], { cwd: fixture, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--preparation'], { cwd: fixture, encoding: 'utf8', timeout: mediumSpawnTimeoutMs });
       // Assert
       expect(result.status, result.stdout).toBe(2);
       expect(result.stderr).toContain('action-contract-execution-unavailable');
@@ -1111,7 +1120,7 @@ describe("workflow-contracts", () => {
       // Arrange
       const fixture = referenceFixture(t);
       // Act
-      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8', timeout: spawnTimeoutMs });
       const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
       // Assert
       expect(result.status, result.stderr).toBe(2);
@@ -1125,11 +1134,11 @@ describe("workflow-contracts", () => {
       mkdirSync(path.join(root, 'tmp'), { recursive: true });
       const fixture = mkdtempSync(path.join(root, 'tmp/published-tag-candidate-'));
       t.onTestFinished(() => rmSync(fixture, { recursive: true, force: true }));
-      execFileSync('git', ['clone', '--shared', '--quiet', root, fixture], { stdio: 'pipe' });
+      execFileSync('git', ['clone', '--shared', '--quiet', root, fixture], { stdio: 'pipe', timeout: spawnTimeoutMs });
       const releaseTag = repositorySnapshot(fixture).registry.actionization.implementationSource.releaseTag;
-      execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD^'], { cwd: fixture, stdio: 'pipe' });
+      execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD^'], { cwd: fixture, stdio: 'pipe', timeout: spawnTimeoutMs });
       // Act
-      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--candidate', '--contracts'], { cwd: fixture, encoding: 'utf8', timeout: mediumSpawnTimeoutMs });
       const evidence = JSON.parse(result.stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
       // Assert
       expect(result.status, result.stderr).toBe(2);
@@ -1154,7 +1163,7 @@ describe("workflow-contracts", () => {
       job.steps.push({ run: `echo \"${'${{'} steps.${control.id}.outputs.undeclared-output }}\"` });
       // Act
       const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
       const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
@@ -1179,6 +1188,7 @@ describe("workflow-contracts", () => {
       const windows = jobBlock(workflow, 'rust-windows');
       const installerLinux = jobBlock(workflow, 'installer-linux');
       const installerWindows = jobBlock(workflow, 'installer-windows');
+      const installerWindowsNative = jobBlock(workflow, 'installer-windows-native');
       const installerMacos = jobBlock(workflow, 'installer-macos');
       const installerHandoff = jobBlock(workflow, 'installer-handoff');
       const aggregate = jobBlock(workflow, 'contract');
@@ -1193,11 +1203,20 @@ describe("workflow-contracts", () => {
         /^    runs-on: windows-2025$/m,
         /actions\/setup-python@[0-9a-f]{40}/,
         /python-version: '3\.12'/,
+      ]);
+      // The native PowerShell checks do not feed the handoff, so they run in their own job and do not delay it.
+      includesAll(installerWindowsNative, [
+        /^    name: Installer native safety \/ Windows$/m,
+        /^    runs-on: windows-2025$/m,
+        /actions\/setup-python@[0-9a-f]{40}/,
+        /python-version: '3\.12'/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_build_installer\.py -v/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_runtime_installer\.py -k test_windows -v/,
         /name: Test native Windows installer safety \/ Windows PowerShell 5\.1\n\s+shell: powershell\n\s+env:\n\s+CI_INSTALLER_POWERSHELL: powershell/,
         /name: Test native Windows installer safety \/ PowerShell 7\n\s+shell: pwsh\n\s+env:\n\s+CI_INSTALLER_POWERSHELL: pwsh/,
       ]);
+      expect(installerWindowsNative).not.toMatch(/npm ci|actions\/setup-node|upload-artifact/);
+      expect(installerWindows).not.toContain('Test native Windows installer safety');
       for (const native of [installerWindows, installerMacos]) {
         expect(native).toContain('npm test -- actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
         expect(native).toContain('npm ci --ignore-scripts --no-audit --no-fund');
@@ -1233,7 +1252,7 @@ describe("workflow-contracts", () => {
       expect(reporter).not.toMatch(/continue-on-error|if:/);
       expect(linux).not.toContain('Test contract-subject coverage reporter');
       expect(reportStep).not.toContain('test:coverage:installer');
-      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'installer-linux', 'rust-windows', 'installer-windows', 'installer-macos', 'installer-handoff']));
+      expect(new Set(summaryNeeds(aggregate))).toStrictEqual(new Set(['contract-linux', 'installer-linux', 'rust-windows', 'installer-windows', 'installer-windows-native', 'installer-macos', 'installer-handoff']));
       expect(aggregate).toContain('INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}');
       expect(aggregate).toContain('test "$INSTALLER_LINUX_RESULT" = success');
       const diagnostics = stepContaining(linux, '- name: Test failure diagnostics');
@@ -1263,10 +1282,12 @@ describe("workflow-contracts", () => {
         /test "\$LINUX_RESULT" = success/,
         /test "\$WINDOWS_RESULT" = success/,
         /test "\$INSTALLER_WINDOWS_RESULT" = success/,
+        /test "\$INSTALLER_WINDOWS_NATIVE_RESULT" = success/,
         /test "\$INSTALLER_MACOS_RESULT" = success/,
         /test "\$INSTALLER_HANDOFF_RESULT" = success/,
         /INSTALLER_MACOS_RESULT: \$\{\{ needs\.installer-macos\.result \}\}/,
         /INSTALLER_WINDOWS_RESULT: \$\{\{ needs\.installer-windows\.result \}\}/,
+        /INSTALLER_WINDOWS_NATIVE_RESULT: \$\{\{ needs\.installer-windows-native\.result \}\}/,
       ]);
     });
 
@@ -1300,7 +1321,7 @@ describe("workflow-contracts", () => {
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
-      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8' }).trim();
+      const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
       const checked = checkRepository(root, false, { candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);
@@ -1440,7 +1461,8 @@ describe("workflow-contracts", () => {
         for (const environment of cases) {
           writeFileSync(calls, '');
           const result = spawnSync('bash', ['runtime/repository/lint-repository.sh'], { cwd: root, encoding: 'utf8',
-            env: { ...process.env, A3_LINT_BIN: binary, LINT_CALLS: calls, LINT_REPORT: JSON.stringify(report), ...environment } });
+            env: { ...process.env, A3_LINT_BIN: binary, LINT_CALLS: calls, LINT_REPORT: JSON.stringify(report), ...environment }, timeout: spawnTimeoutMs });
+          expect(result.error).toBeUndefined();
           expect(result.status).not.toBe(0);
           expect(readFileSync(calls, 'utf8').trim().split('\n').length, JSON.stringify(environment) + readFileSync(calls, 'utf8')).toBeLessThanOrEqual(2);
           expect(result.stdout).not.toContain('a3-lint fixture groups passed');
@@ -1448,7 +1470,7 @@ describe("workflow-contracts", () => {
         }
       } finally { rmSync(failureRoot, { recursive: true, force: true }); }
       const fixture = mkdtempSync(path.join(root, 'tmp/provider-reference-stage-'));
-      const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe' });
+      const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe', timeout: spawnTimeoutMs });
       try {
         git('init');
         const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
@@ -1465,7 +1487,7 @@ describe("workflow-contracts", () => {
         mkdirSync(path.join(fixture, 'actions'));
         const cli = (...args) => spawnSync(process.execPath,
           [path.join(root, 'runtime/repository/check-provider-references.mjs'), ...args],
-          { cwd: fixture, encoding: 'utf8' });
+          { cwd: fixture, encoding: 'utf8', timeout: spawnTimeoutMs });
         // Act
         const rejectedReference = cli();
         // Assert
@@ -1754,11 +1776,15 @@ describe('repository installer CI result gate', () => {
       const environment = { ...process.env, ...Object.fromEntries(Object.keys(step.env).map((key) => [key, 'success'])) };
       // Act
       const execute = (status) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
-        encoding: 'utf8', env: { ...environment, INSTALLER_LINUX_RESULT: status },
+        encoding: 'utf8', env: { ...environment, INSTALLER_LINUX_RESULT: status }, timeout: spawnTimeoutMs,
       });
       // Assert
       expect(execute('success').status).toBe(0);
-      for (const status of ['failure', 'cancelled', 'skipped', '']) expect(execute(status).status, status).not.toBe(0);
+      for (const status of ['failure', 'cancelled', 'skipped', '']) {
+        const rejected = execute(status);
+        expect(rejected.error, status).toBeUndefined();
+        expect(rejected.status, status).not.toBe(0);
+      }
     });
   });
 });

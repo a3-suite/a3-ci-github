@@ -538,6 +538,20 @@ jobs:
           path: tests/tmp/installer-acceptance
           if-no-files-found: error
 
+  installer-windows-native:
+    name: Installer native safety / Windows
+    runs-on: windows-2025
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up installer verification Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+
       - name: Test installer builder on Windows
         shell: pwsh
         run: python -m unittest discover -s runtime/installer/tests -p test_build_installer.py -v
@@ -675,7 +689,7 @@ jobs:
   contract:
     name: CI Action contract / hosted
     if: always()
-    needs: [contract-linux, installer-linux, rust-windows, installer-windows, installer-macos, installer-handoff]
+    needs: [contract-linux, installer-linux, rust-windows, installer-windows, installer-windows-native, installer-macos, installer-handoff]
     runs-on: ubuntu-24.04
     steps:
       - name: Require all platform contract evidence
@@ -684,6 +698,7 @@ jobs:
           INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}
           WINDOWS_RESULT: ${{ needs.rust-windows.result }}
           INSTALLER_WINDOWS_RESULT: ${{ needs.installer-windows.result }}
+          INSTALLER_WINDOWS_NATIVE_RESULT: ${{ needs.installer-windows-native.result }}
           INSTALLER_MACOS_RESULT: ${{ needs.installer-macos.result }}
           INSTALLER_HANDOFF_RESULT: ${{ needs.installer-handoff.result }}
         shell: bash
@@ -692,6 +707,7 @@ jobs:
           test "$INSTALLER_LINUX_RESULT" = success
           test "$WINDOWS_RESULT" = success
           test "$INSTALLER_WINDOWS_RESULT" = success
+          test "$INSTALLER_WINDOWS_NATIVE_RESULT" = success
           test "$INSTALLER_MACOS_RESULT" = success
           test "$INSTALLER_HANDOFF_RESULT" = success
 

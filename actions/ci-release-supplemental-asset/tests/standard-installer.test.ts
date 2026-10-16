@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
+import { holdProcessOutput } from '../../../tests/support/hold-process-output.mjs';
 import { runSupplemental } from '../../../runtime/release-publication/supplemental';
 import { supplementalSelection } from '../../../runtime/release-publication/selection';
 import { sha256 } from '../../../runtime/release-publication/io';
@@ -10,6 +11,8 @@ import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-m
 import { validateHandoffIntegrity } from '../../ci-handoff-integrity/src/integrity';
 import { runInstallerCli } from '../../../runtime/installer/cli';
 import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepareAssembly, python, repository, target } from './standard-installer-fixtures';
+
+holdProcessOutput('stderr');
 
 describe('standard installer', () => {
   // evidence_role: contract

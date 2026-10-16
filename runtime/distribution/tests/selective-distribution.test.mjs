@@ -49,53 +49,59 @@ const planDistributionApplication = (options) => {
 const fixtureVersion = '1.2.3';
 const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
-fs.mkdirSync(temporaryRoot, { recursive: true });
-const committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
-for (const relative of [
-  'VERSION',
-  '.github/workflows/ci-quality.yml',
-  '.github/workflows/ci-quality-platforms.yml',
-  '.github/workflows/ci-package-preparation.yml',
-  '.github/workflows/ci-release-publication.yml',
-  '.github/workflows/ci-package-publication.yml',
-  'skills/ci-github',
-  'skills/installer',
-  'runtime/installer',
-  'runtime/release-publication/selection.ts',
-  'workflows',
-  'runtime/preset',
-  'runtime/platform',
-  'runtime/release-publication/evidence.schema.json',
-  'runtime/adapter',
-  'runtime/path',
-  'runtime/distribution',
-  'runtime/diagnostics',
-  'lint-rules/a3-lint',
-]) {
-  const source = path.join(repositoryRoot, relative);
-  const destination = path.join(committedSourceRoot, relative);
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.cpSync(source, destination, {
-    recursive: true,
-    filter: (candidate) => !path.relative(source, candidate).split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)),
-  });
-}
-fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
+// Created in beforeAll, not at import: collection-only runs (such as resolve-test-targets) never run afterAll,
+// so a module-level copy of the source tree would be left behind on every such run.
+let committedSourceRoot;
+let sourceRevision;
 const runFixtureGit = (args) => {
-  const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8' });
+  const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8', timeout: 5000 });
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
 };
-runFixtureGit(['init', '-q']);
-runFixtureGit(['config', 'user.name', 'Distribution Test']);
-runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
-runFixtureGit(['add', '--all']);
-runFixtureGit(['commit', '-qm', 'fixture']);
-const sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
+beforeAll(() => {
+  fs.mkdirSync(temporaryRoot, { recursive: true });
+  committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
+  for (const relative of [
+    'VERSION',
+    '.github/workflows/ci-quality.yml',
+    '.github/workflows/ci-quality-platforms.yml',
+    '.github/workflows/ci-package-preparation.yml',
+    '.github/workflows/ci-release-publication.yml',
+    '.github/workflows/ci-package-publication.yml',
+    'skills/ci-github',
+    'skills/installer',
+    'runtime/installer',
+    'runtime/release-publication/selection.ts',
+    'workflows',
+    'runtime/preset',
+    'runtime/platform',
+    'runtime/release-publication/evidence.schema.json',
+    'runtime/adapter',
+    'runtime/path',
+    'runtime/distribution',
+    'runtime/diagnostics',
+    'lint-rules/a3-lint',
+  ]) {
+    const source = path.join(repositoryRoot, relative);
+    const destination = path.join(committedSourceRoot, relative);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.cpSync(source, destination, {
+      recursive: true,
+      filter: (candidate) => !path.relative(source, candidate).split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)),
+    });
+  }
+  fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
+  runFixtureGit(['init', '-q']);
+  runFixtureGit(['config', 'user.name', 'Distribution Test']);
+  runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
+  runFixtureGit(['add', '--all']);
+  runFixtureGit(['commit', '-qm', 'fixture']);
+  sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
+});
 let baselineRoot;
 afterAll(() => {
   if (baselineRoot) fs.rmSync(baselineRoot, { recursive: true, force: true });
-  fs.rmSync(committedSourceRoot, { recursive: true, force: true });
+  if (committedSourceRoot) fs.rmSync(committedSourceRoot, { recursive: true, force: true });
 });
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -374,12 +380,12 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(outputConflict.stderr).toMatch(/distribution-release-output-exists/);
         // Arrange
         const linkedSource = path.join(root, 'linked-source');
-        const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8' });
+        const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8', timeout: 5000 });
         expect(clone.status, clone.stderr).toBe(0);
         const linkedAsset = 'lint-rules/a3-lint/linked.lua';
         fs.symlinkSync('ci_github_workflow_external_action_full_sha.lua', path.join(linkedSource, linkedAsset));
         const fixtureGit = (args) => {
-          const result = spawnSync('git', args, { cwd: linkedSource, encoding: 'utf8' });
+          const result = spawnSync('git', args, { cwd: linkedSource, encoding: 'utf8', timeout: 5000 });
           expect(result.status, result.stderr).toBe(0);
           return result.stdout.trim();
         };

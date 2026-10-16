@@ -3,6 +3,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test, describe, expect } from 'vitest';
 import { collectSubjectCoverage } from '../../../tests/coverage-tools/contract-subject-coverage.mjs';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Measured max 7.3s per call; the limit is about 5x that. A timeout means the call regressed:
+// investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 40000;
 
 describe("repository-coverage-aggregation", () => {
   // integration_id: repository-coverage-aggregation
@@ -58,7 +62,7 @@ describe("repository-coverage-aggregation", () => {
       const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
         `import { collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subjects, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify(collectAggregateCoverage(subjects, root, root + '/coverage')));`,
         JSON.stringify([subjects, root]),
-      ], { encoding: 'utf8', env: environment });
+      ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
       // Assert
       expect(execution.status, execution.stderr).toBe(0);
       const result = JSON.parse(execution.stdout);
@@ -126,7 +130,7 @@ describe("contract-coverage-aggregation", () => {
         const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
           `import { collectSubjectCoverage, collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subjects, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify(subjects.map(subject => ({ id: subject.subjectId, individual: collectSubjectCoverage(subject, root, root + '/coverage'), aggregate: collectAggregateCoverage([subject], root, root + '/coverage') }))));`,
           JSON.stringify([subjects, root]),
-        ], { encoding: 'utf8', env: environment });
+        ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
         // Assert
         expect(execution.status, execution.stderr).toBe(0);
         const results = JSON.parse(execution.stdout);
@@ -203,7 +207,7 @@ describe("repository-coverage-aggregation", () => {
       const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
         `import { collectSubjectCoverage, collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subject, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify({ individual: collectSubjectCoverage(subject, root, root + '/coverage'), aggregate: collectAggregateCoverage([subject], root, root + '/coverage') }));`,
         JSON.stringify([subject, root]),
-      ], { encoding: 'utf8', env: environment });
+      ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
       // Assert
       expect(execution.status, execution.stderr).toBe(0);
       const results = JSON.parse(execution.stdout);
@@ -237,7 +241,7 @@ describe("repository-coverage-aggregation", () => {
     const config = path.join(root, 'capture.json');
     writeFileSync(config, JSON.stringify({ scripts: { fixture: '' }, rawDirectory: root, typescript: false }));
     const env = { ...process.env, A3_CI_COVERAGE_CONFIG: config, NODE_OPTIONS: '' };
-    const run = (code) => spawnSync(process.execPath, ['--import', capture.href, '--input-type=module', '--eval', code], { env, encoding: 'utf8' });
+    const run = (code) => spawnSync(process.execPath, ['--import', capture.href, '--input-type=module', '--eval', code], { env, encoding: 'utf8', timeout: spawnTimeoutMs });
     try {
       // Act
       const empty = run('');
@@ -251,6 +255,7 @@ describe("repository-coverage-aggregation", () => {
       // Act
       const interrupted = run("import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module'; globalThis.__coverage__ = { fixture: { observed: true } }; const write = fs.writeFileSync; fs.writeFileSync = (destination) => { write(destination, '{'); throw new Error('simulated interrupted snapshot'); }; syncBuiltinESMExports();");
       // Assert
+      expect(interrupted.error).toBeUndefined();
       expect(interrupted.status).not.toBe(0);
       expect(interrupted.stderr).toMatch(/simulated interrupted snapshot/);
       expect(existsSync(path.join(root, `${interrupted.pid}-0.json`))).toBe(false);

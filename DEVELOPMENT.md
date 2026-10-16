@@ -117,6 +117,26 @@ a3-sdd sdd resolve-test-targets --workspace-root . \
 
 `root_layout_scan` と `owner_outcomes` を確認し、failure、未分類、対象0件を成功扱いにしません。`sdd/dsl/**/.a3-sdd` は生成状態であり、正本ツリーへ残しません。生成状態の配置は sdd-core の `definition-file-locations` に従います。
 
+## 契約対象ごとの回帰
+
+回帰方式の選択は `regression-test` スキルに従います。契約対象を1つに絞る場合は、その subject の test map だけを解決し、`verified` のテストファイルだけを実行します。
+
+```sh
+test_map=sdd/dsl/specs/contract-core/subjects/<subject-dir>/test-maps.sdd.yml
+a3-sdd sdd resolve-test-targets --workspace-root . \
+  --resolver-profile vitest-5.0.3 --test-map "$test_map" --format json
+```
+
+返った `targets[].path` のうち `status` が `verified` のものを `npm test --` へ渡します。`verified` 以外の対象があるときは、成功扱いにしません。所要時間は契約対象ごとに大きく異なり、`repository-action-distribution` のように全体とほぼ同じ時間がかかるものがあります。
+
+フル回帰が停止した場合に止まったファイルを特定できるよう、進捗をファイルにも残して実行します。ログは一時領域へ置きます。
+
+```sh
+(set -o pipefail; npm test 2>&1 | tee "$TMPDIR/vitest.log")
+```
+
+テストが同期で起動する外部プロセスの `timeout` は、実測した所要時間の約5倍(最小5秒)を上限とします。同期呼び出しはワーカーを止め、Vitest の `testTimeout` では中断できません。タイムアウトした場合は、上限を上げる前に、その呼び出しの性能改善または分割を検討します。
+
 ## 移行記録
 
 移行元の revision と切替時点の受入結果は [移行記録](docs/maintenance/migration-baseline.md)、旧公開資産の保全条件は [README.md](README.md) を参照してください。
