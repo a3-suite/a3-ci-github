@@ -124,14 +124,14 @@ assets:
     sourcePaths:
       - runtime/installer/run-installer.mjs
       - runtime/installer/dist/index.js
-      - runtime/installer/dist/installer/src/assembly.py
-      - runtime/installer/dist/installer/src/diagnostic-reasons.json
-      - runtime/installer/dist/installer/src/build-installer.py
-      - runtime/installer/dist/installer/src/build-shared-wrapper.py
-      - runtime/installer/dist/installer/src/builder_common.py
-      - runtime/installer/dist/installer/src/platform/install.sh
-      - runtime/installer/dist/installer/src/platform/install.ps1
-      - runtime/installer/dist/installer/src/wrapper/install.sh
+      - runtime/installer/src/assembly.py
+      - runtime/installer/src/diagnostic-reasons.json
+      - runtime/installer/src/build-installer.py
+      - runtime/installer/src/build-shared-wrapper.py
+      - runtime/installer/src/builder_common.py
+      - runtime/installer/src/platform/install.sh
+      - runtime/installer/src/platform/install.ps1
+      - runtime/installer/src/wrapper/install.sh
   - id: skill.ci-release-installer
     application: skill-deploy-source
     sourceTree: skills/ci-release-installer

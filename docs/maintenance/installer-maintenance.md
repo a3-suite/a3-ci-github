@@ -25,7 +25,7 @@ Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/s
 
 入力固定とAction／CLI境界はTypeScriptです。候補組立とprofile検証はPython 3.11以上を使います。既存builderのarchive処理・source正規化・checksum・確定処理を同じPython processから利用でき、TypeScriptへ同じ処理を再実装せずに実候補を検証できるため、この部分を[Action構築方針](action-construction.md)の例外とします。Python runtimeに外部package依存はありません。新規の言語非依存な制御処理一般への例外ではありません。
 
-ActionとCLIのPython payloadは同じ `src/` から生成します。利用側の製品宣言・manifest以外に共通実装・テストのGit管理を要求しません。runnerのPython、Git、OS toolchainの前提は [Action README](../../actions/ci-release-supplemental-asset/README.md) に従います。
+ActionとCLIは同じ `src/` のPython payloadを正本とします。利用側の製品宣言・manifest以外に共通実装・テストのGit管理を要求しません。runnerのPython、Git、OS toolchainの前提は [Action README](../../actions/ci-release-supplemental-asset/README.md) に従います。
 
 共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/ci-release-installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
 
@@ -55,7 +55,7 @@ a3-lint lint runtime/installer/src runtime/installer/tests --lang python --frame
   --add-rule-set-lib "$A3_SKILLS_ROOT/python/assets/a3-lint/shared" --format json
 ```
 
-配布生成はAction bundle、CLI bundleと各Python／OS payloadを更新します。生成先の `dist/` を直接保守せず、source変更後に再生成します。公開スキルの配備だけではこの配布物は更新されません。
+配布生成はAction bundle、CLI bundleと、Action bundleに同梱するPython／OS payloadを更新します。CLIは `runtime/installer/src` のpayloadを直接使います。生成先の `dist/` を直接保守せず、source変更後に再生成します。公開スキルの配備だけではこの配布物は更新されません。
 
 ## Pythonソース計測
 
