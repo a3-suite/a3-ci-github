@@ -96,4 +96,31 @@ test('entrypoint rejects a changed approval ID', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint rejects release notes that differ from the approved body digest', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-digest-'));
+  const output = path.join(root, 'output');
+  const notes = '# Release\n';
+  const approvedDigest = crypto.createHash('sha256').update('# Approved\n').digest('hex');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1.2.3', 'INPUT_RELEASE-VERSION': '1.2.3', 'INPUT_TARGET-IDENTITY': 'owner/project', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': approvedDigest } as Record<string, string>;
+
+  // Act
+  const result = spawnSync(process.execPath, [...entrypointArgs], { env, encoding: 'utf8' });
+
+  // Assert
+  expect(result.status).not.toBe(0);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', stage: 'create-request' },
+    context: { inputs: { requestHeadSha: 'a'.repeat(40), releaseRequestRunId: '11', requestWorkflowRunId: '22' } },
+    comparison: { field: 'approval-body-sha256', expected: approvedDigest, observed: crypto.createHash('sha256').update(notes).digest('hex') },
+  });
+  expect(result.stderr).not.toContain('# Release');
+  expect(fs.existsSync(path.join(root, 'release-publication-request/request.json'))).toBe(false);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 });

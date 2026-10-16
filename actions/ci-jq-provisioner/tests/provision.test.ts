@@ -67,7 +67,8 @@ describe('jq provisioning', () => {
       fetchAsset: async (url) => url.endsWith('/sha256sum.txt')
         ? Buffer.from(`${'0'.repeat(64)}  jq-linux-amd64\n`)
         : Buffer.from('jq fixture'),
-    })).rejects.toThrow(/jq-provision-failed: checksum mismatch/);
+    })).rejects.toMatchObject({ message: expect.stringMatching(/jq-provision-failed: checksum mismatch/), details: { stage: 'checksum-validation', field: 'sha256', asset: 'jq-linux-amd64',
+      expected: '0'.repeat(64), observed: createHash('sha256').update('jq fixture').digest('hex') } });
   });
 
   test('reports a download failure separately from version verification', async () => {

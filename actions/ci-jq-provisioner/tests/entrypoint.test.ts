@@ -26,6 +26,11 @@ test('Action rejects an invalid version as provisioning failure', () => {
   });
   expect(result.status).toBe(1);
   expect(result.stderr).toMatch(/jq-provision-failed/);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-jq-provisioner', stage: 'version-validation' },
+    comparison: { field: 'version', expected: 'exact-numeric-version' },
+  });
 });
 
 });
