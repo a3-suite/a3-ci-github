@@ -119,6 +119,10 @@ describe("contract.ci-rust-source-gate.processing", () => {
       const rejected = run(path.join(scriptRoot, 'ci-source-gate.sh'), ['rust', authority], { cwd: fixture });
       // Assert
       expect(rejected.status).not.toBe(0);
+      expect(failureEvidence(rejected.stderr)).toMatchObject({
+        classification: { subject: 'ci-rust-source-gate', stage: 'source-binding' },
+        comparison: { field: 'source-sha', expected: 'a'.repeat(40), observed: sourceSha },
+      });
     }));
   });
 });
@@ -265,9 +269,20 @@ describe("contract.ci-rust-release-build.processing", () => {
       ), { env: { ...environment, FAKE_RUSTUP_EXIT_CODE: '1', FAKE_MANIFEST: '/must-not-reach-cargo' } });
       expect(failedSetup.status).not.toBe(0);
       expect(failureEvidence(failedSetup.stderr)).toMatchObject({
-        classification: { operation: 'build', stage: 'toolchain-install' },
+        classification: { subject: 'ci-rust-release-build', operation: 'build', stage: 'toolchain-install' },
+        comparison: { field: 'rust-toolchain' },
       });
       expect(existsSync(path.join(fixture, 'setup-failed'))).toBe(false);
+
+      writeFileSync(authorityPath, JSON.stringify({ ...JSON.parse(readFileSync(authorityPath, 'utf8')), source_sha: 'a'.repeat(40) }));
+      const unboundSource = runBuild(args('1.90.0', platformTarget, path.join(fixture, 'source-mismatch')), { env: environment });
+      expect(unboundSource.status).not.toBe(0);
+      expect(failureEvidence(unboundSource.stderr)).toMatchObject({
+        classification: { subject: 'ci-rust-release-build', operation: 'build', stage: 'source-binding' },
+        comparison: { field: 'source-sha', expected: 'a'.repeat(40), observed: sourceSha },
+      });
+      expect(existsSync(path.join(fixture, 'source-mismatch'))).toBe(false);
+      writeAuthority('1.90.0');
 
       // Act / Assert: checkout EOL differences are permitted, other bytes remain bound.
       const acceptedManifests = [manifestText.replaceAll('\n', '\r\n'), manifestText.replace('\n', '\r\n')];

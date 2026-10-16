@@ -151,6 +151,9 @@ test_maps:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > preset-assurance preserves its outcome and safe diagnostic context"
         check_refs: [diagnostic-details]
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: "contract.ci-preset-assurance.verification > consumer-preset-assurance-cli > public preset validation CLI retains the failing preset status when a managed workflow drifts"
+        check_refs: [diagnostic-details]
   - verification_id: verification.ci-preset-assurance.asset-lock
     case_id: detailed-failure-asset-lock
     tests:

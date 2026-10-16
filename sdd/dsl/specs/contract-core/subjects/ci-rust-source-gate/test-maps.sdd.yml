@@ -36,9 +36,15 @@ test_maps:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context"
         check_refs: [diagnostic-details]
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: "contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA"
+        check_refs: [diagnostic-details]
   - verification_id: verification.ci-rust-source-gate.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+      - path: runtime/rust-release/tests/rust-release-scripts.test.mjs
+        symbol: "contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA"
         check_refs: [diagnostic-details]

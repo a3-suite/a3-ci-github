@@ -274,6 +274,39 @@ describe("contract.ci-preset-assurance.verification", () => {
     // test_level: e2e
     // flow_id: consumer-preset-assurance-cli
     // contract_id: contract.ci-preset-assurance.verification
+    test('public preset validation CLI retains the failing preset status when a managed workflow drifts', () => {
+      withFixture('a3-ci-github-preset-drift-', (consumerRoot) => {
+        // Arrange
+        const skillArguments = preparePresetFixture(consumerRoot, false);
+        const lockResult = generateAssetLock(consumerRoot, skillArguments);
+        expect(lockResult.status, lockResult.stderr).toBe(0);
+        prepareBootstrapRuntime(consumerRoot);
+        const workflow = path.join(consumerRoot, '.github/workflows/release-request-tag.yml');
+        writeFileSync(workflow, `${readFileSync(workflow, 'utf8')}# drift\n`);
+        // Act
+        const validationResult = execute(process.execPath, [
+          path.join(repositoryRoot, 'runtime/preset/run-validate-ci-preset.mjs'),
+          '--audit-mode', 'read-only',
+          '--repo-root', consumerRoot,
+          ...skillArguments,
+          '--preset', 'release-request',
+        ]);
+        // Assert
+        expect(validationResult.status, validationResult.stderr).toBe(1);
+        const report = JSON.parse(validationResult.stdout);
+        expect(report.status).not.toBe('success');
+        const line = validationResult.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+        expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+          classification: { subject: 'ci-preset-assurance', operation: 'preflight', stage: 'preset-validation', reason: 'preset-validation-failed' },
+          comparison: { field: 'preset-status', expected: 'success', observed: report.status },
+        });
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: consumer-preset-assurance-cli
+    // contract_id: contract.ci-preset-assurance.verification
     test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
       withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {
         // Arrange

@@ -50,9 +50,15 @@ test_maps:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context"
         check_refs: [diagnostic-details]
+      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command"
+        check_refs: [diagnostic-details]
   - verification_id: verification.ci-github-toolchain-verifier.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context"
+        check_refs: [diagnostic-details]
+      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        symbol: "contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command"
         check_refs: [diagnostic-details]
