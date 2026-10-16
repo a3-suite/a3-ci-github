@@ -1,5 +1,6 @@
 import { completeFailure, FailureContext, safeErrorReason, DiagnosticError } from '../../../runtime/diagnostics/failure.mjs';
 import { provisionJqOnPath } from './provision.js';
+import { provisionWriteState } from '../../../runtime/provisioner/provision-core.js';
 
 const diagnostic = new FailureContext('ci-jq-provisioner', 'provision');
 async function main(): Promise<void> {
@@ -12,7 +13,6 @@ async function main(): Promise<void> {
 
   diagnostic.confirmed();
   diagnostic.at('download-verify-install', { input: 'exact-version', tool: 'jq' });
-  diagnostic.writeState = 'temporary-install-may-exist';
   await provisionJqOnPath({
     version, runnerOs, runnerArch, tempRoot,
     fetchAsset: async (url) => {
@@ -26,6 +26,7 @@ async function main(): Promise<void> {
 
 if (process.env.GITHUB_ACTIONS === 'true') {
   main().catch((error: unknown) => {
+    diagnostic.writeState = provisionWriteState(error);
     diagnostic.report(error);
     completeFailure(safeErrorReason(error), 1);
   });

@@ -29,6 +29,7 @@ test('Action rejects an invalid version as provisioning failure', () => {
   const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
   expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
     classification: { subject: 'ci-gh-provisioner', stage: 'version-validation' },
+    'execution-state': { write: 'not-started' },
     comparison: { field: 'version', expected: 'exact-numeric-version' },
   });
 });
