@@ -18,6 +18,10 @@ on:
       toolchain:
         required: true
         type: string
+      runner:
+        description: Static versioned runner label selected by the owner caller
+        required: true
+        type: string
     outputs:
       handoff_run_id:
         value: ${{ jobs.build.outputs.handoff_run_id }}
@@ -30,7 +34,7 @@ permissions: {}
 
 jobs:
   version-plan:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions: {}
     outputs:
       version: ${{ steps.version.outputs['publish-version'] }}
@@ -51,7 +55,7 @@ jobs:
 
   build:
     needs: version-plan
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     outputs:
@@ -83,7 +87,7 @@ jobs:
   summary:
     needs: [version-plan, build]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     env:

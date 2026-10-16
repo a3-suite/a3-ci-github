@@ -444,6 +444,8 @@ describe("publication-validation", () => {
         value => { value.jobs.publish.with['gh-version'] = '${{ inputs.tool }}'; },
         value => { value.jobs.publish.with['jq-version'] = false; },
         value => { value.jobs.publish.with.undeclared = 'value'; },
+        value => { value.jobs.prepare.with.runner = '${{ github.event.workflow_run.head_branch }}'; },
+        value => { value.jobs.prepare.with.runner = 'ubuntu-latest'; },
         value => { value.jobs.publish.permissions.packages = 'read'; },
         value => { value.jobs.publish.secrets.UNDECLARED = '${{ secrets.OTHER }}'; },
       ]) {

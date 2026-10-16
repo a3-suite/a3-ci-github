@@ -73,6 +73,7 @@ jobs:
       target_identity: ${{ needs.validate-request.outputs.target_identity }}
       language_profile: ${{ needs.validate-request.outputs.language_profile }}
       toolchain: ${{ needs.validate-request.outputs.toolchain }}
+      runner: <versioned-runner>
 
   publish:
     needs: [validate-request, prepare]

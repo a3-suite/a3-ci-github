@@ -23,6 +23,9 @@ concurrency:
 env:
   CI_GH_VERSION: '2.80.0'
 
+# Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
+# runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
+# available, and re-verify through this repository's quality-gate.
 jobs:
   contract-linux:
     name: CI Action contract / Linux

@@ -673,6 +673,9 @@ const effectivePermissions = (workflow: ValueMap, job: ValueMap): ValueMap =>
     ? map(job.permissions)
     : map(workflow.permissions);
 
+const isStaticRunner = (runner: unknown): boolean =>
+  typeof runner === 'string' && runner !== '' && !runner.endsWith('-latest') && !runner.includes('${{');
+
 const inspectPackagePreparation = (
   context: InspectionContext, asset: WorkflowAsset, workflow: ValueMap, observedActions: Set<string>,
 ): void => {
@@ -708,6 +711,9 @@ const inspectPackagePreparation = (
       path: `${asset.destination}:jobs.prepare.with.${name}`, message: 'required package preparation input is missing',
     });
   }
+  if ('runner' in map(call.with) && !isStaticRunner(map(call.with).runner)) add(report.mismatches, {
+    path: `${asset.destination}:jobs.prepare.with.runner`, message: 'package preparation runner must be a static versioned label',
+  });
   validateCommon(root, `${asset.destination}:prepare`, JSON.stringify(callee), callee, report, registry);
   for (const value of actionUses(callee)) {
     if (!value.startsWith(`${registry.actionRepository}/`)) continue;
@@ -794,7 +800,7 @@ const inspectWorkflowAsset = (
         });
       }
       const runner = map(call.with).runner;
-      if (typeof runner !== 'string' || runner === '' || runner.endsWith('-latest') || runner.includes('${{')) add(report.mismatches, {
+      if (!isStaticRunner(runner)) add(report.mismatches, {
         path: `${asset.destination}:jobs.publish.with.runner`, message: 'publication runner must be a static versioned label', settingLocation: asset.destination,
       });
       const virtualAsset = { id: executionId, destination: `.github/workflows/${executionId}.yml`, source: publication.source };
@@ -819,7 +825,7 @@ const inspectWorkflowAsset = (
       path: `${asset.destination}:jobs.${jobId}.uses`, message: `${label} reusable workflow is pending-release; deployment is forbidden`, settingLocation: asset.destination,
     });
     const runner = map(call.with).runner;
-    if (typeof runner !== 'string' || runner === '' || runner.endsWith('-latest') || runner.includes('${{')) add(report.mismatches, {
+    if (!isStaticRunner(runner)) add(report.mismatches, {
       path: `${asset.destination}:jobs.${jobId}.with.runner`, message: `${label} runner must be a static versioned label`, settingLocation: asset.destination,
     });
     if (asset.id === 'quality-gate') {

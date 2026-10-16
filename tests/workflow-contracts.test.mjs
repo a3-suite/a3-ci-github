@@ -892,7 +892,7 @@ describe("workflow-contracts", () => {
       includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
       expect(preparation).toMatch(/workflow_call:/);
       const preparationContract = yaml.parse(preparation);
-      expect(Object.keys(preparationContract.on.workflow_call.inputs).sort()).toStrictEqual(['language_profile', 'source_sha', 'target_identity', 'toolchain', 'version']);
+      expect(Object.keys(preparationContract.on.workflow_call.inputs).sort()).toStrictEqual(['language_profile', 'runner', 'source_sha', 'target_identity', 'toolchain', 'version']);
       expect(Object.values(preparationContract.on.workflow_call.inputs).every((input) => input.required === true && input.type === 'string')).toBeTruthy();
       expect(Object.keys(preparationContract.on.workflow_call.outputs).sort()).toStrictEqual(['artifact_id', 'handoff_run_id', 'publish_version']);
       expect(preparationContract.permissions).toStrictEqual({});
@@ -1353,8 +1353,7 @@ describe("workflow-contracts", () => {
         for (const [jobId, job] of Object.entries(document.jobs)) {
           const matrixJob = (name === 'ci-quality-platforms' && jobId === 'platform')
             || (name === 'ci-release-publication' && jobId === 'build');
-          const expected = name === 'ci-package-preparation' ? 'ubuntu-24.04'
-            : matrixJob ? '${{ matrix.runner }}' : '${{ inputs.runner }}';
+          const expected = matrixJob ? '${{ matrix.runner }}' : '${{ inputs.runner }}';
           expect(job['runs-on']).toBe(expected);
           if (expected === '${{ inputs.runner }}') {
             expect(document.on.workflow_call.inputs.runner.type).toBe('string');
