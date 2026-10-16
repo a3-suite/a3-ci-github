@@ -270,7 +270,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(failedSetup.status).not.toBe(0);
       expect(failureEvidence(failedSetup.stderr)).toMatchObject({
         classification: { subject: 'ci-rust-release-build', operation: 'build', stage: 'toolchain-install' },
-        comparison: { field: 'rust-toolchain' },
+        comparison: { field: 'rust-toolchain', expected: '1.90.0', observed: 'install-failed' },
       });
       expect(existsSync(path.join(fixture, 'setup-failed'))).toBe(false);
 
@@ -743,6 +743,7 @@ describe("contract.ci-rust-release-build.processing", () => {
           expect(result.status).not.toBe(0);
           expect(failureEvidence(result.stderr)).toMatchObject({
             classification: { operation: 'build', stage: 'toolchain-install' },
+            comparison: { field: 'rust-toolchain', expected: '1.90.0', observed: 'install-failed' },
             'execution-state': { lastConfirmed: 'authority-binding', nativeExit: 1, write: 'not-started' },
           });
           expect(existsSync(output)).toBe(false);

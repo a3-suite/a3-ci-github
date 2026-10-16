@@ -36,8 +36,10 @@ try {
 
   $ciLastConfirmed = $ciStage
   $ciStage = 'toolchain-install'
+  $ciComparison = @{ field = 'rust-toolchain'; expected = $(if ($Toolchain -cmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { $Toolchain } else { 'protected-or-unavailable' }); observed = 'install-failed' }
   rustup toolchain install $Toolchain --profile minimal --target $PlatformTarget
   if ($LASTEXITCODE -ne 0) { throw 'rust toolchain setup failed' }
+  $ciComparison = $null
   $ciLastConfirmed = $ciStage
   $ciStage = 'cargo-metadata'
   $metadata = cargo "+$Toolchain" metadata --manifest-path $manifestPath --locked --no-deps --format-version 1 | ConvertFrom-Json

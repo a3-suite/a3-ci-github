@@ -90,8 +90,8 @@ node "$script_dir/dist/index.mjs" \
 ci_failure_last_confirmed=$ci_failure_stage
 ci_failure_stage=toolchain-install
 ci_failure_field=rust-toolchain
-ci_failure_expected=unavailable
-ci_failure_observed=unavailable
+ci_failure_expected=$toolchain
+ci_failure_observed=install-failed
 rustup toolchain install "$toolchain" --profile minimal --target "$platform_target"
 ci_failure_last_confirmed=$ci_failure_stage
 ci_failure_stage=cargo-metadata
