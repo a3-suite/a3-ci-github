@@ -27,7 +27,7 @@
 
 ### project が管理する CI 資材の配置
 - project が管理する CI 専用資材は `.ci/` 配下へ置く。新しく追加する資材も、用途と所有者から同じ基準で判定する。
-- `.ci/` 配下の個別の配置先（platform 定義、lock、Action 固定参照、独自 adapter、CI 専用 script、同梱スキル宣言など）は、各資材の正本に従う。
+- `.ci/` 配下の個別の配置先（platform 定義、lock、Action 固定参照、独自 adapter、CI 専用 script、同梱スキル宣言、installer の宣言など）は、各資材の正本に従う。
 - 次の資材は `.ci/` へ移さない。標準と異なる配置を選ぶ場合は、理由と owner を project SSOT に残す。
   - provider やツールが固定の位置を要求する資材（`.github/workflows/`、言語ツールが既定で探索する設定など）
   - CI 以外でも使う資材（スキル本体、製品が実行時に読む設定など）

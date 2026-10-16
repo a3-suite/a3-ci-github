@@ -36,7 +36,7 @@
 
 ## 製品宣言の標準配置
 
-製品リポジトリではassemblyを`installer/assembly.json`、対象別manifestを`installer/manifests/<native-platform-id>.json`へ置く。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
+製品リポジトリではassemblyを`.ci/installer/assembly.json`、対象別manifestを`.ci/installer/manifests/<native-platform-id>.json`へ置く。installerはCIで組み立てて公開する資材なので、CI資材の配置基準(`ci-github`スキルの`references/ci-runtime-boundary.reference.md`)に従い`.ci/installer/`へ集める。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
 
 この配置と次節のインストール先を標準との比較基準にする。既存のディレクトリ名だけを維持理由にせず、異なる配置が必要なら製品要件とownerの根拠をproject SSOTへ記録する。ディレクトリ名の違いだけで安全性違反とは扱わず、既存のproject override分類へ渡す。
 
@@ -174,7 +174,7 @@
   - GitHub Release asset として配布する導線では、利用者が取得・実行する配布単位を単一 wrapper、または wrapper と固定済み payload archive に固定してよい。選択した platform 間で wrapper、archive、実行形式が異なる場合は platform 別配布を検討する。
   - shell installer を GitHub Release asset として直接公開する場合、Linux / macOS 共通の asset 名は `install.sh`、Windows の asset 名は `install.ps1` を推奨する。platform ごとに内容の異なる同名 asset が必要なら、名前で区別する。GitHub Release native starter は組立済みの単体スクリプトを公開する。
   - 共有 wrapper を固定 URL 配信する場合は、共有 `install.sh`（POSIX sh bootstrap）とプラットフォーム別 platform installer（検証済み payload）を別 asset として公開する。wrapper は platform を実行時に検出し、選んだ payload を checksum 検証してから実行し、検証前に破壊的副作用を起こさない。
-  - 利用先の installer source は project owner の正本として扱い、`.ci/` やスキル専用の隠し領域へ置かない。`.ci/` は project builder を呼び出して検証済み handoff を作る adapter に限定する。
+  - 利用先の installer source は project owner の正本として扱い、製品宣言と同じ `.ci/installer/` 配下へ置く。スキル専用の隠し領域へは置かない。
   - CI など installer 外で wrapper と payload archive を組み立てる場合、asset の組立と検証証跡はインストーラ asset 組立証跡契約に従う。workflow trigger、job 分割、runner trust、permissions、cache、release publish 手順は ci スキルの責務として扱う。
   - CIとローカルでは同じ固定provider runtimeを使う。project-owned custom sourceは標準では満たせない要求に限定する。
   - CI実行時にAgent Skillをダウンロードしない。Action同梱のruntimeだけを使い、ローカルは固定配布CLIを管理外領域へ取得する。共通builder・fixtureをprojectへコピーしない。
