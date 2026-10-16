@@ -10,7 +10,7 @@ export const run = async (): Promise<void> => {
     const outputPath = text(process.env.GITHUB_OUTPUT);
     diagnostic.confirmed();
     diagnostic.at('authority-validation', {"input": "owner-decision-request-snapshot-and-tag"});
-    const result = await createAuthority({ rootDirectory: input('root-directory'), snapshotPath: input('snapshot-path'), outputDirectory: input('output-directory'), repository: text(process.env.GITHUB_REPOSITORY), requestRunId: input('release-request-run-id'), publicationRequestRunId: input('publication-request-run-id') }, new GithubReadOnlyClient(input('github-token')));
+    const result = await createAuthority({ rootDirectory: input('root-directory'), snapshotPath: input('snapshot-path'), outputDirectory: input('output-directory'), repository: text(process.env.GITHUB_REPOSITORY), requestRunId: input('release-request-run-id'), publicationRequestRunId: input('publication-request-run-id') }, new GithubReadOnlyClient(input('github-token')), diagnostic);
     diagnostic.retainedEvidence = 'configured-output-directory/authority.json';
     const outputs = { 'authority-path': result.authorityPath, source_sha: result.sourceSha, version: result.version, target_identity: result.targetIdentity, 'approval-id': result.approvalId, 'body-sha256': result.bodyDigest };
     diagnostic.confirmed();

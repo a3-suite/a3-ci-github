@@ -6,6 +6,19 @@ import { createRequest, verifyRequest } from '../src/request.js';
 
 describe('ci-package-publication-request-source', () => {
   // integration_id: ci-package-publication-request-source
+  test('rejects an invalid schema without echoing a nested value', (t) => {
+    // Arrange
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-package-request-schema-'));
+    t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+    const requestPath = path.join(root, 'request.json');
+    fs.writeFileSync(requestPath, JSON.stringify({ schema: { credential: 'credential-value' }, sourceSha: 'a'.repeat(40), version: '1.2.3', targetIdentity: 'npm:pkg', languageProfile: 'node', toolchain: '22.20.0' }));
+    // Act
+    const verify = () => verifyRequest(requestPath, 'a'.repeat(40));
+    // Assert
+    expect(verify).toThrow(expect.objectContaining({ details: { field: 'schema', expected: 'ci.package-publication-request.v1', observed: 'type:object' } }));
+  });
+
+  // integration_id: ci-package-publication-request-source
   // contract_id: contract.ci-package-publication-request.outputs
   test('creates and verifies a request bound to source SHA', (t) => {
     // Arrange

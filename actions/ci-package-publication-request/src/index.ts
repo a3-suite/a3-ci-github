@@ -13,17 +13,21 @@ export const run = (): void => {
     if (operation === 'create') {
     diagnostic.confirmed();
     diagnostic.at('request-create', {"output": "request-path"});
-      result = createRequest(requestPath, {
+      const fields = {
         sourceSha: readActionInput(core.getInput, 'source-sha', { required: true }),
         version: readActionInput(core.getInput, 'version', { required: true }),
         targetIdentity: readActionInput(core.getInput, 'target-identity', { required: true }),
         languageProfile: readActionInput(core.getInput, 'language-profile', { required: true }),
         toolchain: readActionInput(core.getInput, 'toolchain', { required: true }),
-      });
+      };
+      diagnostic.at('request-create', { sourceSha: fields.sourceSha, version: fields.version, targetIdentity: fields.targetIdentity });
+      result = createRequest(requestPath, fields);
     } else if (operation === 'verify') {
     diagnostic.confirmed();
     diagnostic.at('request-verify', {"input": "request-path-and-expected-source-sha"});
-      result = verifyRequest(requestPath, readActionInput(core.getInput, 'expected-source-sha', { required: true }));
+      const expectedSourceSha = readActionInput(core.getInput, 'expected-source-sha', { required: true });
+      diagnostic.at('request-verify', { expectedSourceSha });
+      result = verifyRequest(requestPath, expectedSourceSha);
     } else {
       throw new DiagnosticError('package-publication-operation-invalid');
     }

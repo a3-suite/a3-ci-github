@@ -70,6 +70,12 @@ test('entrypoint rejects a source SHA mismatch', () => {
   // Assert
   expect(result.status).not.toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-package-publication-request', stage: 'request-verify', reason: 'package-publication-source-sha-mismatch' },
+    context: { inputs: { expectedSourceSha: 'b'.repeat(40) } },
+    comparison: { field: 'source-sha', expected: 'b'.repeat(40), observed: 'a'.repeat(40) },
+  });
   fs.rmSync(root, { recursive: true, force: true });
 });
 

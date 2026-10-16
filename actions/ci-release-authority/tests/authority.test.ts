@@ -20,6 +20,7 @@ import { fixture, repository, source } from './fixture';
 import { assembleRelease } from '../../../runtime/release-publication/assembly';
 import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-manifest-decoder';
 import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
+import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 
 describe('ci-release-authority-runtime', () => {
   test('authority accepts canonical repository casing while preserving approved identity', async () => {
@@ -114,6 +115,46 @@ describe('ci-release-authority-runtime', () => {
         const sentinel = path.join(f.options.outputDirectory, 'owner-file');
         if (fs.existsSync(sentinel)) expect(fs.readFileSync(sentinel, 'utf8')).toBe('preserve'); }
       finally { fs.rmSync(f.root, { recursive: true }); }
+    }
+  });
+
+  // integration_id: ci-release-authority-runtime
+  test('authority rejection retains the failing verification stage and expected/observed identity', async () => {
+    // Arrange
+    const base = { repository, requestRunId: '11', publicationRequestRunId: '22' };
+    const bound = { ...base, tag: 'v1.2.3', source, approvalId: 'approved' };
+    const rewrite = (f: ReturnType<typeof fixture>, file: string, change: (value: Record<string, unknown>) => void) => {
+      const target = path.join(f.root, file); const value = JSON.parse(fs.readFileSync(target, 'utf8')); change(value); fs.writeFileSync(target, JSON.stringify(value));
+    };
+    const cases: [string, (f: ReturnType<typeof fixture>) => void, Record<string, unknown>, Record<string, unknown>?][] = [
+      ['decision-validation', (f) => rewrite(f, 'release-publication-request/request.json', (value) => { value.schema = { body: 'private-notes-body', credential: 'credential-value' }; }),
+        { field: 'schema', expected: 'ci.release-publication-request.v2', observed: 'type:object' }, base],
+      ['notes-approval', (f) => { fs.writeFileSync(path.join(f.root, 'release-notes-handoff/release-notes.json'), 'not-json'); }, {}, base],
+      ['notes-approval', (f) => { fs.unlinkSync(path.join(f.root, 'release-notes-handoff/release-notes-approval.json')); }, {}, base],
+      ['request-provenance', (f) => { (f.responses[`/repos/${repository}/actions/runs/22`] as Record<string, unknown>).conclusion = 'failure'; },
+        { field: 'run.conclusion', run: '22', expected: 'success', observed: 'failure' }],
+      ['request-provenance', (f) => { (f.responses[`/repos/${repository}/actions/runs/22`] as Record<string, unknown>).head_branch = 'other'; },
+        { field: 'run.head_branch', run: '22', expected: 'main', observed: 'other' }],
+      ['tag-source', (f) => { f.responses[`/repos/${repository}/git/ref/tags/v1.2.3`] = { object: { type: 'tag', sha: 'd'.repeat(40) } }; },
+        { field: 'tag-ref.object', expected: { type: 'tag', sha: 'c'.repeat(40) }, observed: { type: 'tag', sha: 'd'.repeat(40) } }],
+      ['workflow-binding', (f) => { fs.appendFileSync(path.join(f.root, OWNER_HANDOFF_PATH), '# changed\n'); },
+        { field: 'owner-workflow-sha256' }],
+      ['provider-suitability', (f) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).archived = true; },
+        { field: 'repository-metadata', observed: { full_name: repository, archived: true, disabled: false } }],
+    ];
+    for (const [stage, mutate, comparison, inputs = bound] of cases) {
+      const f = fixture();
+      try {
+        mutate(f);
+        const diagnostic = new FailureContext('ci-release-authority', 'release-authority');
+        // Act
+        const error = await createAuthority(f.options, f.client, diagnostic).then(() => undefined, (failure: unknown) => failure);
+        // Assert
+        expect(error, stage).toBeDefined();
+        const evidence = diagnostic.evidence(error);
+        expect(evidence, `${stage} ${String(comparison.field)}`).toMatchObject({ classification: { subject: 'ci-release-authority', stage }, context: { inputs }, comparison });
+        expect(JSON.stringify(evidence)).not.toMatch(/private-notes-body|credential-value/);
+      } finally { fs.rmSync(f.root, { recursive: true }); }
     }
   });
 
