@@ -20,8 +20,8 @@
 以下は同梱する場合だけ実施する。
 
 1. 製品repositoryで管理するスキルから、同梱するものを選ぶ。配置場所は任意で、`.agents/skills/`や入れ子のディレクトリも選べる。移動・複製は不要。外部ownerのスキルを複製しない。
-2. `assets/examples/release-skills.example.json`を基に公開宣言JSONを作る。`skills/release.json`は配置例で、別のrepository相対pathも指定できる。`skills[]`へ選択した各rootの`path`を列挙し、repository直下は`.`で指定する。ZIP直下の名前は各`SKILL.md`の`name`から決まり、配置ディレクトリ名には依存しない。同名のスキルは同時選択できない。`include`には公開するファイルまたはディレクトリだけを指定し、必須の参照・実行資材を`requiredFiles`へ記録する。存在しないサンプルのパスは転記しない。
-3. Release publication callerの生成時に、planの`--set`で`<release-skills-config-path>`へ宣言JSONのrepository相対pathをJSON文字列として渡す（例：`"skills/release.json"`）。同梱しない場合は`"__unset__"`を渡す。生成済みcallerを手編集しない。installerの選択とは独立して設定する。採用する固定providerのworkflowとActionがこの入力へ対応することを、同じReleaseの配布manifestと固定SHA先で確認する。
+2. `assets/examples/release-skills.example.json`を基に公開宣言JSONを作る。標準配置は`.ci/release-skills.json`（`references/ci-runtime-boundary.reference.md`の配置基準）で、別のrepository相対pathも指定できる。`skills[]`へ選択した各rootの`path`を列挙し、repository直下は`.`で指定する。ZIP直下の名前は各`SKILL.md`の`name`から決まり、配置ディレクトリ名には依存しない。同名のスキルは同時選択できない。`include`には公開するファイルまたはディレクトリだけを指定し、必須の参照・実行資材を`requiredFiles`へ記録する。存在しないサンプルのパスは転記しない。
+3. Release publication callerの生成時に、planの`--set`で`<release-skills-config-path>`へ宣言JSONのrepository相対pathをJSON文字列として渡す（例：`".ci/release-skills.json"`）。同梱しない場合は`"__unset__"`を渡す。生成済みcallerを手編集しない。installerの選択とは独立して設定する。採用する固定providerのworkflowとActionがこの入力へ対応することを、同じReleaseの配布manifestと固定SHA先で確認する。
 4. `references/release-skills-contract.reference.yml`に従い、固定製品sourceからの収録内容、禁止資材の除外、必須fileの充足、ZIPと証跡を確認する。除外規則はruntimeのpolicy JSONを参照し、このガイドへ複製しない。公開scriptsや必要な実行資材は残し、コンパイル残骸の除外で必要資材が欠けた場合は配置・宣言を直す。
 5. 同じ製品Releaseへ`<repository-name>-skills.zip`とその`.sha256`を公開する。生成はOS別matrixで繰り返さず、assembleで一度だけ行う。installerを同梱する場合も、各ownerの証跡を個別に保持して同じhandoffへ集約する。別のReleaseは作らない。
 6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。installerの`assets/examples/readme-installation.example.md`の該当節を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。スキル本文に固定versionを埋め込まず、版対応はReleaseとCI証跡で保持する。

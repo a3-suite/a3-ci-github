@@ -54,7 +54,7 @@ export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', tar
   return { root, put, identity, authority, snapshot, name, payload, buildManifest, options, assemble: () => assembleRelease(options, decodePlatformManifest) };
 };
 
-export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}, configPath = 'skills/release.json') => {
+export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}, configPath = '.ci/release-skills.json') => {
   const f = fixture(t);
   const configuration = { schemaVersion: 'ci.release-skills.v1', skills: [{ path: 'skills/example-tool', include: ['SKILL.md', 'references', 'scripts', 'assets'], requiredFiles: ['SKILL.md', 'references/setup.guide.md', 'scripts/run.py'] }] };
   f.put('skills/example-tool/SKILL.md', '---\nname: example-tool\ndescription: Read the product using its public CLI.\n---\nRead `references/setup.guide.md` and use `scripts/run.py`.\n');

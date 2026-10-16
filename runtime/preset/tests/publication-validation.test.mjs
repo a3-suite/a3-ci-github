@@ -12,6 +12,7 @@ import { inspectWorkflowAsset } from '../workflow-validation.ts';
 import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { validateConditionalExtensions, validateQualityPreset } from '../quality-validation.ts';
 import { findWorkflowAssetReferences } from '../workflow-assets.ts';
+import { collectSemanticCandidates } from '../semantic-candidates.ts';
 
 const model = () => {
   const workflows = new Map(['release-publication-request', 'release-publication-caller'].map((id) => [
@@ -493,7 +494,7 @@ describe("publication-validation", () => {
         return [...report.mismatches, ...report.missingSettings, ...flow.mismatches, ...flow.missingSettings].filter(item => String(item.path).includes('release_skills_config_path'));
       };
       // Act
-      const enabled = run('skills/release.json');
+      const enabled = run('.ci/release-skills.json');
       const disabled = run('__unset__');
       const unsafe = run('../release.json');
       // Assert
@@ -501,6 +502,36 @@ describe("publication-validation", () => {
       expect(disabled).toEqual([]);
       expect(unsafe.some(item => item.message.includes('release skills require one static safe declaration path'))).toBe(true);
       expect(unsafe.some(item => item.message.startsWith('canonical drift:'))).toBe(false);
+    });
+
+    // Supplemental coverage: a declaration at the standard .ci placement is owned by the caller setting, not unclassified.
+    test('release skills declaration named by the caller is not an unclassified CI asset', (t) => {
+      // Arrange
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const parent = path.join(repository, 'tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const root = fs.mkdtempSync(path.join(parent, 'release-skills-placement-'));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      const registry = loadRegistry(createReport());
+      const callerPath = '.github/workflows/release-publication-caller.yml';
+      fs.mkdirSync(path.join(root, '.ci'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.ci/release-skills.json'), '{}\n');
+      fs.writeFileSync(path.join(root, '.ci/unrelated.json'), '{}\n');
+      const unclassified = (value) => {
+        const workflows = model();
+        workflows.get(callerPath).jobs.publish.with.release_skills_config_path = value;
+        const report = createReport();
+        collectSemanticCandidates(root, [], [], new Map([[callerPath, workflows.get(callerPath)]]), registry, report);
+        return report.semanticCandidates.filter(item => item.kind === 'unclassified-directory-asset').map(item => item.path);
+      };
+      // Act
+      const named = unclassified('.ci/release-skills.json');
+      const unset = unclassified('__unset__');
+      const rewritten = unclassified('.ci-base/.ci/release-skills.json');
+      // Assert
+      expect(named).toEqual(['.ci/unrelated.json']);
+      expect(unset).toEqual(['.ci/release-skills.json', '.ci/unrelated.json']);
+      expect(rewritten).toEqual(['.ci/release-skills.json', '.ci/unrelated.json']);
     });
   });
 });
