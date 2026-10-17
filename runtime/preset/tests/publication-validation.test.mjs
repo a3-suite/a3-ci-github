@@ -367,7 +367,7 @@ describe("publication-validation", () => {
       expect(baseline.observed.has('ci-release-publisher')).toBeTruthy();
       const execution = baseline.parsed.get('.github/workflows/release-publication.yml');
       expect(execution.env.CI_RELEASE_IMPLEMENTATION).toBe('rust-cli-release');
-      expect(execution.env.CI_SHA256SUM_VERSION).toBe('9.5');
+      expect(execution.env.CI_LANGUAGE_PROFILE).toBe('rust');
       expect(baseline.report.missingSettings.some(item => item.path === '.ci/trusted/ci-release-publish.sh')).toBe(false);
       expect(fs.existsSync(path.join(root, '.github/workflows/release-publication.yml'))).toBe(false);
       const checkout = execution.jobs.publish.steps.find(step => step.with?.ref === '${{ github.workflow_sha }}');

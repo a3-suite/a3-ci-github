@@ -35,8 +35,10 @@ on:
         default: __unset__
         type: string
       sha256sum-version:
-        required: true
+        # No step in this workflow runs gh or sha256sum; existing callers may still pass the tool versions.
+        required: false
         type: string
+        default: ''
       runner:
         description: Static versioned runner label selected by the owner caller
         required: true
@@ -59,8 +61,9 @@ on:
         required: true
         type: string
       gh-version:
-        required: true
+        required: false
         type: string
+        default: ''
       jq-version:
         required: true
         type: string
@@ -99,9 +102,7 @@ env:
   CI_TOOLCHAIN_VERSION: ${{ inputs.toolchain-version }}
   CI_UV_VERSION: ${{ inputs.uv-version }}
   CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
-  CI_GH_VERSION: ${{ inputs.gh-version }}
   CI_JQ_VERSION: ${{ inputs.jq-version }}
-  CI_SHA256SUM_VERSION: ${{ inputs.sha256sum-version }}
   CI_RELEASE_IMPLEMENTATION: ${{ inputs.release-implementation }}
   CI_RELEASE_OWNER_CONTRACT: git.release-flow
   CI_STANDARD_BUNDLE_ID: ${{ inputs.standard-bundle-id }}
@@ -167,21 +168,6 @@ jobs:
         with:
           manifest-path: ${{ env.CI_PLATFORM_MANIFEST }}
           runner-policy: trusted
-      - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
-        with:
-          jq-version: ${{ env.CI_JQ_VERSION }}
-      - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
-        with:
-          gh-version: ${{ env.CI_GH_VERSION }}
-      - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
-        with:
-          mode: gh-jq-sha256
-          gh-version: ${{ env.CI_GH_VERSION }}
-          jq-version: ${{ env.CI_JQ_VERSION }}
-          sha256sum-version: ${{ env.CI_SHA256SUM_VERSION }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: release-publication-request

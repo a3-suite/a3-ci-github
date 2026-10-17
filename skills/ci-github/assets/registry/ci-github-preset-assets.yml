@@ -147,9 +147,9 @@ actionization:
     - id: ci-gh-provisioner
       status: available
       actionPath: actions/ci-gh-provisioner
-      workflows: [release-publication, package-publication]
+      workflows: [package-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish, package-publication/publish]
+      privilegedJobs: [package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-gh-provisioning
     - id: ci-github-toolchain-verifier

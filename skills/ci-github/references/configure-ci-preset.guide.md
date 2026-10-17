@@ -91,9 +91,7 @@ jqを使用する経路では `CI_JQ_VERSION` に公式 Release の取得物と 
 固定 SHA の provider Action で jq を供給してから verifier で検証するため、project 固有の install 処理は不要である。
 `CI_GH_VERSION` も公式 Release に取得物と checksum がある exact 版を指定する。canonical workflow が jq の直後に
 固定 SHA の provider Action で gh を供給してから verifier で検証するため、project 固有の install 処理は不要である。
-`CI_SHA256SUM_VERSION` は release-publication の verifier が参照する。versioned runner label が
-提供する coreutils の版に一致させ、runner image の更新で版が変わった場合は project の CI owner が値を更新して
-verifier 実行で再検証する。package-publication は `gh-jq` のため対象外である。
+release-publication は gh と sha256sum を使わないため、`CI_GH_VERSION` は package-publication だけが参照する。
 
 ### `.ci/README.md` の責務
 
