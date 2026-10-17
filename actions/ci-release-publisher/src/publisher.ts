@@ -1,6 +1,5 @@
 import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 import fs from 'node:fs';
-import { verifySuitability } from '../../../runtime/release-publication/provider';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { loadAssembly, observeBefore, observeReadback, observeAssets, verifyCreatedRelease, GithubReadOnlyClient, remoteId, repositoryEndpoint } from '../../../runtime/release-publication/observation';
@@ -51,7 +50,6 @@ export const publishRelease = async (options: PublisherOptionsType, client: Publ
     equal(current, initial, 'authority-handoff-binding-mismatch');
     diagnostic.confirmed();
     diagnostic.at('pre-write-validation', {"input": "repository-and-remote-inventory"});
-    await verifySuitability(current.identity, client);
     await observeBefore(options, client);
     if (approvedBody(options, current.identity) !== body) fail('approval-binding-mismatch');
     equal(loadAssembly(options), current, 'authority-handoff-binding-mismatch');
@@ -82,7 +80,6 @@ export const publishRelease = async (options: PublisherOptionsType, client: Publ
     diagnostic.confirmed();
     diagnostic.at('uploaded-assets-readback', {"input": "release-asset-inventory"});
     await observeAssets(current.identity, id, current.assembly, client);
-    await verifySuitability(current.identity, client);
     await verifyCreatedRelease(current.identity, id, client);
     approvedBody(options, current.identity);
     diagnostic.confirmed();

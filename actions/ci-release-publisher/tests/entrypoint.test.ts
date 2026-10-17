@@ -117,10 +117,8 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
   const cases = [
     { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: false } }, reason: 'push-permission-denied' },
     { metadata: { full_name: 'another/project', default_branch: 'main', permissions: { push: true } }, reason: 'repository-identity-mismatch' },
-    { metadata: { full_name: 'owner/project', permissions: { push: true } }, reason: 'default-branch-invalid' },
     { metadata: null, reason: 'response-shape-invalid' },
     { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: 'invalid' } }, reason: 'push-permission-invalid' },
-    { metadata: { full_name: 'owner/project', default_branch: 'main', permissions: { push: true } }, reason: 'source-head-invalid' },
   ];
   for (const { metadata, reason } of cases) {
     const calls = f.put(`calls-${reason}`, '');
@@ -131,7 +129,10 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
       globalThis.fetch = async (url, init) => {
         fs.appendFileSync(process.env.MOCK_CALLS, init.method + '\\n');
         if (init.method !== 'GET') throw new Error('unexpected write synthetic-secret');
-        return Response.json(new URL(url).pathname === '/repos/owner/project' ? ${JSON.stringify(metadata)} : { sha: 'invalid' },
+        const tag = ${JSON.stringify({ [`/repos/owner/project/git/ref/tags/${f.identity.tag}`]: { object: { type: 'tag', sha: f.identity.tag_object_sha } },
+          [`/repos/owner/project/git/tags/${f.identity.tag_object_sha}`]: { sha: f.identity.tag_object_sha, object: { type: 'commit', sha: f.identity.source_sha } } })};
+        const pathname = new URL(url).pathname;
+        return Response.json(pathname === '/repos/owner/project' ? ${JSON.stringify(metadata)} : tag[pathname] ?? { sha: 'invalid' },
           { status: 200, headers: { 'x-github-request-id': 'safe:123' } });
       };`);
     // Act
@@ -147,11 +148,11 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
     expect(fs.existsSync(writeRoot)).toBe(false);
     expect(fs.readFileSync(calls, 'utf8').trim().split('\n').every(method => method === 'GET')).toBe(true);
     expect(result.stderr).not.toContain('synthetic-secret');
-    expect(result.stderr).toContain('provider-publication-suitability-unknown-or-unsupported');
+    expect(result.stderr).toContain('remote-state-unknown');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
     expect(diagnostic.classification.stage).toBe('pre-write-validation');
     expect(diagnostic.comparison).toMatchObject({ method: 'GET', 'http-status': 200, 'request-id': 'safe:123', 'sanitized-reason': reason });
-    expect(diagnostic.comparison['sanitized-endpoint']).toBe(reason === 'source-head-invalid' ? 'unavailable' : '/repos/owner/project');
+    expect(diagnostic.comparison['sanitized-endpoint']).toBe('/repos/owner/project');
     expect(diagnostic['execution-state'].write).toBe('not-started');
   }
 });

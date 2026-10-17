@@ -106,9 +106,9 @@ exceptions:
   - id: release-body-missing
     appliesTo: [release-publication]
     decision: Release publish せず、欠落を判定不能として返す。
-  - id: provider-publication-unsuitable
+  - id: provider-publication-rejected
     appliesTo: [release-publication]
-    decision: fail-closed。tag や公開 source を自動で作り直さず、不適合の観測結果を owner へ返す。
+    decision: provider が公開操作を拒否した応答を操作単位の診断として owner へ返し、tag や公開 source を自動で作り直さない。
   - id: release-request-body-missing
     appliesTo: [release-request]
     decision: manual request の承認済み本文が欠落している場合は request を生成せず、判定不能として返す。

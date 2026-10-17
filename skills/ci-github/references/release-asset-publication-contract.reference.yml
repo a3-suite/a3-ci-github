@@ -15,7 +15,7 @@ authority:
     - supplemental Release asset set selection and publication contract
     - release resource identity contract
     - release publication success state
-    - provider publication suitability and failure attribution contract
+    - provider operation failure attribution contract
 usage:
   whenToRead:
     - Release tag と承認済み release notes の入力境界を確認するとき
@@ -23,7 +23,7 @@ usage:
     - Release assets の公開経路を設計または監査するとき
     - Release object の一意性と操作対象 identity を確認するとき
     - Release assets 公開の成功状態を判定するとき
-    - 公開 source の provider 適合と失敗診断の境界を確認するとき
+    - provider 操作の失敗診断の境界を確認するとき
   consumers:
     - human
     - agent
@@ -121,25 +121,13 @@ observation:
   tagEndpoint:
     visibility: published-only
     draftAbsenceEvidence: forbidden
-providerPublicationSuitability:
-  subject: resolved-source-and-credential-route
-  observation:
-    source: provider-remote-state
-    earlyCheck: after-source-resolution
-    earlyScope: [repository-state, source-default-workflow-compatibility]
-    earlyWriteCapability: not-observed
-    preWriteScope: [source-default-workflow-compatibility, selected-credential-write-capability]
-    preWriteRecheck: required
-    earlyCheckIsPermanentEvidence: false
-  credentialRoute:
-    capabilityDeclaration: required
-    declarationAloneIsSufficient: false
-    automaticFallback: forbidden
+providerOperationFailure:
+  precheckPolicy: references/workflow-authoring-policy.reference.md#事前確認
   failureAttribution:
     scope: per-provider-operation
     required: [operation, method, sanitized-endpoint, http-status, request-id, sanitized-reason]
     forbidden: [credential-material, authorization-header, signed-url, response-body-bulk]
-  unknownResult: fail-closed
+  automaticCredentialFallback: forbidden
 successState:
   releaseObjectCardinality: exactly-one
   draft: false

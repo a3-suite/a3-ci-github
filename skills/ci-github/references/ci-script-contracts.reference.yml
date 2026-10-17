@@ -62,10 +62,10 @@ contracts:
       sourceVersionVerification: optional-owner-selected-profile-validation
       canonicalProducer: explicit-v2-inputs-required
 
-    output: [authority-context, release-source-version-approval-binding, provider-publication-suitability-observation]
-    suitabilityContract: ci.release-asset-publication-contract#providerPublicationSuitability
-    boundary: trusted control で実行し、request と source を検証データとして扱う。source identity の確定後、build 前に provider の repository/source/workflow 適合を観測し、その範囲の不適合または判定不能は停止する。実際の公開 credential の write capability は早期観測では未確認として記録し、publisher が write 直前に検証する。早期観測を write 直前の再観測の代替にしない。
-    stopConditions: [request-inconsistent, source-inconsistent, version-inconsistent, approval-inconsistent, config-inconsistent, owner-contract-inconsistent, provider-publication-suitability-unknown-or-unsupported]
+    output: [authority-context, release-source-version-approval-binding]
+    failureContract: ci.release-asset-publication-contract#providerOperationFailure
+    boundary: trusted control で実行し、request と source を検証データとして扱う。対象 repository の identity を確認し、公開 credential の権限と provider の受理可否は事前に予測せず publisher の操作結果で判定する。
+    stopConditions: [request-inconsistent, source-inconsistent, version-inconsistent, approval-inconsistent, config-inconsistent, owner-contract-inconsistent]
   - id: release-source-identity-scripts
     input: [authority-context, fixed-source-sha, language-profile]
     output: [source-identity-evidence]
@@ -159,10 +159,10 @@ contracts:
     input: [authority-context, release-handoff, target-identity, approved-release-body, non-overwrite-policy, credential-route, remote-observation-before]
     output: [release-remote-identity, version, asset-digest, publish-receipt, readback-evidence]
     publicationContract: ci.release-asset-publication-contract#observation
-    suitabilityContract: ci.release-asset-publication-contract#providerPublicationSuitability
+    failureContract: ci.release-asset-publication-contract#providerOperationFailure
     outputChannel: publish 段は identity、receipt、readback evidence を workflow が観測・露出できる機械可読出力として提供する。
-    boundary: trusted control で検証済み handoff だけを publish し、操作対象 source を実行または再 build しない。事前観測が absent の場合だけ非上書き publish command を実行し、その command が出力する事後 readback を検証する。観測の段階規則、不在判定、timestamp の利用禁止は publicationContract を正本とする。既存 Release は成功へ読み替えない。write 直前に provider 適合を再観測し、不適合または判定不能は write せず停止し、provider 操作の失敗は操作単位の診断として返す。
-    stopConditions: [authority-context-missing, release-handoff-missing, authority-handoff-binding-mismatch, remote-state-unknown, existing-release-or-asset, tag-version-asset-checksum-or-body-mismatch, provider-publication-suitability-unknown-or-unsupported]
+    boundary: trusted control で検証済み handoff だけを publish し、操作対象 source を実行または再 build しない。事前観測が absent の場合だけ非上書き publish command を実行し、その command が出力する事後 readback を検証する。観測の段階規則、不在判定、timestamp の利用禁止は publicationContract を正本とする。既存 Release は成功へ読み替えない。write 直前に tag identity と不在を再観測し、provider 操作の失敗は操作単位の診断として返す。
+    stopConditions: [authority-context-missing, release-handoff-missing, authority-handoff-binding-mismatch, remote-state-unknown, existing-release-or-asset, tag-version-asset-checksum-or-body-mismatch]
   - id: package-build-scripts
     input: [concrete-publish-version, fixed-source-sha, language-or-ecosystem-profile, package-build-adapter]
     output: [package-artifact-handoff, metadata, checksum, version-binding]
