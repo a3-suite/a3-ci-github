@@ -528,6 +528,12 @@ jobs:
 
   publish:
     needs: [authority, assemble]
+    if: >-
+      ${{
+        !cancelled() &&
+        needs.authority.result == 'success' &&
+        needs.assemble.result == 'success'
+      }}
     runs-on: ${{ inputs.runner }}
     permissions:
       actions: read
