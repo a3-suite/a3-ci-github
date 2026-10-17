@@ -860,11 +860,59 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: release-publication-workflow-contract
+    test('release publication runs after successful assembly even when supplemental-asset is skipped', () => {
+      // Arrange
+      const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
+      const publish = (results, cancelled = false) => runInNewContext(
+        jobs.publish.if.trim().slice(3, -2).replace(/needs\.([a-zA-Z0-9_-]+)/g, "needs['$1']"),
+        { needs: Object.fromEntries(Object.entries(results).map(([id, result]) => [id, { result }])), cancelled: () => cancelled },
+      );
+      const successful = { authority: 'success', assemble: 'success' };
+      // Act
+      const canPublish = publish(successful);
+      // Assert
+      expect(jobs.publish.needs).toStrictEqual(['authority', 'assemble']);
+      expect(canPublish).toBe(true);
+      expect(publish(successful, true)).toBe(false);
+      for (const id of Object.keys(successful)) {
+        for (const result of ['failure', 'cancelled', 'skipped', '']) {
+          expect(publish({ ...successful, [id]: result }), `${id}:${result}`).toBe(false);
+        }
+      }
+    });
+
+    // integration_id: release-publication-workflow-contract
     test('release publication workflows preserve failed and unknown outcomes', () => {
       const request = jobBlock(read('workflows/release/release-publication-request.yml'), 'request');
       const publication = jobBlock(read('workflows/release/release-publication-caller.yml'), 'summary');
       for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ job\.status \}\}"/]) expect(request).toMatch(pattern);
       for (const pattern of [/if: always\(\)/, /"rawResult":"\$\{\{ needs\.publish\.result \}\}"/]) expect(publication).toMatch(pattern);
+    });
+  });
+});
+
+describe("workflow-contracts", () => {
+  describe("job-execution-condition", () => {
+    // GitHub's implicit success() skips a job when any transitive ancestor was skipped, even if its direct needs succeeded.
+    test('jobs below a conditional ancestor declare their own status-function condition', () => {
+      // Arrange
+      const files = globSync(['.github/workflows/*.yml', 'workflows/**/*.yml'], { cwd: root }).sort();
+      const violations = [];
+      // Act
+      for (const file of files) {
+        const jobs = yaml.parse(read(file)).jobs ?? {};
+        const ancestors = (id, seen = new Set()) => {
+          for (const parent of [jobs[id]?.needs ?? []].flat()) if (!seen.has(parent)) { seen.add(parent); ancestors(parent, seen); }
+          return seen;
+        };
+        for (const id of Object.keys(jobs)) {
+          const conditional = [...ancestors(id)].filter(parent => jobs[parent]?.if !== undefined);
+          if (conditional.length > 0 && !/\b(?:always|cancelled|failure)\(\)/.test(String(jobs[id].if ?? ''))) violations.push(`${file}#${id} <- ${conditional.join(',')}`);
+        }
+      }
+      // Assert
+      expect(files.length).toBeGreaterThan(0);
+      expect(violations).toStrictEqual([]);
     });
   });
 });
