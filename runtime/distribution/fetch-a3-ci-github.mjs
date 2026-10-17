@@ -587,7 +587,8 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
         }
         generatedContent = templateRuntime.renderWorkflowTemplate({
           yaml: yamlRuntime, template: sourceText,
-          values: { ...previous.values, ...(settings[asset.id] ?? {}) },
+          values: settings[asset.id] ?? {},
+          carriedValues: previous.values,
           references: loaded.manifest.workflowReferences,
           emptyAllowed: template.emptyAllowed,
           extensions: previous.extensions,

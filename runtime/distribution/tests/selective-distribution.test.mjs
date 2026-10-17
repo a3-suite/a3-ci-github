@@ -765,6 +765,8 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
       expect(extracted.values['versioned-runner']).toBe(values['versioned-runner']);
       expect(extracted.values['quality-workflow-sha']).toBeUndefined();
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, unknown: 'x' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-unknown/);
+      // A setting carried from the previous template but retired from the new one is dropped instead of blocking the update.
+      expect(yaml.parse(renderWorkflowTemplate({ yaml, template, references, values, carriedValues: { 'retired-setting': '', 'feature-enabled': true }, emptyAllowed: ['optional-value'] })).jobs.quality.with.enabled).toBe(false);
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, 'feature-enabled': 'false' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-invalid/);
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: {}, emptyAllowed: ['optional-value'] })).toThrow(/setting-missing/);
       const drifted = structuredClone(observed);

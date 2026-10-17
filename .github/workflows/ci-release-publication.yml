@@ -51,8 +51,10 @@ on:
         required: true
         type: string
       uv-version:
-        required: true
+        # Release implementations are Rust-only, so callers may omit the Python tool version.
+        required: false
         type: string
+        default: ''
       cargo-audit-version:
         required: true
         type: string

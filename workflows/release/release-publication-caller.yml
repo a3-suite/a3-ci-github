@@ -74,7 +74,6 @@ jobs:
       language-profile: <language-profile>
       platform-manifest: <platform-manifest>
       toolchain-version: <toolchain-version>
-      uv-version: <uv-version>
       cargo-audit-version: <cargo-audit-version>
       gh-version: <gh-version>
       jq-version: <jq-version>

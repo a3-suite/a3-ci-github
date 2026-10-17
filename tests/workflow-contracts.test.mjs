@@ -643,6 +643,9 @@ describe("workflow-contracts", () => {
       const callerPublish = jobBlock(caller, 'publish');
       assertNeeds(callerPublish, ['validate-request']);
       includesAll(callerPublish, [/contents: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
+      // Release implementations are Rust-only, so the caller omits the optional Python tool version.
+      expect(yaml.parse(caller).jobs.publish.with['uv-version']).toBeUndefined();
+      expect(yaml.parse(publication).on.workflow_call.inputs['uv-version']).toMatchObject({ required: false, default: '' });
       expect(yaml.parse(caller).jobs.publish.with).toMatchObject({
         supplemental_release_asset_enabled: '<supplemental-release-asset-enabled>',
         supplemental_release_asset_owner_contract: '<supplemental-release-asset-owner-contract>',
