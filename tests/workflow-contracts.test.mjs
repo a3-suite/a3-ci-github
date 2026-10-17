@@ -1311,6 +1311,20 @@ describe("workflow-contracts", () => {
       expect(collected.filter((file) => !selected.has(file))).toStrictEqual([]);
     });
 
+    test('repository CI discovers every tracked Python test file', () => {
+      // Arrange
+      const collected = execFileSync('git', ['ls-files', '-z', '--', '*test*.py'], { cwd: root, encoding: 'utf8' })
+        .split('\0').filter((file) => /^test.*\.py$/.test(path.basename(file)));
+      const discovers = ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml']
+        .flatMap((file) => [...read(file).matchAll(/unittest discover -s (\S+)(?: -p (\S+))?/g)])
+        .map(([, start, pattern]) => ({ start, pattern: pattern?.replace(/^'|'$/g, '') ?? 'test*.py' }));
+      // Act
+      const undiscovered = collected.filter((file) => !discovers.some(({ start, pattern }) =>
+        path.dirname(file) === start && path.matchesGlob(path.basename(file), pattern)));
+      // Assert
+      expect(undiscovered).toStrictEqual([]);
+    });
+
     // integration_id: repository-quality-delivery-regression
     test('provider reference gate rejects first-party binding drift', () => {
       // Arrange
