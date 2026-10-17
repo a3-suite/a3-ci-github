@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { collectActionMetadata, collectScriptBundleMetadata } from '../../runtime/repository/check-action-dist.mjs';
+import { DiagnosticError, FailureContext, safeErrorReason } from '../../runtime/diagnostics/failure.mjs';
 
 const SCRIPT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DEFAULT_DEFINITION = path.join(SCRIPT_ROOT, 'tests/contract-subject-execution.json');
@@ -112,7 +113,7 @@ const validateSegment = (segment, subjectId, root) => {
       assert(typeof segment.coverage.aggregateGroup === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(segment.coverage.aggregateGroup), `${subjectId}/${segment.id}: invalid aggregate group`);
     }
   } else if (typeof segment.coverage.reason !== 'string') {
-    throw new Error(`${subjectId}/${segment.id}: disabled coverage requires reason`);
+    assert.fail(`${subjectId}/${segment.id}: disabled coverage requires reason`);
   }
 };
 
@@ -145,6 +146,19 @@ export const validateDefinition = (definition, root = SCRIPT_ROOT) => {
 export const loadDefinition = (definitionPath = DEFAULT_DEFINITION, root = SCRIPT_ROOT) => {
   const definition = JSON.parse(readFileSync(definitionPath, 'utf8'));
   return validateDefinition(definition, root);
+};
+
+// Only owner-written assertion messages are public; parser and filesystem messages may contain local paths.
+const loadCheckedDefinition = (definitionPath) => {
+  const diagnostic = new FailureContext('repository-managed-source-integrity', 'contract-execution-mapping');
+  diagnostic.at('execution-definition-validation', { input: 'contract-subject-execution-definition' });
+  try {
+    return loadDefinition(definitionPath);
+  } catch (error) {
+    const observed = error instanceof assert.AssertionError && !error.generatedMessage ? error.message : safeErrorReason(error);
+    diagnostic.report(new DiagnosticError('execution-definition-invalid', { diagnostics: { field: 'contract-subject-execution', expected: 'explicit-segments-with-tests-inside-repository', observed } }));
+    throw error;
+  }
 };
 
 export const selectUnitIntegrationTests = (definition, discoveredTests, root = SCRIPT_ROOT) => {
@@ -352,7 +366,7 @@ const parseArgs = (args) => {
 
 const main = () => {
   const options = parseArgs(process.argv.slice(2));
-  const definition = loadDefinition(options.definition);
+  const definition = loadCheckedDefinition(options.definition);
   if (options.check) {
     console.log(`Execution definition is valid (${definition.subjects.length} contract subjects).`);
     return;

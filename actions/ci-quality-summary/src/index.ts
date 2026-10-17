@@ -16,17 +16,24 @@ export const run = (): void => {
     } catch {
       throw new DiagnosticError('ci-summary-json-invalid');
     }
+    const { GITHUB_SERVER_URL: server = '', GITHUB_REPOSITORY: repository = '', GITHUB_RUN_ID: runId = '' } = process.env;
+    // An invalid run context leaves the default unset, so rows without evidence fail as missing evidence.
+    const serverOrigin = URL.canParse(server) ? new URL(server) : undefined;
+    const runUrl = serverOrigin?.protocol === 'https:' && serverOrigin.origin === server
+      && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) && /^[1-9][0-9]*$/.test(runId)
+      ? `${server}/${repository}/actions/runs/${runId}` : undefined;
     diagnostic.confirmed();
     diagnostic.at('summary-classification', {"input": "summary-json"});
-    const result = renderQualitySummary(input);
+    const result = renderQualitySummary(input, runUrl);
     diagnostic.details.sourceOutcome = result.status;
     if (input && typeof input === 'object' && 'jobs' in input && Array.isArray(input.jobs)) {
       diagnostic.details.jobs = input.jobs.map((job: unknown) => {
         const value = job && typeof job === 'object' ? job as Record<string, unknown> : {};
+        const evidence = value.evidence ?? runUrl;
         return {
           unit: typeof value.unit === 'string' && /^[A-Za-z0-9_.-]{1,100}$/.test(value.unit) ? value.unit : 'unavailable',
           rawResult: ['success', 'failure', 'cancelled', 'skipped'].includes(String(value.rawResult)) ? value.rawResult : 'unavailable',
-          evidence: typeof value.evidence === 'string' && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+(?:\/job\/[0-9]+)?$/.test(value.evidence) ? value.evidence : 'configured-job-evidence',
+          evidence: typeof evidence === 'string' && (evidence === runUrl || /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+(?:\/job\/[0-9]+)?$/.test(evidence)) ? evidence : 'configured-job-evidence',
         };
       });
     }

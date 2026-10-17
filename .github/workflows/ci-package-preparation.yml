@@ -18,6 +18,10 @@ on:
       toolchain:
         required: true
         type: string
+      runner:
+        description: Static versioned runner label selected by the owner caller
+        required: true
+        type: string
     outputs:
       handoff_run_id:
         value: ${{ jobs.build.outputs.handoff_run_id }}
@@ -30,7 +34,7 @@ permissions: {}
 
 jobs:
   version-plan:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions: {}
     outputs:
       version: ${{ steps.version.outputs['publish-version'] }}
@@ -45,13 +49,13 @@ jobs:
           test -n "$PUBLISH_VERSION"
           printf '{"strategy":"exact","publishVersion":%s}\n' "$PUBLISH_VERSION_JSON" > version-plan.json
       - id: version
-        uses: a3-suite/a3-ci-github/actions/ci-publish-version@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-publish-version@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           version-plan-json: version-plan.json
 
   build:
     needs: version-plan
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
     outputs:
@@ -83,14 +87,12 @@ jobs:
   summary:
     needs: [version-plan, build]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           summary-json: >-
-            {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","rawResult":"${{ needs.version-plan.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","rawResult":"${{ needs.build.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"build job result: ${{ needs.build.result }}"}]}
+            {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","rawResult":"${{ needs.version-plan.result }}","applicable":true,"reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","rawResult":"${{ needs.build.result }}","applicable":true,"reason":"build job result: ${{ needs.build.result }}"}]}

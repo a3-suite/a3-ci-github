@@ -110,12 +110,12 @@ export const prepareDistributionRelease = (options: {
   const distributionRegistry = readYaml(
     repositoryRoot,
     options.sourceRevision,
-    'skills/ci-github/references/ci-distribution-assets.reference.yml',
+    'skills/ci-github/assets/registry/ci-distribution-assets.yml',
   );
   const presetRegistry = readYaml(
     repositoryRoot,
     options.sourceRevision,
-    'skills/ci-github/references/ci-github-preset-assets.reference.yml',
+    'skills/ci-github/assets/registry/ci-github-preset-assets.yml',
   );
   const repository = map(distributionRegistry.repository);
   const configuredAssets = Array.isArray(distributionRegistry.assets) ? distributionRegistry.assets.map(map) : [];

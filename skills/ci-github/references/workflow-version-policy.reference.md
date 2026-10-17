@@ -51,10 +51,10 @@
 - local Action は workflow と同じ commit に含まれる資材として扱い、外部 Action の tag pin へ置き換えない。
 - `a3-suite/a3-ci-github` の Action は a3 管理 Action として扱う。consumer接続前に`actionization.implementationSource.releaseTag`のReleaseが公開済みであり、`exactRef`と公開対象の対応を提供元の[publication契約](https://github.com/a3-suite/a3-ci-github/blob/main/sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従って確認する。採用版の契約と検証結果を使い、変更された契約を旧版へ遡及適用しない。tagのpeeled SHAとAction SHAが同じであることだけを確認方法にせず、実装の事前Releaseや接続専用の後続Releaseを要求しない。`uses`は`exactRef`の40桁SHAを実行参照とし、tagを実行参照へ使わない。
 - GitHub 公式、vendor、community の third-party Action は upstream owner の release policy を上書きしない。consumer は full commit SHA を実行参照とし、採用時に upstream の exact release tag、その target commit、実行参照の SHA が一致することを確認する。
-- provider Action の実行参照は registry（`references/ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
+- provider Action の実行参照は registry（`assets/registry/ci-github-preset-assets.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。
-- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/distribute-ci-assets.guide.md`を参照する。
-- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
+- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/deploy-ci-assets.guide.md`を参照する。
+- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/deploy-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
 - upstream がランタイムのサポート終了や移行を通知した場合（例: Node.js ランタイムの deprecation 警告）は、registry と consumer の pin を同一変更で更新し、`## 更新と停止条件` の追跡項目へ記録する。
 - registry に無い provider Action、または `approvedRuntimes` 外の runtime を実行参照にした場合は、`## 更新と停止条件` に従って workflow の追加・更新・publish を進めない。
 - registry の availability gate を満たす `available` の Action だけを workflow へ接続する。Hosted 実行は別の運用証拠として扱う。
@@ -65,6 +65,7 @@
 - runner image の変更、廃止、提供状況を確認できない場合は、実行済み・適合済みと判断しない。
 - trust boundary と version の判断を混ぜない。安全な runner でも version が未指定なら不適合であり、version が固定されても untrusted input を安全に実行できる証拠にはならない。
 
+<a id="os-version-selection"></a>
 ## OS・版の選定と廃止判断
 
 platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更・削除時と、CI監査時に次を判断する。providerは本基準・標準構成・結果集約を所有し、consumerは製品の対応範囲と検査の同等性を判断する。
@@ -73,8 +74,10 @@ platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更
 
 1. 製品が保証するOS/CPUと必要な検証を先に決め、共通化できる処理を確認した後に時間・費用を比較する。native build/test、path、権限、installer等のOS固有保証は対応構成ごとに維持する。
 2. 「なぜ固定が必要か」「どの幅まで許容できるか」を、前節の対象別指定と必要な保証に照らして自問する。完全一致を選ぶなら、同一性・互換性等の理由と、制約を緩めるための検証条件を残す。新しい版が出たことや未検証であることだけで既存の受理範囲を狭めない。
-3. 共通検査は、command、入力、source、依存解決、projectとHOMEの設定、toolchain、OS/CPUによる対象の差を照合する。format/securityという名前だけで同等と判断しない。代表OSは必要能力・実測時間・費用・保守性から選び、先頭platformに置く理由を残す。同等性が不明または崩れた場合は全OSの全検査へ戻す。
-4. 選定理由、固定粒度・許容幅、省略する検査と代替保証、証拠のidentity、owner、次回見直し日・条件を既存の設計またはissueへ記録する。manifestは実行設定に限定し、判断記録用の必須fieldを追加しない。`sharedStandardChecks`はこの判断を済ませたconsumerの宣言として扱う。
+3. 利用者が用意するplatform（OS・runner・runtime）は、互換性があり、providerが廃止・EOLを告知しておらず、support終了まで次回見直しより長い残期間がある版のうち最古を検証対象にする。新しい版の検証は、互換性に効く差がある場合だけ加える。
+4. workflowが使うCI資材（Action・reusable workflowのSHA、workflow内のtool、toolchainのpatch）の版は、dependency-selection スキルの版選定（公開待機期間を含む）に従う。
+5. 共通検査は、command、入力、source、依存解決、projectとHOMEの設定、toolchain、OS/CPUによる対象の差を照合する。format/securityという名前だけで同等と判断しない。代表OSは必要能力・実測時間・費用・保守性から選び、先頭platformに置く理由を残す。同等性が不明または崩れた場合は全OSの全検査へ戻す。
+6. 選定理由、固定粒度・許容幅、省略する検査と代替保証、証拠のidentity、owner、次回見直し日・条件を既存の設計またはissueへ記録する。manifestは実行設定に限定し、判断記録用の必須fieldを追加しない。`sharedStandardChecks`はこの判断を済ませたconsumerの宣言として扱う。
 
 ### 廃止の線引きと見直し
 
@@ -93,8 +96,8 @@ platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更
 - workflow `workflow_dispatch` の入力で runtime や runner を選ぶ場合は、repository 内でレビュー済みの allowlist へ写像し、入力値を `runs-on`、`uses`、download URL、shell source として直接再解釈しない。privileged workflow では trusted CI control が解決した値だけを受け取る。
 - provider 処理が利用する `gh`、`jq`、`sha256sum` は workflow 初期パラメータで exact version を固定し、固定 SHA の toolchain verifier Action で実行前に検証する。
 - `jq` は固定 SHA の `ci-jq-provisioner` Action で指定版を供給してから検証する。Action は jqlang/jq の該当 Release の取得物を同 Release の `sha256sum.txt` と照合し、検証済みの実行ファイルを `GITHUB_PATH` へ追加する。供給失敗は `jq-provision-failed`、供給後の版不一致は verifier の `jq-version-mismatch` で区別する。標準 publication 経路では runner trust policy の入口成功条件と制御checkout照合を満たしてから供給する。
-- `gh` は固定 SHA の `ci-gh-provisioner` Action で指定版を供給してから検証する。Action は cli/cli の該当 Release の取得物を同 Release の `gh_<version>_checksums.txt` と照合し、検証済みの実行ファイルを `GITHUB_PATH` へ追加する。対応 runner は Linux X64/ARM64 とし、それ以外は `gh-provision-failed` で停止する。供給失敗は `gh-provision-failed`、供給後の版不一致は verifier の `gh-version-mismatch` で区別する。供給順は jq 供給の直後、verifier の直前とし、標準 publication 経路では runner trust policy の入口成功条件と制御checkout照合を満たしてから供給する。gh を検証する mode を使う preset は release-publication、package-publication とし、主quality-gateはjq-versionを指定した場合だけjqを供給・検証し、空値なら準備を省略する。必要性はproject ownerが判断する。
-- `sha256sum` は供給対象外とする。供給可能な単体 Release asset を持たないため、許容する版は versioned runner label が提供する coreutils の版に限定する（Ubuntu LTS の runner image では coreutils が rebase されにくい）。`release-publication` の該当 mode は、workflow 初期パラメータ（`CI_SHA256SUM_VERSION`）がその版と完全一致する場合だけ verifier を通過する（`package-publication` は `gh-jq` のため対象外）。runner image の更新で版が変わった場合は、preset を適用した project の CI owner が初期パラメータを更新し、verifier 実行で再検証してから公開を再開する。
+- `gh` は固定 SHA の `ci-gh-provisioner` Action で指定版を供給してから検証する。Action は cli/cli の該当 Release の取得物を同 Release の `gh_<version>_checksums.txt` と照合し、検証済みの実行ファイルを `GITHUB_PATH` へ追加する。対応 runner は Linux X64/ARM64 とし、それ以外は `gh-provision-failed` で停止する。供給失敗は `gh-provision-failed`、供給後の版不一致は verifier の `gh-version-mismatch` で区別する。供給順は jq 供給の直後、verifier の直前とし、標準 publication 経路では runner trust policy の入口成功条件と制御checkout照合を満たしてから供給する。gh を検証する mode を使う preset は package-publication とし、主quality-gateはjq-versionを指定した場合だけjqを供給・検証し、空値なら準備を省略する。必要性はproject ownerが判断する。
+- `sha256sum` は供給対象外とする。供給可能な単体 Release asset を持たないため、許容する版は versioned runner label が提供する coreutils の版に限定する（Ubuntu LTS の runner image では coreutils が rebase されにくい）。標準 preset の publication 経路は sha256sum を使わない。release-publication は provider Action が GitHub API を直接使うため、gh も供給しない。
 - placeholder は consumer が決める値に限る。provider が所有する実行時出力の形式やパース規則を consumer に設定させない。
 - placeholder の空許容は、その placeholder を消費する step が未使用時に skip される場合に限る。
 

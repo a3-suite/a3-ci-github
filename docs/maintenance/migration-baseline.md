@@ -2,7 +2,7 @@
 
 ## 目的
 
-`a3-ci-github` の再構築で使用した移行元と、切替時点の受入結果を記録します。本書の version、SHA、alias は移行時点の記録です。現行の正本は [DEVELOPMENT.md の SSOT](../../DEVELOPMENT.md#ssot)、Action binding は [Action registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml) を参照してください。
+`a3-ci-github` の再構築で使用した移行元と、切替時点の受入結果を記録します。本書の version、SHA、alias は移行時点の記録です。現行の正本は [DEVELOPMENT.md の SSOT](../../DEVELOPMENT.md#ssot)、Action binding は [Action registry](../../skills/ci-github/assets/registry/ci-github-preset-assets.yml) を参照してください。
 
 ## Baseline
 

@@ -341,6 +341,41 @@ describe("repository-contract-subject-execution", () => {
   });
 
   // integration_id: repository-contract-subject-execution
+  test('definition check retains the rejected mapping as failure details without private parser text', () => {
+    // Arrange
+    mkdirSync(path.resolve('tests/tmp'), { recursive: true });
+    const directory = mkdtempSync(path.resolve('tests/tmp/execution-definition-diagnostic-'));
+    try {
+      const invalid = structuredClone(loadDefinition());
+      const subject = invalid.subjects[0];
+      const segment = subject.segments.find((candidate) => candidate.status !== 'excluded');
+      segment.tests = ['../../../../outside.test.mjs'];
+      const invalidPath = path.join(directory, 'escaping.json');
+      writeFileSync(invalidPath, JSON.stringify(invalid));
+      const malformedPath = path.join(directory, 'private-marker.json');
+      writeFileSync(malformedPath, '{');
+      const check = (definitionPath) => {
+        const result = spawnSync(process.execPath, ['tests/coverage-tools/contract-subject-coverage.mjs', '--check', '--definition', definitionPath], { encoding: 'utf8' });
+        const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+        return { result, evidence: JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}') };
+      };
+      // Act
+      const escaping = check(invalidPath);
+      const malformed = check(malformedPath);
+      // Assert
+      expect(escaping.result.status).toBe(1);
+      expect(escaping.evidence.classification).toMatchObject({ subject: 'repository-managed-source-integrity', operation: 'contract-execution-mapping', stage: 'execution-definition-validation', reason: 'execution-definition-invalid' });
+      expect(escaping.evidence.comparison).toStrictEqual({ field: 'contract-subject-execution', expected: 'explicit-segments-with-tests-inside-repository', observed: `${subject.subjectId}/${segment.id}: test path must resolve inside project root` });
+      expect(escaping.evidence['execution-state'].write).toBe('not-started');
+      expect(malformed.result.status).toBe(1);
+      expect(malformed.evidence.comparison.observed).toBe('unknown-failure');
+      expect(JSON.stringify(malformed.evidence)).not.toContain('private-marker');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  // integration_id: repository-contract-subject-execution
   test('definition rejects an active segment without an execution test', () => {
     // Arrange
     const definition = loadDefinition();

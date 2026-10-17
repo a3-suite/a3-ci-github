@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.quality-summary
 contracts:
   - id: contract.ci-quality-summary.outputs
-    summary: A quality result containing normalized rows or raw GitHub job results produces an aggregate status output; caller-declared non-applicable rows become 対象外, are excluded from aggregation, and a result where every row is 対象外 is invalid input.
+    summary: A quality result containing normalized rows or raw GitHub job results produces an aggregate status output; caller-declared non-applicable rows become 対象外, are excluded from aggregation, and a result where every row is 対象外 is invalid input. A row without evidence takes the workflow run URL from a valid GitHub run context and is rejected as missing evidence otherwise.
     conditions:
       - id: diagnostic-required-outputs
         environment_predicate:

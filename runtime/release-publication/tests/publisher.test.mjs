@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
+import { holdProcessOutput } from '../../../tests/support/hold-process-output.mjs';
 import { fixture, remoteClient, preObservationFixture } from './fixtures.mjs';
 import { publishRelease, GithubPublisherClient } from '../../../actions/ci-release-publisher/src/publisher.ts';
 import { loadAssembly, observeBefore, verifyAfter } from '../observation.ts';
@@ -34,6 +35,8 @@ const setup = async (t, changes = {}, { realObservation = false } = {}) => {
   };
   return { f, assembly, writes, client, options: { ...options, beforePath, outputRoot: path.join(f.root, 'write') } };
 };
+
+holdProcessOutput('stdout');
 
 describe("contract.ci-release-publisher.outputs", () => {
   describe("release-publisher-source-flow", { concurrent: true }, () => {

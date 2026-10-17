@@ -303,7 +303,7 @@ auditContract:
         - expected-source-or-artifact-identity
     localCache:
       owner: audit-orchestrator
-      path: .a3-skills/ci/audit-cache.json
+      path: .a3-skills/ci-github/audit-cache.json
       format: json
       role: optional-rebuildable-local-optimization
       sourceOfTruth: false
@@ -358,7 +358,7 @@ auditContract:
       write:
         trigger: completed-audit
         atomicReplace:
-          temporaryDirectory: .a3-skills/ci/tmp
+          temporaryDirectory: .a3-skills/ci-github/tmp
           replaceAfterValidation: true
         failure:
           reporting: warning

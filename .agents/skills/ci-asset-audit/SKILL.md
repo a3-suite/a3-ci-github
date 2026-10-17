@@ -28,17 +28,17 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 確認すること | 入口 |
 |---|---|
 | repositoryの保守配置・実装方式・検証面 | `{project-root}/DEVELOPMENT.md`、`{project-root}/docs/maintenance/action-construction.md`、`{project-root}/docs/maintenance/test-strategy.md` |
-| preset、consumer配置、Action binding、標準実装 | preset registry: `{project-root}/skills/ci-github/references/ci-github-preset-assets.reference.yml` |
-| 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/references/ci-distribution-assets.reference.yml` |
-| adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/references/ci-script-assets.reference.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
+| preset、consumer配置、Action binding、標準実装 | preset registry: `{project-root}/skills/ci-github/assets/registry/ci-github-preset-assets.yml` |
+| 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/assets/registry/ci-distribution-assets.yml` |
+| adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/assets/registry/ci-script-assets.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
 | 配置・論理責務・投影 | physical structure: `{project-root}/sdd/dsl/designs/global/physical-structure.sdd.yml`、logical structure: `{project-root}/sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`、projection: `{project-root}/sdd/dsl/designs/scopes/repository/projection.sdd.yml` |
 | lintと検証ルールの選択 | CI資材の規則は `{project-root}/a3-lint.repository.yaml`、外部Skillの言語・Vitest規則は `{project-root}/a3-lint.yaml`からrule root・適用条件・例外を解決する。対象別profileと実行経路は `{project-root}/docs/maintenance/action-construction.md`を参照し、preflightと契約テストの検査範囲も照合 |
 | CLI入力条件 | CLI manifest: `{project-root}/sdd/dsl/specs/cli/cli-command-manifest.sdd.yml`から各commandを解決 |
 | 契約と検証証拠 | contract package: `{project-root}/sdd/dsl/specs/contract-core/contract-package.sdd.yml`、契約対象の実行定義: `{project-root}/tests/contract-subject-execution.json` |
 | 失敗診断の要求・共通保証・固有保証 | 要求: `{project-root}/sdd/dsl/requirements/items/requirements/ci-failure-diagnostics/requirement.sdd.yml`、共通契約: `{project-root}/sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/`、各subjectの固有契約。公開監査への接続: `{project-root}/skills/ci-github/references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |
-| installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
-| Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: `{project-root}/.agents/skills/skills-deploy/SKILL.md`。固定参照と利用可能条件は上記preset registry・version policyから解決 |
+| installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/ci-release-installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
+| Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: skills-deploy スキル。固定参照と利用可能条件は上記preset registry・version policyから解決 |
 
 実体は上記から到達する `actions/`、`workflows/`、provider reusable workflow、`runtime/`、公開・ローカルSkill、lint、テスト、文書を照合する。registryからの到達だけで棚卸しを終えず、対象ディレクトリの実在資材との逆照合で未登録・互換用・保守用資材も区別する。
 
@@ -68,7 +68,7 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 
 ## 毎回確認する必須項目
 
-- **OS・版の選定**: [選定と廃止判断の正本](../../../skills/ci-github/references/workflow-version-policy.reference.md#os版の選定と廃止判断)に従い、manifest作成・変更時の判断記録を当日の公式情報と照合する。基準・期限・例外を本スキルへ再定義しない。
+- **OS・版の選定**: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` の「OS・版の選定と廃止判断」に従い、manifest作成・変更時の判断記録を当日の公式情報と照合する。基準・期限・例外を本スキルへ再定義しない。
 
 - **コピー削減**: consumerで管理する各資材が固有の設定・判断・実装として必要かを確認する。providerのAction／reusable workflowへの固定参照や導入時だけの参照へ置き換えられる共通処理を探す。削減余地はGit管理するコピー、CI実行時にダウンロードする資材、導入・保守時だけの取得資材を分けて示す。
 - **追加共通化**: 未共通化の処理も対象にし、同じ意味・責務の重複を確認する。候補ごとに対象経路、減らせるcopy・個別実装、維持するowner責務、共通化の保守・移行費用を示す。既に共通化済みの資材の確認だけで終えない。
@@ -86,7 +86,7 @@ SDD正本の意味・責務判断が必要な場合は `sdd-framework` を入口
 
 各必須項目について、確認範囲と根拠を添えた結論を毎回報告する。構造は正本と実体の対応、ルールは参照した正本と実際の適用・検証範囲を示す。削減・共通化の候補がない場合も理由を示す。対称性の問題がない場合は比較した対応関係と必要な差を示す。証拠不足や指定範囲外は未確認として示し、「候補なし」「問題なし」で代用しない。
 
-固定参照を持つ対象経路では、caller→callee→Actionの実際の`uses`を起点に、参照SHA・tag対応・必要な契約・確認したmetadata/dist・検証結果を対応付ける。実行方法と準備段階の扱いは[Action構築方針](../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。sourceの修正済み、固定参照先への反映済み、対象SHAのHosted受入済みを別々に判定し、どれかが未確認なら経路全体を問題なしとしない。registryとworkflowが同じ旧SHAを指す場合も、相互一致だけでは現在契約への適合証拠にしない。生成・配置・公開とHosted受入の達成状態を分け、受入未実施をAction参照更新の取り残しを調べない理由にはしない。
+固定参照を持つ対象経路では、caller→callee→Actionの実際の`uses`を起点に、参照SHA・tag対応・必要な契約・確認したmetadata/dist・検証結果を対応付ける。実行方法と準備段階の扱いは `{project-root}/docs/maintenance/action-construction.md` の「固定参照の更新順序」を参照する。sourceの修正済み、固定参照先への反映済み、対象SHAのHosted受入済みを別々に判定し、どれかが未確認なら経路全体を問題なしとしない。registryとworkflowが同じ旧SHAを指す場合も、相互一致だけでは現在契約への適合証拠にしない。生成・配置・公開とHosted受入の達成状態を分け、受入未実施をAction参照更新の取り残しを調べない理由にはしない。
 
 検証資材の評価では、subject／test-mapの保証とテストが実際に観測する境界を照合する。provider内部の回帰をActionの公開出力保証へ直接算入せず、テストの収集成功を実行・契約達成の証拠にしない。計測は保守方針に従う元ソースの対象・分母・子プロセス経路を確認し、生成済み配布物の動作検証と分ける。言語別の計測値を合算して品質判定せず、未実行OSやskipは未確認として残す。計測設定・手順は本スキルへ複製しない。
 

@@ -6,12 +6,16 @@ import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
 import { checkRepository, repositorySnapshot, registryPath } from '../check-provider-references.mjs';
 import { planActionReferenceUpdate, applyActionReferenceUpdate } from '../update-action-references.mjs';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Calls take up to 1.7s alone but over 7s under full-regression load; the limit is about 5x that load maximum.
+// A timeout means the call regressed: investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 35000;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const failure = (operation) => { try { operation(); } catch (error) { return error.message; } };
 const access = (directory) => ({
   directory,
-  git: (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: 'pipe' }).trim(),
+  git: (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: 'pipe', timeout: spawnTimeoutMs }).trim(),
   write: (relative, bytes) => { mkdirSync(path.dirname(path.join(directory, relative)), { recursive: true }); writeFileSync(path.join(directory, relative), bytes); },
 });
 let seed;
@@ -56,7 +60,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     f.git('add', '.'); f.git('commit', '-m', 'existing connection');
     f.write('runtime/payload.mjs', 'export const payload = 2;\n');
     f.git('add', '.');
-    const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', ...args], { cwd: f.directory, encoding: 'utf8' });
+    const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', ...args], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
 
     const prepared = cli('--preparation');
     expect(prepared.status, prepared.stderr).toBe(0);
@@ -65,6 +69,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(report.connection.diagnostics).toEqual([]);
     expect(f.git('tag', '--list')).toBe('');
     const candidate = cli('--candidate');
+    expect(candidate.error).toBeUndefined();
     expect(candidate.status).not.toBe(0);
     expect(candidate.stderr).toContain('implementation-execution-closure-mismatch');
 
@@ -106,8 +111,8 @@ describe('contract.ci-selective-distribution.publication', () => {
     f.git('add', '.'); f.git('commit', '-m', 'connect implementation'); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
     // Act
     const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
-    const executed = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8' });
-    const metadataOnly = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs')], { cwd: f.directory, encoding: 'utf8' });
+    const executed = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
+    const metadataOnly = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs')], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
     // Assert
     expect(checked.diagnostics).toEqual([]); expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding.sourceRevision).not.toBe(f.implementation);
@@ -120,7 +125,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     const gate = workflow.jobs['prepare-distribution'].steps.find((step) => step.id === 'provider-binding');
     const script = gate.run.replace('node runtime/repository/check-provider-references.mjs', `node "${path.join(root, 'runtime/repository/check-provider-references.mjs')}"`);
     const output = path.join(f.directory, 'tmp/binding-output'); f.write('tmp/binding-output', '');
-    const runGate = () => spawnSync('bash', ['-c', script], { cwd: f.directory, encoding: 'utf8', env: { ...process.env, RELEASE_TAG: 'v0.2.11', GITHUB_OUTPUT: output } });
+    const runGate = () => spawnSync('bash', ['-c', script], { cwd: f.directory, encoding: 'utf8', env: { ...process.env, RELEASE_TAG: 'v0.2.11', GITHUB_OUTPUT: output }, timeout: spawnTimeoutMs });
     // Act
     const gateResult = runGate();
     // Assert
@@ -131,6 +136,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Act
     const rejectedGate = runGate();
     // Assert
+    expect(rejectedGate.error).toBeUndefined();
     expect(rejectedGate.status).not.toBe(0); expect(readFileSync(output, 'utf8')).toBe('');
   });
 
@@ -208,7 +214,7 @@ describe('contract.ci-selective-distribution.publication', () => {
       if (mismatch === 'interface') step.with['undeclared-input'] = 'invalid';
       f.write(relative, yaml.stringify(value)); f.git('add', '.'); f.git('commit', '-m', 'stale connection'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid connection');
       // Act
-      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8' });
+      const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
       // Assert
       expect(result.status).toBe(1); expect(JSON.parse(result.stdout).implementationBindingStatus).toBe('rejected');
     }
@@ -227,7 +233,7 @@ describe('contract.ci-selective-distribution.publication', () => {
       f.write(relative, readFileSync(path.join(f.directory, relative), 'utf8').replaceAll('0'.repeat(40), sha).replace('releaseTag: v0.2.10', 'releaseTag: v0.2.11'));
     }
     f.git('add', '.'); f.git('commit', '-m', 'broken binding'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid behavior');
-    const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), ...args], { cwd: f.directory, encoding: 'utf8' });
+    const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), ...args], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
     // Act
     const result = cli('--contracts', '--release-tag', 'v0.2.11');
     const bypass = cli('--release-tag', 'v0.2.11');
@@ -260,7 +266,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     }
     f.git('add', '.'); f.git('commit', '-m', 'identical missing entrypoint'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid source');
     // Act
-    const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8' });
+    const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
     // Assert
     expect(result.status).toBe(1); expect(JSON.parse(result.stdout).implementationBindingStatus).toBe('rejected');
   });

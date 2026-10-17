@@ -17,6 +17,7 @@ const runBundled = (
   input: unknown,
   includeSummaryPath = true,
   pathMode: 'distinct' | 'same' | 'hardlink' | 'nested' = 'distinct',
+  envOverrides: Record<string, string | undefined> = {},
 ) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-quality-summary-'));
   const summaryPath = path.join(tempRoot, 'summary.md');
@@ -39,6 +40,10 @@ const runBundled = (
   env['INPUT_SUMMARY-JSON'] = JSON.stringify(input);
   env['INPUT_EVIDENCE-PATH'] = evidencePath;
   if (includeSummaryPath) env.GITHUB_STEP_SUMMARY = summaryPath;
+  for (const [name, value] of Object.entries(envOverrides)) {
+    if (value === undefined) delete env[name];
+    else env[name] = value;
+  }
   const result = spawnSync(process.execPath, [...bundledEntrypoint], {
     cwd: root,
     env,
@@ -58,6 +63,9 @@ const outputValue = (output: string, name: string): string => {
   expect(match, `missing output: ${name}`).toBeTruthy();
   return match![1];
 };
+
+const runEnv = { GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'owner/project', GITHUB_RUN_ID: '42' };
+const runUrl = 'https://github.com/owner/project/actions/runs/42';
 
 const successInput = {
   jobs: [{
@@ -86,6 +94,52 @@ test('entrypoint writes matching evidence and outputs', () => {
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'evidence-path')).toBe(run.evidencePath);
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// integration_id: ci-quality-summary-contract-entrypoint
+test('entrypoint uses the workflow run URL for rows without evidence', () => {
+  // Failed rows render their evidence in the details section.
+  const run = runBundled({
+    jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true }],
+    tests: [
+      { unit: 'contract', execution: 'node', result: 'failed', collection: '完了', reason: 'assertion failed' },
+      { unit: 'explicit', execution: 'node', result: 'failed', evidence: 'explicit.log', collection: '完了', reason: 'assertion failed' },
+    ],
+  }, true, 'distinct', runEnv);
+  try {
+    const evidence = fs.readFileSync(run.evidencePath, 'utf8');
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
+    expect(evidence.split(runUrl).length - 1).toBe(2);
+    expect(evidence).toContain('explicit.log');
+    const line = run.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+    expect(JSON.parse(line.slice('ci-failure-diagnostic:'.length)).context.inputs.jobs).toEqual([{ unit: 'build', rawResult: 'failure', evidence: runUrl }]);
+    const enterprise = runBundled({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true }] }, true, 'distinct', { ...runEnv, GITHUB_SERVER_URL: 'https://git.example.com' });
+    try {
+      const enterpriseLine = enterprise.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+      expect(JSON.parse(enterpriseLine.slice('ci-failure-diagnostic:'.length)).context.inputs.jobs[0].evidence).toBe('https://git.example.com/owner/project/actions/runs/42');
+    } finally {
+      fs.rmSync(enterprise.tempRoot, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// integration_id: ci-quality-summary-contract-entrypoint
+test('entrypoint rejects rows without evidence when the run context is missing or invalid', () => {
+  const row = { unit: 'build', execution: 'build', rawResult: 'success', applicable: true };
+  for (const overrides of [{ GITHUB_RUN_ID: undefined }, { GITHUB_RUN_ID: '42\nINJECTED' }, { GITHUB_SERVER_URL: 'http://github.com' }, { GITHUB_SERVER_URL: 'https://github.com:99999' }, { GITHUB_SERVER_URL: 'https://github.com/path' }, { GITHUB_REPOSITORY: 'owner' }]) {
+    const run = runBundled({ jobs: [row] }, true, 'distinct', { ...runEnv, ...overrides });
+    try {
+      expect(run.result.status, JSON.stringify(overrides)).not.toBe(0);
+      expect(run.result.stderr).toContain('ci-summary-evidence-invalid');
+      expect(fs.existsSync(run.evidencePath)).toBe(false);
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
   }
 });
 

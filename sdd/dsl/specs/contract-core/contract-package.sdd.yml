@@ -48,8 +48,6 @@ subject_scopes:
     path: subjects/ci-quality-adapter/
   - subject_id: subject.ci.publish-version
     path: subjects/ci-publish-version/
-  - subject_id: subject.ci.vitest-summary
-    path: subjects/ci-vitest-summary/
   - subject_id: subject.ci.quality-workflow
     path: subjects/ci-quality-workflow/
   - subject_id: subject.ci.release-request-workflow

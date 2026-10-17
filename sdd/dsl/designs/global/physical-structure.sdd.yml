@@ -43,7 +43,7 @@ elements:
     primary_area_kind: implementation
     area_kinds: [implementation, verification]
     source_control: managed
-    placement_purpose: src配下で共通installer組立・exact候補検証・証跡生成のsourceを保守し、testsでprovider回帰を検証、同じsourceからActionとCLIのdistを生成する。製品宣言以外の共通実装を利用側に要求しない
+    placement_purpose: src配下で共通installer組立・exact候補検証・証跡生成のsourceを保守し、testsでprovider回帰を検証、ActionとCLIのbundleを生成する。CLIはsrcのpayloadを直接使い、payloadのコピーはAction bundleにだけ同梱する。製品宣言以外の共通実装を利用側に要求しない
   - element_id: quality-reusable-workflow
     element_kind: file
     path: .github/workflows/ci-quality.yml

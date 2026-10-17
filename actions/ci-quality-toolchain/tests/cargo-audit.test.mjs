@@ -34,7 +34,8 @@ const fixture = (target = 'x86_64-unknown-linux-gnu') => {
   mock('curl', 'echo curl >> "$CALLS"\n[[ "${FAILURE:-}" != download ]] || exit 22\nwhile (( $# )); do if [[ "$1" == --output ]]; then shift; output=$1; fi; shift; done\ncp "$FIXTURE_ARCHIVE" "$output"');
   mock('tar', `echo tar >> "$CALLS"\n[[ "${'${FAILURE:-}'}" != extract ]] || exit 9\nexec "${realTar}" "$@"`);
   fs.mkdirSync(path.join(directory, 'System32'));
-  fs.writeFileSync(path.join(directory, 'System32/tar.exe'), `#!/bin/bash\necho tar.exe >> "$CALLS"\n[[ "${'${FAILURE:-}'}" != extract ]] || exit 9\nexec "${realTar}" "$@"\n`, { mode: 0o700 });
+  // Windows bsdtar reads ZIP, but the host tar may be GNU tar, so the stand-in reads the member with Python.
+  fs.writeFileSync(path.join(directory, 'System32/tar.exe'), `#!/bin/bash\necho tar.exe >> "$CALLS"\n[[ "${'${FAILURE:-}'}" != extract ]] || exit 9\n[[ "$1" == -xOf ]] || exit 98\nexec python3 -c 'import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))' "$2" "$3"\n`, { mode: 0o700 });
   mock('tar.exe', 'echo wrong-tar >> "$CALLS"\nexit 99');
   mock('cargo', 'echo "cargo $*" >> "$CALLS"\nexit "${CARGO_EXIT:-0}"');
   return {

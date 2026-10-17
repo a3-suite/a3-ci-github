@@ -15,8 +15,8 @@
 - repository Release version: `VERSION`
 - 要求・観測可能な契約・設計境界: `sdd/`
 - Action の公開 I/O: `actions/<action-name>/action.yml`
-- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)
-- 選択配布単位と依存閉包: `skills/ci-github/references/ci-distribution-assets.reference.yml`
+- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)
+- 選択配布単位と依存閉包: `skills/ci-github/assets/registry/ci-distribution-assets.yml`
 - 選択配布manifest生成・取得・適用・復旧: `runtime/distribution/`
 - 配置・検証処理: `runtime/`
 - Agent Skill の起動条件と操作導線: `skills/`
@@ -25,7 +25,7 @@
 
 スキル文書へ workflow、Action、runtime の実装を複製しません。適用先へ配置するcaller・request workflowのsourceは`workflows/`に置き、個々のcanonical sourceとbindingは上記registryを参照します。
 
-`skills/ci-github/references/` と `skills/installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
+`skills/ci-github/references/` と `skills/ci-release-installer/references/` は consumer へ配布する portable public contract です。project 内部の契約・検証の基準は `sdd/` とし、同一契約を変更する場合は SDD の subject / test-map と reference を同一変更単位で更新します。
 
 公開スキルの導入版の扱いは、[公開導入ガイドの版選定](docs/maintenance/README.md#公開導入ガイドの版選定)に従います。
 
@@ -65,7 +65,7 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 Action・workflow・公開参照を変更する前に、[固定参照の更新順序](docs/maintenance/action-construction.md#固定参照の更新順序)を確認してください。コミットゲートで準備段階と利用可能化を区別し、Actionと再利用workflowそれぞれの確定SHA・受入証拠を確認します。
 
-コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.md#コミットゲート連携)に従います。
+コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.reference.md#コミットゲート連携)に従います。
 
 ## Action catalog
 
@@ -116,6 +116,26 @@ a3-sdd sdd resolve-test-targets --workspace-root . \
 全対象の `verified` を確認し、`unresolved`、`not-supported`、収集失敗を成功扱いにしません。`sdd check` の構文・参照構造の成功だけではテスト名の実在を保証しません。
 
 `root_layout_scan` と `owner_outcomes` を確認し、failure、未分類、対象0件を成功扱いにしません。`sdd/dsl/**/.a3-sdd` は生成状態であり、正本ツリーへ残しません。生成状態の配置は sdd-core の `definition-file-locations` に従います。
+
+## 契約対象ごとの回帰
+
+回帰方式の選択は `regression-test` スキルに従います。契約対象を1つに絞る場合は、その subject の test map だけを解決し、`verified` のテストファイルだけを実行します。
+
+```sh
+test_map=sdd/dsl/specs/contract-core/subjects/<subject-dir>/test-maps.sdd.yml
+a3-sdd sdd resolve-test-targets --workspace-root . \
+  --resolver-profile vitest-5.0.3 --test-map "$test_map" --format json
+```
+
+返った `targets[].path` のうち `status` が `verified` のものを `npm test --` へ渡します。`verified` 以外の対象があるときは、成功扱いにしません。所要時間は契約対象ごとに大きく異なり、`repository-action-distribution` のように全体とほぼ同じ時間がかかるものがあります。
+
+フル回帰が停止した場合に止まったファイルを特定できるよう、進捗をファイルにも残して実行します。ログは一時領域へ置きます。
+
+```sh
+(set -o pipefail; npm test 2>&1 | tee "$TMPDIR/vitest.log")
+```
+
+テストが同期で起動する外部プロセスの `timeout` は、実測した所要時間の約5倍(最小5秒)を上限とします。同期呼び出しはワーカーを止め、Vitest の `testTimeout` では中断できません。タイムアウトした場合は、上限を上げる前に、その呼び出しの性能改善または分割を検討します。
 
 ## 移行記録
 

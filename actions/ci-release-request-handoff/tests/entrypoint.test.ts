@@ -9,6 +9,8 @@ import { actionEntrypointArguments } from '../../../tests/support/action-entrypo
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
+const diagnosticOf = (stderr: string): Record<string, unknown> =>
+  JSON.parse(stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
 
 // contract_id: contract.ci-release-request-handoff.outputs
 // integration_id: ci-release-request-handoff-contract-entrypoint
@@ -35,6 +37,11 @@ test('entrypoint writes a tag handoff', () => {
   const replay = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env: { ...env, 'INPUT_TAG-SOURCE-SHA': 'c'.repeat(40) }, encoding: 'utf8' });
   // Assert
   expect(replay.status).not.toBe(0);
+  expect(diagnosticOf(replay.stderr)).toMatchObject({
+    classification: { stage: 'destination-validation', reason: 'release-request-output-already-exists' },
+    comparison: { field: 'request-files', expected: 'absent', observed: 'already-present' },
+    'execution-state': { write: 'not-started' },
+  });
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(files.map((file) => fs.readFileSync(path.join(handoff, file), 'utf8'))).toStrictEqual(saved);
   fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -55,6 +62,11 @@ test('entrypoint rejects a tag ref mismatch', () => {
 
   // Assert
   expect(result.status).not.toBe(0);
+  expect(diagnosticOf(result.stderr)).toMatchObject({
+    classification: { subject: 'ci-release-request-handoff', stage: 'request-identity-validation', reason: 'github-tag-ref-mismatch' },
+    comparison: { field: 'github-ref', expected: 'refs/tags/v1.2.3', observed: 'refs/tags/v1.2.4' },
+    'execution-state': { write: 'not-started' },
+  });
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(handoff, 'release-request.json'))).toBe(false);
   expect(fs.existsSync(path.join(handoff, 'release-request.json.sha256'))).toBe(false);

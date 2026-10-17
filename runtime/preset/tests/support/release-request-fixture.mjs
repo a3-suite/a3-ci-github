@@ -10,7 +10,7 @@ export const loadReleaseRequestFixtureModel = ({ repositoryRoot, runtimeRoot }) 
   const { parse } = requireFromRuntime('yaml');
   const registryPath = path.join(
     repositoryRoot,
-    'skills/ci-github/references/ci-github-preset-assets.reference.yml',
+    'skills/ci-github/assets/registry/ci-github-preset-assets.yml',
   );
   const registry = parse(readFileSync(registryPath, 'utf8'));
   const providerActions = registry.providerActions ?? {};

@@ -25,10 +25,10 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
    - ブランチ操作と承認要件は git スキル側の正本に従う。
    - 本スキル側で branch category、merge direction、version policy、publish trigger を再定義しない。
 2. language profile と実行 adapter を解決する。
-   - adapterを決める前に`references/distribute-ci-assets.guide.md`の「対応条件」に従い、公開済み安定版と導入済みrevisionを比較する。最新の標準preset・Action・bundleで製品要件を満たせるかを先に確認し、満たせる場合は標準構成を優先する。最新資材を確認できない場合は未確認とし、既存の固有実装を標準として追認しない。
+   - adapterを決める前に`references/deploy-ci-assets.guide.md`の「対応条件」に従い、公開済み安定版と導入済みrevisionを比較する。最新の標準preset・Action・bundleで製品要件を満たせるかを先に確認し、満たせる場合は標準構成を優先する。最新資材を確認できない場合は未確認とし、既存の固有実装を標準として追認しない。
    - 既存の固有workflow・script・adapterがある場合は`references/configure-ci-preset.guide.md`の「標準構成からのセットアップ」に従い、標準との差分と必要性を確認し、利用者と採用方針を決める。固有adapterは標準で満たせない製品要件が確認された場合だけ選択する。採否が未確定の間は既存実装を変更しない。
    - profile の format、lint、test、build、package、version、artifact の契約を確認する。
-   - project SSOT または対象 project の owner 契約で installer asset が採用済みの場合は、adapter を決める前に installer スキルへ委譲し、asset、manifest、builder、組立後検証と証跡の契約を解決する。未解決なら installer asset の adapter と公開経路を確定しない。
+   - project SSOT または対象 project の owner 契約で installer asset が採用済みの場合は、adapter を決める前に ci-release-installer スキルへ委譲し、asset、manifest、builder、組立後検証と証跡の契約を解決する。未解決なら installer asset の adapter と公開経路を確定しない。
    - 標準構成で満たせない製品要件のためにproject-local adapterが必要な場合だけ、その入力・出力・失敗条件を固定する。標準Action・bundleで成立する処理には固有adapterを追加しない。
    - script ユースケースと処理契約は `references/ci-script-use-cases.reference.yml` と `references/ci-script-contracts.reference.yml` に従い、具体的な実行前提は `references/ci-script-catalog.reference.md` で確認する。
 3. CI workflow runtime の境界を確認する。
@@ -47,7 +47,7 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
    - 差分検出スクリプトは workflow 実行後に重い工程をスキップする。
    - required check の起動条件、対象外処理、merge queue 対応は選択した provider の trust policy profile に従う。
 6. provider 実装へ写像する。
-   - `references/configure-ci-preset.guide.md`に従い、選択したCIプリセットとlanguage profileをcallerへ接続する。入出力と停止条件は`references/ci-preset-contracts.reference.yml`、Actionと資材の対応は`references/ci-github-preset-assets.reference.yml`を参照する。
+   - `references/configure-ci-preset.guide.md`に従い、選択したCIプリセットとlanguage profileをcallerへ接続する。入出力と停止条件は`references/ci-preset-contracts.reference.yml`、Actionと資材の対応は`assets/registry/ci-github-preset-assets.yml`を参照する。
    - provider 固有の構文や API を `ci` の概念契約へ逆流させない。
    - provider の runtime、toolchain、runner、Action、container の版指定は選択した provider の version policy profile を参照する。
 7. workflow の実装境界を決める。

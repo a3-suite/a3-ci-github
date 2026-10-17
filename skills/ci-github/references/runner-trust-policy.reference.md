@@ -52,6 +52,7 @@
 - required 対象の `pull_request` では、workflow 自体を `paths` / `paths-ignore`、branch filter、commit message で skip しない。対象外処理は workflow 起動後の job または step で判定する。
 - merge queue を運用する場合は `merge_group` payload で成立する check を required check として用意する。`pull_request` 固有 field を参照する既存 workflow に trigger だけを追加しない。
 
+<a id="platform-quality-check"></a>
 #### platform 別 quality check
 - platform 別 quality job の runner は platform manifest の allowlist 済み versioned label だけを使い、未信頼入力から runner 値を解決しない。
 - 採用済みbaseまたは検証済みpublication controlのmanifestはconsumerがレビューしたrunner選択の正本とする。固定callerだけがci-platform-matrixの`runner-policy: trusted`を選び、providerの検証済みOS世代カタログへ限定しない。consumerは提供されるHosted labelとarchitectureを確認する。labelの構文検査はHosted originや提供状況の証明ではない。

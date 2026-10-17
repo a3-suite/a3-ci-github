@@ -6,7 +6,7 @@
 
 - 要求・保証・構造境界: `sdd/`
 - 公開 I/O・runtime・entrypoint: 各 `actions/<id>/action.yml`
-- workflow 接続・公開 ref・利用可能性: `skills/ci-github/references/ci-github-preset-assets.reference.yml`
+- workflow 接続・公開 ref・利用可能性: `skills/ci-github/assets/registry/ci-github-preset-assets.yml`
 - テスト実行単位: `tests/contract-subject-execution.json`
 
 ## 方式選択

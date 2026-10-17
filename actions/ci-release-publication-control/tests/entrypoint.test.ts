@@ -8,6 +8,7 @@ import { describe, test, expect } from 'vitest';
 import { publicationRequestInputs } from '../../../runtime/repository/action-reference-fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { requestTriggerEnvironment } from '../../../runtime/workflow-run/tests/request-trigger-fixture';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
@@ -93,6 +94,83 @@ test('entrypoint rejects a changed approval ID', () => {
   // Assert
   expect(result.status).not.toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint rejects release notes that differ from the approved body digest', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-digest-'));
+  const output = path.join(root, 'output');
+  const notes = '# Release\n';
+  const approvedDigest = crypto.createHash('sha256').update('# Approved\n').digest('hex');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create-request', 'INPUT_ROOT-DIRECTORY': root, 'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_REQUEST-WORKFLOW-RUN-ID': '22', 'INPUT_REQUEST-HEAD-SHA': 'a'.repeat(40), 'INPUT_RELEASE-IDENTITY': 'v1.2.3', 'INPUT_RELEASE-VERSION': '1.2.3', 'INPUT_TARGET-IDENTITY': 'owner/project', 'INPUT_RELEASE-NOTES': notes, 'INPUT_APPROVAL-ID': 'approval', 'INPUT_APPROVAL-EXPIRES-AT': '2999-01-01T00:00:00Z', 'INPUT_APPROVAL-BODY-SHA256': approvedDigest } as Record<string, string>;
+
+  // Act
+  const result = spawnSync(process.execPath, [...entrypointArgs], { env, encoding: 'utf8' });
+
+  // Assert
+  expect(result.status).not.toBe(0);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', stage: 'create-request' },
+    context: { inputs: { requestHeadSha: 'a'.repeat(40), releaseRequestRunId: '11', requestWorkflowRunId: '22' } },
+    comparison: { field: 'approval-body-sha256', expected: approvedDigest, observed: crypto.createHash('sha256').update(notes).digest('hex') },
+  });
+  expect(result.stderr).not.toContain('# Release');
+  expect(fs.existsSync(path.join(root, 'release-publication-request/request.json'))).toBe(false);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint rejects the authority-internal provenance operation', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-operation-'));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-provenance', 'INPUT_ROOT-DIRECTORY': root } as Record<string, string>;
+
+  // Act
+  const result = spawnSync(process.execPath, [...entrypointArgs], { env, encoding: 'utf8' });
+
+  // Assert
+  expect(result.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', stage: 'control-input', reason: 'release-publication-operation-invalid' },
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-release-publication-control.outputs
+// integration_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint verifies the triggering request workflow run before artifact download', () => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-trigger-'));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const base = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'verify-trigger', 'INPUT_ROOT-DIRECTORY': root } as Record<string, string>;
+
+  // Act
+  const accepted = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'release-publication-request') }, encoding: 'utf8' });
+  const acceptedOutput = fs.readFileSync(output, 'utf8');
+  fs.writeFileSync(output, '');
+  const rejected = spawnSync(process.execPath, [...entrypointArgs], { env: { ...base, ...requestTriggerEnvironment(root, 'release-publication-request', { head_branch: 'feature' }) }, encoding: 'utf8' });
+
+  // Assert
+  expect(accepted.status).toBe(0);
+  expect(acceptedOutput).toMatch(/status<<[^\n]+\nsuccess\n/);
+  expect(rejected.status).not.toBe(0);
+  expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
+  const line = rejected.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', reason: 'request-trigger-mismatch' },
+    comparison: { field: 'head-branch', expected: 'default-branch', observed: 'other' },
+  });
   fs.rmSync(root, { recursive: true, force: true });
 });
 

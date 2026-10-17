@@ -1,9 +1,9 @@
 name: ci-release-publication-control
-description: Create and verify release publication request handoffs and provenance.
+description: Create and verify release publication request handoffs and approval.
 inputs:
   operation:
     required: true
-    description: create-request, verify-publication-request, verify-provenance, or verify-approval.
+    description: verify-trigger, create-request, verify-publication-request, or verify-approval.
   root-directory:
     required: false
     default: .
@@ -38,15 +38,6 @@ inputs:
   approval-body-sha256:
     required: false
     description: Approved release notes body digest.
-  publication-request-run-id:
-    required: false
-    description: Publication request run ID used by provenance verification.
-  release-request-tag-workflow-name:
-    required: false
-    description: Tag release request workflow name.
-  release-request-tag-workflow-path:
-    required: false
-    description: Tag release request workflow path.
 outputs:
   status:
     description: success or failed.

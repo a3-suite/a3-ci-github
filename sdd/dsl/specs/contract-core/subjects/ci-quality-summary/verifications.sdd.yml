@@ -52,3 +52,19 @@ verifications:
         checks:
           - id: check-quality-summary-all-excluded-failure
             guarantee_ref: quality-summary-failure-propagated
+      - id: omitted-evidence-uses-run-url
+        intent_id: quality-summary-output-set
+        input:
+          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true}]}'
+          github-run-context: valid
+        checks:
+          - id: check-quality-summary-default-evidence-status
+            guarantee_ref: quality-summary-status-produced
+      - id: omitted-evidence-without-run-context-rejected
+        intent_id: quality-summary-rejected
+        input:
+          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"success","applicable":true}]}'
+          github-run-context: missing-or-invalid
+        checks:
+          - id: check-quality-summary-default-evidence-failure
+            guarantee_ref: quality-summary-failure-propagated

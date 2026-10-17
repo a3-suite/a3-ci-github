@@ -11,7 +11,6 @@ const commands = [
   ['preset-assurance', 'ci-preset-assurance', ['--import', tsx, 'runtime/preset/validate-ci-preset.ts', '--unknown', 'value'], 2],
   ['asset-lock', 'ci-preset-assurance', ['--import', tsx, 'runtime/preset/generate-ci-asset-lock.ts', '--unknown', 'value'], 2],
   ['materialization', 'ci-preset-materialization', ['--import', tsx, 'runtime/adapter/materialize-adapter-bundle.ts'], 1],
-  ['vitest-summary', 'ci-vitest-summary', ['--import', tsx, 'runtime/adapter/vitest-test-summary.ts'], 0],
   ['installer-cli', 'ci-release-supplemental-asset', ['runtime/installer/run-installer.mjs'], 1],
 ];
 
@@ -28,7 +27,7 @@ describe('runtime failure diagnostics', () => {
       expect(evidence.classification.stage).toBeTruthy();
       expect(evidence.context).toBeTruthy();
       expect(evidence.comparison).toBeTruthy();
-      expect(evidence['execution-state'].outcome).toBe(status === 0 ? 'unresolved' : 'failure');
+      expect(evidence['execution-state'].outcome).toBe('failure');
       expect(evidence['evidence-location'].log).toBe(log);
       expect(evidence['next-check'].rule).toBe(evidence.classification.reason);
     }

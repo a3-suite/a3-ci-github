@@ -12,6 +12,7 @@ import { inspectWorkflowAsset } from '../workflow-validation.ts';
 import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { validateConditionalExtensions, validateQualityPreset } from '../quality-validation.ts';
 import { findWorkflowAssetReferences } from '../workflow-assets.ts';
+import { collectSemanticCandidates } from '../semantic-candidates.ts';
 
 const model = () => {
   const workflows = new Map(['release-publication-request', 'release-publication-caller'].map((id) => [
@@ -336,7 +337,7 @@ describe("publication-validation", () => {
       const caller = parse(fs.readFileSync(path.join(repository, 'workflows/release/release-publication-caller.yml'), 'utf8'));
       Object.assign(caller.jobs.publish.with, {
         runner: 'ubuntu-24.04', 'language-profile': 'rust', 'release-implementation': 'rust-cli-release',
-        'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'sha256sum-version': '9.5', 'platform-manifest': '.ci/platform-manifest.yml',
+        'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'platform-manifest': '.ci/platform-manifest.yml',
         supplemental_release_asset_enabled: false, supplemental_release_asset_owner_contract: '__unset__',
         supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__',
       });
@@ -366,7 +367,7 @@ describe("publication-validation", () => {
       expect(baseline.observed.has('ci-release-publisher')).toBeTruthy();
       const execution = baseline.parsed.get('.github/workflows/release-publication.yml');
       expect(execution.env.CI_RELEASE_IMPLEMENTATION).toBe('rust-cli-release');
-      expect(execution.env.CI_SHA256SUM_VERSION).toBe('9.5');
+      expect(execution.env.CI_LANGUAGE_PROFILE).toBe('rust');
       expect(baseline.report.missingSettings.some(item => item.path === '.ci/trusted/ci-release-publish.sh')).toBe(false);
       expect(fs.existsSync(path.join(root, '.github/workflows/release-publication.yml'))).toBe(false);
       const checkout = execution.jobs.publish.steps.find(step => step.with?.ref === '${{ github.workflow_sha }}');
@@ -376,7 +377,7 @@ describe("publication-validation", () => {
         value => { value.jobs.publish.uses = value.jobs.publish.uses.replace(providerSha, 'main'); },
         value => { value.jobs.publish.with.runner = '${{ github.event.workflow_run.head_branch }}'; },
         value => { value.jobs.publish.with['release-implementation'] = '${{ inputs.implementation }}'; },
-        value => { value.jobs.publish.with['sha256sum-version'] = '${{ github.event.workflow_run.head_branch }}'; },
+        value => { value.jobs.publish.with['jq-version'] = '${{ github.event.workflow_run.head_branch }}'; },
         value => { value.jobs.publish.with.supplemental_release_asset_enabled = '${{ inputs.enabled }}'; },
         value => { value.jobs.publish.with.supplemental_release_asset_owner_contract = '${{ inputs.contract }}'; },
         value => { value.jobs.publish.with.undeclared = 'value'; },
@@ -396,6 +397,12 @@ describe("publication-validation", () => {
       expect(failed.mismatches.some(item => item.message === 'release implementation is not registered'
         && item.path === `${asset.destination}:jobs.publish.with.release-implementation` && item.settingLocation === asset.destination)).toBeTruthy();
       expect([...failed.mismatches, ...failed.missingSettings].some(item => item.path.startsWith('.github/workflows/release-publication.yml:'))).toBe(false);
+      for (const reorder of [(steps) => steps.shift(), (steps) => steps.splice(1, 0, steps.shift())]) {
+        const unverified = structuredClone(caller); reorder(unverified.jobs['validate-request'].steps);
+        fs.writeFileSync(filename, stringify(unverified));
+        const result = validateCiPresetInternal({ repoRoot: root, presets: ['release-publication'] }, false);
+        expect(result.missingSettings.some(item => item.message.includes('must run verify-trigger before downloading'))).toBeTruthy();
+      }
       const missing = structuredClone(caller); delete missing.jobs.publish.with.runner;
       expect(run(missing).report.missingSettings.some(item => item.message.includes('required reusable workflow input runner'))).toBeTruthy();
     });
@@ -443,11 +450,19 @@ describe("publication-validation", () => {
         value => { value.jobs.publish.with['gh-version'] = '${{ inputs.tool }}'; },
         value => { value.jobs.publish.with['jq-version'] = false; },
         value => { value.jobs.publish.with.undeclared = 'value'; },
+        value => { value.jobs.prepare.with.runner = '${{ github.event.workflow_run.head_branch }}'; },
+        value => { value.jobs.prepare.with.runner = 'ubuntu-latest'; },
         value => { value.jobs.publish.permissions.packages = 'read'; },
         value => { value.jobs.publish.secrets.UNDECLARED = '${{ secrets.OTHER }}'; },
       ]) {
         const changed = structuredClone(caller); mutate(changed);
         expect(run(changed).report.mismatches.length > baseline.report.mismatches.length, String(mutate)).toBeTruthy();
+      }
+      for (const reorder of [(steps) => steps.shift(), (steps) => steps.splice(1, 0, steps.shift())]) {
+        const unverified = structuredClone(caller); reorder(unverified.jobs['validate-request'].steps);
+        fs.writeFileSync(filename, stringify(unverified));
+        const result = validateCiPresetInternal({ repoRoot: root, presets: ['package-publication'] }, false);
+        expect(result.missingSettings.some(item => item.message.includes('must run verify-trigger before downloading'))).toBeTruthy();
       }
       const missing = structuredClone(caller); delete missing.jobs.publish.secrets.PACKAGE_REGISTRY_TOKEN;
       expect(run(missing).report.missingSettings.some(item => item.message.includes('required reusable workflow secret PACKAGE_REGISTRY_TOKEN'))).toBeTruthy();
@@ -493,7 +508,7 @@ describe("publication-validation", () => {
         return [...report.mismatches, ...report.missingSettings, ...flow.mismatches, ...flow.missingSettings].filter(item => String(item.path).includes('release_skills_config_path'));
       };
       // Act
-      const enabled = run('skills/release.json');
+      const enabled = run('.ci/release-skills.json');
       const disabled = run('__unset__');
       const unsafe = run('../release.json');
       // Assert
@@ -501,6 +516,72 @@ describe("publication-validation", () => {
       expect(disabled).toEqual([]);
       expect(unsafe.some(item => item.message.includes('release skills require one static safe declaration path'))).toBe(true);
       expect(unsafe.some(item => item.message.startsWith('canonical drift:'))).toBe(false);
+    });
+
+    // Supplemental coverage: a declaration at the standard .ci placement is owned by the caller setting, not unclassified.
+    test('release skills declaration named by the caller is not an unclassified CI asset', (t) => {
+      // Arrange
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const parent = path.join(repository, 'tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const root = fs.mkdtempSync(path.join(parent, 'release-skills-placement-'));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      const registry = loadRegistry(createReport());
+      const callerPath = '.github/workflows/release-publication-caller.yml';
+      fs.mkdirSync(path.join(root, '.ci'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.ci/release-skills.json'), '{}\n');
+      fs.writeFileSync(path.join(root, '.ci/unrelated.json'), '{}\n');
+      const unclassified = (value) => {
+        const workflows = model();
+        workflows.get(callerPath).jobs.publish.with.release_skills_config_path = value;
+        const report = createReport();
+        collectSemanticCandidates(root, [], [], new Map([[callerPath, workflows.get(callerPath)]]), registry, report);
+        return report.semanticCandidates.filter(item => item.kind === 'unclassified-directory-asset').map(item => item.path);
+      };
+      // Act
+      const named = unclassified('.ci/release-skills.json');
+      const unset = unclassified('__unset__');
+      const rewritten = unclassified('.ci-base/.ci/release-skills.json');
+      // Assert
+      expect(named).toEqual(['.ci/unrelated.json']);
+      expect(unset).toEqual(['.ci/release-skills.json', '.ci/unrelated.json']);
+      expect(rewritten).toEqual(['.ci/release-skills.json', '.ci/unrelated.json']);
+    });
+
+    // Supplemental coverage: the standard installer assembly and the manifests it names are owned by the caller setting.
+    test('installer assembly named by the caller and its manifests are not unclassified CI assets', (t) => {
+      // Arrange
+      const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+      const parent = path.join(repository, 'tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const root = fs.mkdtempSync(path.join(parent, 'installer-placement-'));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      const registry = loadRegistry(createReport());
+      const callerPath = '.github/workflows/release-publication-caller.yml';
+      fs.mkdirSync(path.join(root, '.ci/installer/manifests'), { recursive: true });
+      const example = JSON.parse(fs.readFileSync(path.join(repository, 'skills/ci-release-installer/assets/examples/standard-assembly.example.json'), 'utf8'));
+      fs.writeFileSync(path.join(root, '.ci/installer/assembly.json'), JSON.stringify(example));
+      for (const platform of Object.values(example.platforms)) fs.writeFileSync(path.join(root, platform.manifest), '{}\n');
+      fs.writeFileSync(path.join(root, '.ci/installer/unrelated.json'), '{}\n');
+      const unclassified = (configPath) => {
+        const workflows = model();
+        Object.assign(workflows.get(callerPath).jobs.publish.with, { supplemental_release_asset_enabled: true, supplemental_release_asset_owner_contract: 'installer.asset-assembly-evidence-contract', supplemental_release_asset_implementation: 'standard-installer', supplemental_release_asset_config_path: configPath });
+        const report = createReport();
+        collectSemanticCandidates(root, [], [], new Map([[callerPath, workflows.get(callerPath)]]), registry, report);
+        return report.semanticCandidates.filter(item => item.kind === 'unclassified-directory-asset').map(item => item.path);
+      };
+      // Act
+      const named = unclassified('.ci/installer/assembly.json');
+      const unset = unclassified('__unset__');
+      const outside = fs.mkdtempSync(path.join(parent, 'installer-outside-'));
+      t.onTestFinished(() => fs.rmSync(outside, { recursive: true, force: true }));
+      fs.renameSync(path.join(root, '.ci/installer/assembly.json'), path.join(outside, 'assembly.json'));
+      fs.symlinkSync(path.join(outside, 'assembly.json'), path.join(root, '.ci/installer/assembly.json'));
+      const escaped = unclassified('.ci/installer/assembly.json');
+      // Assert
+      expect(named).toEqual(['.ci/installer/unrelated.json']);
+      expect(unset).toHaveLength(5);
+      expect(escaped).toHaveLength(4);
     });
   });
 });
@@ -553,7 +634,7 @@ describe('standard installer preflight', () => {
       const cases = [
         [false, '__unset__', 'owner-adapter', '__unset__'],
         [true, 'example.supplemental-asset-contract', 'owner-adapter', '__unset__'],
-        [true, 'installer.asset-assembly-evidence-contract', 'standard-installer', 'installer/assembly.json'],
+        [true, 'installer.asset-assembly-evidence-contract', 'standard-installer', '.ci/installer/assembly.json'],
       ];
       for (const [enabled, ownerContract, implementation, configPath] of cases) {
         const workflows = model();
@@ -561,7 +642,7 @@ describe('standard installer preflight', () => {
         Object.assign(selection, { supplemental_release_asset_enabled: enabled, supplemental_release_asset_owner_contract: ownerContract, supplemental_release_asset_implementation: implementation, supplemental_release_asset_config_path: configPath });
         // Act / Assert
         expect(inspect(workflows).mismatches).toEqual([]);
-        selection.supplemental_release_asset_config_path = implementation === 'owner-adapter' ? 'installer/assembly.json' : '../unsafe.json';
+        selection.supplemental_release_asset_config_path = implementation === 'owner-adapter' ? '.ci/installer/assembly.json' : '../unsafe.json';
         expect(inspect(workflows).mismatches.length).toBeGreaterThan(0);
       }
     });
@@ -577,7 +658,7 @@ describe('standard installer preflight', () => {
       const caller = workflows.get('.github/workflows/release-publication-caller.yml');
       expect(caller.jobs.publish.with).toHaveProperty('supplemental_release_asset_implementation');
       expect(caller.jobs.publish.with).toHaveProperty('supplemental_release_asset_config_path');
-      Object.assign(caller.jobs.publish.with, { supplemental_release_asset_enabled: true, supplemental_release_asset_owner_contract: 'installer.asset-assembly-evidence-contract', supplemental_release_asset_implementation: 'standard-installer', supplemental_release_asset_config_path: 'installer/assembly.json' });
+      Object.assign(caller.jobs.publish.with, { supplemental_release_asset_enabled: true, supplemental_release_asset_owner_contract: 'installer.asset-assembly-evidence-contract', supplemental_release_asset_implementation: 'standard-installer', supplemental_release_asset_config_path: '.ci/installer/assembly.json' });
       fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
       fs.writeFileSync(path.join(root, '.github/workflows/release-publication-caller.yml'), stringify(caller));
       const registry = loadRegistry(createReport());

@@ -30,3 +30,9 @@ test_maps:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-change-scope failure boundary > source retains actionable input failure without private input values"
         check_refs: [diagnostic-details]
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint fails open for an invalid SHA"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint fails open and keeps both SHAs when the base commit is unavailable"
+        check_refs: [diagnostic-details]

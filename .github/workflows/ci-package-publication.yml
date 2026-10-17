@@ -87,15 +87,15 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -131,11 +131,9 @@ jobs:
     runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           summary-json: >-
-            {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish job result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish job result: ${{ needs.publish.result }}"}]}

@@ -80,7 +80,7 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
       expect(lock.generatedAt).toBe('2026-09-17T00:41Z');
       expect(lock.assets.map((asset) => asset.path).sort()).toStrictEqual([...releaseRequestAssets.map((asset) => asset.destination), model.pinPath].sort());
       const pins = lock.assets.find((asset) => asset.path === model.pinPath);
-      expect(pins.canonicalSha256).toBe(model.sha256(readFileSync(path.join(repositoryRoot, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'))));
+      expect(pins.canonicalSha256).toBe(model.sha256(readFileSync(path.join(repositoryRoot, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml'))));
       expect(pins.appliedSha256).toBe(model.sha256(readFileSync(path.join(root, model.pinPath))));
       for (const asset of releaseRequestAssets) {
         const locked = lock.assets.find((entry) => entry.path === asset.destination);
@@ -268,6 +268,7 @@ describe("preset-validation-contract", () => {
         const assets = [...preset.workflowAssets, ...(preset.optionalWorkflowAssets ?? [])];
         const installed = new Set(assets.map((asset) => asset.id));
         if (['release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
+        if (installed.has('package-publication-caller')) installed.add('package-preparation');
         const declared = new Set(registry.actionTargets
           .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
           .map((target) => target.id));
@@ -643,7 +644,7 @@ describe("preset-validation-contract", () => {
     // integration_id: preset-registry-binding-validation
     test('preflight reports incomplete standard and conditional registry bindings', () => withFixture((root) => {
       // Arrange
-      const registryPath = path.join(repositoryRoot, 'skills/ci-github/references/ci-github-preset-assets.reference.yml');
+      const registryPath = path.join(repositoryRoot, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml');
       const sourceRegistry = parseYaml(readFileSync(registryPath, 'utf8'), registryPath);
       const invalidRegistryCases = [
         ['static validation shape', (r) => { r.provider.staticValidation = {}; }, 'provider.staticValidation'],

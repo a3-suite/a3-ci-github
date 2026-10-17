@@ -88,7 +88,8 @@ describe('GitHub CLI provisioning', () => {
       fetchAsset: async (url) => url.endsWith(`/${fixtureAsset}`)
         ? archive
         : Buffer.from(`${'0'.repeat(64)}  ${fixtureAsset}\n`),
-    })).rejects.toThrow(/gh-provision-failed: checksum mismatch/);
+    })).rejects.toMatchObject({ message: expect.stringMatching(/gh-provision-failed: checksum mismatch/), details: { stage: 'checksum-validation', field: 'sha256', asset: fixtureAsset,
+      expected: '0'.repeat(64), observed: createHash('sha256').update(archive).digest('hex') } });
     expect((await readdir(tempRoot)).filter((entry) => entry.startsWith('ci-gh-'))).toStrictEqual([]);
   });
 

@@ -8,4 +8,4 @@ workflowがcredentialを注入する。標準bindingは`github.token`専用で�
 
 write前にauthority directoryの承認済みnotes・approval・publication requestとhandoff・pre-observationを照合し、最後のremote観測後にhandoffを再検証する。既存Releaseはdraftも含めて拒否し、create結果のimmutable IDにupload・finalizeを固定する。asset一覧の反映待ちはGETだけを上限内で再観測し、writeを繰り返さない。結果不明や部分失敗では停止し、再create・上書き・削除・自動recoveryを行わない。失敗後の部分Releaseはownerが診断する。
 
-`receipt-path`／`readback-path`は後続のread-only `ci-release-publication-verifier`に渡す。jobの成功出力は独立verifierから取得する。公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とする。
+`receipt-path`／`readback-path`は後続のread-only `ci-release-publication-verifier`に渡す。jobの成功出力は独立verifierから取得する。公開状態と承認済み固定参照は[preset registry](../../skills/ci-github/assets/registry/ci-github-preset-assets.yml)を正本とする。

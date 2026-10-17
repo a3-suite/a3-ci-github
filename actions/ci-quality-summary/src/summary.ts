@@ -48,7 +48,7 @@ const rawResult = (
   return { result: '判定不能', collection: '取得不可' };
 };
 
-const parseRows = (value: unknown, section: string): SummaryRow[] => {
+const parseRows = (value: unknown, section: string, defaultEvidence?: string): SummaryRow[] => {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new DiagnosticError(`ci-summary-${section}-invalid`);
   return value.map((row) => {
@@ -56,7 +56,7 @@ const parseRows = (value: unknown, section: string): SummaryRow[] => {
     const common = {
       unit: normalize(row.unit, 'unit'),
       execution: normalize(row.execution, 'execution'),
-      evidence: normalize(row.evidence, 'evidence'),
+      evidence: normalize(row.evidence === undefined ? defaultEvidence : row.evidence, 'evidence'),
     };
     let parsed: SummaryRow;
     if (row.rawResult !== undefined) {
@@ -82,10 +82,10 @@ const parseRows = (value: unknown, section: string): SummaryRow[] => {
   });
 };
 
-const parseInput = (value: unknown): QualitySummaryInput => {
+const parseInput = (value: unknown, defaultEvidence?: string): QualitySummaryInput => {
   if (!isRecord(value)) throw new DiagnosticError('ci-summary-input-invalid');
-  const jobs = parseRows(value.jobs, 'jobs');
-  const tests = parseRows(value.tests, 'tests');
+  const jobs = parseRows(value.jobs, 'jobs', defaultEvidence);
+  const tests = parseRows(value.tests, 'tests', defaultEvidence);
   if (jobs.length === 0 && tests.length === 0) throw new DiagnosticError('ci-summary-rows-invalid');
   return { jobs, tests };
 };
@@ -120,8 +120,9 @@ const aggregateStatus = (rows: SummaryRow[]): RenderedSummary['status'] => {
   return 'success';
 };
 
-export const renderQualitySummary = (value: unknown): RenderedSummary => {
-  const parsed = parseInput(value);
+// defaultEvidence fills rows that omit evidence, so callers need not repeat the workflow run URL per row.
+export const renderQualitySummary = (value: unknown, defaultEvidence?: string): RenderedSummary => {
+  const parsed = parseInput(value, defaultEvidence);
   const rows = [...(parsed.jobs ?? []), ...(parsed.tests ?? [])];
   if (rows.every((row) => isExcluded(row))) throw new DiagnosticError('ci-summary-all-excluded');
   const lines: string[] = [];

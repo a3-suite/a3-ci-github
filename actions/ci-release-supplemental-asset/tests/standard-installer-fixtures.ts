@@ -20,21 +20,21 @@ export const fixture = (t: TestContext, verificationProfile = 'native-offline-dr
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.realpathSync(fs.mkdtempSync(path.join(parent, 'standard-installer-')));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
-  const manifest = JSON.parse(fs.readFileSync(path.join(repository, 'skills/installer/assets/examples/native-manifest.template.json'), 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(repository, 'skills/ci-release-installer/assets/examples/native-manifest.template.json'), 'utf8'));
   const managed = path.join(root, 'managed');
   manifest.placement = { managedRoot: managed, releasePath: path.join(managed, 'releases/1.0.0'), currentLink: path.join(managed, 'current') };
   manifest.activation = { strategy: 'active-pointer' };
   manifest.concurrency = { lockPath: path.join(managed, 'install.lock') };
   manifest.state = { installStatePath: path.join(managed, 'state/install.state') };
   manifest.compatibility = { requiredInstallerVersion: '2' };
-  fs.mkdirSync(path.join(root, 'installer'));
-  fs.writeFileSync(path.join(root, 'installer/product.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  const platforms = { [target]: { manifest: 'installer/product.json', assetName }, ...(windowsAssetName === undefined ? {} : { 'windows-x86_64': { manifest: 'installer/product.json', assetName: windowsAssetName } }) };
-  fs.writeFileSync(path.join(root, 'installer/assembly.json'), `${JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms }, null, 2)}\n`);
+  fs.mkdirSync(path.join(root, '.ci/installer'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.ci/installer/product.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  const platforms = { [target]: { manifest: '.ci/installer/product.json', assetName }, ...(windowsAssetName === undefined ? {} : { 'windows-x86_64': { manifest: '.ci/installer/product.json', assetName: windowsAssetName } }) };
+  fs.writeFileSync(path.join(root, '.ci/installer/assembly.json'), `${JSON.stringify({ schemaVersion: 'installer.assembly.v1', useCase: 'github-release-native', verificationProfile, platforms }, null, 2)}\n`);
   fs.writeFileSync(path.join(root, 'platform.yml'), `platforms:\n  - id: ${platform.id}\n    runner: ${platform.runner}\n    target: ${platform.target}\n`);
   execFileSync('git', ['init', '-q', '--object-format=sha1', root]);
   execFileSync('git', ['-C', root, 'config', 'core.autocrlf', 'false']);
-  execFileSync('git', ['-C', root, 'add', 'installer', 'platform.yml']);
+  execFileSync('git', ['-C', root, 'add', '.ci', 'platform.yml']);
   const tree = execFileSync('git', ['-C', root, 'write-tree'], { encoding: 'utf8' }).trim();
   const sourceSha = execFileSync('git', ['-C', root, 'hash-object', '-t', 'commit', '-w', '--stdin'], { input: `tree ${tree}\nauthor Fixture <fixture@example.invalid> 1 +0000\ncommitter Fixture <fixture@example.invalid> 1 +0000\n\nfixture\n`, encoding: 'utf8' }).trim();
   fs.writeFileSync(path.join(root, '.git/HEAD'), `${sourceSha}\n`);
@@ -48,7 +48,7 @@ export const fixture = (t: TestContext, verificationProfile = 'native-offline-dr
   fs.writeFileSync(`${archive}.sha256`, `${checksum}  ${archiveName}\n`);
   fs.writeFileSync(path.join(root, 'standard/asset-manifest.json'), JSON.stringify({ schema_version: '1', kind: 'ci-release-build-manifest', source_sha: sourceSha, version: '1.0.0', platform_id: platform.id, platform_target: platform.target, assets: [{ path: archiveName, sha256: checksum, checksum_path: `${archiveName}.sha256` }] }));
   const configure = (changes: Record<string, string> = {}): void => {
-    const values = { CI_PLATFORM_MANIFEST: 'platform.yml', CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'true', CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT: 'ci.release-asset-publication-contract#supplementalAsset', CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract', CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer', CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: 'installer/assembly.json', ...changes };
+    const values = { CI_PLATFORM_MANIFEST: 'platform.yml', CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'true', CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT: 'ci.release-asset-publication-contract#supplementalAsset', CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract', CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer', CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '.ci/installer/assembly.json', ...changes };
     const sources = {};
     const digest = sha256(Buffer.from(canonicalJson({ sources, values })));
     fs.writeFileSync(path.join(root, 'snapshot.json'), JSON.stringify({ schema: 'ci.config-snapshot.v1', sources, values, digest }));
@@ -67,7 +67,7 @@ export const prepareAssembly = (f: ReturnType<typeof fixture>): SupplementalOpti
 };
 
 export const checkoutLineEndings = (root: string, endings: string): void => {
-  const files = ['installer/assembly.json', 'installer/product.json', 'platform.yml'];
+  const files = ['.ci/installer/assembly.json', '.ci/installer/product.json', 'platform.yml'];
   for (const relative of files) fs.unlinkSync(path.join(root, relative));
   execFileSync('git', ['-C', root, '-c', `core.autocrlf=${endings === 'lf' ? 'false' : 'true'}`, 'checkout-index', '--force', '--', ...files]);
   for (const relative of files) {

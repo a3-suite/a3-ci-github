@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import childProcess, { execFileSync, spawnSync } from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { test, vi, describe, expect } from 'vitest';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture } from './fixtures.mjs';
@@ -8,14 +9,21 @@ import { sha256, canonicalJson } from '../io.ts';
 import { validateEvidence } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
 import skillPolicy from '../skill-package-policy.json';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Measured max 0.03s per call for the Python call; the PowerShell calls were not measurable here, so the 10s limit is an estimate to revisit once they are measured. A timeout means the call regressed:
+// investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 10000;
 
-const hasPwsh = spawnSync('pwsh', ['--version'], { encoding: 'utf8' }).status === 0;
+const pwshProbe = spawnSync('pwsh', ['--version'], { encoding: 'utf8', timeout: spawnTimeoutMs });
+// A missing pwsh disables the PowerShell tests; a start-up failure or timeout must fail the run instead of skipping them.
+if (pwshProbe.error && pwshProbe.error.code !== 'ENOENT') throw pwshProbe.error;
+const hasPwsh = pwshProbe.status === 0;
 
 describe('contract.ci-release-assembly.outputs', () => {
   describe('same-release-skills', () => {
     // contract_id: contract.ci-release-assembly.outputs
     // integration_id: same-release-skills
-    test('skills exceed former individual limits and retain the aggregate size boundary', (t) => {
+    test('skills exceed former individual limits', (t) => {
       const f = releaseSkillsFixture(t, (config, root) => {
         for (let index = 0; index < 65; index++) {
           const directory = `skills/sdd/tool-${index}`;
@@ -32,6 +40,10 @@ describe('contract.ci-release-assembly.outputs', () => {
       expect(new Set(owner.files.map(entry => entry.path.split('/')[0])).size).toBe(66);
       expect(owner.files.length).toBeGreaterThan(1024);
       expect(owner.files.find(entry => entry.path.endsWith('/large.bin')).size).toBeGreaterThan(8 * 1024 * 1024);
+    });
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: same-release-skills
+    test('skills retain the aggregate size boundary', (t) => {
       const boundary = releaseSkillsFixture(t);
       boundary.assemble();
       const boundaryOwner = JSON.parse(fs.readFileSync(path.join(boundary.options.outputRoot, 'evidence/evidence-4-project-skills.zip.owner.json'), 'utf8'));
@@ -51,6 +63,39 @@ describe('contract.ci-release-assembly.outputs', () => {
     });
     // contract_id: contract.ci-release-assembly.outputs
     // integration_id: same-release-skills
+    test('skills report an invalid SKILL.md before an unreadable later blob', (t) => {
+      // Arrange
+      const f = releaseSkillsFixture(t, (config, root) => {
+        fs.writeFileSync(path.join(root, 'skills/example-tool/SKILL.md'), 'no frontmatter here\n');
+      });
+      const oid = execFileSync('git', ['-C', f.root, 'rev-parse', 'HEAD:skills/example-tool/references/setup.guide.md'], { encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
+      fs.rmSync(path.join(f.root, '.git/objects', oid.slice(0, 2), oid.slice(2)));
+      // Act and Assert
+      expect(f.assemble).toThrow(/skills-entry-invalid/);
+    });
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: same-release-skills
+    test('skills report an invalid SKILL.md even when the read-ahead batch fails', (t) => {
+      // Arrange
+      const f = releaseSkillsFixture(t, (config, root) => {
+        fs.writeFileSync(path.join(root, 'skills/example-tool/SKILL.md'), 'no frontmatter here\n');
+      });
+      const original = childProcess.execFileSync;
+      childProcess.execFileSync = (command, args, ...rest) => {
+        if (Array.isArray(args) && args.includes('cat-file') && args.includes('--batch')) throw new Error('simulated batch failure');
+        return original(command, args, ...rest);
+      };
+      syncBuiltinESMExports();
+      try {
+        // Act and Assert
+        expect(f.assemble).toThrow(/skills-entry-invalid/);
+      } finally {
+        childProcess.execFileSync = original;
+        syncBuiltinESMExports();
+      }
+    });
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: same-release-skills
     test('skills preserve fixed source bytes and reject incomplete or unsafe packages', (t) => {
       // Arrange
       const f = releaseSkillsFixture(t);
@@ -60,7 +105,7 @@ describe('contract.ci-release-assembly.outputs', () => {
       const zipPath = path.join(f.options.outputRoot, 'assets/project-skills.zip');
       const inspected = spawnSync(process.platform === 'win32' ? 'python' : 'python3', ['-c',
         'import sys,io,zipfile,json,hashlib; z=zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); assert z.testzip() is None; print(json.dumps([{ "path":i.filename,"size":i.file_size,"sha256":hashlib.sha256(z.read(i)).hexdigest(),"mode":i.external_attr >> 16} for i in z.infolist()]))'],
-        { input: fs.readFileSync(zipPath), encoding: 'utf8' });
+        { input: fs.readFileSync(zipPath), encoding: 'utf8', timeout: spawnTimeoutMs });
       // Assert
       expect(inspected.status, inspected.stderr).toBe(0);
       const inventory = JSON.parse(inspected.stdout);
@@ -249,7 +294,7 @@ describe("contract.ci-release-assembly.outputs", () => {
 
       const packaged = spawnSync('pwsh', ['-NoLogo', '-NoProfile', '-File', script,
         binary, 'project.exe', 'project', f.identity.version, platform.id, platform.target, f.identity.source_sha, output,
-      ], { encoding: 'utf8' });
+      ], { encoding: 'utf8', timeout: spawnTimeoutMs });
 
       expect(packaged.status, packaged.stderr).toBe(0);
       const digest = sha256(fs.readFileSync(path.join(output, f.name)));

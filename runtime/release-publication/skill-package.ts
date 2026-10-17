@@ -8,6 +8,8 @@ import { assetName, canonicalJson, fail, hex, record, sha256 } from './io';
 import { releaseSkillsPath as relativePath } from './selection';
 
 export const SKILLS_OWNER_CONTRACT = 'ci.release-skills-package';
+// Upper bound for one `git cat-file --batch` header (`<oid> blob <size>\n`) plus its input line.
+const BATCH_OBJECT_OVERHEAD = 128;
 type EntryType = SkillZipEntryType;
 export type SkillPackageType = {
   assets: { name: string; bytes: Buffer }[];
@@ -61,6 +63,38 @@ export const buildReleaseSkills = (sourceRoot: string, configPath: string, sourc
     try { return execFileSync('git', ['-C', rootPath, ...args], { maxBuffer: maximum, timeout: 30000, stdio: ['ignore', 'pipe', 'ignore'] }); }
     catch { return fail('skills-source-invalid'); }
   };
+  // One `git cat-file --batch` per skill replaces a process per file. This is only a cache: it never fails the build, and any
+  // blob it does not return is read by the per-file path below, which keeps the original validation order and diagnostics.
+  // The budget counts every object's header allowance, so the batch input and output stay within the remaining size budget.
+  const readAhead = (candidates: { oid: string; size: number }[], budget: number): Map<string, Buffer> => {
+    const wanted: { oid: string; size: number }[] = [];
+    const seen = new Set<string>();
+    let used = 0;
+    for (const candidate of candidates) {
+      if (seen.has(candidate.oid)) continue;
+      if (!Number.isSafeInteger(candidate.size) || candidate.size < 0 || used + candidate.size + BATCH_OBJECT_OVERHEAD > budget) break;
+      seen.add(candidate.oid);
+      wanted.push(candidate);
+      used += candidate.size + BATCH_OBJECT_OVERHEAD;
+    }
+    const blobs = new Map<string, Buffer>();
+    if (!wanted.length) return blobs;
+    let output: Buffer;
+    try {
+      output = execFileSync('git', ['-C', rootPath, 'cat-file', '--batch'], { input: `${wanted.map(entry => entry.oid).join('\n')}\n`,
+        maxBuffer: used + 1024, timeout: 30000, stdio: ['pipe', 'pipe', 'ignore'] });
+    } catch { return blobs; }
+    let offset = 0;
+    for (const { oid, size } of wanted) {
+      const lineEnd = output.indexOf(0x0a, offset);
+      const match = lineEnd < 0 ? null : /^([a-f0-9]{40}) blob (\d+)$/.exec(output.toString('utf8', offset, lineEnd));
+      const start = lineEnd + 1;
+      if (!match || match[1] !== oid || Number(match[2]) !== size || start + size >= output.length || output[start + size] !== 0x0a) return new Map();
+      blobs.set(oid, output.subarray(start, start + size));
+      offset = start + size + 1;
+    }
+    return blobs;
+  };
   if (git(['rev-parse', 'HEAD']).toString('utf8').trim() !== sourceSha) fail('skills-source-mismatch');
   const declarationPath = relativePath(configPath);
   const declarationMode = git(['ls-tree', sourceSha, '--', declarationPath]).toString('utf8').split(' ')[0];
@@ -93,18 +127,29 @@ export const buildReleaseSkills = (sourceRoot: string, configPath: string, sourc
     const selected: EntryType[] = [];
     const prefix = root === '.' ? '' : `${root}/`;
     const sourcePaths = [...new Set(['SKILL.md', ...includes].map(relative => `:(literal)${prefix}${relative}`))];
-    const tree = git(['ls-tree', '-rz', sourceSha, '--', ...sourcePaths]).toString('utf8');
+    // `-l` makes git read every listed object, so a damaged blob would fail the listing before SKILL.md is validated.
+    // Sizes are therefore an optimization: without them the original listing and per-file size reads apply.
+    let tree: string;
+    try {
+      tree = execFileSync('git', ['-C', rootPath, 'ls-tree', '-rlz', sourceSha, '--', ...sourcePaths], { timeout: 30000, maxBuffer: Infinity, stdio: ['ignore', 'pipe', 'ignore'] }).toString('utf8');
+    } catch { tree = git(['ls-tree', '-rz', sourceSha, '--', ...sourcePaths]).toString('utf8'); }
     const records = tree.split('\0').filter(Boolean).map(line => {
-      const match = /^(\d+) (\w+) ([a-f0-9]{40})\t(.+)$/.exec(line);
-      if (!match || !match[4].startsWith(prefix)) fail('skills-source-invalid');
-      return { mode: match[1], kind: match[2], oid: match[3], relative: match[4].slice(prefix.length) };
+      // The size column is `-` for non-blobs and `BAD` for a blob git cannot read; both leave the size unknown (see sizeOf).
+      const match = /^(\d+) (\w+) ([a-f0-9]{40})(?: +(\d+|-|BAD))?\t(.+)$/.exec(line);
+      if (!match || !match[5].startsWith(prefix)) fail('skills-source-invalid');
+      return { mode: match[1], kind: match[2], oid: match[3], size: match[4] === undefined || !/^\d+$/.test(match[4]) ? Number.NaN : Number(match[4]), relative: match[5].slice(prefix.length) };
     });
     const entry = records.find(record => record.relative === 'SKILL.md');
     if (!entry) fail('skills-required-file-missing');
     if (entry.kind !== 'blob' || !['100644', '100755'].includes(entry.mode)) fail('skills-file-kind-invalid');
-    const skillSize = Number(git(['cat-file', '-s', entry.oid], 1024).toString('utf8').trim());
+    const sizeOf = (record: { oid: string; size: number }): number => Number.isNaN(record.size)
+      ? Number(git(['cat-file', '-s', record.oid], 1024).toString('utf8').trim()) : record.size;
+    const skillSize = sizeOf(entry);
     if (!Number.isSafeInteger(skillSize) || skillSize < 0 || total + skillSize > policy.maximumTotalBytes) fail('skills-size-invalid');
-    const skillBytes = git(['cat-file', 'blob', entry.oid], policy.maximumTotalBytes - total);
+    const blobs = readAhead([entry, ...records.filter(record => record.kind === 'blob' && ['100644', '100755'].includes(record.mode)
+      && includes.some(include => record.relative === include || record.relative.startsWith(`${include}/`)) && !excluded(record.relative, required))]
+      .filter(candidate => !Number.isNaN(candidate.size)), policy.maximumTotalBytes - total);
+    const skillBytes = blobs.get(entry.oid) ?? git(['cat-file', 'blob', entry.oid], policy.maximumTotalBytes - total);
     const skillText = skillBytes.toString('utf8');
     const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(skillText);
     let header: unknown;
@@ -134,10 +179,10 @@ export const buildReleaseSkills = (sourceRoot: string, configPath: string, sourc
       }
       if (archiveNames.has(archiveName.toLowerCase()) || archiveDirectories.has(archiveName.toLowerCase())) fail('skills-file-name-collision');
       archiveNames.add(archiveName.toLowerCase());
-      const size = Number(git(['cat-file', '-s', record.oid], 1024).toString('utf8').trim());
+      const size = sizeOf(record);
       if (!Number.isSafeInteger(size) || size < 0
         || total + size > policy.maximumTotalBytes) fail('skills-size-invalid');
-      const bytes = relative === 'SKILL.md' ? skillBytes : git(['cat-file', 'blob', record.oid], policy.maximumTotalBytes - total);
+      const bytes = relative === 'SKILL.md' ? skillBytes : blobs.get(record.oid) ?? git(['cat-file', 'blob', record.oid], policy.maximumTotalBytes - total);
       total += bytes.length;
       if (total > policy.maximumTotalBytes) fail('skills-size-invalid');
       selected.push({ name: archiveName, bytes, mode: Number.parseInt(record.mode, 8) });

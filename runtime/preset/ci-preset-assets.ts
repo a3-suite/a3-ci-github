@@ -287,7 +287,7 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
     [...providerActionPinRepositories(workflow)].some((action) => registry.approvedProviderActionPins.has(action))));
   if (requiresPins && registry.providerActionPinCompanionPath) result.set(registry.providerActionPinCompanionPath, {
     path: registry.providerActionPinCompanionPath,
-    sourcePath: path.join(SOURCE_ROOT, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'),
+    sourcePath: path.join(SOURCE_ROOT, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml'),
     exactCopy: false,
   });
   return [...result.values()].sort((left, right) => left.path.localeCompare(right.path));

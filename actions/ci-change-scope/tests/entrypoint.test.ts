@@ -41,8 +41,10 @@ const runBundled = (base: 'head' | string, files: string[] = []) => {
   env['INPUT_HEAD-SHA'] = head;
   env['INPUT_DOCS-ONLY-PATTERNS'] = 'docs/**,README.md,**/*.md';
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: tempRoot, env, encoding: 'utf8' });
-  return { output, result, tempRoot };
+  return { output, result, tempRoot, head };
 };
+const diagnosticOf = (stderr: string): Record<string, unknown> =>
+  JSON.parse(stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
 
 // contract_id: contract.ci-change-scope.outputs
 // integration_id: ci-change-scope-contract-entrypoint
@@ -80,6 +82,31 @@ test('entrypoint fails open for an invalid SHA', () => {
     const output = fs.readFileSync(run.output, 'utf8');
     expect(output).toMatch(/unresolved/);
     expect(output).toMatch(/run-ci/);
+    expect(diagnosticOf(run.result.stderr)).toMatchObject({
+      classification: { subject: 'ci-change-scope', stage: 'git-diff', reason: 'change-range-unavailable' },
+      context: { inputs: { base: 'unavailable', head: run.head, runCi: true } },
+      'execution-state': { outcome: 'unresolved', lastConfirmed: 'range-resolution' },
+    });
+  } finally {
+    fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// integration_id: ci-change-scope-entrypoint-regression
+test('entrypoint fails open and keeps both SHAs when the base commit is unavailable', () => {
+  // Arrange
+  const base = 'c'.repeat(40);
+  // Act
+  const run = runBundled(base);
+  // Assert
+  try {
+    expect(run.result.status).toBe(0);
+    expect(fs.readFileSync(run.output, 'utf8')).toMatch(/unresolved/);
+    expect(diagnosticOf(run.result.stderr)).toMatchObject({
+      classification: { subject: 'ci-change-scope', stage: 'git-diff', reason: 'git-diff-unavailable' },
+      context: { inputs: { base, head: run.head, runCi: true } },
+      'execution-state': { outcome: 'unresolved', lastConfirmed: 'range-resolution' },
+    });
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }

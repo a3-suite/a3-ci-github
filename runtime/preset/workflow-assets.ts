@@ -8,6 +8,11 @@ import type { ValueMap } from './preset-model.ts';
 
 const WORKFLOW_ASSET = /(?:\.ci-base\/)?(\.ci\/(?:scripts|provider|trusted|runtime)\/[A-Za-z0-9._/-]+)/g;
 
+// Reusable workflow inputs that name project-owned declarations; the provider reads them, so they are referenced assets.
+const PROJECT_DECLARATION_INPUTS = ['release_skills_config_path', 'supplemental_release_asset_config_path'];
+// Declaration paths are taken literally: no .ci-base/ rewrite, and expressions or placeholders are not paths.
+const CI_DECLARATION_PATH = /^\.ci\/(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
+
 const LOCAL_ASSET = /(?:\$?\{?)(script_dir|runtime_dir)\}?\/([A-Za-z0-9._/-]+)/g;
 
 const POWERSHELL_LOCAL_ASSET = /\$PSScriptRoot\s+['"]([A-Za-z0-9._/-]+)['"]/g;
@@ -28,6 +33,38 @@ const realPathIsInside = (root: string, absolutePath: string): boolean => {
   const realPath = fs.realpathSync(absolutePath);
   const relative = path.relative(realRoot, realPath);
   return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+};
+
+// A standard installer assembly names its manifests repository-relative; those manifests are referenced assets too.
+// Only a bounded regular file whose real path stays in the project is read; anything else is left to the existence checks.
+// The checks and the bounded read use one non-blocking descriptor; a concurrent parent-directory swap needs write access
+// to the checkout during preflight and can only add path-shaped references, so it is not defended further.
+const ASSEMBLY_MAX_BYTES = 1024 * 1024;
+const assemblyManifests = (root: string, declaration: string): string[] => {
+  let assembly: unknown;
+  let descriptor: number | undefined;
+  try {
+    const absolute = inside(root, declaration);
+    if (!realPathIsInside(root, absolute)) return [];
+    descriptor = fs.openSync(absolute, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+    if (!fs.fstatSync(descriptor).isFile()) return [];
+    const buffer = Buffer.alloc(ASSEMBLY_MAX_BYTES + 1);
+    let length = 0;
+    for (let read = -1; read !== 0 && length < buffer.length;) {
+      read = fs.readSync(descriptor, buffer, length, buffer.length - length, length);
+      length += read;
+    }
+    if (length > ASSEMBLY_MAX_BYTES) return [];
+    assembly = JSON.parse(buffer.subarray(0, length).toString('utf8'));
+  } catch {
+    return [];
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+  const parsed = map(assembly);
+  if (parsed.schemaVersion !== 'installer.assembly.v1') return [];
+  return Object.values(map(parsed.platforms)).map((platform) => map(platform).manifest)
+    .filter((manifest): manifest is string => typeof manifest === 'string' && CI_DECLARATION_PATH.test(manifest));
 };
 
 const sha256 = (absolutePath: string): string => createHash('sha256')
@@ -148,8 +185,15 @@ const findWorkflowAssetReferences = (
   const parsed = map(parseYaml(workflowText, 'workflow'));
   const workflowEnv = map(parsed.env);
   const runs: string[] = [];
+  const declarations = new Set<string>();
   if (typeof parsed.run === 'string') runs.push(parsed.run);
   for (const job of Object.values(map(parsed.jobs)).map(map)) {
+    for (const input of PROJECT_DECLARATION_INPUTS) {
+      const value = map(job.with)[input];
+      if (typeof value !== 'string' || !CI_DECLARATION_PATH.test(value)) continue;
+      declarations.add(value);
+      for (const manifest of assemblyManifests(root, value)) declarations.add(manifest);
+    }
     for (const step of Array.isArray(job.steps) ? job.steps.map(map) : []) {
       if (!staticallyDisabledStep(step, workflowEnv) && typeof step.run === 'string') {
         runs.push(step.run);
@@ -158,7 +202,7 @@ const findWorkflowAssetReferences = (
   }
   const directReferences = directAssets(runs.join('\n'));
   for (const excluded of excludedReferences) directReferences.delete(excluded);
-  return [...indirectAssets(root, directReferences, excludedReferences)].sort();
+  return [...new Set([...indirectAssets(root, directReferences, excludedReferences), ...declarations])].sort();
 };
 
 const filesUnder = (root: string, directory: string, suffixes: string[]): string[] => {

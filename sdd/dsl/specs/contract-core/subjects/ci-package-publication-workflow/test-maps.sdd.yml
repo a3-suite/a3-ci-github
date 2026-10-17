@@ -26,3 +26,9 @@ test_maps:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: "workflow failure diagnostics > package-publication aggregate retains failed job identity and run evidence"
         check_refs: [diagnostic-details]
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job failure result"
+        check_refs: [diagnostic-details]
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: "workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job cancelled result"
+        check_refs: [diagnostic-details]

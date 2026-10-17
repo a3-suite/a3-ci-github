@@ -63,6 +63,17 @@ export async function downloadVerifiedAsset(request: VerifiedAssetRequest): Prom
   return content;
 }
 
+// Only the install and PATH export stages write, and each failure there reports its directory rollback.
+// Removing the directory cannot undo a partial GITHUB_PATH append, so that stage reports the PATH file instead.
+export function provisionWriteState(error: unknown): string {
+  const details = error instanceof DiagnosticError && error.details && typeof error.details === 'object' ? error.details as { stage?: unknown; rollback?: unknown } : undefined;
+  const rollback = details?.rollback;
+  if (details?.stage === 'path-export') return 'github-path-may-be-partial';
+  if (rollback === 'removed') return 'rolled-back';
+  if (rollback === 'cleanup-failed') return 'temporary-install-may-exist';
+  return 'not-started';
+}
+
 export async function exportDirectoryToPath(
   installed: string,
   githubPath: string,

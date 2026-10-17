@@ -8,7 +8,7 @@
 
 ## 正本と境界
 
-プリセットの意味、入出力、停止条件は `references/ci-preset-contracts.reference.yml`、GitHub Actions の workflow、コピー先、必要 asset、Action mapping は `references/ci-github-preset-assets.reference.yml` を正本とする。
+プリセットの意味、入出力、停止条件は `references/ci-preset-contracts.reference.yml`、GitHub Actions の workflow、コピー先、必要 asset、Action mapping は `assets/registry/ci-github-preset-assets.yml` を正本とする。
 
 本カタログは選択の入口だけを示す。Git、branch、version、release notes、承認、処理契約、例外条件を再定義しない。
 

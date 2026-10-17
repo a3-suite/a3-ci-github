@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const yaml = createRequire(path.join(root, 'runtime/preset/package.json'))('yaml');
 
 export const generateStandardQualityBundles = ({ repositoryRoot = root, check = false } = {}) => {
-  const inventory = yaml.parse(fs.readFileSync(path.join(repositoryRoot, 'skills/ci-github/references/ci-script-assets.reference.yml'), 'utf8'));
+  const inventory = yaml.parse(fs.readFileSync(path.join(repositoryRoot, 'skills/ci-github/assets/registry/ci-script-assets.yml'), 'utf8'));
   const sourceRoot = fs.realpathSync(path.join(repositoryRoot, 'runtime/adapter/bundles'));
   const repository = fs.realpathSync(repositoryRoot);
   const relative = path.relative(repository, sourceRoot);

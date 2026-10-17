@@ -20,12 +20,12 @@ import { add } from './validation-report.ts';
 export const SOURCE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const REGISTRY_PATH = path.resolve(
   SOURCE_ROOT,
-  'skills/ci-github/references/ci-github-preset-assets.reference.yml',
+  'skills/ci-github/assets/registry/ci-github-preset-assets.yml',
 );
 export const SKILL_ROOT = SOURCE_ROOT;
 const CI_ASSET_REGISTRY_PATH = path.resolve(
   SOURCE_ROOT,
-  'skills/ci-github/references/ci-script-assets.reference.yml',
+  'skills/ci-github/assets/registry/ci-script-assets.yml',
 );
 const SELF_SKILL = path.basename(SKILL_ROOT);
 const FULL_SHA = /^[0-9a-f]{40}$/;

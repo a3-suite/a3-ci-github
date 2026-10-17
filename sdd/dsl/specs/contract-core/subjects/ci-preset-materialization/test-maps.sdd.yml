@@ -44,3 +44,6 @@ test_maps:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > materialization preserves its outcome and safe diagnostic context"
         check_refs: [diagnostic-details]
+      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+        symbol: "contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejection retains the failing stage, paths and conflicting digests"
+        check_refs: [diagnostic-details]

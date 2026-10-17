@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Measured max 0.18s per git call; the limit is the 5s floor that absorbs process start-up jitter. A timeout means the call
+// regressed: investigate its performance or split it before raising the limit.
+const gitTimeoutMs = 5000;
 import { sha256, canonicalJson } from '../io.ts';
 import { assembleRelease } from '../assembly.ts';
 import { loadAssembly } from '../observation.ts';
@@ -50,7 +54,7 @@ export const fixture = (t, platform = { id: 'linux', runner: 'ubuntu-24.04', tar
   return { root, put, identity, authority, snapshot, name, payload, buildManifest, options, assemble: () => assembleRelease(options, decodePlatformManifest) };
 };
 
-export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}, configPath = 'skills/release.json') => {
+export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {}, configPath = '.ci/release-skills.json') => {
   const f = fixture(t);
   const configuration = { schemaVersion: 'ci.release-skills.v1', skills: [{ path: 'skills/example-tool', include: ['SKILL.md', 'references', 'scripts', 'assets'], requiredFiles: ['SKILL.md', 'references/setup.guide.md', 'scripts/run.py'] }] };
   f.put('skills/example-tool/SKILL.md', '---\nname: example-tool\ndescription: Read the product using its public CLI.\n---\nRead `references/setup.guide.md` and use `scripts/run.py`.\n');
@@ -64,7 +68,7 @@ export const releaseSkillsFixture = (t, mutate = () => {}, mutateIndex = () => {
   f.put('skills/unselected/SKILL.md', 'not selected');
   mutate(configuration, f.root);
   f.put(configPath, configuration);
-  const git = (args, input) => execFileSync('git', ['-C', f.root, ...args], { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+  const git = (args, input) => execFileSync('git', ['-C', f.root, ...args], { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'], timeout: gitTimeoutMs }).trim();
   git(['init', '-q']);
   git(['config', 'user.name', 'Fixture']);
   git(['config', 'user.email', 'fixture@example.invalid']);

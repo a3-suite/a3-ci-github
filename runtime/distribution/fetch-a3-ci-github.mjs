@@ -192,34 +192,37 @@ export const validateDistributionManifest = (manifest) => {
   return manifest;
 };
 
+// Selection runs before any state or destination write. Unregistered caller input is not echoed.
+const selectionFailure = (field, expected, observed) => ({ stage: 'selection', input: 'requested-presets-and-assets', write: 'not-started', field, expected, observed: /^[a-zA-Z0-9][a-zA-Z0-9._>-]{0,199}$/.test(observed) ? observed : 'unavailable' });
+
 export const resolveDistributionSelection = (manifest, requestedPresets, requestedAssets) => {
   validateDistributionManifest(manifest);
   if (requestedPresets.length === 0 && requestedAssets.length === 0) {
-    throw new DistributionError('distribution-selection-required');
+    throw new DistributionError('distribution-selection-required', { diagnostics: selectionFailure('selection', 'preset-or-asset', 'none') });
   }
   const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
   const presets = new Map(manifest.presets.map((preset) => [preset.id, preset]));
   const selected = new Set();
   const addClosure = (assetId, chain = []) => {
-    if (chain.includes(assetId)) throw new DistributionError(`distribution-dependency-cycle:${[...chain, assetId].join('>')}`);
+    if (chain.includes(assetId)) throw new DistributionError(`distribution-dependency-cycle:${[...chain, assetId].join('>')}`, { diagnostics: selectionFailure('dependencies', 'acyclic-dependency-closure', [...chain, assetId].join('>')) });
     selected.add(assetId);
     const asset = assets.get(assetId);
     for (const dependency of asset.dependencies) addClosure(dependency, [...chain, assetId]);
   };
   for (const presetId of requestedPresets) {
     const preset = presets.get(presetId);
-    if (!preset) throw new DistributionError(`distribution-preset-unknown:${presetId}`);
+    if (!preset) throw new DistributionError(`distribution-preset-unknown:${presetId}`, { diagnostics: selectionFailure('preset', 'registered-preset', 'unregistered') });
     preset.requiredAssets.forEach((assetId) => addClosure(assetId));
   }
   for (const assetId of requestedAssets) {
-    if (!assets.has(assetId)) throw new DistributionError(`distribution-asset-unknown:${assetId}`);
+    if (!assets.has(assetId)) throw new DistributionError(`distribution-asset-unknown:${assetId}`, { diagnostics: selectionFailure('asset', 'registered-asset', 'unregistered') });
     selected.add(assetId);
   }
   for (const assetId of requestedAssets) {
     const asset = assets.get(assetId);
     for (const dependency of asset.dependencies) {
       if (!selected.has(dependency)) {
-        throw new DistributionError(`distribution-dependency-missing:${assetId}:${dependency}`);
+        throw new DistributionError(`distribution-dependency-missing:${assetId}:${dependency}`, { diagnostics: selectionFailure(`${assetId}.dependencies`, dependency, 'not-selected') });
       }
     }
   }
@@ -584,7 +587,8 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
         }
         generatedContent = templateRuntime.renderWorkflowTemplate({
           yaml: yamlRuntime, template: sourceText,
-          values: { ...previous.values, ...(settings[asset.id] ?? {}) },
+          values: settings[asset.id] ?? {},
+          carriedValues: previous.values,
           references: loaded.manifest.workflowReferences,
           emptyAllowed: template.emptyAllowed,
           extensions: previous.extensions,
@@ -612,7 +616,7 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
   }
   if (templateRuntime) {
     const registryAsset = loaded.manifest.assets.find((asset) => asset.id === 'registry.ci-github');
-    const registrySource = registryAsset?.files.find((file) => file.sourcePath.endsWith('/ci-github-preset-assets.reference.yml'))?.sourcePath;
+    const registrySource = registryAsset?.files.find((file) => file.sourcePath.endsWith('/ci-github-preset-assets.yml'))?.sourcePath;
     if (!registrySource || !loaded.receipt.files.includes(registrySource)) throw new DistributionError('distribution-pin-registry-not-fetched');
     const providerActions = yamlRuntime.parse(fs.readFileSync(inside(loaded.root, registrySource), 'utf8')).providerActions;
     const projection = templateRuntime.projectProviderActionPins(providerActions.entries, providerActions.pinCompanion.fields);

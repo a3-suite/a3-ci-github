@@ -1,5 +1,5 @@
 import schema from './evidence.schema.json';
-import { fail, record, sha256, readRecord } from './io';
+import { fail, record, sha256 } from './io';
 
 export type ReleaseIdentityType = {
   repository: string; tag: string; tag_object_sha: string; source_sha: string;
@@ -81,4 +81,3 @@ export const identityFromAuthority = (authority: Record<string, unknown>, reposi
     || identity.version !== authority.version || identity.target_identity !== authority.target_identity) fail('authority-handoff-binding-mismatch');
   return identity;
 };
-export const readAuthority = (filename: string, repository: string): ReleaseIdentityType => identityFromAuthority(readRecord(filename), repository);

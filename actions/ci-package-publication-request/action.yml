@@ -3,7 +3,7 @@ description: Create or verify an immutable package publication request handoff.
 inputs:
   operation:
     required: true
-    description: Operation, create or verify.
+    description: Operation, verify-trigger, create, or verify.
   request-path:
     required: false
     default: package-publication-request/request.json

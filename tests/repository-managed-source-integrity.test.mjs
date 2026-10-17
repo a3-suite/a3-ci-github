@@ -16,7 +16,7 @@ describe("repository-managed-source-integrity", () => {
     for (const relative of ['actions', 'workflows', 'runtime', 'lint-rules/a3-lint', 'lint-rules/repository', 'skills/ci-github', 'sdd', 'tests']) {
       expect(existsSync(path.join(root, relative)), relative).toBe(true);
     }
-    const registry = readFileSync(path.join(root, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'), 'utf8');
+    const registry = readFileSync(path.join(root, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml'), 'utf8');
     for (const match of registry.matchAll(/^\s+source:\s+((?:workflows|runtime|lint-rules)\/\S+)\s*$/gm)) {
       expect(existsSync(path.join(root, match[1])), match[1]).toBe(true);
     }
