@@ -180,10 +180,12 @@ jobs:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       # Only trusted Rust quality reuses Cargo builds; untrusted pull requests and Release builds always start clean.
-      # Trusted runs require repository write access to start, and GitHub scopes caches saved off the default branch to their own ref.
+      # Only default-branch runs can save to the default-branch cache scope, and they build default-branch sources.
+      # Resolution failure only disables the cache, so the adapter still reports invalid Cargo settings with its own diagnostics.
       - name: Resolve Cargo cache paths
         id: cargo-cache-paths
         if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail

@@ -333,12 +333,20 @@ describe("workflow-contracts", () => {
       const adapter = steps.find(step => step.id === 'quality-adapter');
       const output = path.join(mkdtempSync(path.join(root, 'tmp/cargo-cache-paths-')), 'output');
       onTestFinished(() => rmSync(path.dirname(output), { recursive: true, force: true }));
+      const failedOutput = `${output}-failed`;
       // Act
       execFileSync('bash', ['-c', paths.run.replace(/cargo metadata [^|]+\|/, 'printf %s "$METADATA" |')], {
         env: { ...process.env, METADATA: JSON.stringify({ target_directory: 'D:\\a\\repo\\target' }), GITHUB_OUTPUT: output }, timeout: spawnTimeoutMs,
       });
+      const failed = spawnSync('bash', ['-c', paths.run.replace(/cargo metadata [^|]+\|/, 'false |')], {
+        env: { ...process.env, GITHUB_OUTPUT: failedOutput }, encoding: 'utf8', timeout: spawnTimeoutMs,
+      });
       // Assert
       expect(readFileSync(output, 'utf8')).toBe('target=D:/a/repo/target\n');
+      expect(failed.status).not.toBe(0);
+      expect(existsSync(failedOutput)).toBe(false);
+      expect(paths['continue-on-error']).toBe(true);
+      expect(adapter.if).toBe("steps.change-scope.outputs['run-ci'] != 'false'");
       expect(paths.if).toBe("steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'");
       expect(cache.if).toBe("steps.cargo-cache-paths.outcome == 'success'");
       expect(cache.uses).toBe(`actions/cache@${cachePin}`);
