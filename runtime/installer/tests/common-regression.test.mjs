@@ -30,7 +30,10 @@ describe('provider installer', () => {
         : [execFileSync(process.execPath, [fileURLToPath(new URL('../../../tests/coverage-tools/measure-installer-coverage.mjs', import.meta.url)), 'run', coverageOutput], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], timeout: suiteTimeoutMs })];
       // Assert
       expect(suites.length).toBeGreaterThan(0);
-      const failures = results.filter((result) => result.status === 'rejected').map((result) => String(result.reason?.stderr ?? result.reason));
+      // execFile reports a timeout only through killed; name it so CPU contention is not read as a regression.
+      const failures = results.flatMap((result, index) => (result.status !== 'rejected' ? [] : [result.reason?.killed
+        ? `${suites[index]}: killed by ${result.reason.signal} after the ${pythonSuiteTimeoutMs}ms timeout\n${result.reason.stderr}`
+        : String(result.reason?.stderr ?? result.reason)]));
       expect(failures, failures.join('\n')).toEqual([]);
     }, 120000);
   });
