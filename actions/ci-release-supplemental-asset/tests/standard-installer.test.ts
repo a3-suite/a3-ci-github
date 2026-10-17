@@ -14,6 +14,18 @@ import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepare
 
 holdProcessOutput('stderr');
 
+// Source objects and declarations are fixture context, separate from the artifact under test.
+const packTransport = (root: string, output: string) => {
+  fs.mkdirSync(output, { recursive: true });
+  fs.cpSync(path.join(root, 'supplemental-download'), path.join(output, 'supplemental-download'), { recursive: true });
+  execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git",".ci","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', root, path.join(output, 'context.zip')]);
+};
+const unpackTransport = (input: string, root: string) => {
+  execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root]);
+  fs.mkdirSync(path.join(root, '.git/refs'), { recursive: true });
+  fs.cpSync(path.join(input, 'supplemental-download'), path.join(root, 'supplemental-download'), { recursive: true });
+};
+
 describe('standard installer', () => {
   // evidence_role: contract
   // flow_id: standard-installer-provider-execution
@@ -89,13 +101,7 @@ describe('standard installer', () => {
       // Act
       runInstallerCli(['--operation', 'build-platform', '--source-root', f.root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard', '--output-directory', 'platform-output', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer'));
       const assembled = prepareAssembly(f);
-      if (process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT) {
-        const output = path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT);
-        fs.mkdirSync(output, { recursive: true });
-        fs.cpSync(path.join(f.root, 'supplemental-download'), path.join(output, 'supplemental-download'), { recursive: true });
-        // Source objects and declarations are fixture context, separate from the artifact under test.
-        execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git","installer","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', f.root, path.join(output, 'context.zip')]);
-      }
+      if (process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT) packTransport(f.root, path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT));
       runInstallerCli(['--operation', 'assemble', '--source-root', f.root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', assembled.standardBuildRoot, '--supplemental-build-root', assembled.supplementalBuildRoot!, '--output-directory', 'handoff', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer'));
       const releaseRoot = path.join(f.root, 'release-handoff');
       const release = assembleRelease({ authorityPath: path.join(f.root, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(f.root, 'snapshot.json'), platformManifestPath: path.join(f.root, 'platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(f.root, assembled.standardBuildRoot), supplementalRoot: path.join(f.root, 'handoff'), outputRoot: releaseRoot }, decodePlatformManifest);
@@ -123,21 +129,20 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
     test('revalidates downloaded platform evidence', (t) => {
-      let root: string;
-      if (process.env.CI_INSTALLER_PLATFORM_INPUT) {
-        fs.mkdirSync(path.join(repository, 'tests/tmp'), { recursive: true });
-        root = fs.realpathSync(fs.mkdtempSync(path.join(repository, 'tests/tmp/installer-transport-')));
-        t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
-        const input = path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_INPUT);
-        execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root]);
-        fs.mkdirSync(path.join(root, '.git/refs'), { recursive: true });
-        fs.cpSync(path.join(input, 'supplemental-download'), path.join(root, 'supplemental-download'), { recursive: true });
-      } else {
+      let input: string;
+      if (process.env.CI_INSTALLER_PLATFORM_INPUT) input = path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_INPUT);
+      else {
+        // Without a producer job, pack the local fixture the same way so the transport contents stay verified.
         const f = fixture(t);
         runSupplemental(f.options);
         prepareAssembly(f);
-        root = f.root;
+        input = path.join(f.root, 'platform-transport');
+        packTransport(f.root, input);
       }
+      fs.mkdirSync(path.join(repository, 'tests/tmp'), { recursive: true });
+      const root = fs.realpathSync(fs.mkdtempSync(path.join(repository, 'tests/tmp/installer-transport-')));
+      t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+      unpackTransport(input, root);
       const candidates = path.join(root, 'supplemental-download');
       const platformRoot = path.join(candidates, fs.readdirSync(candidates)[0]);
       const record = JSON.parse(fs.readFileSync(path.join(platformRoot, 'platform-record.json'), 'utf8'));
