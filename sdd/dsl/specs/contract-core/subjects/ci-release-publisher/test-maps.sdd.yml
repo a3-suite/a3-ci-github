@@ -27,6 +27,13 @@ test_maps:
         symbol: "contract.ci-release-publisher.outputs > release-publisher-source-flow > bound standard capability permits false API push through publication and independent readback"
         check_refs: [receipt, readback]
   - verification_id: verification.ci-release-publisher.outputs
+    case_id: provider-acceptance-not-predicted
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher leaves provider acceptance to the create response instead of predicting it from the default branch"
+        check_refs:
+          - receipt
+  - verification_id: verification.ci-release-publisher.outputs
     case_id: canonical-repository-identity
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
@@ -110,7 +117,7 @@ test_maps:
     case_id: remote-rejection
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher rejects moved source, existing draft and unsupported provider before create"
+        symbol: "publisher > publisher > publisher rejects moved source, existing draft and unverifiable draft visibility before create"
         check_refs:
           - rejection
           - no-outputs

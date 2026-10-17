@@ -121,7 +121,7 @@ presets:
       - language_profile、toolchain、platform_manifest、quality adapter descriptor
       - 承認済み release body の handoff と digest
       - Release target identity と非上書き policy
-      - 公開 source の provider 適合判定に用いる credential route
+      - 公開操作に用いる credential route
     optionalInput:
       - 解決済み補助 Release asset 選択、owner 契約 ID と build adapter
     internalStages: [authority-context, source-gate, quality, build, assemble]
@@ -131,14 +131,12 @@ presets:
       - draft と final Release の remote identity
       - Release tag、source SHA、version、platform asset、選択済み補助 asset、checksum の結合
       - publish 前後の readback evidence と保存済み release body
-      - provider 公開適合の観測結果（source 確定後・write 直前）
     stopConditions:
       - authority context と source handoff を別入力として検証できない。
       - publish job が操作対象 source、source dependency、source 由来 script を実行する。
       - tag、source、version、platform、asset、checksum、本文、remote 状態が一致しない。
       - 補助 asset が未選択なのに handoff が渡される、または選択済みなのに adapter、handoff、owner 証跡が欠落・不一致となる。
       - 既存 Release / asset の上書き、状態不明、承認期限切れが発生する。
-      - provider 公開適合を証明できない、または write 直前の再観測で不適合・判定不能となる。
   - id: package-publication
     input:
       - owner が解決した registry、channel、version plan、credential route
