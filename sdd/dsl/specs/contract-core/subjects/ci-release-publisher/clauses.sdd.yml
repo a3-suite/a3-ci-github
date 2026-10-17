@@ -6,8 +6,9 @@ contracts:
     summary: Only the registry-approved GitHub token binding may create a previously
       absent Release, upload validated assets and finalize by create-result
       immutable ID. Accept only publication-request v2 and bind its owner version and target to authority. Validate approved notes, expiry,
-      authority/handoff/pre-observation, reobserve provider suitability and
-      complete absence and the unchanged handoff immediately before create, and stop on mismatches,
+      authority/handoff/pre-observation, reobserve tag identity, draft visibility and
+      complete absence and the unchanged handoff immediately before create without predicting
+      provider acceptance, and stop on mismatches,
       unknown results or partial failure without retrying writes, overwrite, deletion or
       successful outputs. Emit schema-valid receipt/readback paths after
       readback; independent verifier owns publication success. Draft visibility and bounded GET-only inventory reobservation follow contract.ci-release-publication-verifier.outputs.

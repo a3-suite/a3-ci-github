@@ -12,11 +12,11 @@ workflow は選択済み credential を `GH_TOKEN` 環境変数で注入しま�
 
 1. authority が identity と承認済み本文 digest を確定し、assembly が handoff を生成。
 2. `observe-before` が handoff と tag を検証し、全 Release inventory で不在を証明。新 observation-path に証跡を書き、exact byte digest を返す。
-3. owner write adapter が observation を受け取り、**write 直前に provider suitability・tag・不在を再観測**し、非上書き create / upload / finalize を実行。
+3. owner write adapter が observation を受け取り、**write 直前に tag・不在を再観測**し、非上書き create / upload / finalize を実行。
 4. owner が create-result の ID に結合した receipt.json と readback.json を生成。
 5. `verify-after` が receipt の pre_observation_sha256 を元の観測 bytes と照合し、immutable ID の直参照、tag object / source、本文 digest、asset bytes、draft:false、全 inventory の一意性を独立に確認。owner readback と内容一致した場合だけ公開成功出力を返す。
 
-write adapter は required extension のままです。早期観測は write 直前の再観測や suitability の代替ではありません。競合、create の失敗、部分公開、復旧判断は owner が保持します。自動削除・上書き・再公開はありません。
+write adapter は required extension のままです。早期観測は write 直前の再観測の代替ではありません。競合、create の失敗、部分公開、復旧判断は owner が保持します。自動削除・上書き・再公開はありません。
 
 ## inventory / readback
 

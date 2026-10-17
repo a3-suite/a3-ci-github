@@ -172,11 +172,11 @@ runtime_contexts:
   - id: runtime-context.preset-assurance-read-only-output-requested
     summary: Read-only preset assurance is invoked with remediation output requested.
   - id: runtime-context.release-publisher-valid
-    summary: Owner-approved notes, future expiry, authority and validated handoff agree; injected GitHub token has observed suitability, complete absence and successful bounded provider responses.
+    summary: Owner-approved notes, future expiry, authority and validated handoff agree; injected GitHub token has observed draft visibility, complete absence and successful bounded provider responses.
   - id: runtime-context.release-publisher-invalid
-    summary: Inputs are missing or mismatched, approval is expired, source moves, inventory or provider suitability is unknown, a Release already exists, or create/upload/finalize/readback fails.
+    summary: Inputs are missing or mismatched, approval is expired, source moves, inventory is unknown, a Release already exists, or create/upload/finalize/readback fails.
   - id: runtime-context.release-authority-valid
-    summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with known provider suitability.
+    summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with the target repository identity.
   - id: runtime-context.release-authority-invalid
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
   - id: runtime-context.standard-installer-evidence-valid

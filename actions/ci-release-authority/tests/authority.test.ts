@@ -63,8 +63,6 @@ describe('ci-release-authority-runtime', () => {
       expect(authority.owner_contract.id).toBe('git.release-flow');
       expect(authority.owner_contract_digest.length).toBe(64);
       expect(authority.config_snapshot_digest.length).toBe(64);
-      expect(authority.provider_publication_suitability.status).toBe('source-compatible');
-      expect(authority.provider_publication_suitability.write_capability).toBe('not-observed');
       expect(result.approvalId).toBe('approved');
       const platformPath = path.join(f.root, '.ci/platform-manifest.yml');
       const platformLf = fs.readFileSync(platformPath, 'utf8').replaceAll('\r\n', '\n');
@@ -91,9 +89,7 @@ describe('ci-release-authority-runtime', () => {
   // integration_id: ci-release-authority-runtime
   test('authority rejects untrusted runs, moved tags, owner drift, snapshot drift and expired approval without authority output', async () => {
     const mutations = [
-      (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}/commits/main`] = { sha: 'd'.repeat(40) }; },
       (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}`] = []; },
-      (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).archived = true; },
       (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = 'another/repository'; },
       (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}/contents/${OWNER_HANDOFF_PATH}?ref=${'a'.repeat(40)}`] = { type: 'file', encoding: 'base64', content: 'invalid!' }; },
       (f: ReturnType<typeof fixture>) => { fs.mkdirSync(f.options.outputDirectory); fs.writeFileSync(path.join(f.options.outputDirectory, 'owner-file'), 'preserve'); },
@@ -139,8 +135,8 @@ describe('ci-release-authority-runtime', () => {
         { field: 'tag-ref.object', expected: { type: 'tag', sha: 'c'.repeat(40) }, observed: { type: 'tag', sha: 'd'.repeat(40) } }],
       ['workflow-binding', (f) => { fs.appendFileSync(path.join(f.root, OWNER_HANDOFF_PATH), '# changed\n'); },
         { field: 'owner-workflow-sha256' }],
-      ['provider-suitability', (f) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).archived = true; },
-        { field: 'repository-metadata', observed: { full_name: repository, archived: true, disabled: false } }],
+      ['repository-identity', (f) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = 'another/repository'; },
+        { field: 'repository-metadata.full_name', expected: repository, observed: 'another/repository' }],
     ];
     for (const [stage, mutate, comparison, inputs = bound] of cases) {
       const f = fixture();
@@ -184,6 +180,8 @@ describe('ci-release-authority-runtime', () => {
     const f = fixture();
     try {
       delete (f.responses[`/repos/${repository}`] as Record<string, unknown>).permissions;
+      // Write capability is judged by the publisher's own write, so repository state must not predict it here.
+      Object.assign(f.responses[`/repos/${repository}`] as Record<string, unknown>, { archived: true, disabled: true });
       const result = await createAuthority(f.options, f.client);
       const bytes = fs.readFileSync(result.authorityPath, 'utf8');
       await expect(createAuthority(f.options, f.client)).rejects.toThrow();
