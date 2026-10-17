@@ -147,6 +147,10 @@ jobs:
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
 
+      - name: Test repository commit gate scripts
+        shell: bash
+        run: python3 -m unittest discover -s .agents/skills/commit-gate/_build/tests -v
+
       - name: Verify all bundled Action sources
         shell: bash
         run: node runtime/repository/verify-action-packages.mjs --scope=actions

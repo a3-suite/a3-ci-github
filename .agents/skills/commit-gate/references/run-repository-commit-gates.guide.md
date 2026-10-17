@@ -98,16 +98,18 @@ node runtime/repository/check-provider-references.mjs --staged --contracts --pre
 python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
 ```
 
-- 配備先の設定は `skills-deploy` の `references/deploy-context.md` を正本とする。未設定の場合は `STOP` とし、コミットへ進めない。
+- 配備先の設定は skills-deploy スキルのデプロイコンテキストを正本とする。未設定の場合は `STOP` とし、コミットへ進めない。
 - 差分確認、候補分類、反映、再検査の順序と判定は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本ゲートでは再定義しない。
 - 削除を伴わない更新差分は prune なしで自動反映し、同じ scope を再検査して一致を確認する。
 - 削除候補、明示 prune 対象、category replacement root、管理外 skill の削除は自動反映せず `STOP` とする。
 - 反映する変更は staged snapshot と一致する作業ツリーの内容に限る。対象 root に未ステージ差分がある場合は実行しない。
 
 ### 停止条件
-- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。
+- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。ただし、改名・廃止で root 全体を削除し、配備先の旧 root が skills-deploy の明示操作で削除済みの場合は続行する。
+- `skills/<name>` より深い位置に `SKILL.md` がある（入れ子のスキル）。
 - 対象 root に未ステージ差分または未追跡ファイルがある。
 - 配備先に削除候補、明示 prune 対象、または category replacement root がある。
+- 反映の直前に確認し直した計画が、最初の dry-run から変わっている。
 - 自動反映後も配備先に差分が残る。
 - 配備 CLI または配備先 root を解決できない。
 
@@ -116,7 +118,7 @@ python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
 - 配備先 root が未設定の場合は `STOP` とし、理由と設定方法を返す。
 - `0`: 更新を反映し、配備先が canonical source と一致する、または一致済み。`PASS`。
 - `1`: 検証失敗。`STOP`。
-- `2`: 実行エラー。`判定不能`。
+- `2`: 実行エラー、または配備 CLI の計画に必須項目がない・型が違う。`判定不能`。
 
 ### 再実行条件
 - staged snapshot、対象 root の未ステージ状態、配備先 root、配備 CLI、`project-skill-deploy` の公開契約のいずれかが変わった場合は、配備整合証拠を失効させて再実行する。

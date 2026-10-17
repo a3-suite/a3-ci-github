@@ -56,5 +56,5 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 
 ## 参照
 - `references/run-repository-commit-gates.guide.md`
-- `../skills-deploy/SKILL.md`
+- skills-deploy スキル
 - git スキル

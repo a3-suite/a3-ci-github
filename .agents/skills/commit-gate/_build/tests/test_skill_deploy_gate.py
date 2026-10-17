@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -9,12 +10,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-GATE = Path(__file__).resolve().parents[1] / "scripts/check_staged_skill_deploy.py"
+GATE = Path(__file__).resolve().parents[2] / "scripts/check_staged_skill_deploy.py"
 PROJECT_ROOT = GATE.parents[4]
 
 
 class SkillDeployGateTest(unittest.TestCase):
     def setUp(self) -> None:
+        (PROJECT_ROOT / "tmp").mkdir(exist_ok=True)
         self.temporary = tempfile.TemporaryDirectory(
             prefix="skill-deploy-gate-", dir=PROJECT_ROOT / "tmp"
         )
@@ -26,7 +28,7 @@ class SkillDeployGateTest(unittest.TestCase):
         self.target.mkdir()
         self.cli = self.root / "deploy.py"
         self.cli.write_text(
-            """import argparse, json
+            """import argparse, json, os
 from pathlib import Path
 p = argparse.ArgumentParser()
 p.add_argument('--source-root')
@@ -39,10 +41,16 @@ s = Path(a.source_root) / 'demo/SKILL.md'
 t = Path(a.target_root) / 'demo/SKILL.md'
 updates = [] if t.is_file() and t.read_bytes() == s.read_bytes() else ['demo/SKILL.md']
 stale = ['stale.txt'] if (Path(a.target_root) / 'stale.txt').exists() else []
-if not a.dry_run:
+calls = Path(a.target_root).parent / 'dry-runs'
+if a.dry_run:
+    count = int(calls.read_text()) + 1 if calls.exists() else 1
+    calls.write_text(str(count))
+    stale = stale or (['changed.txt'] if count >= int(os.environ.get('FIXTURE_CHANGE_AT_DRY_RUN') or 99) else [])
+else:
     t.parent.mkdir(exist_ok=True)
     t.write_bytes(s.read_bytes())
-print(json.dumps({'updates': updates, 'stale_files': stale}))
+plan = {'updates': updates, 'stale_files': stale, 'explicit_prune_skills': [], 'replacement_skill_roots': []}
+print(os.environ.get('FIXTURE_PLAN') or json.dumps(plan))
 """,
             encoding="utf-8",
         )
@@ -68,11 +76,11 @@ print(json.dumps({'updates': updates, 'stale_files': stale}))
     def configure_destination(self) -> None:
         self.git("config", "--local", "a3-ci-github.skillDeployRoot", str(self.target))
 
-    def run_gate(self) -> subprocess.CompletedProcess[str]:
+    def run_gate(self, **extra: str) -> subprocess.CompletedProcess[str]:
         environment = os.environ.copy()
         environment.pop("A3_CI_GITHUB_SKILL_DEPLOY_ROOT", None)
         environment.update(
-            A3_REPO_ROOT=str(self.repo), A3_PROJECT_SKILL_DEPLOY_CLI=str(self.cli)
+            A3_REPO_ROOT=str(self.repo), A3_PROJECT_SKILL_DEPLOY_CLI=str(self.cli), **extra
         )
         return subprocess.run(
             [sys.executable, str(GATE)], env=environment, text=True,
@@ -219,6 +227,40 @@ print(json.dumps({'updates': updates, 'stale_files': stale}))
         metadata.write_text("local metadata\n", encoding="utf-8")
         result = self.run_gate()
         self.assertEqual(result.returncode, 1)
+        self.assertFalse((self.target / "demo").exists())
+
+    def test_incomplete_plan_is_not_treated_as_empty(self) -> None:
+        self.configure_destination()
+        self.stage_repository_change()
+        complete = {"updates": [], "stale_files": ["old.txt"], "explicit_prune_skills": [], "replacement_skill_roots": []}
+        plans = ["{}"] + [
+            json.dumps({**complete, key: None}) for key in complete
+        ] + [json.dumps({key: value for key, value in complete.items() if key != missing}) for missing in complete]
+        for plan in plans:
+            with self.subTest(plan=plan):
+                result = self.run_gate(FIXTURE_PLAN=plan)
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertFalse((self.target / "demo").exists())
+
+    def test_plan_change_before_apply_stops(self) -> None:
+        self.configure_destination()
+        self.stage_repository_change()
+        result = self.run_gate(FIXTURE_CHANGE_AT_DRY_RUN="2")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("検査後に", result.stderr)
+        self.assertFalse((self.target / "demo").exists())
+
+    def test_kept_nested_skill_stops(self) -> None:
+        self.configure_destination()
+        child = self.repo / "skills/demo/child/SKILL.md"
+        child.parent.mkdir(parents=True)
+        child.write_text("nested public skill\n", encoding="utf-8")
+        self.git("add", ".")
+        self.git("commit", "-qm", "nested skill")
+        self.stage_repository_change()
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("入れ子", result.stderr)
         self.assertFalse((self.target / "demo").exists())
 
 

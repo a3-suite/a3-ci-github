@@ -16,6 +16,7 @@ CLI_ENV = "A3_PROJECT_SKILL_DEPLOY_CLI"
 CLI_RELATIVE = Path("project-skill-deploy/scripts/deploy_project_skills.py")
 EXCLUDED_PARTS = {"_build", "__pycache__"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
+PLAN_KEYS = ("updates", "stale_files", "explicit_prune_skills", "replacement_skill_roots")
 
 
 def run_git(*args: str) -> subprocess.CompletedProcess[bytes]:
@@ -163,19 +164,35 @@ def parse_plan(stdout: str) -> dict[str, object]:
         raise RuntimeError(f"deploy CLI returned invalid JSON: {error}") from error
     if not isinstance(payload, dict):
         raise TypeError("deploy CLI returned a non-object JSON payload")
+    for key in PLAN_KEYS:
+        as_list(payload, key)
     return payload
 
 
 def as_list(plan: dict[str, object], key: str) -> list[object]:
-    value = plan.get(key, [])
-    return value if isinstance(value, list) else []
+    # 欠落や型違いを空の計画として読むと、配備整合を確認しないまま通過する。
+    value = plan.get(key)
+    if not isinstance(value, list):
+        raise TypeError(f"deploy CLI plan field is missing or not a list: {key}")
+    return value
 
 
 def blockers_from(plan: dict[str, object]) -> list[str]:
     items: list[str] = []
-    for key in ("stale_files", "explicit_prune_skills", "replacement_skill_roots"):
+    for key in PLAN_KEYS[1:]:
         items.extend(str(item) for item in as_list(plan, key))
     return items
+
+
+def nested_skill_mds() -> list[Path]:
+    # 配備CLIは入れ子の SKILL.md も別 root として扱うが、本ゲートの検査範囲は skills/<name> に固定している。
+    tracked = git_paths("ls-files", "--cached", "-z", "--", SKILL_ROOT.as_posix())
+    present = [candidate.relative_to(REPO_ROOT) for candidate in (REPO_ROOT / SKILL_ROOT).rglob("SKILL.md")]
+    return sorted({
+        path for path in [*tracked, *present]
+        if path.name == "SKILL.md" and len(path.parts) > 3
+        and not any(part in EXCLUDED_PARTS for part in path.parts)
+    })
 
 
 def main() -> int:
@@ -192,6 +209,15 @@ def main() -> int:
                 "skill-deploy-parity: STOP: 入れ子のスキルを含む公開スキル root の削除は自動確認の対象外です。",
                 file=sys.stderr,
             )
+            return 1
+        nested = nested_skill_mds()
+        if nested:
+            print(
+                "skill-deploy-parity: STOP: 入れ子のスキルは自動確認の対象外です。",
+                file=sys.stderr,
+            )
+            for path in nested:
+                print(f"- {path.as_posix()}", file=sys.stderr)
             return 1
         if any(root not in removed_roots or not is_removed_root(root) for root in roots_without_skill_md()):
             print(
@@ -267,6 +293,23 @@ def main() -> int:
             print("skill-deploy-parity: PASS (updates=0, deletions=0)")
             return 0
 
+        # 検査から反映までの間に公開ソースや配備先が変わっていないことを、反映の直前に確かめる。
+        code, stdout, stderr = run_cli(cli, destination, "--dry-run")
+        if code != 0:
+            print(
+                "skill-deploy-parity: ERROR: "
+                f"deploy dry-run failed: {stderr.strip()}",
+                file=sys.stderr,
+            )
+            return 2
+        current = parse_plan(stdout)
+        if unstaged_overlaps() or blockers_from(current) or [str(item) for item in as_list(current, "updates")] != updates:
+            print(
+                "skill-deploy-parity: STOP: 検査後に公開ソースまたは配備先が変わりました。",
+                file=sys.stderr,
+            )
+            return 1
+
         code, _stdout, stderr = run_cli(cli, destination, "--yes")
         if code != 0:
             print(
@@ -286,7 +329,7 @@ def main() -> int:
         remaining_plan = parse_plan(stdout)
         remaining = blockers_from(remaining_plan) + [
             str(item) for item in as_list(remaining_plan, "updates")
-        ]
+        ] + unstaged_overlaps()
         if remaining:
             print(
                 "skill-deploy-parity: STOP: 自動反映後も配備先に差分があります。",
