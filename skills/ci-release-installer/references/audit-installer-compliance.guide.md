@@ -4,7 +4,7 @@
 - リリース前に、作成済み、導入判断が `required`、またはproject SSOTで要求されるインストーラ成果物を、最新の公開済み安定版の標準installerと比較し、標準へ合わせる差分と必要な固有差分を明らかにする。安全性・動作・実候補の検証証跡を裏付けとして、標準整合と公開準備を確認する。
 - 監査ガイドの型は `compliance` とし、review / validate / check では不足する対象集合、契約、実装、証跡、停止条件の対応を扱う。
 
-監査目的と実公開との境界は、ci-githubスキルの`references/ci-audit-contract.reference.yml`の`auditContract.purpose`に固定する。成功は選択した段階への適合を示す。実候補・組立証跡・検証profileの結果は、証跡監査を選択した場合の必須確認として保持する。実Release・公開後URLの取得成功は公開後確認へ分ける。
+監査目的と実公開との境界は、ci-githubスキルの監査契約が定める監査目的に固定する。成功は選択した段階への適合を示す。実候補・組立証跡・検証profileの結果は、証跡監査を選択した場合の必須確認として保持する。実Release・公開後URLの取得成功は公開後確認へ分ける。
 
 ## 監査段階と確認対象
 
@@ -30,7 +30,7 @@
 - 既存プロジェクトに installer の SSOT がある場合も、インストーラ契約 coverage matrix の core safety invariant を緩和する根拠にはしない。
 
 ## 機械検証と意味監査
-- 検査の選択と未対応項目の扱いは、ci-githubスキルの`references/verify-applied-ci-preset.guide.md`の「機械検証の選択」に従う。installerは固定providerが公開する入力検証の対応範囲を確認し、READMEの実行ファイル・URL・asset名、宣言・manifestの参照先と配置を照合する。機械検査が未対応の項目は意味監査で確認し、未実施を検査成功としない。
+- 検査の選択と未対応項目の扱いは、ci-githubスキルの適用済みCI監査にある機械検証の選択に従う。installerは固定providerが公開する入力検証の対応範囲を確認し、READMEの実行ファイル・URL・asset名、宣言・manifestの参照先と配置を照合する。機械検査が未対応の項目は意味監査で確認し、未実施を検査成功としない。
 - アンインストール案内の存在や参照整合は対応する既存lintで検査し、削除対象の所有範囲、PATH、設定・データへの影響はmanifestと製品契約を使う意味監査で確認する。対応ルールがなければ案内の存在も手動確認し、単語やコマンドの有無だけで安全な削除手順と判定しない。
 - 配置警告は project override の採否を決めない。警告の対象、必要性、既存 project SSOT の証跡を project override classification で判断する。検査不能を配置適合へ読み替えない。
 - 構成監査では最新標準とdistribution layout、実装、CI workflow、README、検査導線を照合し、証跡監査では実候補・配置結果・実行証跡を照合する。各段階はその段階の適用項目で判定し、全体結果は選択段階だけから集約する。構成だけの成功を動作確認済みやリリース準備完了にしない。
@@ -38,7 +38,7 @@
 ## 標準整合の必須判定
 
 - 比較基準は監査開始時の最新の公開済み安定版に固定する。Release・provider revision・manifestのidentityと採用中のrevisionを記録する。採用中の版への検証成功だけで標準整合を確認済みとしない。
-- 差分分類の語彙はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.differenceClassification`に従う。installer差分の必要性・例外成立・安全性の判断は本スキルが所有し、例外の成立条件はcoverage matrixの`projectOverrideClassification`へ照合する。許可された製品設定値や、同じ標準要件を満たす版番号だけの差を逸脱にしない。
+- 差分分類の語彙はci-githubスキルの監査subjectが定める最新標準との整合の差分分類に従う。installer差分の必要性・例外成立・安全性の判断は本スキルが所有し、例外の成立条件はcoverage matrixの`projectOverrideClassification`へ照合する。許可された製品設定値や、同じ標準要件を満たす版番号だけの差を逸脱にしない。
 - 標準へ移行すべき差分が残れば構成の標準整合を未達とする。比較基準や例外の必要性を確認できなければ構成を未確認とする。根拠のある固有差分は理由と適用範囲を併記し、実行検証の結果は別記する。実行結果の未取得だけで構成を未達にせず、古い版だけをcore safety invariant違反としない。
 
 ## 監査時の優先順位
@@ -50,7 +50,7 @@
 
 ## プロジェクト固有規則との競合確認
 
-共通工程はci-githubスキルの`references/verify-applied-ci-preset.guide.md`の同名節へ委譲する。installerに適用される契約・文書・有効な指示・ローカルスキルを対象に、旧前提ツール、実行環境、入口選択、ディレクトリ名、手動操作・説明の義務が標準に競合していないか確認する。例外の必要性と許容条件は本スキルの`projectOverrideClassification`とcore safety invariantへ照合する。CIから委譲された場合は同じ比較基準と対象identityを再利用し、installerの判断と解決案を差分表へ返す。
+共通工程はci-githubスキルの適用済みCI監査にあるプロジェクト固有規則との競合確認へ委譲する。installerに適用される契約・文書・有効な指示・ローカルスキルを対象に、旧前提ツール、実行環境、入口選択、ディレクトリ名、手動操作・説明の義務が標準に競合していないか確認する。例外の必要性と許容条件は本スキルの`projectOverrideClassification`とcore safety invariantへ照合する。CIから委譲された場合は同じ比較基準と対象identityを再利用し、installerの判断と解決案を差分表へ返す。
 
 ## 権限境界の語彙
 - `privileged execution context`: root、または managed root、service、runtime asset、install state、handoff state、secret、credential に影響できる service user の実行文脈を指す。
@@ -75,7 +75,7 @@
 ## action / 停止要否
 - `fix-now`: 正解が一意で、project SSOT、coverage matrix、fixture baseline、asset 組立証跡契約のいずれかに照らして局所修正できる。停止不要。
 - `stop`: 契約と実装のどちらを真にするか、project override が bounded かどうか、または runtime-script 監査結果の解釈を判断できない場合。停止して確認する。
-- `handoff`: runtime-script スキル、ci スキル、backup スキル、secret-management スキル、project SSOT など installer 外の owner で直す必要がある場合。停止して責務者へ戻す。
+- `handoff`: runtime-script スキル、ci スキル、secret-management スキル、project SSOT など installer 外の owner で直す必要がある場合。停止して責務者へ戻す。
 - `observe`: finding ではない未確認範囲、将来確認、project detail の記録。停止不要。
 - `blocker` は `stop` または `fix-now` に限る。正解が一意で局所修正できない blocker は停止する。
 - `major` は `fix-now`、`stop`、`handoff` のいずれかへ分類し、証跡不足であっても `observe` に落とさない。
@@ -106,7 +106,7 @@
    - project SSOT、release manifest、execution request、asset 組立証跡 record、coverage matrix、fixture baseline から、installer script、manifest schema、組立済み installer asset、asset checksum、manifest checksum、provenance、組立後検証結果、state / handoff state、audit log、installer が配置または生成する runtime script、systemd unit または service manager 定義、製品READMEのインストール節、運用ドキュメント、テストを棚卸する。
    - 監査対象外のファイルを明示し、スキル文書や一般サンプルを証跡に混ぜない。
 2. 判定基準を固定する。
-   - 提供元の公開済み安定版Releaseと採用中のprovider revisionを比較し、最新版の標準構成を比較基準に固定する。提供元の版選定と必要機能の確認はci-githubスキルの`references/distribute-ci-assets.guide.md`の「対応条件」へ委譲し、版番号を本ガイドへ保持しない。比較したRelease・revisionを記録し、最新資材を確認できない場合は未確認とする。CI監査から委譲された場合は、最新Releaseの確認結果と同一の比較基準・監査対象に結合した証跡を確認して再利用する。別の版を比較基準にしない。
+   - 提供元の公開済み安定版Releaseと採用中のprovider revisionを比較し、最新版の標準構成を比較基準に固定する。提供元の版選定と必要機能の確認はci-githubスキルのCI資材の選択配布にある対応条件へ委譲し、版番号を本ガイドへ保持しない。比較したRelease・revisionを記録し、最新資材を確認できない場合は未確認とする。CI監査から委譲された場合は、最新Releaseの確認結果と同一の比較基準・監査対象に結合した証跡を確認して再利用する。別の版を比較基準にしない。
    - 監査で使う installer の共通契約と適用可能な starter を特定し、比較元のパスと実ファイル checksum または未変更の revision、対象実装の状態を記録する。比較元を特定できなければ証跡不足として扱い、比較済み・最新版に適合と報告しない。
    - 共通構成・動作と対象実装の差分を確認し、製品固有値や許可 adapter の適合で準拠できるかを先に評価する。配置検証の成功だけで実装・動作への準拠を判断しない。
    - 準拠できない場合は、必須制約の必要性と標準経路では満たせない根拠を証跡へ照合し、project override classification で判定する。既存実装や project SSOT の記載だけで例外を正当化しない。正当性の検証前に例外を受け入れない。
@@ -115,7 +115,7 @@
    - project override classificationに従い、必要性・許容条件の根拠不足は構成監査のfindingとする。実行結果の不足は選択した証跡監査へ保持し、構成上の例外成立と動作検証の成立を混同しない。
 3. 契約 surface へ対応付ける。
    - manifest contract、execution request contract、source mode contract、asset 組立証跡契約、state machine、audit log contract、audit event contract、fixture baseline のどれを各成果物が満たすべきかを対応付ける。
-   - CIでの組立・転送・最終検証の失敗診断はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics`から正本を解決し、同subjectの`stageChecks`と`evidenceOwnership`で診断・保持導線と実行証跡を分ける。インストール実行時の失敗はinstallerの該当owner契約へ対応付け、CI固有の形式を一律に要求しない。installer単独監査でもこの対応付けを行い、CIから委譲された場合は同じ比較基準・対象identityの確認結果を再利用して返す。
+   - CIでの組立・転送・最終検証の失敗診断はci-githubスキルの監査subjectのうち失敗診断（`ci-failure-diagnostics`）から正本を解決し、同subjectの段階別確認と証跡の所有区分で診断・保持導線と実行証跡を分ける。インストール実行時の失敗はinstallerの該当owner契約へ対応付け、CI固有の形式を一律に要求しない。installer単独監査でもこの対応付けを行い、CIから委譲された場合は同じ比較基準・対象identityの確認結果を再利用して返す。
    - installer が runtime script を配置または生成する場合は、runtime-script スキルの監査結果、または runtime-script 監査ガイドの最低証跡セットと代替証跡条件を満たす同等証跡を service runtime 境界の証跡として対応付ける。
    - 必須の構成や検査導線の欠落と、実候補・組立証跡・実行結果の未取得を分け、該当段階の根拠不足として扱う。未生成の実候補だけで構成不適合にしない。
 4. blocker を先に確認する。
@@ -149,8 +149,8 @@
    - 必要なテストの配置・対応付けがなければ構成監査の不足とする。テストはあるが実行結果がない場合は、選択した証跡監査の証跡不足とし、構成の結果を変更しない。
    - timeout / hang は、test harness の不備、fixture driver の不備、installer 実行の停止を分け、残存 state、lock、service、managed root、audit log の副作用を確認して severity を決める。
    - 製品READMEを必須確認対象とし、`references/use-standard-installer.guide.md`の「READMEに残す内容」「READMEへ書かない内容」を適用する。構成監査は宣言・manifest・配布計画、選択した証跡監査は実候補へ照合する。
-   - READMEの本文・導入導線はroot-docsスキルの`references/audit-root-docs.guide.md`を補助として適用する。対象をインストール・アンインストール節とその参照先へ限定し、段階・対象identity・確認項目とinstallerが確認した製品情報を渡す。root-docsの文書判断と、installerが所有する配布経路・コマンドの正当性を分けて保持する。実行証跡不足は該当する証跡段階へ写像し、構成の不適合へ混ぜない。
-   - ci-githubの`references/release-project-skills.guide.md`の「同梱の選択」に従い、公開スキルの有無と製品ownerの選択を確認する。結果、未同梱理由、CI設定・READMEへの一致を既存レポートへ記録する。選択未確認を未同梱・監査完了としない。
+   - READMEの本文・導入導線はroot-docsスキルのルート文書監査を補助として適用する。対象をインストール・アンインストール節とその参照先へ限定し、段階・対象identity・確認項目とinstallerが確認した製品情報を渡す。root-docsの文書判断と、installerが所有する配布経路・コマンドの正当性を分けて保持する。実行証跡不足は該当する証跡段階へ写像し、構成の不適合へ混ぜない。
+   - ci-githubスキルの製品と対応スキルの同時Releaseにある同梱の選択に従い、公開スキルの有無と製品ownerの選択を確認する。結果、未同梱理由、CI設定・READMEへの一致を既存レポートへ記録する。選択未確認を未同梱・監査完了としない。
    - 対応スキルを同梱する製品は、同セットアップガイドの「製品と対応スキルを同梱する場合」に照合する。READMEで導入案内が欠落している、任意扱いになっている、同じ製品版のZIPへのリンクや展開・配置の案内がない場合は構成監査のfindingとする。
    - アンインストール案内を同セットアップガイドの「READMEに残す内容」へ照合し、欠落・削除対象の不一致・共有領域の削除を構成監査のfindingにする。構成監査で実際の削除は行わず、削除実行の証跡不足を構成の不適合へ混ぜない。
    - 宣言ファイルとインストール先を`references/define-installer.guide.md`の「製品宣言の標準配置」「配置プロファイルと標準配置」へ照合し、非標準のディレクトリ名・構造には製品要件とownerの根拠を確認する。既存配置との一致だけを標準適合の根拠にしない。
@@ -163,7 +163,7 @@
    - runtime-script 監査結果を取り込む場合は、runtime-script 側の result class、evidence gap、blocker candidate、audit action、停止要否、handoff 先、gate action を保持する。
    - 同じ事象が複数 invariant に触れる場合は、最も高い severity を採用し、関連 invariant を finding に併記する。
 9. 監査結果を出す。
-   - 本文はci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.reportFormat`に従う。以下の必須詳細は参照先または該当区分へ記載し、installer固有の報告形式を追加しない。インストール概要は判定の補足として示す。
+   - 本文はci-githubスキルの監査subjectが定める最新標準との整合の報告形式に従う。以下の必須詳細は参照先または該当区分へ記載し、installer固有の報告形式を追加しない。インストール概要は判定の補足として示す。
    - 構成監査と証跡監査の結果・根拠・確認対象・未確認を分けて報告する。証跡監査が未選択なら未実施・未依頼を明記する。CIへも段階別結果を返し、実行証跡不足を構成の不適合へ混ぜさせない。
    - リリース前確認の結果として報告し、実公開成功の証明と読み替えない。実公開後に確認するURL取得・公開物導入・Hosted公開は別記し、その未実施だけで監査全体を非成功にしない。
    - 比較基準のRelease・revision・manifest、採用中のrevision、標準整合の判定、差分分類と理由、移行案・未確認事項を先頭に報告する。安全性・動作・実候補・Hostedの証拠と、監査全体の結果は裏付けとして分けて示す。CIから委譲された場合は標準整合と差分の証拠をCIへ返し、installer側の判定をCI側で代替させない。
@@ -173,7 +173,7 @@
    - confirmed finding、blocker candidate、core evidence gap、major evidence gap、residual evidence gap、open question を分ける。
    - 問題がない場合も、確認済み invariant と残る証跡不足を明示する。
    - installer 成果物が確認できる場合は、「インストール概要の表示」に従ってインストール方法とインストール先を表示する。
-   - 監査レポートの最後に、ci-githubスキルの`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment.finalReport`に従って「標準適合度・差分・正当性レビュー」を必ず付ける。installerの比較範囲で集計し、全実質差の正当性を本スキルの例外成立条件でレビューする。差分なし・未確認の場合も省略しない。CIから委譲された場合は比較項目と分類、差分表、ownerレビュー結果をCIへ返し、CIの末尾レポートで重複集計させない。
+   - 監査レポートの最後に、ci-githubスキルの監査subjectが定める最新標準との整合の最終報告に従って「標準適合度・差分・正当性レビュー」を必ず付ける。installerの比較範囲で集計し、全実質差の正当性を本スキルの例外成立条件でレビューする。差分なし・未確認の場合も省略しない。CIから委譲された場合は比較項目と分類、差分表、ownerレビュー結果をCIへ返し、CIの末尾レポートで重複集計させない。
 
 ## 標準比較の完了チェック
 
@@ -300,4 +300,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <installer-asset-name>.ps1 -
 - 参照: references/installer-state-machine.reference.md
 
 ### runtime-script 監査ガイド
-- 参照: runtime-script スキルの監査ガイド
+- 参照: runtime-script スキル

@@ -86,7 +86,7 @@ node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
 
 ## 検査
 
-OS・版と共通検査の採否は[選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)に従って意味監査で確認する。以下のpreflight成功だけで、その判断記録や当日のサポート状況を確認済みにしない。
+OS・版と共通検査の採否は[選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)に従って意味監査で確認する。以下のpreflight成功だけで、その判断記録や当日のサポート状況を確認済みにしない。
 
 - registry の canonical destination から導入済みプリセットを検出する。
 - 検出が0件、指定したプリセットが不在、またはregistryが定義する必須workflowが欠けている場合は失敗する。packageではconsumerにrequestとcallerの2本を配置し、providerのpreparationとpublication calleeは検証用参照として扱う。

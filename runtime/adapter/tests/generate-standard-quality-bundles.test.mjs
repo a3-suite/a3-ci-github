@@ -7,7 +7,7 @@ import { STANDARD_QUALITY_BUNDLES } from '../standard-quality-bundles.generated.
 import { generateStandardQualityBundles } from '../generate-standard-quality-bundles.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const inventory = 'skills/ci-github/references/ci-script-assets.reference.yml';
+const inventory = 'skills/ci-github/assets/registry/ci-script-assets.yml';
 const outputPath = 'runtime/adapter/standard-quality-bundles.generated.ts';
 const fixture = (t) => {
   fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });

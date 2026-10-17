@@ -5,7 +5,7 @@ title: GitHub Actions CI asset registry
 summary: >-
   ci-github スキルの CI プリセットを、コピー先が確定した GitHub Actions workflow と
   実行に必要な repository-owned asset へ写像する。
-placementRole: public_reference
+placementRole: distributable_asset
 authority:
   role: authoritative-definition
   owns:
@@ -49,7 +49,6 @@ distribution:
   destinationContainsSkillTree: false
   sourceResolution: registry-selection-only
   selectiveDelivery:
-    registry: skills/ci-github/references/ci-distribution-assets.reference.yml
     manifestRole: generated-release-evidence
     transferUnit: individual-file
     usabilityUnit: asset-or-preset-dependency-closure

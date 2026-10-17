@@ -51,7 +51,7 @@
 - local Action は workflow と同じ commit に含まれる資材として扱い、外部 Action の tag pin へ置き換えない。
 - `a3-suite/a3-ci-github` の Action は a3 管理 Action として扱う。consumer接続前に`actionization.implementationSource.releaseTag`のReleaseが公開済みであり、`exactRef`と公開対象の対応を提供元の[publication契約](https://github.com/a3-suite/a3-ci-github/blob/main/sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従って確認する。採用版の契約と検証結果を使い、変更された契約を旧版へ遡及適用しない。tagのpeeled SHAとAction SHAが同じであることだけを確認方法にせず、実装の事前Releaseや接続専用の後続Releaseを要求しない。`uses`は`exactRef`の40桁SHAを実行参照とし、tagを実行参照へ使わない。
 - GitHub 公式、vendor、community の third-party Action は upstream owner の release policy を上書きしない。consumer は full commit SHA を実行参照とし、採用時に upstream の exact release tag、その target commit、実行参照の SHA が一致することを確認する。
-- provider Action の実行参照は registry（`references/ci-github-preset-assets.reference.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
+- provider Action の実行参照は registry（`assets/registry/ci-github-preset-assets.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。
 - registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/distribute-ci-assets.guide.md`を参照する。
 - 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
@@ -65,6 +65,7 @@
 - runner image の変更、廃止、提供状況を確認できない場合は、実行済み・適合済みと判断しない。
 - trust boundary と version の判断を混ぜない。安全な runner でも version が未指定なら不適合であり、version が固定されても untrusted input を安全に実行できる証拠にはならない。
 
+<a id="os-version-selection"></a>
 ## OS・版の選定と廃止判断
 
 platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更・削除時と、CI監査時に次を判断する。providerは本基準・標準構成・結果集約を所有し、consumerは製品の対応範囲と検査の同等性を判断する。

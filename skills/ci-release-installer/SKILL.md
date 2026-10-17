@@ -1,6 +1,6 @@
 ---
 name: ci-release-installer
-description: CIで組み立ててReleaseへ公開するインストーラ（GitHub 管理のソース/Release asset/Packages、npm・Maven など外部リポジトリから資材を取得するもの）とインストールスクリプト、関連ドキュメントのセットアップ・作成・修正・レビュー、READMEのインストール・アンインストール手順と対応スキルの導入案内の作成・簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証、標準とproject固有の契約・文書・ローカルスキルの競合確認と解決検討、および作成済みまたは導入判断・project SSOT で要求されるインストーラ成果物の構成監査・証跡監査・失敗時の診断可能性確認で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使うスキル。
+description: CIで組み立ててReleaseへ公開するインストーラ（GitHub Release asset、Packages、npm・Mavenなどから資材を取得するもの）とインストールスクリプトの設計・作成・修正・レビュー・監査、READMEのインストール・アンインストール手順と対応スキルの導入案内の作成・簡素化、提供元の固定runtimeを使う製品宣言とCI接続の検証で、配布物検証、冪等性、既存データ保護、rollback、安全な設定読取を整理するときに使う。
 ---
 
 # ci-release-installer / SKILL
@@ -13,24 +13,21 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - インストーラは「取得」「検証」「配置」「切替」「起動確認」を混同せず、各段階の責務を分ける。
 - 取得元は GitHub、package registry、artifact repository などの外部境界として扱い、信頼は manifest、checksum、署名、固定 version で確立する。
 - 標準経路では、JRE、Node.js、package manager などの実行基盤は事前インストール済み前提とし、installer は存在確認と version 照合だけを行う。
-- starter の installer は、Unixのアーカイブ展開にOS提供の`tar`を存在確認して使い、無い場合は展開の前に失敗する。WindowsのZIP展開には.NETのAPIを使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
 - 既存データ、既存設定、稼働中プロセスを壊さないことを最優先にする。
 - 検証した入力と実行に使う入力を一致させる。
 - 失敗時に残る状態を先に定義し、途中成功の副作用を最小化する。
-- 共通 installer への準拠を既定とし、非準拠の根拠はインストーラ契約 coverage matrix の project override classification に従って検証する。
+- 共通 installer への準拠を既定とする。
 
 ## ルール
 - manifest、checksum、署名などの検証済み入力を使う場合、インストール実行時に別入力を再取得してはならない。
 - production / release 用 installer の入力は manifest contract を正本とし、Java / Node などの runtime 別差分は manifest の overlay として扱う。
 - GitHub の branch、registry の `latest`、version range、SNAPSHOT などの可変参照は、明示的に許可された開発用途以外では installer 入力にしない。
 - GitHub Packages、npm、Maven などから取得する資材は、registry URL、package coordinate、version、checksum と任意の署名検証を入力契約に含める。
-- project override はインストーラ契約 coverage matrix の project override classification に従い、project SSOT の証跡で分類する。
-- project override があっても、インストーラ契約 coverage matrix の core safety invariant は緩和しない。
-- installer の標準対象 platform 候補と識別子は use case 契約を正本とし、設計時は全候補を常に選択可能な前提で対象 platform を決める。
-- project-owned custom installer の実装形式は、インストーラ作成ガイドの選択基準に従う。
+- project override があっても core safety invariant は緩和しない。
+- 設計時は標準対象 platform の全候補を選択可能な前提で対象 platform を決める。
 - installer が巨大化する場合は、配布単位と保守単位を分け、保守単位は manifest、source、verify、staging、activation、state、audit、service などの契約境界で分割する。
 - CI で installer asset を組み立てる場合、installer 側は組立済み asset、manifest、checksum、provenance、テスト証跡の契約を扱い、workflow trigger、job、権限、cache、release publish 手順は ci スキルへ委譲する。
-- 標準GitHub Release native経路は、提供元の固定Actionまたは固定配布CLIを使う。利用projectがGit管理するのは製品宣言とmanifestの製品固有値だけとし、共通installer本体・builder・fixture・テスト・adapterをコピーまたは個別実装しない。CI中の取得資材とprojectの追跡sourceを分ける。入力と保証範囲は標準組立契約に従う。
+- 標準GitHub Release native経路は、提供元の固定Actionまたは固定配布CLIを使う。利用projectがGit管理するのは製品宣言とmanifestの製品固有値だけとし、共通installer本体・builder・fixture・テスト・adapterをコピーまたは個別実装しない。CI中の取得資材とprojectの追跡sourceを分ける。
 - production installer は未知の manifest field、未許可 download URL、unsafe archive entry、checksum または署名の不一致を拒否し、包括的な強制オプションで迂回させない。
 - 標準経路で実行基盤が存在しない、または要求 version を満たさない場合は、installer が取得・導入せず失敗する。
 - production installer は本番ホストで source build を暗黙に実行しない。project override で source build を扱う場合も、入力、toolchain、依存解決、出力検証、失敗時状態を固定する。
@@ -43,19 +40,8 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - destructive な操作、所有権変更、権限変更は managed root 内に閉じる。root 外の launcher 操作は manifest 契約の「launcher 安全不変条件」に従い、service manager 登録は必要な最小操作だけに限定する。
 
 ## 関連スキル
-- 必須: post-artifact-review - セットアップ・README修正・監査・監査後修正の最終結果を、主工程から独立レビュー必須として確認するため
-- 任意: root-docs - READMEのインストール節を監査・改稿するときに、本文構成・最短導線・詳細への参照を担う補助スキルとして適用する
-- 任意: repository-audit - installer の導入推奨と project SSOT の採否を確認するときに参照する
-- 任意: runtime-script - installer が配置または生成する起動スクリプト、service manager handoff、PID、ログ、restart、health 境界を整理するときに参照する
-- 任意: env - 環境変数や設定ファイルの扱いを整理するときに参照する
-- 任意: secret-management - token、secret、資格情報の保存禁止や注入元を整理するときに参照する
-- 任意: backup - DB や永続データの退避・復旧境界を整理するときに参照する
-- 任意: review - インストーラの設計や差分をレビューするときに参照する
-- 任意: test - 失敗系、rollback、冪等性のテスト方針を整理するときに参照する
-- 任意: ci - installer asset の CI 組立、workflow、権限、release publish の実装境界を整理するときに参照する
-- 任意: a3-lint - 公開済みルールの対応範囲で配布・宣言・READMEを機械検証するときに参照する
-- 任意: tech-stack-selection - installer 実装言語や配布技術の採否理由を設計書として整理するときに参照する
-- 任意: module-boundary-design - installer 実装が巨大化し、保守単位、公開契約、依存方向を整理するときに参照する
+- 必須: post-artifact-review
+- 任意: root-docs, repository-audit, runtime-script, env, secret-management, review, test, ci, a3-lint, dependency-selection, module-boundary-design
 
 ## 注意
 - 非対象: OS やパッケージマネージャ固有の詳細手順
@@ -101,13 +87,12 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - 参照: references/define-installer.guide.md
 
 ### インストーラをセットアップしたい、またはCIセットアップから委譲された
-- セットアップ依頼の範囲で、次のガイドの手順を実施し、完了条件を確認する。ガイドの紹介や構成提案だけで終了しない。既存の固有実装がある場合は、標準構成との比較と必要性の対話を先に行う。
-- 同ガイドの「固定providerの対応確認」を宣言変更前に行う。Unix共有入口を第一に比較し、サンプルを固定版の対応証拠にせず、対象別入口を残す場合は理由を確認する。
+- セットアップ依頼の範囲で手順を実施し、完了条件を確認する。ガイドの紹介や構成提案だけで終了しない。
 - CIから委譲された場合は、実施結果と未確認事項をCI側へ返す。
 - 参照: references/use-standard-installer.guide.md
 
 ### READMEのインストール・アンインストール手順を作成・簡素化・修正したい
-- 本スキルを主工程とし、採用した配布経路・コマンド・対応環境・配置先の正当性を確認する。READMEの本文・最短導線にはroot-docsを補助として適用し、次のガイドの「製品READMEへのインストール手順追記」節に限定して許可範囲の改稿と再確認まで行う。構成提案だけで終了しない。
+- 本スキルを主工程とし、READMEの本文・最短導線にはroot-docsを補助として適用する。許可範囲の改稿と再確認まで行い、構成提案だけで終了しない。
 - 参照: references/use-standard-installer.guide.md
 
 ### 標準installerをCIまたはローカルで組み立てたい
@@ -124,6 +109,7 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 ### 標準経路から外れる installer を扱いたい
 - project override classification に必要な証跡を project SSOT へ寄せる。
 - 参照: references/define-installer.guide.md
+- 参照: references/installer-contract-coverage.reference.yml
 
 ### インストーラをレビューしたい
 - 検証済み入力と実行入力の一致、設定読取、既存データ保護、失敗時状態を優先して確認する。
@@ -131,16 +117,10 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - 参照: references/define-installer.guide.md
 
 ### インストーラを監査したい
-- 通常の監査は構成監査とする。証跡監査・両段階・リリース前の実行確認を指定された場合は、同じ対象について構成監査から証跡監査へ進む。CIから委譲された場合は選択段階と確認対象を引き継ぐ。
-- READMEのインストール節ではroot-docsを補助として適用し、提供元が対応する短い既定オンライン起動を第一案としてOSごとに現手順と比較する。現在のasset名・URL・配置との一致だけで差分なしにせず、比較結果、残す操作の必要性、具体的な置換案を報告する。その修正を依頼された場合はREADMEの改稿と再確認へ進む。判定と変更範囲は監査ガイドに従う。
-- 同ガイドの機械検証とproject固有規則の競合確認を実施し、未対応の検査項目と競合の解決案を保持する。
-- 作成済み、導入判断が `required`、またはproject SSOTで要求されるinstaller script、製品宣言・manifest、execution request、関連ドキュメント、検査導線を構成監査で確認する。証跡監査では実候補とテスト結果を照合する。構成の欠落と実行証跡の未取得を分けて扱う。
-- スキル文書自体の監査ではなく、インストーラ成果物の実装・入力・運用証跡を対象にする。
-- 機械検証の成功だけで、実装責務・CI接続を確認した構成監査や、実候補の証跡を確認した証跡監査の成功とは扱わない。
-- 構成監査では製品宣言・固定provider revision・検証profileの選択と接続を、証跡監査では候補checksumと実候補の検証結果を照合する。
-- 失敗時の診断保証も監査ガイドの契約surfaceへ対応付ける。標準providerの共通回帰と製品固有の実行証拠を分け、未実行OSや保持失敗の未検証を残す。
-- リリース前の確認として、最新の公開済み安定版の標準installerとの整合を中心に、標準へ合わせる差分、必要性を確認した固有差分、未確認を判定し、移行案を先頭に報告する。安全性・動作・実候補の証跡は裏付けとして保持する。目的・比較基準・差分判定・CIへの返却は監査ガイドに従う。
-- 準拠監査での project SSOT の扱いと判定順は、監査ガイドの優先順位に従う。
+- 通常は構成監査とし、証跡監査・両段階・リリース前の実行確認を指定された場合だけ、同じ対象について証跡監査へ進む。CIから委譲された場合は選択段階と確認対象を引き継ぐ。
+- 対象はインストーラ成果物の実装・入力・運用証跡で、スキル文書自体ではない。
+- リリース前の確認では、最新の公開済み安定版の標準installerとの整合を中心に判定し、移行案を先頭に報告する。
+- READMEのインストール節の修正を依頼された場合は、改稿と再確認まで行う。
 - 参照: references/audit-installer-compliance.guide.md
 
 ### インストーラのテスト観点を整理したい

@@ -20,7 +20,7 @@ const slowSpawnTimeoutMs = 35000; // provider reference check over the full cont
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
-const actionRef = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).actionization.implementationSource.exactRef;
+const actionRef = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml')).actionization.implementationSource.exactRef;
 
 describe('contract.ci-release-assembly.outputs', () => {
   describe('same-release-skills', () => {
@@ -1308,7 +1308,7 @@ describe("workflow-contracts", () => {
 
     // integration_id: repository-quality-delivery-regression
     test('repository workflow provider actions use registry-approved pins', () => {
-      const entries = yaml.parse(read('skills/ci-github/references/ci-github-preset-assets.reference.yml')).providerActions.entries;
+      const entries = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml')).providerActions.entries;
       const approved = new Map(entries.map((entry) => [entry.action, entry.commitSha]));
       for (const relative of ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml', 'actions/ci-quality-toolchain/action.yml']) {
         expect(checkProviderReferences(read(relative), relative, approved)).toEqual([]);
@@ -1475,7 +1475,7 @@ describe("workflow-contracts", () => {
       const git = (...args) => execFileSync('git', args, { cwd: fixture, encoding: 'utf8', stdio: 'pipe', timeout: spawnTimeoutMs });
       try {
         git('init');
-        const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
+        const registryPath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
         mkdirSync(path.join(fixture, path.dirname(registryPath)), { recursive: true });
         writeFileSync(path.join(fixture, registryPath), read(registryPath));
         mkdirSync(path.join(fixture, '.github/workflows'), { recursive: true });

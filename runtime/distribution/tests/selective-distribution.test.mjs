@@ -1458,7 +1458,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           });
           expect(merged.action).toBe('merged');
           expect(merged.selectedAssets).toStrictEqual(['lint.github-actions', 'registry.ci-github']);
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/references/ci-distribution-assets.reference.yml'))).toBeTruthy();
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/assets/registry/ci-distribution-assets.yml'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_workflow_name_matches_file.lua'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/shared/ci_github_yaml.lua'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_action_runtime_contract.lua'))).toBe(false);
@@ -1774,7 +1774,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const beforeFiles = fs.readdirSync(adapterProject);
         run(`import assert from 'node:assert/strict';
       import { materializeAdapterBundle } from ${moduleUrl(merged.distributionRoot, 'runtime/adapter/materialize-adapter-bundle.ts')};
-      const result = materializeAdapterBundle({ sourceRoot: ${JSON.stringify(adapterProject)}, inventoryPath: 'skills/ci-github/references/ci-script-assets.reference.yml', bundleId: 'typescript-npm-quality', targetRoot: ${JSON.stringify(adapterProject)} });
+      const result = materializeAdapterBundle({ sourceRoot: ${JSON.stringify(adapterProject)}, inventoryPath: 'skills/ci-github/assets/registry/ci-script-assets.yml', bundleId: 'typescript-npm-quality', targetRoot: ${JSON.stringify(adapterProject)} });
       assert.deepEqual(result.files, []);
       assert.equal(result.binding.standardBundleId, 'typescript-npm-quality');`);
         expect(fs.readdirSync(adapterProject)).toStrictEqual(beforeFiles);

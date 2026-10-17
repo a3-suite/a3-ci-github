@@ -15,8 +15,8 @@
 - repository Release version: `VERSION`
 - 要求・観測可能な契約・設計境界: `sdd/`
 - Action の公開 I/O: `actions/<action-name>/action.yml`
-- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)
-- 選択配布単位と依存閉包: `skills/ci-github/references/ci-distribution-assets.reference.yml`
+- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)
+- 選択配布単位と依存閉包: `skills/ci-github/assets/registry/ci-distribution-assets.yml`
 - 選択配布manifest生成・取得・適用・復旧: `runtime/distribution/`
 - 配置・検証処理: `runtime/`
 - Agent Skill の起動条件と操作導線: `skills/`

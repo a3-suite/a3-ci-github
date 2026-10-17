@@ -8,8 +8,8 @@ GitHub Actions 向けの CI 契約、canonical workflow、再利用可能な Act
 
 - Agent Skill: `skills/ci-github/` と `skills/ci-release-installer/`
 - GitHub Actions: `actions/<action-name>/`
-- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)
-- 選択配布registry: `skills/ci-github/references/ci-distribution-assets.reference.yml`
+- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)
+- 選択配布registry: `skills/ci-github/assets/registry/ci-distribution-assets.yml`
 - 配置・検証 runtime: `runtime/`
 - 要求・仕様・設計: `sdd/`
 - repository Release version: `VERSION`
@@ -28,13 +28,13 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 | Release | `workflows/release/` |
 | Package公開 | `workflows/package/` |
 
-`workflows/` は導入時に製品設定を埋め込むcaller・request templateです。`.github/workflows/` はproviderの再利用calleeと、このリポジトリ自身のCIを置きます。calleeの固定参照はRelease manifestから解決します。導入先では生成済みcallerを設定の正本として管理し、共通実装や個別の生成スクリプトはコピーしません。個々のcanonical sourceとAction bindingは[preset registry](skills/ci-github/references/ci-github-preset-assets.reference.yml)を参照してください。
+`workflows/` は導入時に製品設定を埋め込むcaller・request templateです。`.github/workflows/` はproviderの再利用calleeと、このリポジトリ自身のCIを置きます。calleeの固定参照はRelease manifestから解決します。導入先では生成済みcallerを設定の正本として管理し、共通実装や個別の生成スクリプトはコピーしません。個々のcanonical sourceとAction bindingは[preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)を参照してください。
 
 ## 選択配布
 
 Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分planの確認、同じdigestでのapplyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。具体的な手順は[配布ガイド](skills/ci-github/references/distribute-ci-assets.guide.md)に従います。
 
-操作契約は[`distribute-ci-assets.guide.md`](skills/ci-github/references/distribute-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.reference.yml`](skills/ci-github/references/ci-distribution-assets.reference.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
+操作契約は[`distribute-ci-assets.guide.md`](skills/ci-github/references/distribute-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.yml`](skills/ci-github/assets/registry/ci-distribution-assets.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
 
 ## 製品と対応スキルの同時Release
 

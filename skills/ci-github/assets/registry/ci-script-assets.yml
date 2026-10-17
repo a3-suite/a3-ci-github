@@ -5,7 +5,7 @@ title: CI script asset inventory
 summary: >-
   script use case と CIプリセットを実装する現在の reusable asset、project/provider adapter、
   trusted control、外部補助を定義する。
-placementRole: public_reference
+placementRole: distributable_asset
 assetPrinciples:
   - id: minimal-project-change
     rule: >-

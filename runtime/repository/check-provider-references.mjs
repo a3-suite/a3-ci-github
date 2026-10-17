@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
 import { verifyImplementationBinding } from './verify-implementation-binding.mjs';
 
-export const registryPath = 'skills/ci-github/references/ci-github-preset-assets.reference.yml';
+export const registryPath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
 export const parseYaml = (text, relative) => {
   const document = parseDocument(text, { uniqueKeys: true });
   if (document.errors.length) throw new DiagnosticError(`provider-yaml-invalid: ${relative}: ${document.errors.map((error) => error.message).join('; ')}`, { diagnostics: { field: 'yaml', expected: 'valid-yaml', observed: 'parse-failed', path: relative } });

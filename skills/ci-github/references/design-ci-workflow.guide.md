@@ -47,7 +47,7 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
    - 差分検出スクリプトは workflow 実行後に重い工程をスキップする。
    - required check の起動条件、対象外処理、merge queue 対応は選択した provider の trust policy profile に従う。
 6. provider 実装へ写像する。
-   - `references/configure-ci-preset.guide.md`に従い、選択したCIプリセットとlanguage profileをcallerへ接続する。入出力と停止条件は`references/ci-preset-contracts.reference.yml`、Actionと資材の対応は`references/ci-github-preset-assets.reference.yml`を参照する。
+   - `references/configure-ci-preset.guide.md`に従い、選択したCIプリセットとlanguage profileをcallerへ接続する。入出力と停止条件は`references/ci-preset-contracts.reference.yml`、Actionと資材の対応は`assets/registry/ci-github-preset-assets.yml`を参照する。
    - provider 固有の構文や API を `ci` の概念契約へ逆流させない。
    - provider の runtime、toolchain、runner、Action、container の版指定は選択した provider の version policy profile を参照する。
 7. workflow の実装境界を決める。

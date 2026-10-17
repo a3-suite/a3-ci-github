@@ -3,7 +3,7 @@
 ## 目的
 
 選択したCIプリセットのcallerを製品設定付きで生成・配置し、project固有の実装だけを接続する。
-プリセットの意味、コピー元、コピー先は `references/ci-github-preset-assets.reference.yml`、共通処理契約は
+プリセットの意味、コピー元、コピー先は `assets/registry/ci-github-preset-assets.yml`、共通処理契約は
 `references/ci-script-contracts.reference.yml` を正本とする。
 
 ## 導入前提
@@ -238,7 +238,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 
 主workflowは薄いcallerを配置する。固有値はplanの`--set`で渡し、生成された`jobs.quality.with`を確認する。共通jobはproviderの `.github/workflows/ci-quality.yml` が実行する。calleeはconsumerのworkflow directoryへコピーしない。入力定義と受渡しはcalleeの `workflow_call.inputs` と `env`、固定参照と利用可能性はregistryの `qualityReusableWorkflow` を参照する。callerに残る `summary` は既存の集約check identityと失敗伝播のために必要であり、共通品質jobを再実装しない。実際のrequired check名の互換性はHostedで受け入れるまで未確認とする。
 
-1. `references/ci-script-assets.reference.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
+1. `assets/registry/ci-script-assets.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
    entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `references/ci-adapter-bundles.reference.yml` を参照する。
    plan前にlanguage profile、toolchain、runner、保護branch、必要なtoolのexact版を選ぶ。選択した言語で使わないuvまたはcargo-auditの版と、主qualityで使わないjqの版は、対応する生成設定へJSON文字列の空値を渡す。
 
@@ -256,7 +256,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
    CI_FIXED_RUNTIME_ROOT="$ci_github_local_runtime" \
      "$ci_github_local_runtime/node_modules/.bin/tsx" \
      "{ci-github-source-root}/runtime/adapter/materialize-adapter-bundle.ts" \
-     --inventory "skills/ci-github/references/ci-script-assets.reference.yml" \
+     --inventory "{ci-github-source-root}/skills/ci-github/assets/registry/ci-script-assets.yml" \
      --bundle "{bundle-id}" \
      --target-root "{project-root}"
    ```
@@ -301,9 +301,9 @@ trusted PR check は標準で base SHA の trusted CI assets を使用する。b
 
 platform 固有の runtime、artifact、installer の検証が必要な project だけが、次の順で optional asset を導入する。
 
-manifestの作成・追加・変更・削除前に、[OS・版の選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)を適用し、対応範囲・代表OS・共通検査・固定粒度の判断を既存の設計またはissueへ残す。
+manifestの作成・追加・変更・削除前に、[OS・版の選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)を適用し、対応範囲・代表OS・共通検査・固定粒度の判断を既存の設計またはissueへ残す。
 
-1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](runner-trust-policy.reference.md#platform-別-quality-check)に従う。
+1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](references/runner-trust-policy.reference.md#platform-quality-check)に従う。
 2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。 任意の `sharedStandardChecks: true` は、標準Rustのformat/securityについてHOMEとprojectの設定・OS/architecture対象が全runnerで同等と利用projectが確認した場合だけ指定する。未指定/falseは全検査を維持し、trueは信頼済みbaseの宣言だけ有効になる。先頭platformが全検査、残りがnative検査を実行し、全platform成功を要求する。PR headだけの宣言やbootstrapでは省略しない。
 3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。

@@ -10,7 +10,7 @@ import { standardQualityBundle } from '../standard-quality-bundles.ts';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const require = createRequire(import.meta.url);
 const yaml = require(path.join(root, 'runtime/preset/node_modules/yaml'));
-const inventoryPath = 'skills/ci-github/references/ci-script-assets.reference.yml';
+const inventoryPath = 'skills/ci-github/assets/registry/ci-script-assets.yml';
 const filesIn = (directory) => fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
   entry.isDirectory() ? filesIn(path.join(directory, entry.name)) : [path.join(directory, entry.name)]);
 

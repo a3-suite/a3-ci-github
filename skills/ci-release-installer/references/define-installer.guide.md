@@ -8,12 +8,7 @@
 - 既存 installer の安全性、失敗時挙動、ドキュメント整合を確認する。
 
 ## 関連スキル
-- 任意: temp-management - 一時領域の配置とライフサイクルを決める場合に参照する
-- 任意: runtime-script - installer が配置または生成する起動スクリプト、手動操作、service manager handoff、PID、ログ、restart、health 境界を整理する場合に参照する
-- 任意: env - 設定ファイルや環境変数の契約を整理する場合に参照する
-- 任意: secret-management - token や資格情報の保存禁止、ログ秘匿、注入元を整理する場合に参照する
-- 任意: backup - 永続データの backup / restore 境界を整理する場合に参照する
-- 任意: test - 回帰テストや失敗系テストの粒度を整理する場合に参照する
+- 任意: temp-management, runtime-script, env, secret-management, test
 
 ## 標準経路と project override
 - 標準経路は、安全な既定値とレビューの出発点であり、すべての project に同じ運用形態を強制するものではない。
@@ -36,7 +31,7 @@
 
 ## 製品宣言の標準配置
 
-製品リポジトリではassemblyを`.ci/installer/assembly.json`、対象別manifestを`.ci/installer/manifests/<native-platform-id>.json`へ置く。installerはCIで組み立てて公開する資材なので、CI資材の配置基準(`ci-github`スキルの`references/ci-runtime-boundary.reference.md`)に従い`.ci/installer/`へ集める。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
+製品リポジトリではassemblyを`.ci/installer/assembly.json`、対象別manifestを`.ci/installer/manifests/<native-platform-id>.json`へ置く。installerはCIで組み立てて公開する資材なので、ci-githubスキルのCI資材の配置基準に従い`.ci/installer/`へ集める。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
 
 この配置と次節のインストール先を標準との比較基準にする。既存のディレクトリ名だけを維持理由にせず、異なる配置が必要なら製品要件とownerの根拠をproject SSOTへ記録する。ディレクトリ名の違いだけで安全性違反とは扱わず、既存のproject override分類へ渡す。
 
@@ -66,6 +61,7 @@
 - 共有wrapperの標準提供範囲はUnixの2platform。Windows共有wrapperは標準対象外で、必要性が確認された場合のみ共通拡張または明示owner extensionを検討する。
 - Maven/npmは入力契約と例を提供するが、標準実行engineは提供しない。個別実装が本当に必要かはpackage managerの既存機能と製品要求から判断する。
 - providerの共通回帰と、製品の実manifest・archiveを使うcandidate検証を分ける。profile成功だけでinstall/upgrade/rollback等の全受入を保証しない。
+- starter の installer は、Unixのアーカイブ展開にOS提供の`tar`を存在確認して使い、無い場合は展開の前に失敗する。WindowsのZIP展開には.NETのAPIを使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
 - 参照: references/use-standard-installer.guide.md
 
 ## フロー

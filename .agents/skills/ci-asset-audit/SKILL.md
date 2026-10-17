@@ -28,9 +28,9 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 確認すること | 入口 |
 |---|---|
 | repositoryの保守配置・実装方式・検証面 | `{project-root}/DEVELOPMENT.md`、`{project-root}/docs/maintenance/action-construction.md`、`{project-root}/docs/maintenance/test-strategy.md` |
-| preset、consumer配置、Action binding、標準実装 | preset registry: `{project-root}/skills/ci-github/references/ci-github-preset-assets.reference.yml` |
-| 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/references/ci-distribution-assets.reference.yml` |
-| adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/references/ci-script-assets.reference.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
+| preset、consumer配置、Action binding、標準実装 | preset registry: `{project-root}/skills/ci-github/assets/registry/ci-github-preset-assets.yml` |
+| 選択配布の依存閉包、copyとlocal-referenceの区分 | distribution registry: `{project-root}/skills/ci-github/assets/registry/ci-distribution-assets.yml` |
+| adapterとowner固有実装 | script assets: `{project-root}/skills/ci-github/assets/registry/ci-script-assets.yml`、script contracts: `{project-root}/skills/ci-github/references/ci-script-contracts.reference.yml` |
 | 配置・論理責務・投影 | physical structure: `{project-root}/sdd/dsl/designs/global/physical-structure.sdd.yml`、logical structure: `{project-root}/sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`、projection: `{project-root}/sdd/dsl/designs/scopes/repository/projection.sdd.yml` |
 | lintと検証ルールの選択 | CI資材の規則は `{project-root}/a3-lint.repository.yaml`、外部Skillの言語・Vitest規則は `{project-root}/a3-lint.yaml`からrule root・適用条件・例外を解決する。対象別profileと実行経路は `{project-root}/docs/maintenance/action-construction.md`を参照し、preflightと契約テストの検査範囲も照合 |
 | CLI入力条件 | CLI manifest: `{project-root}/sdd/dsl/specs/cli/cli-command-manifest.sdd.yml`から各commandを解決 |

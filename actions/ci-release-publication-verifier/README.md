@@ -4,7 +4,7 @@ GitHub Release の不在を観測し、owner write が返した receipt / readba
 
 ## 契約と前提
 
-公開 I/O は [action.yml](action.yml)、JSON shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。意味は `ci.release-asset-publication-contract` に従います。`runs.using: node24` と bundle 済み `dist/index.js` を提供し、consumer に Node 準備を要求しません。公開状態と固定参照は[preset registry](../../skills/ci-github/references/ci-github-preset-assets.reference.yml)を正本とします。
+公開 I/O は [action.yml](action.yml)、JSON shape は [evidence.schema.json](../../runtime/release-publication/evidence.schema.json) を正本とします。意味は `ci.release-asset-publication-contract` に従います。`runs.using: node24` と bundle 済み `dist/index.js` を提供し、consumer に Node 準備を要求しません。公開状態と固定参照は[preset registry](../../skills/ci-github/assets/registry/ci-github-preset-assets.yml)を正本とします。
 
 workflow は選択済み credential を `GH_TOKEN` 環境変数で注入します。Action は credential の選択・保存・fallback を行わず、GET だけを実行します。draft を含む閲覧能力の証拠は[固有契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-publication-verifier/clauses.sdd.yml)を正本とします。標準の固定 publication workflow は、同じjobのGITHUB_TOKENとcontents-writeの能力証拠を接続するため、APIの権限metadataが省略されても正常な公開経路を継続できます。任意tokenの権限不明、証拠の不一致、明示的な権限拒否では停止します。対象 provider は github.com のみです。
 

@@ -4,7 +4,7 @@ id: ci.github-distribution-assets
 title: Selective CI asset distribution registry
 summary: >-
   固定revisionから必要なCI資材だけを取得するため、配布単位、依存閉包、取得後の適用境界を定義する。
-placementRole: public_reference
+placementRole: distributable_asset
 usage:
   whenToRead: 固定revisionから必要なCI資材を選択して取得するとき。
   consumers: [ci-github, ci-release-installer]
@@ -39,10 +39,10 @@ assets:
   - id: registry.ci-github
     application: local-reference
     sourcePaths:
-      - skills/ci-github/references/ci-github-preset-assets.reference.yml
-      - skills/ci-github/references/ci-script-assets.reference.yml
+      - skills/ci-github/assets/registry/ci-github-preset-assets.yml
+      - skills/ci-github/assets/registry/ci-script-assets.yml
       - skills/ci-github/references/ci-script-contracts.reference.yml
-      - skills/ci-github/references/ci-distribution-assets.reference.yml
+      - skills/ci-github/assets/registry/ci-distribution-assets.yml
   - id: runtime.diagnostics
     application: local-reference
     sourcePaths:

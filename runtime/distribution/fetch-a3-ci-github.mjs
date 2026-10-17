@@ -616,7 +616,7 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
   }
   if (templateRuntime) {
     const registryAsset = loaded.manifest.assets.find((asset) => asset.id === 'registry.ci-github');
-    const registrySource = registryAsset?.files.find((file) => file.sourcePath.endsWith('/ci-github-preset-assets.reference.yml'))?.sourcePath;
+    const registrySource = registryAsset?.files.find((file) => file.sourcePath.endsWith('/ci-github-preset-assets.yml'))?.sourcePath;
     if (!registrySource || !loaded.receipt.files.includes(registrySource)) throw new DistributionError('distribution-pin-registry-not-fetched');
     const providerActions = yamlRuntime.parse(fs.readFileSync(inside(loaded.root, registrySource), 'utf8')).providerActions;
     const projection = templateRuntime.projectProviderActionPins(providerActions.entries, providerActions.pinCompanion.fields);

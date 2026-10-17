@@ -24,7 +24,7 @@
 3. Release publication callerの生成時に、planの`--set`で`<release-skills-config-path>`へ宣言JSONのrepository相対pathをJSON文字列として渡す（例：`".ci/release-skills.json"`）。同梱しない場合は`"__unset__"`を渡す。生成済みcallerを手編集しない。installerの選択とは独立して設定する。採用する固定providerのworkflowとActionがこの入力へ対応することを、同じReleaseの配布manifestと固定SHA先で確認する。
 4. `references/release-skills-contract.reference.yml`に従い、固定製品sourceからの収録内容、禁止資材の除外、必須fileの充足、ZIPと証跡を確認する。除外規則はruntimeのpolicy JSONを参照し、このガイドへ複製しない。公開scriptsや必要な実行資材は残し、コンパイル残骸の除外で必要資材が欠けた場合は配置・宣言を直す。
 5. 同じ製品Releaseへ`<repository-name>-skills.zip`とその`.sha256`を公開する。生成はOS別matrixで繰り返さず、assembleで一度だけ行う。installerを同梱する場合も、各ownerの証跡を個別に保持して同じhandoffへ集約する。別のReleaseは作らない。
-6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。ci-release-installerスキルの`assets/examples/readme-installation.example.md`の該当節を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。スキル本文に固定versionを埋め込まず、版対応はReleaseとCI証跡で保持する。
+6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。ci-release-installerスキルのREADMEインストール節の記載例を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。スキル本文に固定versionを埋め込まず、版対応はReleaseとCI証跡で保持する。
 
 ## 取得・配備・削除の案内
 

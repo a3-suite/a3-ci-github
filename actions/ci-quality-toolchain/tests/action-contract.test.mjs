@@ -21,7 +21,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     expect(action.inputs['version-policy'].default).toBe('exact');
     expect(action.outputs['resolved-toolchain-version'].value).toBe('${{ steps.publish-version.outputs.version }}');
     expect(action.runs.steps[0].name).toBe('Validate selected toolchain inputs');
-    const registry = yaml.parse(fs.readFileSync(path.join(root, 'skills/ci-github/references/ci-github-preset-assets.reference.yml'), 'utf8'));
+    const registry = yaml.parse(fs.readFileSync(path.join(root, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml'), 'utf8'));
     const pins = new Map(registry.providerActions.entries.map((entry) => [entry.action, entry.commitSha]));
     const dependencies = action.runs.steps.filter((step) => step.uses);
     expect(dependencies.map((step) => step.uses.split('@')[0])).toStrictEqual(['actions/setup-node', 'actions/setup-python', 'astral-sh/setup-uv']);
