@@ -65,7 +65,7 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 Action・workflow・公開参照を変更する前に、[固定参照の更新順序](docs/maintenance/action-construction.md#固定参照の更新順序)を確認してください。コミットゲートで準備段階と利用可能化を区別し、Actionと再利用workflowそれぞれの確定SHA・受入証拠を確認します。
 
-コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.md#コミットゲート連携)に従います。
+コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.reference.md#コミットゲート連携)に従います。
 
 ## Action catalog
 
