@@ -8,7 +8,7 @@
 ## 入力
 
 - 監査モード
-- `{ci-github-source-root}`: `references/distribute-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
+- `{ci-github-source-root}`: `references/deploy-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
 - 任意の `{skill-collection-root}`: 外部 language skill の資材を参照する adapter bundle を使う場合に指定するスキル集合 root。標準bundleと外部資材を参照しない構成では省略する。
 - 導入先 project root
 - `{project-root}/.a3-skills/ci-github/` のスキル専用ローカル状態 root

@@ -87,6 +87,21 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 
 この回帰は各 rule について正常、代表違反、対象外または誤検知防止の3ケースを実 a3-lint runtime で検査します。
 
+## 実行環境の選定
+
+`.github/workflows/quality-gate.yml` の runner と toolchain は、[OS・版の選定と廃止判断](../../skills/ci-github/references/workflow-version-policy.reference.md#os-version-selection)に従って選びます。利用者が用意する platform は検証の見本で、それ以外は保守用の道具です。
+
+| 対象 | 区分 | 選定 | 理由 |
+| --- | --- | --- | --- |
+| ubuntu-24.04（契約検査） | 道具 | 代表OS | OSに依存しない検査を最速・最安で実行する |
+| ubuntu-24.04、macos-15、windows-2025（installer） | platform | installer の3対象 platform に1対1 | ubuntu-22.04 は廃止開始、macos-14 は 2026-11-02 に support 終了のため除外。windows-2022 は条件を満たすが、検証する PowerShell 5.1 は両版にあり差が効かず、次に廃止される版なので 2025 とする |
+| Windows PowerShell 5.1、PowerShell 7 | platform | 宣言の下限と現行系 | 5.1 以上を宣言している |
+| Python 3.11 | platform | 宣言の下限 | 3.10 は 2026-10 に EOL。3.11 の support は 2027-10 まで |
+| Node 24 | platform | 最古の互換版 | Action は `node24` で動き、engines の下限も 24 |
+| Node の patch、uv、jq、Action の SHA | 道具 | dependency-selection の版選定（公開待機期間を含む） | patch まで固定し、更新は意図して行う |
+
+各 release 時と、提供元が廃止・EOL を告知した時に見直します。
+
 ## 追加判断
 
 新しいE2Eは、統合テストでは観測できない公開経路がある場合だけ追加します。追加前に、owner contract、`flow_id`、外部副作用、実行頻度、fixtureの後処理を確定します。

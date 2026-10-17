@@ -1207,14 +1207,14 @@ describe("workflow-contracts", () => {
         /^    name: Installer contract \/ Windows$/m,
         /^    runs-on: windows-2025$/m,
         /actions\/setup-python@[0-9a-f]{40}/,
-        /python-version: '3\.12'/,
+        /python-version: '3\.11'/,
       ]);
       // The native PowerShell checks do not feed the handoff, so they run in their own job and do not delay it.
       includesAll(installerWindowsNative, [
         /^    name: Installer native safety \/ Windows$/m,
         /^    runs-on: windows-2025$/m,
         /actions\/setup-python@[0-9a-f]{40}/,
-        /python-version: '3\.12'/,
+        /python-version: '3\.11'/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_build_installer\.py -v/,
         /python -m unittest discover -s runtime\/installer\/tests -p test_runtime_installer\.py -k test_windows -v/,
         /name: Test native Windows installer safety \/ Windows PowerShell 5\.1\n\s+shell: powershell\n\s+env:\n\s+CI_INSTALLER_POWERSHELL: powershell/,

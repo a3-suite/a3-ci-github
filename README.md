@@ -32,13 +32,13 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 
 ## 選択配布
 
-Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分planの確認、同じdigestでのapplyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。具体的な手順は[配布ガイド](skills/ci-github/references/distribute-ci-assets.guide.md)に従います。
+Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分planの確認、同じdigestでのapplyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。具体的な手順は[配布ガイド](skills/ci-github/references/deploy-ci-assets.guide.md)に従います。
 
-操作契約は[`distribute-ci-assets.guide.md`](skills/ci-github/references/distribute-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.yml`](skills/ci-github/assets/registry/ci-distribution-assets.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
+操作契約は[`deploy-ci-assets.guide.md`](skills/ci-github/references/deploy-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.yml`](skills/ci-github/assets/registry/ci-distribution-assets.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
 
 ## 製品と対応スキルの同時Release
 
-製品の公開スキルを固定sourceへ宣言し、OS共通の`<repository-name>-skills.zip`とchecksumを製品と同じReleaseへ含められます。開発・一時資材を除外し、installerと併用しても各ownerの証跡を保持します。セットアップとREADMEへの導入・削除案内は[同時Releaseガイド](skills/ci-github/references/release-project-skills.guide.md)を参照してください。
+製品の公開スキルを固定sourceへ宣言し、OS共通の`<repository-name>-skills.zip`とchecksumを製品と同じReleaseへ含められます。開発・一時資材を除外し、installerと併用しても各ownerの証跡を保持します。セットアップとREADMEへの導入・削除案内は[同時Releaseガイド](skills/ci-github/references/publish-project-skills.guide.md)を参照してください。
 
 ## Action一覧
 

@@ -170,4 +170,4 @@ preflight 後の GitHub Actions 固有の必須確認を上表の一つの共通
 
 ## 製品スキルの同時Release
 
-まず`references/release-project-skills.guide.md`の「同梱の選択」を確認する。公開スキルがある場合は製品ownerの同梱・未同梱の選択、未同梱理由、CI設定とREADMEとの一致を既存の監査レポートへ記録する。選択未確認は未同梱へ読み替えない。同梱する場合だけ同ガイドの構成・証跡監査を実施する。公開宣言、固定source、禁止資材の除外、必須file、installerとの併用時の各owner証跡、READMEの同じ製品Releaseへの案内を比較する。未選択の製品にZIPや外部配備を要求しない。
+まず`references/publish-project-skills.guide.md`の「同梱の選択」を確認する。公開スキルがある場合は製品ownerの同梱・未同梱の選択、未同梱理由、CI設定とREADMEとの一致を既存の監査レポートへ記録する。選択未確認は未同梱へ読み替えない。同梱する場合だけ同ガイドの構成・証跡監査を実施する。公開宣言、固定source、禁止資材の除外、必須file、installerとの併用時の各owner証跡、READMEの同じ製品Releaseへの案内を比較する。未選択の製品にZIPや外部配備を要求しない。

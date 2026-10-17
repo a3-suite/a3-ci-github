@@ -53,8 +53,8 @@
 - GitHub 公式、vendor、community の third-party Action は upstream owner の release policy を上書きしない。consumer は full commit SHA を実行参照とし、採用時に upstream の exact release tag、その target commit、実行参照の SHA が一致することを確認する。
 - provider Action の実行参照は registry（`assets/registry/ci-github-preset-assets.yml` の `providerActions`）の承認 pin（`pinnedVersion`、`commitSha`、`runtime`）と一致させ、runtime は `approvedRuntimes` の値に限る。承認値以外を使う場合は、先に registry を更新して承認してから実行参照にする。
 - registry の `runtime` は entry の `runtimeBasis` が指す `action.yml` の `runs.using` を示す。sub-path の entrypoint を使う場合と `composite` の内部 Action は含まないため、実行前にその entrypoint と内部 Action の runtime を確認し、未確認のまま承認済みとして扱わない。
-- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/distribute-ci-assets.guide.md`を参照する。
-- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/distribute-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
+- registry の `pinCompanion` が宣言する `path`（`.ci/provider-action-pins.yml`）は、必要なcallerを扱うprovider CLIのplanが`providerActions.entries`と`pinCompanion.fields`から生成し、確認済みplanのapplyが配置する。companionはregistryの完全な射影であり独自編集しない。lock生成とpreflightは使用中・未使用を問わず全entryとfieldを比較し、欠落・追加・独自編集を拒否する。手順は`references/deploy-ci-assets.guide.md`を参照する。
+- 照合は preset のcaller生成時と適用後の検証時に必須とする。参照解決・製品設定の入力は`references/deploy-ci-assets.guide.md`に従う。preflightはcanonical、registry、manifestと生成済みcallerの参照を照合する。companionは必要な経路だけでregistryの射影と比較する。
 - upstream がランタイムのサポート終了や移行を通知した場合（例: Node.js ランタイムの deprecation 警告）は、registry と consumer の pin を同一変更で更新し、`## 更新と停止条件` の追跡項目へ記録する。
 - registry に無い provider Action、または `approvedRuntimes` 外の runtime を実行参照にした場合は、`## 更新と停止条件` に従って workflow の追加・更新・publish を進めない。
 - registry の availability gate を満たす `available` の Action だけを workflow へ接続する。Hosted 実行は別の運用証拠として扱う。
@@ -74,8 +74,10 @@ platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更
 
 1. 製品が保証するOS/CPUと必要な検証を先に決め、共通化できる処理を確認した後に時間・費用を比較する。native build/test、path、権限、installer等のOS固有保証は対応構成ごとに維持する。
 2. 「なぜ固定が必要か」「どの幅まで許容できるか」を、前節の対象別指定と必要な保証に照らして自問する。完全一致を選ぶなら、同一性・互換性等の理由と、制約を緩めるための検証条件を残す。新しい版が出たことや未検証であることだけで既存の受理範囲を狭めない。
-3. 共通検査は、command、入力、source、依存解決、projectとHOMEの設定、toolchain、OS/CPUによる対象の差を照合する。format/securityという名前だけで同等と判断しない。代表OSは必要能力・実測時間・費用・保守性から選び、先頭platformに置く理由を残す。同等性が不明または崩れた場合は全OSの全検査へ戻す。
-4. 選定理由、固定粒度・許容幅、省略する検査と代替保証、証拠のidentity、owner、次回見直し日・条件を既存の設計またはissueへ記録する。manifestは実行設定に限定し、判断記録用の必須fieldを追加しない。`sharedStandardChecks`はこの判断を済ませたconsumerの宣言として扱う。
+3. 利用者が用意するplatform（OS・runner・runtime）は、互換性があり、providerが廃止・EOLを告知しておらず、support終了まで次回見直しより長い残期間がある版のうち最古を検証対象にする。新しい版の検証は、互換性に効く差がある場合だけ加える。
+4. workflowが使うCI資材（Action・reusable workflowのSHA、workflow内のtool、toolchainのpatch）の版は、dependency-selection スキルの版選定（公開待機期間を含む）に従う。
+5. 共通検査は、command、入力、source、依存解決、projectとHOMEの設定、toolchain、OS/CPUによる対象の差を照合する。format/securityという名前だけで同等と判断しない。代表OSは必要能力・実測時間・費用・保守性から選び、先頭platformに置く理由を残す。同等性が不明または崩れた場合は全OSの全検査へ戻す。
+6. 選定理由、固定粒度・許容幅、省略する検査と代替保証、証拠のidentity、owner、次回見直し日・条件を既存の設計またはissueへ記録する。manifestは実行設定に限定し、判断記録用の必須fieldを追加しない。`sharedStandardChecks`はこの判断を済ませたconsumerの宣言として扱う。
 
 ### 廃止の線引きと見直し
 

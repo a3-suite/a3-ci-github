@@ -8,7 +8,7 @@
 
 ## 導入前提
 
-使用するprovider Releaseは、選択配布ガイド`references/distribute-ci-assets.guide.md`の「対応条件」を満たすことを先に確認する。Releaseの選定・比較、必要機能の確認、取得・生成・適用の手順は同ガイドへ委譲する。
+使用するprovider Releaseは、選択配布ガイド`references/deploy-ci-assets.guide.md`の「対応条件」を満たすことを先に確認する。Releaseの選定・比較、必要機能の確認、取得・生成・適用の手順は同ガイドへ委譲する。
 
 ## 標準構成からのセットアップ
 
@@ -187,7 +187,7 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 
 | 表記 | 意味 |
 | --- | --- |
-| `{ci-github-source-root}` | `references/distribute-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
+| `{ci-github-source-root}` | `references/deploy-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
 | `{skill-collection-root}` | 独自adapter bundle の `source.skill` を解決する場合の外部スキル集合 root |
 | `{ci-github-skill-root}` | `project-skill-deploy`で別途配備した、導線と参照文書だけを持つ`ci-github` Agent Skill root |
 | `{project-root}` | CI を導入する project の root |
@@ -195,7 +195,7 @@ PR check の trusted CI assets bootstrap は別の入力境界であり、従来
 `{skill-collection-root}` は、独自bundleの外部スキルを identity で解決する場合だけ使用する。標準bundleの生成・導入・実行には使用しない。
 repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
 `{ci-github-skill-root}` 配下へ複製しない。取得とworkflow copyは
-`references/distribute-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
+`references/deploy-ci-assets.guide.md`のfetch後に本節のruntimeを準備し、設定を渡してplan／applyを行う。コピー先の`{project-root}`は両方と別であり、
 導入後の workflow や adapter から配布元を参照しない。
 
 ## プリセット別の値
@@ -214,7 +214,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 ## 導入手順
 
 1. `ci-github` スキルで用途に対応する標準プリセットを選ぶ。既存の固有実装がある場合は「標準構成からのセットアップ」に従い、必要性と採用方針を利用者と確認する。installerの採否をproject SSOTで確認する。未確定の場合はrepository-auditへ導入判断を委譲し、採否を利用者と確認する。配布する場合は、ci-release-installerスキルの「インストーラをセットアップしたい、またはCIセットアップから委譲された」からセットアップガイドの実施へ委譲し、実装選択・契約ID・製品宣言pathをplan前に確定する。
-2. `references/distribute-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。依頼で許可された範囲の差分を確認し、設定済みcanonical callerを配置する。
+2. `references/deploy-ci-assets.guide.md`に従い、exact Release manifestから選択presetの必須閉包をfetchする。本ガイドの導入時runtimeを準備し、製品設定を`--set`で渡してplanを生成する。依頼で許可された範囲の差分を確認し、設定済みcanonical callerを配置する。
 3. apply結果をregistryの選択preset、copyable asset、固定 SHA Action bindingと依存閉包へ照合し、残る `requiredExtensions` を確認する。callerとpin companionの配置は手順2の確認済みplanのapplyだけで行い、固定本数や platform 数から必要ファイルを推測しない。
 4. 生成済みcallerの標準bundle IDまたは独自descriptor、Releaseとpackageの選択したAction bindingを確認し、残る `requiredExtensions` をproject側に用意する。依存閉包に属する copyable asset は改変しない。installerは手順1で確定した構成の接続を確認し、その後の組立・検証・製品READMEへのインストール手順追記をci-release-installerスキルへ委譲する。セットアップガイドの完了条件に対する実施結果と未確認事項を受け取り、委譲の記載だけで完了扱いにしない。
 5. 配置されたregistryの`workflowAssets`を読み返し、planで確認したdestinationと一致することを確認する。
@@ -242,14 +242,14 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
    entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `references/ci-adapter-bundles.reference.yml` を参照する。
    plan前にlanguage profile、toolchain、runner、保護branch、必要なtoolのexact版を選ぶ。選択した言語で使わないuvまたはcargo-auditの版と、主qualityで使わないjqの版は、対応する生成設定へJSON文字列の空値を渡す。
 
-2. `references/distribute-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
+2. `references/deploy-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
    planに必要なruntimeを、取得済みdistributionの`runtime/preset/`固定依存定義から
    `references/validate-ci-preset.guide.md`の「runtime準備」で
    `{project-root}/.a3-skills/ci-github/runtime/`へ準備する。runtimeはGit管理に含めない。
    その後、製品設定を`--set`で渡してplanを生成し、`create`／`reuse`／`update`と競合なしを
    確認してから、plan digestを明示してapplyする。
 
-3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`references/distribute-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
+3. 標準bundleの配置は不要。project設定を検査して参照bindingを確認する場合だけ、`references/deploy-ci-assets.guide.md`の追加取得手順で同一revisionのmaterializerを取得し、準備済みローカルruntimeで実行する。標準経路は外部スキル集合を読まず、`--source-root` を省略する。独自bundleの配置では指定が必要。
 
    ```bash
    ci_github_local_runtime="{project-root}/.a3-skills/ci-github/runtime"
@@ -325,7 +325,7 @@ JSON booleanの`false`、`<supplemental-release-asset-owner-contract>`へJSON文
 受け取らない。固定SHAの`ci-config-snapshot`は空値を拒否するため、無効値を空文字へ戻さない。
 
 対応スキルを同梱しないprojectは、planの`--set`で`<release-skills-config-path>`へJSON文字列`"__unset__"`を渡す。
-同梱する場合の値と準備は`references/release-project-skills.guide.md`に従う。
+同梱する場合の値と準備は`references/publish-project-skills.guide.md`に従う。
 補助Release assetとしてinstallerを配布するprojectは、ci-release-installerスキルへセットアップを委譲し、標準runtimeの適用範囲と固有実装の必要性を確認して、製品宣言・manifest・組立・製品READMEへのインストール手順追記を進める。確定した実装選択・契約ID・製品宣言pathをplanの`--set`で渡し、生成済みcallerの補助asset入力と照合する。workflow接続・権限・認証・公開とpreflightはCI側が担当する。
 
 非標準のowner adapterは既定の `owner-adapter` とconfig path `__unset__` を使い、

@@ -22,7 +22,7 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 ## 関連スキル
 
 - 必須: git, git-branch-strategy, post-artifact-review
-- 任意: github-actions, a3-lint
+- 任意: github-actions, a3-lint, dependency-selection
 
 ## 注意
 
@@ -40,14 +40,14 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 ### CIをセットアップ・更新したい、またはcanonical workflowを適用したい
 
 - 導入完了条件まで実施し、実施結果・未確認事項・ブロッカーを報告する。ガイドの紹介や構成提案だけで終了しない。
-- 参照: references/distribute-ci-assets.guide.md
+- 参照: references/deploy-ci-assets.guide.md
 - 参照: references/configure-ci-preset.guide.md
 - 参照: references/validate-ci-preset.guide.md
 
 ### 必要なCI資材だけを取得・更新・復旧したい
 
 - presetまたはassetを選択し、full commit SHA固定sourceから検証済みproject-local distributionへ取得する。
-- 参照: references/distribute-ci-assets.guide.md
+- 参照: references/deploy-ci-assets.guide.md
 
 ### 適用済みCIを監査したい
 
@@ -64,4 +64,4 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 ### 製品と対応スキルを同じReleaseで提供したい
 
 - 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。同梱する場合は、installerと独立したOS共通ZIPを同じReleaseへ含める。
-- 参照: references/release-project-skills.guide.md
+- 参照: references/publish-project-skills.guide.md

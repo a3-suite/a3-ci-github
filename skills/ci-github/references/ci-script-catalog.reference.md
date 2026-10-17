@@ -25,7 +25,7 @@
 共通処理のうち、変更範囲、quality adapter 実行、設定 snapshot、結果 summary、handoff integrity、release notes binding、version materialization は、選択した provider 固有スキルの Action binding が提供する。Action または外部再利用単位の入力・出力・停止条件は provider registry と提供元の公開契約を参照し、Action 化された共通 script を project へコピーしない。
 
 ### adapter bundle materializer（skill script）
-- 適用条件・取得・実行手順: `references/distribute-ci-assets.guide.md` と `references/configure-ci-preset.guide.md` の materializer 手順を参照する。
+- 適用条件・取得・実行手順: `references/deploy-ci-assets.guide.md` と `references/configure-ci-preset.guide.md` の materializer 手順を参照する。
 - 実行時パス: `assets/registry/ci-script-assets.yml` inventory の `ci-adapter-bundle-materializer` の `source`
 - 入出力・衝突時の扱い・配置境界: `references/ci-adapter-bundles.reference.yml` の `materialization` と `copyContract` を参照する。
 
