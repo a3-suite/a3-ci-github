@@ -40,7 +40,8 @@ describe('standard installer', () => {
         const distribution = path.join(f.root, 'provider');
         const source = surface === 'Action' ? 'actions/ci-release-supplemental-asset' : 'runtime/installer';
         fs.cpSync(path.join(repository, source, 'dist'), path.join(distribution, 'dist'), { recursive: true });
-        const assembly = path.join(distribution, 'dist/installer/src/assembly.py');
+        if (surface === 'CLI') fs.cpSync(path.join(repository, source, 'src'), path.join(distribution, 'src'), { recursive: true });
+        const assembly = path.join(distribution, surface === 'Action' ? 'dist/installer/src/assembly.py' : 'src/assembly.py');
         fs.writeFileSync(assembly, fs.readFileSync(assembly, 'utf8').replace('    raise SystemExit(main())',
           '    from unittest.mock import patch\n    with patch.object(Path, "rmdir", side_effect=OSError("synthetic-secret")):\n        raise SystemExit(main())'));
         if (primary) fs.writeFileSync(path.join(f.root, 'standard', `${archiveName}.sha256`), 'invalid');
@@ -142,7 +143,7 @@ describe('standard installer', () => {
       const result = spawnSync(python, ['-c', driver, path.join(repository, 'runtime/installer/src/assembly.py')], {
         env: { ...process.env, ...(process.platform === 'win32' ? { PSModulePath: path.join(f.root, 'unavailable-modules') } : {}) },
         cwd: f.root, encoding: 'utf8', input: JSON.stringify({ operation: 'build-platform', sourceRoot: f.root,
-          configPath: path.join(f.root, 'installer/assembly.json'), authority, releasePlatforms: [platform],
+          configPath: path.join(f.root, '.ci/installer/assembly.json'), authority, releasePlatforms: [platform],
           standardBuildRoot: path.join(f.root, 'standard'), outputDirectory: output,
           providerRevision: 'a'.repeat(40), assemblyId: 'native-boundary' }),
       });

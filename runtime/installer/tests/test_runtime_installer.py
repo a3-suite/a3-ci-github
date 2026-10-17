@@ -21,7 +21,7 @@ from pathlib import Path
 BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 BUILDER = BUNDLE_ROOT / "src/build-installer.py"
 SOURCE = BUNDLE_ROOT / "src/platform"
-TEMPLATE = BUNDLE_ROOT.parents[1] / "skills/installer/assets/examples/native-manifest.template.json"
+TEMPLATE = BUNDLE_ROOT.parents[1] / "skills/ci-release-installer/assets/examples/native-manifest.template.json"
 REVISION = "0123456789abcdef0123456789abcdef01234567"
 
 

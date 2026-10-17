@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { downloadVerifiedAsset, selectChecksumDigest, sha256Hex } from '../provision-core.js';
+import { downloadVerifiedAsset, provisionWriteState, selectChecksumDigest, sha256Hex } from '../provision-core.js';
+import { DiagnosticError } from '../../diagnostics/failure.mjs';
 
 describe('selectChecksumDigest(manifest, asset, failurePrefix)', () => {
   // evidence_role: supplemental
@@ -67,4 +68,24 @@ describe('downloadVerifiedAsset(request)', () => {
       }
     },
   );
+});
+
+describe('provisionWriteState(error)', () => {
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: provisionWriteState(error)
+  test('reports a write only for failures after the install directory or PATH file was written', () => {
+    // Arrange
+    const failures = [
+      new DiagnosticError('provision-failed: invalid exact version', { diagnostics: { stage: 'version-validation' } }),
+      new Error('download-failed'),
+      new DiagnosticError('provision-failed: install failed', { diagnostics: { stage: 'asset-install', rollback: 'removed' } }),
+      new DiagnosticError('provision-failed: install failed', { diagnostics: { stage: 'asset-install', rollback: 'cleanup-failed' } }),
+      new DiagnosticError('provision-failed: PATH update failed', { diagnostics: { stage: 'path-export', rollback: 'removed' } }),
+    ];
+    // Act
+    const states = failures.map((failure) => provisionWriteState(failure));
+    // Assert
+    expect(states).toStrictEqual(['not-started', 'not-started', 'rolled-back', 'temporary-install-may-exist', 'github-path-may-be-partial']);
+  });
 });

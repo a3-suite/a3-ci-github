@@ -77,7 +77,10 @@ export const readWorkflowSettings = ({ yaml, template, current, triggerExtension
   return { values, extensions };
 };
 
-export const renderWorkflowTemplate = ({ yaml, template, values = {}, references = {}, emptyAllowed = [], extensions = {} }) => {
+// carriedValues are settings read back from the previous template; ones the new template no longer declares were retired by
+// the provider and are dropped, while owner-supplied values must all be used.
+export const renderWorkflowTemplate = ({ yaml, template, values = {}, carriedValues = {}, references = {}, emptyAllowed = [], extensions = {} }) => {
+  const settings = { ...carriedValues, ...values };
   const used = new Set();
   const empty = new Set(emptyAllowed);
   const visit = (value, location = []) => {
@@ -88,11 +91,11 @@ export const renderWorkflowTemplate = ({ yaml, template, values = {}, references
       const resolve = (key) => {
         if (Object.hasOwn(references, key)) return references[key];
         used.add(key);
-        if (!Object.hasOwn(values, key)) {
+        if (!Object.hasOwn(settings, key)) {
           if (empty.has(key)) return '';
           throw new DiagnosticError(`workflow-template-setting-missing:${key}`);
         }
-        const setting = values[key];
+        const setting = settings[key];
         if (isMap(setting) || setting === null || setting === undefined
           || Array.isArray(setting) && typeof location.at(-1) !== 'number'
           || Array.isArray(setting) && (!setting.length || setting.some((item) => typeof item !== 'string' || !item))

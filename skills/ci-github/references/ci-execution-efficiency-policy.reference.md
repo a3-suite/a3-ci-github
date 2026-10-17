@@ -30,7 +30,7 @@
 - 事前判定を使用しても、公開直前の binding、非上書き検証、公開後観測は省略しない。
 
 ## platform 別検証のスコープ
-- OS選定、検査の同等性、代表OSと省略解除の判断は[OS・版の選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)に従う。
+- OS選定、検査の同等性、代表OSと省略解除の判断は[OS・版の選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)に従う。
 - 全 suite を全 platform で重複実行しない。platform 独立の検証は代表 platform で1回実行し、platform 固有の検証だけを追加する。
 - platform ごとの対象外は、適用条件と理由コードを伴う明示的な判定とし、暗黙の skip にしない。
 - 抑止しても required check の期待 record 集合を減らさない。期待 record は実行前に確定し、欠落を success に読み替えない。

@@ -10,7 +10,7 @@
 | `summary-path` | no | 出力先。空値は `GITHUB_STEP_SUMMARY` |
 | `evidence-path` | no | 今回の描画 bytes を保存する証跡ファイル。既定値は `.ci/ci-quality-summary.evidence.md` |
 
-各 row は `unit`、`execution`、`evidence` に加え、正規化済みの `result`／`collection`、またはGitHub jobの `rawResult`／boolean `applicable` のどちらか一方を持ちます。正規化済み `result` は `success`、`failed`、`blocked`、`判定不能`、`未実施`、`対象外` のいずれかで、`success` 以外は `reason` が必要です。raw resultは `success`、`failure`、`cancelled`、`skipped` をAction内で正規化し、未知値は`判定不能`として保持します。`applicable: false` はcallerが明示した対象外だけに使用し、理由を`reason`へ指定します。実行すべきrowが実行されなかった場合は`未実施`として扱います。
+各 row は `unit`、`execution`、`evidence` に加え、正規化済みの `result`／`collection`、またはGitHub jobの `rawResult`／boolean `applicable` のどちらか一方を持ちます。`evidence` を省略した row は、実行中の workflow run の URL を証跡にします。正規化済み `result` は `success`、`failed`、`blocked`、`判定不能`、`未実施`、`対象外` のいずれかで、`success` 以外は `reason` が必要です。raw resultは `success`、`failure`、`cancelled`、`skipped` をAction内で正規化し、未知値は`判定不能`として保持します。`applicable: false` はcallerが明示した対象外だけに使用し、理由を`reason`へ指定します。実行すべきrowが実行されなかった場合は`未実施`として扱います。
 
 ## 出力
 

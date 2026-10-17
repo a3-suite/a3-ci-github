@@ -6,8 +6,17 @@ test_maps:
     case_id: same-release-skills
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills exceed former individual limits and retain the aggregate size boundary"
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills exceed former individual limits"
+        check_refs: [handoff]
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills retain the aggregate size boundary"
         check_refs: [handoff, rejection]
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md before an unreadable later blob"
+        check_refs: [rejection]
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md even when the read-ahead batch fails"
+        check_refs: [rejection]
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages"
         check_refs: [handoff, digest, rejection]
@@ -85,4 +94,7 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-release-assembly failure boundary > source retains actionable input failure without private input values"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: "source entrypoint > missing build inventory retains the failing stage and exact missing entries"
         check_refs: [diagnostic-details]

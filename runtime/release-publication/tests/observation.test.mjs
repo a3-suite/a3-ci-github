@@ -1,4 +1,5 @@
 import { test, describe, expect, vi } from 'vitest';
+import { holdProcessOutput } from '../../../tests/support/hold-process-output.mjs';
 import fs from 'node:fs';
 import { fixture, remoteClient, standardPublicationTokenEnvironment, preObservationFixture } from './fixtures.mjs';
 import { GithubReadOnlyClient, observeBefore, verifyAfter, loadAssembly, draftVisibilityFailure, observeAssets } from '../observation.ts';
@@ -18,6 +19,8 @@ const publication = async (t, { realObservation = false } = {}) => {
   options.readbackPath = f.put('readback.json', readback);
   return { f, options, assembly, receipt, readback };
 };
+
+holdProcessOutput('stdout');
 
 describe("contract.ci-release-publication-verifier.outputs", { concurrent: true }, () => {
   describe("release-publication-evidence", () => {

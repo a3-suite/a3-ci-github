@@ -82,3 +82,9 @@ test_maps:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-gh-provisioner failure boundary > source retains actionable input failure without private input values"
         check_refs: [diagnostic-details]
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: "source entrypoint > Action rejects an invalid version as provisioning failure"
+        check_refs: [diagnostic-details]
+      - path: actions/ci-gh-provisioner/tests/provision.test.ts
+        symbol: "GitHub CLI provisioning > rejects a checksum mismatch without exposing a binary"
+        check_refs: [diagnostic-details]

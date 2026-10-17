@@ -3,6 +3,10 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmdirSync,
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Measured max 2.1s per call; the limit is about 5x that. A timeout means the call regressed:
+// investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 11000;
 
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
@@ -27,6 +31,7 @@ const execute = (command, args, options = {}) => spawnSync(command, args, {
   cwd: options.cwd,
   env: options.env,
   encoding: 'utf8',
+  timeout: spawnTimeoutMs,
 });
 const successful = (command, args, options = {}) => {
   const result = execute(command, args, options);

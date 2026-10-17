@@ -1,5 +1,6 @@
 import { completeFailure, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
 import { DiagnosticError } from '../diagnostics/failure.mjs';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -314,18 +315,34 @@ const validateProjectSettings = (root: string, settings: AdapterDescriptor['proj
   }
 };
 
-const copyWithoutOverwrite = (source: string, destination: string): 'copied' | 'reused' => {
+const digestOf = (bytes: Buffer): string => crypto.createHash('sha256').update(bytes).digest('hex');
+// Diagnostic-only reads must not replace the conflict failure they describe.
+const readDigest = (filePath: string): string => { try { return digestOf(fs.readFileSync(filePath)); } catch { return 'unavailable'; } };
+// Unvalidated inventory or CLI values are recorded only in their accepted shape.
+const managedPathValue = (value: unknown): string => typeof value === 'string' && /^\.ci\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(value) && !value.split('/').includes('..') ? value : 'invalid-format';
+const relativePathValue = (value: unknown): string => typeof value === 'string' && /^(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(value) && !value.split('/').includes('..') ? value : 'invalid-format';
+const sourceValue = (source: ResourceSource): string => { try { return relativePathValue(resourceDisplay(source)); } catch { return 'invalid-format'; } };
+const identifierValue = (value: unknown): string => typeof value === 'string' && /^[A-Za-z0-9._-]{1,200}$/.test(value) ? value : 'invalid-format';
+const assertSameContent = (source: string, destination: string, relativeDestination: string, stat: fs.Stats): void => {
+  const conflict = (expected: string, observed: string) => new DiagnosticError(`adapter-materializer-destination-conflict:${destination}`,
+    { diagnostics: { field: 'destination-content', destination: managedPathValue(relativeDestination), expected, observed } });
+  if (!stat.isFile()) throw conflict(readDigest(source), 'not-a-regular-file');
+  const sourceBytes = fs.readFileSync(source);
+  const destinationBytes = fs.readFileSync(destination);
+  if (!sourceBytes.equals(destinationBytes)) throw conflict(digestOf(sourceBytes), digestOf(destinationBytes));
+};
+
+const copyWithoutOverwrite = (source: string, destination: string, relativeDestination: string): 'copied' | 'reused' => {
   let destinationStat: fs.Stats | undefined;
   try {
     destinationStat = fs.lstatSync(destination);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-  if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destination}`);
+  if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destination}`,
+    { diagnostics: { field: 'destination-kind', destination: managedPathValue(relativeDestination), expected: 'regular-file-or-absent', observed: 'symbolic-link' } });
   if (destinationStat) {
-    if (!destinationStat.isFile() || !fs.readFileSync(source).equals(fs.readFileSync(destination))) {
-      throw new DiagnosticError(`adapter-materializer-destination-conflict:${destination}`);
-    }
+    assertSameContent(source, destination, relativeDestination, destinationStat);
     return 'reused';
   }
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -349,16 +366,18 @@ export type MaterializeAdapterBundleReport = {
   binding?: { action: 'ci-quality-adapter'; standardBundleId: string; sourcePath: string; sha256: string };
 };
 
-export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions): MaterializeAdapterBundleReport => {
+export const materializeAdapterBundle = (options: MaterializeAdapterBundleOptions, diagnostic = new FailureContext('ci-preset-materialization', 'materialize')): MaterializeAdapterBundleReport => {
+  diagnostic.at('bundle-resolution', { bundle: identifierValue(options.bundleId) });
   const targetRoot = path.resolve(options.targetRoot);
   const inventoryPath = resolveInside(REPOSITORY_ROOT, options.inventoryPath);
   const inventory = parseYaml(inventoryPath);
   const bundle = findBundle(inventory, options.bundleId);
+  diagnostic.at('bundle-resolution', { delivery: identifierValue(bundle.delivery ?? 'copy'), targetDescriptor: bundle.targetDescriptor === undefined ? 'none' : managedPathValue(bundle.targetDescriptor) });
   if (bundle.delivery === 'action') {
     const standard = standardQualityBundle(bundle.id);
     if (resourceSkill(bundle.source) !== undefined
       || standard.sourcePath !== resourceRelativePath(bundle.source, 'bundle-source')) {
-      throw new DiagnosticError('adapter-materializer-standard-provenance-mismatch');
+      throw new DiagnosticError('adapter-materializer-standard-provenance-mismatch', { diagnostics: { field: 'bundle-source', expected: standard.sourcePath, observed: sourceValue(bundle.source) } });
     }
     if (options.outputPath && fs.lstatSync(path.resolve(options.outputPath), { throwIfNoEntry: false })) throw new DiagnosticError('adapter-materializer-output-conflict');
     const descriptor = parseDescriptor(bundle.id, standard.descriptor);
@@ -368,11 +387,12 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
       binding: { action: 'ci-quality-adapter', standardBundleId: bundle.id, sourcePath: standard.sourcePath, sha256: standard.sha256 } };
   }
   if (bundle.delivery !== undefined) throw new DiagnosticError('adapter-materializer-delivery-invalid');
-  if (!options.sourceRoot) throw new DiagnosticError('adapter-materializer-source-root-required');
+  if (!options.sourceRoot) throw new DiagnosticError('adapter-materializer-source-root-required', { diagnostics: { field: 'source-root', expected: 'required-for-copied-bundle', observed: 'absent' } });
+  diagnostic.at('source-resolution', { source: sourceValue(bundle.source) });
   const sourceRoot = path.resolve(options.sourceRoot);
   const descriptorSource = resolveResource(sourceRoot, bundle.source);
   const descriptor = parseDescriptor(descriptorSource);
-  if (descriptor.id !== bundle.id) throw new DiagnosticError(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`);
+  if (descriptor.id !== bundle.id) throw new DiagnosticError(`adapter-materializer-descriptor-id-mismatch:${bundle.id}`, { diagnostics: { field: 'descriptor.id', expected: identifierValue(bundle.id), observed: identifierValue(descriptor.id) } });
   for (const command of [...descriptor.preparation, ...descriptor.commands, descriptor.toolchain.verify]) {
     if (unresolvedSourcePathReferences(targetRoot, command.command).length > 0 || command.args.some((arg) => unresolvedSourcePathReferences(targetRoot, arg).length > 0)) {
       throw new DiagnosticError('adapter-materializer-command-source-reference');
@@ -382,29 +402,30 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
 
   const plan: Array<{ source: ResourceSource; destination: string }> = [];
   for (const asset of descriptor.assets) {
-    if (!asset.destination.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-destination-invalid:${asset.destination}`);
+    if (!asset.destination.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-destination-invalid:${asset.destination}`, { diagnostics: { stage: 'destination-validation', field: 'asset.destination', asset: identifierValue(asset.id), expected: '.ci/-relative-path', observed: 'invalid-format' } });
     const sourceAsset = assets.get(asset.id);
     const assetSource = sourceAsset === undefined
       ? undefined
       : sourceAsset.source ?? (sourceAsset.entrypoints.length === 1 ? sourceAsset.entrypoints[0] : undefined);
     if (!sourceAsset || !sourceAsset.copyable || assetSource === undefined) {
-      throw new DiagnosticError(`adapter-materializer-source-asset-unavailable:${asset.id}`);
+      throw new DiagnosticError(`adapter-materializer-source-asset-unavailable:${asset.id}`, { diagnostics: { field: 'asset', asset: identifierValue(asset.id), expected: 'copyable-source-asset', observed: !sourceAsset ? 'unregistered' : !sourceAsset.copyable ? 'not-copyable' : 'source-ambiguous' } });
     }
     plan.push({
       source: assetSource,
       destination: asset.destination,
     });
   }
-  if (!bundle.targetDescriptor || !bundle.targetDescriptor.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`);
+  if (!bundle.targetDescriptor || !bundle.targetDescriptor.startsWith('.ci/')) throw new DiagnosticError(`adapter-materializer-target-descriptor-invalid:${bundle.targetDescriptor}`, { diagnostics: { stage: 'destination-validation', field: 'targetDescriptor', expected: '.ci/-relative-path', observed: bundle.targetDescriptor === undefined ? 'absent' : 'invalid-format' } });
   plan.push({ source: bundle.source, destination: bundle.targetDescriptor });
 
   const sourcePlan = plan.map((item) => {
     const sourcePath = resolveResource(sourceRoot, item.source);
     if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
-      throw new DiagnosticError(`adapter-materializer-source-missing:${resourceDisplay(item.source)}`);
+      throw new DiagnosticError(`adapter-materializer-source-missing:${resourceDisplay(item.source)}`, { diagnostics: { field: 'source', source: sourceValue(item.source), destination: managedPathValue(item.destination), expected: 'regular-file', observed: 'missing' } });
     }
     return { ...item, sourcePath };
   });
+  diagnostic.at('destination-validation', { destinations: sourcePlan.map((item) => managedPathValue(item.destination)) });
   if (options.outputPath) {
     const outputPath = path.resolve(options.outputPath);
     const conflict = [inventoryPath, ...sourcePlan.flatMap((item) => [
@@ -424,20 +445,20 @@ export const materializeAdapterBundle = (options: MaterializeAdapterBundleOption
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destinationPath}`);
-    if (destinationStat && (!destinationStat.isFile() || !fs.readFileSync(item.sourcePath).equals(fs.readFileSync(destinationPath)))) {
-      throw new DiagnosticError(`adapter-materializer-destination-conflict:${destinationPath}`);
-    }
+    if (destinationStat?.isSymbolicLink()) throw new DiagnosticError(`adapter-materializer-destination-symlink:${destinationPath}`,
+      { diagnostics: { field: 'destination-kind', destination: managedPathValue(item.destination), expected: 'regular-file-or-absent', observed: 'symbolic-link' } });
+    if (destinationStat) assertSameContent(item.sourcePath, destinationPath, item.destination, destinationStat);
     return { ...item, destinationPath, action: destinationStat ? 'reused' as const : 'copied' as const };
   });
   const destinations = new Set<string>();
   for (const item of preparedPlan) {
-    if (destinations.has(item.destinationPath)) throw new DiagnosticError(`adapter-materializer-destination-duplicate:${item.destination}`);
+    if (destinations.has(item.destinationPath)) throw new DiagnosticError(`adapter-materializer-destination-duplicate:${item.destination}`, { diagnostics: { field: 'destination', destination: managedPathValue(item.destination), expected: 'unique', observed: 'duplicate' } });
     destinations.add(item.destinationPath);
   }
   const files: MaterializeAdapterBundleReport['files'] = [];
   for (const item of preparedPlan) {
-    const action = copyWithoutOverwrite(item.sourcePath, item.destinationPath);
+    diagnostic.at('copy', { written: files.filter((file) => file.action === 'copied').map((file) => managedPathValue(file.destination)), current: managedPathValue(item.destination) });
+    const action = copyWithoutOverwrite(item.sourcePath, item.destinationPath, item.destination);
     files.push({ source: resourceDisplay(item.source), destination: item.destination, action });
   }
   return {
@@ -479,7 +500,7 @@ const main = (): void => {
     diagnostic.confirmed();
     diagnostic.at('materialization', { input: 'bundle-and-selection', output: 'managed-destinations' });
     diagnostic.writeState = 'managed-destinations-may-be-partial';
-    const report = materializeAdapterBundle({ ...options, outputPath });
+    const report = materializeAdapterBundle({ ...options, outputPath }, diagnostic);
     const output = `${JSON.stringify(report, null, 2)}\n`;
     if (outputPath) fs.writeFileSync(outputPath, output, 'utf8');
     else process.stdout.write(output);

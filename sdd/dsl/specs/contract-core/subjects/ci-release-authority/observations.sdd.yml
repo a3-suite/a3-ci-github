@@ -49,4 +49,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "decision・request provenance・tag/source・workflow binding・snapshot・notes approval・provider suitabilityの検証を区別し、対象repository/tag/source/run/approval identity、違反field、期待/観測identityまたは期限状態、provider HTTP相関情報を残す。notes本文やcredentialを出力しない。"
+          meaning: "decision・request provenance・tag/source・workflow binding・snapshot・notes approval・provider suitabilityの検証を区別し、対象repository/tag/source/run/approval identity、違反field、期待/観測identity、provider HTTP相関情報を残す。承認期限の判定はci-release-publication-controlが扱う。notes本文やcredentialを出力しない。"

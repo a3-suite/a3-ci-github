@@ -20,7 +20,7 @@ description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を
 
 ## 関連スキル
 
-- 必須: `project-skill-deploy` - 公開契約検証への委譲を含め、selectable skill の探索、差分検査、反映、stale と prune の判定を実行するため
+- 必須: project-skill-deploy
 
 ## 注意
 
@@ -33,7 +33,7 @@ description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を
 
 ### 公開 Agent Skill の配備差分を確認したい
 
-- `references/deploy-context.md` で source root、対象、配備先、非対象を固定し、差分検査を `project-skill-deploy` へ委譲する。
+- `references/deploy-context.reference.md` で source root、対象、配備先、非対象を固定し、差分検査を `project-skill-deploy` へ委譲する。
 - 返された更新、stale、管理外、prune 候補を、リポジトリ固有の判断で再分類せず報告する。
 
 ### 公開 Agent Skill を外部スキルルートへ反映したい
@@ -49,9 +49,9 @@ description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を
 
 ### コミットゲートから配備整合を確認したい
 
-- `references/deploy-context.md` に従い配備先をリポジトリのローカルGit設定に保存し、`commit-gate` スキルの `skill-deploy-parity` から公開root全体の差分検査、削除を伴わない反映、再検査を実行する。
+- `references/deploy-context.reference.md` に従い配備先をリポジトリのローカルGit設定に保存し、`commit-gate` スキルの `skill-deploy-parity` から公開root全体の差分検査、削除を伴わない反映、再検査を実行する。
 - 削除候補がある場合は自動反映せず、明示操作として報告する。
 
 ## 参照
 
-- [ci-github スキルデプロイコンテキスト](references/deploy-context.md)
+- [ci-github スキルデプロイコンテキスト](references/deploy-context.reference.md)

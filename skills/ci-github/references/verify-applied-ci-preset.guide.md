@@ -97,8 +97,8 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
    **標準比較工程**: シミュレーション後、整合判定の前に次を順に実施する。
 
    1. `latest-standard-alignment.comparisonScope`の各項目について標準と現状を対応付ける。「機械検証の選択」と「プロジェクト固有規則との競合確認」を実施し、既存ガイドとの一致だけを標準適合の根拠にしない。
-   2. `installer-distribution`が適用対象なら、GitHub Actions固有の公開経路と証拠を`delegation.ciInputs`へ加えてinstallerスキルへ一度だけ委譲する。ownerが返す固定providerの対応根拠、OS別の期待入口・現入口とREADMEコマンド、移行可否・維持理由を既存の差分表へ受け取る。同subjectの`publicationPathCheck`を実経路へ写像する。
-   3. 対象identity・比較基準・段階とowner結果の結合を確認し、`latest-standard-alignment`の比較完了条件を照合して差分の必要性と移行対象を判定する。installerについてはownerガイド`references/audit-installer-compliance.guide.md`の「標準比較の完了チェック」を満たす返却結果を受け取る。公開名の標準適合と宣言・README・生成物の一致を別々に確認した結果を必須とし、旧名の自己整合だけで完了としない。固定providerの対応根拠、OS別比較、README・配置の差分の必要性が欠ける場合はownerへ差し戻し、既存のstatus分類へ渡す。installerの判定をCI側で代替せず、修正の優先順位は`remediationPriority`に従う。
+   2. `installer-distribution`が適用対象なら、GitHub Actions固有の公開経路と証拠を`delegation.ciInputs`へ加えてci-release-installerスキルへ一度だけ委譲する。ownerが返す固定providerの対応根拠、OS別の期待入口・現入口とREADMEコマンド、移行可否・維持理由を既存の差分表へ受け取る。同subjectの`publicationPathCheck`を実経路へ写像する。
+   3. 対象identity・比較基準・段階とowner結果の結合を確認し、`latest-standard-alignment`の比較完了条件を照合して差分の必要性と移行対象を判定する。installerについてはci-release-installerスキルのインストーラ監査にある標準比較の完了チェックを満たす返却結果を受け取る。公開名の標準適合と宣言・README・生成物の一致を別々に確認した結果を必須とし、旧名の自己整合だけで完了としない。固定providerの対応根拠、OS別比較、README・配置の差分の必要性が欠ける場合はownerへ差し戻し、既存のstatus分類へ渡す。installerの判定をCI側で代替せず、修正の優先順位は`remediationPriority`に従う。
 
 6. 構成監査では契約対象と実行可能な検査導線の対応を確認する。証跡監査を選択した場合は、`references/verify-applied-ci-assets.guide.md`の副作用判定を先に適用し、language adapterと`.ci` entrypointの代表正常系、主要失敗、境界条件の実行結果を取得または再利用する。実行時は入力、出力、終了状態、証跡と管理対象資産の状態不変を確認する。管理対象資産／外部の永続状態への書き込みが必要、または副作用不明ならread-onlyでは実行せず、必須操作の開始・継続不能を証跡監査の`statusClassification`へ渡す。未選択の実行確認は未依頼として記録する。
 
@@ -152,7 +152,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
 
 ## 最終結果の独立レビュー
 
-監査・監査後修正の最終報告前に、検証とセルフレビューを終えた対象をpost-artifact-reviewへ「独立レビュー必須」として渡す。比較基準、対象状態、今回の変更集合または監査範囲、選択段階、workflow・`.ci/`・READMEの現物と根拠、対象のproject固有規則と競合の解決結果を固定する。installerが適用対象ならownerガイド`references/audit-installer-compliance.guide.md`の「最終結果の独立レビュー」の入力を含め、主工程から一度だけ実施する。
+監査・監査後修正の最終報告前に、検証とセルフレビューを終えた対象をpost-artifact-reviewへ「独立レビュー必須」として渡す。比較基準、対象状態、今回の変更集合または監査範囲、選択段階、workflow・`.ci/`・READMEの現物と根拠、対象のproject固有規則と競合の解決結果を固定する。installerが適用対象ならci-release-installerスキルのインストーラ監査にある最終結果の独立レビューの入力を含め、主工程から一度だけ実施する。
 
 監査そのものは主工程で実施し、独立レビューを監査の代替にしない。レビューが未完了なら最終結果の完了報告・デプロイへ進まず、その事実を報告する。結果の再検証・採否はpost-artifact-reviewの委譲先に従ってメインが判断する。監査の完了・適合statusは共通監査契約に従い、レビュー結果や未依頼の実行証跡で別のstatus規則を追加しない。
 
@@ -170,4 +170,4 @@ preflight 後の GitHub Actions 固有の必須確認を上表の一つの共通
 
 ## 製品スキルの同時Release
 
-まず`references/release-project-skills.guide.md`の「同梱の選択」を確認する。公開スキルがある場合は製品ownerの同梱・未同梱の選択、未同梱理由、CI設定とREADMEとの一致を既存の監査レポートへ記録する。選択未確認は未同梱へ読み替えない。同梱する場合だけ同ガイドの構成・証跡監査を実施する。公開宣言、固定source、禁止資材の除外、必須file、installerとの併用時の各owner証跡、READMEの同じ製品Releaseへの案内を比較する。未選択の製品にZIPや外部配備を要求しない。
+まず`references/publish-project-skills.guide.md`の「同梱の選択」を確認する。公開スキルがある場合は製品ownerの同梱・未同梱の選択、未同梱理由、CI設定とREADMEとの一致を既存の監査レポートへ記録する。選択未確認は未同梱へ読み替えない。同梱する場合だけ同ガイドの構成・証跡監査を実施する。公開宣言、固定source、禁止資材の除外、必須file、installerとの併用時の各owner証跡、READMEの同じ製品Releaseへの案内を比較する。未選択の製品にZIPや外部配備を要求しない。

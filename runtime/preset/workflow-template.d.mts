@@ -5,4 +5,4 @@ interface YamlRuntime {
   stringify(value: unknown): string;
 }
 export function readWorkflowSettings(options: { yaml: YamlRuntime; template: string; current: string; triggerExtensions?: Record<string, string> }): { values: Record<string, unknown>; extensions: Record<string, unknown> };
-export function renderWorkflowTemplate(options: { yaml: YamlRuntime; template: string; values?: Record<string, unknown>; references?: Record<string, string>; emptyAllowed?: string[]; extensions?: Record<string, unknown> }): string;
+export function renderWorkflowTemplate(options: { yaml: YamlRuntime; template: string; values?: Record<string, unknown>; carriedValues?: Record<string, unknown>; references?: Record<string, string>; emptyAllowed?: string[]; extensions?: Record<string, unknown> }): string;

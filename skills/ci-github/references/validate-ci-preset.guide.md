@@ -8,7 +8,7 @@
 ## 入力
 
 - 監査モード
-- `{ci-github-source-root}`: `references/distribute-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
+- `{ci-github-source-root}`: `references/deploy-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
 - 任意の `{skill-collection-root}`: 外部 language skill の資材を参照する adapter bundle を使う場合に指定するスキル集合 root。標準bundleと外部資材を参照しない構成では省略する。
 - 導入先 project root
 - `{project-root}/.a3-skills/ci-github/` のスキル専用ローカル状態 root
@@ -86,7 +86,7 @@ node "{ci-github-source-root}/runtime/preset/run-validate-ci-preset.mjs" \
 
 ## 検査
 
-OS・版と共通検査の採否は[選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)に従って意味監査で確認する。以下のpreflight成功だけで、その判断記録や当日のサポート状況を確認済みにしない。
+OS・版と共通検査の採否は[選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)に従って意味監査で確認する。以下のpreflight成功だけで、その判断記録や当日のサポート状況を確認済みにしない。
 
 - registry の canonical destination から導入済みプリセットを検出する。
 - 検出が0件、指定したプリセットが不在、またはregistryが定義する必須workflowが欠けている場合は失敗する。packageではconsumerにrequestとcallerの2本を配置し、providerのpreparationとpublication calleeは検証用参照として扱う。
@@ -181,7 +181,5 @@ a3-lint lint "{project-root}/.ci/README.md" \
 ```
 
 rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。YAML規則はproviderの正式能力`fact:yaml_structure:v1`を必須とする。対応公開版は未確定であり、0.7.0は非対応。公開版切替までは対応能力を実測済みの開発バイナリでローカル検証する。共有helperは検証済み配布rootからlibとして参照し、rule収集から除外する。JS/TS用CLI規則とMarkdown規則をYAML実行へ混在させない。
-
-`.github/`と`.ci/`を無条件にCI assetとみなすinventoryは、非CIファイルを構造的にfalse positiveとして候補化する根本原因である。provider静的検証設定の認識はその最小の緩和であり、inventory scopeの限定または認識集合の再編は別契約で扱う。
 
 Package公開もconsumerにはrequestとcallerだけを配置し、publication calleeは `packagePublicationReusableWorkflow` の登録済み固定参照・公開状態・宣言入力・明示secret・権限と内部Actionを検査する。provider calleeはconsumerの実ファイルとして再読込しない。

@@ -428,6 +428,8 @@ const validateActionCoverage = (
   const { registry, report } = context;
   const installedWorkflowIds = new Set(assets.map((asset) => asset.id));
   if (context.parsed.has(`.github/workflows/${preset.id}.yml`)) installedWorkflowIds.add(preset.id);
+  // The package publication caller always runs the fixed preparation workflow (inspectPackagePreparation).
+  if (installedWorkflowIds.has('package-publication-caller')) installedWorkflowIds.add('package-preparation');
   validateActionAvailability(context.root, preset.id, installedWorkflowIds, context.parsed, registry, report);
   const expectedActions = new Set(registry.actionTargets
     .filter((target) => target.workflows.some((workflow) => installedWorkflowIds.has(workflow)))

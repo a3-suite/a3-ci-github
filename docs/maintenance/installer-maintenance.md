@@ -2,7 +2,7 @@
 
 ## 配置と正本
 
-installer はこのリポジトリの機能として保守します。公開仕様と利用方法は `skills/installer/references/`、プロジェクトの保証と検証対応は `sdd/` を参照します。この文書はプロジェクト固有の配置・構築・検証方法だけを扱います。
+installer はこのリポジトリの機能として保守します。公開仕様と利用方法は `skills/ci-release-installer/references/`、プロジェクトの保証と検証対応は `sdd/` を参照します。この文書はプロジェクト固有の配置・構築・検証方法だけを扱います。
 
 | 資材 | 保守場所 |
 | --- | --- |
@@ -11,11 +11,11 @@ installer はこのリポジトリの機能として保守します。公開仕�
 | Actionの入力・出力、runnerとの接続 | `actions/ci-release-supplemental-asset/src/` |
 | provider回帰、Python計測設定 | `runtime/installer/tests/` |
 | Action／CLI境界の統合テスト | `actions/ci-release-supplemental-asset/tests/` |
-| 利用入口、portable public contract、製品宣言例 | `skills/installer/` |
+| 利用入口、portable public contract、製品宣言例 | `skills/ci-release-installer/` |
 
 公開例を入力にするテストは配布資産の検証として扱います。現在の native manifest template は builder・runtime・Action の共通回帰でも利用し、別の内部fixtureへ同じ定義を複製しません。内部専用の値・障害注入はテスト側で作ります。
 
-公開ガイド・サンプルを変更するときは、[宣言とインストール先の標準配置](../../skills/installer/references/define-installer.guide.md#製品宣言の標準配置)、[製品READMEの記載範囲](../../skills/installer/references/use-standard-installer.guide.md#製品readmeへのインストール手順追記)、[標準比較の完了チェック](../../skills/installer/references/audit-installer-compliance.guide.md#標準比較の完了チェック)との参照整合を確認します。CI監査はinstaller ownerの返却結果を受け取り、同じ判断規則をCI側に複製しません。
+公開ガイド・サンプルを変更するときは、[宣言とインストール先の標準配置](../../skills/ci-release-installer/references/define-installer.guide.md#製品宣言の標準配置)、[製品READMEの記載範囲](../../skills/ci-release-installer/references/use-standard-installer.guide.md#製品readmeへのインストール手順追記)、[標準比較の完了チェック](../../skills/ci-release-installer/references/audit-installer-compliance.guide.md#標準比較の完了チェック)との参照整合を確認します。CI監査はinstaller ownerの返却結果を受け取り、同じ判断規則をCI側に複製しません。
 
 ## 実装方式
 
@@ -25,9 +25,9 @@ Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/s
 
 入力固定とAction／CLI境界はTypeScriptです。候補組立とprofile検証はPython 3.11以上を使います。既存builderのarchive処理・source正規化・checksum・確定処理を同じPython processから利用でき、TypeScriptへ同じ処理を再実装せずに実候補を検証できるため、この部分を[Action構築方針](action-construction.md)の例外とします。Python runtimeに外部package依存はありません。新規の言語非依存な制御処理一般への例外ではありません。
 
-ActionとCLIのPython payloadは同じ `src/` から生成します。利用側の製品宣言・manifest以外に共通実装・テストのGit管理を要求しません。runnerのPython、Git、OS toolchainの前提は [Action README](../../actions/ci-release-supplemental-asset/README.md) に従います。
+ActionとCLIは同じ `src/` のPython payloadを正本とします。利用側の製品宣言・manifest以外に共通実装・テストのGit管理を要求しません。runnerのPython、Git、OS toolchainの前提は [Action README](../../actions/ci-release-supplemental-asset/README.md) に従います。
 
-共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
+共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/ci-release-installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
 
 組立とcleanupが併発する失敗の診断は[観測契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/observations.sdd.yml)に従います。Pythonの失敗からNodeのsanitizerを経てAction／CLIの最終ログへ届く経路を、配布物への障害注入テストで確認します。
 
@@ -55,7 +55,7 @@ a3-lint lint runtime/installer/src runtime/installer/tests --lang python --frame
   --add-rule-set-lib "$A3_SKILLS_ROOT/python/assets/a3-lint/shared" --format json
 ```
 
-配布生成はAction bundle、CLI bundleと各Python／OS payloadを更新します。生成先の `dist/` を直接保守せず、source変更後に再生成します。公開スキルの配備だけではこの配布物は更新されません。
+配布生成はAction bundle、CLI bundleと、Action bundleに同梱するPython／OS payloadを更新します。CLIは `runtime/installer/src` のpayloadを直接使います。生成先の `dist/` を直接保守せず、source変更後に再生成します。公開スキルの配備だけではこの配布物は更新されません。
 
 ## Pythonソース計測
 

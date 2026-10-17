@@ -3,7 +3,7 @@
   "inputs": {
     "summary-json": {
       "required": true,
-      "description": "Quality result JSON containing a non-empty jobs or tests array."
+      "description": "Quality result JSON containing a non-empty jobs or tests array. Rows without evidence use this workflow run URL."
     },
     "summary-path": {
       "required": false,

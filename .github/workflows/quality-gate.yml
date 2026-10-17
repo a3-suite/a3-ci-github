@@ -2,7 +2,8 @@ name: quality-gate
 
 on:
   push:
-    branches: [main, develop, 'release/**', 'hotfix/**']
+    # Release sources are verified on main after integration; a hotfix tip may be published first, so its exact SHA is verified here.
+    branches: [main, develop, 'hotfix/**']
   pull_request:
     branches: [main, develop, 'release/**', 'hotfix/**']
   workflow_dispatch:
@@ -22,6 +23,9 @@ concurrency:
 env:
   CI_GH_VERSION: '2.80.0'
 
+# Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
+# runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
+# available, and re-verify through this repository's quality-gate.
 jobs:
   contract-linux:
     name: CI Action contract / Linux
@@ -78,6 +82,9 @@ jobs:
           runtime/preset/tests/preset-assurance-contract.test.mjs
           tests/repository-managed-source-integrity.test.mjs
           tests/cli-specification.test.mjs
+          tests/control-checkout.test.mjs
+          tests/release-token-capability-probe.test.mjs
+          tests/shared-quality-checks.test.mjs
 
       - name: Verify README Action catalog
         shell: bash
@@ -128,16 +135,9 @@ jobs:
           runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
           runtime/path/tests/same-file-core.test.mjs
           runtime/platform/tests/platform-manifest-core.test.mjs
-          runtime/vitest/tests/vitest-summary-core.test.mjs
-
-      - name: Test Vitest summary CLI and conformance
-        shell: bash
-        env:
-          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtime/preset
-        run: |
-          npm test -- \
-            runtime/adapter/tests/vitest-test-summary.test.mjs \
-            runtime/adapter/tests/vitest-summary-conformance.test.mjs
+          runtime/platform/tests/source-text.test.mjs
+          runtime/vitest/tests/vitest-report-core.test.mjs
+          runtime/workflow-run/tests/request-trigger.test.ts
 
       - name: Test quality toolchain Action contracts
         shell: bash
@@ -145,6 +145,11 @@ jobs:
           npm test --
           actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
+          actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
+
+      - name: Test repository commit gate scripts
+        shell: bash
+        run: python3 -m unittest discover -s .agents/skills/commit-gate/_build/tests -v
 
       - name: Verify all bundled Action sources
         shell: bash
@@ -420,29 +425,6 @@ jobs:
           test "$INVALID_STATUS" = failed
           test "$INVALID_EXIT_CODE" -ne 0
 
-      - name: Prepare Vitest report fixture
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf '%s' '{"numTotalTests":2,"numPassedTests":2,"numFailedTests":0,"numPendingTests":0,"numTodoTests":0,"success":true}' > .ci/vitest.json
-
-      - name: Render Vitest summary
-        id: vitest
-        uses: ./actions/ci-vitest-summary
-        with:
-          report-json: .ci/vitest.json
-          label: hosted
-
-      - name: Verify Vitest summary outputs
-        env:
-          STATUS: ${{ steps.vitest.outputs.status }}
-          COLLECTION: ${{ steps.vitest.outputs.collection }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$STATUS" = passed
-          test "$COLLECTION" = complete
-
       - name: Prepare Linux installer transport acceptance
         id: installer-handoff
         env:
@@ -538,7 +520,7 @@ jobs:
       - name: Set up installer verification Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Set up installer boundary test Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -569,6 +551,20 @@ jobs:
           name: installer-handoff-${{ runner.os }}
           path: tests/tmp/installer-acceptance
           if-no-files-found: error
+
+  installer-windows-native:
+    name: Installer native safety / Windows
+    runs-on: windows-2025
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up installer verification Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.11'
 
       - name: Test installer builder on Windows
         shell: pwsh
@@ -611,7 +607,7 @@ jobs:
       - name: Set up installer verification Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Set up installer boundary test Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -667,7 +663,7 @@ jobs:
       - name: Set up installer transport Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Set up installer transport Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -707,7 +703,7 @@ jobs:
   contract:
     name: CI Action contract / hosted
     if: always()
-    needs: [contract-linux, installer-linux, rust-windows, installer-windows, installer-macos, installer-handoff]
+    needs: [contract-linux, installer-linux, rust-windows, installer-windows, installer-windows-native, installer-macos, installer-handoff]
     runs-on: ubuntu-24.04
     steps:
       - name: Require all platform contract evidence
@@ -716,6 +712,7 @@ jobs:
           INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}
           WINDOWS_RESULT: ${{ needs.rust-windows.result }}
           INSTALLER_WINDOWS_RESULT: ${{ needs.installer-windows.result }}
+          INSTALLER_WINDOWS_NATIVE_RESULT: ${{ needs.installer-windows-native.result }}
           INSTALLER_MACOS_RESULT: ${{ needs.installer-macos.result }}
           INSTALLER_HANDOFF_RESULT: ${{ needs.installer-handoff.result }}
         shell: bash
@@ -724,6 +721,7 @@ jobs:
           test "$INSTALLER_LINUX_RESULT" = success
           test "$WINDOWS_RESULT" = success
           test "$INSTALLER_WINDOWS_RESULT" = success
+          test "$INSTALLER_WINDOWS_NATIVE_RESULT" = success
           test "$INSTALLER_MACOS_RESULT" = success
           test "$INSTALLER_HANDOFF_RESULT" = success
 

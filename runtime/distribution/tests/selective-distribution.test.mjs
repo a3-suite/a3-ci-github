@@ -27,7 +27,7 @@ const fixtureSettings = {
   'protected-branch': ['main'], 'versioned-runner': 'ubuntu-24.04', 'language-profile': 'typescript',
   'toolchain-version': '24.0.0', 'uv-version': '', 'cargo-audit-version': '', 'cargo-manifest-path': '',
   'cargo-lock-path': '', 'optional-jq-version': '', 'standard-bundle-id': 'typescript-npm-quality',
-  'adapter-descriptor': '', 'release-tag-pattern': 'v*', 'sha256sum-version': '9.7',
+  'adapter-descriptor': '', 'release-tag-pattern': 'v*',
   'platform-manifest': '.ci/platform-manifest.yml', 'gh-version': '2.80.0', 'jq-version': '1.7.1',
   'release-implementation': 'rust-cli', 'release-binary-name': '', 'release-asset-prefix': '',
   'supplemental-release-asset-enabled': false, 'supplemental-release-asset-owner-contract': 'owner-v2',
@@ -49,54 +49,59 @@ const planDistributionApplication = (options) => {
 const fixtureVersion = '1.2.3';
 const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
-fs.mkdirSync(temporaryRoot, { recursive: true });
-const committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
-for (const relative of [
-  'VERSION',
-  '.github/workflows/ci-quality.yml',
-  '.github/workflows/ci-quality-platforms.yml',
-  '.github/workflows/ci-package-preparation.yml',
-  '.github/workflows/ci-release-publication.yml',
-  '.github/workflows/ci-package-publication.yml',
-  'skills/ci-github',
-  'skills/installer',
-  'runtime/installer',
-  'runtime/release-publication/selection.ts',
-  'workflows',
-  'runtime/preset',
-  'runtime/platform',
-  'runtime/release-publication/evidence.schema.json',
-  'runtime/adapter',
-  'runtime/path',
-  'runtime/vitest',
-  'runtime/distribution',
-  'runtime/diagnostics',
-  'lint-rules/a3-lint',
-]) {
-  const source = path.join(repositoryRoot, relative);
-  const destination = path.join(committedSourceRoot, relative);
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.cpSync(source, destination, {
-    recursive: true,
-    filter: (candidate) => !path.relative(source, candidate).split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)),
-  });
-}
-fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
+// Created in beforeAll, not at import: collection-only runs (such as resolve-test-targets) never run afterAll,
+// so a module-level copy of the source tree would be left behind on every such run.
+let committedSourceRoot;
+let sourceRevision;
 const runFixtureGit = (args) => {
-  const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8' });
+  const result = spawnSync('git', args, { cwd: committedSourceRoot, encoding: 'utf8', timeout: 5000 });
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
 };
-runFixtureGit(['init', '-q']);
-runFixtureGit(['config', 'user.name', 'Distribution Test']);
-runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
-runFixtureGit(['add', '--all']);
-runFixtureGit(['commit', '-qm', 'fixture']);
-const sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
+beforeAll(() => {
+  fs.mkdirSync(temporaryRoot, { recursive: true });
+  committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
+  for (const relative of [
+    'VERSION',
+    '.github/workflows/ci-quality.yml',
+    '.github/workflows/ci-quality-platforms.yml',
+    '.github/workflows/ci-package-preparation.yml',
+    '.github/workflows/ci-release-publication.yml',
+    '.github/workflows/ci-package-publication.yml',
+    'skills/ci-github',
+    'skills/ci-release-installer',
+    'runtime/installer',
+    'runtime/release-publication/selection.ts',
+    'workflows',
+    'runtime/preset',
+    'runtime/platform',
+    'runtime/release-publication/evidence.schema.json',
+    'runtime/adapter',
+    'runtime/path',
+    'runtime/distribution',
+    'runtime/diagnostics',
+    'lint-rules/a3-lint',
+  ]) {
+    const source = path.join(repositoryRoot, relative);
+    const destination = path.join(committedSourceRoot, relative);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.cpSync(source, destination, {
+      recursive: true,
+      filter: (candidate) => !path.relative(source, candidate).split(path.sep).some((part) => ['node_modules', '__pycache__', 'tmp'].includes(part)),
+    });
+  }
+  fs.writeFileSync(path.join(committedSourceRoot, 'VERSION'), `${fixtureVersion}\n`);
+  runFixtureGit(['init', '-q']);
+  runFixtureGit(['config', 'user.name', 'Distribution Test']);
+  runFixtureGit(['config', 'user.email', 'distribution-test@example.invalid']);
+  runFixtureGit(['add', '--all']);
+  runFixtureGit(['commit', '-qm', 'fixture']);
+  sourceRevision = runFixtureGit(['rev-parse', 'HEAD']);
+});
 let baselineRoot;
 afterAll(() => {
   if (baselineRoot) fs.rmSync(baselineRoot, { recursive: true, force: true });
-  fs.rmSync(committedSourceRoot, { recursive: true, force: true });
+  if (committedSourceRoot) fs.rmSync(committedSourceRoot, { recursive: true, force: true });
 });
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -375,12 +380,12 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(outputConflict.stderr).toMatch(/distribution-release-output-exists/);
         // Arrange
         const linkedSource = path.join(root, 'linked-source');
-        const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8' });
+        const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8', timeout: 5000 });
         expect(clone.status, clone.stderr).toBe(0);
         const linkedAsset = 'lint-rules/a3-lint/linked.lua';
         fs.symlinkSync('ci_github_workflow_external_action_full_sha.lua', path.join(linkedSource, linkedAsset));
         const fixtureGit = (args) => {
-          const result = spawnSync('git', args, { cwd: linkedSource, encoding: 'utf8' });
+          const result = spawnSync('git', args, { cwd: linkedSource, encoding: 'utf8', timeout: 5000 });
           expect(result.status, result.stderr).toBe(0);
           return result.stdout.trim();
         };
@@ -502,6 +507,33 @@ describe("contract.ci-selective-distribution.selection", () => {
           ['runtime.preset', 'registry.ci-github', 'runtime.diagnostics'],
         );
         expect(directAssets.map((asset) => asset.id)).toStrictEqual(['registry.ci-github', 'runtime.diagnostics', 'runtime.preset']);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.selection
+    test('selection rejection retains the rejected request and missing dependency as failure details', async () => {
+      await withFixture('a3-ci-github-distribution-selection-diagnostic-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+        const cases = [
+          [['--preset', 'private-preset-value'], 'distribution-preset-unknown', { field: 'preset', expected: 'registered-preset', observed: 'unregistered' }],
+          [['--asset', 'runtime.preset'], 'distribution-dependency-missing', { field: 'runtime.preset.dependencies', expected: 'registry.ci-github', observed: 'not-selected' }],
+          [['--asset', 'private-asset-value'], 'distribution-asset-unknown', { field: 'asset', expected: 'registered-asset', observed: 'unregistered' }],
+        ];
+        for (const [selection, reason, comparison] of cases) {
+          const result = spawnSync(process.execPath, [
+            cli, 'fetch', '--manifest', release.manifestPath, '--source-root', repositoryRoot, ...selection, '--repo-root', projectRoot,
+          ], { encoding: 'utf8' });
+          expect(result.status, result.stderr).toBe(2);
+          const evidence = JSON.parse(result.stderr).failureEvidence;
+          expect(evidence.classification).toMatchObject({ subject: 'ci-selective-distribution', operation: 'fetch', stage: 'selection', reason });
+          expect(evidence.comparison).toStrictEqual(comparison);
+          expect(evidence['execution-state'].write).toBe('not-started');
+          expect(fs.readdirSync(projectRoot)).toEqual([]);
+          expect(result.stdout + result.stderr).not.toMatch(/private-(?:preset|asset)-value/);
+        }
       });
     });
   });
@@ -733,6 +765,8 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
       expect(extracted.values['versioned-runner']).toBe(values['versioned-runner']);
       expect(extracted.values['quality-workflow-sha']).toBeUndefined();
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, unknown: 'x' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-unknown/);
+      // A setting carried from the previous template but retired from the new one is dropped instead of blocking the update.
+      expect(yaml.parse(renderWorkflowTemplate({ yaml, template, references, values, carriedValues: { 'retired-setting': '', 'feature-enabled': true }, emptyAllowed: ['optional-value'] })).jobs.quality.with.enabled).toBe(false);
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, 'feature-enabled': 'false' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-invalid/);
       expect(() => renderWorkflowTemplate({ yaml, template, references, values: {}, emptyAllowed: ['optional-value'] })).toThrow(/setting-missing/);
       const drifted = structuredClone(observed);
@@ -1424,7 +1458,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           });
           expect(merged.action).toBe('merged');
           expect(merged.selectedAssets).toStrictEqual(['lint.github-actions', 'registry.ci-github']);
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/references/ci-distribution-assets.reference.yml'))).toBeTruthy();
+          expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/assets/registry/ci-distribution-assets.yml'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_workflow_name_matches_file.lua'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/shared/ci_github_yaml.lua'))).toBeTruthy();
           expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_action_runtime_contract.lua'))).toBe(false);
@@ -1740,7 +1774,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const beforeFiles = fs.readdirSync(adapterProject);
         run(`import assert from 'node:assert/strict';
       import { materializeAdapterBundle } from ${moduleUrl(merged.distributionRoot, 'runtime/adapter/materialize-adapter-bundle.ts')};
-      const result = materializeAdapterBundle({ sourceRoot: ${JSON.stringify(adapterProject)}, inventoryPath: 'skills/ci-github/references/ci-script-assets.reference.yml', bundleId: 'typescript-npm-quality', targetRoot: ${JSON.stringify(adapterProject)} });
+      const result = materializeAdapterBundle({ sourceRoot: ${JSON.stringify(adapterProject)}, inventoryPath: 'skills/ci-github/assets/registry/ci-script-assets.yml', bundleId: 'typescript-npm-quality', targetRoot: ${JSON.stringify(adapterProject)} });
       assert.deepEqual(result.files, []);
       assert.equal(result.binding.standardBundleId, 'typescript-npm-quality');`);
         expect(fs.readdirSync(adapterProject)).toStrictEqual(beforeFiles);

@@ -9,6 +9,22 @@ verifications:
         intent_id: detailed-diagnostics-outputs
         input: {scenario: rejected-failed-or-unresolved-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+      - id: request-trigger-accepted
+        intent_id: request-trigger-verified
+        input:
+          operation: verify-trigger
+          workflow-run: successful-default-branch-dispatch-of-release-publication-request
+        checks:
+          - id: check-request-trigger-status
+            guarantee_ref: publication-control-status-produced
+      - id: request-trigger-rejected
+        intent_id: publication-control-rejected
+        input:
+          operation: verify-trigger
+          workflow-run: non-default-branch
+        checks:
+          - id: check-request-trigger-failure
+            guarantee_ref: publication-control-failure-propagated
       - id: publication-request-round-trip
         intent_id: publication-request-binding
         input:

@@ -111,7 +111,7 @@ class StandardAssemblyTest(unittest.TestCase):
                     value = {**shared, "platforms": selected}
                     config_path.write_text(json.dumps(value))
                     self.assertEqual(assembly.config_for({"configPath": str(config_path)}), value)
-            example = json.loads((ROOT.parents[1] / "skills/installer/assets/examples/standard-assembly.example.json").read_text(encoding="utf-8"))
+            example = json.loads((ROOT.parents[1] / "skills/ci-release-installer/assets/examples/standard-assembly.example.json").read_text(encoding="utf-8"))
             config_path.write_text(json.dumps(example))
             self.assertEqual(assembly.config_for({"configPath": str(config_path)}), example)
             for urls in [{}, {"linux-x86_64": "https://example.invalid/linux.sh"}, {**shared["sharedWrapper"]["deliveryUrls"], "windows-x86_64": "https://example.invalid/windows.ps1"}]:

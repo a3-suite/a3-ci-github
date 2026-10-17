@@ -112,6 +112,11 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
       // Assert
       expect(mismatch.status).toBe(1);
       expect(mismatch.stderr).toMatch(/jq-version-mismatch: expected=1.6 actual=1.7/);
+      const line = mismatch.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+      expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+        classification: { subject: 'ci-github-toolchain-verifier', stage: 'tool-version-validation' },
+        comparison: { field: 'jq-version', expected: '1.6', observed: '1.7' },
+      });
     }));
   });
 });

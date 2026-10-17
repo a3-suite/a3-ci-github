@@ -36,7 +36,7 @@
 確定済み実装SHAへの接続・公開準備コミットでは、事前tagを要求しない候補検査を実行する。
 
 ```sh
-node runtime/repository/check-provider-references.mjs --staged --candidate --contracts
+node {project-root}/runtime/repository/check-provider-references.mjs --staged --candidate --contracts
 ```
 
 実装準備コミットでは、既存の固定参照に対する検査を実行する。対象版の実装資材とdistの検証は別途実行し、既存固定参照の成功を新しい実装の成功と取り違えない。
@@ -44,23 +44,23 @@ node runtime/repository/check-provider-references.mjs --staged --candidate --con
 `--preparation`は既存の実装SHAの包含・版・実行資材・固定参照先の契約を検証し、最終tagを要求しない。成功時も`preparationOnly: true`、`implementationBindingStatus: unverified`を返す。新しいstaged実装の資材同一性と接続は、実装コミット確定後の接続候補検査で確認する。
 
 ```sh
-node runtime/repository/check-provider-references.mjs --staged --contracts --preparation
+node {project-root}/runtime/repository/check-provider-references.mjs --staged --contracts --preparation
 ```
 
-実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)を参照する。
+実行するゲート本体と依存がstaged snapshotと一致することを確認する。一致しない場合はsnapshotをmaterializeした検証環境で実行する。検査対象と規則の正本は当該executor、実行順序は `{project-root}/docs/maintenance/action-construction.md` の「固定参照の更新順序」を参照する。
 
 ### 終了条件
 
 - 適用条件に該当しなければ`非適用`。
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
-- [公開済みtagへ接続した状態からの回復](../../../../docs/maintenance/action-construction.md#公開済みtagへ接続した状態からの回復)の実装コミットAに限り、`--preparation`の停止理由が`implementation-source-not-contained`だけで、staged snapshotの`VERSION`が同名tagのない対象版へ更新されている場合は`PASS`とする。停止理由と後続の接続コミットBが必要なことを証拠へ記録する。それ以外の停止理由は通常どおり扱う。
+- `{project-root}/docs/maintenance/action-construction.md` の「公開済みtagへ接続した状態からの回復」の実装コミットAに限り、`--preparation`の停止理由が`implementation-source-not-contained`だけで、staged snapshotの`VERSION`が同名tagのない対象版へ更新されている場合は`PASS`とする。停止理由と後続の接続コミットBが必要なことを証拠へ記録する。それ以外の停止理由は通常どおり扱う。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
 - `preparationOnly: true` は実装準備を示し、新実装の接続・利用可能化を証明しない。既存固定参照の検査成功と、全Action targetとavailabilityGateがpendingで接続診断を残す状態を区別し、`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。接続診断の免除は後者の準備コミットだけに限り、Actionのavailable targetがある場合は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新には上記の候補検査を使い、`--preparation`を付けない。
 
 ## 固定参照更新順序ゲート
 
 ### 確認（手動）
-- 更新順序の正本は[Action構築方針](../../../../docs/maintenance/action-construction.md#固定参照の更新順序)。手順を本ゲートへ複製しない。
+- 更新順序の正本は `{project-root}/docs/maintenance/action-construction.md` の「固定参照の更新順序」。手順を本ゲートへ複製しない。
 - staged snapshotの変更を実装準備、確定済み実装SHAへの接続、再利用workflowの公開準備、callerの生成・接続に分類し、正本の順序に照合する。実装の事前Releaseや接続専用の次版を要求しない。
 - 候補の接続は正本のpublication契約に従って包含・実行資材の同一性と固定SHA先の契約を確認する。consumerの利用可能状態は当該Releaseの公開後に確認する。作業ツリーの実装や別SHAの成功を接続先の証拠に読み替えない。
 - 準備段階で残したpending状態・placeholderと、後続の公開・受入・切替が必要な箇所を確認結果へ明示する。未公開という理由だけで準備コミットを停止しない。
@@ -95,19 +95,21 @@ node runtime/repository/check-provider-references.mjs --staged --contracts --pre
 プロジェクトルートで実行する。
 
 ```sh
-python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
+python3 {skill-root}/scripts/check_staged_skill_deploy.py
 ```
 
-- 配備先の設定は `skills-deploy` の `references/deploy-context.md` を正本とする。未設定の場合は `STOP` とし、コミットへ進めない。
+- 配備先の設定は skills-deploy スキルのデプロイコンテキストを正本とする。未設定の場合は `STOP` とし、コミットへ進めない。
 - 差分確認、候補分類、反映、再検査の順序と判定は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本ゲートでは再定義しない。
 - 削除を伴わない更新差分は prune なしで自動反映し、同じ scope を再検査して一致を確認する。
 - 削除候補、明示 prune 対象、category replacement root、管理外 skill の削除は自動反映せず `STOP` とする。
 - 反映する変更は staged snapshot と一致する作業ツリーの内容に限る。対象 root に未ステージ差分がある場合は実行しない。
 
 ### 停止条件
-- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。
+- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。ただし、改名・廃止で root 全体を削除し、配備先の旧 root が skills-deploy の明示操作で削除済みの場合は続行する。
+- `skills/<name>` より深い位置に `SKILL.md` がある（入れ子のスキル）。
 - 対象 root に未ステージ差分または未追跡ファイルがある。
 - 配備先に削除候補、明示 prune 対象、または category replacement root がある。
+- 反映の直前に確認し直した計画が、最初の dry-run から変わっている。
 - 自動反映後も配備先に差分が残る。
 - 配備 CLI または配備先 root を解決できない。
 
@@ -116,7 +118,7 @@ python3 .agents/skills/commit-gate/scripts/check_staged_skill_deploy.py
 - 配備先 root が未設定の場合は `STOP` とし、理由と設定方法を返す。
 - `0`: 更新を反映し、配備先が canonical source と一致する、または一致済み。`PASS`。
 - `1`: 検証失敗。`STOP`。
-- `2`: 実行エラー。`判定不能`。
+- `2`: 実行エラー、または配備 CLI の計画に必須項目がない・型が違う。`判定不能`。
 
 ### 再実行条件
 - staged snapshot、対象 root の未ステージ状態、配備先 root、配備 CLI、`project-skill-deploy` の公開契約のいずれかが変わった場合は、配備整合証拠を失効させて再実行する。

@@ -43,7 +43,7 @@ subjects:
       excludes: [installer-contract-compliance-judgment, project-owned-contract-semantics]
     baselineResolution:
       ownerSkill: ci-github
-      guide: references/distribute-ci-assets.guide.md
+      guide: references/deploy-ci-assets.guide.md
       section: 対応条件
       requirements:
         - resolve-latest-published-stable-release-at-audit-start
@@ -384,7 +384,7 @@ subjects:
         - release-shape-classification
         - installer-contract-compliance-judgment
         - concrete-installer-remediation
-    ownerSkill: installer
+    ownerSkill: ci-release-installer
     stageChecks:
       configuration: installer ownerの構成監査結果と、選択した公開経路の実装・設定の接続を照合する。
       execution-evidence: installer ownerの実候補・検証profile・native実行証跡を保持し、構成監査結果で代替しない。
@@ -402,7 +402,7 @@ subjects:
         - preserve-installer-audit-result
         - preserve-installer-stage-results-and-evidence-gaps-without-cross-stage-substitution
         - installer ownerの監査ガイドが要求する構成比較の証拠（READMEのOS別比較を含む）を受領し、対象identity・比較基準・選択段階との対応と充足を確認してから集約する。
-        - ownerのsuccess表記、asset名・URL・manifestの一致、CI公開経路の接続だけで必須比較の実施を代替しない。比較不足はinstallerへ差し戻し、実施状態と不足根拠を既存のstatusClassificationへ渡す。
+        - ownerのsuccess表記、asset名・URL・manifestの一致、CI公開経路の接続だけで必須比較の実施を代替しない。比較不足はci-release-installerへ差し戻し、実施状態と不足根拠を既存のstatusClassificationへ渡す。
         - 比較内容の正当性と具体的な置換案・維持理由の判断はinstaller ownerに保持する。CIはownerの判断規則を複製・再判定せず、未依頼の実行証跡を構成比較の不足へ混ぜない。
         - classify-delegation-result-through-status-classification
     remediationPriority:

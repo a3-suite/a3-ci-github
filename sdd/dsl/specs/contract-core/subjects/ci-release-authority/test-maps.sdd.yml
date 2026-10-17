@@ -47,3 +47,6 @@ test_maps:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-release-authority failure boundary > source retains actionable input failure without private input values"
         check_refs: [diagnostic-details]
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: "ci-release-authority-runtime > authority rejection retains the failing verification stage and expected/observed identity"
+        check_refs: [diagnostic-details]

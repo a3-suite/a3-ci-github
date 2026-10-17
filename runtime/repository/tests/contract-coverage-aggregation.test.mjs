@@ -3,6 +3,14 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test, describe, expect } from 'vitest';
 import { collectSubjectCoverage } from '../../../tests/coverage-tools/contract-subject-coverage.mjs';
+// Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
+// Measured max 7.3s per call; the limit is about 5x that. A timeout means the call regressed:
+// investigate its performance or split it before raising the limit.
+const spawnTimeoutMs = 40000;
+// spawnSync reports a timeout only as a null status; name it so CPU contention is not read as a regression.
+const processDetail = (execution) => (execution.error?.code === 'ETIMEDOUT'
+  ? `killed by ${execution.signal} after the ${spawnTimeoutMs}ms timeout\n${execution.stderr}`
+  : execution.stderr);
 
 describe("repository-coverage-aggregation", () => {
   // integration_id: repository-coverage-aggregation
@@ -58,9 +66,9 @@ describe("repository-coverage-aggregation", () => {
       const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
         `import { collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subjects, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify(collectAggregateCoverage(subjects, root, root + '/coverage')));`,
         JSON.stringify([subjects, root]),
-      ], { encoding: 'utf8', env: environment });
+      ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
       // Assert
-      expect(execution.status, execution.stderr).toBe(0);
+      expect(execution.status, processDetail(execution)).toBe(0);
       const result = JSON.parse(execution.stdout);
       expect(result.byScope.source.files.map((file) => file.path)).toStrictEqual(['shared/core.cjs']);
       expect(result.byScope.source.metrics.C1.percentage).toBe(100);
@@ -126,9 +134,9 @@ describe("contract-coverage-aggregation", () => {
         const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
           `import { collectSubjectCoverage, collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subjects, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify(subjects.map(subject => ({ id: subject.subjectId, individual: collectSubjectCoverage(subject, root, root + '/coverage'), aggregate: collectAggregateCoverage([subject], root, root + '/coverage') }))));`,
           JSON.stringify([subjects, root]),
-        ], { encoding: 'utf8', env: environment });
+        ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
         // Assert
-        expect(execution.status, execution.stderr).toBe(0);
+        expect(execution.status, processDetail(execution)).toBe(0);
         const results = JSON.parse(execution.stdout);
         for (const result of results) {
           const individual = result.individual.segments[0].coverage.metrics;
@@ -203,9 +211,9 @@ describe("repository-coverage-aggregation", () => {
       const execution = spawnSync(process.execPath, ['--input-type=module', '--eval',
         `import { collectSubjectCoverage, collectAggregateCoverage } from ${JSON.stringify(collectorUrl)}; const [subject, root] = JSON.parse(process.argv[1]); console.log(JSON.stringify({ individual: collectSubjectCoverage(subject, root, root + '/coverage'), aggregate: collectAggregateCoverage([subject], root, root + '/coverage') }));`,
         JSON.stringify([subject, root]),
-      ], { encoding: 'utf8', env: environment });
+      ], { encoding: 'utf8', env: environment, timeout: spawnTimeoutMs });
       // Assert
-      expect(execution.status, execution.stderr).toBe(0);
+      expect(execution.status, processDetail(execution)).toBe(0);
       const results = JSON.parse(execution.stdout);
       const lcov = readFileSync(path.join(root, 'coverage/mixed/source.lcov'), 'utf8');
       expect(lcov).toMatch(/^FNF:2$/m);
@@ -237,20 +245,21 @@ describe("repository-coverage-aggregation", () => {
     const config = path.join(root, 'capture.json');
     writeFileSync(config, JSON.stringify({ scripts: { fixture: '' }, rawDirectory: root, typescript: false }));
     const env = { ...process.env, A3_CI_COVERAGE_CONFIG: config, NODE_OPTIONS: '' };
-    const run = (code) => spawnSync(process.execPath, ['--import', capture.href, '--input-type=module', '--eval', code], { env, encoding: 'utf8' });
+    const run = (code) => spawnSync(process.execPath, ['--import', capture.href, '--input-type=module', '--eval', code], { env, encoding: 'utf8', timeout: spawnTimeoutMs });
     try {
       // Act
       const empty = run('');
       const complete = run('globalThis.__coverage__ = { fixture: { observed: true } };');
       // Assert
-      expect(empty.status, empty.stderr).toBe(0);
-      expect(complete.status, complete.stderr).toBe(0);
+      expect(empty.status, processDetail(empty)).toBe(0);
+      expect(complete.status, processDetail(complete)).toBe(0);
       expect(existsSync(path.join(root, `${empty.pid}-0.json`))).toBe(false);
       expect(JSON.parse(readFileSync(path.join(root, `${complete.pid}-0.json`), 'utf8')).coverage).toStrictEqual({ fixture: { observed: true } });
       expect(readdirSync(root).some((filename) => filename.endsWith('.pending'))).toBe(false);
       // Act
       const interrupted = run("import fs from 'node:fs'; import { syncBuiltinESMExports } from 'node:module'; globalThis.__coverage__ = { fixture: { observed: true } }; const write = fs.writeFileSync; fs.writeFileSync = (destination) => { write(destination, '{'); throw new Error('simulated interrupted snapshot'); }; syncBuiltinESMExports();");
       // Assert
+      expect(interrupted.error).toBeUndefined();
       expect(interrupted.status).not.toBe(0);
       expect(interrupted.stderr).toMatch(/simulated interrupted snapshot/);
       expect(existsSync(path.join(root, `${interrupted.pid}-0.json`))).toBe(false);

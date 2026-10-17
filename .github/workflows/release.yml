@@ -22,6 +22,9 @@ env:
   CI_GH_VERSION: '2.80.0'
   CI_JQ_VERSION: '1.7.1'
 
+# Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
+# runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
+# available, and re-verify through this repository's quality-gate.
 jobs:
   prepare-distribution:
     name: Prepare selective distribution
@@ -70,7 +73,7 @@ jobs:
       - name: Set up Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: '24'
+          node-version: '24.21.0'
           cache: npm
           cache-dependency-path: runtime/preset/package-lock.json
 

@@ -23,4 +23,4 @@ runnerだけでなく、toolchain、runtime、依存package、Actionや配布資
 
 本リポジトリの公開スキルでは、導入先のprovider・CLIの採用版や最低対応版を具体的なリリース番号で固定しません。導入時に提供元の公開済み安定版と導入済みrevisionを比較し、公開契約と必要機能を確認して採用するexact Releaseを確定する導線にします。確認できない機能を利用可能として扱いません。
 
-再現性を保つ実行時の固定SHA・checksumはregistryとmanifestを正本とし、ガイドへ値を重複させません。導入手順は[選択配布ガイド](../../skills/ci-github/references/distribute-ci-assets.guide.md#対応条件)を参照してください。
+再現性を保つ実行時の固定SHA・checksumはregistryとmanifestを正本とし、ガイドへ値を重複させません。導入手順は[選択配布ガイド](../../skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。

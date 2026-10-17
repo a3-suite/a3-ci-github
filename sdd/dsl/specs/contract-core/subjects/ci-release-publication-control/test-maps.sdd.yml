@@ -50,3 +50,28 @@ test_maps:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-release-publication-control failure boundary > source retains actionable input failure without private input values"
         check_refs: [diagnostic-details]
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint rejects release notes that differ from the approved body digest"
+        check_refs: [diagnostic-details]
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: request-trigger-accepted
+    tests:
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
+        check_refs:
+          - check-request-trigger-status
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
+        check_refs:
+          - check-request-trigger-status
+  - verification_id: verification.ci-release-publication-control.outputs
+    case_id: request-trigger-rejected
+    tests:
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
+        check_refs:
+          - check-request-trigger-failure
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
+        check_refs:
+          - check-request-trigger-failure

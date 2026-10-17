@@ -15,7 +15,7 @@ selection:
   decision: 製品repositoryで管理するSKILL.mdを配置場所にかかわらず確認し、製品ownerが同梱するスキルをskills配列へ明示する。複数選択でき、.agents/skills/も名前だけで除外しない。宣言外のスキルを自動追加しない。
   audit: 公開スキルの有無、同梱の選択と未同梱理由を既存監査レポートへ記録し、CI設定・公開宣言・READMEとの一致を確認する。選択未確認は未同梱へ読み替えず未確認として報告する。
   disabled: __unset__
-  declarationPlacement: release_skills_config_pathで指定するrepository相対のJSON。skills/release.jsonは配置例。
+  declarationPlacement: release_skills_config_pathで指定するrepository相対のJSON。標準配置は.ci/release-skills.json。
   source: authority.source_shaで固定した別checkout。制御checkout・作業ツリー・別版を生成元にしない。
 declaration:
   schemaVersion: ci.release-skills.v1

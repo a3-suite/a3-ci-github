@@ -1,8 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 
+import { createHash } from 'node:crypto';
 import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
+import { FailureContext } from '../../diagnostics/failure.mjs';
 import { fileURLToPath } from 'node:url';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
 
@@ -53,7 +55,7 @@ describe("materialize-adapter-bundle", () => {
         copyable: true,
         languageProfiles: ['rust'],
         owner: 'rust',
-        assets: [{ id: 'repository-helper', destination: '.ci/runtime/vitest-test-summary.ts' }],
+        assets: [{ id: 'repository-helper', destination: '.ci/runtime/cli-runtime.ts' }],
         commands: [{ id: 'test', command: 'echo', args: ['test'] }],
         preparation: [{ id: 'prepare', command: 'echo', args: ['prepare'] }],
         toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: { id: 'verify', command: 'echo', args: ['verify'] } },
@@ -78,12 +80,12 @@ describe("materialize-adapter-bundle", () => {
 
         expect(report.schema).toBe('ci.adapter-materializer.v2');
         expect(report.files.map((file) => file.source)).toStrictEqual([
-          'runtime/adapter/vitest-test-summary.ts',
+          'runtime/adapter/cli-runtime.ts',
           'rust/assets/test-bundle.json',
         ]);
-        expect(readFileSync(path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts'), 'utf8')).toMatch(/Vitest/);
+        expect(readFileSync(path.join(targetRoot, '.ci/runtime/cli-runtime.ts'), 'utf8')).toMatch(/DiagnosticError/);
         const targetDescriptor = path.join(targetRoot, '.ci/adapters/test-bundle.json');
-        const targetAsset = path.join(targetRoot, '.ci/runtime/vitest-test-summary.ts');
+        const targetAsset = path.join(targetRoot, '.ci/runtime/cli-runtime.ts');
         const materialized = JSON.parse(readFileSync(targetDescriptor, 'utf8'));
         expect(materialized.id).toBe('test-bundle');
         expect(materialized.preparation.map((command) => command.id)).toStrictEqual(['prepare']);
@@ -173,7 +175,7 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
     projectSettings: { requiredFiles: [], requiredScripts: [] },
   };
   const inventory = {
-    assets: [{ id: 'helper', copyable: true, entrypoints: ['runtime/adapter/vitest-test-summary.ts'] }],
+    assets: [{ id: 'helper', copyable: true, entrypoints: ['runtime/adapter/cli-runtime.ts'] }],
     adapterBundles: [{ id: descriptor.id, source: { skill: 'rust', path: 'assets/test-bundle.json' }, targetDescriptor: '.ci/adapters/test-bundle.json' }],
   };
   const options = { sourceRoot: skills, inventoryPath, bundleId: descriptor.id, targetRoot };
@@ -304,6 +306,50 @@ describe("contract.ci-preset-materialization.application", () => {
       // Assert
       expect(JSON.parse(readFileSync(packagePath, 'utf8'))).toStrictEqual(scripts);
       expect(existsSync(path.join(fixture.targetRoot, 'skills'))).toBe(false);
+    }));
+
+    // evidence_role: contract
+    // test_level: integration
+    // integration_id: adapter-materialization-rejection
+    // contract_id: contract.ci-preset-materialization.application
+    test('materializer rejection retains the failing stage, paths and conflicting digests', () => withCustomBundle((fixture) => {
+      // Arrange
+      writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+      writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
+      materializeAdapterBundle(fixture.options);
+      const helper = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
+      writeFileSync(helper, '// changed\n');
+      const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
+      const cases = [
+        ['destination-validation', () => {}, { field: 'destination-content', destination: '.ci/runtime/helper.ts',
+          expected: digest(path.join(repository, 'runtime/adapter/cli-runtime.ts')), observed: digest(helper) }],
+        ['source-resolution', () => writeFileSync(fixture.descriptorPath, JSON.stringify({ ...fixture.descriptor, id: 'other-bundle' })),
+          { field: 'descriptor.id', expected: 'test-bundle', observed: 'other-bundle' }],
+        ['destination-validation', () => writeFileSync(fixture.descriptorPath, JSON.stringify({ ...fixture.descriptor, assets: [{ id: 'helper', destination: '/private/secret-path' }] })),
+          { field: 'asset.destination', expected: '.ci/-relative-path', observed: 'invalid-format' }],
+        ['destination-validation', () => {
+          writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+          unlinkSync(helper);
+          mkdirSync(helper);
+        }, { field: 'destination-content', destination: '.ci/runtime/helper.ts', observed: 'not-a-regular-file' }],
+        ['source-resolution', () => writeFileSync(fixture.inventoryPath, JSON.stringify({ ...fixture.inventory,
+          adapterBundles: [{ ...fixture.inventory.adapterBundles[0], source: { skill: 'rust', path: 'assets/secret-path/../../x.json' } }] })), {}],
+      ];
+      for (const [stage, mutate, comparison] of cases) {
+        mutate();
+        const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
+        // Act
+        const execute = () => materializeAdapterBundle(fixture.options, diagnostic);
+        // Assert
+        let error;
+        try { execute(); } catch (failure) { error = failure; }
+        expect(diagnostic.evidence(error), stage).toMatchObject({
+          classification: { subject: 'ci-preset-materialization', stage },
+          context: { inputs: { bundle: 'test-bundle', delivery: 'copy', targetDescriptor: '.ci/adapters/test-bundle.json' } },
+          comparison,
+        });
+        expect(JSON.stringify(diagnostic.evidence(error))).not.toContain('secret-path');
+      }
     }));
   });
 });

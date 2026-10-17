@@ -35,12 +35,12 @@
    - source gate は authority と checkout の identity だけを検証し、format、lint、test は quality job が trusted control の runner、runtime、adapter descriptor から実行する。
    - source gate の成功後は quality と read-only build を並列に実行する。assemble は quality、source gate、全OS build の成功を明示的に要求し、quality の failure、skip、cancel は assemble と publication を開始させない。
 4. 書込権限を持たないbuild / validate jobでrelease資材を作る。
-   - 採用済み installer asset の組立を担当する 標準runtimeまたは非標準adapterは、本スキルの workflow 設計で installer スキルへ委譲して解決した契約に接続する。このガイドから直接着手した場合も adapter を決める前に同じ委譲を行い、委譲先の契約または owner 契約が未解決なら構成しない。
+   - 採用済み installer asset の組立を担当する 標準runtimeまたは非標準adapterは、本スキルの workflow 設計で ci-release-installer スキルへ委譲して解決した契約に接続する。このガイドから直接着手した場合も adapter を決める前に同じ委譲を行い、委譲先の契約または owner 契約が未解決なら構成しない。
    - build / validate jobは`contents: read`とし、`contents: write`、release token、署名用秘密鍵を持たせない。
    - trusted CI controlと操作対象sourceのcheckout pathを分離する。
    - 操作対象sourceは検証済みrequestのsource SHAへ固定する。
    - 対応するOS / CPU architectureを1つ以上明示する。
-   - platform manifestを作成・変更・削除する際は、[OS・版の選定と廃止判断](workflow-version-policy.reference.md#os版の選定と廃止判断)を適用してから実行設定を記述する。
+   - platform manifestを作成・変更・削除する際は、[OS・版の選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)を適用してから実行設定を記述する。
    - trusted controlのplatform manifestを検証してGitHub-hosted runnerのmatrixへ変換し、各platformをmanifestで指定したnative OS runner上でbuildする。
    - platform manifestは`platforms`だけをroot fieldに持ち、各要素を`id`、`runner`、`target`だけで構成する。`id`と`target`は重複不可、`runner`はci-githubのplatform manifest契約が許可するGitHub-hosted runner labelに限定し、空集合、未知field、不正値はfail closedとする。
    - canonical workflowはbuild adapterへ`language-profile`、platform manifest、toolchain、現在の`platform-id`、現在の`platform-target`、authority context、platform別output directoryの順で渡す。

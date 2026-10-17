@@ -174,12 +174,6 @@ routes:
       contract_id: contract.ci-quality-adapter.outputs
     hops:
       - component_id: action-contracts
-  - route_id: action-contracts-vitest-summary
-    contract_ref:
-      subject_ref: subject.ci.vitest-summary
-      contract_id: contract.ci.vitest-summary.outputs
-    hops:
-      - component_id: action-contracts
   - route_id: workflow-quality-execution
     contract_ref:
       subject_ref: subject.ci.quality-workflow

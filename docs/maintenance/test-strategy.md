@@ -87,6 +87,39 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 
 この回帰は各 rule について正常、代表違反、対象外または誤検知防止の3ケースを実 a3-lint runtime で検査します。
 
+## 実行環境の選定
+
+`.github/workflows/quality-gate.yml` の runner と toolchain は、[OS・版の選定と廃止判断](../../skills/ci-github/references/workflow-version-policy.reference.md#os-version-selection)に従って選びます。利用者が用意する platform は検証の見本で、それ以外は保守用の道具です。
+
+| 対象 | 区分 | 選定 | 理由 |
+| --- | --- | --- | --- |
+| ubuntu-24.04（契約検査） | 道具 | 代表OS | OSに依存しない検査を最速・最安で実行する |
+| ubuntu-24.04、macos-15、windows-2025（installer） | platform | installer の3対象 platform に1対1 | ubuntu-22.04 は廃止開始、macos-14 は 2026-11-02 に support 終了のため除外。windows-2022 は条件を満たすが、検証する PowerShell 5.1 は両版にあり差が効かず、次に廃止される版なので 2025 とする |
+| Windows PowerShell 5.1、PowerShell 7 | platform | 宣言の下限と現行系 | 5.1 以上を宣言している |
+| Python 3.11 | platform | 宣言の下限 | 3.10 は 2026-10 に EOL。3.11 の support は 2027-10 まで |
+| Node 24 | platform | 最古の互換版 | Action は `node24` で動き、engines の下限も 24 |
+| Node の patch、uv、jq、GitHub CLI、cargo-audit、Action の SHA | 道具 | dependency-selection の版選定（公開待機期間を含む） | patch まで固定し、更新は意図して行う |
+
+各 release 時と、提供元が廃止・EOL を告知した時に見直します。
+
+### CI資材の採用記録
+
+道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17 です。版を更新したときは、この表の該当行を書き換えます。
+
+| 対象 | 版 | 公開日時（UTC） | 採用 commit・日時（JST） | 待機期間 |
+| --- | --- | --- | --- | --- |
+| actions/checkout | v7.0.1（`3d3c42e5`） | 2026-07-20 15:10 | 703133c 2026-09-28 | 満たす |
+| actions/setup-node | v7.0.0（`82076278`） | 2026-07-14 02:46 | 2ab8f21 2026-09-29 | 満たす |
+| actions/setup-python | v7.0.0（`5fda3b95`） | 2026-07-20 03:15 | e66d02a 2026-10-01 | 満たす |
+| astral-sh/setup-uv | v10.2.0（`c18668ad`） | 2026-09-21 13:15 | e66d02a 2026-10-01 | 満たす |
+| actions/upload-artifact | v7.0.1（`043fb46d`） | 2026-04-10 17:31 | 2ab8f21 2026-09-29 | 満たす |
+| actions/download-artifact | v8.0.1（`3e5f45b2`） | 2026-03-11 15:44 | 2ab8f21 2026-09-29 | 満たす |
+| Node | 24.21.0 | 2026-09-08 21:51 | 4b694d0 2026-10-03 | 満たす |
+| uv | 0.11.15 | 2026-05-18 19:59 | b066848 2026-10-05 | 満たす |
+| jq | 1.7.1 | 2023-12-13 19:56 | 6d7f6fc 2026-09-28 | 満たす |
+| GitHub CLI | 2.80.0 | 2025-09-23 16:57 | 6d7f6fc 2026-09-28 | 満たす |
+| cargo-audit | 0.22.2 | 2026-06-05 12:38 | ca6d0d4 2026-10-14 | 満たす |
+
 ## 追加判断
 
 新しいE2Eは、統合テストでは観測できない公開経路がある場合だけ追加します。追加前に、owner contract、`flow_id`、外部副作用、実行頻度、fixtureの後処理を確定します。

@@ -17,6 +17,7 @@ describe('ci-release-publication-control-action-contract', () => {
     expect(action.inputs.operation.required).toBe(true);
     expect(action.inputs['release-request-workflow-name']).toBe(undefined);
     expect(action.inputs['release-request-workflow-path']).toBe(undefined);
+    for (const name of ['publication-request-run-id', 'release-request-tag-workflow-name', 'release-request-tag-workflow-path']) expect(action.inputs[name]).toBe(undefined);
     expect(Object.keys(action.outputs)).toStrictEqual(['status', 'request-run-id']);
     expect(action.runs.using).toBe('node24');
   });
