@@ -143,8 +143,8 @@ describe("publisher", () => {
       }
     });
 
-    test('publisher rejects moved source, existing draft and unsupported provider before create', async (t) => {
-      for (const kind of ['source', 'existing', 'existing-public', 'permission', 'permission-missing', 'workflow', 'truncated']) {
+    test('publisher rejects moved source, existing draft and unverifiable draft visibility before create', async (t) => {
+      for (const kind of ['source', 'existing', 'existing-public', 'permission', 'permission-missing']) {
         const state = await setup(t);
         const original = state.client.json;
         if (kind === 'existing' || kind === 'existing-public') state.client.list = async () => [{ id: '9', tag_name: state.f.identity.tag, draft: kind === 'existing' }];
@@ -152,12 +152,6 @@ describe("publisher", () => {
           if (kind === 'source' && endpoint.includes('/git/tags/')) return { sha: state.f.identity.tag_object_sha, object: { type: 'commit', sha: 'f'.repeat(40) } };
           if (kind === 'permission-missing' && endpoint === '/repos/owner/project') return { full_name: 'owner/project', default_branch: 'main' };
           if (kind === 'permission' && endpoint === '/repos/owner/project') return { full_name: 'owner/project', permissions: { push: false }, default_branch: 'main' };
-          if (['workflow', 'truncated'].includes(kind) && endpoint.endsWith('/commits/main')) return { sha: 'f'.repeat(40) };
-          if (['workflow', 'truncated'].includes(kind) && endpoint.includes('/git/commits/')) return { sha: endpoint.split('/').at(-1), tree: { sha: endpoint.split('/').at(-1) } };
-          if (['workflow', 'truncated'].includes(kind) && endpoint.includes('/git/trees/')) {
-            const sha = endpoint.split('/').at(-1).split('?')[0];
-            return { sha, truncated: kind === 'truncated', tree: [{ path: '.github/workflows/release.yml', type: 'blob', mode: '100644', sha }] };
-          }
           return original(endpoint);
         };
         await expect(publishRelease(state.options, state.client)).rejects.toThrow();
@@ -165,18 +159,17 @@ describe("publisher", () => {
       }
     });
 
-    test('publisher supports differing source commits only when complete workflow trees agree', async (t) => {
+    test('publisher leaves provider acceptance to the create response instead of predicting it from the default branch', async (t) => {
       const state = await setup(t);
       const original = state.client.json;
+      const predictions = [];
       state.client.json = async (endpoint) => {
-        if (endpoint.endsWith('/commits/main')) return { sha: 'f'.repeat(40) };
-        if (endpoint.includes('/git/commits/')) return { sha: endpoint.split('/').at(-1), tree: { sha: endpoint.split('/').at(-1) } };
-        if (endpoint.includes('/git/trees/')) return { sha: endpoint.split('/').at(-1).split('?')[0], truncated: false,
-          tree: [{ path: '.github/workflows/release.yml', type: 'blob', mode: '100644', sha: 'e'.repeat(40) }] };
+        if (endpoint.includes('/commits/') || endpoint.includes('/git/trees/')) { predictions.push(endpoint); throw new Error('unexpected prediction'); }
         return original(endpoint);
       };
       const result = await publishRelease(state.options, state.client);
       expect(result.receipt.release_id).toBe('42');
+      expect(predictions).toStrictEqual([]);
     });
 
     for (const phase of ['create', 'upload', 'finalize', 'readback']) {

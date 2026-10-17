@@ -39,6 +39,7 @@ auditContract:
       - 実公開時のrun・actor・公開後の配布物取得などは公開後確認として別記し、その未実施だけでリリース前監査を非成功にしない。
       - 選択した段階に必要な確認の不足は既存のstatusClassificationで非成功として保持し、実行証跡の未取得を構成不適合へ混ぜない。
       - 監査を実公開操作へ拡張せず、公開後確認は対象ownerの運用手順へ引き継ぐ。
+      - providerの設定（branch protection、ruleset、required check、Variables、公開先registryの設定）は監査の必須入力にしない。権限・機能・設定の可否は操作の結果で判定する。任意に読み取った観測を読み取れない、または判定できない事実は監査statusへ入れず、事前確認の扱いはproviderの事前確認方針に従う。
   stages:
     defaultSelection: configuration-only
     selections:
@@ -50,7 +51,7 @@ auditContract:
     definitions:
       configuration:
         title: 構成監査
-        checks: 最新標準との設定・実装・文書の整合、差分の必要性と許容条件、必要な検査導線の配置・接続、provider設定の確認。
+        checks: 最新標準との設定・実装・文書の整合、差分の必要性と許容条件、必要な検査導線の配置・接続。
       execution-evidence:
         title: 証跡監査
         checks: 契約テストの実行結果、実候補・manifest・archiveのchecksum対応、検証profile、native dry-run・隔離install・起動の証跡。
@@ -132,8 +133,8 @@ auditContract:
     - id: runtime-evidence
       requirement: conditional
       layer: overall-supporting
-      purpose: リリース前確認に必要なprovider設定と、公開を伴わない実行環境の証拠を確認する。
-      appliesWhen: リリース前の契約確認に、静的検証・契約テストだけでは確認できないprovider設定または非公開実行の観測が必要である。
+      purpose: リリース前確認に必要な、公開を伴わない実行環境の証拠を確認する。
+      appliesWhen: リリース前の契約確認に、静的検証・契約テストだけでは確認できない非公開実行の観測が必要である。
       excludes: 監査対象製品の実公開run、公開成功、公開後readbackを必須確認にすること。
   statuses:
     success:

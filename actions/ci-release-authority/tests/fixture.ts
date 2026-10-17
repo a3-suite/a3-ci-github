@@ -42,7 +42,6 @@ export const fixture = () => {
     [`/repos/${repository}/git/ref/tags/v1.2.3`]: { object: { type: 'tag', sha: tagObject } },
     [`/repos/${repository}/git/tags/${tagObject}`]: { sha: tagObject, tag: 'v1.2.3', object: { type: 'commit', sha: source } },
     [`/repos/${repository}/git/commits/${source}`]: { sha: source },
-    [`/repos/${repository}/commits/main`]: { sha: source },
   };
   const requests: string[] = [];
   const client = new GithubReadOnlyClient('test-token', async (url, init) => {

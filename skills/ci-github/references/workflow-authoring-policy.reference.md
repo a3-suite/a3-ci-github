@@ -5,6 +5,7 @@
 ## 理解できること
 - workflow の命名、実装境界、静的検証
 - workflow に残す処理と外部化する処理の境界
+- 事前確認の採否と、provider 操作の失敗の扱い
 
 ## 命名
 - workflow file は `.github/workflows/` 配下の `lower-kebab-case.yml` とする。
@@ -16,8 +17,8 @@
 - job id は `needs`、ruleset、required check から安定参照できる短い機械名にする。
 - job `name:` は単一 job なら workflow 名、複数 job なら `<workflow-name> / <job-role>` とする。
 - platform 別の matrix job 名は `<workflow-name> / <platform-id>` とし、platform id は platform manifest の id を使う。
-- platform 結果の集約 job 名は `<workflow-name> / summary` に固定し、required check は集約 job を参照する。
-- required check から参照する名前は workflow rename と独立して安定させる。
+- platform 結果の集約 job 名は `<workflow-name> / summary` に固定し、platform 結果を判定する唯一の check とする。
+- check 名は workflow rename と独立して安定させる。
 
 用途別の workflow asset は `references/preset-catalog.reference.md` を正本とする。本policyでは provider 固有の workflow file 名を標準例として再定義しない。権限を持つ publish / deploy は通常 CI から分離する。
 
@@ -41,14 +42,13 @@
 - `queue: max` と `cancel-in-progress: true` は併用しない。
 - `queue` を提供しない provider 版では、待機 run を置換しない契約を満たせないため publish を開始しない。
 
-## Release 公開の provider 適合
-- GitHub の Release 作成・更新 API は、対象 commit（既存 tag では tag が指す commit）が default branch に対して `.github/workflows/` 配下を追加または変更する場合、認証 token に workflow 変更権限を要求する。権限がない場合の応答は 404、認証経路によっては 403 `Resource not accessible by integration` となる。
-- Actions の `GITHUB_TOKEN` には workflow 変更権限を付与できない。`permissions` の追加では解消しないため、公開 source の選択または credential route の選択として扱う。
-- 適合判定は provider の diff 比較条件の細部（比較方向、merge-base、rename の扱い、切り詰め）へ依存させず、公開対象 commit と判定時点の default branch で `.github/workflows/` 配下の entry（path と object identity）が一致することを確認する保守的判定とする。一致は provider が必要条件とする意味ではなく、この profile が採用する安全側の判定である。
-- 適合判定は source identity の確定後（build 前）に一度行い、write 直前に default branch と権限状態を再観測する。build 中の変更を理由に早期結果を恒久証拠へ読み替えない。
-- credential route が workflow 変更権限を宣言しているだけでは適合と扱わない。権限の実効性を確認できない場合は fail closed とし、強い credential への自動 fallback を行わない。
-- 不適合または判定不能の場合は publish を停止し、tag、source SHA、default branch SHA、差分 entry を診断として owner へ返す。CI が tag や公開 source を自動で作り直さない。
-- 公開の provider 操作（release 作成、asset upload、finalize、観測）が失敗した場合は、`references/release-asset-publication-contract.reference.yml` の `providerPublicationSuitability.failureAttribution` に従って GitHub API の操作単位で診断を残す。必須項目と秘匿対象は同 section を正本とし、この profile では再定義しない。
+## 事前確認
+- 権限、機能、プラン、credential の実効性は、provider 操作そのものの応答で判定する。事前観測で操作の成否を予測し、その予測を停止条件にしない。
+- 事前確認は任意とし、早く失敗させる便益がある場合などに個別に採用する。
+- 任意の事前確認を開始・完了できない、または判定できない場合は停止せず、本来の操作へ進む。停止してよいのは、操作が失敗することを観測で確定できた場合だけとする。
+- 操作が成功しても結果を誤る条件（tag と source の一致、非上書きのための不在確認、内容と承認値の一致、公開後 readback）は任意にせず、各契約の必須確認とする。
+- GitHub の Release 作成・更新 API は、対象 commit（既存 tag では tag が指す commit）が default branch に対して `.github/workflows/` 配下を追加または変更する場合、workflow 変更権限を要求し、権限がなければ 404、認証経路によっては 403 `Resource not accessible by integration` を返す。Actions の `GITHUB_TOKEN` にはこの権限を付与できないため、この応答は公開 source または credential route の選択として owner へ返す。CI が tag や公開 source を自動で作り直さず、強い credential へ自動 fallback しない。
+- provider 操作（release 作成、asset upload、finalize、観測）の失敗は、`references/release-asset-publication-contract.reference.yml` の `providerOperationFailure` に従って GitHub API の操作単位で診断を残す。必須項目と秘匿対象は同 section を正本とし、この profile では再定義しない。
 
 ## 静的検証
 - 実在する workflow を repository root の `actionlint` で検証する。

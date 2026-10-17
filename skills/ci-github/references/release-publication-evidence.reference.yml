@@ -36,7 +36,7 @@ ownerWrite:
   remainsRequired: non-standard-owner-route
   invocationArguments: [authority-path, release-handoff-root, pre-observation-path, new-write-output-directory]
   outputs: [receipt.json, readback.json]
-  responsibilities: [pre-write-suitability-reobservation, pre-write-identity-and-absence-reobservation, non-overwrite-create, upload, finalize, partial-publication-failure]
+  responsibilities: [pre-write-identity-and-absence-reobservation, non-overwrite-create, upload, finalize, partial-publication-failure]
   forbidden: [automatic-credential-fallback, automatic-overwrite, partial-as-success]
 workflowMapping:
   assemble: ci-release-assembly

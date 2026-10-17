@@ -8,7 +8,6 @@ import { validateSnapshot } from '../../../runtime/release-publication/snapshot'
 import { validateEvidence } from '../../../runtime/release-publication/schema';
 import { remoteId } from '../../../runtime/release-publication/observation';
 import type { ReadOnlyClientType } from '../../../runtime/release-publication/observation';
-import { verifySourceCompatibility } from '../../../runtime/release-publication/provider';
 import { sourceTextSha256 } from '../../../runtime/platform/source-text.mjs';
 
 export type AuthorityOptions = { rootDirectory: string; snapshotPath: string; outputDirectory: string; repository: string; requestRunId: string; publicationRequestRunId: string };
@@ -74,11 +73,11 @@ export const createAuthority = async (options: AuthorityOptions, client: ReadOnl
       : { field: 'version', expected: decision.version, observed: diagnosticValue(request.version) });
   }
   const endpoint = `/repos/${repository}`;
-  diagnostic.at('provider-suitability', { endpoint: 'repository-metadata' });
+  diagnostic.at('repository-identity', { endpoint: 'repository-metadata' });
   const metadata = await remote(client, endpoint);
-  if (typeof metadata.full_name !== 'string' || metadata.full_name.toLowerCase() !== repository.toLowerCase() || metadata.archived !== false || metadata.disabled !== false) {
-    fail('provider-publication-suitability-unknown-or-unsupported', { field: 'repository-metadata', expected: { full_name: repository.toLowerCase(), archived: false, disabled: false },
-      observed: { full_name: typeof metadata.full_name === 'string' ? metadata.full_name.toLowerCase() : 'unavailable', archived: diagnosticValue(metadata.archived), disabled: diagnosticValue(metadata.disabled) } });
+  if (typeof metadata.full_name !== 'string' || metadata.full_name.toLowerCase() !== repository.toLowerCase()) {
+    fail('repository-invalid', { field: 'repository-metadata.full_name', expected: repository.toLowerCase(),
+      observed: typeof metadata.full_name === 'string' ? metadata.full_name.toLowerCase() : 'unavailable' });
   }
   const defaultBranch = text(metadata.default_branch, 'default-branch-unknown');
   diagnostic.at('request-provenance', { endpoint: 'workflow-runs' });
@@ -134,12 +133,10 @@ export const createAuthority = async (options: AuthorityOptions, client: ReadOnl
   const toolchain = text(values.CI_TOOLCHAIN_VERSION, 'toolchain-invalid');
   if (toolchain.includes('<') || toolchain === '__unset__') fail('toolchain-invalid', { field: 'CI_TOOLCHAIN_VERSION', expected: 'resolved-toolchain', observed: toolchain });
   const identity = validateEvidence('identity', { repository, tag: decision.tag, tag_object_sha: tagObjectSha, source_sha: sourceSha, version: decision.version, target_identity: decision.targetIdentity, body_sha256: bound.bodyDigest });
-  diagnostic.at('provider-suitability', { endpoint: 'source-compatibility' });
-  await verifySourceCompatibility(identity, client);
   const authority = { schema: 'ci.release-authority.v1', source_sha: sourceSha, tag_object_sha: tagObjectSha, version: decision.version, tag: decision.tag, target_identity: decision.targetIdentity,
     language_profile: 'rust', toolchain_version: toolchain, platform_manifest: manifestPath, platform_manifest_sha256: manifestDigest,
     config_snapshot_digest: snapshot.digest, owner_contract: { id: 'git.release-flow', handoff_path: OWNER_HANDOFF_PATH, revision: publicationRun.head_sha }, owner_contract_digest: sha256(ownerBytes), publication: identity,
-    approval_id: bound.approvalId, approved_body_sha256: bound.bodyDigest, provider_publication_suitability: { status: 'source-compatible', credential_route: 'GITHUB_TOKEN', write_capability: 'not-observed', observed_at: new Date().toISOString() } };
+    approval_id: bound.approvalId, approved_body_sha256: bound.bodyDigest };
   diagnostic.at('authority-write', { output: 'output-directory' });
   const output = path.resolve(root, text(options.outputDirectory));
   if (fs.existsSync(output) || path.dirname(output) !== root) fail('authority-output-invalid-or-existing', { field: 'output-directory', expected: 'new-direct-child-of-root', observed: fs.existsSync(output) ? 'existing' : 'outside-root' });

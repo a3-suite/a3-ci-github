@@ -8,7 +8,7 @@
 ## 前提
 - 対象プロジェクトの owner 契約により、GitHub Release assets 経路と publish 範囲が解決済みであること。
 - owner 契約により、publication request を起動できる主体が publication authorization を発行できる主体と一致していること。一致しない場合は、この canonical flow を承認 gate の代替として使用せず、owner が別途選択した approval handoff へ委譲する。
-- Release tag identity、承認済みrelease notes、inventory、resource identity、provider 公開適合、失敗診断、成功状態の不変条件は `references/release-asset-publication-contract.reference.yml` を正本とする。
+- Release tag identity、承認済みrelease notes、inventory、resource identity、provider 操作の失敗診断、成功状態の不変条件は `references/release-asset-publication-contract.reference.yml` を正本とする。
 - HTTP操作以外も含む失敗診断の正本・保持経路・検証は、`references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics`から解決する。provider操作固有の`failureAttribution`と併せて確認する。
 - branch category、tag source、branch ancestry、version policyの意味と採否は git スキルへ委譲する。Release assets workflow は、その正本から受け取った tag/source identity の binding と object の実測だけを再検証する。
 - runnerとtrusted CI controlの境界は`references/runner-trust-policy.reference.md`に従うこと。
@@ -30,7 +30,7 @@
    - authority preflightは`contents: read`とし、requestのtag refとsource SHAを、gitスキルの`git.release-flow`から別入力として受領したtag、target commit、versionへ照合してrelease tag identityを検証し、tag object SHAを解決する。
    - `references/release-asset-publication-contract.reference.yml` の `tagIdentity` に必要な release authority context を出力し、後続jobはこのcontextからtag ref、tag object SHA、source SHA、versionを受け取る。platform集合はproject-localなtrusted CI controlから別に固定する。
    - verifierが出力したsource SHAだけを後続のbuild対象にする。
-   - source identity の確定後、build 前に公開 source の provider 適合を観測する。不適合または判定不能は後続 stage へ進めず停止し、この早期観測を write 直前の再観測の代替にしない。判定規則と credential route の限界は `references/workflow-authoring-policy.reference.md` の Release 公開の provider 適合を正本とする。
+   - 公開 credential の権限や provider の受理可否は事前に予測せず、Release 作成の操作結果で判定する。事前確認の採否と、workflow 変更権限による拒否の扱いは `references/workflow-authoring-policy.reference.md` の事前確認を正本とする。
 3. 書込権限を持たない quality job で固定 source を検証する。
    - source gate は authority と checkout の identity だけを検証し、format、lint、test は quality job が trusted control の runner、runtime、adapter descriptor から実行する。
    - source gate の成功後は quality と read-only build を並列に実行する。assemble は quality、source gate、全OS build の成功を明示的に要求し、quality の failure、skip、cancel は assemble と publication を開始させない。
@@ -61,7 +61,6 @@
    - Release作成jobだけに`contents: write`を付与し、それ以外のjobは`contents: read`以下とする。
    - Release作成jobでは操作対象sourceをcheckoutまたは実行しない。
    - Release作成の直前にtrusted CI controlからrelease tagを再解決し、そのobject SHAがrelease authority contextのtag object SHAと一致すること、tag objectのtypeが`tag`であること、annotated tagをcommitへdereferenceした結果がrelease authority contextのsource SHAと一致することを検証する。
-   - Release作成の直前にprovider適合を再観測し、不適合または判定不能の場合はwriteしない。default branchと権限状態はbuild中に変わり得るため、authorityの早期観測結果を再利用しない。
    - 書き込み前の観測は `references/release-asset-publication-contract.reference.yml` の `inventory` を満たす場合だけ有効とする。
    - 書き込み前の同一tag Releaseが0件であることを確認できない場合はfail closedとする。
    - 同じtagの既存releaseまたは既存assetを検出した場合はfail closedとし、自動上書きしない。
@@ -77,7 +76,7 @@
    - release の `created_at` は release に使われた commit の日付であり、作成時刻の判定や冪等判定に使わない。
    - 作成直後の一覧は未反映があり得る（draft の一覧可視性は push access 依存）。一覧の一意性確認は上限回数・上限時間を明示した限定再観測とし、収束しなければ診断（HTTP status、観測 ID・件数）を付けて fail closed とする。
    - publish 段は create-result の release ID、publish receipt、readback evidence を機械可読出力（`release-remote-identity` / `publish-receipt` / `readback-evidence`）として提供し、canonical publish job がこれを露出する。欠落は fail closed とする。
-   - provider 操作が失敗した場合は、`references/release-asset-publication-contract.reference.yml` の `providerPublicationSuitability.failureAttribution` に従って操作単位の診断を残す。必須項目と秘匿対象を本ガイドで再定義しない。
+   - provider 操作が失敗した場合は、`references/release-asset-publication-contract.reference.yml` の `providerOperationFailure` に従って操作単位の診断を残す。必須項目と秘匿対象を本ガイドで再定義しない。
    - 作成後にRelease本文を読み戻し、承認済み本文およびhandoff digestと完全一致することを確認する。不一致または読み戻し不能はfail closedとする。
    - 作成後にrelease tagのcommit、登録asset集合、checksumを再観測し、検証済み入力との一致と同契約の`successState`を確認する。
    - Release作成の成否にかかわらずActions artifactを恒久配布先として案内しない。
@@ -99,7 +98,6 @@
 - build / validate jobが`contents: write`、release token、署名用秘密鍵を要求する。
 - Release作成jobが操作対象source、build script、実行可能assetをcheckoutまたは実行しようとする。
 - Release作成の直前または作成後に観測したrelease tagのcommitが、検証済みsource SHAと一致しない。
-- provider 公開適合を証明できない、または write 直前の再観測で不適合・判定不能となる。
 - `references/release-asset-publication-contract.reference.yml` のいずれかの不変条件を満たさない。
 - 同じtagの既存releaseまたは既存assetが存在する。
 - development実行可能資材または暗黙のpackage補助経路を公開しようとする。

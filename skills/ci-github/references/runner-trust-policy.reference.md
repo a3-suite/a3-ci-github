@@ -36,7 +36,7 @@
 - merge gate check と post-merge verification の境界を混ぜない。
 - `trusted` は PR の投稿者や head source を信頼済みとみなす名称ではなく、base SHA または監査済み commit SHA から取得した trusted CI control で判定する境界名とする。
 - merge gate check 境界名は `trusted`、`untrusted-pr` とする。
-- merge gate check は branch protection / ruleset の required 判定対象として扱う。
+- merge gate check は required check として登録できる形で配置する。branch protection・ruleset・required check の設定は repository 設定の owner の責務とし、本スキルは扱わない。
 - post-merge verification 境界名は `post-merge` とする。
 - post-merge verification は merge 後の検証であり、merge gate required check として扱わない。
 - `runs-on` の具体値はプロジェクトの runner、権限、trigger、toolchain に合わせて置き換える。
@@ -48,7 +48,7 @@
 | fork | `untrusted-pr` | `trusted` job を job-level condition で skip する |
 
 - `trusted` と `untrusted-pr` を配置する場合、両 workflow または両 job は required 対象となるすべての `pull_request` で起動し、相互排他的な job-level condition で実行対象を選ぶ。
-- 配置した merge gate check は安定した job 名で branch protection / ruleset の required check に設定する。
+- 配置した merge gate check は安定した job 名にする。
 - required 対象の `pull_request` では、workflow 自体を `paths` / `paths-ignore`、branch filter、commit message で skip しない。対象外処理は workflow 起動後の job または step で判定する。
 - merge queue を運用する場合は `merge_group` payload で成立する check を required check として用意する。`pull_request` 固有 field を参照する既存 workflow に trigger だけを追加しない。
 

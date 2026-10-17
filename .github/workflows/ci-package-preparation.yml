@@ -49,7 +49,7 @@ jobs:
           test -n "$PUBLISH_VERSION"
           printf '{"strategy":"exact","publishVersion":%s}\n' "$PUBLISH_VERSION_JSON" > version-plan.json
       - id: version
-        uses: a3-suite/a3-ci-github/actions/ci-publish-version@f8fb0b2b7c98b595f869a50a8406b3a416f28915
+        uses: a3-suite/a3-ci-github/actions/ci-publish-version@6784952cc3355a8f48a3ae86ff98057dafda1eae
         with:
           version-plan-json: version-plan.json
 
@@ -92,7 +92,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@f8fb0b2b7c98b595f869a50a8406b3a416f28915
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@6784952cc3355a8f48a3ae86ff98057dafda1eae
         with:
           summary-json: >-
             {"jobs":[{"unit":"version-plan","execution":"owner-approved version plan","rawResult":"${{ needs.version-plan.result }}","applicable":true,"reason":"version-plan job result: ${{ needs.version-plan.result }}"},{"unit":"build","execution":"package handoff build and upload","rawResult":"${{ needs.build.result }}","applicable":true,"reason":"build job result: ${{ needs.build.result }}"}]}
