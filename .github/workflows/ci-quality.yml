@@ -179,6 +179,30 @@ jobs:
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
+      # Only trusted Rust quality reuses Cargo builds; untrusted pull requests and Release builds always start clean.
+      # Trusted runs require repository write access to start, and GitHub scopes caches saved off the default branch to their own ref.
+      - name: Resolve Cargo cache paths
+        id: cargo-cache-paths
+        if: steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$(cargo metadata --manifest-path "$CI_CARGO_MANIFEST_PATH" --no-deps --format-version 1 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).target_directory.replace(/\\/g,"/")))')"
+          [[ -n "$target" && "$target" != *$'\n'* ]]
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+      - name: Cache Cargo dependencies and builds
+        id: cargo-cache
+        if: steps.cargo-cache-paths.outcome == 'success'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ${{ steps.cargo-cache-paths.outputs.target }}
+            !${{ steps.cargo-cache-paths.outputs.target }}/*/incremental
+          key: ci-quality-rust-${{ runner.os }}-${{ runner.arch }}-${{ steps.quality-toolchain.outputs.resolved-toolchain-version }}-${{ hashFiles(env.CI_CARGO_LOCK_PATH) }}
+          restore-keys: ci-quality-rust-${{ runner.os }}-${{ runner.arch }}-${{ steps.quality-toolchain.outputs.resolved-toolchain-version }}-
       - name: Run project quality adapter
         id: quality-adapter
         if: steps.change-scope.outputs['run-ci'] != 'false'
