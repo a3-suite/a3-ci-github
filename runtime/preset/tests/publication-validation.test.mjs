@@ -337,7 +337,7 @@ describe("publication-validation", () => {
       const caller = parse(fs.readFileSync(path.join(repository, 'workflows/release/release-publication-caller.yml'), 'utf8'));
       Object.assign(caller.jobs.publish.with, {
         runner: 'ubuntu-24.04', 'language-profile': 'rust', 'release-implementation': 'rust-cli-release',
-        'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'sha256sum-version': '9.5', 'platform-manifest': '.ci/platform-manifest.yml',
+        'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'platform-manifest': '.ci/platform-manifest.yml',
         supplemental_release_asset_enabled: false, supplemental_release_asset_owner_contract: '__unset__',
         supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__',
       });
@@ -377,7 +377,7 @@ describe("publication-validation", () => {
         value => { value.jobs.publish.uses = value.jobs.publish.uses.replace(providerSha, 'main'); },
         value => { value.jobs.publish.with.runner = '${{ github.event.workflow_run.head_branch }}'; },
         value => { value.jobs.publish.with['release-implementation'] = '${{ inputs.implementation }}'; },
-        value => { value.jobs.publish.with['sha256sum-version'] = '${{ github.event.workflow_run.head_branch }}'; },
+        value => { value.jobs.publish.with['jq-version'] = '${{ github.event.workflow_run.head_branch }}'; },
         value => { value.jobs.publish.with.supplemental_release_asset_enabled = '${{ inputs.enabled }}'; },
         value => { value.jobs.publish.with.supplemental_release_asset_owner_contract = '${{ inputs.contract }}'; },
         value => { value.jobs.publish.with.undeclared = 'value'; },
@@ -397,6 +397,12 @@ describe("publication-validation", () => {
       expect(failed.mismatches.some(item => item.message === 'release implementation is not registered'
         && item.path === `${asset.destination}:jobs.publish.with.release-implementation` && item.settingLocation === asset.destination)).toBeTruthy();
       expect([...failed.mismatches, ...failed.missingSettings].some(item => item.path.startsWith('.github/workflows/release-publication.yml:'))).toBe(false);
+      for (const reorder of [(steps) => steps.shift(), (steps) => steps.splice(1, 0, steps.shift())]) {
+        const unverified = structuredClone(caller); reorder(unverified.jobs['validate-request'].steps);
+        fs.writeFileSync(filename, stringify(unverified));
+        const result = validateCiPresetInternal({ repoRoot: root, presets: ['release-publication'] }, false);
+        expect(result.missingSettings.some(item => item.message.includes('must run verify-trigger before downloading'))).toBeTruthy();
+      }
       const missing = structuredClone(caller); delete missing.jobs.publish.with.runner;
       expect(run(missing).report.missingSettings.some(item => item.message.includes('required reusable workflow input runner'))).toBeTruthy();
     });
@@ -451,6 +457,12 @@ describe("publication-validation", () => {
       ]) {
         const changed = structuredClone(caller); mutate(changed);
         expect(run(changed).report.mismatches.length > baseline.report.mismatches.length, String(mutate)).toBeTruthy();
+      }
+      for (const reorder of [(steps) => steps.shift(), (steps) => steps.splice(1, 0, steps.shift())]) {
+        const unverified = structuredClone(caller); reorder(unverified.jobs['validate-request'].steps);
+        fs.writeFileSync(filename, stringify(unverified));
+        const result = validateCiPresetInternal({ repoRoot: root, presets: ['package-publication'] }, false);
+        expect(result.missingSettings.some(item => item.message.includes('must run verify-trigger before downloading'))).toBeTruthy();
       }
       const missing = structuredClone(caller); delete missing.jobs.publish.secrets.PACKAGE_REGISTRY_TOKEN;
       expect(run(missing).report.missingSettings.some(item => item.message.includes('required reusable workflow secret PACKAGE_REGISTRY_TOKEN'))).toBeTruthy();

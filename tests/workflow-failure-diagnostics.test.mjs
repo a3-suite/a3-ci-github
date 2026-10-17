@@ -27,8 +27,7 @@ describe('workflow failure diagnostics', () => {
     }
     const runUrl = 'https://github.com/owner/product/actions/runs/123';
     const input = step.with['summary-json'].replaceAll('${{ job.status }}', status)
-      .replaceAll('${{ needs.request.result }}', status)
-      .replaceAll('${{ env.WORKFLOW_RUN_URL }}', runUrl);
+      .replaceAll('${{ needs.request.result }}', status);
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const directory = fs.mkdtempSync(path.resolve('tests/tmp/publication-request-summary-'));
     onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -37,7 +36,7 @@ describe('workflow failure diagnostics', () => {
     fs.writeFileSync(output, '');
     // Act
     const result = spawnSync(process.execPath, ['actions/ci-quality-summary/dist/index.js'], { encoding: 'utf8', env: {
-      ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GITHUB_RUN_ID: '123', GITHUB_JOB: 'request',
+      ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'owner/product', GITHUB_RUN_ID: '123', GITHUB_JOB: 'request',
       'INPUT_SUMMARY-JSON': input, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'), 'INPUT_EVIDENCE-PATH': evidencePath,
     } });
     // Assert

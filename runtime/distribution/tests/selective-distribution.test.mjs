@@ -27,7 +27,7 @@ const fixtureSettings = {
   'protected-branch': ['main'], 'versioned-runner': 'ubuntu-24.04', 'language-profile': 'typescript',
   'toolchain-version': '24.0.0', 'uv-version': '', 'cargo-audit-version': '', 'cargo-manifest-path': '',
   'cargo-lock-path': '', 'optional-jq-version': '', 'standard-bundle-id': 'typescript-npm-quality',
-  'adapter-descriptor': '', 'release-tag-pattern': 'v*', 'sha256sum-version': '9.7',
+  'adapter-descriptor': '', 'release-tag-pattern': 'v*',
   'platform-manifest': '.ci/platform-manifest.yml', 'gh-version': '2.80.0', 'jq-version': '1.7.1',
   'release-implementation': 'rust-cli', 'release-binary-name': '', 'release-asset-prefix': '',
   'supplemental-release-asset-enabled': false, 'supplemental-release-asset-owner-contract': 'owner-v2',

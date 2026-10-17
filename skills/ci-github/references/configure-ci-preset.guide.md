@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | workflow 構成 | `.github/workflows/` | trigger、runner、固定 Action／Reusable Workflow SHA、固有入力 |
 | 非秘匿の環境・運用値 | GitHub Variables（下記の必要性判定で必須または条件付きとなる場合だけ） | environment選択、運用ポリシー |
-| toolchain・tool version | projectのversion設定またはworkflow初期パラメータ | 言語runtime、uv、cargo-audit、gh、jq、sha256sum |
+| toolchain・tool version | projectのversion設定またはworkflow初期パラメータ | 言語runtime、uv、cargo-audit、gh、jq |
 | 秘匿値 | GitHub Secrets | registry token など |
 | 実行ごとの入力 | `workflow_dispatch.inputs` | 例外的な request または手動 publication request の非秘匿入力 |
 | quality adapter | workflowの標準bundle ID、または独自 `.ci/adapters/*.yml` | 選択とproject固有設定。標準commandは固定Actionが供給 |
@@ -84,7 +84,7 @@ CI が検証するのは承認済み入力の同一性と搬送経路であり�
 3. 必須経路でのみ参照される Variable を設定し、条件付きの Variable は該当機能を採用する場合だけ設定する。
 4. 不要な Variable を作成せず、未設定を理由に未使用経路を失敗扱いしない。
 
-`CI_TOOLCHAIN_VERSION`、`CI_GH_VERSION`、`CI_JQ_VERSION`、`CI_SHA256SUM_VERSION` などの版情報は
+`CI_TOOLCHAIN_VERSION`、`CI_GH_VERSION`、`CI_JQ_VERSION` などの版情報は
 workflow 初期パラメータまたは project の version 設定で固定し、Variable へ移さない。README に記録する場合も、
 値の複製ではなく、採用した経路・必要性の理由・owner・正本への導線だけを残す。
 jqを使用する経路では `CI_JQ_VERSION` に公式 Release の取得物と checksum がある exact 版を指定する。canonical workflow が

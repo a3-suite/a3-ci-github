@@ -23,31 +23,9 @@ jobs:
       request_run_id: ${{ steps.request.outputs['request-run-id'] }}
     steps:
       - name: Validate triggering workflow run
-        shell: bash
-        env:
-          REQUEST_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          REQUEST_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
-          REQUEST_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
-          REQUEST_WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
-          REQUEST_WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
-          REQUEST_EVENT: ${{ github.event.workflow_run.event }}
-          REQUEST_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          REQUEST_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          test "$REQUEST_CONCLUSION" = success
-          test "$REQUEST_REPOSITORY" = "$GITHUB_REPOSITORY"
-          test "$REQUEST_WORKFLOW_NAME" = release-publication-request
-          test "$REQUEST_EVENT" = workflow_dispatch
-          test -n "$DEFAULT_BRANCH"
-          test "$REQUEST_HEAD_BRANCH" = "$DEFAULT_BRANCH"
-          case "$REQUEST_WORKFLOW_PATH" in
-            .github/workflows/release-publication-request.yml|.github/workflows/release-publication-request.yml@"$DEFAULT_BRANCH") ;;
-            *) exit 1 ;;
-          esac
-          [[ "$REQUEST_WORKFLOW_RUN_ID" =~ ^[1-9][0-9]*$ ]]
-          [[ "$REQUEST_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        with:
+          operation: verify-trigger
       - uses: actions/download-artifact@<commit-sha>
         with:
           name: release-publication-request
@@ -69,13 +47,11 @@ jobs:
       contents: write
     uses: a3-suite/a3-ci-github/.github/workflows/ci-release-publication.yml@<release-publication-workflow-sha>
     with:
-      sha256sum-version: <sha256sum-version>
       runner: <versioned-runner>
       language-profile: <language-profile>
       platform-manifest: <platform-manifest>
       toolchain-version: <toolchain-version>
       cargo-audit-version: <cargo-audit-version>
-      gh-version: <gh-version>
       jq-version: <jq-version>
       release-implementation: <release-implementation>
       standard-bundle-id: <standard-bundle-id>
@@ -98,11 +74,9 @@ jobs:
     runs-on: <versioned-runner>
     permissions:
       contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
         with:
           summary-json: >-
-            {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}

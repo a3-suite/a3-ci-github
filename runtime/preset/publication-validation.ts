@@ -128,12 +128,13 @@ const validateCaller = (
   }
 };
 
-const workflowRunText = (workflow: ValueMap): string =>
-  Object.values(map(workflow.jobs))
-    .flatMap((job) => Array.isArray(map(job).steps) ? map(job).steps as unknown[] : [])
-    .map((step) => map(step).run)
-    .filter((run): run is string => typeof run === 'string')
-    .join('\n');
+// The triggering run must be verified before any of its artifacts is downloaded.
+const verifiesTriggerFirst = (job: ValueMap, actionPath: string): boolean => {
+  const steps = (Array.isArray(job.steps) ? job.steps as unknown[] : []).map(map);
+  const trigger = steps.findIndex((step) => typeof step.uses === 'string' && step.uses.includes(`/${actionPath}@`) && map(step.with).operation === 'verify-trigger');
+  const download = steps.findIndex((step) => typeof step.uses === 'string' && step.uses.startsWith('actions/download-artifact@'));
+  return trigger >= 0 && (download < 0 || trigger < download);
+};
 
 const workflowActionOperations = (workflow: ValueMap, actionPath: string): string[] =>
   Object.values(map(workflow.jobs))
@@ -199,21 +200,11 @@ const validatePackagePublicationFlow = (
     message: 'trigger conclusion must be validated as a failure, not skipped at job level',
     settingLocation: callerPath,
   });
-  const callerRuns = workflowRunText(caller);
-  for (const token of [
-    'REQUEST_CONCLUSION',
-    '.github/workflows/package-publication-request.yml',
-    'REQUEST_WORKFLOW_NAME',
-    'REQUEST_WORKFLOW_PATH',
-    'test "$REQUEST_HEAD_BRANCH" = "$DEFAULT_BRANCH"',
-    'REQUEST_HEAD_SHA',
-  ]) {
-    if (!callerRuns.includes(token)) add(report.missingSettings, {
-      path: `${callerPath}:jobs.validate-request.steps`,
-      message: `package publication caller provenance check is missing: ${token}`,
-      settingLocation: callerPath,
-    });
-  }
+  if (!verifiesTriggerFirst(validateJob, 'actions/ci-package-publication-request')) add(report.missingSettings, {
+    path: `${callerPath}:jobs.validate-request.steps`,
+    message: 'package publication caller must run verify-trigger before downloading the request artifact',
+    settingLocation: callerPath,
+  });
   if (!workflowActionOperations(caller, 'actions/ci-package-publication-request').includes('verify')) add(report.missingSettings, {
     path: `${callerPath}:jobs.validate-request.steps`,
     message: 'package publication caller is missing Action request verification',
@@ -319,20 +310,11 @@ const validateReleaseCallerWorkflow = (
     message: 'trigger conclusion must be validated as a failure, not skipped at job level',
     settingLocation: callerPath,
   });
-  const callerRuns = workflowRunText(caller);
-  for (const token of [
-    'REQUEST_CONCLUSION',
-    '.github/workflows/release-publication-request.yml',
-    'REQUEST_WORKFLOW_PATH',
-    'test "$REQUEST_HEAD_BRANCH" = "$DEFAULT_BRANCH"',
-    'REQUEST_HEAD_SHA',
-  ]) {
-    if (!callerRuns.includes(token)) add(report.missingSettings, {
-      path: `${callerPath}:jobs.validate-request.steps`,
-      message: `release publication caller provenance check is missing: ${token}`,
-      settingLocation: callerPath,
-    });
-  }
+  if (!verifiesTriggerFirst(validateJob, 'actions/ci-release-publication-control')) add(report.missingSettings, {
+    path: `${callerPath}:jobs.validate-request.steps`,
+    message: 'release publication caller must run verify-trigger before downloading the request artifact',
+    settingLocation: callerPath,
+  });
   if (!workflowActionOperations(caller, 'actions/ci-release-publication-control').includes('verify-publication-request')) add(report.missingSettings, {
     path: `${callerPath}:jobs.validate-request.steps`,
     message: 'release publication caller is missing Action request verification',

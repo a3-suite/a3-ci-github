@@ -26,29 +26,9 @@ jobs:
       toolchain: ${{ steps.request.outputs.toolchain }}
     steps:
       - name: Require successful request
-        shell: bash
-        env:
-          REQUEST_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          REQUEST_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
-          REQUEST_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
-          REQUEST_WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
-          REQUEST_EVENT: ${{ github.event.workflow_run.event }}
-          REQUEST_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          REQUEST_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          test "$REQUEST_CONCLUSION" = success
-          test "$REQUEST_REPOSITORY" = "$GITHUB_REPOSITORY"
-          test "$REQUEST_WORKFLOW_NAME" = package-publication-request
-          test "$REQUEST_EVENT" = workflow_dispatch
-          test -n "$DEFAULT_BRANCH"
-          test "$REQUEST_HEAD_BRANCH" = "$DEFAULT_BRANCH"
-          case "$REQUEST_WORKFLOW_PATH" in
-            .github/workflows/package-publication-request.yml|.github/workflows/package-publication-request.yml@"$DEFAULT_BRANCH") ;;
-            *) exit 1 ;;
-          esac
-          [[ "$REQUEST_HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        with:
+          operation: verify-trigger
       - uses: actions/download-artifact@<commit-sha>
         with:
           name: package-publication-request
@@ -100,11 +80,9 @@ jobs:
     runs-on: <versioned-runner>
     permissions:
       contents: read
-    env:
-      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Write workflow summary
         uses: a3-suite/a3-ci-github/actions/ci-quality-summary@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
         with:
           summary-json: >-
-            {"jobs":[{"unit":"validate-request","execution":"trusted package publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"prepare","execution":"trusted package preparation","rawResult":"${{ needs.prepare.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"prepare result: ${{ needs.prepare.result }}"},{"unit":"publish","execution":"trusted package publication","rawResult":"${{ needs.publish.result }}","applicable":true,"evidence":"${{ env.WORKFLOW_RUN_URL }}","reason":"publish result: ${{ needs.publish.result }}"}]}
+            {"jobs":[{"unit":"validate-request","execution":"trusted package publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"prepare","execution":"trusted package preparation","rawResult":"${{ needs.prepare.result }}","applicable":true,"reason":"prepare result: ${{ needs.prepare.result }}"},{"unit":"publish","execution":"trusted package publication","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}

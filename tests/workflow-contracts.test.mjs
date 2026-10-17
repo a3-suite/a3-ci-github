@@ -209,9 +209,10 @@ describe("workflow-contracts", () => {
       const directory = mkdtempSync(path.join(root, 'tmp/reusable-quality-summary-'));
       try {
         for (const { source, template } of templates) for (const result of ['success', 'failure', 'cancelled', 'skipped', '', 'unknown']) {
-          const payload = template.replaceAll('${{ needs.' + source + '.result }}', result).replaceAll('${{ env.WORKFLOW_RUN_URL }}', 'https://github.com/example/project/actions/runs/1');
+          const payload = template.replaceAll('${{ needs.' + source + '.result }}', result);
           const run = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
             cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
+              GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'example/project', GITHUB_RUN_ID: '1',
               'INPUT_SUMMARY-JSON': payload, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'),
               'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md'),
             }, timeout: spawnTimeoutMs,
@@ -1717,14 +1718,13 @@ describe("workflow-contracts", () => {
         includesAll(summary, [
           /^    if: always\(\)$/m,
           /ci-quality-summary@/,
-          /^      WORKFLOW_RUN_URL: \$\{\{ github\.server_url \}\}\/\$\{\{ github\.repository \}\}\/actions\/runs\/\$\{\{ github\.run_id \}\}$/m,
-          /"evidence"/,
           /"reason"/,
         ]);
         expect(summary).not.toMatch(/secrets(?:\.|\s*\[)/);
 
         if (summaryId === 'platform-summary' && relative === '.github/workflows/ci-quality-platforms.yml') {
           includesAll(summary, [
+            /^      WORKFLOW_RUN_URL: \$\{\{ github\.server_url \}\}\/\$\{\{ github\.repository \}\}\/actions\/runs\/\$\{\{ github\.run_id \}\}$/m,
             /^      RESOLVE_RESULT: \$\{\{ needs\.resolve-platforms\.result \}\}$/m,
             /^      PLATFORM_RESULT: \$\{\{ needs\.platform\.result \}\}$/m,
             /elif \[\[ "\$\{RESOLVE_RESULT:-\}" == "success" && "\$\{PLATFORM_RESULT:-\}" == "success" \]\]; then\n\s+result="success"/,
@@ -1744,7 +1744,8 @@ describe("workflow-contracts", () => {
           // failed and missing states are normalized by the ci-quality-summary contract.
           expect(record).toMatch(new RegExp(`"rawResult":"\\$\\{\\{ needs\\.${escapedJob}\\.result \\}\\}"`));
           expect(record).toMatch(/"applicable":/);
-          expect(record).toMatch(/"evidence":"\$\{\{ env\.WORKFLOW_RUN_URL \}\}"/);
+          // ci-quality-summary fills the run URL when a row omits evidence.
+          expect(record).not.toMatch(/"evidence"/);
           expect(record).toMatch(new RegExp(`"reason":"[^"]*needs\\.${escapedJob}\\.result`));
         }
       }
