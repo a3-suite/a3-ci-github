@@ -1,8 +1,10 @@
-import { existsSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
 import { checkActionReferences, checkProviderReferences, checkRepository, registryPath, repositorySnapshot } from '../runtime/repository/check-provider-references.mjs';
 import { verifyActionReferenceContracts } from '../runtime/repository/verify-action-reference-contracts.mjs';
+import { collectActionPackages, sharedRuntimeVerificationPlan, verificationPlan } from '../runtime/repository/verify-action-packages.mjs';
+import vitestConfig from '../vitest.config.mjs';
 import path from 'node:path';
 import { test, describe, expect, onTestFinished } from 'vitest';
 import { runInNewContext } from 'node:vm';
@@ -1292,6 +1294,21 @@ describe("workflow-contracts", () => {
         /INSTALLER_WINDOWS_RESULT: \$\{\{ needs\.installer-windows\.result \}\}/,
         /INSTALLER_WINDOWS_NATIVE_RESULT: \$\{\{ needs\.installer-windows-native\.result \}\}/,
       ]);
+    });
+
+    // integration_id: repository-quality-delivery-regression
+    test('repository CI runs every Vitest file the root configuration collects', () => {
+      // Arrange
+      const collected = globSync(vitestConfig.test.include, { cwd: root });
+      const workflowTests = ['.github/workflows/quality-gate.yml', '.github/workflows/release.yml']
+        .flatMap((file) => read(file).match(/[\w./-]+\.test\.(?:ts|mjs)/g) ?? []);
+      const planTests = [...verificationPlan(collectActionPackages(root)), ...sharedRuntimeVerificationPlan(root)]
+        .filter((step) => step.phase === 'test')
+        .flatMap((step) => step.args.filter((arg) => /\.test\.(?:ts|mjs)$/.test(arg)).map((arg) => path.relative(root, arg)));
+      // Act
+      const selected = new Set([...workflowTests, ...planTests]);
+      // Assert
+      expect(collected.filter((file) => !selected.has(file))).toStrictEqual([]);
     });
 
     // integration_id: repository-quality-delivery-regression

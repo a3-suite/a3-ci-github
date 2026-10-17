@@ -82,6 +82,9 @@ jobs:
           runtime/preset/tests/preset-assurance-contract.test.mjs
           tests/repository-managed-source-integrity.test.mjs
           tests/cli-specification.test.mjs
+          tests/control-checkout.test.mjs
+          tests/release-token-capability-probe.test.mjs
+          tests/shared-quality-checks.test.mjs
 
       - name: Verify README Action catalog
         shell: bash
@@ -132,7 +135,9 @@ jobs:
           runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
           runtime/path/tests/same-file-core.test.mjs
           runtime/platform/tests/platform-manifest-core.test.mjs
+          runtime/platform/tests/source-text.test.mjs
           runtime/vitest/tests/vitest-report-core.test.mjs
+          runtime/workflow-run/tests/request-trigger.test.ts
 
       - name: Test quality toolchain Action contracts
         shell: bash
@@ -140,6 +145,7 @@ jobs:
           npm test --
           actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
+          actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
 
       - name: Verify all bundled Action sources
         shell: bash
