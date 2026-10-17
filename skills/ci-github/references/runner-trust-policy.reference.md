@@ -65,6 +65,13 @@
 - trusted CI assets bootstrap（後述）を除き、trusted PR check が project-local な trusted CI assets を実行する場合は、その assets と lockfile / dependency set を event payload の base SHA から取得し、PR head 側の変更で判定を弱めない。
 - trusted PR check の base / head 入力は event payload の immutable SHA に固定し、mutable branch ref または merge alias を入力にしない。
 
+### build cache の境界
+- 本節の build cache は、compile 済みの成果物を含む cache（Cargo の target directory など）を指す。lockfile の integrity で内容を検証する package manager の download cache（`actions/setup-node` の `cache: npm` など）は対象外とする。
+- build cache は `trusted` の quality check だけで復元・保存する。cache の内容は、保存した run が checkout した source から作られる。GitHub は default branch の scope への保存を default branch 上の run に限るため、default branch の実行が復元する cache は default branch の source から作られる。PR の merge ref で保存した cache はその PR の実行だけが復元し、default branch 以外の branch で保存した cache は、その branch の実行と、その branch を head または base とする PR の実行が復元する。
+- `trusted` という job 名は、起動者の権限や PR 内容の信頼を表さない（same-repo の Dependabot PR も `trusted` で実行される）。build cache の信頼は上記の scope の制限だけに基づく。
+- `untrusted-pr` と、publish などの権限付き workflow の job（build を含む）では build cache を使わない。公開物は build cache を経由しない clean build から作る。
+- build cache は quality の実行時間を短縮する手段であり、検証対象や判定を置き換えない。key には runner の OS・architecture、toolchain の版、lockfile の内容を含める。
+
 ### trusted CI assets bootstrap
 - trusted CI assets は、workflow が呼び出す `.ci/scripts/**`、policy script、adapter descriptor、またはそれらに相当する project-local CI 実行資産とする。
 - base の採用済み marker は `.ci/ci-assets.lock.json` の存在とする。marker は配布同一性 lock の正本 path を使い、内容は runtime で解析しない。
@@ -115,6 +122,7 @@
 - [ ] merge queue を使う場合、`merge_group` payload で成立する required check を用意している
 - [ ] post-merge verification を merge gate required check として扱っていない
 - [ ] trusted PR check の入力境界を満たしている
+- [ ] build cache を `trusted` の quality check だけで使い、`untrusted-pr` と権限付き workflow の job では使っていない
 - [ ] trusted CI assets は標準で base SHA から取得している
 - [ ] base の採用済み marker として `.ci/ci-assets.lock.json` の存在を使用している
 - [ ] marker がある base で対象資産の欠落を fail closed にしている
