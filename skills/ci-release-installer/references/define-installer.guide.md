@@ -51,7 +51,7 @@
 
 - per-user のパスはホームに依存するため、manifest では Unix は `~/...`、Windows は `%LOCALAPPDATA%\...` / `%USERPROFILE%\...` を使い、installer が実行時に展開する。system-wide は絶対パスを使う。
 - managed root 配下は `releases/<version>`、`current`、`install.lock`、`state/install-state.json` を基本構造とする。
-- launcher は managed root 外に置いてよいが、プロファイル別の許可 base（per-user は `~/.local/bin` または `%LOCALAPPDATA%\Programs`、system-wide は `/usr/local/bin` または `%ProgramFiles%`）に限定する。
+- launcher は managed root 外に置いてよい。配置を許可する base はインストーラ manifest 契約の「launcher 安全不変条件」を正本とする。
 - launcher は Unix は symlink（`current` 配下のバイナリを指す）、Windows は copy とする。Windows の shim は starter 標準では扱わない。既存の管理外 launcher の判定と衝突時の扱いはインストーラ manifest 契約の「launcher 安全不変条件」を正本とし、上書きせず失敗して rollback で旧 launcher を復元する。
 - PATH 登録は自動変更しない。実行後に PATH 上の所在を確認し、見つからない場合は利用者へ案内する。自動登録は project override とする。
 
@@ -91,7 +91,7 @@
    - cache を使う場合も、cache hit を checksum / signature 検証なしで信頼しない。
 4. managed root を狭く定義する。
    - managed root は1つに限定する。root 外の launcher と必要な親ディレクトリ作成はインストーラ manifest 契約の「launcher 安全不変条件」に従う。
-   - 絶対パス、親 traversal、symlink component を拒否する。
+   - 親 traversal、symlink component を拒否する。
    - managed root は `<base>/<app...>` の深さを持つアプリ固有ディレクトリに限定し、filesystem root、Windows drive root、ホームディレクトリそのもの（`/home/<user>`、`/Users/<user>` など）、OS 予約領域（`/etc`、`/usr`、`/var`、`/System`、`<drive>:\Windows` など）を拒否する。
    - Windows では drive root と UNC share root 自体を拒否し、`<drive>\<base>\<app...>` または `\\<server>\<share>\<app...>` の深さを要求する。
    - OS 予約領域配下の許可例外は `/usr/local/<app>`、`/var/lib/<app>`、`/var/opt/<app>`、`/Library/Application Support/<app>`、fixture / test で使う一時領域（`/tmp/<app>`、`/private/tmp/<app>`、`/var/tmp/<app>`、`/private/var/tmp/<app>`、`/var/folders/<...>`、`/private/var/folders/<...>`）に限定し、これらの base 自体は拒否する。
