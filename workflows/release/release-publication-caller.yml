@@ -23,7 +23,7 @@ jobs:
       request_run_id: ${{ steps.request.outputs['request-run-id'] }}
     steps:
       - name: Validate triggering workflow run
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           operation: verify-trigger
       - uses: actions/download-artifact@<commit-sha>
@@ -34,7 +34,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate publication request identity
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           operation: verify-publication-request
           request-workflow-run-id: ${{ github.event.workflow_run.id }}
@@ -76,7 +76,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@e55fdf8e28680b44fdb9ca6fedbae85ae6d7a113
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@f8fb0b2b7c98b595f869a50a8406b3a416f28915
         with:
           summary-json: >-
             {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}
