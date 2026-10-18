@@ -15,7 +15,7 @@
 
 ## 標準整合の必須確認
 
-`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。
+`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。移行・更新を推奨する場合の経路は`references/deploy-ci-assets.guide.md`の「更新と削除」とする。
 
 ## 監査段階の選択
 
@@ -30,10 +30,11 @@ ownerへの委譲ではsubject catalogの`stageHandling`も適用する。返却
 3. `references/ci-audit-subjects.reference.yml` の `repository-root-readme` を意味監査の必須 subject として登録し、同 subject の `ownerSkill` が要求する前提と `delegation.ciInputs` を準備する。委譲は provider 固有証拠を揃えた後、ユースケースシミュレーションで実行する。
 4. 同subject catalogの `repository-ci-documentation.discovery` を順に適用して候補と個別扱いを確定する。適用対象は同 subject の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
 5. 同subject catalogの `installer-distribution.adoptionAssessment` を先に適用し、定義済みの handling を保持する。続いて `installer-distribution.appliesWhen`、`discovery`、`inapplicable` と、監査契約の `statusClassification` から適用判定を導出する。適用対象なら `delegation.ciInputs` を準備し、provider 固有証拠を揃えた後、ユースケースシミュレーションで一度だけ委譲する。修正が必要な場合は同 subject の `remediationPriority` を適用し、読み取り専用監査と修正許可のある監査を `modeHandling` で分ける。
-6. 外部から観測できる仕様や安全不変条件を実行可能な検査へ接続する。導線の有無は構成監査で、実行結果は選択した証跡監査で確認する。
-7. 局所保証、再発防止、テスト資産互換性の検査導線が必要かを判定する。実行結果の取得・照合は証跡監査を選択した場合に行い、補助証拠の追加可否は監査モードに従う。
-8. 到達不能な補助ファイル、導入元スキルの内部実装、provider の再利用単位本体は適用先の実装テスト対象にしない。ただし適用先での固定 ref、入出力、権限、配置結果との接続は確認する。
-9. 棚卸しした各ファイルを、CI に必要な資産、別 owner が管理する非 CI 資産、削除または置換が必要な重複・未到達・旧資産のいずれかへ分類し、根拠を記録する。別 owner の資産は owner と用途を確認して CI 監査の保証対象から除外し、到達不能という理由だけで不要と判定しない。未分類のファイルが残る間は意味監査を完了扱いにしない。
+6. 同subject catalogの `release-target-coverage` を適用し、製品・installer・公開スキルのうち製品と同じversionのReleaseへ接続されていない対象を、公開を促す推奨対応として要対応へ示す。採用済みの公開経路は、同subjectの `versionConsistency` の適用条件・比較基準・段階規則に従ってversionを照合する。推奨する経路は、製品versionが `references/configure-ci-preset.guide.md`、installerが ci-release-installer スキル、公開スキルが `references/publish-project-skills.guide.md` とする。
+7. 外部から観測できる仕様や安全不変条件を実行可能な検査へ接続する。導線の有無は構成監査で、実行結果は選択した証跡監査で確認する。
+8. 局所保証、再発防止、テスト資産互換性の検査導線が必要かを判定する。実行結果の取得・照合は証跡監査を選択した場合に行い、補助証拠の追加可否は監査モードに従う。
+9. 到達不能な補助ファイル、導入元スキルの内部実装、provider の再利用単位本体は適用先の実装テスト対象にしない。ただし適用先での固定 ref、入出力、権限、配置結果との接続は確認する。
+10. 棚卸しした各ファイルを、CI に必要な資産、別 owner が管理する非 CI 資産、削除または置換が必要な重複・未到達・旧資産のいずれかへ分類し、根拠を記録する。別 owner の資産は owner と用途を確認して CI 監査の保証対象から除外し、到達不能という理由だけで不要と判定しない。未分類のファイルが残る間は意味監査を完了扱いにしない。
 
 ## ユースケースシミュレーション
 

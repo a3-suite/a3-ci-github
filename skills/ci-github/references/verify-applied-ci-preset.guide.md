@@ -73,6 +73,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
    - `references/ci-audit-subjects.reference.yml` の `repository-root-readme` に必要な入力として、workflow、provider registry、policy、manifest、リリース前確認に適用する検証証拠を準備する。この手順では委譲せず、手順5の意味監査へ渡す。
    - `repository-ci-documentation.discovery` を適用して候補と個別扱いを確定する。適用対象は手順5の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
    - 共通検証で確定した `installer-distribution` の適用判定を手順5の意味監査へ渡し、GitHub Actions 固有の適用条件を追加しない。
+   - 共通検証で確定した `release-target-coverage` の対象を手順5の意味監査へ渡し、採用済みの公開経路について、`release-request`・`release-publication` callerと公開宣言の接続、および同subjectの `versionConsistency` が求めるversionの受け渡しを照合する。
 
 5. `references/ci-workflow-use-cases.reference.yml` のユースケースシミュレーションで抽出した各シナリオを、GitHub Actions の実行経路へ写像する。
 
