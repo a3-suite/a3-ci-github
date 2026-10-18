@@ -31,7 +31,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "identity/preflight・asset解決・toolchain・quality adapter・platform job・aggregate summaryの失敗段階、matrix/platform、元のneeds result、欠落/unresolvedの理由、当該run/job/step logと既存evidenceへの参照を残す。"
+          meaning: "identity/preflight・asset解決・toolchain・quality adapter・platform job・aggregate summaryの失敗段階、matrix/platform、元のneeds result、欠落/unresolvedの理由、当該run/job/step logと既存evidenceへの参照を表す診断情報。"
   - id: observation.ci-quality-workflow.execution.relations
     summary: Individually observed contract values and comparisons.
     boundary:

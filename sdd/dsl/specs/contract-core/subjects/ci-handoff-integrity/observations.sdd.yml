@@ -45,4 +45,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "manifest読取・path/種別検証・inventory照合・size/digest照合を区別し、handoff identity、対象相対path、欠落/余剰/不正種別、期待/観測sizeとdigest、最初に失敗した検証を残す。"
+          meaning: "manifest読取・path/種別検証・inventory照合・size/digest照合の段階、handoff identity、対象相対path、欠落/余剰/不正種別、期待/観測sizeとdigest、最初に失敗した検証を表す診断情報。"

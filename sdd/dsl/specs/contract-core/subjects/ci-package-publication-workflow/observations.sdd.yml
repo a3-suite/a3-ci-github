@@ -25,7 +25,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "request・request検証・version plan・package build・credential準備・publication・readback・summaryのどのjob/stepで失敗したか、package/version/registry、元のneeds result、既存log/artifactへの参照、公開操作の未実行/部分実行/結果不明を残す。"
+          meaning: "request・request検証・version plan・package build・credential準備・publication・readback・summaryの失敗job/step、package/version/registry、元のneeds result、既存log/artifactへの参照、公開操作の未実行/部分実行/結果不明を表す診断情報。"
   - id: observation.ci-package-publication-workflow.publication.relations
     summary: Individually observed contract values and comparisons.
     boundary:

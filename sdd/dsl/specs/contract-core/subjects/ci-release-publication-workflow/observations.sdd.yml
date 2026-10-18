@@ -28,7 +28,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "request・authority・source/quality・platform build・supplemental生成/転送/final assemble・absence観測・create/upload/finalize・readbackの失敗job/step、matrix identity、元のneeds result、log/artifact参照、最後に確定したRelease ID/公開段階を残す。公開前failureと部分公開/公開結果不明を区別し、転送欠落は宣言したevidenceと実体の差を追跡できる。"
+          meaning: "request・authority・source/quality・platform build・supplemental生成/転送/final assemble・absence観測・create/upload/finalize・readbackの失敗job/step、matrix identity、元のneeds result、log/artifact参照、最後に確定したRelease ID/公開段階、公開前failure/部分公開/公開結果不明の別、転送欠落時の宣言evidenceと実体の差を表す診断情報。"
   - id: observation.ci-release-publication-workflow.publication.relations
     summary: Individually observed contract values and comparisons.
     boundary:

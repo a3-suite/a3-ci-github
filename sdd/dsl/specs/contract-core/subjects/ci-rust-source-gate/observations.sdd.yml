@@ -44,4 +44,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "authority読取・language profile・source SHA・checkout照合を区別し、authority相対path、要求/観測language profileと固定source SHA、checkoutの取得可否、検証前後の状態を残す。"
+          meaning: "authority読取・language profile・source SHA・checkout照合の段階、authority相対path、要求/観測language profileと固定source SHA、checkoutの取得可否、検証前後の状態を表す診断情報。"

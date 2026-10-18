@@ -25,7 +25,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "tag解決・source照合・handoff生成・artifact upload・summaryの失敗job/step、tag/source/request run identity、元のneeds result、保存済みrequest/digestと当該log/artifact参照、未生成または未転送理由を残す。"
+          meaning: "tag解決・source照合・handoff生成・artifact upload・summaryの失敗job/step、tag/source/request run identity、元のneeds result、保存済みrequest/digestと当該log/artifact参照、未生成または未転送理由を表す診断情報。"
   - id: observation.ci-release-request-workflow.handoff.relations
     summary: Individually observed contract values and comparisons.
     boundary:

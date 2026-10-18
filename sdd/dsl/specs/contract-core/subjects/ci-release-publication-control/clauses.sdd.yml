@@ -100,6 +100,11 @@ contracts:
           - publication-control-status-produced
           - publication-request-run-id-produced
       - id: publication-control-rejected
-        goal: Publication control fails on unsupported request schema, missing or invalid owner decision, approval/provenance mismatch, or a trigger that is not a successful default-branch dispatch of the request workflow.
+        goal: Publication control fails on unsupported request schema, missing or invalid owner decision, or approval/provenance mismatch.
         guarantee_refs:
           - publication-control-failure-propagated
+      - id: request-trigger-rejection
+        goal: verify-trigger fails and accepts no run when the triggering run is not a successful default-branch dispatch of the caller's own request workflow.
+        guarantee_refs:
+          - publication-control-failure-propagated
+          - request-trigger-run-bound

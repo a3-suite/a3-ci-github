@@ -5,7 +5,7 @@ import { verifyRequestTrigger } from '../request-trigger.js';
 import { requestTriggerEnvironment } from './request-trigger-fixture.js';
 
 describe('verifyRequestTrigger(requestWorkflow, env)', () => {
-  // evidence_role: supplemental
+  // evidence_role: contract
   // test_level: integration
   // integration_id: request-trigger-event-file
   // Action entrypoint tests cover the public operation; this covers each rejected trigger field.
@@ -24,7 +24,7 @@ describe('verifyRequestTrigger(requestWorkflow, env)', () => {
     for (const result of results) expect(result).toEqual({ runId: '22', headSha: 'a'.repeat(40) });
   });
 
-  // evidence_role: supplemental
+  // evidence_role: contract
   // test_level: integration
   // integration_id: request-trigger-event-file
   test('rejects each trigger field that does not match the request workflow dispatch', () => {

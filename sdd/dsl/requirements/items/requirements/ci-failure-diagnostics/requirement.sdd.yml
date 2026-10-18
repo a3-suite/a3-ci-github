@@ -22,10 +22,7 @@ requirements:
       - 入力検証結果、実行した検証段階、終了状態、失敗前に確定した主要結果を、障害原因の切り分けに必要な範囲で証跡として残す
       - secret、token、credential、保護対象の入力値をメッセージ、summary、outputまたはartifactへ記録しない
       - 同じ情報の重複、大量の無関係な出力、文脈のないstack traceを避け、最初に確認すべき失敗情報を判別できる
-      - 診断情報はGitHub Actionsのlog、annotation、job summary、outputおよび必要時のartifactで提供し、診断だけを目的とする常設基盤を追加しない
       - 証跡生成の失敗が元の失敗理由や終了状態を上書きせず、元の障害を追跡できる
-      - Releaseのremote観測では通信、応答解析、権限可視性、一覧完全性の拒否理由を区別し、利用可能なHTTP statusとrequest IDを安全に残す
-      - 標準installerの既知の検証理由と実行phaseを子プロセスから最終logまで保持し、未知の失敗はphaseと原因不明を示す。独自adapterの自由な診断は公開しない
     derived_artifacts:
       quality_scenarios:
         - quality_scenario_ref:

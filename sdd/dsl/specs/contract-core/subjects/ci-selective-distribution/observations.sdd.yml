@@ -105,7 +105,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "selection/fetch/verify/plan/apply/rollback/publicationのoperationと失敗段階の段階、preset/asset、固定revision、manifest schema、対象相対path、期待/観測size/digest、plan/transaction identity、lock競合と変更前後/復元状態、公開write結果の確定/不明を表す診断情報。"
+          meaning: "selection/fetch/verify/plan/apply/rollback/publicationのoperationと失敗段階、preset/asset、固定revision、manifest schema、対象相対path、期待/観測size/digest、plan/transaction identity、lock競合と変更前後/復元状態、公開write結果の確定/不明を表す診断情報。"
   - id: observation.ci-selective-distribution.restoration
     summary: Atomic boundary comparisons used by this contract.
     boundary:

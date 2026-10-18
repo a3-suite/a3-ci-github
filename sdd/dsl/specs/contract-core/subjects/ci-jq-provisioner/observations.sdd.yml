@@ -33,4 +33,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "version選択・platform選択・取得・checksum・配置・version確認を区別し、tool名、要求version、OS/arch、asset名、期待/観測digestまたはversion、HTTP相関情報、失敗した配置段階を残す。"
+          meaning: "version選択・platform選択・取得・checksum・配置・version確認の段階、tool名、要求version、OS/arch、asset名、期待/観測digestまたはversion、HTTP相関情報、失敗した配置段階を表す診断情報。"

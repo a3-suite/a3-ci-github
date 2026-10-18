@@ -39,7 +39,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "入力result/report読取・classification・render・evidence保存を区別し、欠落または不正な入力identity、failed/unresolved/skippedの元状態、未収集項目、保存済み証跡参照を残す。summary作成失敗で元の失敗を隠さない。"
+          meaning: "入力result/report読取・classification・render・evidence保存の段階、欠落または不正な入力identity、failed/unresolved/skippedの元状態、未収集項目、保存済み証跡参照を表す診断情報。"
   - id: observation.ci-quality-summary.outputs.relations
     summary: Individually observed contract values and comparisons.
     boundary:

@@ -20,13 +20,15 @@ verifications:
           - id: check-request-trigger-run-bound
             guarantee_ref: request-trigger-run-bound
       - id: request-trigger-rejected
-        intent_id: package-request-rejected
+        intent_id: request-trigger-rejection
         input:
           operation: verify-trigger
           workflow-run: non-default-branch
         checks:
           - id: check-request-trigger-failure
             guarantee_ref: package-request-failure-propagated
+          - id: check-request-trigger-run-bound
+            guarantee_ref: request-trigger-run-bound
       - id: package-request-round-trip
         intent_id: package-request-source-binding
         input:

@@ -39,7 +39,7 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "authority/snapshot検証・platform/build inventory・checksum・supplemental binding・handoff生成を区別し、固定source/version/platform、対象asset/evidence相対path、欠落/余剰/重複、期待/観測size/digest/identity、出力の未生成/部分生成を残す。"
+          meaning: "authority/snapshot検証・platform/build inventory・checksum・supplemental binding・handoff生成の段階、固定source/version/platform、対象asset/evidence相対path、欠落/余剰/重複、期待/観測size/digest/identity、出力の未生成/部分生成を表す診断情報。"
   - id: observation.ci-release-assembly.comparisons
     summary: Individually observed asset digest serialization and accepted checksum sidecar properties.
     boundary:
