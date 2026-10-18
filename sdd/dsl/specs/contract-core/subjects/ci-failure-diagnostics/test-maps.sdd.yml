@@ -7,7 +7,7 @@ test_maps:
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: "workflow-contracts > failure-diagnostics-contract > every packaged contract defines subject-specific diagnostics under the shared minimum"
-        check_refs: [check.ci-failure-diagnostics.subject-contract-coverage]
+        check_refs: [ check.ci-failure-diagnostics.subject-contract-coverage ]
   - verification_id: verification.ci-failure-diagnostics.workflow-evidence
     case_id: workflow-evidence-declared
     tests:
@@ -23,16 +23,16 @@ test_maps:
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+        check_refs: [ check.ci-failure-diagnostics.bootstrap-diagnostic ]
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap confines dependency files and accepts internal symlink cycles"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+        check_refs: [ check.ci-failure-diagnostics.bootstrap-diagnostic ]
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap reports unavailable npm and cleans up state after dependency command failures"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+        check_refs: [ check.ci-failure-diagnostics.bootstrap-diagnostic ]
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap reports validator startup and completion failures without consumer changes"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
+        check_refs: [ check.ci-failure-diagnostics.bootstrap-diagnostic ]
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots"
         check_refs:
@@ -42,52 +42,52 @@ test_maps:
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: "source entrypoint > missing build inventory retains the failing stage and exact missing entries"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-known-cause-omission ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: unknown-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when unknown fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-unsubstantiated-remediation ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: external-request-failure
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-unsubstantiated-context ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: child-process-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: "source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-unsafe-diagnostic-disclosure ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: evidence-generation-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when evidence-generation fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-original-diagnostic-loss ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: evidence-transfer-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: "standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-invalid-evidence-reference ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: summary-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when summary-write fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-original-outcome-replacement ]
   - verification_id: verification.ci-failure-diagnostics.detailed-evidence
     case_id: partial-write-failure
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-diagnostic-only-retry ]
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-diagnostic-only-retry ]
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        check_refs: [ classification, context, comparison, retention, state, next-check, diagnostic-diagnostic-only-retry ]

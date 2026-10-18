@@ -47,3 +47,57 @@ test_maps:
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
         symbol: "contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejection retains the failing stage, paths and conflicting digests"
         check_refs: [diagnostic-details]
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: standard-binding-footprint
+    tests:
+    - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
+      symbol: adapter-bundle-materialization-contract > registered standard quality bundles require no consumer
+        copies and preserve consumer files
+      check_refs:
+      - selected-bundle-match
+      - standard-copy-state
+      - standard-report-files
+      - standard-binding-action
+      - standard-binding-bundle
+      - standard-binding-source
+      - standard-binding-digest
+      - consumer-settings-change
+      - consumer-dependency-change
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: custom-copy-report
+    tests:
+    - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+      symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer
+        reports copied and reused custom assets without changing consumer settings
+      check_refs:
+      - selected-bundle-match
+      - copy-report-sources
+      - copy-report-destinations
+      - copy-report-actions
+      - consumer-settings-change
+      - consumer-dependency-change
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: conflicting-destination-protection
+    tests:
+    - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+      symbol: materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned
+        assets from external skill resources
+      check_refs:
+      - conflicting-destination-change
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: late-copy-failure-retention
+    tests:
+    - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+      symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer
+        retains completed copies and reports the changed range after a later copy fails
+      check_refs:
+      - consumer-settings-change
+      - consumer-dependency-change
+      - completed-copy-loss
+      - changed-range-evidence
+  - verification_id: verification.ci-preset-materialization.application
+    case_id: standard-rejection-footprint
+    tests:
+      - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
+        symbol: "adapter-bundle-materialization-contract > registered standard quality bundles require no consumer copies and preserve consumer files"
+        check_refs: [standard-copy-state, consumer-settings-change, consumer-dependency-change]

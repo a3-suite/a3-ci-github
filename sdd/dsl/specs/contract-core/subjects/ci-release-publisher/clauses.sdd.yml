@@ -28,6 +28,11 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.release-publisher-invalid
           op: available
+      - id: publication-invocation
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-publisher-invocation
+          op: available
     guarantees:
       - id: receipt-file
         when: valid
@@ -82,6 +87,76 @@ contracts:
           kind: observable-result
           op: present
           target: {kind: observation_field, value: details}
+      - id: publication-write-retry
+        when: publication-invocation
+        observation_ref: observation.ci-release-publisher.effects
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: publication-write-retry
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: publication-recovery-write
+        when: publication-invocation
+        observation_ref: observation.ci-release-publisher.effects
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: publication-recovery-write
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: publication-delete
+        when: publication-invocation
+        observation_ref: observation.ci-release-publisher.effects
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: publication-delete
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: publication-existing-release-write
+        when: publication-invocation
+        observation_ref: observation.ci-release-publisher.effects
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: publication-existing-release-write
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: publication-created-id-binding
+        when: publication-invocation
+        observation_ref: observation.ci-release-publisher.effects
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: publication-created-id-binding
+            right:
+              kind: value_set
+              values:
+              - matched
     verification_intents:
       - id: detailed-diagnostics-outputs
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
@@ -98,3 +173,22 @@ contracts:
         guarantee_refs:
           - rejected
           - no-success-outputs
+      - id: publication-write-failure-boundary-intent
+        goal: Observe the complete write trace at each uncertain publication boundary.
+        guarantee_refs:
+        - publication-created-id-binding
+        - publication-write-retry
+        - publication-recovery-write
+        - publication-delete
+      - id: publication-existing-release-protection-intent
+        goal: Observe provider writes when a same-tag draft or published Release already exists.
+        guarantee_refs:
+        - publication-existing-release-write
+      - id: publication-immutable-id-intent
+        goal: Compare upload and finalize targets with the immutable create response ID.
+        guarantee_refs:
+        - publication-created-id-binding
+      - id: publication-inventory-reobservation-intent
+        goal: Observe publication write counts while read-only asset inventory initially lags.
+        guarantee_refs:
+        - publication-write-retry

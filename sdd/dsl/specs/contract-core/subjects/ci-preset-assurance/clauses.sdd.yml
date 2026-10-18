@@ -103,7 +103,7 @@ contracts:
               value: status
             right:
               kind: value_set
-              values: [success]
+              values: [ success ]
       - id: ci-preset-assurance-valid-evidence-exposed
         when: ci-preset-assurance-applied-preset-valid
         observation_ref: observation.ci-preset-assurance.preflight-report
@@ -134,42 +134,71 @@ contracts:
               value: status
             right:
               kind: value_set
-              values: [failed]
+              values: [ failed ]
       - id: diagnostic-details-verification
         when: diagnostic-required-verification
         observation_ref: observation.ci-preset-assurance.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: valid-consumer-unchanged
+        when: ci-preset-assurance-applied-preset-valid
+        observation_ref: observation.ci-preset-assurance.verification.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: valid-tree-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: drift-consumer-unchanged
+        when: ci-preset-assurance-applied-preset-drifted
+        observation_ref: observation.ci-preset-assurance.verification.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: drift-tree-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
     verification_intents:
       - id: detailed-diagnostics-verification
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-verification]
+        guarantee_refs: [ diagnostic-details-verification ]
       - id: ci-preset-assurance-explicit-roots-intent
         goal: Missing explicit repository root produces a stable invalid-input diagnostic before validation starts.
-        guarantee_refs: [ci-preset-assurance-explicit-roots-required]
+        guarantee_refs: [ ci-preset-assurance-explicit-roots-required ]
       - id: ci-preset-assurance-read-only-output-intent
         goal: Read-only audit rejects remediation output with a stable invalid-input diagnostic.
-        guarantee_refs: [ci-preset-assurance-read-only-output-rejected]
+        guarantee_refs: [ ci-preset-assurance-read-only-output-rejected ]
       - id: pending-action-blocked
         goal: Selected pending Actions produce availability failures until exact publication SHA is confirmed; unrelated released presets remain available.
-        guarantee_refs: [unavailable-action-reported]
+        guarantee_refs: [ unavailable-action-reported ]
       - id: supplemental-phase-checked
         goal: Supplemental phases must use the common Action and exact owner-v2 argument mapping; bypass, wrong inputs and failure suppression produce observable mismatches.
-        guarantee_refs: [supplemental-phase-drift-reported]
+        guarantee_refs: [ supplemental-phase-drift-reported ]
       - id: retired-release-entrypoints-blocked
         goal: Any path registered as a retired Release entrypoint is reserved; retained files or workflow references produce mismatches regardless of purpose, without modifying consumer assets.
-        guarantee_refs: [retired-release-entrypoints-reported]
+        guarantee_refs: [ retired-release-entrypoints-reported ]
       - id: ci-preset-assurance-valid-intent
         goal: A canonical applied preset produces a successful read-only preflight report without modifying the project.
         guarantee_refs:
           - ci-preset-assurance-valid-preset-succeeds
           - ci-preset-assurance-valid-evidence-exposed
           - ci-preset-assurance-semantic-review-state-exposed
+          - valid-consumer-unchanged
       - id: ci-preset-assurance-drift-intent
         goal: Canonical or distribution identity drift produces a failed report and remains observable without remediation. Required pin companions must match every registry-projected entry and field, including unused pins; missing, additional or edited values are rejected independently of any existing lock. YAML formatting and mapping order are not semantic drift.
-        guarantee_refs: [ci-preset-assurance-drift-fails]
+        guarantee_refs: [ ci-preset-assurance-drift-fails, drift-consumer-unchanged ]
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation binds validated applied assets to one full distribution revision and rejects invalid revision identity.
     conditions:
@@ -188,6 +217,11 @@ contracts:
           kind: input
           term: input.invalid-source-revision
           op: present
+      - id: canonical-lock-input
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.ci-preset-assurance-canonical-lock-input
+          op: available
     guarantees:
       - id: ci-preset-assurance-lock-source-bound
         when: ci-preset-assurance-lock-input-valid
@@ -222,11 +256,53 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: lock-source-equals-request
+        when: canonical-lock-input
+        observation_ref: observation.ci-preset-assurance.asset-lock.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: requested-source-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: lock-canonical-digests-match
+        when: canonical-lock-input
+        observation_ref: observation.ci-preset-assurance.asset-lock.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: canonical-digest-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: lock-applied-digests-match
+        when: canonical-lock-input
+        observation_ref: observation.ci-preset-assurance.asset-lock.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: applied-digest-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
     verification_intents:
       - id: detailed-diagnostics-asset-lock
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-asset-lock]
+        guarantee_refs: [ diagnostic-details-asset-lock ]
       - id: ci-preset-assurance-lock-generation-intent
         goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests. Required generated pin companions record their registry input as the canonical digest and installed bytes as the applied digest; invalid projections cannot be blessed by generating a new lock.
         guarantee_refs:
@@ -234,4 +310,10 @@ contracts:
           - ci-preset-assurance-lock-assets-recorded
       - id: ci-preset-assurance-lock-rejection-intent
         goal: A noncanonical source revision is rejected before an asset lock is written.
-        guarantee_refs: [ci-preset-assurance-invalid-revision-rejected]
+        guarantee_refs: [ ci-preset-assurance-invalid-revision-rejected ]
+      - id: canonical-lock-bindings
+        goal: Verify identities generated from complete canonical lock inputs.
+        guarantee_refs:
+          - lock-applied-digests-match
+          - lock-canonical-digests-match
+          - lock-source-equals-request

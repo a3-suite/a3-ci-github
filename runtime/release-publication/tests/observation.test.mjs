@@ -176,6 +176,13 @@ describe("contract.ci-release-publication-verifier.outputs", { concurrent: true 
       await expect(verifyAfter(options, remoteClient(f, assembly).client)).rejects.toThrow(/receipt-mismatch/);
       receipt.pre_observation_sha256 = sha256(fs.readFileSync(options.beforePath));
       f.put('receipt.json', receipt);
+      const remote = remoteClient(f, assembly).client;
+      const json = remote.json;
+      remote.json = async endpoint => {
+        const value = await json(endpoint);
+        return endpoint.endsWith('/releases/42') ? { ...value, id: '43' } : value;
+      };
+      await expect(verifyAfter(options, remote)).rejects.toThrow(/tag-version-asset-checksum-or-body-mismatch/);
       readback.release_id = '43';
       f.put('readback.json', readback);
       await expect(verifyAfter(options, remoteClient(f, assembly).client)).rejects.toThrow(/readback-evidence-mismatch/);
@@ -192,11 +199,15 @@ describe("contract.ci-release-publication-verifier.outputs", { concurrent: true 
     // integration_id: release-publication-transport
     test('read-only transport completes pagination and rejects unknown remote state', async () => {
       const calls = [];
+      const asset = Buffer.from('independent asset bytes');
       const client = new GithubReadOnlyClient('test-token', async (url, init) => {
         calls.push([url, init]);
+        if (new URL(url).pathname.endsWith('/assets/100')) return new Response(asset);
         return new Response(JSON.stringify(new URL(url).searchParams.get('page') === '1' ? Array.from({ length: 100 }, (_, i) => ({ id: i + 1 })) : [{ id: 101 }]));
       });
       expect((await client.list('/repos/owner/project/releases')).length).toBe(101);
+      await client.json('/repos/owner/project');
+      expect(await client.assetDigest('/repos/owner/project/releases/assets/100', asset.length)).toBe(sha256(asset));
       expect(calls.every(([, init]) => init.method === 'GET' && init.redirect === 'manual')).toBeTruthy();
       const denied = new GithubReadOnlyClient('private-token', async () => new Response('private-token', { status: 403 }));
       await expect(denied.json('/repos/owner/project')).rejects.toSatisfy((error) => error.message.includes('"http-status":403') && !error.message.includes('private-token'));

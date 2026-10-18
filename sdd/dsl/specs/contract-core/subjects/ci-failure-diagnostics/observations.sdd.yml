@@ -30,26 +30,50 @@ observations:
           meaning: Every packaged subject and contract defines its failure diagnostic details and refers to the shared minimum; source inspection proves definitions only, independently of execution evidence.
   - id: observation.ci-failure-diagnostics.failure-evidence
     summary: Detailed failure evidence reconstructed from final logs and existing referenced evidence, without imposing a new universal serialized output format.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
       fields:
         - selector: classification
           kind: observation_field
-          meaning: Contract subject or component, operation and failing stage, stable reason and known cause classification. Unknown causes are explicitly unknown; a generic failure code alone is insufficient when a safe specific reason was known.
+          meaning: Contract subject or component, operation, failing stage, stable reason and observed cause classification.
         - selector: context
           kind: observation_field
-          meaning: Available run/job/step/matrix, source revision, platform/target, safe input/asset identities and external request correlation. Existing CI context may supply identifiers. Values not obtained before failure are explicitly unavailable or not applicable; they are never invented.
+          meaning: Observed run/job/step/matrix, source revision, platform/target, safe input/asset identities and external request correlation, including unavailable or inapplicable states.
         - selector: comparison
           kind: observation_field
-          meaning: Applicable rule or violated field, safe expected and observed identities, versions, inventory, sizes or digests. Missing, extra, malformed, mismatching and unobserved data are distinct. Protected values and entire input/response/argv/environment dumps are forbidden; omission for protection is explicit.
+          meaning: Applicable rule or violated field and safe expected/observed identities, versions, inventories, sizes and digests with their observation states.
         - selector: evidence-location
           kind: observation_field
-          meaning: The original diagnostic survives in the run/job/step log after failure. Reference existing detailed reports or partial artifacts only when needed, with safe relative paths or log links and available digest/inventory identity. State not-generated, transfer-failed or unavailable rather than referring to nonexistent evidence. Failed/always routes preserve required evidence; artifact generation is not mandatory when retained logs suffice.
+          meaning: Locations and availability states of the original diagnostic, detailed reports and partial artifacts in final logs or existing evidence channels.
         - selector: execution-state
           kind: observation_field
-          meaning: Original exit or classified outcome, last confirmed processing stage, applicable write/partial-output/rollback state, and separately observed diagnostic-retention failure. Retention/summary failure must not overwrite the original reason or make the invocation succeed. No retry is added solely to obtain diagnostics.
+          meaning: Original exit or classified outcome, last confirmed stage, write/partial-output/rollback state and diagnostic-retention outcome.
         - selector: next-check
           kind: observation_field
-          meaning: The reason and violated contract identify the concrete input, permission, tool, remote request or evidence to inspect next. Known failure and insufficient observation are distinguished; remediation and rerun safety are not claimed without the applicable state evidence.
+          meaning: Input, permission, tool, remote request or evidence identified by the observed reason and violated contract.
+        - selector: known-cause-omission-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
+        - selector: unsubstantiated-context-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
+        - selector: unsafe-diagnostic-disclosure-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of protected inputs, unchecked child/provider output, signed URLs, or whole input/response/argv/environment payloads exposed in diagnostics.
+        - selector: original-diagnostic-loss-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
+        - selector: invalid-evidence-reference-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a reference to evidence that was not generated or retained.
+        - selector: original-outcome-replacement-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
+        - selector: diagnostic-only-retry-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
+        - selector: unsubstantiated-remediation-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of remediation or rerun safety asserted without applicable state evidence.

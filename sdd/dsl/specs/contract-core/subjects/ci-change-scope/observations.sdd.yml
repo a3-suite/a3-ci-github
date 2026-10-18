@@ -37,4 +37,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "比較範囲解決・Git取得・差分分類を区別し、event種別、base/headの固定SHA、取得できないref、判定不能の理由を残す。unresolvedを正常な分類結果として維持し、fail-openをfailureへ変更しない。"
+          meaning: 比較範囲解決・Git取得・差分分類の段階、event種別、base/headの固定SHA、取得できないref、判定不能の理由を表す診断情報。

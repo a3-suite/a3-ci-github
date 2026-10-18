@@ -22,6 +22,8 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+# test_level: e2e
+# flow_id: provider-shared-wrapper-builder
 class BuildSharedWrapperContractTest(unittest.TestCase):
     """Exercise the provider builder through its command-line boundary."""
 

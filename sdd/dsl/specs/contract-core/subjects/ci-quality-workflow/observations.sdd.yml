@@ -12,19 +12,19 @@ observations:
       fields:
         - selector: reusable-binding
           kind: observation_field
-          meaning: Declared caller-to-callee reference, explicit project inputs, retained summary job identity, and local rejection of invalid refs or input bindings. The callee is provider-owned and is not deployed into the consumer workflow directory.
+          meaning: Declared caller-to-callee binding.
         - selector: execution-chain
           kind: observation_field
-          meaning: Declared order in which trusted checkout and asset resolution precede adapter execution, and applicable execution results precede the aggregate decision.
+          meaning: Declared quality execution dependency graph.
         - selector: failure-summary
           kind: observation_field
-          meaning: Declared always-run summary route after all applicable execution jobs that keeps failed, missing, and unresolved checks visible.
+          meaning: Declared aggregate failure route.
         - selector: optional-platform-chain
           kind: observation_field
-          meaning: Declared trusted platform resolution, matrix execution, and aggregate platform decision chain when the optional asset is selected.
+          meaning: Declared platform quality dependency graph.
   - id: observation.ci-quality-workflow.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
@@ -32,3 +32,47 @@ observations:
         - selector: details
           kind: observation_field
           meaning: "identity/preflight・asset解決・toolchain・quality adapter・platform job・aggregate summaryの失敗段階、matrix/platform、元のneeds result、欠落/unresolvedの理由、当該run/job/step logと既存evidenceへの参照を残す。"
+  - id: observation.ci-quality-workflow.execution.relations
+    summary: Individually observed contract values and comparisons.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: quality-fixed-reference
+          kind: observation_field
+          meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
+        - selector: quality-explicit-input-binding
+          kind: observation_field
+          meaning: Comparison of caller input names and typed bindings with the callee interface.
+        - selector: quality-summary-identity
+          kind: observation_field
+          meaning: Declared caller aggregate job ID.
+        - selector: quality-no-consumer-callee-copy
+          kind: observation_field
+          meaning: Occurrence of local copies of provider execution jobs in the caller.
+        - selector: quality-caller-read-permissions
+          kind: observation_field
+          meaning: Declared caller contents permission.
+        - selector: quality-caller-summary-always
+          kind: observation_field
+          meaning: Declared caller aggregate condition.
+        - selector: quality-source-before-adapter
+          kind: observation_field
+          meaning: Declared order of trusted checkout/asset resolution and adapter execution.
+        - selector: quality-results-before-summary
+          kind: observation_field
+          meaning: Declared dependency order of applicable execution jobs and aggregate decision.
+        - selector: quality-failure-summary-always
+          kind: observation_field
+          meaning: Declared summary condition on applicable job failure.
+        - selector: quality-unresolved-results-visible
+          kind: observation_field
+          meaning: Occurrence of unresolved applicable results in aggregate failure evidence.
+        - selector: platform-resolution-before-execution
+          kind: observation_field
+          meaning: Declared dependency order of trusted platform resolution and selected matrix execution.
+        - selector: platform-execution-before-summary
+          kind: observation_field
+          meaning: Declared dependency order of matrix execution and aggregate platform decision.

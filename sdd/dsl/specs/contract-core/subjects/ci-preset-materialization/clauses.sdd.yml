@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.preset-materialization
 contracts:
   - id: contract.ci-preset-materialization.application
-    summary: Return a fixed Action binding without copying standard quality descriptors, or materialize selected repository and external-skill adapter assets without overwriting conflicting project files. Preserve consumer settings and dependencies in both routes.
+    summary: Return a fixed Action binding without copying standard quality descriptors, or materialize selected repository and external-skill adapter assets without overwriting conflicting project files. Preserve consumer settings and dependencies in both routes. On failure, retain completed changes without rollback and identify the changed range in diagnostics.
     conditions:
       - id: diagnostic-required-application
         environment_predicate:
@@ -19,6 +19,21 @@ contracts:
         environment_predicate:
           kind: environment-ref
           target_ref: runtime-context.preset-materialization-conflict
+          op: available
+      - id: valid-standard-materialization
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-standard-materialization-valid
+          op: available
+      - id: bundle-invocation
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-materialization-invocation
+          op: available
+      - id: valid-custom-materialization
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.preset-custom-materialization-valid
           op: available
     guarantees:
       - id: ci-preset-materialization-success-observed
@@ -51,6 +66,201 @@ contracts:
           kind: observable-result
           op: present
           target: {kind: observation_field, value: details}
+      - id: standard-copy-state
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.consumer-files
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: standard-copy-state
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: standard-binding-bundle
+        when: valid-standard-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: standard-binding-bundle
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: standard-binding-source
+        when: valid-standard-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: standard-binding-source
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: standard-binding-digest
+        when: valid-standard-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: standard-binding-digest
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: consumer-settings-change
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.consumer-files
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: consumer-settings-change
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: consumer-dependency-change
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.consumer-files
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: consumer-dependency-change
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: copy-report-sources
+        when: valid-custom-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: copy-report-sources
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: copy-report-destinations
+        when: valid-custom-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: copy-report-destinations
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: copy-report-actions
+        when: valid-custom-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: copy-report-actions
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: conflicting-destination-change
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.consumer-files
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: conflicting-destination-change
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: completed-copy-loss
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.consumer-files
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: completed-copy-loss
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: changed-range-evidence
+        when: bundle-invocation
+        observation_ref: observation.ci-preset-materialization.detailed-diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: changed-range-evidence
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: standard-report-files
+        when: valid-standard-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: standard-report-files}
+            right: {kind: value_set, values: [empty]}
+      - id: standard-binding-action
+        when: valid-standard-materialization
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: standard-binding-action}
+            right: {kind: value_set, values: [ci-quality-adapter]}
+      - id: selected-bundle-match
+        when: ci-preset-materialization-valid
+        observation_ref: observation.ci-preset-materialization.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: {kind: observation_field, value: selected-bundle-match}
+            right: {kind: value_set, values: [matched]}
     verification_intents:
       - id: detailed-diagnostics-application
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
@@ -63,3 +273,39 @@ contracts:
         goal: A conflicting destination, a custom bundle without source-root is rejected without overwriting the existing file.
         guarantee_refs:
           - ci-preset-materialization-failure-observed
+      - id: standard-binding-footprint-intent
+        goal: Verify the standard bundle binding against its registry identity and descriptor bytes while observing
+          the consumer footprint.
+        guarantee_refs:
+        - selected-bundle-match
+        - standard-copy-state
+        - standard-report-files
+        - standard-binding-action
+        - standard-binding-bundle
+        - standard-binding-source
+        - standard-binding-digest
+        - consumer-settings-change
+        - consumer-dependency-change
+      - id: custom-copy-report-intent
+        goal: Compare the custom report against selected source and destination inventories on initial copy and reuse.
+        guarantee_refs:
+        - selected-bundle-match
+        - copy-report-sources
+        - copy-report-destinations
+        - copy-report-actions
+        - consumer-settings-change
+        - consumer-dependency-change
+      - id: conflicting-destination-protection-intent
+        goal: Compare the conflicting destination bytes before and after rejection.
+        guarantee_refs:
+        - conflicting-destination-change
+      - id: late-copy-failure-retention-intent
+        goal: Observe completed copies and the diagnostic changed range after a later copy fails.
+        guarantee_refs:
+        - consumer-settings-change
+        - consumer-dependency-change
+        - completed-copy-loss
+        - changed-range-evidence
+      - id: standard-rejection-footprint-intent
+        goal: Compare the consumer file footprint before and after a rejected standard bundle invocation.
+        guarantee_refs: [standard-copy-state, consumer-settings-change, consumer-dependency-change]

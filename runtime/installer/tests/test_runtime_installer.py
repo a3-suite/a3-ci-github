@@ -42,6 +42,8 @@ def _windows_powershell() -> str:
     return os.environ.get("CI_INSTALLER_POWERSHELL", "powershell")
 
 
+# test_level: e2e
+# flow_id: provider-installer-native-runtime
 class RuntimeInstallerTest(unittest.TestCase):
     """Check the assembled installer runtime against its public modes."""
 

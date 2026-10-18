@@ -53,20 +53,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-authority",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -93,8 +94,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-authority",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -110,14 +110,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Local authority evidence uses actual components and fake GET-only provider responses; Hosted execution is separate."
+          "cwd": "actions/ci-release-authority",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -128,7 +142,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -151,20 +165,21 @@
           "reason": "Publication crosses handoff files and provider operations; local evidence uses actual components with fake provider responses."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-publisher",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -191,8 +206,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-publisher",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -208,14 +222,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Live GitHub write and hosted/consumer acceptance require separate approval; local tests never publish."
+          "cwd": "actions/ci-release-publisher",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -226,7 +254,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -316,8 +344,8 @@
           }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -328,7 +356,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -368,20 +396,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-assembly",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -409,13 +438,36 @@
           }
         },
         {
+          "id": "e2e-source-boundary",
+          "level": "e2e",
+          "cwd": "actions/ci-release-assembly",
+          "tests": [
+            "../../runtime/release-publication/tests/assembly.process.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [
+              "../../runtime/release-publication/assembly.ts",
+              "../../runtime/release-publication/snapshot.ts",
+              "../../runtime/release-publication/schema.ts",
+              "../../runtime/release-publication/io.ts",
+              "src/platform-manifest-decoder.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ],
+            "aggregateGroup": "release-publication-shared",
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts",
-            "tests/ci-context.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -431,14 +483,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted Release execution is outside local contract-subject execution; assembly performs no provider write."
+          "cwd": "actions/ci-release-assembly",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -449,7 +515,20 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-fixture-import",
+          "level": "e2e",
+          "cwd": "actions/ci-release-assembly",
+          "tests": [
+            "tests/ci-context.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Fixture import side effects are observed in an isolated target process; supplemental E2E does not contribute source-only coverage."
           }
         }
       ]
@@ -474,20 +553,21 @@
           "reason": "Verification crosses evidence files and the read-only remote client boundary; contract evidence is integration-source and integration-bundle."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-publication-verifier",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -495,7 +575,8 @@
           "level": "integration",
           "cwd": "actions/ci-release-assembly",
           "tests": [
-            "../../runtime/release-publication/tests/observation.test.mjs"
+            "../../runtime/release-publication/tests/observation.test.mjs",
+            "../../runtime/release-publication/tests/observation-policy.test.mjs"
           ],
           "typescript": true,
           "coverage": {
@@ -514,8 +595,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-publication-verifier",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -531,14 +611,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Live GitHub and owner write require hosted evidence; local tests inject a GET-only transport and do not publish."
+          "cwd": "actions/ci-release-publication-verifier",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -549,7 +643,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -585,20 +679,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-annotated-tag-resolver",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -606,8 +701,7 @@
           "level": "integration",
           "cwd": "actions/ci-annotated-tag-resolver",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -623,14 +717,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "The Action contract is fully observed by the project-owned unit and bundled-entrypoint segments; no external system flow is defined."
+          "cwd": "actions/ci-annotated-tag-resolver",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -641,7 +749,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -664,20 +772,21 @@
           "reason": "The source suite composes multiple change-scope functions; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-change-scope",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -704,8 +813,7 @@
           "level": "integration",
           "cwd": "actions/ci-change-scope",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -721,14 +829,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-change-scope",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -739,7 +861,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -775,20 +897,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-config-snapshot",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -796,8 +919,7 @@
           "level": "integration",
           "cwd": "actions/ci-config-snapshot",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -813,14 +935,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-config-snapshot",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -831,7 +967,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -846,8 +982,8 @@
           "reason": "The implementation boundary is a shell adapter; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-script",
-          "level": "integration",
+          "id": "e2e-script",
+          "level": "e2e",
           "cwd": "runtime/github-toolchain",
           "tests": [
             "tests/verify-github-toolchain.test.mjs"
@@ -855,7 +991,7 @@
           "coverage": {
             "enabled": false,
             "scope": "shell",
-            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         },
         {
@@ -872,14 +1008,8 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-diagnostics",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted toolchain execution requires GitHub-hosted evidence and is outside local contract-subject execution."
-        },
-        {
-          "id": "integration-diagnostics",
-          "level": "integration",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -890,7 +1020,20 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-composite",
+          "level": "e2e",
+          "cwd": "actions/ci-github-toolchain-verifier",
+          "tests": [
+            "tests/composite-execution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -926,20 +1069,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-jq-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -947,8 +1091,7 @@
           "level": "integration",
           "cwd": "actions/ci-jq-provisioner",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -964,14 +1107,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted jq provisioning is checked by the GitHub workflow and requires runner evidence outside local contract-subject execution."
+          "cwd": "actions/ci-jq-provisioner",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -982,7 +1139,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1018,20 +1175,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-gh-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1039,8 +1197,7 @@
           "level": "integration",
           "cwd": "actions/ci-gh-provisioner",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1056,14 +1213,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted gh provisioning is checked by the GitHub workflow and requires runner evidence outside local contract-subject execution."
+          "cwd": "actions/ci-gh-provisioner",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1074,7 +1245,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1097,20 +1268,21 @@
           "reason": "The source behavior validates filesystem-backed handoff assets; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-handoff-integrity",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1137,8 +1309,7 @@
           "level": "integration",
           "cwd": "actions/ci-handoff-integrity",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1154,14 +1325,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-handoff-integrity",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1172,7 +1357,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1208,20 +1393,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-platform-matrix",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1229,8 +1415,7 @@
           "level": "integration",
           "cwd": "actions/ci-platform-matrix",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1246,14 +1431,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "The Action contract is observed through the bundled entrypoint; no external system flow is defined."
+          "cwd": "actions/ci-platform-matrix",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1264,7 +1463,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1272,13 +1471,26 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/shared-quality-checks.test.mjs",
             "runtime/preset/tests/quality-platform-selection.test.mjs"
           ],
           "typescript": true,
           "coverage": {
             "enabled": false,
             "reason": "Workflow Bash and matrix projection jointly establish trusted declaration boundaries; Node source coverage is not attributed across this segment."
+          }
+        },
+        {
+          "id": "e2e-shared-trust-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/shared-quality-checks.test.mjs",
+            "runtime/preset/tests/quality-platform-selection.process.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         }
       ]
@@ -1314,20 +1526,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-publish-version",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1335,8 +1548,7 @@
           "level": "integration",
           "cwd": "actions/ci-publish-version",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1352,14 +1564,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-publish-version",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1370,7 +1596,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1406,20 +1632,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-quality-summary",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1427,8 +1654,7 @@
           "level": "integration",
           "cwd": "actions/ci-quality-summary",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1444,14 +1670,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-quality-summary",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1462,7 +1702,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1485,20 +1725,21 @@
           "reason": "The source behavior writes filesystem-backed handoff assets; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-request-handoff",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1525,8 +1766,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-request-handoff",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1542,14 +1782,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "No external system flow is defined for this Action."
+          "cwd": "actions/ci-release-request-handoff",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1560,7 +1814,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1596,20 +1850,21 @@
           }
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-release-publication-control",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1636,8 +1891,7 @@
           "level": "integration",
           "cwd": "actions/ci-release-publication-control",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1653,6 +1907,26 @@
           }
         },
         {
+          "id": "e2e-bundle-process",
+          "level": "e2e",
+          "cwd": "actions/ci-release-publication-control",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
           "id": "integration-fixed-reference",
           "level": "integration",
           "cwd": ".",
@@ -1665,14 +1939,20 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted release publication requires external workflow evidence and is outside local contract-subject execution."
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1683,7 +1963,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1706,20 +1986,21 @@
           "reason": "The source behavior depends on the filesystem; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-package-publication-request",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1746,8 +2027,7 @@
           "level": "integration",
           "cwd": "actions/ci-package-publication-request",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1763,14 +2043,28 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-bundle-process",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted package publication requires external workflow evidence and is outside local contract-subject execution."
+          "cwd": "actions/ci-package-publication-request",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1781,7 +2075,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1804,20 +2098,21 @@
           "reason": "The source behavior depends on the filesystem and child processes; no isolated unit test surface is declared."
         },
         {
-          "id": "integration-source-entrypoint",
-          "level": "integration",
+          "id": "e2e-source-entrypoint",
+          "level": "e2e",
           "cwd": "actions/ci-quality-adapter",
           "tests": [
             "tests/entrypoint.test.ts"
           ],
           "typescript": true,
           "coverage": {
-            "enabled": true,
+            "enabled": false,
             "scope": "source",
             "include": [
               "src/index.ts"
             ],
-            "exclude": []
+            "exclude": [],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -1826,8 +2121,7 @@
           "cwd": "actions/ci-quality-adapter",
           "tests": [
             "tests/adapter.test.ts",
-            "tests/standard-bundles.test.ts",
-            "tests/python-standard-bundle.test.ts"
+            "tests/standard-bundles.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1842,12 +2136,31 @@
           }
         },
         {
+          "id": "e2e-source-boundary",
+          "level": "e2e",
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/python-standard-bundle.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "dist/**"
+            ],
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "integration-bundle",
           "level": "integration",
           "cwd": "actions/ci-quality-adapter",
           "tests": [
-            "tests/action-contract.test.ts",
-            "tests/entrypoint.test.ts"
+            "tests/action-contract.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -1863,12 +2176,31 @@
           }
         },
         {
+          "id": "e2e-bundle-process",
+          "level": "e2e",
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/entrypoint.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "scope": "dist",
+            "include": [
+              "dist/**/*.js"
+            ],
+            "exclude": [
+              "src/**"
+            ],
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
           "id": "integration-fixed-reference",
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.test.mjs",
-            "tests/shared-quality-checks.test.mjs"
+            "tests/workflow-contracts.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -1876,14 +2208,21 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted multi-checkout execution requires GitHub-hosted evidence and is outside local contract-subject execution."
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.process.test.mjs",
+            "tests/shared-quality-checks.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/action-failure-diagnostics.test.mjs"
@@ -1894,7 +2233,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -1928,6 +2267,26 @@
           }
         },
         {
+          "id": "e2e-source-boundary",
+          "level": "e2e",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [
+              "src/verify-platform-manifest.mjs",
+              "../platform/platform-manifest-core.mjs"
+            ],
+            "exclude": [
+              "dist/**"
+            ],
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "integration-script",
           "level": "integration",
           "cwd": "runtime/rust-release",
@@ -1938,6 +2297,19 @@
             "enabled": false,
             "scope": "shell",
             "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
+          }
+        },
+        {
+          "id": "e2e-script-boundary",
+          "level": "e2e",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "shell",
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         },
         {
@@ -1954,14 +2326,8 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-diagnostics",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted release execution requires external toolchain evidence and is outside local contract-subject execution."
-        },
-        {
-          "id": "integration-diagnostics",
-          "level": "integration",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -1972,7 +2338,20 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-composite",
+          "level": "e2e",
+          "cwd": "actions/ci-rust-release-build",
+          "tests": [
+            "tests/composite-execution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2000,6 +2379,19 @@
           }
         },
         {
+          "id": "e2e-script-boundary",
+          "level": "e2e",
+          "cwd": "runtime/rust-release",
+          "tests": [
+            "tests/rust-release-scripts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "shell",
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "integration-action",
           "level": "integration",
           "cwd": "actions/ci-rust-source-gate",
@@ -2013,14 +2405,8 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-diagnostics",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted source verification requires external workflow evidence and is outside local contract-subject execution."
-        },
-        {
-          "id": "integration-diagnostics",
-          "level": "integration",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2031,7 +2417,20 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-composite",
+          "level": "e2e",
+          "cwd": "actions/ci-rust-source-gate",
+          "tests": [
+            "tests/composite-execution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2068,6 +2467,28 @@
           }
         },
         {
+          "id": "e2e-gates-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/action-dist-gate.process.test.mjs",
+            "tests/action-package-verification.process.test.mjs",
+            "runtime/repository/tests/update-release-aliases.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "repository-scripts",
+            "include": [
+              "runtime/repository/**/*.mjs"
+            ],
+            "exclude": [
+              "actions/**/dist/**",
+              "runtime/**/dist/**"
+            ],
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "e2e-maintenance-cli",
           "level": "e2e",
           "cwd": ".",
@@ -2083,8 +2504,8 @@
           }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2095,7 +2516,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2124,14 +2545,21 @@
           "typescript": true
         },
         {
-          "id": "e2e",
+          "id": "e2e-contract-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+          "cwd": "runtime/preset",
+          "tests": [
+            "../../tests/workflow-contracts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          },
+          "typescript": true
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/workflow-failure-diagnostics.test.mjs"
@@ -2142,7 +2570,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2169,14 +2597,20 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-contract-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/workflow-failure-diagnostics.test.mjs"
@@ -2187,7 +2621,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2215,14 +2649,21 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-contract-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.process.test.mjs",
+            "tests/control-checkout.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/workflow-failure-diagnostics.test.mjs"
@@ -2233,7 +2674,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2262,14 +2703,21 @@
           "typescript": true
         },
         {
-          "id": "e2e",
+          "id": "e2e-contract-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted or external-system evidence is outside local contract-subject execution."
+          "cwd": "runtime/preset",
+          "tests": [
+            "../../tests/workflow-contracts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          },
+          "typescript": true
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/workflow-failure-diagnostics.test.mjs"
@@ -2280,7 +2728,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2299,7 +2747,6 @@
           "level": "integration",
           "cwd": "runtime/preset",
           "tests": [
-            "tests/preset-assurance-contract.test.mjs",
             "tests/preset-validation-contract.test.mjs",
             "tests/action-availability.test.mjs",
             "tests/publication-validation.test.mjs",
@@ -2311,6 +2758,20 @@
           "coverage": {
             "enabled": false,
             "reason": "Preset assurance combines a Node bootstrap and TypeScript validator; this segment verifies the public boundary without source coverage attribution."
+          }
+        },
+        {
+          "id": "e2e-contract-boundary",
+          "level": "e2e",
+          "cwd": "runtime/preset",
+          "tests": [
+            "tests/preset-assurance-contract.test.mjs",
+            "tests/quality-platform-selection.process.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         },
         {
@@ -2326,8 +2787,8 @@
           }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2338,7 +2799,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2366,6 +2827,18 @@
           }
         },
         {
+          "id": "e2e-contract-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/contract-subject-execution.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "e2e-maintenance-cli",
           "level": "e2e",
           "cwd": ".",
@@ -2381,8 +2854,8 @@
           }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2393,7 +2866,24 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-maintenance-test-assets",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "runtime/repository/tests/contract-coverage-aggregation.process.test.mjs",
+            "tests/release-token-capability-probe.test.mjs"
+          ],
+          "typescript": false,
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [],
+            "exclude": [],
+            "reason": "Supplemental maintenance process observations execute the collector, capture hook or capability probe in child processes; exclude them from unit/integration source measurement."
           }
         }
       ]
@@ -2426,8 +2916,33 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.test.mjs",
-            "runtime/preset/tests/preset-assurance-contract.test.mjs",
+            "tests/workflow-contracts.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Diagnostic behavior spans workflows and runtime entrypoints and has no single source coverage unit."
+          },
+          "typescript": true
+        },
+        {
+          "id": "e2e-contract-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "tests/workflow-contracts.process.test.mjs",
+            "runtime/preset/tests/preset-assurance-contract.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          },
+          "typescript": true
+        },
+        {
+          "id": "e2e-contract-process",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
             "tests/action-failure-diagnostics.test.mjs",
             "tests/runtime-failure-diagnostics.test.mjs",
             "tests/workflow-failure-diagnostics.test.mjs",
@@ -2437,7 +2952,7 @@
           ],
           "coverage": {
             "enabled": false,
-            "reason": "Diagnostic behavior spans workflows and runtime entrypoints and has no single source coverage unit."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           },
           "typescript": true
         },
@@ -2475,7 +2990,6 @@
           "cwd": ".",
           "tests": [
             "runtime/distribution/tests/selective-distribution.test.mjs",
-            "runtime/repository/tests/manage-distribution-release.test.mjs",
             "tests/workflow-contracts.test.mjs"
           ],
           "coverage": {
@@ -2490,6 +3004,30 @@
             "exclude": [
               "runtime/distribution/tests/**"
             ]
+          }
+        },
+        {
+          "id": "e2e-runtime-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.process.test.mjs",
+            "runtime/repository/tests/manage-distribution-release.test.mjs",
+            "tests/workflow-contracts.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "source",
+            "include": [
+              "runtime/distribution/**/*.mjs",
+              "runtime/repository/check-provider-references.mjs",
+              "runtime/repository/update-action-references.mjs",
+              "runtime/repository/verify-implementation-binding.mjs"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ],
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         },
         {
@@ -2511,6 +3049,25 @@
           }
         },
         {
+          "id": "e2e-release-builder-boundary",
+          "level": "e2e",
+          "cwd": ".",
+          "tests": [
+            "runtime/distribution/tests/selective-distribution.process.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "repository-scripts",
+            "include": [
+              "runtime/distribution/**/*.ts"
+            ],
+            "exclude": [
+              "runtime/distribution/tests/**"
+            ],
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
+        },
+        {
           "id": "e2e-local-binding",
           "level": "e2e",
           "cwd": ".",
@@ -2523,14 +3080,8 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-diagnostics",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "GitHub Release and Raw availability require hosted evidence after publication."
-        },
-        {
-          "id": "integration-diagnostics",
-          "level": "integration",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2541,7 +3092,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         },
         {
@@ -2573,13 +3124,26 @@
           "cwd": "runtime/preset",
           "tests": [
             "../adapter/tests/materialize-adapter-bundle.test.mjs",
-            "../adapter/tests/standard-quality-footprint.test.mjs",
             "../adapter/tests/generate-standard-quality-bundles.test.mjs"
           ],
           "typescript": true,
           "coverage": {
             "enabled": false,
             "reason": "The test imports repository TypeScript through the fixed preset runtime; cross-root coverage is not attributed to one package."
+          }
+        },
+        {
+          "id": "e2e-runtime-boundary",
+          "level": "e2e",
+          "cwd": "runtime/preset",
+          "tests": [
+            "../adapter/tests/standard-quality-footprint.test.mjs",
+            "../adapter/tests/generate-standard-quality-bundles.process.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
           }
         },
         {
@@ -2595,8 +3159,8 @@
           }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2607,7 +3171,7 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]
@@ -2626,8 +3190,7 @@
           "level": "integration",
           "cwd": "actions/ci-quality-toolchain",
           "tests": [
-            "tests/action-contract.test.mjs",
-            "tests/cargo-audit.test.mjs"
+            "tests/action-contract.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2636,14 +3199,21 @@
           }
         },
         {
-          "id": "e2e",
+          "id": "e2e-action-boundary",
           "level": "e2e",
-          "status": "excluded",
-          "reason": "Hosted toolchain download and supported runner execution require separate GitHub-hosted acceptance."
+          "cwd": "actions/ci-quality-toolchain",
+          "tests": [
+            "tests/cargo-audit.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
+          }
         },
         {
-          "id": "integration-diagnostics",
-          "level": "integration",
+          "id": "e2e-diagnostics",
+          "level": "e2e",
           "cwd": ".",
           "tests": [
             "tests/runtime-failure-diagnostics.test.mjs"
@@ -2654,7 +3224,20 @@
             "scope": "source",
             "include": [],
             "exclude": [],
-            "reason": "Public diagnostic boundary checks complement the existing source coverage segments; Shell and packaged entrypoints are not source coverage counters."
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
+          }
+        },
+        {
+          "id": "e2e-composite",
+          "level": "e2e",
+          "cwd": "actions/ci-quality-toolchain",
+          "tests": [
+            "tests/composite-execution.test.mjs"
+          ],
+          "coverage": {
+            "enabled": false,
+            "scope": "composite-action",
+            "reason": "Target-process execution is E2E and is excluded from unit/integration source-only coverage."
           }
         }
       ]

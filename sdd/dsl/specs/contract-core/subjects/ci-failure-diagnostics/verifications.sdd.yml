@@ -7,90 +7,106 @@ verifications:
     cases:
       - id: known-validation-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: known-validation-failure}
+        input: { scenario: known-validation-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-known-cause-omission
+            guarantee_ref: diagnostic-known-cause-omission
       - id: unknown-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: unknown-failure}
+        input: { scenario: unknown-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-unsubstantiated-remediation
+            guarantee_ref: diagnostic-unsubstantiated-remediation
       - id: external-request-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: external-request-failure}
+        input: { scenario: external-request-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-unsubstantiated-context
+            guarantee_ref: diagnostic-unsubstantiated-context
       - id: child-process-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: child-process-failure}
+        input: { scenario: child-process-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-unsafe-diagnostic-disclosure
+            guarantee_ref: diagnostic-unsafe-diagnostic-disclosure
       - id: evidence-generation-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: evidence-generation-failure}
+        input: { scenario: evidence-generation-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-original-diagnostic-loss
+            guarantee_ref: diagnostic-original-diagnostic-loss
       - id: evidence-transfer-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: evidence-transfer-failure}
+        input: { scenario: evidence-transfer-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-invalid-evidence-reference
+            guarantee_ref: diagnostic-invalid-evidence-reference
       - id: summary-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: summary-failure}
+        input: { scenario: summary-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-original-outcome-replacement
+            guarantee_ref: diagnostic-original-outcome-replacement
       - id: partial-write-failure
         intent_id: detailed-failure-evidence
-        input: {scenario: partial-write-failure}
+        input: { scenario: partial-write-failure }
         checks:
-          - {id: classification, guarantee_ref: detailed-failure-classification}
-          - {id: context, guarantee_ref: detailed-failure-context}
-          - {id: comparison, guarantee_ref: detailed-failure-comparison}
-          - {id: retention, guarantee_ref: detailed-failure-retention}
-          - {id: state, guarantee_ref: detailed-failure-state}
-          - {id: next-check, guarantee_ref: detailed-failure-next-check}
+          - { id: classification, guarantee_ref: detailed-failure-classification }
+          - { id: context, guarantee_ref: detailed-failure-context }
+          - { id: comparison, guarantee_ref: detailed-failure-comparison }
+          - { id: retention, guarantee_ref: detailed-failure-retention }
+          - { id: state, guarantee_ref: detailed-failure-state }
+          - { id: next-check, guarantee_ref: detailed-failure-next-check }
+          - id: diagnostic-diagnostic-only-retry
+            guarantee_ref: diagnostic-diagnostic-only-retry
   - id: verification.ci-failure-diagnostics.subject-declarations
     contract_id: contract.ci-failure-diagnostics.actionable
     cases:
       - id: all-subject-diagnostics-defined
         intent_id: subject-diagnostic-declarations
-        input: {scenario: packaged-subject-contract-definitions}
+        input: { scenario: packaged-subject-contract-definitions }
         checks:
           - id: check.ci-failure-diagnostics.subject-contract-coverage
             guarantee_ref: subject-diagnostic-contract-coverage

@@ -25,6 +25,33 @@ observations:
         - selector: diagnostic
           kind: observation_field
           meaning: Stable thrown diagnostic for an invalid source or conflicting destination.
+        - selector: standard-binding-bundle
+          kind: observation_field
+          meaning: Equality of the returned standardBundleId and selected registry bundle ID.
+        - selector: standard-binding-source
+          kind: observation_field
+          meaning: Equality of the binding sourcePath and the selected repository-owned descriptor path.
+        - selector: standard-binding-digest
+          kind: observation_field
+          meaning: Equality of the binding SHA-256 and selected fixed standard descriptor content digest.
+        - selector: copy-report-sources
+          kind: observation_field
+          meaning: Equality of reported sources and the selected descriptor plus registered asset source inventory.
+        - selector: copy-report-destinations
+          kind: observation_field
+          meaning: Equality of reported destinations and the selected descriptor destination inventory.
+        - selector: copy-report-actions
+          kind: observation_field
+          meaning: Agreement of every reported copy or reuse action with the destination state before invocation.
+        - selector: standard-report-files
+          kind: observation_field
+          meaning: Cardinality classification of the returned standard bundle files array.
+        - selector: standard-binding-action
+          kind: observation_field
+          meaning: Action identifier in the returned standard bundle binding.
+        - selector: selected-bundle-match
+          kind: observation_field
+          meaning: Equality of the report bundle ID and the selected input bundle ID.
   - id: observation.ci-preset-materialization.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
     boundary: {ref: boundary.diagnostic-result}
@@ -34,4 +61,30 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "bundle/source解決・destination検査・copy/reuseを区別し、選択bundle、source/destination相対path、競合の期待/観測digest、変更済み範囲を残す。失敗時に変更を戻さないため、変更済み範囲で後始末の対象を示す。"
+          meaning: "bundle/source解決・destination検査・copy/reuseの段階、選択bundle、source/destination相対path、競合の期待/観測digest、変更済み範囲を表す診断情報。"
+        - selector: changed-range-evidence
+          kind: observation_field
+          meaning: Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.
+  - id: observation.ci-preset-materialization.consumer-files
+    summary: Consumer file state before and after materialization, including a failed invocation.
+    boundary:
+      ref: boundary.project-ci-assets
+    value:
+      root: consumer.files
+      kind: object
+      fields:
+      - selector: standard-copy-state
+        kind: observation_field
+        meaning: Presence of consumer files newly copied by a standard Action bundle invocation.
+      - selector: consumer-settings-change
+        kind: observation_field
+        meaning: Changes to pre-existing consumer settings bytes during materialization.
+      - selector: consumer-dependency-change
+        kind: observation_field
+        meaning: Changes to pre-existing consumer dependency declarations during materialization.
+      - selector: conflicting-destination-change
+        kind: observation_field
+        meaning: Byte changes to an existing destination whose contents conflict with the selected source.
+      - selector: completed-copy-loss
+        kind: observation_field
+        meaning: Removal or byte changes of files successfully copied before a later copy failure.

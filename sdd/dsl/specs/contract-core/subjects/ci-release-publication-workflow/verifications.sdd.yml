@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-publication
         intent_id: detailed-diagnostics-publication
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-publication}]
+        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-publication } ]
       - id: ci-release-publication-workflow-success
         intent_id: ci-release-publication-workflow-success-intent
         input:
@@ -16,6 +16,24 @@ verifications:
         checks:
           - id: check-ci-release-publication-workflow-success
             guarantee_ref: ci-release-publication-workflow-success-observed
+          - id: release-fixed-provider-reference
+            guarantee_ref: release-fixed-provider-reference
+          - id: release-explicit-owner-inputs
+            guarantee_ref: release-explicit-owner-inputs
+          - id: release-request-before-publication
+            guarantee_ref: release-request-before-publication
+          - id: release-authority-before-publication
+            guarantee_ref: release-authority-before-publication
+          - id: release-control-sha-bound
+            guarantee_ref: release-control-sha-bound
+          - id: release-control-head-verified
+            guarantee_ref: release-control-head-verified
+          - id: release-handoff-before-publication
+            guarantee_ref: release-handoff-before-publication
+          - id: release-publication-before-readback
+            guarantee_ref: release-publication-before-readback
+          - id: release-tokens-explicit
+            guarantee_ref: release-tokens-explicit
       - id: ci-release-publication-workflow-failure
         intent_id: ci-release-publication-workflow-failure-intent
         input:
@@ -23,9 +41,21 @@ verifications:
         checks:
           - id: check-ci-release-publication-workflow-failure
             guarantee_ref: ci-release-publication-workflow-failure-observed
+          - id: release-failure-summary-always
+            guarantee_ref: release-failure-summary-always
+          - id: release-failed-prerequisite-blocks
+            guarantee_ref: release-failed-prerequisite-blocks
       - id: ci-release-publication-workflow-evidence-transfer
         intent_id: ci-release-publication-workflow-evidence-transfer-intent
-        input: {scenario: canonical-transfer}
+        input: { scenario: canonical-transfer }
         checks:
           - id: check-ci-release-publication-workflow-evidence-transfer
             guarantee_ref: ci-release-publication-workflow-evidence-transfer-declared
+          - id: supplemental-upload-selected-root
+            guarantee_ref: supplemental-upload-selected-root
+          - id: supplemental-hidden-files-selected
+            guarantee_ref: supplemental-hidden-files-selected
+          - id: supplemental-download-root
+            guarantee_ref: supplemental-download-root
+          - id: supplemental-final-assembly-input
+            guarantee_ref: supplemental-final-assembly-input

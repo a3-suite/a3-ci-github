@@ -11,7 +11,7 @@ observations:
       fields:
         - selector: authority-path
           kind: observation_field
-          meaning: New authority handoff binds explicit version and target, verified runs and fixed tag/source, separately approved notes, owner receiving workflow digest and configuration snapshot.
+          meaning: Path to the generated authority handoff.
         - selector: source_sha
           kind: observation_field
           meaning: Verified annotated tag commit SHA.
@@ -36,17 +36,28 @@ observations:
       fields:
         - selector: outcome
           kind: observation_field
-          meaning: Validation fails on missing, inconsistent or unknown local or remote inputs without provider writes.
+          meaning: Authority validation step outcome.
         - selector: successful-output-state
           kind: observation_field
-          meaning: Successful outputs are absent on rejection.
+          meaning: Occurrence state of successful outputs.
   - id: observation.ci-release-authority.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
       fields:
         - selector: details
           kind: observation_field
-          meaning: "decision・request provenance・tag/source・workflow binding・snapshot・notes approval・repository identityの検証を区別し、対象repository/tag/source/run/approval identity、違反field、期待/観測identity、provider HTTP相関情報を残す。承認期限の判定はci-release-publication-controlが扱う。notes本文やcredentialを出力しない。"
+          meaning: "decision・request provenance・tag/source・workflow binding・snapshot・notes approval・repository identityの検証の段階、対象repository/tag/source/run/approval identity、違反field、期待/観測identity、provider HTTP相関情報を表す診断情報。"
+  - id: observation.ci-release-authority.outputs.relations
+    summary: Individually observed contract values and comparisons.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.result
+      kind: object
+      fields:
+        - selector: platform-manifest-source-text-comparison
+          kind: observation_field
+          meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.

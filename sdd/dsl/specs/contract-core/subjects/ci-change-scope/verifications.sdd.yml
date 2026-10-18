@@ -12,8 +12,8 @@ verifications:
       - id: valid-change-range
         intent_id: change-scope-output-set
         input:
-          base-sha: 0000000000000000000000000000000000000001
-          head-sha: 0000000000000000000000000000000000000002
+          base-sha: "0000000000000000000000000000000000000001"
+          head-sha: "0000000000000000000000000000000000000002"
           docs-only-patterns: docs/**,README.md,**/*.md
         checks:
           - id: check-change-scope-status

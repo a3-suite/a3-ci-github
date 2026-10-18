@@ -52,6 +52,16 @@ boundaries:
     kind: process-output
     direction: output
     externality: caller-owned
+  - id: boundary.release-provider-requests
+    summary: GitHub Release provider requests and responses observed during publication or independent verification.
+    kind: external-system
+    direction: bidirectional
+    externality: provider-owned
+  - id: boundary.observation-clock
+    summary: Reobservation delays requested from the runner clock.
+    kind: external-system
+    direction: output
+    externality: caller-owned
 runtime_contexts:
   - id: runtime-context.failure-diagnostic-required
     summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
@@ -85,10 +95,10 @@ runtime_contexts:
     summary: The manifest and supplied quality selection are available and satisfy the ci-platform-matrix input contract, including unique declared IDs in selection order.
   - id: runtime-context.quality-platform-selection-invalid
     summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
-  - id: runtime-context.quality-toolchain-preparation-succeeds
-    summary: The selected language profile and version policy are supported, auxiliary tools are exact, the toolchain is exact or a bounded Node/Python selector under compatible policy, its resolved exact version matches the request, and every selected setup step succeeds. Release and legacy callers retain the default exact policy.
-  - id: runtime-context.quality-toolchain-preparation-fails
-    summary: The profile or policy is unsupported, a selected required version violates its input contract, resolution is missing or outside the requested selector, or a selected setup step fails.
+  - id: runtime-context.quality-toolchain-inputs-ready
+    summary: Caller inputs satisfy quality-toolchain-request-valid. For Node/Python, the external setup provider supplies a well-formed exact version record within the requested selector; Rust uses the requested exact version and requires no independent version record. For a registered cargo-audit binary only, the downloaded archive bytes match the registered digest, extraction supplies a nonempty executable and its external --version response matches the requested version. Rustup and unregistered cargo-audit source installation require zero external command status, not independently inspected version metadata. Other selected setup dependencies supply their normal zero-status responses; required files and output, environment and PATH destinations permit the selected reads/writes. These are external response and IO inputs, not the composite Action's own step outcomes, computed resolution or published outputs. Release and legacy callers retain the default exact policy.
+  - id: runtime-context.quality-toolchain-inputs-unusable
+    summary: Caller inputs violate the supported profile, policy or selected version grammar; or a Node/Python provider supplies a missing, malformed or out-of-selector version record; or a registered cargo-audit binary has an unavailable download response, mismatching archive digest, empty/invalid executable bytes or a mismatching external --version response; or a selected external installation command/service returns nonzero or required IO is denied. Rustup and unregistered cargo-audit source installation do not require independent version records or executable metadata. No composite Action outcome or computed resolution is assumed.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid
@@ -164,7 +174,7 @@ runtime_contexts:
   - id: runtime-context.selective-distribution-plan-changed
     summary: The manifest, source, destination, approval digest, or plan input changed after planning.
   - id: runtime-context.preset-materialization-valid
-    summary: Repository and external-skill sources resolve and all selected destinations are new or content-identical.
+    summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation.
   - id: runtime-context.preset-materialization-conflict
     summary: A selected source is invalid or a destination already contains different content.
   - id: runtime-context.preset-assurance-roots-missing
@@ -181,3 +191,45 @@ runtime_contexts:
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
   - id: runtime-context.standard-installer-evidence-valid
     summary: Standard-installer assemble receives authority-bound transported candidates whose exact file inventories and SHA-256 bytes match their platform records and whose native verification succeeds.
+  - id: runtime-context.preset-materialization-invocation
+    summary: The declared materialization boundary is invoked with its normal input and filesystem interfaces, including incomplete or invalid inputs and storage faults.
+  - id: runtime-context.preset-standard-materialization-valid
+    summary: Inputs satisfy runtime-context.preset-materialization-valid and select a registered standard Action bundle; an external source-root is not required for this selection.
+  - id: runtime-context.preset-custom-materialization-valid
+    summary: Inputs satisfy runtime-context.preset-materialization-valid and select a copyable custom bundle through an explicit source-root.
+  - id: runtime-context.release-publisher-invocation
+    summary: The declared publisher boundary is invoked with its normal input and provider interfaces, including incomplete or invalid inputs and any provider response or transport fault.
+  - id: runtime-context.quality-selection-shared-checks-supplied
+    summary: A valid quality selection explicitly declares boolean sharedStandardChecks.
+  - id: runtime-context.quality-selection-shared-checks-omitted
+    summary: A valid quality selection omits sharedStandardChecks.
+  - id: runtime-context.distribution-rollback-restorable
+    summary: An explicit rollback receives a valid recorded transaction, verified before-state backups and unchanged transaction-owned destinations under the exclusive lock; backup reads, restoration writes and required state writes remain available.
+  - id: runtime-context.distribution-partial-apply-restorable
+    summary: An initially valid unchanged plan has multiple writes; after an earlier write, a later destination or source becomes unavailable or changes. Earlier transaction-owned destinations remain unchanged by others, verified backups remain readable and all recovery writes remain available.
+  - id: runtime-context.release-verification-invocation
+    summary: Any invocation of observe-before or verify-after, including invalid inputs, insufficient credentials, unknown remote state and mismatching evidence.
+  - id: runtime-context.distribution-independent-destination-stable
+    summary: During a plan, apply or rollback invocation, one or more canonical consumer destinations differ from the current identity expected by the plan or recorded transaction. Every such destination remains unchanged by other actors from its independent modification through invocation completion.
+  - id: runtime-context.selective-distribution-plan-input-valid
+    summary: A plan request selects a verified local distribution and complete preset closure, readable consumer destinations, valid settings and interpretable prior ownership. Conflicts may be reported by the resulting plan; no apply approval is required to plan.
+  - id: runtime-context.ci-quality-adapter-native-rust-valid
+    summary: A valid embedded rust-cargo-quality invocation selects execution-scope native, valid fixed source paths and a matching toolchain.
+  - id: runtime-context.ci-quality-adapter-native-scope-rejected
+    summary: A native execution request selects a non-Rust bundle or a local descriptor, or the requested execution scope is unknown.
+  - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+    summary: A registered embedded standard bundle is selected from a fixed Action artifact for execution; consumer descriptors are not selected.
+  - id: runtime-context.ci-quality-summary-summary-mixed-applicability
+    summary: At least one quality row is applicable and valid; excluded rows may contain non-success statuses.
+  - id: runtime-context.ci-quality-summary-summary-default-evidence-valid
+    summary: A valid summary has a row with omitted evidence and a valid GitHub server URL, repository and run ID.
+  - id: runtime-context.ci-quality-summary-summary-all-excluded
+    summary: All supplied quality rows are intentionally excluded.
+  - id: runtime-context.ci-quality-summary-summary-run-context-missing
+    summary: Evidence is omitted and the GitHub run context needed to construct a URL is absent or invalid.
+  - id: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+    summary: A registered cargo-audit version/target is requested with an unavailable download response, mismatching archive digest, invalid archive, mismatching executable version, or unwritable PATH output destination.
+  - id: runtime-context.quality-toolchain-request-valid
+    summary: The requested language profile and version policy are supported; the requested toolchain is exact or a bounded Node/Python selector under compatible policy, and selected auxiliary tool versions satisfy their input grammar. No setup outcome or observed resolved version is assumed.
+  - id: runtime-context.ci-preset-assurance-canonical-lock-input
+    summary: A full immutable source revision and a complete configured canonical preset are supplied for lock generation. Managed workflow bytes, registry-projected pin companions and required settings conform to the provider inputs; source and consumer files remain readable and unchanged through the invocation.

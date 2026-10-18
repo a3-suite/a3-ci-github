@@ -141,7 +141,10 @@ contracts:
         guarantee_refs:
           - action-source-verification-plan-produced
       - id: release-version-bound
-        goal: Exact release tags and mutable aliases cannot advance unless the tagged commit declares the same repository version.
+        goal: Observe the confirmed repository version for an exact matching release tag.
         guarantee_refs:
           - release-version-confirmed
+      - id: release-version-rejected
+        goal: Reject an invalid or mismatched repository release version.
+        guarantee_refs:
           - invalid-or-mismatched-release-version-rejected

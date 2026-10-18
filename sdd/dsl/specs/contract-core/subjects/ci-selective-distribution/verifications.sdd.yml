@@ -7,15 +7,26 @@ verifications:
     cases:
       - id: detailed-failure-selection
         intent_id: detailed-diagnostics-selection
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-selection}]
-      - id: selective-distribution-selection
-        intent_id: selective-distribution-selection-intent
+        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-selection } ]
+      - id: selective-distribution-selection-selective-distribution-selection-valid
+        intent_id: selective-distribution-selection-intent-selective-distribution-selection-valid
         input:
-          scenario: preset-and-direct-asset-selection
+          operation: describe
+          presets:
+            - quality-gate
+          assets: []
         checks:
           - id: check-selective-distribution-closure
             guarantee_ref: selective-distribution-closure-exposed
+      - id: selective-distribution-selection-selective-distribution-selection-incomplete
+        intent_id: selective-distribution-selection-intent-selective-distribution-selection-incomplete
+        input:
+          operation: describe
+          presets: []
+          assets:
+            - workflow.quality-gate
+        checks:
           - id: check-selective-distribution-missing-dependency
             guarantee_ref: selective-distribution-missing-dependency-rejected
   - id: verification.ci-selective-distribution.delivery
@@ -23,17 +34,28 @@ verifications:
     cases:
       - id: detailed-failure-delivery
         intent_id: detailed-diagnostics-delivery
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-delivery}]
-      - id: selective-distribution-delivery
-        intent_id: selective-distribution-delivery-intent
+        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-delivery } ]
+      - id: selective-distribution-delivery-selective-distribution-source-valid
+        intent_id: selective-distribution-delivery-intent-selective-distribution-source-valid
         input:
-          scenario: valid-and-invalid-selected-source
+          operation: fetch
+          presets:
+            - quality-gate
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         checks:
           - id: check-selective-distribution-receipt
             guarantee_ref: selective-distribution-receipt-exposed
           - id: check-selective-distribution-assets
             guarantee_ref: selective-distribution-assets-exposed
+      - id: selective-distribution-delivery-selective-distribution-source-invalid
+        intent_id: selective-distribution-delivery-intent-selective-distribution-source-invalid
+        input:
+          operation: fetch
+          presets:
+            - quality-gate
+          file-sha256: mismatch
+        checks:
           - id: check-selective-distribution-invalid-source
             guarantee_ref: selective-distribution-invalid-source-rejected
   - id: verification.ci-selective-distribution.publication
@@ -41,70 +63,237 @@ verifications:
     cases:
       - id: detailed-failure-publication
         intent_id: detailed-diagnostics-publication
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-publication}]
-      - id: selective-distribution-publication
-        intent_id: selective-distribution-publication-intent
+        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-publication } ]
+      - id: selective-distribution-publication-selective-distribution-publication-valid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-valid
         input:
-          scenario: exact-release-assets-and-readback
+          operation: publish
+          tag: v1.2.3
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          implementation-revision: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          integration: ancestor-of-main
         checks:
           - id: check-selective-distribution-publication
             guarantee_ref: selective-distribution-publication-exposed
+      - id: selective-distribution-publication-selective-distribution-publication-invalid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-invalid
+        input:
+          operation: publish
+          tag: v1.2.3
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          readback: asset-bytes-mismatch
+        checks:
           - id: check-selective-distribution-publication-failure
             guarantee_ref: selective-distribution-publication-failure-exposed
-      - id: selective-distribution-release-integration
-        intent_id: selective-distribution-publication-intent
+      - id: selective-distribution-release-integration-selective-distribution-publication-valid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-valid
         input:
-          scenario: ancestry-and-current-main-tree-identity-with-rejected-invalid-and-unavailable-evidence
+          operation: publish
+          tag: v1.2.3
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          main-tip-tree: same-as-approved-source-tree
+          integration: published-hotfix-squash
         checks:
           - id: check-selective-distribution-release-integration
             guarantee_ref: selective-distribution-publication-exposed
+      - id: selective-distribution-release-integration-selective-distribution-publication-invalid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-invalid
+        input:
+          operation: publish
+          tag: v1.2.3
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          main-tip-tree: different-from-approved-source-tree
+          integration: historical-squash-only
+        checks:
           - id: check-selective-distribution-release-integration-failure
             guarantee_ref: selective-distribution-publication-failure-exposed
-      - id: selective-distribution-single-release-binding
-        intent_id: selective-distribution-publication-intent
+      - id: selective-distribution-single-release-binding-selective-distribution-publication-valid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-valid
         input:
-          scenario: implementation-commit-and-connection-commit-with-one-final-release
-          valid_variants:
-            - ordinary-release-with-verified-implementation-ancestor
-            - hotfix-with-verified-implementation-ancestor
-          rejected_variants:
-            - missing-or-unrelated-implementation-commit
-            - implementation-and-final-source-version-mismatch
-            - missing-declared-action-entrypoint
-            - changed-action-metadata-bundle-composite-script-or-runtime-payload
-            - stale-workflow-or-installer-binding
-            - fixed-reference-contract-failure
-          publication_count: 1
-          prior_implementation_release_required: false
+          operation: publish
+          branch: release/0.2.11
+          tag: v0.2.11
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          implementation-revision: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          implementation-release: absent
+          connection-candidate: approved-unchanged
         checks:
           - id: check-selective-distribution-single-release-success
             guarantee_ref: selective-distribution-publication-exposed
           - id: check-selective-distribution-implementation-binding
             guarantee_ref: selective-distribution-implementation-binding-verified
+      - id: selective-distribution-single-release-binding-selective-distribution-publication-invalid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-invalid
+        input:
+          operation: publish
+          branch: release/0.2.11
+          tag: v0.2.11
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          implementation-revision: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          execution-input-change: actions/ci-quality-adapter/dist/index.js-after-approval
+        checks:
           - id: check-selective-distribution-single-release-rejection
             guarantee_ref: selective-distribution-publication-failure-exposed
-  - id: verification.ci-selective-distribution.application
-    contract_id: contract.ci-selective-distribution.application
+  - id: verification.ci-selective-distribution.plan
+    contract_id: contract.ci-selective-distribution.plan
     cases:
-      - id: detailed-failure-application
-        intent_id: detailed-diagnostics-application
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-application}]
-      - id: selective-distribution-application
-        intent_id: selective-distribution-application-intent
+      - id: selective-distribution-application-selective-distribution-application-incomplete
+        intent_id: plan-selective-distribution-application-incomplete
         input:
-          scenario: create-conflict-change-and-rollback
+          operation: plan
+          presets: []
+          assets:
+            - workflow.quality-gate
+        checks:
+          - id: check-selective-distribution-incomplete-application
+            guarantee_ref: selective-distribution-incomplete-application-rejected
+      - id: selective-distribution-application-selective-distribution-application-valid-plan
+        intent_id: plan-planning-input-valid
+        input:
+          operation: plan
+          presets:
+            - quality-gate
+          assets: []
         checks:
           - id: check-selective-distribution-plan
             guarantee_ref: selective-distribution-plan-exposed
+      - id: detailed-failure-plan
+        intent_id: plan-diagnostic-required-application
+        input:
+          operation: plan
+          repo-root: consumer
+          required-arguments: missing
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application
+      - id: plan-independent-destination
+        intent_id: plan-independent-destination
+        input:
+          operation: plan
+          destination: .github/workflows/quality-gate.yml
+          ownership: unmanaged
+          independent-state: stable-through-invocation-completion
+        checks:
+          - id: independent-destination-binding
+            guarantee_ref: independent-destination-binding
+  - id: verification.ci-selective-distribution.application
+    contract_id: contract.ci-selective-distribution.application
+    cases:
+      - id: selective-distribution-application-selective-distribution-application-valid
+        intent_id: apply-selective-distribution-application-valid
+        input:
+          operation: apply
+          plan: unchanged
+          approval: matching-plan-digest
+        checks:
           - id: check-selective-distribution-transaction
             guarantee_ref: selective-distribution-transaction-exposed
+      - id: selective-distribution-application-selective-distribution-application-conflict
+        intent_id: apply-selective-distribution-application-conflict
+        input:
+          operation: apply
+          destination: .github/workflows/quality-gate.yml
+          ownership: unmanaged-conflict
+        checks:
           - id: check-selective-distribution-conflict
             guarantee_ref: selective-distribution-conflict-rejected
-          - id: check-selective-distribution-incomplete-application
-            guarantee_ref: selective-distribution-incomplete-application-rejected
+      - id: selective-distribution-application-selective-distribution-plan-changed
+        intent_id: apply-selective-distribution-plan-changed
+        input:
+          operation: apply
+          plan: previously-approved
+          destination-change: consumer-edit-after-planning
+        checks:
           - id: check-selective-distribution-changed-input
             guarantee_ref: selective-distribution-changed-input-rejected
-          - id: check-selective-distribution-rollback
+      - id: partial-apply-restoration
+        intent_id: apply-partial-apply-restorable
+        input:
+          operation: apply
+          destination-change: later-destination-after-an-earlier-write
+          independent-state: stable-through-invocation-completion
+          rollback-io: available
+        checks:
+          - id: partial-apply-files-restored
+            guarantee_ref: partial-apply-files-restored
+      - id: partial-apply-protected-destination
+        intent_id: apply-independent-destination-stable
+        input:
+          operation: apply
+          destination-change: later-destination-after-an-earlier-write
+          independent-state: stable-through-invocation-completion
+        checks:
+          - id: independent-destination-binding
+            guarantee_ref: independent-destination-binding
+      - id: detailed-failure-application
+        intent_id: apply-diagnostic-required-application
+        input: { operation: apply, repo-root: consumer, required-arguments: missing }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-application } ]
+      - id: apply-recovery-diagnostic-1
+        intent_id: apply-diagnostic-required-application
+        input:
+          operation: apply
+          transaction-state: completed
+          secondary-io: owned-lock-cleanup-fails
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application
+  - id: verification.ci-selective-distribution.rollback
+    contract_id: contract.ci-selective-distribution.rollback
+    cases:
+      - id: explicit-rollback-restoration
+        intent_id: rollback-rollback-restorable
+        input:
+          operation: rollback
+          transaction: valid-unchanged-restorable
+        checks:
+          - id: selective-distribution-rollback-exposed
             guarantee_ref: selective-distribution-rollback-exposed
+          - id: rollback-files-restored
+            guarantee_ref: rollback-files-restored
+      - id: rollback-protected-destination
+        intent_id: rollback-independent-destination-stable
+        input:
+          operation: rollback
+          destination-change: consumer-edit-after-apply
+          independent-state: stable-through-invocation-completion
+        checks:
+          - id: independent-destination-binding
+            guarantee_ref: independent-destination-binding
+      - id: detailed-failure-rollback
+        intent_id: rollback-diagnostic-required-application
+        input:
+          operation: rollback
+          repo-root: consumer
+          required-arguments: missing
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application
+      - id: rollback-recovery-diagnostic-1
+        intent_id: rollback-diagnostic-required-application
+        input:
+          operation: rollback
+          transaction-state: restoration-rejected
+          secondary-io: owned-lock-cleanup-fails
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application
+      - id: rollback-recovery-diagnostic-2
+        intent_id: rollback-diagnostic-required-application
+        input:
+          operation: rollback
+          transaction-state: completed
+          secondary-io: owned-lock-cleanup-fails
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application
+      - id: rollback-recovery-diagnostic-3
+        intent_id: rollback-diagnostic-required-application
+        input:
+          operation: rollback
+          transaction-state: restoration-rejected
+          secondary-io: recovery-state-recording-fails
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-application

@@ -13,15 +13,15 @@ test_maps:
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > collects and rebuilds the Rust release script bundle"
         check_refs:
           - check-distribution-plan-produced
-      - path: tests/action-dist-gate.test.mjs
+      - path: tests/action-dist-gate.process.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > diagnostic runtime regenerates native JavaScript and declarations from strict source"
-        check_refs: [check-distribution-plan-produced]
+        check_refs: [ check-distribution-plan-produced ]
       - path: tests/action-dist-gate.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > CI rebuild skips duplicate ncc typechecking while standard build remains unchanged"
-        check_refs: [check-distribution-plan-produced]
-      - path: tests/action-dist-gate.test.mjs
+        check_refs: [ check-distribution-plan-produced ]
+      - path: tests/action-dist-gate.process.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > installer build forwards the CI option to both ncc entries without changing normal builds"
-        check_refs: [check-distribution-plan-produced]
+        check_refs: [ check-distribution-plan-produced ]
   - verification_id: verification.repository-action-distribution.integrity
     case_id: inconsistent-distribution-state
     tests:
@@ -60,23 +60,23 @@ test_maps:
     tests:
       - path: tests/action-package-verification.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > batches every Action and shared test once while retaining all typechecks"
-        check_refs: [check-action-source-verification-plan]
+        check_refs: [ check-action-source-verification-plan ]
       - path: tests/action-package-verification.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > rejects missing files, empty, entirely skipped and unknown test results despite a zero child exit"
-        check_refs: [check-action-source-verification-plan]
-      - path: tests/action-package-verification.test.mjs
+        check_refs: [ check-action-source-verification-plan ]
+      - path: tests/action-package-verification.process.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > batched typechecks keep project globals isolated and reject errors after a previous successful build"
-        check_refs: [check-action-source-verification-plan]
-      - path: tests/action-package-verification.test.mjs
+        check_refs: [ check-action-source-verification-plan ]
+      - path: tests/action-package-verification.process.test.mjs
         symbol: "repository-cli-source-verification > cliTypecheckPlan > the CLI verification plan accepts valid sources and rejects type errors in every CLI source family"
-        check_refs: [check-action-source-verification-plan]
+        check_refs: [ check-action-source-verification-plan ]
       - path: tests/action-package-verification.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > derives typecheck and no-rebuild test steps for every bundled Action"
         check_refs:
           - check-action-source-verification-plan
-      - path: tests/action-package-verification.test.mjs
+      - path: tests/action-package-verification.process.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > the formal Action source gate rejects type errors independently of bundling"
-        check_refs: [check-action-source-verification-plan]
+        check_refs: [ check-action-source-verification-plan ]
       - path: tests/action-package-verification.test.mjs
         symbol: "action-package-verification > action-package-verification > connects shared provisioner, publication and installer tests without another install or build"
         check_refs:
@@ -84,24 +84,24 @@ test_maps:
   - verification_id: verification.repository-action-distribution.integrity
     case_id: matching-release-version
     tests:
-      - path: runtime/repository/tests/update-release-aliases.test.mjs
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: "repository-release-alias-update > release alias updater creates annotated major and minor aliases idempotently"
         check_refs:
           - check-release-version-confirmed
-      - path: runtime/repository/tests/update-release-aliases.test.mjs
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: "repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base"
-        check_refs: [check-release-version-confirmed]
+        check_refs: [ check-release-version-confirmed ]
   - verification_id: verification.repository-action-distribution.integrity
     case_id: invalid-release-version
     tests:
-      - path: runtime/repository/tests/update-release-aliases.test.mjs
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: "repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION"
         check_refs:
           - check-invalid-release-version-rejected
   - verification_id: verification.repository-action-distribution.integrity
     case_id: mismatched-release-version
     tests:
-      - path: runtime/repository/tests/update-release-aliases.test.mjs
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: "repository-release-alias-update > release alias updater rejects a tag that differs from repository VERSION"
         check_refs:
           - check-mismatched-release-version-rejected
@@ -110,22 +110,22 @@ test_maps:
     tests:
       - path: tests/action-package-verification.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-source-verification > retains the known report rejection reason after a zero child exit"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/action-dist-gate.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-action-distribution-gates > reports a dist identity mismatch reason and keeps other step failures unchanged"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > repository distribution retains the failing metadata gate before build"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-maintenance-cli > maintenance entrypoints retain safe failure context and primary exits when sinks fail"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-maintenance-cli > source verification retains child status and completed stage when group output fails"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.repository-action-distribution.integrity > repository-maintenance-cli > catalog write failure retains known write state without changing existing README"
-        check_refs: [diagnostic-details]
-      - path: runtime/repository/tests/update-release-aliases.test.mjs
+        check_refs: [ diagnostic-details ]
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: "repository-release-alias-update > alias push failure retains native exit and uncertain remote state without moving exact tags"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]

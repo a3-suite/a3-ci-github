@@ -13,6 +13,9 @@ const platform = (overrides = {}) => ({
 });
 
 describe("platform-manifest-core", () => {
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: validatePlatformManifestValue(manifest, runnerPolicy)
   test.each(['macos-15', 'windows-2025', 'ubuntu-22.04', 'ubuntu-24.04-arm', 'macos-15-intel'])('trusted manifest accepts the consumer-selected versioned runner %s', (runner) => {
     expect(validatePlatformManifestValue({ platforms: [platform({ runner })] }, 'trusted'))
       .toStrictEqual([platform({ runner })]);
@@ -20,11 +23,17 @@ describe("platform-manifest-core", () => {
       .toThrow('runner is not allowed');
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: validatePlatformManifestValue(manifest, runnerPolicy)
   test.each(['self-hosted', 'macos-latest', 'ubuntu-latest', 'windows-latest', 'macos-15\n', '${{ github.event.runner }}', 'custom-runner'])('trusted manifest rejects unsafe or unversioned runner %s', (runner) => {
     expect(() => validatePlatformManifestValue({ platforms: [platform({ runner })] }, 'trusted'))
       .toThrow('runner is not allowed');
   });
 
+  // evidence_role: supplemental
+  // test_level: unit
+  // target_id: validatePlatformManifestValue(manifest, runnerPolicy)
   test('unknown runner policy fails closed', () => {
     expect(() => validatePlatformManifestValue({ platforms: [platform()] }, 'unknown'))
       .toThrow('runner policy is invalid');
@@ -36,7 +45,7 @@ describe("platform-manifest-core", () => {
   ]) {
     // evidence_role: supplemental
     // test_level: unit
-    // target_id: validatePlatformManifestValue(manifest)
+    // target_id: validatePlatformManifestValue(manifest, runnerPolicy)
     // These syntax boundaries supplement the Action's shape, duplicate and runner cases.
     test(`platform manifest core reports a typed failure for ${label}`, () => {
       // Arrange

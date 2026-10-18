@@ -22,7 +22,7 @@ requirements:
       - Action へ移した旧実装を project-local fallback として残さない
       - 標準installerを選択した場合、providerはinstaller ownerの命名契約に従うWindows公開入口とUnix共有入口を生成・検証し、製品宣言との自己整合だけで標準適合としない。Unixの対象別導入方式は維持する
       - 公開スキルを選択した場合、製品と同じ固定source・versionに拘束した必要なスキルだけを同じ1回のReleaseで提供し、開発・一時・コンパイル残骸を除外する。installerとの併用でも各owner証跡を保持し、READMEの導入・削除案内を同梱構成へ整合させる
-      - quality descriptor の toolchain version は command 出力の独立トークンとして検証し、失敗時は診断コードと expected / received を観測可能にする
+      - quality descriptor が要求する toolchain version と実際の version の一致を確認でき、失敗時は期待した version と観測結果を識別できる
     depends_on:
       - requirement_ref:
           requirement_id: github-actions-action-contract-and-distribution

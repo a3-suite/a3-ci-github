@@ -7,46 +7,46 @@ test_maps:
     tests:
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority accepts canonical repository casing while preserving approved identity"
-        check_refs: [authority]
+        check_refs: [ authority ]
   - verification_id: verification.ci-release-authority.outputs
     case_id: verified-inputs
     tests:
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > standard authority binds explicit decision, existing owner workflow, snapshot and GET-only observations"
-        check_refs: [authority]
+        check_refs: [ authority ]
   - verification_id: verification.ci-release-authority.outputs
     case_id: invalid-bindings
     tests:
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority rejects untrusted runs, moved tags, owner drift, snapshot drift and expired approval without authority output"
-        check_refs: [failure, no-outputs]
+        check_refs: [ failure, no-outputs ]
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority accepts read-only repository metadata without claiming publish capability and rejects replay"
-        check_refs: [failure]
+        check_refs: [ failure ]
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority rejects unsupported implementation, profile and owner with a valid snapshot digest"
-        check_refs: [failure, no-outputs]
+        check_refs: [ failure, no-outputs ]
   - verification_id: verification.ci-release-authority.outputs
     case_id: bundle-boundary
     tests:
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: "source entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection"
-        check_refs: [authority]
+        check_refs: [ authority ]
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: "dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection"
-        check_refs: [authority]
+        check_refs: [ authority ]
   - verification_id: verification.ci-release-authority.outputs
     case_id: platform-checkout-eol
     tests:
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority binds LF source identity for CRLF and mixed platform manifests"
-        check_refs: [authority]
+        check_refs: [ authority, platform-source-text-digest ]
   - verification_id: verification.ci-release-authority.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-release-authority failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: "ci-release-authority-runtime > authority rejection retains the failing verification stage and expected/observed identity"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]

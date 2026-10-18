@@ -12,13 +12,13 @@ observations:
       fields:
         - selector: publication-boundary
           kind: observation_field
-          meaning: Declared fixed provider publication call with explicit typed owner configuration and the order in which source and version request validation precedes preparation, publication entry and handoff validation precede credential-bearing publication, and publication precedes registry readback.
+          meaning: Declared owner publication call and dependency graph; registry publication/readback behavior is owned by the selected owner publisher.
         - selector: failure-summary
           kind: observation_field
-          meaning: Declared always-run summary route after request validation, preparation, and publication that preserves failed and unknown outcomes.
+          meaning: Declared package aggregate route.
   - id: observation.ci-package-publication-workflow.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
@@ -26,3 +26,44 @@ observations:
         - selector: details
           kind: observation_field
           meaning: "request・request検証・version plan・package build・credential準備・publication・readback・summaryのどのjob/stepで失敗したか、package/version/registry、元のneeds result、既存log/artifactへの参照、公開操作の未実行/部分実行/結果不明を残す。"
+  - id: observation.ci-package-publication-workflow.publication.relations
+    summary: Individually observed contract values and comparisons.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: package-fixed-provider-reference
+          kind: observation_field
+          meaning: Comparison of caller preparation/publication references with registered provider workflow reference declarations.
+        - selector: package-explicit-owner-inputs
+          kind: observation_field
+          meaning: Comparison of caller owner bindings with the provider typed required inputs.
+        - selector: package-request-before-preparation
+          kind: observation_field
+          meaning: Declared dependency order of request validation and preparation.
+        - selector: package-preparation-before-publication
+          kind: observation_field
+          meaning: Declared dependency order of preparation and privileged publication.
+        - selector: package-control-sha-bound
+          kind: observation_field
+          meaning: Comparison of trusted control checkout revision with github.workflow_sha.
+        - selector: package-control-head-verified
+          kind: observation_field
+          meaning: Declared order of control checkout and immediate HEAD verification.
+        - selector: package-handoff-before-publication
+          kind: observation_field
+          meaning: Declared order of package handoff validation and credential-bearing owner publisher invocation.
+        - selector: package-credential-scope
+          kind: observation_field
+          meaning: Occurrence of registry token bindings outside the owner publication step within the provider workflow execution.
+        - selector: package-owner-publisher-invoked
+          kind: observation_field
+          meaning: Declared owner publisher argument.
+        - selector: package-failure-summary-always
+          kind: observation_field
+          meaning: Declared publication aggregate condition.
+        - selector: package-failed-prerequisite-blocks
+          kind: observation_field
+          meaning: Occurrence of publication eligibility with failed or unknown required preparation or request validation.

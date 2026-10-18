@@ -14,7 +14,7 @@ verifications:
         input:
           handoff-root: .ci/handoff
           descriptor: handoff.json
-          source-sha: 0000000000000000000000000000000000000001
+          source-sha: "0000000000000000000000000000000000000001"
           version: 1.0.0
           target-identity: linux-x64
         checks:

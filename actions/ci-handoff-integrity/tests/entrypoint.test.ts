@@ -33,7 +33,7 @@ const runBundled = (handoffRoot: string, sourceSha: string) => {
 };
 
 // contract_id: contract.ci-handoff-integrity.outputs
-// integration_id: ci-handoff-integrity-contract-entrypoint
+// flow_id: ci-handoff-integrity-contract-entrypoint
 test('entrypoint validates a handoff', () => {
   // Arrange
   const handoffRoot = createHandoff();
@@ -49,7 +49,7 @@ test('entrypoint validates a handoff', () => {
   fs.rmSync(handoffRoot, { recursive: true, force: true });
 });
 
-// integration_id: ci-handoff-integrity-entrypoint-regression
+// flow_id: ci-handoff-integrity-entrypoint-regression
 test('entrypoint fails an identity mismatch', () => {
   // Arrange
   const handoffRoot = createHandoff();
@@ -64,7 +64,7 @@ test('entrypoint fails an identity mismatch', () => {
 });
 
 // contract_id: contract.ci-handoff-integrity.outputs
-// integration_id: ci-handoff-integrity-contract-entrypoint
+// flow_id: ci-handoff-integrity-contract-entrypoint
 test('entrypoint retains the failed artifact path and digest comparison', (t) => {
   const handoffRoot = createHandoff();
   t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));

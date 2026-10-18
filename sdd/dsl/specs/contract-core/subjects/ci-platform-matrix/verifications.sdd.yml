@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: valid-platform-manifest
         intent_id: platform-matrix-output-set
         input:
@@ -30,6 +30,9 @@ verifications:
         input:
           manifest-path: .ci/platform-manifest.yml
           selection-path: .ci/quality-platforms.yml
+          selection-document:
+            platforms:
+              - id: linux-x64
         checks:
           - id: check-selected-full-matrix
             guarantee_ref: selected-full-matrix-produced
@@ -49,3 +52,63 @@ verifications:
             guarantee_ref: invalid-selection-has-no-matrix
           - id: check-invalid-selection-no-quality-outputs
             guarantee_ref: invalid-selection-has-no-quality-outputs
+      - id: manifest-identity
+        intent_id: matrix-identity-platform-manifest-valid
+        input:
+          manifest-path: .ci/platform-manifest.yml
+        checks:
+          - id: manifest-matrix-binding
+            guarantee_ref: manifest-matrix-binding
+      - id: selection-identity
+        intent_id: matrix-identity-shared-checks-omitted
+        input:
+          selection-document:
+            platforms:
+              - id: windows-x64
+              - id: linux-x64
+        checks:
+          - id: selected-matrix-binding
+            guarantee_ref: selected-matrix-binding
+          - id: quality-id-order
+            guarantee_ref: quality-id-order
+          - id: quality-runner-binding
+            guarantee_ref: quality-runner-binding
+          - id: expected-id-order
+            guarantee_ref: expected-id-order
+          - id: shared-checks-absence
+            guarantee_ref: shared-checks-absence
+      - id: shared-checks-identity
+        intent_id: matrix-identity-shared-checks-supplied
+        input:
+          selection-document:
+            platforms:
+              - id: windows-x64
+              - id: linux-x64
+            sharedStandardChecks: true
+        checks:
+          - id: selected-matrix-binding
+            guarantee_ref: selected-matrix-binding-with-shared-checks
+          - id: quality-id-order
+            guarantee_ref: quality-id-order-with-shared-checks
+          - id: quality-runner-binding
+            guarantee_ref: quality-runner-binding-with-shared-checks
+          - id: expected-id-order
+            guarantee_ref: expected-id-order-with-shared-checks
+          - id: shared-checks-value
+            guarantee_ref: shared-checks-value
+      - id: valid-quality-selection-with-shared-checks
+        intent_id: quality-selection-output-set-with-shared-checks
+        input:
+          manifest-path: .ci/platform-manifest.yml
+          selection-path: .ci/quality-platforms.yml
+          selection-document:
+            platforms:
+              - id: linux-x64
+            sharedStandardChecks: true
+        checks:
+          - id: check-selected-full-matrix-with-shared-checks
+            guarantee_ref: selected-full-matrix-produced-with-shared-checks
+          - id: check-ordered-quality-matrix-with-shared-checks
+            guarantee_ref: ordered-quality-matrix-produced-with-shared-checks
+          - id: check-ordered-expected-platforms-with-shared-checks
+            guarantee_ref: ordered-expected-platforms-produced-with-shared-checks

@@ -45,15 +45,18 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-selection
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-selection]
-      - id: selective-distribution-selection-intent
-        goal: A preset exposes its complete registered closure and a direct incomplete asset request is rejected.
+        guarantee_refs: [ diagnostic-details-selection ]
+      - id: selective-distribution-selection-intent-selective-distribution-selection-valid
+        goal: Verify the selective-distribution-selection-valid input partition.
         guarantee_refs:
           - selective-distribution-closure-exposed
+      - id: selective-distribution-selection-intent-selective-distribution-selection-incomplete
+        goal: Verify the selective-distribution-selection-incomplete input partition.
+        guarantee_refs:
           - selective-distribution-missing-dependency-rejected
   - id: contract.ci-selective-distribution.delivery
     summary: Selected files are published locally only after immutable source identity and file integrity validation.
@@ -107,16 +110,19 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-delivery
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-delivery]
-      - id: selective-distribution-delivery-intent
-        goal: Valid selected files produce a revision-bound receipt and invalid source bytes do not become a usable local distribution. Missing prior manifests produce the classified distribution-local-manifest-missing diagnostic; unsupported manifest schemas are rejected without conversion or fallback.
+        guarantee_refs: [ diagnostic-details-delivery ]
+      - id: selective-distribution-delivery-intent-selective-distribution-source-valid
+        goal: Verify the selective-distribution-source-valid input partition.
         guarantee_refs:
           - selective-distribution-receipt-exposed
           - selective-distribution-assets-exposed
+      - id: selective-distribution-delivery-intent-selective-distribution-source-invalid
+        goal: Verify the selective-distribution-source-invalid input partition.
+        guarantee_refs:
           - selective-distribution-invalid-source-rejected
   - id: contract.ci-selective-distribution.publication
     summary: One exact-tag Release makes its implementation and fixed workflow and installer connections available together after provider checks and byte-identical draft asset readback with approved notes.
@@ -175,29 +181,104 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-publication
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-publication]
-      - id: selective-distribution-publication-intent
-        goal: >-
-          The manifest binds reusable workflow references to the published source SHA and external Action references to verified provider pins. Provider CI verifies template generation, fixed references and caller/callee contracts before publication. Consumer existence and successful Hosted invocation of every reusable workflow are not publication prerequisites. Consumer environment acceptance follows installation and is reported separately.
-          Each ordinary release and hotfix uses one immutable exact tag and one GitHub Release to deliver its implementation and connections. A separate implementation Release or connection-only follow-up Release is not a prerequisite. Preparation may use multiple commits; one publication does not require a single commit or equality of the implementation and final source SHA.
-          Every first-party Action binding resolves an existing full implementation SHA that is an ancestor of, or equal to, the final tagged source. The implementation SHA and final source declare the same release VERSION. All referenced Actions, their metadata, entrypoints, bundled payloads, Composite scripts and transitively required provider runtime assets are present at that SHA and byte-and-mode identical in the final source. Canonical workflows, provider callees and installer provider revisions use that verified binding; caller generation binds callees to the final source SHA. The registry release tag identifies the enclosing Release, not necessarily the implementation SHA itself.
-          Before the final tag exists, candidate validation verifies the implementation against the selected candidate commit or staged tree without requiring a prior Release. Publication revalidates the finalized tag, its source and implementation ancestry, execution closure identity, registry and workflow connections, required I/O and actual fixed-reference behavior. A missing Git object, unrelated implementation, changed execution closure, stale binding or failed contract prevents publication. Arbitrary known SHAs and successful tests of another checkout cannot replace that evidence. Moving branches, tag execution references and future self-SHA placeholders are not substitutes for full SHA bindings.
-          These first-party rules do not relax third-party Action pin approval or upstream tag-to-SHA identity checks. Manifest file digests, asset readback, immutable exact tags and publication failure handling remain unchanged.
-          A validated exact tag publishes only the three bootstrap assets from a draft with unchanged approved notes after byte-identical readback; prepublication failure leaves the draft unpublished, and any publication or verification failure blocks alias updates.
-          Integration into main is evidenced by target ancestry of the fetched main commit snapshot or exact Git tree object identity with that main tip; the target and main commit SHA, both tree IDs, and the accepted evidence method are exposed. Failed reference, tree, or ancestry acquisition stops validation. Tree equality does not substitute for integration approval, releaseability of the integrated main tip, Hosted validation, or Release identity.
-          For this repository's fixed-SHA preparation, main integration evaluates the final connected state. Implementation preparation commits need not be independently publishable when integrated together with their validated connection commit; an unconnected implementation commit is never integrated alone. This allowance covers only fixed-SHA preparation, not unrelated unverified changes. The actual integration candidate preserves the referenced implementation commit as an ancestor, matches the validated final source tree and execution closure, and passes the applicable checks. Merge commits or fast-forward integration retain this ancestry; squash or rebase must not remove it or invalidate a fixed binding. Record the preintegration main SHA, incoming commit set and validated candidate, and reevaluate if main advances. Verify ancestry, tree identity and Hosted CI on the resulting main tip; publication readback or tree equality alone does not establish integration completion. Published exact tags and assets remain immutable during history repair.
-          Ordinary sources must satisfy this integration proof. A canonical next-patch hotfix tip may precede main integration only when it descends from the annotated base of the current stable main version and that base satisfies the same integration proof; annotated tags, exact source and canonical tip identity, and VERSION alignment remain required.
-          Tree equality compares only the fetched main tip; it does not search historical main trees to authorize replay of old releases. Validation-only execution does not mutate aliases; alias updates never regress a newer release or move immutable exact tags.
+        guarantee_refs: [ diagnostic-details-publication ]
+      - id: selective-distribution-publication-intent-selective-distribution-publication-valid
+        goal: Verify the selective-distribution-publication-valid input partition.
         guarantee_refs:
           - selective-distribution-publication-exposed
-          - selective-distribution-publication-failure-exposed
           - selective-distribution-implementation-binding-verified
+      - id: selective-distribution-publication-intent-selective-distribution-publication-invalid
+        goal: Verify the selective-distribution-publication-invalid input partition.
+        guarantee_refs:
+          - selective-distribution-publication-failure-exposed
+  - id: contract.ci-selective-distribution.plan
+    summary: Produce a reviewed workflow application plan from a complete verified distribution selection without applying its changes.
+    conditions:
+      - id: diagnostic-required-application
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
+      - id: selective-distribution-application-incomplete
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-application-incomplete
+          op: available
+      - id: planning-input-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.selective-distribution-plan-input-valid
+          op: available
+      - id: independent-destination-stable
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.distribution-independent-destination-stable
+          op: available
+    guarantees:
+      - id: selective-distribution-plan-exposed
+        when: planning-input-valid
+        observation_ref: observation.ci-selective-distribution.plan-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: planDigest
+      - id: selective-distribution-incomplete-application-rejected
+        when: selective-distribution-application-incomplete
+        observation_ref: observation.ci-selective-distribution.plan-result
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: diagnostic
+      - id: diagnostic-details-application
+        when: diagnostic-required-application
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: details
+      - id: independent-destination-binding
+        when: independent-destination-stable
+        observation_ref: observation.ci-selective-distribution.restoration
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: independent-destination-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+    verification_intents:
+      - id: plan-planning-input-valid
+        goal: Verify the planning-input-valid partition for plan.
+        guarantee_refs:
+          - selective-distribution-plan-exposed
+      - id: plan-selective-distribution-application-incomplete
+        goal: Verify the selective-distribution-application-incomplete partition for plan.
+        guarantee_refs:
+          - selective-distribution-incomplete-application-rejected
+      - id: plan-diagnostic-required-application
+        goal: Verify the diagnostic-required-application partition for plan.
+        guarantee_refs:
+          - diagnostic-details-application
+      - id: plan-independent-destination
+        goal: Verify preservation of an independently owned destination during planning.
+        guarantee_refs:
+          - independent-destination-binding
   - id: contract.ci-selective-distribution.application
-    summary: Configured canonical callers and required registry-projected pin companions are generated under a reviewed unchanged plan within the authorized scope and restored after failure or rollback.
+    summary: Apply an approved unchanged plan and restore transaction-owned files after a partial failure while retaining independent consumer changes.
     conditions:
       - id: diagnostic-required-application
         environment_predicate:
@@ -214,26 +295,22 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.selective-distribution-application-conflict
           op: available
-      - id: selective-distribution-application-incomplete
-        environment_predicate:
-          kind: environment-ref
-          target_ref: runtime-context.selective-distribution-application-incomplete
-          op: available
       - id: selective-distribution-plan-changed
         environment_predicate:
           kind: environment-ref
           target_ref: runtime-context.selective-distribution-plan-changed
           op: available
+      - id: partial-apply-restorable
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.distribution-partial-apply-restorable
+          op: available
+      - id: independent-destination-stable
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.distribution-independent-destination-stable
+          op: available
     guarantees:
-      - id: selective-distribution-plan-exposed
-        when: selective-distribution-application-valid
-        observation_ref: observation.ci-selective-distribution.plan-result
-        claim:
-          kind: observable-result
-          op: present
-          target:
-            kind: observation_field
-            value: planDigest
       - id: selective-distribution-transaction-exposed
         when: selective-distribution-application-valid
         observation_ref: observation.ci-selective-distribution.apply-result
@@ -252,15 +329,6 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
-      - id: selective-distribution-incomplete-application-rejected
-        when: selective-distribution-application-incomplete
-        observation_ref: observation.ci-selective-distribution.apply-result
-        claim:
-          kind: observable-result
-          op: present
-          target:
-            kind: observation_field
-            value: diagnostic
       - id: selective-distribution-changed-input-rejected
         when: selective-distribution-plan-changed
         observation_ref: observation.ci-selective-distribution.apply-result
@@ -270,33 +338,147 @@ contracts:
           target:
             kind: observation_field
             value: diagnostic
-      - id: selective-distribution-rollback-exposed
-        when: selective-distribution-application-valid
-        observation_ref: observation.ci-selective-distribution.apply-result
-        claim:
-          kind: observable-result
-          op: present
-          target:
-            kind: observation_field
-            value: rollbackStatus
       - id: diagnostic-details-application
         when: diagnostic-required-application
         observation_ref: observation.ci-selective-distribution.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: partial-apply-files-restored
+        when: partial-apply-restorable
+        observation_ref: observation.ci-selective-distribution.restoration
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: partial-apply-files-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: independent-destination-binding
+        when: independent-destination-stable
+        observation_ref: observation.ci-selective-distribution.restoration
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: independent-destination-binding
+            right:
+              kind: value_set
+              values:
+                - matched
     verification_intents:
-      - id: detailed-diagnostics-application
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-application]
-      - id: selective-distribution-application-intent
-        goal: >-
-          Plans bind product settings, manifest-resolved fixed callee references, source digests and generated bytes. Required pin companions are the complete projection of registry provider Action entries and declared companion fields, share caller ownership classifications and diff review, and participate in the same transaction and rollback. YAML scalar generation rejects missing or unknown settings and leaves no placeholders. Schema 2 updates preserve declared settings from the installed caller, drop installed settings the new template no longer declares, and reject structural drift; earlier manifest schemas require explicit create migration with consumer-owned inventory, backup and restoration of the old lock and retired assets. The provider supplies templates and the generation script; consumers supply settings without implementing a renderer or copying provider runtime into Git. Missing Hosted acceptance evidence does not block generation, application or asset lock creation. Generated configuration does not prove successful execution in the consumer environment. Reviewed unchanged plans within the authorized scope apply atomically and expose a rollbackable transaction while conflicts and changed inputs stop. Asset lock generation after apply is outside this transaction. The supplied plan digest binds review to application and is not human approval evidence. Authorized standard setup and updates require no additional user approval of the digest; unapproved scope expansion, custom implementation replacement or destructive changes require prior confirmation of the concrete diff.
+      - id: apply-selective-distribution-application-valid
+        goal: Verify the selective-distribution-application-valid partition for apply.
         guarantee_refs:
-          - selective-distribution-plan-exposed
           - selective-distribution-transaction-exposed
+      - id: apply-selective-distribution-application-conflict
+        goal: Verify the selective-distribution-application-conflict partition for apply.
+        guarantee_refs:
           - selective-distribution-conflict-rejected
-          - selective-distribution-incomplete-application-rejected
+      - id: apply-selective-distribution-plan-changed
+        goal: Verify the selective-distribution-plan-changed partition for apply.
+        guarantee_refs:
           - selective-distribution-changed-input-rejected
+      - id: apply-diagnostic-required-application
+        goal: Verify the diagnostic-required-application partition for apply.
+        guarantee_refs:
+          - diagnostic-details-application
+      - id: apply-partial-apply-restorable
+        goal: Verify the partial-apply-restorable partition for apply.
+        guarantee_refs:
+          - partial-apply-files-restored
+      - id: apply-independent-destination-stable
+        goal: Verify the independent-destination-stable partition for apply.
+        guarantee_refs:
+          - independent-destination-binding
+  - id: contract.ci-selective-distribution.rollback
+    summary: Restore a recorded transaction under verified restoration preconditions while retaining independent consumer changes.
+    conditions:
+      - id: diagnostic-required-application
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
+      - id: rollback-restorable
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.distribution-rollback-restorable
+          op: available
+      - id: independent-destination-stable
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.distribution-independent-destination-stable
+          op: available
+    guarantees:
+      - id: selective-distribution-rollback-exposed
+        when: rollback-restorable
+        observation_ref: observation.ci-selective-distribution.apply-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: rollbackStatus
+            right:
+              kind: value_set
+              values:
+                - restored
+      - id: diagnostic-details-application
+        when: diagnostic-required-application
+        observation_ref: observation.ci-selective-distribution.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: details
+      - id: rollback-files-restored
+        when: rollback-restorable
+        observation_ref: observation.ci-selective-distribution.restoration
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: rollback-files-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: independent-destination-binding
+        when: independent-destination-stable
+        observation_ref: observation.ci-selective-distribution.restoration
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: independent-destination-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+    verification_intents:
+      - id: rollback-rollback-restorable
+        goal: Verify the rollback-restorable partition for rollback.
+        guarantee_refs:
           - selective-distribution-rollback-exposed
+          - rollback-files-restored
+      - id: rollback-diagnostic-required-application
+        goal: Verify the diagnostic-required-application partition for rollback.
+        guarantee_refs:
+          - diagnostic-details-application
+      - id: rollback-independent-destination-stable
+        goal: Verify the independent-destination-stable partition for rollback.
+        guarantee_refs:
+          - independent-destination-binding

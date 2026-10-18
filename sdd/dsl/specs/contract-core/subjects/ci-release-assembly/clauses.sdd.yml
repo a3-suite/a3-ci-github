@@ -33,7 +33,7 @@ contracts:
               value: status
             right:
               kind: value_set
-              values: [success]
+              values: [ success ]
       - id: bound-handoff
         when: assembly-valid
         observation_ref: observation.ci-release-assembly.outputs
@@ -64,24 +64,30 @@ contracts:
               value: outcome
             right:
               kind: value_set
-              values: [failure]
+              values: [ failure ]
       - id: diagnostic-details-outputs
         when: diagnostic-required-outputs
         observation_ref: observation.ci-release-assembly.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-outputs
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        guarantee_refs: [ diagnostic-details-outputs ]
       - id: bound-assembly
         goal: Complete validation produces the authority-bound handoff, asset digest and success output without overwriting an existing destination.
-        guarantee_refs: [assembly-success, bound-handoff, bound-asset-digest]
-      - id: same-release-skills
-        goal: When selected by the authority-bound snapshot, package only declared public skills from authority.source_sha as one OS-independent ZIP. Select one or more repository-relative roots at any directory, including the repository root and nested roots; derive each unique archive root from its fixed SKILL.md name rather than its source directory name. Do not impose independent skill-count, file-count or per-file-size limits; reject aggregate source bytes exceeding the policy total-size limit. Retain per-file size and SHA-256 inventory, declaration identity and ci.release-skills-package owner evidence. Reject missing required files, unsafe paths, symlinks, collisions or identity mismatches before successful handoff; exclude development and compiled leftovers according to ci-github.release-skills-contract. Preserve installer and skills owner attestations separately. Source scripts are not executed and external skill roots are not modified.
-        guarantee_refs: [bound-handoff, bound-asset-digest, assembly-rejected]
+        guarantee_refs: [ assembly-success, bound-handoff, bound-asset-digest ]
+      - id: same-release-skills-assembly-valid
+        goal: Verify the assembly-valid input partition.
+        guarantee_refs:
+          - bound-handoff
+          - bound-asset-digest
+      - id: same-release-skills-assembly-invalid
+        goal: Verify the assembly-invalid input partition.
+        guarantee_refs:
+          - assembly-rejected
       - id: fail-closed
         goal: Reject identity, platform, checksum, unsafe path, extra asset or supplemental binding mismatches without successful outputs.
-        guarantee_refs: [assembly-rejected]
+        guarantee_refs: [ assembly-rejected ]

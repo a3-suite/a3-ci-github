@@ -49,3 +49,7 @@ related_contracts:
       contract_id: contract.ci-preset-assurance.asset-lock
   - contract_ref:
       contract_id: contract.ci-preset-assurance.verification
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.plan
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.rollback

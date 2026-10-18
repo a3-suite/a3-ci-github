@@ -94,3 +94,38 @@ verifications:
             guarantee_ref: rejected
           - id: no-outputs
             guarantee_ref: no-success-outputs
+      - id: publication-write-failure-boundary
+        intent_id: publication-write-failure-boundary-intent
+        input:
+          provider: uncertain-create-upload-finalize-or-readback
+        checks:
+        - id: publication-created-id-binding
+          guarantee_ref: publication-created-id-binding
+        - id: publication-write-retry
+          guarantee_ref: publication-write-retry
+        - id: publication-recovery-write
+          guarantee_ref: publication-recovery-write
+        - id: publication-delete
+          guarantee_ref: publication-delete
+      - id: publication-existing-release-protection
+        intent_id: publication-existing-release-protection-intent
+        input:
+          remote: existing-same-tag-draft-or-published-release
+        checks:
+        - id: publication-existing-release-write
+          guarantee_ref: publication-existing-release-write
+      - id: publication-immutable-id
+        intent_id: publication-immutable-id-intent
+        input:
+          handoff: validated
+          provider: successful
+        checks:
+        - id: publication-created-id-binding
+          guarantee_ref: publication-created-id-binding
+      - id: publication-inventory-reobservation
+        intent_id: publication-inventory-reobservation-intent
+        input:
+          asset-inventory: initially-valid-subset-then-complete
+        checks:
+        - id: publication-write-retry
+          guarantee_ref: publication-write-retry

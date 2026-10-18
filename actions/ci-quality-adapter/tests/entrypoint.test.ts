@@ -24,7 +24,7 @@ const runAction = (root: string, content: string, inputs: Record<string, string>
 };
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-contract-entrypoint
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint emits status and result path', () => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
   for (const exitCode of [0, 7]) {
@@ -56,7 +56,7 @@ test('entrypoint emits status and result path', () => {
   }
 });
 
-// integration_id: ci-quality-adapter-entrypoint-regression
+// flow_id: ci-quality-adapter-entrypoint-regression
 test('command timings preserve toolchain rejection and preparation stopping', (t) => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-timing-'));
@@ -76,7 +76,7 @@ test('command timings preserve toolchain rejection and preparation stopping', (t
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-standard-selection
+// flow_id: ci-quality-adapter-standard-selection
 test('entrypoint rejects a standard bundle supplied through a local descriptor', () => {
   // Arrange
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-local-standard-'));
@@ -93,7 +93,7 @@ test('entrypoint rejects a standard bundle supplied through a local descriptor',
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-standard-selection
+// flow_id: ci-quality-adapter-standard-selection
 test('entrypoint rejects simultaneous standard ID and descriptor before execution', () => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
@@ -105,7 +105,7 @@ test('entrypoint rejects simultaneous standard ID and descriptor before executio
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-standard-selection
+// flow_id: ci-quality-adapter-standard-selection
 test('entrypoint rejects an unknown standard ID without a descriptor fallback', () => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
@@ -117,7 +117,7 @@ test('entrypoint rejects an unknown standard ID without a descriptor fallback', 
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-standard-selection
+// flow_id: ci-quality-adapter-standard-selection
 test('entrypoint executes the embedded standard without reading a project descriptor', () => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-standard-'));
   try {
@@ -144,7 +144,7 @@ test('entrypoint executes the embedded standard without reading a project descri
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-execution-scope
+// flow_id: ci-quality-adapter-execution-scope
 test('standard Rust scope preserves native checks and rejects unsupported scopes before commands', (t) => {
   // Arrange
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-scope-'));
@@ -188,7 +188,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-execution-scope
+// flow_id: ci-quality-adapter-execution-scope
 test('native Rust scope retains toolchain preparation and native command failure', (t) => {
   // Arrange
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-native-failure-'));
@@ -198,7 +198,7 @@ test('native Rust scope retains toolchain preparation and native command failure
   fs.writeFileSync(path.join(bin, 'rustc'), `#!${process.execPath}\nconsole.log('rustc '+(process.env.FAIL_COMMAND==='rustc'?'0.0.0':'1.80.0'));\n`, { mode: 0o700 });
   fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nprocess.exit(process.argv[2]===process.env.FAIL_COMMAND?7:0);\n`, { mode: 0o700 });
   // Act
-  for (const failure of ['rustc', 'fetch', 'clippy', 'test', 'metadata']) {
+  for (const failure of ['rustc', 'fetch', 'clippy', 'test', 'metadata'] as const) {
     const run = runAction(root, 'ignored', { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality', 'INPUT_EXECUTION-SCOPE': 'native',
       'INPUT_TOOLCHAIN-VERSION': '1.80.0', FAIL_COMMAND: failure, CI_CARGO_MANIFEST_PATH: 'Cargo.toml', CI_CARGO_LOCK_PATH: 'Cargo.lock', PATH: `${bin}${path.delimiter}${process.env.PATH}` });
     const payload = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
@@ -207,11 +207,17 @@ test('native Rust scope retains toolchain preparation and native command failure
     expect(payload.status).toBe('failed');
     expect(run.result.stderr).toContain('ci-failure-diagnostic:');
     expect(payload.results).toHaveLength(failure === 'rustc' ? 1 : failure === 'fetch' ? 2 : 5);
+    const nativeIds = ['toolchain-verify', 'dependency-restore', 'lint', 'test', 'structure'];
+    expect(payload.results.map((entry: { id: string }) => entry.id)).toStrictEqual(nativeIds.slice(0, failure === 'rustc' ? 1 : failure === 'fetch' ? 2 : 5));
+    const failedId = { rustc: 'toolchain-verify', fetch: 'dependency-restore', clippy: 'lint', test: 'test', metadata: 'structure' }[failure];
+    expect(payload.results.map((entry: { id: string; status: string }) => ({ id: entry.id, status: entry.status }))).toStrictEqual(
+      nativeIds.slice(0, failure === 'rustc' ? 1 : failure === 'fetch' ? 2 : 5).map(id => ({ id, status: id === failedId ? 'failed' : 'success' })),
+    );
     expect(payload.results.some((entry: { status: string }) => entry.status === 'failed')).toBe(true);
   }
 });
 
-// integration_id: ci-quality-adapter-entrypoint-regression
+// flow_id: ci-quality-adapter-entrypoint-regression
 test('entrypoint rejects a non-read-only descriptor', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-entry-'));
@@ -230,7 +236,7 @@ test('entrypoint rejects a non-read-only descriptor', () => {
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
-// integration_id: ci-quality-adapter-contract-entrypoint
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint keeps unsafe child output out of logs and the public result', (t) => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-private-'));

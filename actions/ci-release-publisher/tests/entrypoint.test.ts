@@ -14,10 +14,10 @@ const bundle = entrypointArgs;
 describe('runActionEntrypoint', () => {
 
 // contract_id: contract.ci-release-publisher.outputs
-// integration_id: release-publisher-bundled-flow
+// flow_id: release-publisher-bundled-flow
   for (const permissionMetadata of ['present', 'absent', 'empty']) {
   // contract_id: contract.ci-release-publisher.outputs
-  // integration_id: release-publisher-bundled-flow
+  // flow_id: release-publisher-bundled-flow
   test(`publisher entrypoint writes once by immutable ID and emits evidence paths: ${permissionMetadata}`, async (t) => {
   const f = fixture(t);
   const assembly = f.assemble();
@@ -104,7 +104,7 @@ globalThis.fetch = async (url, init) => {
   }
 
 // contract_id: contract.ci-release-publisher.outputs
-// integration_id: release-publisher-bundled-rejection
+// flow_id: release-publisher-bundled-rejection
 test('publisher entrypoint preserves provider rejection metadata before writes', async (t) => {
   // Arrange
   const f = fixture(t);
@@ -158,7 +158,7 @@ test('publisher entrypoint preserves provider rejection metadata before writes',
 });
 
 // contract_id: contract.ci-release-publisher.outputs
-// integration_id: release-publisher-bundled-rejection
+// flow_id: release-publisher-bundled-rejection
 test('publisher entrypoint rejects missing credential and path injection without outputs', async (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');

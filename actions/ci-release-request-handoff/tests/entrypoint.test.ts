@@ -13,7 +13,7 @@ const diagnosticOf = (stderr: string): Record<string, unknown> =>
   JSON.parse(stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
 
 // contract_id: contract.ci-release-request-handoff.outputs
-// integration_id: ci-release-request-handoff-contract-entrypoint
+// flow_id: ci-release-request-handoff-contract-entrypoint
 test('entrypoint writes a tag handoff', () => {
   // Arrange
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-entrypoint-'));
@@ -48,7 +48,7 @@ test('entrypoint writes a tag handoff', () => {
 });
 
 // contract_id: contract.ci-release-request-handoff.outputs
-// integration_id: ci-release-request-handoff-contract-entrypoint
+// flow_id: ci-release-request-handoff-contract-entrypoint
 test('entrypoint rejects a tag ref mismatch', () => {
   // Arrange
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-entrypoint-rejected-'));

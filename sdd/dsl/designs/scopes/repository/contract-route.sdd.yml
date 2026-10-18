@@ -284,3 +284,26 @@ routes:
       - component_id: workflow-sources
       - component_id: runtime-implementations
       - component_id: contract-verification
+  - route_id: selective-distribution-application-plan
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.plan
+    hops:
+      - component_id: agent-guidance
+      - component_id: selective-distribution
+      - component_id: contract-verification
+  - route_id: selective-distribution-application-rollback
+    contract_ref:
+      subject_ref: subject.ci.selective-distribution
+      contract_id: contract.ci-selective-distribution.rollback
+    hops:
+      - component_id: agent-guidance
+      - component_id: selective-distribution
+      - component_id: contract-verification
+  - route_id: action-contracts-release-supplemental-asset-assembly
+    contract_ref:
+      subject_ref: subject.ci.release-supplemental-asset
+      contract_id: contract.ci-release-supplemental-asset.assembly
+    hops:
+      - component_id: action-contracts
+      - component_id: runtime-implementations

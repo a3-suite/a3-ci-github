@@ -27,3 +27,7 @@ related_contracts:
       contract_id: contract.ci-selective-distribution.publication
   - contract_ref:
       contract_id: contract.ci-selective-distribution.application
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.plan
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.rollback

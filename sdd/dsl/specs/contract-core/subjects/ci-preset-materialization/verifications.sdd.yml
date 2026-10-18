@@ -23,3 +23,73 @@ verifications:
         checks:
           - id: check-ci-preset-materialization-failure
             guarantee_ref: ci-preset-materialization-failure-observed
+      - id: standard-binding-footprint
+        intent_id: standard-binding-footprint-intent
+        input:
+          selection: registered-standard-bundle
+          source-root: omitted
+        checks:
+        - id: standard-report-files
+          guarantee_ref: standard-report-files
+        - id: standard-binding-action
+          guarantee_ref: standard-binding-action
+        - id: selected-bundle-match
+          guarantee_ref: selected-bundle-match
+        - id: standard-copy-state
+          guarantee_ref: standard-copy-state
+        - id: standard-binding-bundle
+          guarantee_ref: standard-binding-bundle
+        - id: standard-binding-source
+          guarantee_ref: standard-binding-source
+        - id: standard-binding-digest
+          guarantee_ref: standard-binding-digest
+        - id: consumer-settings-change
+          guarantee_ref: consumer-settings-change
+        - id: consumer-dependency-change
+          guarantee_ref: consumer-dependency-change
+      - id: custom-copy-report
+        intent_id: custom-copy-report-intent
+        input:
+          selection: custom-bundle
+          destination: initially-absent-then-identical
+        checks:
+        - id: selected-bundle-match
+          guarantee_ref: selected-bundle-match
+        - id: copy-report-sources
+          guarantee_ref: copy-report-sources
+        - id: copy-report-destinations
+          guarantee_ref: copy-report-destinations
+        - id: copy-report-actions
+          guarantee_ref: copy-report-actions
+        - id: consumer-settings-change
+          guarantee_ref: consumer-settings-change
+        - id: consumer-dependency-change
+          guarantee_ref: consumer-dependency-change
+      - id: conflicting-destination-protection
+        intent_id: conflicting-destination-protection-intent
+        input:
+          destination: conflicting-existing-file
+        checks:
+        - id: conflicting-destination-change
+          guarantee_ref: conflicting-destination-change
+      - id: late-copy-failure-retention
+        intent_id: late-copy-failure-retention-intent
+        input:
+          selection: custom-bundle
+          copy-failure: after-one-completed-copy
+        checks:
+        - id: consumer-settings-change
+          guarantee_ref: consumer-settings-change
+        - id: consumer-dependency-change
+          guarantee_ref: consumer-dependency-change
+        - id: completed-copy-loss
+          guarantee_ref: completed-copy-loss
+        - id: changed-range-evidence
+          guarantee_ref: changed-range-evidence
+      - id: standard-rejection-footprint
+        intent_id: standard-rejection-footprint-intent
+        input: {selection: registered-standard-typescript-bundle, project-settings: missing-required-scripts}
+        checks:
+          - {id: standard-copy-state, guarantee_ref: standard-copy-state}
+          - {id: consumer-settings-change, guarantee_ref: consumer-settings-change}
+          - {id: consumer-dependency-change, guarantee_ref: consumer-dependency-change}

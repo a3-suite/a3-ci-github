@@ -73,23 +73,197 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: quality-fixed-reference
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-fixed-reference
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: quality-explicit-input-binding
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-explicit-input-binding
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: quality-summary-identity
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-summary-identity
+            right:
+              kind: value_set
+              values:
+                - summary
+      - id: quality-no-consumer-callee-copy
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-no-consumer-callee-copy
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: quality-caller-read-permissions
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-caller-read-permissions
+            right:
+              kind: value_set
+              values:
+                - read
+      - id: quality-caller-summary-always
+        when: ci-quality-workflow-caller-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-caller-summary-always
+            right:
+              kind: value_set
+              values:
+                - always
+      - id: quality-source-before-adapter
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-source-before-adapter
+            right:
+              kind: value_set
+              values:
+                - source-before-adapter
+      - id: quality-results-before-summary
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-results-before-summary
+            right:
+              kind: value_set
+              values:
+                - execution-before-summary
+      - id: quality-failure-summary-always
+        when: ci-quality-workflow-failure-route-required
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-failure-summary-always
+            right:
+              kind: value_set
+              values:
+                - always
+      - id: quality-unresolved-results-visible
+        when: ci-quality-workflow-failure-route-required
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-unresolved-results-visible
+            right:
+              kind: value_set
+              values:
+                - present
+      - id: platform-resolution-before-execution
+        when: ci-quality-workflow-platform-source-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: platform-resolution-before-execution
+            right:
+              kind: value_set
+              values:
+                - resolution-before-execution
+      - id: platform-execution-before-summary
+        when: ci-quality-workflow-platform-source-selected
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: platform-execution-before-summary
+            right:
+              kind: value_set
+              values:
+                - execution-before-summary
     verification_intents:
       - id: detailed-diagnostics-execution
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-execution]
+        guarantee_refs: [ diagnostic-details-execution ]
       - id: ci-quality-workflow-reusable-binding-intent
         goal: Verify explicit typed inputs, read permissions, a registered fixed reusable target, no consumer callee copy, and an always-run caller summary. Local evidence does not establish Hosted check-name compatibility.
-        guarantee_refs: [ci-quality-workflow-reusable-binding-observed]
+        guarantee_refs: [ ci-quality-workflow-reusable-binding-observed, quality-fixed-reference, quality-explicit-input-binding, quality-summary-identity, quality-no-consumer-callee-copy, quality-caller-read-permissions, quality-caller-summary-always ]
       - id: ci-quality-workflow-success-intent
         goal: Verify trusted source resolution precedes adapter execution and the aggregate decision follows the applicable execution jobs. Only the trusted Rust execution restores the Cargo cache before adapter execution and saves it after the job succeeds; a cache path resolution failure leaves adapter execution and its diagnostics unchanged. Untrusted pull request and Release jobs start without it.
         guarantee_refs:
           - ci-quality-workflow-success-observed
+          - quality-source-before-adapter
+          - quality-results-before-summary
       - id: ci-quality-workflow-failure-intent
         goal: Verify the failure-visible summary runs after applicable execution jobs even when they fail or remain unresolved.
         guarantee_refs:
           - ci-quality-workflow-failure-observed
+          - quality-failure-summary-always
+          - quality-unresolved-results-visible
       - id: ci-quality-workflow-platform-intent
         goal: Verify the optional platform caller passes explicit typed project inputs to its registered fixed source without copying the callee, preserves trusted asset resolution, selected matrix execution, docs-only platform records and aggregate evidence, and rejects invalid settings and unpublished dependencies through preflight. Local evidence does not establish Hosted check-name compatibility.
         guarantee_refs:
           - ci-quality-workflow-platform-chain-observed
+          - platform-resolution-before-execution
+          - platform-execution-before-summary

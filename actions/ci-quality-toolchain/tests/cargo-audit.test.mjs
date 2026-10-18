@@ -51,7 +51,7 @@ const calls = f => fs.existsSync(f.env.CALLS) ? fs.readFileSync(f.env.CALLS, 'ut
 
 describe('contract.ci-quality-toolchain.preparation', () => {
   // contract_id: contract.ci-quality-toolchain.preparation
-  // integration_id: quality-toolchain-cargo-audit-prebuilt
+  // flow_id: quality-toolchain-cargo-audit-prebuilt
   test('verified archive is extracted executed and exported without cargo compilation', () => {
     for (const [system, machine, libc, target] of [
       ['Linux', 'x86_64', 'gnu', 'x86_64-unknown-linux-gnu'],

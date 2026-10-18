@@ -45,3 +45,5 @@ related_contracts:
       contract_id: contract.ci-rust-release-build.outputs
   - contract_ref:
       contract_id: contract.ci-release-supplemental-asset.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-supplemental-asset.assembly

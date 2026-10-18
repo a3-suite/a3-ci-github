@@ -45,4 +45,32 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "manifest読取・schema/identity検証・selection解決を区別し、manifest/selection相対path、違反field、重複/未知platform ID、選択順序と該当targetを残す。無効な選択からmatrixや成功outputを生成しない。"
+          meaning: manifest読取・schema/identity検証・selection解決の段階、manifest/selection相対path、違反field、重複/未知platform ID、選択順序と該当targetを表す診断情報。
+  - id: observation.ci-platform-matrix.comparisons
+    summary: Atomic boundary comparisons used by this contract.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.output-comparisons
+      kind: object
+      fields:
+      - selector: full-matrix-binding
+        kind: observation_field
+        meaning: Equality of the complete matrix include array, including order and all entry values, with the validated
+          manifest.
+      - selector: quality-id-order
+        kind: observation_field
+        meaning: Equality of the quality matrix platform_id sequence with the supplied selection ID sequence.
+      - selector: quality-runner-binding
+        kind: observation_field
+        meaning: Equality of each quality entry runner with the validated manifest runner for that entry platform_id.
+      - selector: expected-id-order
+        kind: observation_field
+        meaning: Equality of the comma-separated expected-platforms value with the supplied selection ID sequence.
+      - selector: shared-checks-value
+        kind: observation_field
+        meaning: Equality of each quality entry shared_standard_checks value with the explicitly supplied boolean
+          sharedStandardChecks.
+      - selector: shared-checks-absence
+        kind: observation_field
+        meaning: Occurrence state of shared_standard_checks keys when sharedStandardChecks was omitted from the selection.

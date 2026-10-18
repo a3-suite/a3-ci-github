@@ -45,26 +45,247 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: evidence-transfer}
+          target: { kind: observation_field, value: evidence-transfer }
       - id: diagnostic-details-publication
         when: diagnostic-required-publication
         observation_ref: observation.ci-release-publication-workflow.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: release-fixed-provider-reference
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-fixed-provider-reference
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: release-explicit-owner-inputs
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-explicit-owner-inputs
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: release-request-before-publication
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-request-before-publication
+            right:
+              kind: value_set
+              values:
+                - request-before-publication
+      - id: release-authority-before-publication
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-authority-before-publication
+            right:
+              kind: value_set
+              values:
+                - authority-before-publication
+      - id: release-control-sha-bound
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-control-sha-bound
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: release-control-head-verified
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-control-head-verified
+            right:
+              kind: value_set
+              values:
+                - checkout-before-verification
+      - id: release-handoff-before-publication
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-handoff-before-publication
+            right:
+              kind: value_set
+              values:
+                - handoff-before-publication
+      - id: release-publication-before-readback
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-publication-before-readback
+            right:
+              kind: value_set
+              values:
+                - publication-before-readback
+      - id: release-tokens-explicit
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-tokens-explicit
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: supplemental-upload-selected-root
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: supplemental-upload-selected-root
+            right:
+              kind: value_set
+              values:
+                - supplemental-build/${{ matrix.id }}
+      - id: supplemental-hidden-files-selected
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: supplemental-hidden-files-selected
+            right:
+              kind: value_set
+              values:
+                - equal
+      - id: supplemental-download-root
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: supplemental-download-root
+            right:
+              kind: value_set
+              values:
+                - supplemental-build
+      - id: supplemental-final-assembly-input
+        when: ci-release-publication-workflow-canonical-source-available
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: supplemental-final-assembly-input
+            right:
+              kind: value_set
+              values:
+                - supplemental-build
+      - id: release-failure-summary-always
+        when: ci-release-publication-workflow-failure-route-required
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-failure-summary-always
+            right:
+              kind: value_set
+              values:
+                - always
+      - id: release-failed-prerequisite-blocks
+        when: ci-release-publication-workflow-failure-route-required
+        observation_ref: observation.ci-release-publication-workflow.publication.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-failed-prerequisite-blocks
+            right:
+              kind: value_set
+              values:
+                - absent
     verification_intents:
       - id: detailed-diagnostics-publication
         goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-publication]
+        guarantee_refs: [ diagnostic-details-publication ]
       - id: ci-release-publication-workflow-success-intent
         goal: Verify the provider publication workflow is called through a registered full SHA with typed static owner configuration, default-branch workflow_run caller entry, authority success dependencies, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and readback.
         guarantee_refs:
           - ci-release-publication-workflow-success-observed
+          - release-fixed-provider-reference
+          - release-explicit-owner-inputs
+          - release-request-before-publication
+          - release-authority-before-publication
+          - release-control-sha-bound
+          - release-control-head-verified
+          - release-handoff-before-publication
+          - release-publication-before-readback
+          - release-tokens-explicit
       - id: ci-release-publication-workflow-failure-intent
         goal: Verify failed or unresolved prerequisite stages block publication while the aggregate summary remains observable.
         guarantee_refs:
           - ci-release-publication-workflow-failure-observed
+          - release-failure-summary-always
+          - release-failed-prerequisite-blocks
       - id: ci-release-publication-workflow-evidence-transfer-intent
         goal: Verify only the selected supplemental build directory opts into hidden-file upload for standard-installer, downloaded supplemental artifacts reach the final assemble phase, and publication depends on its successful handoff. Runtime candidate completeness and rejection belong to contract.ci-release-supplemental-asset.outputs.
-        guarantee_refs: [ci-release-publication-workflow-evidence-transfer-declared]
+        guarantee_refs: [ ci-release-publication-workflow-evidence-transfer-declared, supplemental-upload-selected-root, supplemental-hidden-files-selected, supplemental-download-root, supplemental-final-assembly-input ]
