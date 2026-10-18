@@ -161,10 +161,3 @@ selectionRules:
     rule: platform 固有の品質検証は quality-gate の platform 次元として扱い、必要な platform の選択を project data に置く。標準実装がない場合だけ owner-defined workflow へ委譲し、preset 契約と停止条件を維持する。
   - id: keep-owner-workflow
     rule: 単一 project の独自成果物、owner 固有 metadata、deploy、rollback、外部結果解析は owner-defined workflow または workflow 外経路へ委譲し、例外専用 preset を作らない。
-selectionOrder:
-  - 変更検証、Release 要求、Release 公開、package 公開のいずれかを選ぶ。
-  - 変更検証なら change、integration、scheduled の execution mode を選ぶ。
-  - 公開経路なら request、authority、build、handoff、publish、observe の責務境界を確認する。
-  - 例外がある場合は停止条件と owner 委譲を適用し、例外専用 preset は作らない。
-  - 新規用途は selectionRules を適用し、既存 preset、adapter、owner 委譲のいずれかを根拠付きで決める。
-  - provider 実装は選択した provider 固有スキルへ委譲し、trigger、job、Action 構文は定義しない。

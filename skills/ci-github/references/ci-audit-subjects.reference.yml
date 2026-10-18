@@ -43,8 +43,6 @@ subjects:
       excludes: [installer-contract-compliance-judgment, project-owned-contract-semantics]
     baselineResolution:
       ownerSkill: ci-github
-      guide: references/deploy-ci-assets.guide.md
-      section: 対応条件
       requirements:
         - resolve-latest-published-stable-release-at-audit-start
         - bind-release-commit-manifest-and-registry-to-the-same-distribution

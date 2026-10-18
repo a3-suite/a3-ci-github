@@ -360,7 +360,6 @@
 - GitHub branch、`latest`、version range、SNAPSHOT を本番 installer の既定入力にする。
 - JRE、Node.js、package manager を、project override と検証契約なしに installer が暗黙に取得・更新する。
 - production installer が source archive から暗黙に build する。
-- lock 無しで managed root を変更する。
 - checksum mismatch を force option で無視する。
 - uninstall / cleanup を install / upgrade と同じ暗黙モードに混ぜる。
 - GitHub、npm、Maven などの取得先を URL 文字列だけで受け取り、owner / namespace / registry を検証しない。

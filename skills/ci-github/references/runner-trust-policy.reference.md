@@ -1,6 +1,6 @@
 # CI runner trust policy
 
-> この文書は GitHub Actions provider profile である。provider-neutral な trust boundary は `ci` の CIプリセット契約で定義し、GitHub 固有の trigger、権限、workflow 起動方式を本スキルへ写像する。
+> この文書は GitHub Actions provider profile である。provider-neutral な trust boundary は `ci` スキルに従い、GitHub 固有の trigger、権限、workflow 起動方式を本スキルへ写像する。
 
 ## 理解できること
 - CI runner の選定判断軸

@@ -122,7 +122,6 @@ observation:
     visibility: published-only
     draftAbsenceEvidence: forbidden
 providerOperationFailure:
-  precheckPolicy: references/workflow-authoring-policy.reference.md#事前確認
   failureAttribution:
     scope: per-provider-operation
     required: [operation, method, sanitized-endpoint, http-status, request-id, sanitized-reason]

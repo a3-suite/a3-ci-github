@@ -180,6 +180,6 @@ a3-lint lint "{project-root}/.ci/README.md" \
   --fail-on error
 ```
 
-rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。YAML規則はproviderの正式能力`fact:yaml_structure:v1`を必須とする。対応公開版は未確定であり、0.7.0は非対応。公開版切替までは対応能力を実測済みの開発バイナリでローカル検証する。共有helperは検証済み配布rootからlibとして参照し、rule収集から除外する。JS/TS用CLI規則とMarkdown規則をYAML実行へ混在させない。
+rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。YAML規則はproviderの正式能力`fact:yaml_structure:v1`を必須とする。a3-lint 0.8.0以降を使う。共有helperは検証済み配布rootからlibとして参照し、rule収集から除外する。JS/TS用CLI規則とMarkdown規則をYAML実行へ混在させない。
 
 Package公開もconsumerにはrequestとcallerだけを配置し、publication calleeは `packagePublicationReusableWorkflow` の登録済み固定参照・公開状態・宣言入力・明示secret・権限と内部Actionを検査する。provider calleeはconsumerの実ファイルとして再読込しない。

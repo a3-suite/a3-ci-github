@@ -13,9 +13,11 @@
 3. プリセット契約の必須入力、出力、停止条件を固定する。
 4. script ユースケースと処理契約を確認し、script 契約の必須入力、出力、停止条件を固定する。
 5. 変更検証では `change`、`integration`、`scheduled` の execution mode を選ぶ。
-6. language profile を選び、`references/ci-adapter-bundles.reference.yml` で標準 bundle の有無を確認する。
-7. 標準 bundle がない profile は project-owned adapter の候補を調べ、profile が提供する検証、build、package、version、artifact の契約を確認する。
-8. `references/configure-ci-preset.guide.md`に従い、選択した標準構成をworkflowへ接続する。
+6. 公開経路では request、authority、build、handoff、publish、observe の責務境界を確認する。
+7. 例外がある場合は停止条件と owner 委譲を適用し、例外専用の CIプリセットを作らない。
+8. language profile を選び、`references/ci-adapter-bundles.reference.yml` で標準 bundle の有無を確認する。
+9. 標準 bundle がない profile は project-owned adapter の候補を調べ、profile が提供する検証、build、package、version、artifact の契約を確認する。
+10. `references/configure-ci-preset.guide.md`に従い、選択した標準構成をworkflowへ接続する。
 
 CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml` と `references/ci-workflow-use-cases.reference.yml` が定義する）を独立した workflow として選択せず、CIプリセットの一連の経路として扱う。新規用途は `references/ci-workflow-use-cases.reference.yml` の selectionRules で既存の CIプリセット、adapter、owner-defined workflow を分類する。未設定の CIプリセット、language profile、adapter は既定値で補完しない。
 

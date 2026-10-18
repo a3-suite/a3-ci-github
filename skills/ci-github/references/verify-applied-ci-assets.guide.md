@@ -6,7 +6,7 @@
 
 ## 正本と対象境界
 
-- CI の用途、入出力、停止条件は `ci` スキルの workflow／preset／script 契約を正本とし、本スキルは provider 写像と provider-local 差分（物理 source、解決 root、実行 binding）だけを定義する。
+- CI の用途、入出力、停止条件は本スキルの workflow／preset／script 契約を正本とする。provider-neutral な目的・責務・信頼境界は `ci` スキルに従う。
 - 監査モード、検証フェーズ、監査 status、証拠適用性、監査完了と適合 success の境界は `references/ci-audit-contract.reference.yml` を正本とする。本ガイドでは再定義しない。
 - 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目は `references/ci-audit-subjects.reference.yml` を正本とする。本ガイドでは個別subjectの判断規則を補完しない。
 - SDD を利用する project は、project の contract registry で外部観測可能な CI 境界を契約対象として宣言する。
@@ -15,7 +15,7 @@
 
 ## 標準整合の必須確認
 
-`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。
+`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。
 
 ## 監査段階の選択
 
@@ -89,7 +89,7 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 
 検査の配置・契約への対応付けは構成監査で確認する。本章の契約テストや補助テストの実行結果取得・照合は、証跡監査を選択した場合に行う。構成監査だけの場合は未依頼として報告し、実行結果の未取得で構成のstatusを変更しない。必要な検査導線の欠落は構成監査の不足として保持する。
 
-- 契約証拠は、project の契約正本（contract registry が存在する場合）または `ci` の preset／script 契約が定める外部観測可能な振る舞いを直接検証する。
+- 契約証拠は、project の契約正本（contract registry が存在する場合）または本スキルの preset／script 契約が定める外部観測可能な振る舞いを直接検証する。
 - 補助証拠は契約保証を代替せず、`contract-test-supplement`、`local-regression-prevention`、`test-asset-compatibility` のいずれかの固有目的を持つ。
 - coverage 率だけを理由に補助テストを追加しない。
 - 補助テストは選択した test level と依存境界を説明できる場合だけ採用する。
