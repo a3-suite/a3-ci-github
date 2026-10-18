@@ -4,6 +4,8 @@
 
 - [Action 構築方針](action-construction.md): 方式選択、既存 Action との対称性、配布・検証導線。
 - [テスト戦略](test-strategy.md): 統合テストと Hosted E2E の受入境界。
+- [installer 保守](installer-maintenance.md): installer の配置・構築・検証方法。
+- [移行記録](migration-baseline.md): 再構築の移行元と切替時点の受入結果。
 
 ## バージョン制約の判断
 
