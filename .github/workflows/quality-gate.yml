@@ -151,6 +151,9 @@ jobs:
         shell: bash
         run: python3 -m unittest discover -s .agents/skills/commit-gate/_build/tests -v
 
+      - name: Install coverage tool dependencies
+        run: npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
+
       - name: Verify all bundled Action sources
         shell: bash
         run: node runtime/repository/verify-action-packages.mjs --scope=actions
