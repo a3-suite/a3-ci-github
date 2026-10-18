@@ -20,14 +20,19 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.rust-release-build-rejected
           op: available
+      - id: rust-release-build-commands-succeed
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.rust-release-build-commands-succeed
+          op: available
       - id: rust-release-version-report-rejected
         environment_predicate:
           kind: environment-ref
           target_ref: runtime-context.rust-release-version-report-rejected
           op: available
     guarantees:
-      - id: rust-release-processing-concludes-safely
-        when: rust-release-build-inputs-match-authority
+      - id: rust-release-processing-succeeds
+        when: rust-release-build-commands-succeed
         observation_ref: observation.ci-rust-release-build.script-result
         claim:
           kind: observable-value
@@ -40,7 +45,6 @@ contracts:
               kind: value_set
               values:
                 - success
-                - failure
       - id: rust-release-final-output-safe
         when: rust-release-build-inputs-match-authority
         observation_ref: observation.ci-rust-release-build.script-result
@@ -104,13 +108,16 @@ contracts:
           target: {kind: observation_field, value: details}
     verification_intents:
       - id: detailed-diagnostics-processing
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [diagnostic-details-processing]
       - id: rust-release-processing-verified
-        goal: Matching authority-bound inputs produce a verified Rust release asset or fail without publishing an unverified final asset.
+        goal: Matching authority-bound inputs never leave an unverified final asset, including when a later command fails.
         guarantee_refs:
-          - rust-release-processing-concludes-safely
           - rust-release-final-output-safe
+      - id: rust-release-processing-completed
+        goal: Matching authority-bound inputs whose build, package and verification commands succeed complete successfully.
+        guarantee_refs:
+          - rust-release-processing-succeeds
       - id: rust-release-processing-rejected
         goal: Invalid, ambiguous, mutable, mismatching, existing-output, or tampered inputs fail without an unverified final asset.
         guarantee_refs:
@@ -176,7 +183,7 @@ contracts:
           target: {kind: observation_field, value: details}
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [diagnostic-details-outputs]
       - id: rust-release-build-completed
         goal: Shared script success exposes completed=true.

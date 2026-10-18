@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
-import { test, describe, expect } from 'vitest';
+import { test, describe, expect, vi } from 'vitest';
 
 import { createHash } from 'node:crypto';
 import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
@@ -116,12 +117,14 @@ describe("materialize-adapter-bundle", () => {
           targetRoot,
         });
         writeFileSync(targetDescriptor, '{"id":"conflicting-descriptor"}\n');
+        const beforeConflict = snapshotTree(targetRoot);
         expect(() => materializeAdapterBundle({
             sourceRoot: skillCollectionRoot,
             inventoryPath: 'tests/fixtures/materializer-inventory.json',
             bundleId: 'test-bundle',
             targetRoot,
           })).toThrow(/adapter-materializer-destination-conflict/);
+        expect(snapshotTree(targetRoot)).toStrictEqual(beforeConflict);
 
         rmSync(targetRoot, { recursive: true, force: true });
         writeFileSync(descriptorSource, JSON.stringify({
@@ -191,6 +194,69 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
 
 describe("contract.ci-preset-materialization.application", () => {
   describe("adapter-materialization-rejection", () => {
+    // evidence_role: contract
+    // test_level: integration
+    // integration_id: adapter-materialization-rejection
+    // contract_id: contract.ci-preset-materialization.application
+    test('materializer reports copied and reused custom assets without changing consumer settings', () => withCustomBundle((fixture) => {
+      // Arrange
+      writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+      writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
+      const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
+      writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+      const sources = ['runtime/adapter/cli-runtime.ts', 'rust/assets/test-bundle.json'];
+      const destinations = ['.ci/runtime/helper.ts', '.ci/adapters/test-bundle.json'];
+
+      // Act
+      const copied = materializeAdapterBundle(fixture.options);
+      const reused = materializeAdapterBundle(fixture.options);
+
+      // Assert
+      expect(copied.bundle).toBe(fixture.options.bundleId);
+      expect(reused.bundle).toBe(fixture.options.bundleId);
+      expect(copied.files).toStrictEqual(sources.map((source, index) => ({ source, destination: destinations[index], action: 'copied' })));
+      expect(reused.files).toStrictEqual(sources.map((source, index) => ({ source, destination: destinations[index], action: 'reused' })));
+      expect(readFileSync(path.join(fixture.targetRoot, destinations[0]))).toStrictEqual(readFileSync(path.join(repository, sources[0])));
+      expect(readFileSync(path.join(fixture.targetRoot, destinations[1]))).toStrictEqual(readFileSync(fixture.descriptorPath));
+      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+    }));
+
+    // evidence_role: contract
+    // test_level: integration
+    // integration_id: adapter-materialization-rejection
+    // contract_id: contract.ci-preset-materialization.application
+    test('materializer retains completed copies and reports the changed range after a later copy fails', () => withCustomBundle((fixture) => {
+      // Arrange
+      writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+      writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
+      const firstDestination = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
+      const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
+      const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
+      writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+      const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
+      const copyFile = fs.copyFileSync;
+      const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
+      const copy = vi.spyOn(fs, 'copyFileSync').mockImplementation((source, destination, ...options) => {
+        if (destination === failedDestination) throw injected;
+        return copyFile(source, destination, ...options);
+      });
+      let failure;
+
+      // Act
+      try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
+      finally { copy.mockRestore(); }
+
+      // Assert
+      expect(failure).toBe(injected);
+      expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
+      expect(existsSync(failedDestination)).toBe(false);
+      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+      expect(diagnostic.evidence(failure)).toMatchObject({
+        classification: { stage: 'copy' },
+        context: { inputs: { written: ['.ci/runtime/helper.ts'], current: '.ci/adapters/test-bundle.json' } },
+      });
+    }));
+
     // evidence_role: contract
     // test_level: integration
     // integration_id: adapter-materialization-rejection

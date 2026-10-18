@@ -30,6 +30,8 @@ def _temporary_directory() -> tempfile.TemporaryDirectory[str]:
     return tempfile.TemporaryDirectory(dir=temp_root)
 
 
+# test_level: e2e
+# flow_id: provider-shared-wrapper-runtime
 class SharedWrapperRuntimeTest(unittest.TestCase):
     """Check the shared wrapper through its public pipe execution boundary."""
 

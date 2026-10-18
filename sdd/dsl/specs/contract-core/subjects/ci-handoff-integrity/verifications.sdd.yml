@@ -7,14 +7,14 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: valid-handoff
         intent_id: handoff-output-set
         input:
           handoff-root: .ci/handoff
           descriptor: handoff.json
-          source-sha: 0000000000000000000000000000000000000001
+          source-sha: "0000000000000000000000000000000000000001"
           version: 1.0.0
           target-identity: linux-x64
         checks:

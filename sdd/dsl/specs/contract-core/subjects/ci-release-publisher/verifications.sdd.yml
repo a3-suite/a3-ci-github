@@ -7,11 +7,11 @@ verifications:
     cases:
       - id: provider-rejection-diagnostics
         intent_id: detailed-diagnostics-outputs
-        input: {provider: invalid-identity-shape-or-unbound-write-permission}
+        input: {provider: invalid-identity-shape}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: provider-identity-rejection
         intent_id: fail-closed
-        input: {provider: invalid-identity-shape-or-unbound-write-permission}
+        input: {provider: invalid-identity-shape}
         checks: [{id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
       - id: standard-workflow-capability
         intent_id: publish-evidence
@@ -35,7 +35,7 @@ verifications:
         checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: bundle-publish
         intent_id: publish-evidence
@@ -60,7 +60,7 @@ verifications:
       - id: bundle-rejection
         intent_id: fail-closed
         input:
-          scenario: missing-credential-or-invalid-output-path
+          scenario: missing-credential
         checks:
           - id: rejection
             guarantee_ref: rejected
@@ -69,7 +69,15 @@ verifications:
       - id: invalid-local-bindings
         intent_id: fail-closed
         input:
-          approval: expired-or-mismatching
+          approval: expired
+        checks:
+          - id: rejection
+            guarantee_ref: rejected
+          - id: no-outputs
+            guarantee_ref: no-success-outputs
+      - id: tampered-handoff-asset
+        intent_id: fail-closed
+        input:
           handoff: tampered
         checks:
           - id: rejection
@@ -79,7 +87,7 @@ verifications:
       - id: remote-rejection
         intent_id: fail-closed
         input:
-          remote: moved-source-existing-draft-or-unsupported
+          remote: moved-source
         checks:
           - id: rejection
             guarantee_ref: rejected
@@ -88,9 +96,44 @@ verifications:
       - id: partial-failure
         intent_id: fail-closed
         input:
-          provider: uncertain-create-upload-finalize-or-readback
+          provider: uncertain-upload
         checks:
           - id: rejection
             guarantee_ref: rejected
           - id: no-outputs
             guarantee_ref: no-success-outputs
+      - id: publication-write-failure-boundary
+        intent_id: publication-write-failure-boundary-intent
+        input:
+          provider: uncertain-upload
+        checks:
+        - id: publication-created-id-binding
+          guarantee_ref: publication-created-id-binding
+        - id: publication-write-retry
+          guarantee_ref: publication-write-retry
+        - id: publication-recovery-write
+          guarantee_ref: publication-recovery-write
+        - id: publication-delete
+          guarantee_ref: publication-delete
+      - id: publication-existing-release-protection
+        intent_id: publication-existing-release-protection-intent
+        input:
+          remote: existing-same-tag-published-release
+        checks:
+        - id: publication-existing-release-write
+          guarantee_ref: publication-existing-release-write
+      - id: publication-immutable-id
+        intent_id: publication-immutable-id-intent
+        input:
+          handoff: validated
+          provider: successful
+        checks:
+        - id: publication-created-id-binding
+          guarantee_ref: publication-created-id-binding
+      - id: publication-inventory-reobservation
+        intent_id: publication-inventory-reobservation-intent
+        input:
+          asset-inventory: initially-valid-subset-then-complete
+        checks:
+        - id: publication-write-retry
+          guarantee_ref: publication-write-retry

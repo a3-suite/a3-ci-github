@@ -34,4 +34,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "distribution plan/rebuild/比較・catalog・contract coverage・source verification・release version/tag bindingのgateを区別し、Action/runtime identity、問題のsource/dist/script相対path、tracked状態、期待/観測Git object/digest/version、失敗command/検査owner、残る未実行gateを残す。"
+          meaning: "distribution plan/rebuild/比較・catalog・contract coverage・source verification・release version/tag bindingのgateの段階、Action/runtime identity、問題のsource/dist/script相対path、tracked状態、期待/観測Git object/digest/version、失敗command/検査owner、残る未実行gateを表す診断情報。"

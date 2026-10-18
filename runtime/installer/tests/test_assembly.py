@@ -18,6 +18,8 @@ import test_runtime_installer
 
 
 class StandardAssemblyTest(unittest.TestCase):
+    # test_level: integration
+    # integration_id: standard-installer-entry-names
     def test_standard_entry_names_rejected_before_output(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -56,6 +58,8 @@ class StandardAssemblyTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "installer-unix-shared-entry-name-invalid"):
                 assembly.config_for({"configPath": str(config_path)})
 
+    # test_level: unit
+    # target_id: assembly.main()
     def test_main_emits_only_known_diagnostic_reasons(self) -> None:
         for error, reason in [
             (ValueError("installer-artifact-checksum-invalid"), "installer-artifact-checksum-invalid"),
@@ -71,6 +75,8 @@ class StandardAssemblyTest(unittest.TestCase):
                 self.assertEqual(diagnostic, {"phase": "assemble", "sanitized-reason": reason})
                 self.assertNotIn("synthetic-secret", output.getvalue())
 
+    # test_level: integration
+    # integration_id: provider-assembly-cleanup
     def test_cleanup_failure_preserves_primary_assembly_diagnostic(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -82,6 +88,8 @@ class StandardAssemblyTest(unittest.TestCase):
                     assembly.run(request)
             self.assertIs(failure.exception, primary)
 
+    # test_level: integration
+    # integration_id: provider-assembly-cleanup
     def test_main_reports_cleanup_failure_without_replacing_primary_reason(self) -> None:
         for primary, reason in [(ValueError("installer-artifact-checksum-invalid"), "installer-artifact-checksum-invalid"),
                                 (None, "installer-cleanup-failed")]:
@@ -95,6 +103,8 @@ class StandardAssemblyTest(unittest.TestCase):
                 self.assertNotIn("synthetic-secret", output.getvalue())
                 self.assertNotIn(directory, output.getvalue())
 
+    # test_level: integration
+    # integration_id: provider-assembly-config-files
     def test_profiles_reject_unsupported_inputs_and_colliding_assets(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -130,6 +140,8 @@ class StandardAssemblyTest(unittest.TestCase):
                     with self.assertRaises((ValueError, TypeError)):
                         assembly.config_for({"configPath": str(config_path)})
 
+    # test_level: unit
+    # target_id: assembly.platform_bindings(request, config)
     def test_native_bindings_use_targets_and_preserve_release_subsets(self) -> None:
         platforms = [
             {"id": "linux-release", "target": "x86_64-unknown-linux-gnu"},
@@ -145,6 +157,8 @@ class StandardAssemblyTest(unittest.TestCase):
                     with self.subTest(entries=entries), self.assertRaisesRegex(ValueError, "installer-platform-binding-invalid"):
                         assembly.platform_bindings({"releasePlatforms": entries}, config)
 
+    # test_level: e2e
+    # flow_id: provider-assembly-native-transport
     @unittest.skipIf(sys.platform == "win32", "Unix archive fixture; Windows has native boundary CI")
     def test_native_provider_boundary_rejects_transport_drift(self) -> None:
         """Run the native profile and reject altered records before emitting a handoff."""
@@ -282,11 +296,15 @@ class StandardAssemblyTest(unittest.TestCase):
     def _run_provider(request: dict) -> subprocess.CompletedProcess[str]:
         return subprocess.run([sys.executable, str(ROOT / "src/assembly.py")], input=json.dumps(request), capture_output=True, text=True, check=False)
 
+    # test_level: unit
+    # target_id: assembly.verify_native(root, entry, manifest, artifact)
     def test_native_verification_rejects_successful_process_with_wrong_result(self) -> None:
         result = subprocess.CompletedProcess([], 0, stdout='{"result":"installed"}')
         with patch.object(assembly.subprocess, "run", return_value=result), self.assertRaisesRegex(ValueError, "installer-verification-failed"):
             assembly.verify_native(ROOT, "install.sh", "manifest.json", ROOT / "tool.tar.gz")
 
+    # test_level: e2e
+    # flow_id: provider-assembly-invalid-input
     def test_provider_rejects_invalid_config_and_generated_values(self) -> None:
         temporary_root = ROOT / "tests/tmp"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -316,6 +334,8 @@ class StandardAssemblyTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "installer-generated-value-conflict"):
                 assembly.generated("conflict", "expected", "<marker>")
 
+    # test_level: e2e
+    # flow_id: provider-assembly-shared-payloads
     @unittest.skipIf(sys.platform == "win32", "standard shared wrapper is Unix only")
     def test_shared_profile_executes_exact_wrapper_and_native_payloads(self) -> None:
         temporary_root = ROOT / "tests/tmp"

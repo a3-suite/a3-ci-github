@@ -1,6 +1,6 @@
 # CI workflow 作成ポリシー
 
-> この文書は GitHub Actions provider profile である。provider-neutral な workflow 責務は `ci` の CIプリセット契約で定義し、GitHub 固有の配置と静的検証を本スキルへ写像する。
+> この文書は GitHub Actions provider profile である。provider-neutral な workflow 責務は `ci` スキルに従い、GitHub 固有の配置と静的検証を本スキルへ写像する。
 
 ## 理解できること
 - workflow の命名、実装境界、静的検証

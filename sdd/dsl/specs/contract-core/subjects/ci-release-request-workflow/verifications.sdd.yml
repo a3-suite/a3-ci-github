@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-handoff
         intent_id: detailed-diagnostics-handoff
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-handoff}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-handoff } ]
       - id: ci-release-request-workflow-success
         intent_id: ci-release-request-workflow-success-intent
         input:
@@ -16,6 +16,10 @@ verifications:
         checks:
           - id: check-ci-release-request-workflow-success
             guarantee_ref: ci-release-request-workflow-success-observed
+          - id: request-no-publication-permission
+            guarantee_ref: request-no-publication-permission
+          - id: request-tag-before-handoff
+            guarantee_ref: request-tag-before-handoff
       - id: ci-release-request-workflow-failure
         intent_id: ci-release-request-workflow-failure-intent
         input:
@@ -23,3 +27,5 @@ verifications:
         checks:
           - id: check-ci-release-request-workflow-failure
             guarantee_ref: ci-release-request-workflow-failure-observed
+          - id: request-failure-summary-always
+            guarantee_ref: request-failure-summary-always

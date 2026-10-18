@@ -31,7 +31,7 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
     });
 
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-release-supplemental-asset.outputs
     // flow_id: standard-installer-cleanup-diagnostics
     // test_level: e2e
     test.for(['Action', 'CLI'])('distributed %s retains primary and cleanup failures safely', (surface, t) => {
@@ -50,6 +50,7 @@ describe('standard installer', () => {
           result = runDistributedAction(f, f.options, [path.join(distribution, 'dist/index.js')]).result;
         } else {
           fs.copyFileSync(path.join(repository, 'runtime/installer/run-installer.mjs'), path.join(distribution, 'run-installer.mjs'));
+          fs.copyFileSync(path.join(repository, 'runtime/installer/package.json'), path.join(distribution, 'package.json'));
           result = spawnSync(process.execPath, [path.join(distribution, 'run-installer.mjs'),
             '--operation', f.options.operation, '--source-root', f.root, '--authority-path', 'authority.json',
             '--snapshot-path', 'snapshot.json', '--standard-build-root', f.options.standardBuildRoot,
@@ -100,7 +101,7 @@ describe('standard installer', () => {
       }
     });
 
-    // evidence_role: supplemental
+    // contract_id: contract.ci-release-supplemental-asset.outputs
     // flow_id: standard-installer-diagnostic-rejection
     // test_level: e2e
     test('standard installer rejects malformed or untrusted process diagnostics', (t) => {

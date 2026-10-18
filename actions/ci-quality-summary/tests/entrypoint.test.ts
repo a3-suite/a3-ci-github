@@ -78,7 +78,7 @@ const successInput = {
 };
 
 // contract_id: contract.ci-quality-summary.outputs
-// integration_id: ci-quality-summary-contract-entrypoint
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint writes matching evidence and outputs', () => {
   // Arrange
   const input = successInput;
@@ -98,7 +98,7 @@ test('entrypoint writes matching evidence and outputs', () => {
 });
 
 // contract_id: contract.ci-quality-summary.outputs
-// integration_id: ci-quality-summary-contract-entrypoint
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint uses the workflow run URL for rows without evidence', () => {
   // Failed rows render their evidence in the details section.
   const run = runBundled({
@@ -128,7 +128,7 @@ test('entrypoint uses the workflow run URL for rows without evidence', () => {
 });
 
 // contract_id: contract.ci-quality-summary.outputs
-// integration_id: ci-quality-summary-contract-entrypoint
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint rejects rows without evidence when the run context is missing or invalid', () => {
   const row = { unit: 'build', execution: 'build', rawResult: 'success', applicable: true };
   for (const overrides of [{ GITHUB_RUN_ID: undefined }, { GITHUB_RUN_ID: '42\nINJECTED' }, { GITHUB_SERVER_URL: 'http://github.com' }, { GITHUB_SERVER_URL: 'https://github.com:99999' }, { GITHUB_SERVER_URL: 'https://github.com/path' }, { GITHUB_REPOSITORY: 'owner' }]) {
@@ -144,7 +144,7 @@ test('entrypoint rejects rows without evidence when the run context is missing o
 });
 
 // contract_id: contract.ci-quality-summary.outputs
-// integration_id: ci-quality-summary-contract-entrypoint
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint normalizes a raw GitHub job result', () => {
   const run = runBundled({ jobs: [{
     unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'run',
@@ -159,7 +159,7 @@ test('entrypoint normalizes a raw GitHub job result', () => {
 });
 
 // contract_id: contract.ci-quality-summary.outputs
-// integration_id: ci-quality-summary-contract-entrypoint
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint rejects a missing summary path', () => {
   // Arrange
   // Act
@@ -173,7 +173,7 @@ test('entrypoint rejects a missing summary path', () => {
   }
 });
 
-// integration_id: ci-quality-summary-entrypoint-regression
+// flow_id: ci-quality-summary-entrypoint-regression
 test('entrypoint fails unresolved and invalid path relationships', () => {
   // Arrange
   const unresolvedInput = {
@@ -204,7 +204,7 @@ test('entrypoint fails unresolved and invalid path relationships', () => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: summary-failure-retention
+// flow_id: summary-failure-retention
 for (const mode of ['evidence-generation', 'summary-write', 'unknown'] as const) {
   test(`retains source failure when ${mode} fails`, () => {
     // Arrange
@@ -240,7 +240,13 @@ for (const mode of ['evidence-generation', 'summary-write', 'unknown'] as const)
         expect(evidence['evidence-location'].file).toBe('configured-evidence-path');
         expect(evidence['execution-state'].retention).toBe('log-and-file');
       }
-      if (mode === 'unknown') expect(evidence.classification).toMatchObject({ reason: 'unknown-failure', cause: 'unknown' });
+      if (mode === 'unknown') {
+        expect(evidence.classification).toMatchObject({ reason: 'unknown-failure', cause: 'unknown' });
+        expect(evidence['next-check']).toStrictEqual({
+          stage: 'summary-write', rule: 'unknown-failure',
+          input: evidence.context.inputs, unknownCause: true,
+        });
+      }
       expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
       expect(fs.readFileSync(outputPath, 'utf8')).not.toContain('success');
     } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }

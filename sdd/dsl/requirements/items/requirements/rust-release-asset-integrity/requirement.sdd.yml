@@ -16,8 +16,8 @@ requirements:
       - release authority の language profile と source SHA が checked-out source と一致する
       - toolchain version は完全一致する固定 version とし、可変 channel を受け入れない
       - platform manifest は platform ID を一意に解決し、要求 target と一致する
-      - package version と生成 binary が報告する version が release authority の version と一致し、binary の --version 出力は version を独立トークン（{version} / v{version} / V{version} の完全一致）として報告する
-      - version を観測できない場合は binary-version-mismatch と expected / received を観測可能にする
+      - package version と生成 binary が報告する version が release authority の version と一致する
+      - version の不一致または観測不能を成功扱いにせず識別できる
       - archive、checksum、asset manifest、source SHA、platform identity を相互に検証する
       - 既存の出力先または競合して作成された出力先を上書きしない
       - 入力不一致、build、package、または検証の失敗時は成功状態や未検証 asset を公開しない

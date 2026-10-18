@@ -47,4 +47,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "authority/source・toolchain/platform/package解決・build・version command・package・checksum・artifact検証・final配置を区別し、固定source/version、platform/target、toolchain、失敗commandの安全な識別子と終了状態、期待/観測version/size/digest、scratch/final出力の状態を残す。"
+          meaning: "authority/source・toolchain/platform/package解決・build・version command・package・checksum・artifact検証・final配置の段階、固定source/version、platform/target、toolchain、失敗commandの安全な識別子と終了状態、期待/観測version/size/digest、scratch/final出力の状態を表す診断情報。"

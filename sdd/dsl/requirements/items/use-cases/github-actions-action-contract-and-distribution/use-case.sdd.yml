@@ -19,14 +19,14 @@ goal: Action の公開契約を保ったまま、利用者側の build や内部
 preconditions:
   - Action の実行方式と公開契約が選択されている
   - provider 側が workflow mapping、権限、runner、信頼境界を所有している
-  - release tagのsourceは必須quality checkを通過したprotected mainへ統合されている
+  - release tag の source は必須 quality check を通過し、通常 release では protected main へ統合されている。hotfix では git-branch-strategy が許容する公開後の main 統合に従い、最新 stable の基点の main 統合証拠と承認済み hotfix source の同一性を確認できる
 trigger: Action の新規作成または公開契約・実装・依存の変更
 main_success_scenario:
   - summary: action.yml に公開 input、output、runtime、entrypoint を定義する
   - summary: 実装で入力制約、secret 取り扱い、成功 output、失敗終了状態を検証する
   - summary: 共通化する定型処理は単独実行できる script として実装し、Composite Action は入出力写像だけを担当する
   - summary: 実装方式に応じた配布物を再生成し、契約テスト、実装テスト、配布物検証を実行する
-  - summary: Action ディレクトリの一覧を README.md へ反映し、コミットゲートで一覧の同期を検証する
+  - summary: README.md の Action 一覧と用途を実在する Action に合わせ、不一致がないことを確認する
   - summary: 実装と配布物を同じ immutable ref に含め、利用者が source build なしで実行できる状態を公開する
 success_outcomes:
   - Action の公開契約、実装、配布物が同じ ref で一致する

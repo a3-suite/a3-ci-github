@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-verification
         intent_id: detailed-diagnostics-verification
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-verification}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-verification } ]
       - id: case.ci-preset-assurance.explicit-roots-required
         intent_id: ci-preset-assurance-explicit-roots-intent
         input:
@@ -56,21 +56,21 @@ verifications:
       - id: standard-publisher-drift
         intent_id: ci-preset-assurance-drift-intent
         input:
-          applied-preset-drift: standard-publisher-condition-credential-input-or-local-fallback
+          applied-preset-drift: standard-publisher-condition
         checks:
           - id: publisher-drift
             guarantee_ref: ci-preset-assurance-drift-fails
       - id: standard-authority-drift
         intent_id: ci-preset-assurance-drift-intent
         input:
-          applied-preset-drift: standard-authority-condition-credential-input-or-missing-owner-decision
+          applied-preset-drift: standard-authority-condition
         checks:
           - id: authority-drift
             guarantee_ref: ci-preset-assurance-drift-fails
       - id: supplemental-phase-drift
         intent_id: supplemental-phase-checked
         input:
-          supplemental-phase-drift: bypass-or-argument-mismatch-or-failure-suppression
+          supplemental-phase-drift: bypass
         checks:
           - id: phase-mismatch
             guarantee_ref: supplemental-phase-drift-reported
@@ -96,6 +96,8 @@ verifications:
             guarantee_ref: ci-preset-assurance-valid-evidence-exposed
           - id: check.ci-preset-assurance.semantic-review-state-exposed
             guarantee_ref: ci-preset-assurance-semantic-review-state-exposed
+          - id: valid-consumer-unchanged
+            guarantee_ref: valid-consumer-unchanged
       - id: case.ci-preset-assurance.drift-fails
         intent_id: ci-preset-assurance-drift-intent
         input:
@@ -105,6 +107,8 @@ verifications:
         checks:
           - id: check.ci-preset-assurance.drift-fails
             guarantee_ref: ci-preset-assurance-drift-fails
+          - id: drift-consumer-unchanged
+            guarantee_ref: drift-consumer-unchanged
       - id: conditional-owner-extension
         intent_id: ci-preset-assurance-valid-intent
         input:
@@ -119,7 +123,7 @@ verifications:
         intent_id: ci-preset-assurance-valid-intent
         input:
           preset: release-publication
-          applied-preset: disabled-or-owner-adapter-or-standard-installer
+          applied-preset: disabled
         _authoring:
           case_focus: Verify static caller selections in the publication validation stage; this does not assert Hosted acceptance or overall pending-preset availability.
         checks:
@@ -128,7 +132,7 @@ verifications:
       - id: supplemental-snapshot-reachability-drift
         intent_id: supplemental-phase-checked
         input:
-          supplemental-phase-drift: missing-or-invalid-snapshot-binding-or-unconsumed-snapshot
+          supplemental-phase-drift: missing-snapshot-binding
         checks:
           - id: snapshot-reachability-rejected
             guarantee_ref: supplemental-phase-drift-reported
@@ -137,8 +141,8 @@ verifications:
     cases:
       - id: detailed-failure-asset-lock
         intent_id: detailed-diagnostics-asset-lock
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-asset-lock}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-asset-lock } ]
       - id: case.ci-preset-assurance.asset-lock-generated
         intent_id: ci-preset-assurance-lock-generation-intent
         input:
@@ -159,3 +163,16 @@ verifications:
         checks:
           - id: check.ci-preset-assurance.asset-lock-invalid-revision-rejected
             guarantee_ref: ci-preset-assurance-invalid-revision-rejected
+      - id: canonical-lock-bindings
+        intent_id: canonical-lock-bindings
+        input:
+          source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          preset: quality-gate
+          consumer-assets: canonical-with-complete-pin-projection
+        checks:
+          - id: lock-applied-digests-match
+            guarantee_ref: lock-applied-digests-match
+          - id: lock-canonical-digests-match
+            guarantee_ref: lock-canonical-digests-match
+          - id: lock-source-equals-request
+            guarantee_ref: lock-source-equals-request

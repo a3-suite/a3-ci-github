@@ -8,7 +8,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 describe('release token capability probe', () => {
   describe('isolated ownership and draft visibility', () => {
     // evidence_role: supplemental
-    // integration_id: release-token-capability-probe
+    // test_level: e2e
+    // flow_id: release-token-capability-probe
     test.each([{ visible: true, changed: false, transport: false }, { visible: false, changed: false, transport: false }, { visible: true, changed: true, transport: false }, { visible: true, changed: false, transport: true }, { visible: true, changed: false, transport: false, listTransport: true }, { visible: true, changed: false, transport: false, existing: true }, { visible: true, changed: false, transport: false, existingTag: true }, { visible: true, changed: false, transport: false, movedTag: true }, { visible: true, changed: false, transport: false, movedCleanupTag: true }])('detects draft visibility or fails closed without leaking the token: %s', ({ visible, changed, transport, listTransport = false, existing = false, existingTag = false, movedTag = false, movedCleanupTag = false }) => {
       // Arrange
       fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });

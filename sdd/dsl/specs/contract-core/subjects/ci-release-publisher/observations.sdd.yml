@@ -43,4 +43,28 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "入力/approval検証・pre-write reobservation・create・個別asset upload・finalize・remote readback・receipt保存を区別し、固定source/tag/asset、method・安全なendpoint・HTTP status/request ID、確定したRelease IDと最後に完了した公開段階、期待/観測digestを残す。provider拒否、write前未実行、write後の結果不明を区別し、診断でretryや成功receiptを追加しない。"
+          meaning: "入力/approval検証・pre-write reobservation・create・個別asset upload・finalize・remote readback・receipt保存の段階、固定source/tag/asset、method・安全なendpoint・HTTP status/request ID、確定したRelease IDと最後に完了した公開段階、期待/観測digest、provider拒否・write前未実行・write後の結果不明を表す診断情報。"
+  - id: observation.ci-release-publisher.effects
+    summary: Provider request and response trace observed across the publication boundary.
+    boundary:
+      ref: boundary.release-provider-requests
+    value:
+      root: invocation.effects
+      kind: object
+      fields:
+      - selector: publication-write-retry
+        kind: observation_field
+        meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation,
+          including after an uncertain result.
+      - selector: publication-recovery-write
+        kind: observation_field
+        meaning: Additional provider writes after the first failed or uncertain publication operation.
+      - selector: publication-delete
+        kind: observation_field
+        meaning: Provider DELETE requests during publication.
+      - selector: publication-existing-release-write
+        kind: observation_field
+        meaning: Provider writes to a same-tag Release observed before creation.
+      - selector: publication-created-id-binding
+        kind: observation_field
+        meaning: For every upload or finalize request, equality of its Release ID and the immutable ID from a preceding valid create response. With no such request, this comparison is vacuously matched; a request without that ID is unmatched.

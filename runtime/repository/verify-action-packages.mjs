@@ -2,7 +2,7 @@
 
 import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -110,13 +110,21 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
     throw new Error('shared provisioner verification dependencies are missing');
   }
   const releaseRoot = path.join(root, 'actions/ci-release-assembly');
-  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
+  const releaseTests = ['assembly.test.mjs', 'observation.test.mjs', 'observation-policy.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((name) => path.join(root, 'runtime/release-publication/tests', name));
   if (!existsSync(path.join(root, 'node_modules/vitest')) || releaseTests.some((file) => !existsSync(file))) {
     throw new Error('shared release publication verification dependencies are missing');
   }
   const installerTest = path.join(root, 'runtime/installer/tests/common-regression.test.mjs');
   if (!existsSync(installerTest)) throw new Error('shared installer verification dependencies are missing');
-  return [{
+  const processTests = globSync(['tests/*.process.test.mjs', 'runtime/*/tests/*.process.test.mjs',
+    'actions/*/tests/composite-execution.test.mjs'], { cwd: root }).sort().map((file) => path.join(root, file));
+  return [...(processTests.length ? [{
+    command: nodePath,
+    args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...processTests],
+    cwd: root,
+    action: 'process-boundary-contracts',
+    phase: 'test',
+  }] : []), {
     command: nodePath,
     args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), testPath],
     cwd: actionRoot,

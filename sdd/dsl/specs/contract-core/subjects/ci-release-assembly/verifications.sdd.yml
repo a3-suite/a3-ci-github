@@ -5,14 +5,33 @@ verifications:
   - id: verification.ci-release-assembly.outputs
     contract_id: contract.ci-release-assembly.outputs
     cases:
-      - id: same-release-skills
-        intent_id: same-release-skills
-        input: {selection: public-skills-with-or-without-installer}
-        checks: [{id: handoff, guarantee_ref: bound-handoff}, {id: digest, guarantee_ref: bound-asset-digest}, {id: rejection, guarantee_ref: assembly-rejected}]
+      - id: same-release-skills-assembly-valid
+        intent_id: same-release-skills-assembly-valid
+        input:
+          operation: assemble
+          repository: owner/project
+          public-skills:
+            - ci-github
+          installer: false
+        checks:
+          - id: handoff
+            guarantee_ref: bound-handoff
+          - id: digest
+            guarantee_ref: bound-asset-digest
+      - id: same-release-skills-assembly-invalid
+        intent_id: same-release-skills-assembly-invalid
+        input:
+          operation: assemble
+          public-skills:
+            - ci-github
+          required-file: missing-SKILL.md
+        checks:
+          - id: rejection
+            guarantee_ref: assembly-rejected
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: bundled-assembly
         intent_id: bound-assembly
         input:
@@ -72,7 +91,35 @@ verifications:
         checks:
           - id: digest
             guarantee_ref: bound-asset-digest
+          - id: asset-digest-serialization
+            guarantee_ref: asset-digest-serialization
+          - id: asset-digest-asset-order
+            guarantee_ref: asset-digest-asset-order
+          - id: asset-digest-field-order
+            guarantee_ref: asset-digest-field-order
+      - id: canonical-checksum-sidecar
+        intent_id: bound-assembly
+        input:
+          build-root: build
+          checksum-sidecar: canonical
+        checks:
+          - id: accepted-checksum-encoding
+            guarantee_ref: accepted-checksum-encoding
+          - id: accepted-checksum-digest-form
+            guarantee_ref: accepted-checksum-digest-form
+          - id: accepted-checksum-separator
+            guarantee_ref: accepted-checksum-separator
+          - id: accepted-checksum-line-ending
+            guarantee_ref: accepted-checksum-line-ending
+      - id: noncanonical-checksum-sidecar
+        intent_id: fail-closed
+        input:
+          build-root: build
+          checksum-sidecar: single-space-separator
+        checks:
+          - id: rejection
+            guarantee_ref: assembly-rejected
       - id: platform-checkout-eol
         intent_id: bound-assembly
-        input: {platform-manifest: LF-CRLF-or-mixed}
-        checks: [{id: handoff, guarantee_ref: bound-handoff}, {id: digest, guarantee_ref: bound-asset-digest}]
+        input: { platform-manifest: CRLF }
+        checks: [ { id: handoff, guarantee_ref: bound-handoff }, { id: digest, guarantee_ref: bound-asset-digest } ]

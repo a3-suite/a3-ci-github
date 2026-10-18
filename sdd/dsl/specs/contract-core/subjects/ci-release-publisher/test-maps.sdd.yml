@@ -114,6 +114,14 @@ test_maps:
           - rejection
           - no-outputs
   - verification_id: verification.ci-release-publisher.outputs
+    case_id: tampered-handoff-asset
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher rejects invalid approval, handoff and pre-observation before writes"
+        check_refs:
+          - rejection
+          - no-outputs
+  - verification_id: verification.ci-release-publisher.outputs
     case_id: remote-rejection
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
@@ -180,3 +188,62 @@ test_maps:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes"
         check_refs: [diagnostic-details]
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: publication-write-failure-boundary
+    tests:
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: 'publisher > publisher > publisher does not retry or recover failed create upload finalize and readback:
+        create'
+      check_refs:
+      - publication-write-retry
+      - publication-recovery-write
+      - publication-delete
+      - publication-created-id-binding
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: 'publisher > publisher > publisher does not retry or recover failed create upload finalize and readback:
+        upload'
+      check_refs:
+      - publication-write-retry
+      - publication-recovery-write
+      - publication-delete
+      - publication-created-id-binding
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: 'publisher > publisher > publisher does not retry or recover failed create upload finalize and readback:
+        finalize'
+      check_refs:
+      - publication-write-retry
+      - publication-recovery-write
+      - publication-delete
+      - publication-created-id-binding
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: 'publisher > publisher > publisher does not retry or recover failed create upload finalize and readback:
+        readback'
+      check_refs:
+      - publication-write-retry
+      - publication-recovery-write
+      - publication-delete
+      - publication-created-id-binding
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: publication-existing-release-protection
+    tests:
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: publisher > publisher > publisher rejects moved source, existing draft and unverifiable draft visibility
+        before create
+      check_refs:
+      - publication-existing-release-write
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: publication-immutable-id
+    tests:
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher creates once and emits
+        evidence accepted by independent verifier
+      check_refs:
+      - publication-created-id-binding
+  - verification_id: verification.ci-release-publisher.outputs
+    case_id: publication-inventory-reobservation
+    tests:
+    - path: runtime/release-publication/tests/publisher.test.mjs
+      symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded
+        asset inventory without repeating publication writes
+      check_refs:
+      - publication-write-retry

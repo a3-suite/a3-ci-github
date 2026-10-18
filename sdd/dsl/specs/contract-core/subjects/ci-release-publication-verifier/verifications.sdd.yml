@@ -7,24 +7,24 @@ verifications:
     cases:
       - id: inventory-propagation-before-create
         intent_id: fail-closed
-        input: {release-inventory: initially-empty-then-same-tag-draft}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
+        input: { release-inventory: initially-empty-then-same-tag-draft }
+        checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: standard-workflow-credential
         intent_id: observe-absence
-        input: {credential: bound-standard-workflow-github-token, permission-metadata: absent-empty-or-boolean-false}
-        checks: [{id: status, guarantee_ref: observation-status}, {id: path, guarantee_ref: observation-file}]
+        input: { credential: bound-standard-workflow-github-token, permission-metadata: absent }
+        checks: [ { id: status, guarantee_ref: observation-status }, { id: path, guarantee_ref: observation-file } ]
       - id: credential-evidence-boundary
         intent_id: fail-closed
-        input: {credential-evidence: mismatching-context-token-capability-repository-unbound-false-or-malformed-metadata}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
+        input: { credential-evidence: mismatching-context }
+        checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: asset-inventory-boundary
         intent_id: fail-closed
-        input: {assets: persistently-incomplete-or-conflicting}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
+        input: { assets: persistently-incomplete }
+        checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: bundled-pre-observation
         intent_id: observe-absence
         input:
@@ -113,61 +113,143 @@ verifications:
             guarantee_ref: verification-rejected
       - id: diagnostic-network
         intent_id: safe-diagnostics
-        input: {failure: network}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: network }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-body-timeout
         intent_id: safe-diagnostics
-        input: {failure: body-timeout}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: body-timeout }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-timeout
         intent_id: safe-diagnostics
-        input: {failure: timeout}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: timeout }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-http
         intent_id: safe-diagnostics
-        input: {failure: http}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: http }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-json
         intent_id: safe-diagnostics
-        input: {failure: json}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: json }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-empty
         intent_id: safe-diagnostics
-        input: {failure: empty}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: empty }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-oversized
         intent_id: safe-diagnostics
-        input: {failure: oversized}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: oversized }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-permissions
         intent_id: safe-diagnostics
-        input: {failure: permissions}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: permissions }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-push-missing
         intent_id: safe-diagnostics
-        input: {failure: push-missing}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: push-missing }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-push-denied
         intent_id: safe-diagnostics
-        input: {failure: push-denied}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: push-denied }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-push-invalid
         intent_id: safe-diagnostics
-        input: {failure: push-invalid}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: push-invalid }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-repository
         intent_id: safe-diagnostics
-        input: {failure: repository}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: repository }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-inventory
         intent_id: safe-diagnostics
-        input: {failure: inventory}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: inventory }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-duplicate
         intent_id: safe-diagnostics
-        input: {failure: duplicate}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: duplicate }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
       - id: diagnostic-pagination
         intent_id: safe-diagnostics
-        input: {failure: pagination}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+        input: { failure: pagination }
+        checks: [ { id: diagnostic, guarantee_ref: verification-diagnostic } ]
+      - id: asset-readback-checksum
+        intent_id: checksum-observation-distinction
+        input:
+          scenario: asset-readback-checksum-failure
+        checks:
+          - id: diagnostic-checksum-observation-conflation
+            guarantee_ref: diagnostic-checksum-observation-conflation
+      - id: asset-readback-transport
+        intent_id: checksum-observation-distinction
+        input:
+          scenario: asset-readback-transport-failure
+        checks:
+          - id: diagnostic-checksum-observation-conflation
+            guarantee_ref: diagnostic-checksum-observation-conflation
+      - id: absence-observation-policy
+        intent_id: read-only-observation-policy
+        input:
+          operation: observe-before
+          remote-inventory: empty
+        checks:
+        - id: get-only-requests
+          guarantee_ref: get-only-requests
+        - id: release-inventory-attempts
+          guarantee_ref: release-inventory-attempts
+        - id: asset-inventory-attempts
+          guarantee_ref: asset-inventory-attempts
+        - id: release-reobservation-delay
+          guarantee_ref: release-reobservation-delay
+        - id: asset-reobservation-delay
+          guarantee_ref: asset-reobservation-delay
+      - id: post-observation-policy
+        intent_id: read-only-observation-policy
+        input:
+          operation: verify-after
+          remote-inventory: initially-absent-then-unique
+          assets: initially-empty-then-complete
+        checks:
+        - id: get-only-requests
+          guarantee_ref: get-only-requests
+        - id: release-inventory-attempts
+          guarantee_ref: release-inventory-attempts
+        - id: asset-inventory-attempts
+          guarantee_ref: asset-inventory-attempts
+        - id: release-reobservation-delay
+          guarantee_ref: release-reobservation-delay
+        - id: asset-reobservation-delay
+          guarantee_ref: asset-reobservation-delay
+      - id: rejected-observation-policy
+        intent_id: read-only-observation-policy
+        input:
+          operation: verify-after
+          remote-inventory: persistently-absent
+        checks:
+        - id: get-only-requests
+          guarantee_ref: get-only-requests
+        - id: release-inventory-attempts
+          guarantee_ref: release-inventory-attempts
+        - id: asset-inventory-attempts
+          guarantee_ref: asset-inventory-attempts
+        - id: release-reobservation-delay
+          guarantee_ref: release-reobservation-delay
+        - id: asset-reobservation-delay
+          guarantee_ref: asset-reobservation-delay
+      - id: immutable-id-binding
+        intent_id: immutable-id-binding
+        input:
+          operation: verify-after
+          evidence: matching-independent-readback
+        checks:
+        - id: receipt-remote-id-binding
+          guarantee_ref: receipt-remote-id-binding
+        - id: receipt-readback-id-binding
+          guarantee_ref: receipt-readback-id-binding
+        - id: release-output-id-binding
+          guarantee_ref: release-output-id-binding
+      - id: provider-transport-methods
+        intent_id: read-only-observation-policy
+        input:
+          remote-response: paginated-json-and-asset-bytes
+        checks:
+        - id: get-only-requests
+          guarantee_ref: get-only-requests

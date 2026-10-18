@@ -9,6 +9,8 @@ test_maps:
         symbol: "workflow-contracts > release-request-workflow-contract > release request workflow binds annotated tags without release publication permission"
         check_refs:
           - check-ci-release-request-workflow-success
+          - request-no-publication-permission
+          - request-tag-before-handoff
   - verification_id: verification.ci-release-request-workflow.handoff
     case_id: ci-release-request-workflow-failure
     tests:
@@ -16,12 +18,13 @@ test_maps:
         symbol: "workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary"
         check_refs:
           - check-ci-release-request-workflow-failure
+          - request-failure-summary-always
   - verification_id: verification.ci-release-request-workflow.handoff
     case_id: detailed-failure-handoff
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]

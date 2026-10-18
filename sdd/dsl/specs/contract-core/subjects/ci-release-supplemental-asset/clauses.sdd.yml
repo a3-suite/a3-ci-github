@@ -3,7 +3,179 @@ name: contract-clauses
 subject_ref: subject.ci.release-supplemental-asset
 contracts:
   - id: contract.ci-release-supplemental-asset.outputs
-    summary: Validate the authority-bound selected snapshot, fixed checkout, safe phase inputs and unclaimed output before executing the selected executable owner adapter whose bytes match the fixed source Git blob, with the v2 argument vector. Recheck identity, authority, snapshot, adapter and build input bytes after execution. Success requires owner exit zero and a new nonempty directory. Owner-adapter mode keeps installer semantics owner-owned. Standard-installer mode requires an enabled authority-bound selection, a fixed-source declaration, explicit supported verification profile and provider identity; the provider assembles and verifies the exact candidate and generates bound owner evidence before finalization. Fixed-source standard installer declarations and product manifests use the source-text identity rule of contract.ci-release-authority.outputs; owner-adapter executable bytes remain exact. Input mutation checks remain byte-exact, including newline-only changes during execution. Release platform identity remains independent of native installer identity. Each selected native target must bind uniquely to an authority-bound Release id and build target; both phases reject mismatches or platform manifest mutation while permitting unselected Release targets. Native supports Linux/macOS/Windows. Windows installer execution supports Windows PowerShell 5.1 and later, including PowerShell 7, without requiring a PowerShell upgrade; shared wrapper supports Linux/macOS only and may coexist with a target-specific Windows installer in the same declaration. Shared wrapper dispatch and evidence include only the Unix payloads; every selected native candidate retains its own verification before handoff. Common implementation is never required in the consumer source; this is not an execution sandbox or a provider publication operation. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
+    summary: Build one selected platform candidate. Validate the authority-bound selected snapshot, fixed checkout, safe phase inputs and unclaimed output before executing the selected executable owner adapter whose bytes match the fixed source Git blob, with the v2 argument vector. Recheck identity, authority, snapshot, adapter and build input bytes after execution. Success requires owner exit zero and a new nonempty directory. Owner-adapter mode keeps installer semantics owner-owned. Standard-installer mode requires an enabled authority-bound selection, a fixed-source declaration, explicit supported verification profile and provider identity; the provider assembles and verifies the exact candidate and generates bound owner evidence before finalization. Fixed-source standard installer declarations and product manifests use the source-text identity rule of contract.ci-release-authority.outputs; owner-adapter executable bytes remain exact. Input mutation checks remain byte-exact, including newline-only changes during execution. Release platform identity remains independent of native installer identity. Each selected native target must bind uniquely to an authority-bound Release id and build target; both phases reject mismatches or platform manifest mutation while permitting unselected Release targets. Native supports Linux/macOS/Windows. Windows installer execution supports Windows PowerShell 5.1 and later, including PowerShell 7, without requiring a PowerShell upgrade; shared wrapper supports Linux/macOS only and may coexist with a target-specific Windows installer in the same declaration. Shared wrapper dispatch and evidence include only the Unix payloads; every selected native candidate retains its own verification before handoff. Common implementation is never required in the consumer source; this is not an execution sandbox or a provider publication operation. Checksum sidecar bytes conform to contract.ci-release-assembly.outputs.
+    conditions:
+      - id: diagnostic-required-outputs
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.failure-diagnostic-required
+          op: available
+      - id: supplemental-valid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.supplemental-phase-valid
+          op: available
+      - id: supplemental-invalid
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.supplemental-phase-invalid
+          op: available
+    guarantees:
+      - id: phase-success
+        when: supplemental-valid
+        observation_ref: observation.ci-release-supplemental-asset.outputs
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: { kind: observation_field, value: status }
+            right: { kind: value_set, values: [ success ] }
+      - id: phase-output
+        when: supplemental-valid
+        observation_ref: observation.ci-release-supplemental-asset.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target: { kind: observation_field, value: output-directory }
+      - id: phase-rejected
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left: { kind: observation_field, value: outcome }
+            right: { kind: value_set, values: [ failure ] }
+      - id: phase-diagnostic
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: { kind: observation_field, value: diagnostic }
+      - id: diagnostic-details-outputs
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-release-supplemental-asset.detailed-diagnostics
+        claim:
+          kind: observable-result
+          op: present
+          target: { kind: observation_field, value: details }
+      - id: diagnostic-unvalidated-installer-reason
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: unvalidated-installer-reason-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-only-code-mismatch
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-only-code-mismatch-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-status-mismatch
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-status-mismatch-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-state-inference
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-state-inference-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-residual-claim
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-residual-claim-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-extra-field
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-extra-field-state
+            right:
+              kind: value_set
+              values:
+                - absent
+    verification_intents:
+      - id: detailed-diagnostics-outputs
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-outputs ]
+      - id: bound-phase
+        goal: This operation select only the snapshot-bound owner adapter or provider standard installer and receive the exact ordered path arguments and return the new output only after successful common checks.
+        guarantee_refs: [ phase-success, phase-output ]
+      - id: fail-closed
+        goal: Reject unsafe, unselected, mismatched or mutated inputs and failed or missing owner output without successful Action outputs.
+        guarantee_refs: [ phase-rejected ]
+      - id: standard-installer-public-entry-names-supplemental-invalid
+        goal: Verify the supplemental-invalid input partition.
+        guarantee_refs:
+          - phase-rejected
+          - phase-diagnostic
+      - id: safe-diagnostics
+        goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
+        guarantee_refs: [ phase-diagnostic ]
+      - id: cleanup-diagnostics
+        goal: Inject primary-plus-cleanup and sole-cleanup failures at both distributed entrypoints; retain the primary reason, use installer-cleanup-failed only for a sole cleanup failure, and expose only failed/unknown cleanup metadata.
+        guarantee_refs:
+          - diagnostic-cleanup-only-code-mismatch
+          - diagnostic-cleanup-status-mismatch
+          - diagnostic-cleanup-state-inference
+          - diagnostic-cleanup-residual-claim
+          - diagnostic-cleanup-extra-field
+      - id: installer-reason-validation
+        goal: Reject malformed provider diagnostics, unknown reasons, mismatching phases and unexpected fields at the actual standard installer process boundary.
+        guarantee_refs:
+          - diagnostic-unvalidated-installer-reason
+  - id: contract.ci-release-supplemental-asset.assembly
+    summary: Assemble transferred platform candidates into the final supplemental handoff. Common phase validation, adapter, standard-installer, identity, native target and checksum sidecar rules follow contract.ci-release-supplemental-asset.outputs.
     conditions:
       - id: diagnostic-required-outputs
         environment_predicate:
@@ -33,15 +205,22 @@ contracts:
           kind: observable-value
           op: in
           relation:
-            left: {kind: observation_field, value: status}
-            right: {kind: value_set, values: [success]}
+            left:
+              kind: observation_field
+              value: status
+            right:
+              kind: value_set
+              values:
+                - success
       - id: phase-output
         when: supplemental-valid
         observation_ref: observation.ci-release-supplemental-asset.outputs
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: output-directory}
+          target:
+            kind: observation_field
+            value: output-directory
       - id: phase-rejected
         when: supplemental-invalid
         observation_ref: observation.ci-release-supplemental-asset.result
@@ -49,52 +228,160 @@ contracts:
           kind: observable-value
           op: in
           relation:
-            left: {kind: observation_field, value: outcome}
-            right: {kind: value_set, values: [failure]}
+            left:
+              kind: observation_field
+              value: outcome
+            right:
+              kind: value_set
+              values:
+                - failure
       - id: standard-installer-evidence-preserved
         when: standard-installer-evidence-valid
         observation_ref: observation.ci-release-supplemental-asset.evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: candidate-files}
+          target:
+            kind: observation_field
+            value: candidate-files
       - id: standard-installer-publication-assets-produced
         when: standard-installer-evidence-valid
         observation_ref: observation.ci-release-supplemental-asset.evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: publication-assets}
+          target:
+            kind: observation_field
+            value: publication-assets
       - id: phase-diagnostic
         when: supplemental-invalid
         observation_ref: observation.ci-release-supplemental-asset.diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: diagnostic}
+          target:
+            kind: observation_field
+            value: diagnostic
       - id: diagnostic-details-outputs
         when: diagnostic-required-outputs
         observation_ref: observation.ci-release-supplemental-asset.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target:
+            kind: observation_field
+            value: details
+      - id: diagnostic-cleanup-only-code-mismatch
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-only-code-mismatch-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-status-mismatch
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-status-mismatch-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-state-inference
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-state-inference-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-residual-claim
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-residual-claim-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-cleanup-extra-field
+        when: supplemental-invalid
+        observation_ref: observation.ci-release-supplemental-asset.diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: cleanup-extra-field-state
+            right:
+              kind: value_set
+              values:
+                - absent
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs:
+          - diagnostic-details-outputs
       - id: bound-phase
-        goal: Both phases select only the snapshot-bound owner adapter or provider standard installer and receive the exact ordered path arguments and return the new output only after successful common checks.
-        guarantee_refs: [phase-success, phase-output]
+        goal: This operation select only the snapshot-bound owner adapter or provider standard installer and receive the exact ordered path arguments and return the new output only after successful common checks.
+        guarantee_refs:
+          - phase-success
+          - phase-output
       - id: fail-closed
         goal: Reject unsafe, unselected, mismatched or mutated inputs and failed or missing owner output without successful Action outputs.
-        guarantee_refs: [phase-rejected]
-      - id: standard-installer-evidence-transfer
-        goal: Final assemble verifies the exact transported candidate inventory and SHA-256 bytes including hidden source evidence, rejects missing, modified or undeclared files without a successful supplemental handoff, and excludes verification-only source snapshots from publication assets.
-        guarantee_refs: [standard-installer-evidence-preserved, standard-installer-publication-assets-produced, phase-rejected]
-      - id: standard-installer-public-entry-names
-        goal: Standard-installer mode validates declaration entry names against installer.standard-assembly-contract.publicEntryNames before creating output. Both phases reject nonstandard Windows or Unix shared entry names with a safe expected-name diagnostic. Target-specific Unix names and owner-adapter mode are unchanged. Publication assets and evidence bind to the validated names.
-        guarantee_refs: [phase-rejected, phase-diagnostic, standard-installer-publication-assets-produced]
+        guarantee_refs:
+          - phase-rejected
+      - id: standard-installer-evidence-transfer-standard-installer-evidence-valid
+        goal: Verify the standard-installer-evidence-valid input partition.
+        guarantee_refs:
+          - standard-installer-evidence-preserved
+          - standard-installer-publication-assets-produced
+      - id: standard-installer-evidence-transfer-supplemental-invalid
+        goal: Verify the supplemental-invalid input partition.
+        guarantee_refs:
+          - phase-rejected
+      - id: standard-installer-public-entry-names-supplemental-invalid
+        goal: Verify the supplemental-invalid input partition.
+        guarantee_refs:
+          - phase-rejected
+          - phase-diagnostic
+      - id: standard-installer-public-entry-names-standard-installer-evidence-valid
+        goal: Verify the standard-installer-evidence-valid input partition.
+        guarantee_refs:
+          - standard-installer-publication-assets-produced
       - id: safe-diagnostics
         goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
-        guarantee_refs: [phase-diagnostic]
+        guarantee_refs:
+          - phase-diagnostic
+      - id: cleanup-diagnostics
+        goal: Inject primary-plus-cleanup and sole-cleanup failures at both distributed entrypoints; retain the primary reason, use installer-cleanup-failed only for a sole cleanup failure, and expose only failed/unknown cleanup metadata.
+        guarantee_refs:
+          - diagnostic-cleanup-only-code-mismatch
+          - diagnostic-cleanup-status-mismatch
+          - diagnostic-cleanup-state-inference
+          - diagnostic-cleanup-residual-claim
+          - diagnostic-cleanup-extra-field

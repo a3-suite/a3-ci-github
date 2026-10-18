@@ -6,7 +6,7 @@
 
 ## 正本と対象境界
 
-- CI の用途、入出力、停止条件は `ci` スキルの workflow／preset／script 契約を正本とし、本スキルは provider 写像と provider-local 差分（物理 source、解決 root、実行 binding）だけを定義する。
+- CI の用途、入出力、停止条件は本スキルの workflow／preset／script 契約を正本とする。provider-neutral な目的・責務・信頼境界は `ci` スキルに従う。
 - 監査モード、検証フェーズ、監査 status、証拠適用性、監査完了と適合 success の境界は `references/ci-audit-contract.reference.yml` を正本とする。本ガイドでは再定義しない。
 - 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目は `references/ci-audit-subjects.reference.yml` を正本とする。本ガイドでは個別subjectの判断規則を補完しない。
 - SDD を利用する project は、project の contract registry で外部観測可能な CI 境界を契約対象として宣言する。
@@ -15,7 +15,7 @@
 
 ## 標準整合の必須確認
 
-`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。
+`references/ci-audit-subjects.reference.yml`の`latest-standard-alignment`を必須subjectとして登録する。監査開始時に同subjectの`baselineResolution`で比較基準を固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。棚卸しした全比較対象を`comparisonScope`へ対応付ける。差分分類・報告項目は同subjectを正本とし、本ガイドへ再定義しない。移行・更新を推奨する場合の経路は`references/deploy-ci-assets.guide.md`の「更新と削除」とする。
 
 ## 監査段階の選択
 
@@ -30,10 +30,11 @@ ownerへの委譲ではsubject catalogの`stageHandling`も適用する。返却
 3. `references/ci-audit-subjects.reference.yml` の `repository-root-readme` を意味監査の必須 subject として登録し、同 subject の `ownerSkill` が要求する前提と `delegation.ciInputs` を準備する。委譲は provider 固有証拠を揃えた後、ユースケースシミュレーションで実行する。
 4. 同subject catalogの `repository-ci-documentation.discovery` を順に適用して候補と個別扱いを確定する。適用対象は同 subject の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
 5. 同subject catalogの `installer-distribution.adoptionAssessment` を先に適用し、定義済みの handling を保持する。続いて `installer-distribution.appliesWhen`、`discovery`、`inapplicable` と、監査契約の `statusClassification` から適用判定を導出する。適用対象なら `delegation.ciInputs` を準備し、provider 固有証拠を揃えた後、ユースケースシミュレーションで一度だけ委譲する。修正が必要な場合は同 subject の `remediationPriority` を適用し、読み取り専用監査と修正許可のある監査を `modeHandling` で分ける。
-6. 外部から観測できる仕様や安全不変条件を実行可能な検査へ接続する。導線の有無は構成監査で、実行結果は選択した証跡監査で確認する。
-7. 局所保証、再発防止、テスト資産互換性の検査導線が必要かを判定する。実行結果の取得・照合は証跡監査を選択した場合に行い、補助証拠の追加可否は監査モードに従う。
-8. 到達不能な補助ファイル、導入元スキルの内部実装、provider の再利用単位本体は適用先の実装テスト対象にしない。ただし適用先での固定 ref、入出力、権限、配置結果との接続は確認する。
-9. 棚卸しした各ファイルを、CI に必要な資産、別 owner が管理する非 CI 資産、削除または置換が必要な重複・未到達・旧資産のいずれかへ分類し、根拠を記録する。別 owner の資産は owner と用途を確認して CI 監査の保証対象から除外し、到達不能という理由だけで不要と判定しない。未分類のファイルが残る間は意味監査を完了扱いにしない。
+6. 同subject catalogの `release-target-coverage` を適用し、製品・installer・公開スキルのうち製品と同じversionのReleaseへ接続されていない対象を、公開を促す推奨対応として要対応へ示す。採用済みの公開経路は、同subjectの `versionConsistency` の適用条件・比較基準・段階規則に従ってversionを照合する。推奨する経路は、製品versionが `references/configure-ci-preset.guide.md`、installerが ci-release-installer スキル、公開スキルが `references/publish-project-skills.guide.md` とする。
+7. 外部から観測できる仕様や安全不変条件を実行可能な検査へ接続する。導線の有無は構成監査で、実行結果は選択した証跡監査で確認する。
+8. 局所保証、再発防止、テスト資産互換性の検査導線が必要かを判定する。実行結果の取得・照合は証跡監査を選択した場合に行い、補助証拠の追加可否は監査モードに従う。
+9. 到達不能な補助ファイル、導入元スキルの内部実装、provider の再利用単位本体は適用先の実装テスト対象にしない。ただし適用先での固定 ref、入出力、権限、配置結果との接続は確認する。
+10. 棚卸しした各ファイルを、CI に必要な資産、別 owner が管理する非 CI 資産、削除または置換が必要な重複・未到達・旧資産のいずれかへ分類し、根拠を記録する。別 owner の資産は owner と用途を確認して CI 監査の保証対象から除外し、到達不能という理由だけで不要と判定しない。未分類のファイルが残る間は意味監査を完了扱いにしない。
 
 ## ユースケースシミュレーション
 
@@ -89,7 +90,7 @@ finding は review スキルへ渡し、正本との不一致は `contract-gap`�
 
 検査の配置・契約への対応付けは構成監査で確認する。本章の契約テストや補助テストの実行結果取得・照合は、証跡監査を選択した場合に行う。構成監査だけの場合は未依頼として報告し、実行結果の未取得で構成のstatusを変更しない。必要な検査導線の欠落は構成監査の不足として保持する。
 
-- 契約証拠は、project の契約正本（contract registry が存在する場合）または `ci` の preset／script 契約が定める外部観測可能な振る舞いを直接検証する。
+- 契約証拠は、project の契約正本（contract registry が存在する場合）または本スキルの preset／script 契約が定める外部観測可能な振る舞いを直接検証する。
 - 補助証拠は契約保証を代替せず、`contract-test-supplement`、`local-regression-prevention`、`test-asset-compatibility` のいずれかの固有目的を持つ。
 - coverage 率だけを理由に補助テストを追加しない。
 - 補助テストは選択した test level と依存境界を説明できる場合だけ採用する。

@@ -32,49 +32,49 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: classification}
+          target: { kind: observation_field, value: classification }
       - id: detailed-failure-context
         when: detailed-failure-evidence-required
         observation_ref: observation.ci-failure-diagnostics.failure-evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: context}
+          target: { kind: observation_field, value: context }
       - id: detailed-failure-comparison
         when: detailed-failure-evidence-required
         observation_ref: observation.ci-failure-diagnostics.failure-evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: comparison}
+          target: { kind: observation_field, value: comparison }
       - id: detailed-failure-retention
         when: detailed-failure-evidence-required
         observation_ref: observation.ci-failure-diagnostics.failure-evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: evidence-location}
+          target: { kind: observation_field, value: evidence-location }
       - id: detailed-failure-state
         when: detailed-failure-evidence-required
         observation_ref: observation.ci-failure-diagnostics.failure-evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: execution-state}
+          target: { kind: observation_field, value: execution-state }
       - id: detailed-failure-next-check
         when: detailed-failure-evidence-required
         observation_ref: observation.ci-failure-diagnostics.failure-evidence
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: next-check}
+          target: { kind: observation_field, value: next-check }
       - id: subject-diagnostic-contract-coverage
         when: subject-contract-source-available
         observation_ref: observation.ci-failure-diagnostics.result
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: subject-contract-coverage}
+          target: { kind: observation_field, value: subject-contract-coverage }
       - id: ci-failure-diagnostics-workflow-evidence-declared
         when: ci-failure-diagnostics-workflow-source-available
         observation_ref: observation.ci-failure-diagnostics.result
@@ -120,13 +120,125 @@ contracts:
           target:
             kind: observation_field
             value: bootstrap-diagnostic
+      - id: diagnostic-known-cause-omission
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: known-cause-omission-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-unsubstantiated-context
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: unsubstantiated-context-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-unsafe-diagnostic-disclosure
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: unsafe-diagnostic-disclosure-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-original-diagnostic-loss
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: original-diagnostic-loss-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-invalid-evidence-reference
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: invalid-evidence-reference-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-original-outcome-replacement
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: original-outcome-replacement-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-diagnostic-only-retry
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: diagnostic-only-retry-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: diagnostic-unsubstantiated-remediation
+        when: detailed-failure-evidence-required
+        observation_ref: observation.ci-failure-diagnostics.failure-evidence
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: unsubstantiated-remediation-state
+            right:
+              kind: value_set
+              values:
+                - absent
     verification_intents:
       - id: detailed-failure-evidence
         goal: At every failing public boundary, inspect retained original diagnostics and subject-specific details, preserve safe available context and expected/observed comparisons, identify the last confirmed stage and next check, and distinguish unknown/unavailable values. Do not echo raw protected inputs or unsafe child/provider output. Evidence retention is best effort after the primary safe diagnostic; retention failure never masks the original outcome. Do not require new infrastructure, automatic retries or success outputs. Execution proof, including child-process propagation and diagnostic/evidence failure, is separate from declaration coverage.
-        guarantee_refs: [detailed-failure-classification, detailed-failure-context, detailed-failure-comparison, detailed-failure-retention, detailed-failure-state, detailed-failure-next-check]
+        guarantee_refs: [ detailed-failure-classification, detailed-failure-context, detailed-failure-comparison, detailed-failure-retention, detailed-failure-state, detailed-failure-next-check, diagnostic-known-cause-omission, diagnostic-unsubstantiated-context, diagnostic-unsafe-diagnostic-disclosure, diagnostic-original-diagnostic-loss, diagnostic-invalid-evidence-reference, diagnostic-original-outcome-replacement, diagnostic-diagnostic-only-retry, diagnostic-unsubstantiated-remediation ]
       - id: subject-diagnostic-declarations
         goal: Inspect every packaged subject and contract for its common diagnostic connection and specific details. This source check verifies declaration coverage only and does not prove diagnostics were produced or retained by an executed failure.
-        guarantee_refs: [subject-diagnostic-contract-coverage]
+        guarantee_refs: [ subject-diagnostic-contract-coverage ]
       - id: ci-failure-diagnostics-workflow-evidence-intent
         goal: Every managed workflow declares an aggregate summary with job classification, run correlation, evidence and reason, no secret-context interpolation, and original source-result preservation.
         guarantee_refs:

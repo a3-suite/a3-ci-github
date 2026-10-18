@@ -5,63 +5,54 @@ verifications:
   - id: verification.ci-release-supplemental-asset.outputs
     contract_id: contract.ci-release-supplemental-asset.outputs
     cases:
-      - id: standard-entry-name-publication
-        intent_id: standard-installer-public-entry-names
-        input: {implementation: standard-installer, declaration: standard-public-entry-name}
-        checks: [{id: assets, guarantee_ref: standard-installer-publication-assets-produced}]
       - id: standard-entry-name-rejection
-        intent_id: standard-installer-public-entry-names
-        input: {implementation: standard-installer, declaration: nonstandard-windows-or-unix-shared-entry-name}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}, {id: diagnostic, guarantee_ref: phase-diagnostic}]
+        intent_id: standard-installer-public-entry-names-supplemental-invalid
+        input: { implementation: standard-installer, declaration: nonstandard-windows-shared-entry-name, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected }, { id: diagnostic, guarantee_ref: phase-diagnostic } ]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-public-invocation, operation: build-platform }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: platform-phase
         intent_id: bound-phase
-        input: {operation: build-platform}
+        input: { operation: build-platform }
         checks:
-          - {id: success, guarantee_ref: phase-success}
-          - {id: output, guarantee_ref: phase-output}
-      - id: assembly-phase
-        intent_id: bound-phase
-        input: {operation: assemble, supplemental-build-root: supplemental-build}
-        checks:
-          - {id: success, guarantee_ref: phase-success}
-          - {id: output, guarantee_ref: phase-output}
+          - { id: success, guarantee_ref: phase-success }
+          - { id: output, guarantee_ref: phase-output }
       - id: unselected-binding
         intent_id: fail-closed
-        input: {enabled: false}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { enabled: false, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: injected-output
         intent_id: fail-closed
-        input: {output-directory: "output\nstatus=success"}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { output-directory: "output\nstatus=success", operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: owner-failure
         intent_id: fail-closed
-        input: {owner-exit: 23}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { owner-exit: 23, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: input-mutation
         intent_id: fail-closed
-        input: {owner-mutates: standard-build-input}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { owner-mutates: standard-build-input, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: unsafe-phase-path
         intent_id: fail-closed
-        input: {path: ../escape, operation: unsupported}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { path: ../escape, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: identity-selection
         intent_id: fail-closed
-        input: {binding: mismatched-source-or-snapshot-or-owner-adapter}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { binding: mismatched-source, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: missing-output
         intent_id: fail-closed
-        input: {owner-output: missing-or-empty}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { owner-output: missing, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-installer
         intent_id: bound-phase
         input:
           implementation: standard-installer
           config: committed-product-declaration
+          operation: build-platform
         checks:
           - id: success
             guarantee_ref: phase-success
@@ -72,14 +63,7 @@ verifications:
         input:
           implementation: standard-installer
           config: committed-product-declaration
-        checks:
-          - id: refusal
-            guarantee_ref: phase-rejected
-      - id: standard-candidate-mutation
-        intent_id: fail-closed
-        input:
-          implementation: standard-installer
-          config: committed-product-declaration
+          operation: build-platform
         checks:
           - id: refusal
             guarantee_ref: phase-rejected
@@ -88,6 +72,7 @@ verifications:
         input:
           implementation: standard-installer
           config: committed-product-declaration
+          operation: build-platform
         checks:
           - id: success
             guarantee_ref: phase-success
@@ -98,67 +83,304 @@ verifications:
         input:
           implementation: standard-installer
           profile: unsupported
+          operation: build-platform
         checks:
           - id: refusal
             guarantee_ref: phase-rejected
       - id: standard-platform-subset
         intent_id: bound-phase
-        input: {implementation: standard-installer, release-targets: selected-and-unselected}
-        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
+        input: { implementation: standard-installer, release-targets: selected-and-unselected, operation: build-platform }
+        checks: [ { id: success, guarantee_ref: phase-success }, { id: output, guarantee_ref: phase-output } ]
       - id: standard-platform-binding
         intent_id: fail-closed
-        input: {implementation: standard-installer, platform-binding: mismatched-id-or-target}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { implementation: standard-installer, platform-binding: mismatched-id, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-platform-authority
         intent_id: fail-closed
-        input: {implementation: standard-installer, platform-manifest: authority-checksum-mismatch}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { implementation: standard-installer, platform-manifest: authority-checksum-mismatch, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-platform-mutation
         intent_id: fail-closed
-        input: {implementation: standard-installer, provider-mutates: platform-manifest}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { implementation: standard-installer, provider-mutates: platform-manifest, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-checksum-bytes
         intent_id: fail-closed
-        input: {implementation: standard-installer, checksum: noncanonical-bytes}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { implementation: standard-installer, checksum: noncanonical-bytes, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-checkout-eol
         intent_id: bound-phase
-        input: {implementation: standard-installer, checkout: LF-CRLF-or-mixed}
-        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
+        input: { implementation: standard-installer, checkout: CRLF, operation: build-platform }
+        checks: [ { id: success, guarantee_ref: phase-success }, { id: output, guarantee_ref: phase-output } ]
       - id: standard-source-content
         intent_id: fail-closed
-        input: {implementation: standard-installer, source-change: beyond-CRLF-to-LF}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
+        input: { implementation: standard-installer, source-change: beyond-CRLF-to-LF, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-execution-eol-mutation
         intent_id: fail-closed
-        input: {implementation: standard-installer, provider-mutates: newline-only}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-evidence-preserved
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: preserved}
-        checks:
-          - {id: inventory, guarantee_ref: standard-installer-evidence-preserved}
-          - {id: assets, guarantee_ref: standard-installer-publication-assets-produced}
-      - id: standard-evidence-missing
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: missing}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
-      - id: standard-evidence-modified
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: modified}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
-      - id: standard-evidence-extra
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: extra}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
+        input: { implementation: standard-installer, provider-mutates: newline-only, operation: build-platform }
+        checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: diagnostic-standard-installer-diagnostic
         intent_id: safe-diagnostics
-        input: {failure: standard-installer-diagnostic}
-        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]
+        input: { failure: standard-installer-diagnostic, operation: build-platform }
+        checks: [ { id: diagnostic, guarantee_ref: phase-diagnostic } ]
       - id: diagnostic-owner-process-diagnostic
         intent_id: safe-diagnostics
-        input: {failure: owner-process-diagnostic}
-        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]
+        input: { failure: owner-process-diagnostic, operation: build-platform }
+        checks: [ { id: diagnostic, guarantee_ref: phase-diagnostic } ]
+      - id: primary-and-cleanup-failure
+        intent_id: cleanup-diagnostics
+        input:
+          scenario: primary-failure-followed-by-cleanup-failure
+          operation: build-platform
+        checks:
+          - id: diagnostic-cleanup-status-mismatch
+            guarantee_ref: diagnostic-cleanup-status-mismatch
+          - id: diagnostic-cleanup-state-inference
+            guarantee_ref: diagnostic-cleanup-state-inference
+          - id: diagnostic-cleanup-residual-claim
+            guarantee_ref: diagnostic-cleanup-residual-claim
+          - id: diagnostic-cleanup-extra-field
+            guarantee_ref: diagnostic-cleanup-extra-field
+      - id: sole-cleanup-failure
+        intent_id: cleanup-diagnostics
+        input:
+          scenario: cleanup-fails-after-successful-primary-operation
+          operation: build-platform
+        checks:
+          - id: diagnostic-cleanup-only-code-mismatch
+            guarantee_ref: diagnostic-cleanup-only-code-mismatch
+          - id: diagnostic-cleanup-status-mismatch
+            guarantee_ref: diagnostic-cleanup-status-mismatch
+          - id: diagnostic-cleanup-state-inference
+            guarantee_ref: diagnostic-cleanup-state-inference
+          - id: diagnostic-cleanup-residual-claim
+            guarantee_ref: diagnostic-cleanup-residual-claim
+          - id: diagnostic-cleanup-extra-field
+            guarantee_ref: diagnostic-cleanup-extra-field
+      - id: untrusted-installer-process-diagnostic
+        intent_id: installer-reason-validation
+        input:
+          scenario: malformed-installer-process-diagnostic
+          operation: build-platform
+        checks:
+          - id: diagnostic-unvalidated-installer-reason
+            guarantee_ref: diagnostic-unvalidated-installer-reason
+  - id: verification.ci-release-supplemental-asset.assembly
+    contract_id: contract.ci-release-supplemental-asset.assembly
+    cases:
+      - id: standard-entry-name-publication
+        intent_id: standard-installer-public-entry-names-standard-installer-evidence-valid
+        input:
+          implementation: standard-installer
+          declaration: standard-public-entry-name
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: assets
+            guarantee_ref: standard-installer-publication-assets-produced
+      - id: standard-entry-name-rejection
+        intent_id: standard-installer-public-entry-names-supplemental-invalid
+        input:
+          implementation: standard-installer
+          declaration: nonstandard-windows-shared-entry-name
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+          - id: diagnostic
+            guarantee_ref: phase-diagnostic
+      - id: detailed-failure-outputs
+        intent_id: detailed-diagnostics-outputs
+        input:
+          scenario: rejected-public-invocation
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: diagnostic-details
+            guarantee_ref: diagnostic-details-outputs
+      - id: assembly-phase
+        intent_id: bound-phase
+        input:
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: owner-failure
+        intent_id: fail-closed
+        input:
+          owner-exit: 23
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-candidate-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          config: committed-product-declaration
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-platform-subset
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          release-targets: selected-and-unselected
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-platform-binding
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          platform-binding: mismatched-id
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-checksum-bytes
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          checksum: noncanonical-bytes
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-checkout-eol
+        intent_id: bound-phase
+        input:
+          implementation: standard-installer
+          checkout: CRLF
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: success
+            guarantee_ref: phase-success
+          - id: output
+            guarantee_ref: phase-output
+      - id: standard-source-content
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          source-change: beyond-CRLF-to-LF
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-execution-eol-mutation
+        intent_id: fail-closed
+        input:
+          implementation: standard-installer
+          provider-mutates: newline-only
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-evidence-preserved
+        intent_id: standard-installer-evidence-transfer-standard-installer-evidence-valid
+        input:
+          implementation: standard-installer
+          transferred-evidence: preserved
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: inventory
+            guarantee_ref: standard-installer-evidence-preserved
+          - id: assets
+            guarantee_ref: standard-installer-publication-assets-produced
+      - id: standard-evidence-missing
+        intent_id: standard-installer-evidence-transfer-supplemental-invalid
+        input:
+          implementation: standard-installer
+          transferred-evidence: missing
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-evidence-modified
+        intent_id: standard-installer-evidence-transfer-supplemental-invalid
+        input:
+          implementation: standard-installer
+          transferred-evidence: modified
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: standard-evidence-extra
+        intent_id: standard-installer-evidence-transfer-supplemental-invalid
+        input:
+          implementation: standard-installer
+          transferred-evidence: extra
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected
+      - id: diagnostic-owner-process-diagnostic
+        intent_id: safe-diagnostics
+        input:
+          failure: owner-process-diagnostic
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: diagnostic
+            guarantee_ref: phase-diagnostic
+      - id: primary-and-cleanup-failure
+        intent_id: cleanup-diagnostics
+        input:
+          scenario: primary-failure-followed-by-cleanup-failure
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: diagnostic-cleanup-status-mismatch
+            guarantee_ref: diagnostic-cleanup-status-mismatch
+          - id: diagnostic-cleanup-state-inference
+            guarantee_ref: diagnostic-cleanup-state-inference
+          - id: diagnostic-cleanup-residual-claim
+            guarantee_ref: diagnostic-cleanup-residual-claim
+          - id: diagnostic-cleanup-extra-field
+            guarantee_ref: diagnostic-cleanup-extra-field
+      - id: sole-cleanup-failure
+        intent_id: cleanup-diagnostics
+        input:
+          scenario: cleanup-fails-after-successful-primary-operation
+          operation: assemble
+          supplemental-build-root: supplemental-build
+        checks:
+          - id: diagnostic-cleanup-only-code-mismatch
+            guarantee_ref: diagnostic-cleanup-only-code-mismatch
+          - id: diagnostic-cleanup-status-mismatch
+            guarantee_ref: diagnostic-cleanup-status-mismatch
+          - id: diagnostic-cleanup-state-inference
+            guarantee_ref: diagnostic-cleanup-state-inference
+          - id: diagnostic-cleanup-residual-claim
+            guarantee_ref: diagnostic-cleanup-residual-claim
+          - id: diagnostic-cleanup-extra-field
+            guarantee_ref: diagnostic-cleanup-extra-field
+      - id: input-mutation
+        intent_id: fail-closed
+        input:
+          operation: assemble
+          supplemental-build-root: supplemental-build
+          owner-mutates: supplemental-input
+        checks:
+          - id: refusal
+            guarantee_ref: phase-rejected

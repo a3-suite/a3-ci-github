@@ -1,33 +1,39 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, onTestFinished } from 'vitest';
 import { verifyRequestTrigger } from '../request-trigger.js';
 import { requestTriggerEnvironment } from './request-trigger-fixture.js';
 
 describe('verifyRequestTrigger(requestWorkflow, env)', () => {
-  // evidence_role: supplemental
-  // test_level: unit
-  // target_id: verifyRequestTrigger(requestWorkflow, env)
+  // evidence_role: contract
+  // test_level: integration
+  // integration_id: request-trigger-event-file
   // Action entrypoint tests cover the public operation; this covers each rejected trigger field.
   test('accepts a successful default-branch dispatch of the request workflow', () => {
     // Arrange
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'request-trigger-'));
+    // Real files cover event decoding and missing/unreadable event boundaries.
+    const temporaryRoot = path.resolve('tests/tmp');
+    fs.mkdirSync(temporaryRoot, { recursive: true });
+    const root = fs.mkdtempSync(path.join(temporaryRoot, 'request-trigger-'));
+    onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
     // The fixture rewrites one event file, so each path form is verified right after it is written.
     const paths = ['.github/workflows/release-publication-request.yml@main', '.github/workflows/release-publication-request.yml'];
     // Act
     const results = paths.map((value) => verifyRequestTrigger('release-publication-request', requestTriggerEnvironment(root, 'release-publication-request', { path: value })));
     // Assert
     for (const result of results) expect(result).toEqual({ runId: '22', headSha: 'a'.repeat(40) });
-    fs.rmSync(root, { recursive: true, force: true });
   });
 
-  // evidence_role: supplemental
-  // test_level: unit
-  // target_id: verifyRequestTrigger(requestWorkflow, env)
+  // evidence_role: contract
+  // test_level: integration
+  // integration_id: request-trigger-event-file
   test('rejects each trigger field that does not match the request workflow dispatch', () => {
     // Arrange
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'request-trigger-'));
+    // Real files cover event decoding and missing/unreadable event boundaries.
+    const temporaryRoot = path.resolve('tests/tmp');
+    fs.mkdirSync(temporaryRoot, { recursive: true });
+    const root = fs.mkdtempSync(path.join(temporaryRoot, 'request-trigger-'));
+    onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
     const cases: [string, Record<string, unknown>, Record<string, string | undefined>][] = [
       ['event-name', {}, { GITHUB_EVENT_NAME: 'push' }],
       ['conclusion', { conclusion: 'failure' }, {}],
@@ -63,6 +69,5 @@ describe('verifyRequestTrigger(requestWorkflow, env)', () => {
       expect(String(failure), file).toBe('DiagnosticError: request-trigger-event-unreadable');
       expect(JSON.stringify((failure as { details?: unknown }).details ?? {})).not.toContain('secret-value');
     }
-    fs.rmSync(root, { recursive: true, force: true });
   });
 });

@@ -7,7 +7,7 @@ import { describe, expect, test, onTestFinished } from 'vitest';
 const actions = fs.readdirSync('actions').filter((name) => fs.existsSync(`actions/${name}/src/index.ts`));
 describe.each(actions)('%s failure boundary', (action) => {
   // contract_id: contract.ci-failure-diagnostics.actionable
-  // integration_id: action-failure-diagnostics
+  // flow_id: action-failure-diagnostics
   test.each(['source', 'dist'])('%s retains actionable input failure without private input values', (surface) => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const fixture = fs.mkdtempSync(path.resolve('tests/tmp/action-failure-'));
@@ -41,7 +41,7 @@ describe.each(actions)('%s failure boundary', (action) => {
 
 describe('failure output retention', () => {
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: failure-output-retention
+// flow_id: failure-output-retention
   test.each(['source', 'dist'])('%s preserves primary failure when failure outputs cannot be written', (surface) => {
   fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
   const fixture = fs.mkdtempSync(path.resolve('tests/tmp/output-failure-'));
@@ -61,7 +61,7 @@ describe('failure output retention', () => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: failure-output-retention
+// flow_id: failure-output-retention
 describe.each(actions)('%s final sink retention', (action) => {
   test.each(['source', 'dist'])('%s retains failure status when public sinks throw', (surface) => {
     const root = path.resolve('actions', action);
@@ -78,7 +78,7 @@ describe.each(actions)('%s final sink retention', (action) => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: action-failure-diagnostics
+// flow_id: action-failure-diagnostics
 describe('owner validation comparisons', () => {
   test.each(['source', 'dist'])('%s retains owner field comparisons without private values', (surface) => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });

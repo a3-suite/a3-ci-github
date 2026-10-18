@@ -14,6 +14,8 @@ GATE = Path(__file__).resolve().parents[2] / "scripts/check_staged_skill_deploy.
 PROJECT_ROOT = GATE.parents[4]
 
 
+# test_level: e2e
+# flow_id: repository-staged-skill-deploy-gate
 class SkillDeployGateTest(unittest.TestCase):
     def setUp(self) -> None:
         (PROJECT_ROOT / "tmp").mkdir(exist_ok=True)

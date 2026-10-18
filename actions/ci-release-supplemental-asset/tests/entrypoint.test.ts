@@ -46,21 +46,23 @@ test('supplemental entrypoint rejects injected output before owner execution', (
 });
 
 test('supplemental entrypoint propagates owner failure without owner diagnostics', (t) => {
-  const f = fixture(t, 'echo secret-owner-diagnostic >&2\nexit 23');
-  const result = bundle(f);
-  expect(result.status).toBe(1);
-  expect(String(result.stderr)).toMatch(/owner-adapter-failed/);
-  const diagnostic = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('owner-adapter-failed:'))!.slice('owner-adapter-failed:'.length));
-  expect(diagnostic.operation).toBe('owner-adapter');
-  expect(diagnostic.phase).toBe('build-platform');
-  expect(diagnostic['exit-status']).toBe(23);
-  const evidence = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
-  expect(evidence.classification.stage).toBe('owner-adapter-execution');
-  expect(evidence.comparison['exit-status']).toBe(23);
-  expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
-  expect(diagnostic['sanitized-reason']).toBe('process-failed');
-  expect(String(result.stderr)).not.toMatch(/secret-owner-diagnostic/);
-  expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
+  for (const operation of ['build-platform', 'assemble']) {
+    const f = fixture(t, 'echo secret-owner-diagnostic >&2\nexit 23');
+    const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
+    expect(result.status).toBe(1);
+    expect(String(result.stderr)).toMatch(/owner-adapter-failed/);
+    const diagnostic = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('owner-adapter-failed:'))!.slice('owner-adapter-failed:'.length));
+    expect(diagnostic.operation).toBe('owner-adapter');
+    expect(diagnostic.phase).toBe(operation);
+    expect(diagnostic['exit-status']).toBe(23);
+    const evidence = JSON.parse(String(result.stderr).split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
+    expect(evidence.classification.stage).toBe('owner-adapter-execution');
+    expect(evidence.comparison['exit-status']).toBe(23);
+    expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
+    expect(diagnostic['sanitized-reason']).toBe('process-failed');
+    expect(String(result.stderr)).not.toMatch(/secret-owner-diagnostic/);
+    expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
+  }
 });
 
 test('supplemental entrypoint rejects mutated standard inputs and retains partial output', (t) => {

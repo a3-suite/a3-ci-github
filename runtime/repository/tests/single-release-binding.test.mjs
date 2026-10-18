@@ -1,6 +1,6 @@
 import { describe, test, expect, onTestFinished, beforeAll, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
@@ -32,7 +32,12 @@ beforeAll(() => {
     const actionPath = `actions/${name}`;
     const action = yaml.parse(readFileSync(path.join(root, actionPath, 'action.yml'), 'utf8'));
     write(`${actionPath}/action.yml`, readFileSync(path.join(root, actionPath, 'action.yml')));
-    if (action.runs.main) write(`${actionPath}/${action.runs.main}`, readFileSync(path.join(root, actionPath, action.runs.main)));
+    if (action.runs.main) {
+      write(`${actionPath}/${action.runs.main}`, readFileSync(path.join(root, actionPath, action.runs.main)));
+      // The ESM dist runs only with the module scope that ncc writes beside it.
+      const scope = path.posix.join(path.posix.dirname(action.runs.main), 'package.json');
+      if (existsSync(path.join(root, actionPath, scope))) write(`${actionPath}/${scope}`, readFileSync(path.join(root, actionPath, scope)));
+    }
     return { uses: `a3-suite/a3-ci-github/${actionPath}@${zero}`, env: { A3_INSTALLER_PROVIDER_REVISION: zero }, with: Object.fromEntries(Object.entries(action.inputs).filter(([, value]) => value.required && !Object.hasOwn(value, 'default')).map(([key]) => [key, 'fixed'])) };
   });
   write(registryPath, yaml.stringify(registry)); write('VERSION', '0.2.10\n'); write('runtime/payload.mjs', 'export const payload = 1;\n');

@@ -118,7 +118,7 @@ contracts:
           target: {kind: observation_field, value: details}
     verification_intents:
       - id: detailed-diagnostics-integrity
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [diagnostic-details-integrity]
       - id: distribution-plan-derived
         goal: Maintained Action and script bundles produce a complete distribution rebuild and comparison plan. Normal builds retain compiler typechecking; CI may opt into transpile-only TypeScript bundling when the formal Action and public CLI source typechecks remain mandatory. Diagnostic generation, non-TypeScript bundles, companion files and byte/inventory comparison are retained.
@@ -141,7 +141,10 @@ contracts:
         guarantee_refs:
           - action-source-verification-plan-produced
       - id: release-version-bound
-        goal: Exact release tags and mutable aliases cannot advance unless the tagged commit declares the same repository version.
+        goal: Observe the confirmed repository version for an exact matching release tag.
         guarantee_refs:
           - release-version-confirmed
+      - id: release-version-rejected
+        goal: Reject an invalid or mismatched repository release version.
+        guarantee_refs:
           - invalid-or-mismatched-release-version-rejected

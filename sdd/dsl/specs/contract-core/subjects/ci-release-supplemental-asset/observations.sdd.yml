@@ -51,14 +51,32 @@ observations:
       fields:
         - selector: diagnostic
           kind: observation_field
-          meaning: Stable failure code. Process failures include operation, phase, exit status or allowed signal when available. Standard installer reasons are accepted only from a bounded strict provider diagnostic with an allowlisted reason and matching phase; unknown failures are classified without echoing stderr. Owner adapter diagnostics remain private. Cleanup failure retains the primary reason, or reports installer-cleanup-failed when it is the sole failure; optional cleanup contains only status=failed and temporary-state=unknown, without inferring residual files or exposing paths.
+          meaning: Stable failure envelope containing a code, available operation/phase/process status or signal, and optional cleanup status and temporary-state.
+        - selector: unvalidated-installer-reason-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a standard installer reason accepted outside the bounded strict provider diagnostic, allowlisted reason and matching phase.
+        - selector: cleanup-only-code-mismatch-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a sole cleanup failure reported with a reason other than installer-cleanup-failed.
+        - selector: cleanup-status-mismatch-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of cleanup failure metadata with status other than failed.
+        - selector: cleanup-state-inference-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of cleanup failure metadata with temporary-state other than unknown.
+        - selector: cleanup-residual-claim-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of a residual file or path assertion inferred from cleanup failure.
+        - selector: cleanup-extra-field-state
+          kind: observation_field
+          meaning: Occurrence state (present or absent) of cleanup metadata fields outside status and temporary-state.
   - id: observation.ci-release-supplemental-asset.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
       fields:
         - selector: details
           kind: observation_field
-          meaning: "build-platform/assemble、共通入力検証、standard-installer/owner-adapter起動、候補生成、転送後inventory/digest検証、native検証、final handoff生成を区別し、platform、asset/evidence相対path、欠落/余剰/改変、期待/観測digest、終了status/signal、既知の安全なinstaller理由と出力状態を残す。独自adapter raw stderrは公開せず、未知理由は未知と明示する。"
+          meaning: "build-platform/assemble、共通入力検証、standard-installer/owner-adapter起動、候補生成、転送後inventory/digest検証、native検証、final handoff生成の段階、platform、asset/evidence相対path、欠落/余剰/改変、期待/観測digest、終了status/signal、既知の安全なinstaller理由と出力状態を表す診断情報。"

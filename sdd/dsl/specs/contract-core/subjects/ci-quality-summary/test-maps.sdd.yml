@@ -65,16 +65,16 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-quality-summary failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when evidence-generation fails"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when summary-write fails"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: "source entrypoint > retains source failure when unknown fails"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
   - verification_id: verification.ci-quality-summary.outputs
     case_id: omitted-evidence-uses-run-url
     tests:
@@ -97,3 +97,21 @@ test_maps:
         symbol: "dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid"
         check_refs:
           - check-quality-summary-default-evidence-failure
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: mixed-applicability
+    tests:
+      - path: actions/ci-quality-summary/tests/summary.test.ts
+        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+        check_refs:
+          - excluded-rows-not-aggregated
+  - verification_id: verification.ci-quality-summary.outputs
+    case_id: default-evidence
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        check_refs:
+          - run-url-used-for-missing-evidence
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        check_refs:
+          - run-url-used-for-missing-evidence

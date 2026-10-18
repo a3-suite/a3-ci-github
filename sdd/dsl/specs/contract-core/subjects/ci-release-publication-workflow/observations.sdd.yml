@@ -2,7 +2,7 @@ version: 1
 name: contract-observations
 subject_ref: subject.ci.release-publication-workflow
 observations:
-  - id: observation.ci.release-publication-workflow.result
+  - id: observation.ci-release-publication-workflow.result
     summary: Observable canonical workflow definition for this capability.
     boundary:
       ref: boundary.workflow-definition
@@ -12,20 +12,73 @@ observations:
       fields:
         - selector: publication-boundary
           kind: observation_field
-          meaning: Declared fixed provider workflow call with explicit typed owner configuration and the order in which request, publication entry, source, quality, and handoff validation precede credential-bearing publication, and publication precedes remote readback.
+          meaning: Declared publication call and dependency graph.
         - selector: failure-summary
           kind: observation_field
-          meaning: Declared always-run summary route after publication prerequisites and publication that preserves failed and unknown outcomes.
+          meaning: Declared publication aggregate route.
         - selector: evidence-transfer
           kind: observation_field
-          meaning: Declared standard-installer-only hidden-file upload from the selected supplemental build directory, download into the supplemental build root, and required final assemble handoff before publication.
+          meaning: Declared supplemental artifact transfer routes.
   - id: observation.ci-release-publication-workflow.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
       fields:
         - selector: details
           kind: observation_field
-          meaning: "request・authority・source/quality・platform build・supplemental生成/転送/final assemble・absence観測・create/upload/finalize・readbackの失敗job/step、matrix identity、元のneeds result、log/artifact参照、最後に確定したRelease ID/公開段階を残す。公開前failureと部分公開/公開結果不明を区別し、転送欠落は宣言したevidenceと実体の差を追跡できる。"
+          meaning: "request・authority・source/quality・platform build・supplemental生成/転送/final assemble・absence観測・create/upload/finalize・readbackの失敗job/step、matrix identity、元のneeds result、log/artifact参照、最後に確定したRelease ID/公開段階、公開前failure/部分公開/公開結果不明の別、転送欠落時の宣言evidenceと実体の差を表す診断情報。"
+  - id: observation.ci-release-publication-workflow.publication.relations
+    summary: Individually observed contract values and comparisons.
+    boundary:
+      ref: boundary.workflow-definition
+    value:
+      root: canonical-workflow
+      kind: object
+      fields:
+        - selector: release-fixed-provider-reference
+          kind: observation_field
+          meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
+        - selector: release-explicit-owner-inputs
+          kind: observation_field
+          meaning: Comparison of caller owner bindings with the provider typed required inputs.
+        - selector: release-request-before-publication
+          kind: observation_field
+          meaning: Declared dependency order of request validation and privileged publication call.
+        - selector: release-authority-before-publication
+          kind: observation_field
+          meaning: Declared dependency order of authority validation and publication.
+        - selector: release-control-sha-bound
+          kind: observation_field
+          meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
+        - selector: release-control-head-verified
+          kind: observation_field
+          meaning: Declared order of control checkout and immediate HEAD verification.
+        - selector: release-handoff-before-publication
+          kind: observation_field
+          meaning: Declared order of handoff validation and credential-bearing publication.
+        - selector: release-publication-before-readback
+          kind: observation_field
+          meaning: Declared order of the publish step and independent verify-publication step.
+        - selector: release-tokens-explicit
+          kind: observation_field
+          meaning: Comparison of credential-bearing step token bindings with github.token.
+        - selector: supplemental-upload-selected-root
+          kind: observation_field
+          meaning: Declared supplemental build upload path.
+        - selector: supplemental-hidden-files-selected
+          kind: observation_field
+          meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
+        - selector: supplemental-download-root
+          kind: observation_field
+          meaning: Declared supplemental artifact download root.
+        - selector: supplemental-final-assembly-input
+          kind: observation_field
+          meaning: Declared supplemental build root passed to final assemble.
+        - selector: release-failure-summary-always
+          kind: observation_field
+          meaning: Declared publication aggregate condition.
+        - selector: release-failed-prerequisite-blocks
+          kind: observation_field
+          meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.

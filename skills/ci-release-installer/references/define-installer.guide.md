@@ -98,8 +98,7 @@
    - 標準経路で扱えないシステム配置は project override として証跡を残す。
    - 所有権変更や権限変更は managed root 内に閉じる。
 5. 事前検証を先に終える。
-   - 必須コマンド、runtime version、service user、空き権限、既存ファイル種別、lock 取得を切替前に確認する。
-   - 同一 managed root の lock を取得できない場合は、既存 install と競合しているものとして失敗する。
+   - 必須コマンド、runtime version、service user、空き権限、既存ファイル種別、lock 取得を切替前に確認する。lock の扱いは `references/installer-manifest-contract.reference.md` の標準境界に従う。
    - runtime bootstrap 対象外の JRE、Node.js、package manager などが存在しない、または manifest の要求 version を満たさない場合は、資材配置、handoff state 記録、activation state 変更前に失敗する。
    - 起動確認を行う場合は、設定ファイルと runtime asset の可読性を handoff state 記録または activation state 変更前に検証する。
 6. staging に配置してから commit する。
@@ -360,7 +359,6 @@
 - GitHub branch、`latest`、version range、SNAPSHOT を本番 installer の既定入力にする。
 - JRE、Node.js、package manager を、project override と検証契約なしに installer が暗黙に取得・更新する。
 - production installer が source archive から暗黙に build する。
-- lock 無しで managed root を変更する。
 - checksum mismatch を force option で無視する。
 - uninstall / cleanup を install / upgrade と同じ暗黙モードに混ぜる。
 - GitHub、npm、Maven などの取得先を URL 文字列だけで受け取り、owner / namespace / registry を検証しない。

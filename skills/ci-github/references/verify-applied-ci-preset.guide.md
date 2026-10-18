@@ -51,7 +51,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
 
 同時に`auditContract.stages`で段階を選択し、記録する。既定は構成監査のみ。証跡監査を指定された場合は同じ対象の構成監査から証跡監査へ進む。以下の手順は確認項目ごとに`stages.itemMapping`とsubjectの`stageChecks`へ写像し、実行結果の未取得を構成の不適合へ混ぜない。
 
-監査開始時に`references/ci-audit-subjects.reference.yml`の必須subject`latest-standard-alignment`を登録し、同subjectの`baselineResolution`で最新の公開済み安定版を比較基準に固定する。GitHub Actionsの実workflow・Action binding・資材・設定・文書を`comparisonScope`へ対応付け、配置済み資産と比較する。差分分類・証拠・判定入力・報告順は同subjectに従う。読み取り専用監査では比較と移行案の提示までとし、既存実装を更新しない。
+監査開始時に`references/ci-audit-subjects.reference.yml`の必須subject`latest-standard-alignment`を登録し、同subjectの`baselineResolution`で最新の公開済み安定版を比較基準に固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。GitHub Actionsの実workflow・Action binding・資材・設定・文書を`comparisonScope`へ対応付け、配置済み資産と比較する。差分分類・証拠・判定入力・報告順は同subjectに従う。読み取り専用監査では比較と移行案の提示までとし、既存実装を更新しない。
 
 1. `references/validate-ci-preset.guide.md` の監査モード別手順に従って導入先 root の preflight を実行し、workflow、必要 asset、quality adapter descriptor、Action SHA、設定値の不一致を検出して記録する。読み取り専用監査では変更せず、修正を含む依頼では明示された変更許可の範囲だけを修正して再検証する。Release／Package の stage 別 descriptor が workflow から到達していない場合は追加せず、既存の未接続 descriptor を撤去対象として記録する。
 
@@ -73,6 +73,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
    - `references/ci-audit-subjects.reference.yml` の `repository-root-readme` に必要な入力として、workflow、provider registry、policy、manifest、リリース前確認に適用する検証証拠を準備する。この手順では委譲せず、手順5の意味監査へ渡す。
    - `repository-ci-documentation.discovery` を適用して候補と個別扱いを確定する。適用対象は手順5の意味監査へ渡し、対象がない場合は `inapplicable` を適用する。
    - 共通検証で確定した `installer-distribution` の適用判定を手順5の意味監査へ渡し、GitHub Actions 固有の適用条件を追加しない。
+   - 共通検証で確定した `release-target-coverage` の対象を手順5の意味監査へ渡し、採用済みの公開経路について、`release-request`・`release-publication` callerと公開宣言の接続、および同subjectの `versionConsistency` が求めるversionの受け渡しを照合する。
 
 5. `references/ci-workflow-use-cases.reference.yml` のユースケースシミュレーションで抽出した各シナリオを、GitHub Actions の実行経路へ写像する。
 

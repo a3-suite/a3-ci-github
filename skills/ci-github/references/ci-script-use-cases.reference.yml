@@ -45,11 +45,6 @@ useCases:
     workflows: [release-publication]
     contract: release-publication-scripts
     owner: reusable-asset
-  - id: release-notes-input-resolution
-    purpose: event と request handoff に応じて公開に使う release notes 入力を選択し、handoff 配置へ正規化する。
-    workflows: [release-publication]
-    contract: release-notes-input-resolution-scripts
-    owner: provider-adapter
   - id: release-authority-validation
     purpose: request、owner 契約、設定 snapshot、source identity を結合する。
     workflows: [release-publication]

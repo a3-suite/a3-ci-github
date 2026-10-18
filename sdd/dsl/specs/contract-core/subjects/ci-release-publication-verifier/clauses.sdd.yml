@@ -25,6 +25,11 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.release-observation-invalid
           op: available
+      - id: verification-invocation
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.release-verification-invocation
+          op: available
     guarantees:
       - id: observation-status
         when: observation-valid
@@ -38,7 +43,7 @@ contracts:
               value: status
             right:
               kind: value_set
-              values: [success]
+              values: [ success ]
       - id: observation-file
         when: observation-valid
         observation_ref: observation.ci-release-publication-verifier.outputs
@@ -69,7 +74,7 @@ contracts:
               value: status
             right:
               kind: value_set
-              values: [success]
+              values: [ success ]
       - id: immutable-release-id
         when: verification-valid
         observation_ref: observation.ci-release-publication-verifier.outputs
@@ -109,34 +114,188 @@ contracts:
               value: outcome
             right:
               kind: value_set
-              values: [failure]
+              values: [ failure ]
       - id: verification-diagnostic
         when: verification-invalid
         observation_ref: observation.ci-release-publication-verifier.diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: diagnostic}
+          target: { kind: observation_field, value: diagnostic }
       - id: diagnostic-details-outputs
         when: diagnostic-required-outputs
         observation_ref: observation.ci-release-publication-verifier.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: diagnostic-checksum-observation-conflation
+        when: diagnostic-required-outputs
+        observation_ref: observation.ci-release-publication-verifier.detailed-diagnostics
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: checksum-observation-conflation-state
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: get-only-requests
+        when: verification-invocation
+        observation_ref: observation.ci-release-publication-verifier.request-trace
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: non-get-request-state
+            right:
+              kind: value_set
+              values:
+              - absent
+      - id: release-inventory-attempts
+        when: verification-invocation
+        observation_ref: observation.ci-release-publication-verifier.request-trace
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-inventory-attempts
+            right:
+              kind: value_set
+              values:
+              - '0'
+              - '1'
+              - '2'
+              - '3'
+      - id: asset-inventory-attempts
+        when: verification-invocation
+        observation_ref: observation.ci-release-publication-verifier.request-trace
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: asset-inventory-attempts
+            right:
+              kind: value_set
+              values:
+              - '0'
+              - '1'
+              - '2'
+              - '3'
+      - id: release-reobservation-delay
+        when: verification-invocation
+        observation_ref: observation.ci-release-publication-verifier.clock-trace
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-reobservation-delay
+            right:
+              kind: value_set
+              values:
+              - '1000'
+              - not-applicable
+      - id: asset-reobservation-delay
+        when: verification-invocation
+        observation_ref: observation.ci-release-publication-verifier.clock-trace
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: asset-reobservation-delay
+            right:
+              kind: value_set
+              values:
+              - '1000'
+              - not-applicable
+      - id: receipt-remote-id-binding
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.evidence-comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: receipt-remote-id-binding
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: receipt-readback-id-binding
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.evidence-comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: receipt-readback-id-binding
+            right:
+              kind: value_set
+              values:
+              - matched
+      - id: release-output-id-binding
+        when: verification-valid
+        observation_ref: observation.ci-release-publication-verifier.evidence-comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: release-output-id-binding
+            right:
+              kind: value_set
+              values:
+              - matched
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-outputs ]
       - id: observe-absence
         goal: Read-only absence observation emits only pre-create outputs bound to authority and handoff.
-        guarantee_refs: [observation-status, observation-file, observation-digest]
+        guarantee_refs: [ observation-status, observation-file, observation-digest ]
       - id: verify-publication
         goal: Independent GET-only immutable-ID verification emits only post-create outputs when all owner and remote evidence agrees.
-        guarantee_refs: [verification-status, immutable-release-id, bound-receipt, independent-readback]
+        guarantee_refs: [ verification-status, immutable-release-id, bound-receipt, independent-readback ]
       - id: fail-closed
         goal: Reject unavailable credentials, incomplete remote knowledge, existing Release or mismatching receipt/readback without success evidence.
-        guarantee_refs: [verification-rejected]
+        guarantee_refs: [ verification-rejected ]
       - id: safe-diagnostics
         goal: Failure reaches final stderr with a safe reason and stage; diagnostic generation does not change the rejection, successful outputs, permissions, checksum classification or existing bounded observation retry policy.
-        guarantee_refs: [verification-diagnostic]
+        guarantee_refs: [ verification-diagnostic ]
+      - id: checksum-observation-distinction
+        goal: Distinguish an observed asset checksum mismatch from unavailable transport observation at the same readback boundary.
+        guarantee_refs:
+          - diagnostic-checksum-observation-conflation
+      - id: read-only-observation-policy
+        goal: Every invocation uses GET-only requests, at most three observations per inventory sequence and one-second
+          requested reobservation delays.
+        guarantee_refs:
+        - get-only-requests
+        - release-inventory-attempts
+        - asset-inventory-attempts
+        - release-reobservation-delay
+        - asset-reobservation-delay
+      - id: immutable-id-binding
+        goal: Successful independent verification binds both the remote Release object and supplied readback to the immutable
+          receipt ID.
+        guarantee_refs:
+        - receipt-remote-id-binding
+        - receipt-readback-id-binding
+        - release-output-id-binding

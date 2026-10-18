@@ -36,4 +36,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "tag/ref/source検証・request JSON生成・digest生成・保存を区別し、要求tag/ref/source/run identity、期待/観測値、対象相対path、request/digestの未生成/部分生成/既存状態を残す。"
+          meaning: "tag/ref/source検証・request JSON生成・digest生成・保存の段階、要求tag/ref/source/run identity、期待/観測値、対象相対path、request/digestの未生成/部分生成/既存状態を表す診断情報。"

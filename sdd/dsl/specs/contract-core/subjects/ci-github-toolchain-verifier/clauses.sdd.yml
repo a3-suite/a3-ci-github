@@ -55,11 +55,11 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-processing
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-processing]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-processing ]
       - id: exact-toolchain-processing-verified
         goal: The shared script succeeds for every supported mode only when all selected versions match exactly.
         guarantee_refs:
@@ -121,11 +121,11 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-outputs ]
       - id: exact-toolchain-verified
         goal: Shared script success exposes verified=true.
         guarantee_refs:

@@ -20,15 +20,20 @@ contracts:
           kind: environment-ref
           target_ref: runtime-context.platform-manifest-invalid
           op: available
-      - id: quality-platform-selection-valid
-        environment_predicate:
-          kind: environment-ref
-          target_ref: runtime-context.quality-platform-selection-valid
-          op: available
       - id: quality-platform-selection-invalid
         environment_predicate:
           kind: environment-ref
           target_ref: runtime-context.quality-platform-selection-invalid
+          op: available
+      - id: shared-checks-supplied
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-selection-shared-checks-supplied
+          op: available
+      - id: shared-checks-omitted
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.quality-selection-shared-checks-omitted
           op: available
     guarantees:
       - id: platform-matrix-produced
@@ -69,7 +74,7 @@ contracts:
               values:
                 - absent
       - id: selected-full-matrix-produced
-        when: quality-platform-selection-valid
+        when: shared-checks-omitted
         observation_ref: observation.ci-platform-matrix.outputs
         claim:
           kind: observable-result
@@ -78,7 +83,7 @@ contracts:
             kind: observation_field
             value: matrix
       - id: ordered-quality-matrix-produced
-        when: quality-platform-selection-valid
+        when: shared-checks-omitted
         observation_ref: observation.ci-platform-matrix.outputs
         claim:
           kind: observable-result
@@ -87,7 +92,7 @@ contracts:
             kind: observation_field
             value: quality-matrix
       - id: ordered-expected-platforms-produced
-        when: quality-platform-selection-valid
+        when: shared-checks-omitted
         observation_ref: observation.ci-platform-matrix.outputs
         claim:
           kind: observable-result
@@ -143,11 +148,192 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: manifest-matrix-binding
+        when: platform-manifest-valid
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: full-matrix-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: selected-matrix-binding
+        when: shared-checks-omitted
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: full-matrix-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: quality-id-order
+        when: shared-checks-omitted
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-id-order
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: quality-runner-binding
+        when: shared-checks-omitted
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-runner-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: expected-id-order
+        when: shared-checks-omitted
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: expected-id-order
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: shared-checks-value
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: shared-checks-value
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: shared-checks-absence
+        when: shared-checks-omitted
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: shared-checks-absence
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: selected-full-matrix-produced-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: matrix
+      - id: ordered-quality-matrix-produced-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: quality-matrix
+      - id: ordered-expected-platforms-produced-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.outputs
+        claim:
+          kind: observable-result
+          op: present
+          target:
+            kind: observation_field
+            value: expected-platforms
+      - id: selected-matrix-binding-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: full-matrix-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: quality-id-order-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-id-order
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: quality-runner-binding-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-runner-binding
+            right:
+              kind: value_set
+              values:
+                - matched
+      - id: expected-id-order-with-shared-checks
+        when: shared-checks-supplied
+        observation_ref: observation.ci-platform-matrix.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: expected-id-order
+            right:
+              kind: value_set
+              values:
+                - matched
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-outputs ]
       - id: platform-matrix-output-set
         goal: A valid manifest produces its validated include matrix.
         guarantee_refs:
@@ -169,3 +355,29 @@ contracts:
           - invalid-selection-fails
           - invalid-selection-has-no-matrix
           - invalid-selection-has-no-quality-outputs
+      - id: matrix-identity-platform-manifest-valid
+        goal: Verify the platform-manifest-valid input partition.
+        guarantee_refs:
+          - manifest-matrix-binding
+      - id: matrix-identity-shared-checks-omitted
+        goal: Verify the shared-checks-omitted input partition.
+        guarantee_refs:
+          - selected-matrix-binding
+          - quality-id-order
+          - quality-runner-binding
+          - expected-id-order
+          - shared-checks-absence
+      - id: matrix-identity-shared-checks-supplied
+        goal: Verify the shared-checks-supplied input partition.
+        guarantee_refs:
+          - shared-checks-value
+          - selected-matrix-binding-with-shared-checks
+          - quality-id-order-with-shared-checks
+          - quality-runner-binding-with-shared-checks
+          - expected-id-order-with-shared-checks
+      - id: quality-selection-output-set-with-shared-checks
+        goal: A valid selection retains the full manifest matrix and produces platform_id/runner and comma-separated expected IDs in selection order. Declared sharedStandardChecks must be a boolean and is projected to each quality entry; malformed values and unknown fields fail without outputs.
+        guarantee_refs:
+          - selected-full-matrix-produced-with-shared-checks
+          - ordered-quality-matrix-produced-with-shared-checks
+          - ordered-expected-platforms-produced-with-shared-checks

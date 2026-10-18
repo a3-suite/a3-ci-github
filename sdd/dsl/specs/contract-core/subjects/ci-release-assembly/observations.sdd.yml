@@ -39,4 +39,33 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "authority/snapshot検証・platform/build inventory・checksum・supplemental binding・handoff生成を区別し、固定source/version/platform、対象asset/evidence相対path、欠落/余剰/重複、期待/観測size/digest/identity、出力の未生成/部分生成を残す。"
+          meaning: "authority/snapshot検証・platform/build inventory・checksum・supplemental binding・handoff生成の段階、固定source/version/platform、対象asset/evidence相対path、欠落/余剰/重複、期待/観測size/digest/identity、出力の未生成/部分生成を表す診断情報。"
+  - id: observation.ci-release-assembly.comparisons
+    summary: Individually observed asset digest serialization and accepted checksum sidecar properties.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.outputs
+      kind: object
+      fields:
+        - selector: asset-digest-serialization
+          kind: observation_field
+          meaning: Serialization of the verified asset list whose SHA-256 equals asset-digest.
+        - selector: asset-digest-asset-order
+          kind: observation_field
+          meaning: Order of the assets in the asset-digest serialization.
+        - selector: asset-digest-field-order
+          kind: observation_field
+          meaning: Field order of each asset projection in the asset-digest serialization.
+        - selector: accepted-checksum-encoding
+          kind: observation_field
+          meaning: Text encoding of a checksum sidecar accepted by a successful assembly.
+        - selector: accepted-checksum-digest-form
+          kind: observation_field
+          meaning: Representation of the digest in a checksum sidecar accepted by a successful assembly.
+        - selector: accepted-checksum-separator
+          kind: observation_field
+          meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
+        - selector: accepted-checksum-line-ending
+          kind: observation_field
+          meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.

@@ -7,13 +7,14 @@ verifications:
     cases:
       - id: detailed-failure-processing
         intent_id: detailed-diagnostics-processing
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-processing}]
       - id: matching-rust-source-processing
         intent_id: rust-source-processing-verified
         input:
           language-profile: rust
           authority-path: authority.json
+          authority-source-sha: checked-out-head
         checks:
           - id: check-rust-source-processing-success
             guarantee_ref: rust-source-processing-succeeds
@@ -22,6 +23,7 @@ verifications:
         input:
           language-profile: rust
           authority-path: authority.json
+          authority-source-sha: different-commit
         checks:
           - id: check-rust-source-processing-failure
             guarantee_ref: rust-source-processing-fails
@@ -30,7 +32,7 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: matching-rust-source-authority
         intent_id: rust-source-identity-verified

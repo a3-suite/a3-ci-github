@@ -15,10 +15,10 @@ test_maps:
           - check-platform-matrix-output
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint accepts consumer versioned runners only with trusted policy"
-        check_refs: [check-platform-matrix-output]
+        check_refs: [ check-platform-matrix-output ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "dist entrypoint > entrypoint accepts consumer versioned runners only with trusted policy"
-        check_refs: [check-platform-matrix-output]
+        check_refs: [ check-platform-matrix-output ]
   - verification_id: verification.ci-platform-matrix.outputs
     case_id: invalid-platform-manifest
     tests:
@@ -34,10 +34,10 @@ test_maps:
           - check-invalid-platform-manifest-no-output
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint preserves bootstrap and invalid policy boundaries"
-        check_refs: [check-invalid-platform-manifest-failure, check-invalid-platform-manifest-no-output]
+        check_refs: [ check-invalid-platform-manifest-failure, check-invalid-platform-manifest-no-output ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "dist entrypoint > entrypoint preserves bootstrap and invalid policy boundaries"
-        check_refs: [check-invalid-platform-manifest-failure, check-invalid-platform-manifest-no-output]
+        check_refs: [ check-invalid-platform-manifest-failure, check-invalid-platform-manifest-no-output ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint rejects an oversized manifest before parsing"
         check_refs:
@@ -51,18 +51,12 @@ test_maps:
   - verification_id: verification.ci-platform-matrix.outputs
     case_id: valid-quality-selection
     tests:
-      - path: runtime/preset/tests/quality-platform-selection.test.mjs
+      - path: runtime/preset/tests/quality-platform-selection.process.test.mjs
         symbol: "contract.ci-platform-matrix.outputs > platform-selection-conformance > platform Action and preflight agree on selection and parser rejection boundaries"
-        check_refs: [check-ordered-quality-matrix]
-      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order"
-        check_refs: [check-selected-full-matrix, check-ordered-quality-matrix, check-ordered-expected-platforms]
-      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order"
-        check_refs: [check-selected-full-matrix, check-ordered-quality-matrix, check-ordered-expected-platforms]
+        check_refs: [ check-ordered-quality-matrix ]
       - path: tests/shared-quality-checks.test.mjs
         symbol: "shared standard quality checks > trusted base declaration wins over head and bootstrap keeps full execution"
-        check_refs: [check-ordered-quality-matrix]
+        check_refs: [ check-ordered-quality-matrix ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix"
         check_refs:
@@ -78,15 +72,15 @@ test_maps:
   - verification_id: verification.ci-platform-matrix.outputs
     case_id: invalid-quality-selection
     tests:
-      - path: runtime/preset/tests/quality-platform-selection.test.mjs
+      - path: runtime/preset/tests/quality-platform-selection.process.test.mjs
         symbol: "contract.ci-platform-matrix.outputs > platform-selection-conformance > platform Action and preflight agree on selection and parser rejection boundaries"
-        check_refs: [check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs]
+        check_refs: [ check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs"
-        check_refs: [check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs]
+        check_refs: [ check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "dist entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs"
-        check_refs: [check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs]
+        check_refs: [ check-invalid-selection-failure, check-invalid-selection-no-matrix, check-invalid-selection-no-quality-outputs ]
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: "source entrypoint > entrypoint fails without any outputs for invalid selection"
         check_refs:
@@ -104,10 +98,82 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "ci-platform-matrix failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "owner validation comparisons > source retains owner field comparisons without private values"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: "owner validation comparisons > dist retains owner field comparisons without private values"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: manifest-identity
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint emits the validated matrix
+        check_refs:
+          - manifest-matrix-binding
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint emits the validated matrix
+        check_refs:
+          - manifest-matrix-binding
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: selection-identity
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
+        check_refs:
+          - selected-matrix-binding
+          - quality-id-order
+          - quality-runner-binding
+          - expected-id-order
+          - shared-checks-absence
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
+        check_refs:
+          - selected-matrix-binding
+          - quality-id-order
+          - quality-runner-binding
+          - expected-id-order
+          - shared-checks-absence
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: shared-checks-identity
+    tests:
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        check_refs:
+          - selected-matrix-binding
+          - quality-id-order
+          - quality-runner-binding
+          - expected-id-order
+          - shared-checks-value
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        check_refs:
+          - selected-matrix-binding
+          - quality-id-order
+          - quality-runner-binding
+          - expected-id-order
+          - shared-checks-value
+  - verification_id: verification.ci-platform-matrix.outputs
+    case_id: valid-quality-selection-with-shared-checks
+    tests:
+      - path: runtime/preset/tests/quality-platform-selection.process.test.mjs
+        symbol: contract.ci-platform-matrix.outputs > platform-selection-conformance > platform Action and preflight agree on selection and parser rejection boundaries
+        check_refs:
+          - check-ordered-quality-matrix-with-shared-checks
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        check_refs:
+          - check-selected-full-matrix-with-shared-checks
+          - check-ordered-quality-matrix-with-shared-checks
+          - check-ordered-expected-platforms-with-shared-checks
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        check_refs:
+          - check-selected-full-matrix-with-shared-checks
+          - check-ordered-quality-matrix-with-shared-checks
+          - check-ordered-expected-platforms-with-shared-checks
+      - path: tests/shared-quality-checks.test.mjs
+        symbol: shared standard quality checks > trusted base declaration wins over head and bootstrap keeps full execution
+        check_refs:
+          - check-ordered-quality-matrix-with-shared-checks

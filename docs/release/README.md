@@ -14,7 +14,7 @@ source versionの正本は`VERSION`です。
 
 通常リリースとhotfixは、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従い、実装と接続を1つのexact tagとReleaseで公開します。準備と検査コマンドは[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)へ委譲します。Release workflowは最終tagのcheckoutで包含・同一性と固定SHA先の契約を検査してから資材を生成します。
 
-`.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするworkflow revisionも承認対象に含め、今回の検証済み実装を使います。
+`.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするrefは`release-tag`と同じexact tagとし（例：`gh workflow run release.yml --ref v0.6.0`）、通常リリースとhotfixのどちらもbranchから起動しません。workflowはそれ以外のrefからの起動を公開前に拒否します。
 
 sourceとhotfix baseのmain統合証拠は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とし、`runtime/repository/update-release-aliases.sh`が検証します。
 

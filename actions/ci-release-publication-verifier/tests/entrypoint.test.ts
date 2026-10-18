@@ -15,7 +15,7 @@ const hash = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest
 describe('runActionEntrypoint', () => {
 
 // contract_id: contract.ci-release-publication-verifier.outputs
-// integration_id: release-publication-verifier-entrypoint
+// flow_id: release-publication-verifier-entrypoint
 test('publication entrypoint observes absence then verifies owner evidence independently', async (t) => {
   const f = fixture(t);
   f.assemble();
@@ -65,11 +65,15 @@ globalThis.fetch = async (url, init) => {
   expect(outputs).toMatch(/release-remote-identity=42\n/);
   expect(outputs).toMatch(/publish-receipt=\{/);
   expect(outputs).toMatch(/readback-evidence=\{/);
+  const values = Object.fromEntries(outputs.trim().split('\n')
+    .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
+  expect(JSON.parse(values['publish-receipt']).release_id).toBe('42');
+  expect(JSON.parse(values['readback-evidence']).release_id).toBe('42');
   expect(outputs.includes('synthetic-secret')).toBe(false);
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
-// integration_id: release-publication-output-injection-rejection
+// flow_id: release-publication-output-injection-rejection
 test('publication entrypoint rejects output path line injection before remote observation', async (t) => {
   const f = fixture(t);
   f.assemble();
@@ -89,7 +93,7 @@ test('publication entrypoint rejects output path line injection before remote ob
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
-// integration_id: release-publication-verifier-entrypoint-rejection
+// flow_id: release-publication-verifier-entrypoint-rejection
 test('publication entrypoint refuses missing credentials without success evidence', async (t) => {
   const f = fixture(t);
   f.assemble();
@@ -101,7 +105,7 @@ test('publication entrypoint refuses missing credentials without success evidenc
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
-// integration_id: release-publication-safe-diagnostics
+// flow_id: release-publication-safe-diagnostics
   const cases: Array<[string, string, Record<string, string>, number]> = [
     ['metadata-absent', 'absent', {}, 0], ['metadata-empty', 'empty', {}, 0],
     ['source-mismatch', 'absent', { CI_RELEASE_CREDENTIAL_SOURCE: 'other-caller' }, 1],
@@ -119,7 +123,7 @@ test('publication entrypoint refuses missing credentials without success evidenc
   ];
   for (const [label, metadata, context, expectedStatus] of cases) {
     // contract_id: contract.ci-release-publication-verifier.outputs
-    // integration_id: release-publication-safe-diagnostics
+    // flow_id: release-publication-safe-diagnostics
     test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, async (t) => {
     const f = fixture(t);
     f.assemble();
@@ -159,7 +163,7 @@ globalThis.fetch = async (url, init) => {
   }
 
 // contract_id: contract.ci-release-publication-verifier.outputs
-// integration_id: release-publication-safe-diagnostics
+// flow_id: release-publication-safe-diagnostics
 for (const [failure, reason, phase] of [
   ['network', 'network-failed', 'request'], ['timeout', 'request-timeout', 'request'],
   ['body-timeout', 'request-timeout', 'response'],

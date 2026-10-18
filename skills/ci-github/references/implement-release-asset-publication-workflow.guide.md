@@ -3,7 +3,7 @@
 ## 目的
 - executableをrelease tagに対応するGitHub Release assetsへ安全に公開する。
 - package registryを使わない標準経路を用意し、development実行可能資材と重複公開による無料枠消費を避ける。
-- provider-neutral な公開経路の意味と契約は `ci` の release-publication preset から受け取り、GitHub Actions 固有の実装を ci-github スキルで扱う。
+- provider-neutral な公開の目的と責務境界は `ci` スキルに従い、release-publication preset の契約と GitHub Actions 固有の実装は本スキルで扱う。
 
 ## 前提
 - 対象プロジェクトの owner 契約により、GitHub Release assets 経路と publish 範囲が解決済みであること。
@@ -50,7 +50,7 @@
    - 各assetのSHA-256 checksumを生成し、checksum一覧もRelease assetsへ含める。
    - token、署名用秘密鍵、source mapなど公開対象外のファイルを除外する。
 6. 検証済みassetだけをRelease作成jobへhandoffする。
-   - 操作対象source由来のhandoffは`references/runner-trust-policy.reference.md`の権限境界に従い、asset、checksum、asset manifestだけをActions artifactに含め、対象と保持期間を最小化する。asset manifestの構造は`ci`スキルの`release-build-scripts`契約を正本とする。
+   - 操作対象source由来のhandoffは`references/runner-trust-policy.reference.md`の権限境界に従い、asset、checksum、asset manifestだけをActions artifactに含め、対象と保持期間を最小化する。asset manifestの構造は`references/ci-script-contracts.reference.yml`の`release-build-scripts`契約を正本とする。
    - upload actionが返すActions artifact IDをRelease作成jobへ渡し、取得した一時artifactの descriptor、manifest、成果物 digest、source/version/target identity を `ci-handoff-integrity` で検証する。Actions artifact transfer API の別 digest Action は使用しない。
    - Actions artifactはjob間の権限境界を越える一時handoffに限定し、利用者向け配布先にしない。
    - 各matrix buildは`release-build-{platform-id}`を一意な一時artifact名としてuploadし、assemble jobは全`release-build-*` artifactをartifact名ごとのsubdirectoryを保って取得する。いずれかのbuild、検証、upload、downloadが失敗した場合はassembleとpublishへ進めない。

@@ -7,11 +7,11 @@ verifications:
     cases:
       - id: detailed-failure-preparation
         intent_id: detailed-diagnostics-preparation
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-preparation}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-preparation }, { id: diagnostic-diagnostic-only-tool-acquisition, guarantee_ref: diagnostic-diagnostic-only-tool-acquisition } ]
       - id: selected-quality-toolchain
         intent_id: quality-toolchain-selection-verified
-        input: {language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0}
+        input: { language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0, rustup-exit-code: 0, cargo-exit-code: 0, io-destinations: writable }
         checks:
           - id: check-resolved-quality-toolchain
             guarantee_ref: resolved-quality-toolchain-produced
@@ -19,7 +19,7 @@ verifications:
             guarantee_ref: selected-quality-toolchain-ready
       - id: compatible-quality-toolchain
         intent_id: quality-toolchain-selection-verified
-        input: {language-profile: typescript, toolchain-version: '24', version-policy: compatible}
+        input: { language-profile: typescript, toolchain-version: '24', version-policy: compatible, provider-node-version: v24.21.0, provider-status: 0, io-destinations: writable }
         checks:
           - id: check-compatible-quality-toolchain
             guarantee_ref: selected-quality-toolchain-ready
@@ -27,13 +27,59 @@ verifications:
             guarantee_ref: resolved-quality-toolchain-produced
       - id: invalid-quality-toolchain
         intent_id: quality-toolchain-failure-verified
-        input: {language-profile: unsupported, toolchain-version: latest}
+        input: { language-profile: unsupported, toolchain-version: latest }
         checks:
           - id: check-invalid-quality-toolchain
             guarantee_ref: invalid-or-failed-quality-toolchain-stops
       - id: failed-quality-toolchain-setup
         intent_id: quality-toolchain-failure-verified
-        input: {language-profile: rust, rustup-exit-code: 13}
+        input: { language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0, rustup-exit-code: 13, io-destinations: writable }
         checks:
           - id: check-failed-quality-toolchain-setup
+            guarantee_ref: invalid-or-failed-quality-toolchain-stops
+      - id: registered-binary-failure
+        intent_id: registered-binary-failure
+        input:
+          tool: cargo-audit
+          version: 0.22.2
+          registered-target: x86_64-unknown-linux-gnu
+          archive-sha256: mismatch
+        checks:
+          - id: registered-failure-no-source-fallback
+            guarantee_ref: registered-failure-no-source-fallback
+          - id: registered-failure-no-path-output
+            guarantee_ref: registered-failure-no-path-output
+      - id: valid-toolchain-request
+        intent_id: valid-toolchain-request
+        input:
+          language-profile: rust
+          toolchain-version: 1.90.0
+          version-policy: exact
+          cargo-audit-version: 0.21.0
+        checks:
+          - id: resolved-version-satisfies-selector
+            guarantee_ref: resolved-version-satisfies-selector
+          - id: selected-profile-dependencies-only
+            guarantee_ref: selected-profile-dependencies-only
+      - id: valid-request-mismatching-resolution
+        intent_id: valid-toolchain-request
+        input:
+          language-profile: typescript
+          toolchain-version: "24"
+          version-policy: compatible
+          provider-node-version: v26.0.0
+        checks:
+          - id: resolved-version-satisfies-selector
+            guarantee_ref: resolved-version-satisfies-selector
+      - id: mismatching-provider-version
+        intent_id: quality-toolchain-failure-verified
+        input: { language-profile: typescript, toolchain-version: '24', version-policy: compatible, provider-node-version: v26.0.0, provider-status: 0, io-destinations: writable }
+        checks:
+          - id: check-mismatching-provider-version
+            guarantee_ref: invalid-or-failed-quality-toolchain-stops
+      - id: missing-provider-version
+        intent_id: quality-toolchain-failure-verified
+        input: { language-profile: typescript, toolchain-version: '24', version-policy: compatible, provider-node-version: '', provider-status: 0, io-destinations: writable }
+        checks:
+          - id: check-missing-provider-version
             guarantee_ref: invalid-or-failed-quality-toolchain-stops

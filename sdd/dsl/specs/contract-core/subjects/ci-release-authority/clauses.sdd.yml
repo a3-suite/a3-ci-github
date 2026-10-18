@@ -42,7 +42,7 @@ contracts:
               value: outcome
             right:
               kind: value_set
-              values: [failure]
+              values: [ failure ]
       - id: no-success-outputs
         when: invalid
         observation_ref: observation.ci-release-authority.result
@@ -55,21 +55,35 @@ contracts:
               value: successful-output-state
             right:
               kind: value_set
-              values: [absent]
+              values: [ absent ]
       - id: diagnostic-details-outputs
         when: diagnostic-required-outputs
         observation_ref: observation.ci-release-authority.detailed-diagnostics
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: platform-source-text-digest
+        when: valid
+        observation_ref: observation.ci-release-authority.outputs.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: platform-manifest-source-text-comparison
+            right:
+              kind: value_set
+              values:
+                - equal
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-outputs]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-outputs ]
       - id: coherent-authority
         goal: Generate verified authority and downstream notes/request/snapshot artifacts from explicit owner inputs.
-        guarantee_refs: [authority-file]
+        guarantee_refs: [ authority-file, platform-source-text-digest ]
       - id: fail-closed
         goal: Reject inconsistent, expired or unknown inputs without successful outputs or provider writes.
-        guarantee_refs: [rejected, no-success-outputs]
+        guarantee_refs: [ rejected, no-success-outputs ]

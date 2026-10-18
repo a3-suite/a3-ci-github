@@ -33,14 +33,14 @@ test_maps:
   - verification_id: verification.ci-github-toolchain-verifier.outputs
     case_id: matching-selected-tool-versions
     tests:
-      - path: actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+      - path: actions/ci-github-toolchain-verifier/tests/composite-execution.test.mjs
         symbol: "contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification"
         check_refs:
           - check-verified-output
   - verification_id: verification.ci-github-toolchain-verifier.outputs
     case_id: mismatching-selected-tool-version
     tests:
-      - path: actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
+      - path: actions/ci-github-toolchain-verifier/tests/composite-execution.test.mjs
         symbol: "contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification"
         check_refs:
           - check-verification-failure

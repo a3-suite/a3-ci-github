@@ -29,11 +29,53 @@ observations:
           meaning: Failure outcome of the rejected quality adapter step.
   - id: observation.ci-quality-adapter.detailed-diagnostics
     summary: Subject-specific failure evidence governed by contract.ci-failure-diagnostics.actionable; log and existing evidence may jointly satisfy the observation.
-    boundary: {ref: boundary.diagnostic-result}
+    boundary: { ref: boundary.diagnostic-result }
     value:
       root: failure-evidence
       kind: object
       fields:
         - selector: details
           kind: observation_field
-          meaning: "bundle選択・toolchain確認・lint/test/build実行・report読取・結果保存を区別し、選択profile/bundle、失敗task/tool、要求/観測version、元の終了状態、生成済みreport/logの相対pathと未生成理由を残す。独自adapterの未検査stderrや保護入力を公開しない。"
+          meaning: "bundle選択・toolchain確認・lint/test/build実行・report読取・結果保存の段階、選択profile/bundle、失敗task/tool、要求/観測version、元の終了状態、生成済みreport/logの相対pathと未生成理由を表す診断情報。"
+  - id: observation.ci-quality-adapter.outputs.relations
+    summary: Individually observed contract values and comparisons.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.result
+      kind: object
+      fields:
+        - selector: format-command-state
+          kind: observation_field
+          meaning: Occurrence of format commands in the native execution trace.
+        - selector: security-command-state
+          kind: observation_field
+          meaning: Occurrence of security commands in the native execution trace.
+        - selector: native-task-order
+          kind: observation_field
+          meaning: Ordered IDs in the observed native result trace.
+        - selector: consumer-descriptor-read-state
+          kind: observation_field
+          meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
+        - selector: rejected-command-state
+          kind: observation_field
+          meaning: Occurrence of project command execution after scope rejection.
+        - selector: native-terminal-prerequisite-status
+          kind: observation_field
+          meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
+        - selector: native-failed-prerequisite-followup-state
+          kind: observation_field
+          meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
+  - id: observation.ci-quality-adapter.embedded-bundle
+    boundary:
+      ref: boundary.workspace-files
+    value:
+      root: action.embedded-standard-bundle
+      kind: object
+      fields:
+        - selector: accepted-source-binding
+          kind: observation_field
+          meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
+        - selector: accepted-content-digest
+          kind: observation_field
+          meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.

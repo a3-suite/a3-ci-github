@@ -39,4 +39,4 @@ observations:
       fields:
         - selector: details
           kind: observation_field
-          meaning: "tag取得・annotated tag検証・commit解決を区別し、repository、要求tag、参照種別、取得できたtag object SHAとcommit SHA、期待する固定参照と観測値、provider応答の安全な相関情報を残す。"
+          meaning: "tag取得・annotated tag検証・commit解決の段階、repository、要求tag、参照種別、取得できたtag object SHAとcommit SHA、期待する固定参照と観測値、provider応答の安全な相関情報を表す診断情報。"

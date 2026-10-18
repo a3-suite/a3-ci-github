@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-integrity
         intent_id: detailed-diagnostics-integrity
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-integrity}]
       - id: maintained-distribution-inputs
         intent_id: distribution-plan-derived
@@ -58,7 +58,7 @@ verifications:
           - id: check-release-version-confirmed
             guarantee_ref: release-version-confirmed
       - id: invalid-release-version
-        intent_id: release-version-bound
+        intent_id: release-version-rejected
         input:
           tag: v1.2.3
           repository-version-variants: [missing, 01.2.3]
@@ -66,7 +66,7 @@ verifications:
           - id: check-invalid-release-version-rejected
             guarantee_ref: invalid-or-mismatched-release-version-rejected
       - id: mismatched-release-version
-        intent_id: release-version-bound
+        intent_id: release-version-rejected
         input:
           tag: v1.2.3
           repository-version: 1.2.4

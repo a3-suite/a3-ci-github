@@ -20,7 +20,7 @@ const environment = (options: Record<string, string>, output: string): NodeJS.Pr
 });
 
 // contract_id: contract.ci-release-assembly.outputs
-// integration_id: release-assembly-detailed-failure
+// flow_id: release-assembly-detailed-failure
 test('missing build inventory retains the failing stage and exact missing entries', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
@@ -37,7 +37,7 @@ test('missing build inventory retains the failing stage and exact missing entrie
 });
 
 // contract_id: contract.ci-release-assembly.outputs
-// integration_id: release-assembly-entrypoint
+// flow_id: release-assembly-entrypoint
 test('assembly bundle packages selected release skills', (t) => {
   // Arrange
   const f = selectedReleaseSkillsFixture(t);
@@ -62,7 +62,7 @@ test('assembly bundle packages selected release skills', (t) => {
 });
 
 // contract_id: contract.ci-release-assembly.outputs
-// integration_id: release-assembly-entrypoint
+// flow_id: release-assembly-entrypoint
 test('assembly bundle emits bound outputs only on complete success', (t) => {
   const f = fixture(t, { id: 'linux', runner: 'ubuntu-22.04', target: 'x86_64-unknown-linux-gnu' });
   const output = f.put('github-output', '');
@@ -84,7 +84,7 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
 });
 
 // contract_id: contract.ci-release-assembly.outputs
-// integration_id: release-assembly-output-injection-rejection
+// flow_id: release-assembly-output-injection-rejection
 test('assembly bundle rejects output path line injection before assembly', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
@@ -99,7 +99,7 @@ test('assembly bundle rejects output path line injection before assembly', (t) =
 });
 
 // contract_id: contract.ci-release-assembly.outputs
-// integration_id: release-assembly-entrypoint-rejection
+// flow_id: release-assembly-entrypoint-rejection
 test('assembly bundle rejects invalid input without successful outputs', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');

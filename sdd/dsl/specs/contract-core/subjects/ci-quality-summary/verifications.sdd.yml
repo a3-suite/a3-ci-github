@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: successful-quality-result
         intent_id: quality-summary-output-set
         input:
@@ -46,12 +46,12 @@ verifications:
           - id: check-quality-summary-excluded-status
             guarantee_ref: quality-summary-status-produced
       - id: all-excluded-rows-rejected
-        intent_id: quality-summary-rejected
+        intent_id: summary-all-excluded-rejection
         input:
           summary-json: '{"tests":[{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
         checks:
           - id: check-quality-summary-all-excluded-failure
-            guarantee_ref: quality-summary-failure-propagated
+            guarantee_ref: summary-all-excluded-rejected
       - id: omitted-evidence-uses-run-url
         intent_id: quality-summary-output-set
         input:
@@ -61,10 +61,39 @@ verifications:
           - id: check-quality-summary-default-evidence-status
             guarantee_ref: quality-summary-status-produced
       - id: omitted-evidence-without-run-context-rejected
-        intent_id: quality-summary-rejected
+        intent_id: summary-run-context-missing-rejection
         input:
           summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"success","applicable":true}]}'
-          github-run-context: missing-or-invalid
+          github-run-context: missing
         checks:
           - id: check-quality-summary-default-evidence-failure
-            guarantee_ref: quality-summary-failure-propagated
+            guarantee_ref: summary-run-context-missing-rejected
+      - id: mixed-applicability
+        intent_id: mixed-applicability
+        input:
+          summary-json:
+            jobs:
+              - unit: unit
+                execution: test command
+                result: success
+                evidence: evidence.log
+                collection: 完了
+              - unit: unit
+                execution: test command
+                result: 対象外
+                evidence: evidence.log
+                collection: 取得不可
+                reason: disabled by owner contract
+        checks:
+          - id: excluded-rows-not-aggregated
+            guarantee_ref: excluded-rows-not-aggregated
+      - id: default-evidence
+        intent_id: default-evidence
+        input:
+          row-evidence: null
+          server-url: https://github.com
+          repository: owner/project
+          run-id: "123"
+        checks:
+          - id: run-url-used-for-missing-evidence
+            guarantee_ref: run-url-used-for-missing-evidence

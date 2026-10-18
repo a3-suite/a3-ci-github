@@ -51,7 +51,7 @@ coreSafetyInvariant:
     - 検証前に破壊的副作用を起こさない
     - secret を永続化せず、実行可能入力として露出しない
     - 既存データとユーザー管理設定を既定で保護する
-    - 所有権変更は managed root 内に閉じる。root 外の書き込みは manifest contract の launcher 安全不変条件に従う launcher と必要な親ディレクトリ作成だけに限定する
+    - 所有権変更は managed root 内に閉じる。root 外の書き込みは launcher と必要な親ディレクトリ作成だけに限定する
     - privileged execution と user-editable file の境界を保つ
 projectOverrideClassification:
   id: project-override-classification

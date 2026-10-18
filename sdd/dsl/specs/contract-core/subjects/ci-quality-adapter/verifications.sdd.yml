@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: standard-adapter-execution
         intent_id: quality-adapter-standard-execution
         input:
@@ -16,16 +16,18 @@ verifications:
         checks:
           - id: check-quality-adapter-standard-status
             guarantee_ref: quality-adapter-standard-status-produced
+          - id: standard-descriptor-independent
+            guarantee_ref: standard-descriptor-independent
       - id: standard-rust-scopes
         intent_id: quality-adapter-standard-execution
-        input: {standard-bundle-id: rust-cargo-quality, execution-scopes: [all, native]}
+        input: { standard-bundle-id: rust-cargo-quality, execution-scope: all, toolchain-version: 1.80.0 }
         checks:
           - id: check-quality-adapter-rust-scope-status
             guarantee_ref: quality-adapter-standard-status-produced
       - id: standard-selection-rejected
         intent_id: quality-adapter-rejected
         input:
-          scenario: ambiguous-or-unknown-standard-selection
+          scenario: unknown-standard-selection
         checks:
           - id: check-quality-adapter-standard-rejection
             guarantee_ref: quality-adapter-failure-propagated
@@ -58,3 +60,56 @@ verifications:
         checks:
           - id: check-quality-adapter-toolchain-version-diagnostic
             guarantee_ref: quality-adapter-toolchain-version-diagnostic-present
+      - id: native-rust-rules
+        intent_id: native-rust-rules
+        input:
+          standard-bundle-id: rust-cargo-quality
+          execution-scope: native
+          toolchain-version: 1.80.0
+        checks:
+          - id: native-format-omitted
+            guarantee_ref: native-format-omitted
+          - id: native-security-omitted
+            guarantee_ref: native-security-omitted
+          - id: native-command-order
+            guarantee_ref: native-command-order
+          - id: native-terminal-prerequisite-status
+            guarantee_ref: native-terminal-prerequisite-status
+          - id: native-no-followup-after-failed-prerequisite
+            guarantee_ref: native-no-followup-after-failed-prerequisite
+      - id: unsupported-native-scope
+        intent_id: unsupported-native-scope
+        input:
+          standard-bundle-id: typescript-npm-quality
+          execution-scope: native
+        checks:
+          - id: rejected-scope-no-commands
+            guarantee_ref: rejected-scope-no-commands
+      - id: embedded-bundle-integrity
+        intent_id: embedded-bundle-integrity
+        input:
+          standard-bundle-id: rust-cargo-quality
+        checks:
+          - id: standard-source-path-validated
+            guarantee_ref: standard-source-path-validated
+          - id: standard-content-digest-checked
+            guarantee_ref: standard-content-digest-checked
+      - id: native-preparation-failure
+        intent_id: native-rust-rules
+        input:
+          standard-bundle-id: rust-cargo-quality
+          execution-scope: native
+          toolchain-version: 1.80.0
+          failed-command: fetch
+          command-exit: 7
+        checks:
+          - id: native-format-omitted
+            guarantee_ref: native-format-omitted
+          - id: native-security-omitted
+            guarantee_ref: native-security-omitted
+          - id: native-command-order
+            guarantee_ref: native-command-order
+          - id: native-terminal-prerequisite-status
+            guarantee_ref: native-terminal-prerequisite-status
+          - id: native-no-followup-after-failed-prerequisite
+            guarantee_ref: native-no-followup-after-failed-prerequisite

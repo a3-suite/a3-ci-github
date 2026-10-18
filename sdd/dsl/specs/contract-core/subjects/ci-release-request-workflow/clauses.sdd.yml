@@ -23,7 +23,7 @@ contracts:
     guarantees:
       - id: ci-release-request-workflow-success-observed
         when: ci-release-request-workflow-canonical-source-available
-        observation_ref: observation.ci.release-request-workflow.result
+        observation_ref: observation.ci-release-request-workflow.result
         claim:
           kind: observable-result
           op: present
@@ -32,7 +32,7 @@ contracts:
             value: request-handoff
       - id: ci-release-request-workflow-failure-observed
         when: ci-release-request-workflow-failure-route-required
-        observation_ref: observation.ci.release-request-workflow.result
+        observation_ref: observation.ci-release-request-workflow.result
         claim:
           kind: observable-result
           op: present
@@ -45,16 +45,61 @@ contracts:
         claim:
           kind: observable-result
           op: present
-          target: {kind: observation_field, value: details}
+          target: { kind: observation_field, value: details }
+      - id: request-no-publication-permission
+        when: ci-release-request-workflow-canonical-source-available
+        observation_ref: observation.ci-release-request-workflow.handoff.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: request-no-publication-permission
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: request-tag-before-handoff
+        when: ci-release-request-workflow-canonical-source-available
+        observation_ref: observation.ci-release-request-workflow.handoff.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: request-tag-before-handoff
+            right:
+              kind: value_set
+              values:
+                - tag-before-handoff
+      - id: request-failure-summary-always
+        when: ci-release-request-workflow-failure-route-required
+        observation_ref: observation.ci-release-request-workflow.handoff.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: request-failure-summary-always
+            right:
+              kind: value_set
+              values:
+                - always
     verification_intents:
       - id: detailed-diagnostics-handoff
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
-        guarantee_refs: [diagnostic-details-handoff]
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
+        guarantee_refs: [ diagnostic-details-handoff ]
       - id: ci-release-request-workflow-success-intent
         goal: Verify the canonical source declares the trusted capability boundary.
         guarantee_refs:
           - ci-release-request-workflow-success-observed
+          - request-no-publication-permission
+          - request-tag-before-handoff
       - id: ci-release-request-workflow-failure-intent
         goal: Verify the canonical source declares a failure-visible summary route.
         guarantee_refs:
           - ci-release-request-workflow-failure-observed
+          - request-failure-summary-always

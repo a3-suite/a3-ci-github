@@ -27,7 +27,7 @@ requirements:
       - version 変更時は実装方式に対応する配布物を更新し、exact release tag は公開する配布物を含むsource commitを指し、tag version は対象commitのrepository VERSIONと一致する
       - alias は必須quality checkを通過し、実装と接続を含む1回の公開成功を確認したexact releaseだけを指し、新しい公開版から古い版へ後退しない
       - 通常リリースの公開sourceはprotected mainへの統合証拠を必須とする。hotfixはgit-branch-strategyの正本が許可する公開後統合の順序に従い、最新安定版の基点のmain統合証拠と承認対象のhotfix sourceの同一性を確認する。統合順序の違いを理由に品質検証や固定参照の検証を省略しない
-      - Action の追加・削除時はコミットゲートが Action ディレクトリを列挙し、README.md の Action 一覧と用途の同期を検証する
+      - Action の追加・削除後も、README.md の Action 一覧と用途が実在する Action と一致し、不一致の変更を確定しない
     derived_artifacts:
       use_cases:
         - use_case_ref:

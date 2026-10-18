@@ -43,8 +43,6 @@ subjects:
       excludes: [installer-contract-compliance-judgment, project-owned-contract-semantics]
     baselineResolution:
       ownerSkill: ci-github
-      guide: references/deploy-ci-assets.guide.md
-      section: 対応条件
       requirements:
         - resolve-latest-published-stable-release-at-audit-start
         - bind-release-commit-manifest-and-registry-to-the-same-distribution
@@ -77,6 +75,7 @@ subjects:
       - do-not-update-every-action-pin-to-its-upstream-latest-version
       - delegate-installer-differences-through-installer-distribution
       - do-not-substitute-old-revision-preflight-success-for-standard-alignment
+      - requires-standard-migrationの差分は最新標準への移行案を要対応に示す。差分がなく導入済みrevisionだけが比較基準より古い場合も、最新標準への更新を推奨対応として要対応に示し、statusは変えない。
       - project固有の契約・文書・有効な指示・ローカルスキルと標準の競合を確認し、該当ownerの意味判断と解決案を保持する。旧規則の存在だけで固有差分を正当化しない。
       - 適用するownerの必須比較について、対象identity・比較基準・選択段階に対応する証拠の受領と充足確認を終えてからsubject statusを確定する。ownerのsuccess表記だけで比較実施を代替しない。
     classificationInputs:
@@ -158,6 +157,65 @@ subjects:
     modeHandling:
       read-only: report-comparison-and-migration-plan-without-mutation
       remediation: apply-authorized-migration-after-unresolved-project-choice-is-confirmed
+  - id: release-target-coverage
+    requirement: conditional
+    appliesWhen:
+      anyOf:
+        - project-declares-product-version-source
+        - project-has-installer-or-installer-adoption-result-is-required-or-recommended
+        - project-manages-public-agent-skills
+    phase: use-case-simulation
+    discovery:
+      sources:
+        - project-ssot-version-source-and-version-policy
+        - installer-distribution-applicability-and-adoption-result
+        - public-skill-roots-and-release-skills-selection
+      rules:
+        - unresolved-applicability-is-not-inapplicable
+    decisionOwner:
+      owner: ci-audit-orchestrator
+      owns: [release-target-inventory, release-path-coverage-comparison, release-version-consistency-comparison, release-recommendation-reporting]
+      excludes: [release-shape-classification, installer-adoption-decision, installer-contract-compliance-judgment, product-release-decision]
+    targets:
+      product: 製品のversion sourceが示すversionで、release-requestとrelease-publicationの標準presetにより製品をReleaseする経路
+      installer: installer assetを製品と同じversionの同じReleaseへ公開する経路
+      public-skills: 公開スキルのZIPを製品と同じversionの同じReleaseへ公開する経路
+    versionConsistency:
+      appliesWhen: 製品ownerが公開経路を採用済みの対象。未採用の対象はtargetsの推奨だけを扱い、version照合の対象外とする。
+      reference: 比較対象の既定の基準はReleaseのversion（git.release-flow.version）とし、comparedが別の基準を定める対象だけその基準を使う。versionInferenceは禁止する。
+      compared:
+        - 製品のversion sourceが示すversion
+        - installer manifestのrelease version、fixed reference、artifact URLが示すversion
+        - release-build-scriptsのasset manifestのversion
+        - 公開スキル証跡のversion
+        - 採用済みのpackage公開経路では、package manifestのversionをversion-plan-scriptsのpublish-versionと比較する。Releaseのversionとは、owner契約が同じversionへ拘束する場合だけ比較する。
+      rules:
+        - 追跡対象のmanifestに書かれたversionは、比較対象ごとの基準と値を比較する。生成時に決まるversionは、基準から生成される接続を構成監査で確認し、生成物の値の比較は証跡監査で行う。
+        - versionの不一致、基準と接続しない手書きの固定値、moving referenceは観測した対象契約違反としてstatusClassificationへ渡す。推奨対応へ読み替えない。
+        - 基準または比較対象のversionを特定できない場合は未確認とし、一致へ読み替えない。
+        - installer manifest自体の準拠判断はinstaller ownerに残し、本subjectはReleaseとのversion一致だけを比較する。
+    handling:
+      covered: no-recommendation
+      not-covered: report-release-recommendation-as-non-blocking-remediation-candidate
+      owner-declined-with-reason: report-reason
+      owner-choice-unconfirmed: report-owner-confirmation-request
+    rules:
+      - 未接続の対象に対する推奨はReleaseでの公開を促す対応候補であり、subject statusと適合を変えない。公開の採否と実行は製品ownerが決める。versionConsistencyの判定はこの規則の対象外とする。
+      - installerの採否と準拠はinstaller-distributionの結果を使い、本subjectで再判定しない。
+      - 公開スキルの同梱選択はci-github.release-skills-contractのselectionに従う。
+    reportingFields:
+      - release-target
+      - coverage-and-evidence
+      - version-reference-and-per-manifest-comparison
+      - owner-choice-and-reason
+      - recommended-release-route
+    modeHandling:
+      read-only: report-recommendation-without-mutation
+      remediation: apply-after-product-owner-confirms-release-target
+    inapplicable:
+      handling: excluded-from-aggregation
+      discoveryScope: required
+      reason: required
   - id: repository-root-readme
     requirement: required
     phase: use-case-simulation

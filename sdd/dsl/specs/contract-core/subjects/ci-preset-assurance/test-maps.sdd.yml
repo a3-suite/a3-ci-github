@@ -7,70 +7,70 @@ test_maps:
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "preset-validation-contract > preset-assurance-contract > preflight verifies enabled conditional owner extensions without changing consumer assets"
-        check_refs: [conditional-reachability]
+        check_refs: [ conditional-reachability ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: supplemental-static-selections
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "standard installer preflight > selection > validates the three static supplemental selections and rejects inconsistent inputs"
-        check_refs: [static-selection]
+        check_refs: [ static-selection ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: supplemental-snapshot-reachability-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "standard installer preflight > selection > recognizes only the authority snapshot consumed by the supplemental Action phases"
-        check_refs: [snapshot-reachability-rejected]
+        check_refs: [ snapshot-reachability-rejected ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.explicit-roots-required
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots"
-        check_refs: [check.ci-preset-assurance.explicit-roots-required]
+        check_refs: [ check.ci-preset-assurance.explicit-roots-required ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.read-only-output-rejected
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: "preset-assurance-contract > preset-assurance-contract > preset assurance rejects remediation output in read-only mode"
-        check_refs: [check.ci-preset-assurance.read-only-output-rejected]
+        check_refs: [ check.ci-preset-assurance.read-only-output-rejected ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: pending-publication-actions
     tests:
       - path: runtime/preset/tests/action-availability.test.mjs
         symbol: "preset-action-availability-contract > selected pending publication Actions block deployment without disturbing released presets"
-        check_refs: [availability]
+        check_refs: [ availability ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: pending-release-publisher
     tests:
       - path: runtime/preset/tests/action-availability.test.mjs
         symbol: "preset-action-availability-contract > selected pending publication Actions block deployment without disturbing released presets"
-        check_refs: [publisher-availability]
+        check_refs: [ publisher-availability ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: standard-publisher-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "contract.ci-preset-assurance.verification > standard-release-publisher-footprint > standard Release workflow requires no local publisher and preflight rejects write binding drift"
-        check_refs: [publisher-drift]
+        check_refs: [ publisher-drift ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: standard-authority-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "contract.ci-preset-assurance.verification > standard-release-authority-footprint > standard Release authority requires no consumer script and rejects input binding drift"
-        check_refs: [authority-drift]
+        check_refs: [ authority-drift ]
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "contract.ci-preset-assurance.verification > authority snapshot preflight > rejects JSON-encoded supplemental binding drift"
-        check_refs: [authority-drift]
+        check_refs: [ authority-drift ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: supplemental-phase-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "publication-validation > preflight rejects supplemental phase bypasses and mismatched Action inputs"
-        check_refs: [phase-mismatch]
+        check_refs: [ phase-mismatch ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: retired-release-entrypoints
     tests:
       - path: runtime/preset/tests/action-availability.test.mjs
         symbol: "preset-actionized-fallback-rejection > preflight rejects all retired Release entrypoints and references without modifying the consumer"
-        check_refs: [fallback-rejection]
+        check_refs: [ fallback-rejection ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.valid-preset-succeeds
     tests:
@@ -80,6 +80,7 @@ test_maps:
           - check.ci-preset-assurance.valid-preset-succeeds
           - check.ci-preset-assurance.valid-evidence-exposed
           - check.ci-preset-assurance.semantic-review-state-exposed
+          - valid-consumer-unchanged
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.ci-preset-assurance.verification > consumer-preset-assurance-cli > public preset validation CLI preserves the consumer tree in read-only mode"
         check_refs:
@@ -92,37 +93,37 @@ test_maps:
           - check.ci-preset-assurance.valid-preset-succeeds
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "contract.ci-preset-assurance.verification > authority snapshot preflight > preserves static bindings and JSON string values"
-        check_refs: [check.ci-preset-assurance.valid-preset-succeeds]
+        check_refs: [ check.ci-preset-assurance.valid-preset-succeeds ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.drift-fails
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation rejects independent edits to unused approved pins"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
       - path: runtime/preset/tests/standard-quality-bundles.test.mjs
         symbol: "contract.ci-preset-assurance.verification > preset-assurance-contract > preflight validates fixed standard quality bundles without a descriptor or external owner checkout"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "preset-validation-contract > preset-assurance-contract > preset assurance reports canonical drift without modifying the consumer project"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails, drift-consumer-unchanged ]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "preset-validation-contract > preset-assurance-contract > preset assurance rejects an asset lock digest drift without remediation"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "contract.ci-preset-assurance.verification > preset-assurance-contract > preflight validates owner descriptor settings and rejects malformed content without remediation"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "contract.ci-preset-assurance.verification > preset-assurance-contract > preflight accepts registered quality trigger extensions and rejects malformed event settings"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
       - path: runtime/preset/tests/publication-validation.test.mjs
         symbol: "contract.ci-preset-assurance.verification > authority snapshot preflight > rejects invalid templates with a snapshot parse diagnostic"
-        check_refs: [check.ci-preset-assurance.drift-fails]
+        check_refs: [ check.ci-preset-assurance.drift-fails ]
   - verification_id: verification.ci-preset-assurance.asset-lock
     case_id: case.ci-preset-assurance.asset-lock-generated
     tests:
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
+      - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: "contract.ci-selective-distribution.application > provider-pin-companion > Release and Package generated companions support lock and preflight without fixture pin injection"
-        check_refs: [check.ci-preset-assurance.asset-lock-source-bound, check.ci-preset-assurance.asset-lock-assets-recorded]
+        check_refs: [ check.ci-preset-assurance.asset-lock-source-bound, check.ci-preset-assurance.asset-lock-assets-recorded ]
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests"
         check_refs:
@@ -138,28 +139,37 @@ test_maps:
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: "preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects a noncanonical source revision"
-        check_refs: [check.ci-preset-assurance.asset-lock-invalid-revision-rejected]
+        check_refs: [ check.ci-preset-assurance.asset-lock-invalid-revision-rejected ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: pending-quality-platform-action
     tests:
       - path: runtime/preset/tests/quality-platform-selection.test.mjs
         symbol: "quality-platform-selection > preset-assurance-contract > unreleased quality bundle and optional selection APIs block deployment until fixed releases exist"
-        check_refs: [quality-platform-availability]
+        check_refs: [ quality-platform-availability ]
   - verification_id: verification.ci-preset-assurance.verification
     case_id: detailed-failure-verification
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > preset-assurance preserves its outcome and safe diagnostic context"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.ci-preset-assurance.verification > consumer-preset-assurance-cli > public preset validation CLI retains the failing preset status when a managed workflow drifts"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
   - verification_id: verification.ci-preset-assurance.asset-lock
     case_id: detailed-failure-asset-lock
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: "runtime failure diagnostics > asset-lock preserves its outcome and safe diagnostic context"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: "contract.ci-preset-assurance.verification > consumer-preset-assurance-cli > public asset lock CLI retains the failing preset findings without writing a lock"
-        check_refs: [diagnostic-details]
+        check_refs: [ diagnostic-details ]
+  - verification_id: verification.ci-preset-assurance.asset-lock
+    case_id: canonical-lock-bindings
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests
+        check_refs:
+          - lock-source-equals-request
+          - lock-canonical-digests-match
+          - lock-applied-digests-match

@@ -42,10 +42,16 @@ test_maps:
         symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
         check_refs:
           - check-request-trigger-status
+          - check-request-trigger-run-bound
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
         check_refs:
           - check-request-trigger-status
+          - check-request-trigger-run-bound
+      - path: runtime/workflow-run/tests/request-trigger.test.ts
+        symbol: "verifyRequestTrigger(requestWorkflow, env) > accepts a successful default-branch dispatch of the request workflow"
+        check_refs:
+          - check-request-trigger-run-bound
   - verification_id: verification.ci-package-publication-request.outputs
     case_id: request-trigger-rejected
     tests:
@@ -57,3 +63,7 @@ test_maps:
         symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
         check_refs:
           - check-request-trigger-failure
+      - path: runtime/workflow-run/tests/request-trigger.test.ts
+        symbol: "verifyRequestTrigger(requestWorkflow, env) > rejects each trigger field that does not match the request workflow dispatch"
+        check_refs:
+          - check-request-trigger-run-bound

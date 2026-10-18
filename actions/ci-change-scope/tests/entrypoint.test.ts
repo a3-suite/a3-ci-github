@@ -47,7 +47,7 @@ const diagnosticOf = (stderr: string): Record<string, unknown> =>
   JSON.parse(stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
 
 // contract_id: contract.ci-change-scope.outputs
-// integration_id: ci-change-scope-contract-entrypoint
+// flow_id: ci-change-scope-contract-entrypoint
 test('entrypoint reports a valid range', () => {
   for (const files of [[], ['docs/日本語.md', 'docs/line\nbreak.md', 'docs/ space .md', 'docs/back\\slash.md'], [' README.md ', 'source.ts']]) {
     // Arrange
@@ -71,7 +71,7 @@ test('entrypoint reports a valid range', () => {
   }
 });
 
-// integration_id: ci-change-scope-entrypoint-regression
+// flow_id: ci-change-scope-entrypoint-regression
 test('entrypoint fails open for an invalid SHA', () => {
   // Arrange
   // Act
@@ -92,7 +92,7 @@ test('entrypoint fails open for an invalid SHA', () => {
   }
 });
 
-// integration_id: ci-change-scope-entrypoint-regression
+// flow_id: ci-change-scope-entrypoint-regression
 test('entrypoint fails open and keeps both SHAs when the base commit is unavailable', () => {
   // Arrange
   const base = 'c'.repeat(40);

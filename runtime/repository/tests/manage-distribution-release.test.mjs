@@ -220,7 +220,7 @@ const execute = (operation, assetDirectory, binaryRoot, stateRoot, extraEnv = {}
 describe("contract.ci-selective-distribution.publication", () => {
   describe("repository-selective-distribution-release", () => {
     // contract_id: contract.ci-selective-distribution.publication
-    // integration_id: repository-selective-distribution-release
+    // flow_id: repository-selective-distribution-release
     test('distribution Release publication is idempotent and readback rejects changed remote bytes', () => {
       const assetDirectory = prepareAssets();
       const binaryRoot = prepareFakeGh();

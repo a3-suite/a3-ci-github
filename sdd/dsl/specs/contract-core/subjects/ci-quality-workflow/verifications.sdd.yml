@@ -7,8 +7,8 @@ verifications:
     cases:
       - id: detailed-failure-execution
         intent_id: detailed-diagnostics-execution
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-execution}]
+        input: { scenario: rejected-public-invocation }
+        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-execution } ]
       - id: ci-quality-workflow-reusable-binding
         intent_id: ci-quality-workflow-reusable-binding-intent
         input:
@@ -16,6 +16,18 @@ verifications:
         checks:
           - id: check-ci-quality-workflow-reusable-binding
             guarantee_ref: ci-quality-workflow-reusable-binding-observed
+          - id: quality-fixed-reference
+            guarantee_ref: quality-fixed-reference
+          - id: quality-explicit-input-binding
+            guarantee_ref: quality-explicit-input-binding
+          - id: quality-summary-identity
+            guarantee_ref: quality-summary-identity
+          - id: quality-no-consumer-callee-copy
+            guarantee_ref: quality-no-consumer-callee-copy
+          - id: quality-caller-read-permissions
+            guarantee_ref: quality-caller-read-permissions
+          - id: quality-caller-summary-always
+            guarantee_ref: quality-caller-summary-always
       - id: ci-quality-workflow-success
         intent_id: ci-quality-workflow-success-intent
         input:
@@ -23,6 +35,18 @@ verifications:
         checks:
           - id: check-ci-quality-workflow-success
             guarantee_ref: ci-quality-workflow-success-observed
+          - id: quality-source-before-adapter
+            guarantee_ref: quality-source-before-adapter
+          - id: quality-results-before-summary
+            guarantee_ref: quality-results-before-summary
+          - id: quality-cargo-cache-rust-only
+            guarantee_ref: quality-cargo-cache-rust-only
+          - id: quality-cargo-cache-before-adapter
+            guarantee_ref: quality-cargo-cache-before-adapter
+          - id: quality-cargo-cache-failure-isolated
+            guarantee_ref: quality-cargo-cache-failure-isolated
+          - id: quality-untrusted-cargo-cache-absent
+            guarantee_ref: quality-untrusted-cargo-cache-absent
       - id: ci-quality-workflow-failure
         intent_id: ci-quality-workflow-failure-intent
         input:
@@ -30,6 +54,10 @@ verifications:
         checks:
           - id: check-ci-quality-workflow-failure
             guarantee_ref: ci-quality-workflow-failure-observed
+          - id: quality-failure-summary-always
+            guarantee_ref: quality-failure-summary-always
+          - id: quality-unresolved-results-visible
+            guarantee_ref: quality-unresolved-results-visible
       - id: ci-quality-workflow-platform
         intent_id: ci-quality-workflow-platform-intent
         input:
@@ -37,3 +65,7 @@ verifications:
         checks:
           - id: check-ci-quality-workflow-platform
             guarantee_ref: ci-quality-workflow-platform-chain-observed
+          - id: platform-resolution-before-execution
+            guarantee_ref: platform-resolution-before-execution
+          - id: platform-execution-before-summary
+            guarantee_ref: platform-execution-before-summary
