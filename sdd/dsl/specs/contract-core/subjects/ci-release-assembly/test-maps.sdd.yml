@@ -52,7 +52,19 @@ test_maps:
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order"
-        check_refs: [ digest ]
+        check_refs: [ digest, asset-digest-serialization, asset-digest-asset-order, asset-digest-field-order ]
+  - verification_id: verification.ci-release-assembly.outputs
+    case_id: noncanonical-checksum-sidecar
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
+        check_refs: [ rejection ]
+  - verification_id: verification.ci-release-assembly.outputs
+    case_id: canonical-checksum-sidecar
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
+        check_refs: [ accepted-checksum-encoding, accepted-checksum-digest-form, accepted-checksum-separator, accepted-checksum-line-ending ]
   - verification_id: verification.ci-release-assembly.outputs
     case_id: platform-checkout-eol
     tests:

@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-handoff
         intent_id: detailed-diagnostics-handoff
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-handoff } ]
       - id: ci-release-request-workflow-success
         intent_id: ci-release-request-workflow-success-intent

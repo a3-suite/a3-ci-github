@@ -5,7 +5,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { test, vi, describe, expect } from 'vitest';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
-import { validateEvidence } from '../schema.ts';
+import { assetDigest, validateEvidence } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
 import skillPolicy from '../skill-package-policy.json';
 import { spawnTimeoutMs } from "./assembly.fixtures.mjs";
@@ -244,6 +244,7 @@ describe("contract.ci-release-assembly.outputs", () => {
         ['crlf', `${digest}  ${f.name}\r\n`],
         ['bom', `\uFEFF${digest}  ${f.name}\n`],
         ['single-space', `${digest} ${f.name}\n`],
+        ['uppercase-digest', `${digest.toUpperCase()}  ${f.name}\n`],
         ['wrong-digest', `${'0'.repeat(64)}  ${f.name}\n`],
       ];
       for (const [label, record] of records) {
@@ -263,11 +264,14 @@ describe("contract.ci-release-assembly.outputs", () => {
     test('asset digest preserves producer bytes and ignores JSON key order', (t) => {
       const f = fixture(t);
       const result = f.assemble();
-      const originalDigest = sha256(Buffer.from(JSON.stringify(result.assets)));
+      // The expectation fixes name ordering and field order independently of the producer output.
+      const canonical = [...result.assets].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(({ name, sha256: digest, size }) => ({ name, sha256: digest, size }));
+      const originalDigest = sha256(Buffer.from(JSON.stringify(canonical)));
       expect(result.asset_digest).toBe(originalDigest);
       const reordered = { ...result, assets: result.assets.map(({ name, sha256: digest, size }) => ({ size, sha256: digest, name })) };
       f.put('handoff/assembly.json', reordered);
       expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.asset_digest).toBe(originalDigest);
+      expect(assetDigest([...reordered.assets].reverse())).toBe(originalDigest);
       for (const [field, value] of [['name', 'changed.tar.gz'], ['sha256', '0'.repeat(64)], ['size', result.assets[0].size + 1]]) {
         f.put('handoff/assembly.json', { ...result, assets: result.assets.map((asset, index) => index === 0 ? { ...asset, [field]: value } : asset) });
         expect(() => loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot })).toThrow(/asset-set-mismatch/);

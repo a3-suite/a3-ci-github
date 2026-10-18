@@ -26,7 +26,7 @@ main_success_scenario:
   - summary: 実装で入力制約、secret 取り扱い、成功 output、失敗終了状態を検証する
   - summary: 共通化する定型処理は単独実行できる script として実装し、Composite Action は入出力写像だけを担当する
   - summary: 実装方式に応じた配布物を再生成し、契約テスト、実装テスト、配布物検証を実行する
-  - summary: Action ディレクトリの一覧を README.md へ反映し、コミットゲートで一覧の同期を検証する
+  - summary: README.md の Action 一覧と用途を実在する Action に合わせ、不一致がないことを確認する
   - summary: 実装と配布物を同じ immutable ref に含め、利用者が source build なしで実行できる状態を公開する
 success_outcomes:
   - Action の公開契約、実装、配布物が同じ ref で一致する

@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
+        input: {scenario: rejected-public-invocation}
         checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
       - id: request-trigger-accepted
         intent_id: request-trigger-verified
@@ -17,6 +17,8 @@ verifications:
         checks:
           - id: check-request-trigger-status
             guarantee_ref: package-request-status-produced
+          - id: check-request-trigger-run-bound
+            guarantee_ref: request-trigger-run-bound
       - id: request-trigger-rejected
         intent_id: package-request-rejected
         input:

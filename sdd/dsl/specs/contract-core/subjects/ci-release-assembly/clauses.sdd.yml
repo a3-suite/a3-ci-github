@@ -3,7 +3,7 @@ name: contract-clauses
 subject_ref: subject.ci.release-assembly
 contracts:
   - id: contract.ci-release-assembly.outputs
-    summary: Assembly checks authority, snapshot, exact platform and build inventories, source/version identity and asset/checksum bytes before producing a new handoff. Platform manifest identity uses the source-text identity rule of contract.ci-release-authority.outputs. Supplemental records remain opaque and bind the selected owner contract, asset, source, evidence and provenance digests. asset_digest is SHA256 of compact JSON encoded as UTF-8 without a terminal newline after schema validation, existing name ordering (localeCompare with en) and projection of each asset in fixed field order name, sha256, size; input object key order does not affect it. No source execution or provider write is performed. Checksum sidecars use UTF-8 without BOM, lowercase SHA256, exactly two spaces, the asset filename and exactly one terminal LF; producers and verifiers compare exact bytes without newline normalization.
+    summary: Assembly checks authority, snapshot, exact platform and build inventories, source/version identity and asset/checksum bytes before producing a new handoff. Platform manifest identity uses the source-text identity rule of contract.ci-release-authority.outputs. Supplemental records remain opaque and bind the selected owner contract, asset, source, evidence and provenance digests. No source execution or provider write is performed.
     conditions:
       - id: diagnostic-required-outputs
         environment_predicate:
@@ -65,6 +65,97 @@ contracts:
             right:
               kind: value_set
               values: [ failure ]
+      - id: asset-digest-serialization
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: asset-digest-serialization
+            right:
+              kind: value_set
+              values: [ compact-utf8-json-without-terminal-newline ]
+      - id: asset-digest-asset-order
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: asset-digest-asset-order
+            right:
+              kind: value_set
+              values: [ name-order-localecompare-en ]
+      - id: asset-digest-field-order
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: asset-digest-field-order
+            right:
+              kind: value_set
+              values: [ name-sha256-size ]
+      - id: accepted-checksum-encoding
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: accepted-checksum-encoding
+            right:
+              kind: value_set
+              values: [ utf8-without-bom ]
+      - id: accepted-checksum-digest-form
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: accepted-checksum-digest-form
+            right:
+              kind: value_set
+              values: [ lowercase-sha256 ]
+      - id: accepted-checksum-separator
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: accepted-checksum-separator
+            right:
+              kind: value_set
+              values: [ two-spaces ]
+      - id: accepted-checksum-line-ending
+        when: assembly-valid
+        observation_ref: observation.ci-release-assembly.comparisons
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: accepted-checksum-line-ending
+            right:
+              kind: value_set
+              values: [ single-terminal-lf ]
       - id: diagnostic-details-outputs
         when: diagnostic-required-outputs
         observation_ref: observation.ci-release-assembly.detailed-diagnostics
@@ -74,11 +165,21 @@ contracts:
           target: { kind: observation_field, value: details }
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-outputs ]
       - id: bound-assembly
-        goal: Complete validation produces the authority-bound handoff, asset digest and success output without overwriting an existing destination.
-        guarantee_refs: [ assembly-success, bound-handoff, bound-asset-digest ]
+        goal: Complete validation produces the authority-bound handoff, asset digest and success output from canonical checksum sidecars without overwriting an existing destination.
+        guarantee_refs:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
+          - asset-digest-serialization
+          - asset-digest-asset-order
+          - asset-digest-field-order
+          - accepted-checksum-encoding
+          - accepted-checksum-digest-form
+          - accepted-checksum-separator
+          - accepted-checksum-line-ending
       - id: same-release-skills-assembly-valid
         goal: Verify the assembly-valid input partition.
         guarantee_refs:

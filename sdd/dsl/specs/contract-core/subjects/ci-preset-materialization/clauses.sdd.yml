@@ -263,7 +263,7 @@ contracts:
             right: {kind: value_set, values: [matched]}
     verification_intents:
       - id: detailed-diagnostics-application
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [diagnostic-details-application]
       - id: ci-preset-materialization-success-intent
         goal: A successful materialization exposes the selected bundle and every copied or reused file; standard Action bundles accept an omitted source-root, return no files and include repository-owned source path and digest in their binding.

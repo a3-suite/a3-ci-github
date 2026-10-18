@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-verification
         intent_id: detailed-diagnostics-verification
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-verification } ]
       - id: case.ci-preset-assurance.explicit-roots-required
         intent_id: ci-preset-assurance-explicit-roots-intent
@@ -141,7 +141,7 @@ verifications:
     cases:
       - id: detailed-failure-asset-lock
         intent_id: detailed-diagnostics-asset-lock
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-asset-lock } ]
       - id: case.ci-preset-assurance.asset-lock-generated
         intent_id: ci-preset-assurance-lock-generation-intent

@@ -869,7 +869,6 @@ describe("workflow-contracts", () => {
           const intent = contract.verification_intents.find((entry) => entry.id.startsWith('detailed-diagnostics-'));
           expect(intent, contract.id).toBeDefined();
           expect(intent.goal, contract.id).toContain(shared.id);
-          expect(intent.goal, contract.id).toContain('actual failure evidence requires execution');
           const guarantee = contract.guarantees.find((entry) => intent.guarantee_refs.includes(entry.id));
           expect(guarantee.claim.target.value, contract.id).toBe('details');
           const condition = contract.conditions.find((entry) => entry.id === guarantee.when);

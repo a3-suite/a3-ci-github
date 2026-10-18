@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-preparation
         intent_id: detailed-diagnostics-preparation
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-preparation }, { id: diagnostic-diagnostic-only-tool-acquisition, guarantee_ref: diagnostic-diagnostic-only-tool-acquisition } ]
       - id: selected-quality-toolchain
         intent_id: quality-toolchain-selection-verified

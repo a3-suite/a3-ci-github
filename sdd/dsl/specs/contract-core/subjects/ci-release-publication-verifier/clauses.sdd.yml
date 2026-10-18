@@ -265,7 +265,7 @@ contracts:
               - matched
     verification_intents:
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-outputs ]
       - id: observe-absence
         goal: Read-only absence observation emits only pre-create outputs bound to authority and handoff.

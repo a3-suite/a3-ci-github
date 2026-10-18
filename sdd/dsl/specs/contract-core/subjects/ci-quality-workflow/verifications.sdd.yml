@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-execution
         intent_id: detailed-diagnostics-execution
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-execution } ]
       - id: ci-quality-workflow-reusable-binding
         intent_id: ci-quality-workflow-reusable-binding-intent
@@ -39,6 +39,14 @@ verifications:
             guarantee_ref: quality-source-before-adapter
           - id: quality-results-before-summary
             guarantee_ref: quality-results-before-summary
+          - id: quality-cargo-cache-rust-only
+            guarantee_ref: quality-cargo-cache-rust-only
+          - id: quality-cargo-cache-before-adapter
+            guarantee_ref: quality-cargo-cache-before-adapter
+          - id: quality-cargo-cache-failure-isolated
+            guarantee_ref: quality-cargo-cache-failure-isolated
+          - id: quality-untrusted-cargo-cache-absent
+            guarantee_ref: quality-untrusted-cargo-cache-absent
       - id: ci-quality-workflow-failure
         intent_id: ci-quality-workflow-failure-intent
         input:

@@ -28,7 +28,11 @@ test_maps:
           - quality-results-before-summary
       - path: tests/workflow-contracts.process.test.mjs
         symbol: "workflow-contracts > quality-workflow-contract > only trusted Rust quality reuses the Cargo cache while untrusted and Release builds start clean"
-        check_refs: [ check-ci-quality-workflow-success ]
+        check_refs:
+          - quality-cargo-cache-rust-only
+          - quality-cargo-cache-before-adapter
+          - quality-cargo-cache-failure-isolated
+          - quality-untrusted-cargo-cache-absent
   - verification_id: verification.ci-quality-workflow.execution
     case_id: ci-quality-workflow-failure
     tests:

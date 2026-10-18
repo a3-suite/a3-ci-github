@@ -52,3 +52,14 @@ observations:
         - selector: details
           kind: observation_field
           meaning: "create/verifyのoperation、要求の選択・作成・照合・出力書き込みを区別し、createでは作成するsource SHA・version・target identity、verifyでは期待source SHA、および違反fieldと期待/観測値を残す。"
+  - id: observation.ci-package-publication-request.trigger-verification
+    summary: The Action exposes whether verify-trigger accepted the triggering workflow run before request artifacts are downloaded.
+    boundary:
+      ref: boundary.action-output
+    value:
+      root: action.step-result
+      kind: object
+      fields:
+        - selector: accepted-trigger-run
+          kind: observation_field
+          meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.

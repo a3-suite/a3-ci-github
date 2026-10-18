@@ -11,7 +11,7 @@ verifications:
         checks: [ { id: refusal, guarantee_ref: phase-rejected }, { id: diagnostic, guarantee_ref: phase-diagnostic } ]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
-        input: { scenario: rejected-failed-or-unresolved-public-invocation, operation: build-platform }
+        input: { scenario: rejected-public-invocation, operation: build-platform }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
       - id: platform-phase
         intent_id: bound-phase
@@ -193,7 +193,7 @@ verifications:
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
         input:
-          scenario: rejected-failed-or-unresolved-public-invocation
+          scenario: rejected-public-invocation
           operation: assemble
           supplemental-build-root: supplemental-build
         checks:

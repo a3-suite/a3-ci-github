@@ -125,6 +125,8 @@ runtime_contexts:
     summary: The shared Rust source verification script failed.
   - id: runtime-context.rust-release-build-inputs-match-authority
     summary: The Rust build request has valid authority, source identity, exact toolchain, unique platform selection, package metadata, a binary that reports the authority version as an independent token, and an unclaimed output destination.
+  - id: runtime-context.rust-release-build-commands-succeed
+    summary: The Rust build inputs match the release authority and the toolchain setup, build, package, checksum, manifest and artifact verification commands complete successfully.
   - id: runtime-context.rust-release-build-rejected
     summary: A Rust build input is invalid, does not match the release authority, selects an ambiguous platform, uses a mutable toolchain, targets an existing output destination, or the binary does not report the authority version as an independent token.
   - id: runtime-context.rust-release-version-report-rejected
@@ -147,6 +149,8 @@ runtime_contexts:
     summary: The publication request has been verified against the invoking workflow evidence and exposes the bound release request run ID.
   - id: runtime-context.package-publication-request-succeeded
     summary: The package publication request has been created or verified successfully and exposes its bound source identity.
+  - id: runtime-context.request-trigger-verification-invoked
+    summary: A publication request Action runs verify-trigger for the workflow_run event that triggered its caller.
   - id: runtime-context.quality-adapter-toolchain-version-report-rejected
     summary: A quality adapter toolchain version command does not report the requested version as an independent token, or the command exits non-zero.
   - id: runtime-context.action-input-invalid
@@ -165,6 +169,10 @@ runtime_contexts:
     summary: The trusted manifest and every selected regular file match the immutable repository revision, size, and SHA-256.
   - id: runtime-context.selective-distribution-source-invalid
     summary: The manifest, redirect, path, source file, size, or SHA-256 does not satisfy the selective distribution contract.
+  - id: runtime-context.selective-distribution-publication-valid
+    summary: The exact tag, approved source and implementation revisions, integration evidence and fixed workflow and installer connections pass provider checks, and the prepared Release assets can be read back byte-identically.
+  - id: runtime-context.selective-distribution-publication-invalid
+    summary: The approved source, implementation binding, integration evidence or execution inputs fail provider checks, or a Release asset read back differs from its prepared bytes.
   - id: runtime-context.selective-distribution-application-valid
     summary: The approved plan, selected local distribution, and observed consumer destinations remain unchanged under an exclusive apply lock.
   - id: runtime-context.selective-distribution-application-conflict

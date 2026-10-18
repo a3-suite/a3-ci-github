@@ -8,27 +8,34 @@ test_maps:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
         check_refs:
-          - check-rust-release-processing-outcome
+          - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite"
         check_refs:
-          - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package failure leaves no final or temporary output directory"
         check_refs:
-          - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package preserves an output directory created immediately before publication"
         check_refs:
-          - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package removes its claimed output when publication fails"
         check_refs:
-          - check-rust-release-processing-outcome
           - check-rust-release-final-output-safe
+  - verification_id: verification.ci-rust-release-build.processing
+    case_id: completed-rust-release-processing
+    tests:
+      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building"
+        check_refs:
+          - check-rust-release-processing-success
+      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
+        symbol: "contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite"
+        check_refs:
+          - check-rust-release-processing-success
   - verification_id: verification.ci-rust-release-build.processing
     case_id: rejected-rust-release-processing
     tests:

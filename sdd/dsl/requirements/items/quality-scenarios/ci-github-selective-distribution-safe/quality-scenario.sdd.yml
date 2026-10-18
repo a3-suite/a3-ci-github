@@ -11,10 +11,10 @@ response_measure:
   - 公開対象に含まれない実装SHA、実行資材の差異、または旧実装への接続を検出した場合は公開を成功扱いにしない
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開またはconsumer管理資産変更を成功扱いにしない
   - GitHub Releaseの3 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
-  - 通信にはtimeoutと有限retryを適用し、検証済みlocal distributionは同一manifest digestの場合だけ再利用する
+  - 通信が応答しない場合も無期限に待たず失敗として識別でき、検証済みlocal distributionは同一manifest digestの場合だけ再利用される
   - asset単体選択の不足依存、preset閉包の欠落、外部owner identity不足を成功扱いにしない
   - plan後にmanifest、source、destinationまたは所有権を示すasset lockのdigestが変化した場合はapplyを停止する
-  - 同一projectのapplyは排他し、consumer変更前にtransactionを永続化してpartial applyまたは中断applyを変更前状態へ戻す
+  - 同一projectで並行するapplyは成功扱いにならず、partial applyまたは中断applyは変更前状態へ戻せる
   - 管理外destinationを上書きせず、staleは自動削除しない
   - 旧distributionは新revisionの受入完了まで保持し、参照状態を判断できない場合はpruneしない
 related_requirements:

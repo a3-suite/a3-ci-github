@@ -202,7 +202,7 @@ contracts:
                 - absent
     verification_intents:
       - id: detailed-diagnostics-publication
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-publication ]
       - id: ci-package-publication-workflow-success-intent
         goal: Verify preparation and publication fixed-reference availability, typed inputs, explicit registry secret and permissions fail closed; request validation precedes preparation, and the default-branch workflow_run caller entry, consumer control checkout at github.workflow_sha with immediate HEAD verification, and handoff validation precede credential-bearing publication and registry readback.

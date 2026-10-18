@@ -242,19 +242,79 @@ contracts:
               kind: value_set
               values:
                 - execution-before-summary
+      - id: quality-cargo-cache-rust-only
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-cargo-cache-profile-condition
+            right:
+              kind: value_set
+              values:
+                - rust-profile-only
+      - id: quality-cargo-cache-before-adapter
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-cargo-cache-before-adapter
+            right:
+              kind: value_set
+              values:
+                - cache-before-adapter
+      - id: quality-cargo-cache-failure-isolated
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-cargo-cache-failure-dependency
+            right:
+              kind: value_set
+              values:
+                - absent
+      - id: quality-untrusted-cargo-cache-absent
+        when: ci-quality-workflow-canonical-source-available
+        observation_ref: observation.ci-quality-workflow.execution.relations
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: quality-untrusted-cargo-cache-use
+            right:
+              kind: value_set
+              values:
+                - absent
     verification_intents:
       - id: detailed-diagnostics-execution
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-execution ]
       - id: ci-quality-workflow-reusable-binding-intent
         goal: Verify explicit typed inputs, read permissions, a registered fixed reusable target, no consumer callee copy, and an always-run caller summary. Local evidence does not establish Hosted check-name compatibility.
         guarantee_refs: [ ci-quality-workflow-reusable-binding-observed, quality-fixed-reference, quality-explicit-input-binding, quality-summary-identity, quality-no-consumer-callee-copy, quality-caller-read-permissions, quality-caller-summary-always ]
       - id: ci-quality-workflow-success-intent
-        goal: Verify trusted source resolution precedes adapter execution and the aggregate decision follows the applicable execution jobs. Only the trusted Rust execution restores the Cargo cache before adapter execution and saves it after the job succeeds; a cache path resolution failure leaves adapter execution and its diagnostics unchanged. Untrusted pull request and Release jobs start without it.
+        goal: Verify trusted source resolution precedes adapter execution, the aggregate decision follows the applicable execution jobs, and the Cargo cache is confined to trusted Rust execution before the adapter without making adapter execution depend on cache path resolution.
         guarantee_refs:
           - ci-quality-workflow-success-observed
           - quality-source-before-adapter
           - quality-results-before-summary
+          - quality-cargo-cache-rust-only
+          - quality-cargo-cache-before-adapter
+          - quality-cargo-cache-failure-isolated
+          - quality-untrusted-cargo-cache-absent
       - id: ci-quality-workflow-failure-intent
         goal: Verify the failure-visible summary runs after applicable execution jobs even when they fail or remain unresolved.
         guarantee_refs:

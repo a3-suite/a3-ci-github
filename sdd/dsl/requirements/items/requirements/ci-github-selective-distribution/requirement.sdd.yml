@@ -23,7 +23,7 @@ requirements:
       - exact tagのGitHub Releaseはmanifest、standalone fetch CLI、SHA256SUMSだけを公開し、remote readbackが準備済みbyteと一致した後だけ成功する
       - consumerは選択した資材だけを固定SHA URLからstagingへ取得し、全file検証後にproject-local distributionとして利用できる
       - asset単体取得は不足依存を診断し、preset選択は必須依存閉包を解決する
-      - canonical workflowのcopyは依頼で許可された範囲の差分plan確認、同一digest照合、排他、前提再確認を経て実行され、管理外差分を上書きしない
+      - canonical workflowのcopyは依頼で許可された範囲で、確認済みplanと適用時の状態が一致する場合だけ実行され、管理外差分を上書きしない
       - apply失敗または明示rollback時に今回のtransactionが変更したmanaged fileを復旧できる
       - runtime、lint、Agent Skill、Action、external skill、project-owned extensionの適用責務を混在させない
       - clean checkoutから固定Release identityを使って選択済みdistributionを再構成できる

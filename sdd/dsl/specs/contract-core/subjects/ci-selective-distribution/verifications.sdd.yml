@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: detailed-failure-selection
         intent_id: detailed-diagnostics-selection
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-selection } ]
       - id: selective-distribution-selection-selective-distribution-selection-valid
         intent_id: selective-distribution-selection-intent-selective-distribution-selection-valid
@@ -34,7 +34,7 @@ verifications:
     cases:
       - id: detailed-failure-delivery
         intent_id: detailed-diagnostics-delivery
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-delivery } ]
       - id: selective-distribution-delivery-selective-distribution-source-valid
         intent_id: selective-distribution-delivery-intent-selective-distribution-source-valid
@@ -63,7 +63,7 @@ verifications:
     cases:
       - id: detailed-failure-publication
         intent_id: detailed-diagnostics-publication
-        input: { scenario: rejected-failed-or-unresolved-public-invocation }
+        input: { scenario: rejected-public-invocation }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-publication } ]
       - id: selective-distribution-publication-selective-distribution-publication-valid
         intent_id: selective-distribution-publication-intent-selective-distribution-publication-valid

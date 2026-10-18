@@ -76,3 +76,15 @@ observations:
         - selector: platform-execution-before-summary
           kind: observation_field
           meaning: Declared dependency order of matrix execution and aggregate platform decision.
+        - selector: quality-cargo-cache-profile-condition
+          kind: observation_field
+          meaning: Declared language profile condition of the trusted Cargo cache path resolution step.
+        - selector: quality-cargo-cache-before-adapter
+          kind: observation_field
+          meaning: Declared order of the trusted Cargo cache step and adapter execution.
+        - selector: quality-cargo-cache-failure-dependency
+          kind: observation_field
+          meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
+        - selector: quality-untrusted-cargo-cache-use
+          kind: observation_field
+          meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.

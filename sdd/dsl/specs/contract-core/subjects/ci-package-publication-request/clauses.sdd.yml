@@ -16,9 +16,14 @@ contracts:
           term: input.operation
           op: present
       - id: package-request-succeeded
-        input_predicate:
+        environment_predicate:
           kind: environment-ref
-          term: runtime-context.package-publication-request-succeeded
+          target_ref: runtime-context.package-publication-request-succeeded
+          op: available
+      - id: request-trigger-verification-invoked
+        environment_predicate:
+          kind: environment-ref
+          target_ref: runtime-context.request-trigger-verification-invoked
           op: available
       - id: package-request-rejected
         environment_predicate:
@@ -65,13 +70,29 @@ contracts:
           kind: observable-result
           op: present
           target: {kind: observation_field, value: details}
+      - id: request-trigger-run-bound
+        when: request-trigger-verification-invoked
+        observation_ref: observation.ci-package-publication-request.trigger-verification
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: accepted-trigger-run
+            right:
+              kind: value_set
+              values:
+                - successful-default-branch-dispatch-of-own-request-workflow
+                - absent
     verification_intents:
       - id: request-trigger-verified
-        goal: Before downloading request artifacts, the caller accepts only a successful default-branch workflow_dispatch of its own request workflow.
+        goal: Verify that verify-trigger reports its status and never accepts a triggering run that differs from a successful default-branch dispatch of the caller's own request workflow.
         guarantee_refs:
           - package-request-status-produced
+          - request-trigger-run-bound
       - id: detailed-diagnostics-outputs
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [diagnostic-details-outputs]
       - id: package-request-source-binding
         goal: The handoff source identity remains bound through create and verify.

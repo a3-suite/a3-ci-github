@@ -60,10 +60,12 @@ test_maps:
         symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
         check_refs:
           - check-request-trigger-status
+          - check-request-trigger-run-bound
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
         check_refs:
           - check-request-trigger-status
+          - check-request-trigger-run-bound
   - verification_id: verification.ci-release-publication-control.outputs
     case_id: request-trigger-rejected
     tests:

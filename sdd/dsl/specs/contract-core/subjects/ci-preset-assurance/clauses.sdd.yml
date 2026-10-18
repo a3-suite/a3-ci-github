@@ -172,7 +172,7 @@ contracts:
                 - equal
     verification_intents:
       - id: detailed-diagnostics-verification
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-verification ]
       - id: ci-preset-assurance-explicit-roots-intent
         goal: Missing explicit repository root produces a stable invalid-input diagnostic before validation starts.
@@ -301,7 +301,7 @@ contracts:
                 - equal
     verification_intents:
       - id: detailed-diagnostics-asset-lock
-        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable. Existing outcome, authority, trust and success-output rules remain unchanged. Definition checks establish declaration coverage only; actual failure evidence requires execution at this contract boundary.
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs: [ diagnostic-details-asset-lock ]
       - id: ci-preset-assurance-lock-generation-intent
         goal: A validated preset produces an asset lock bound to a full source revision and all managed asset digests. Required generated pin companions record their registry input as the canonical digest and installed bytes as the applied digest; invalid projections cannot be blessed by generating a new lock.
