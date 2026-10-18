@@ -152,6 +152,17 @@ test_maps:
         symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
         check_refs:
           - check-selective-distribution-publication
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: contract.ci-selective-distribution.publication > repository-selective-distribution-release > repository release accepts only a dispatch from the requested release tag
+        check_refs:
+          - check-selective-distribution-dispatch-ref-bound
+  - verification_id: verification.ci-selective-distribution.publication
+    case_id: selective-distribution-dispatch-ref-selective-distribution-publication-invalid
+    tests:
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: contract.ci-selective-distribution.publication > repository-selective-distribution-release > repository release accepts only a dispatch from the requested release tag
+        check_refs:
+          - check-selective-distribution-dispatch-ref-rejected
   - verification_id: verification.ci-selective-distribution.publication
     case_id: selective-distribution-publication-selective-distribution-publication-invalid
     tests:

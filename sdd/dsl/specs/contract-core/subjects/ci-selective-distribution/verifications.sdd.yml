@@ -73,9 +73,21 @@ verifications:
           source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           implementation-revision: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           integration: ancestor-of-main
+          dispatch-ref: refs/tags/v1.2.3
         checks:
           - id: check-selective-distribution-publication
             guarantee_ref: selective-distribution-publication-exposed
+          - id: check-selective-distribution-dispatch-ref-bound
+            guarantee_ref: selective-distribution-dispatch-ref-bound
+      - id: selective-distribution-dispatch-ref-selective-distribution-publication-invalid
+        intent_id: selective-distribution-publication-intent-selective-distribution-publication-invalid
+        input:
+          operation: publish
+          tag: v1.2.3
+          dispatch-ref: refs/heads/main
+        checks:
+          - id: check-selective-distribution-dispatch-ref-rejected
+            guarantee_ref: selective-distribution-publication-failure-exposed
       - id: selective-distribution-publication-selective-distribution-publication-invalid
         intent_id: selective-distribution-publication-intent-selective-distribution-publication-invalid
         input:

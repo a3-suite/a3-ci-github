@@ -53,6 +53,9 @@ observations:
         - selector: implementationSourceRevision
           kind: observation_field
           meaning: Full first-party implementation SHA verified against the final tagged source.
+        - selector: acceptedDispatchRef
+          kind: observation_field
+          meaning: Workflow ref of the release dispatch accepted for publication; absent when the dispatch is rejected before publication.
         - selector: implementationBindingStatus
           kind: observation_field
           meaning: Verified only after implementation ancestry, VERSION, execution closure identity and fixed-reference connections pass; evidence identifies both source SHAs and the checked paths and Git object identities.

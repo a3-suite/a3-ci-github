@@ -175,6 +175,20 @@ contracts:
               kind: value_set
               values:
                 - verified
+      - id: selective-distribution-dispatch-ref-bound
+        when: selective-distribution-publication-valid
+        observation_ref: observation.ci-selective-distribution.publication-result
+        claim:
+          kind: observable-value
+          op: in
+          relation:
+            left:
+              kind: observation_field
+              value: acceptedDispatchRef
+            right:
+              kind: value_set
+              values:
+                - tag-ref-of-requested-release-tag
       - id: diagnostic-details-publication
         when: diagnostic-required-publication
         observation_ref: observation.ci-selective-distribution.detailed-diagnostics
@@ -191,6 +205,7 @@ contracts:
         guarantee_refs:
           - selective-distribution-publication-exposed
           - selective-distribution-implementation-binding-verified
+          - selective-distribution-dispatch-ref-bound
       - id: selective-distribution-publication-intent-selective-distribution-publication-invalid
         goal: Verify the selective-distribution-publication-invalid input partition.
         guarantee_refs:
