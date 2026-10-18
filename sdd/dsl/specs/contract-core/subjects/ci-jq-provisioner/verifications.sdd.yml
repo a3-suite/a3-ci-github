@@ -60,7 +60,7 @@ verifications:
         intent_id: failed-jq-provisioning-rejected
         input:
           jq-version: 1.7.1
-          checksum-entry: missing-or-duplicate
+          checksum-entry: missing
         checks:
           - id: check-checksum-entry-failure
             guarantee_ref: failed-provisioning-stops

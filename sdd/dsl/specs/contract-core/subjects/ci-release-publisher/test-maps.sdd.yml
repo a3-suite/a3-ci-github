@@ -114,6 +114,14 @@ test_maps:
           - rejection
           - no-outputs
   - verification_id: verification.ci-release-publisher.outputs
+    case_id: tampered-handoff-asset
+    tests:
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher rejects invalid approval, handoff and pre-observation before writes"
+        check_refs:
+          - rejection
+          - no-outputs
+  - verification_id: verification.ci-release-publisher.outputs
     case_id: remote-rejection
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs

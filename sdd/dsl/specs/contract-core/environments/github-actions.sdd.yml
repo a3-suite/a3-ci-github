@@ -71,8 +71,6 @@ runtime_contexts:
     summary: The readable owner-approved plan conforms to the declared exact or ciGenerated version-plan input contract, with complete matching template components and a safe materialized version.
   - id: runtime-context.release-request-handoff-valid
     summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
-  - id: runtime-context.release-notes-input-resolution-valid
-    summary: Safe input paths identify nonempty notes and approval files, and the writable normalized destination has neither notes nor approval files already present.
   - id: runtime-context.supplemental-phase-valid
     summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints.
   - id: runtime-context.supplemental-phase-invalid
@@ -91,8 +89,6 @@ runtime_contexts:
     summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted. Runner policy defaults to the bounded bootstrap catalog; a fixed caller may select trusted versioned Hosted label syntax only for verified base or publication control configuration. Label syntax is not proof of Hosted origin or availability.
   - id: runtime-context.platform-manifest-invalid
     summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
-  - id: runtime-context.quality-platform-selection-valid
-    summary: The manifest and supplied quality selection are available and satisfy the ci-platform-matrix input contract, including unique declared IDs in selection order.
   - id: runtime-context.quality-platform-selection-invalid
     summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.quality-toolchain-inputs-ready
@@ -157,10 +153,6 @@ runtime_contexts:
     summary: An Action invocation contains invalid, unsafe, or authority-mismatching input.
   - id: runtime-context.action-input-insufficient
     summary: An Action input is insufficient to resolve a trustworthy result.
-  - id: runtime-context.workflow-identity-context-valid
-    summary: The caller and called reusable workflow resolve to the same default-branch snapshot with a matching commit SHA.
-  - id: runtime-context.workflow-identity-context-invalid
-    summary: A caller repository, workflow path, ref, or SHA mismatch rejects the reusable workflow identity.
   - id: runtime-context.selective-distribution-selection-valid
     summary: The requested preset or explicitly complete asset set resolves to registered assets and dependencies.
   - id: runtime-context.selective-distribution-selection-incomplete

@@ -23,7 +23,7 @@ contracts:
     guarantees:
       - id: ci-release-request-workflow-success-observed
         when: ci-release-request-workflow-canonical-source-available
-        observation_ref: observation.ci.release-request-workflow.result
+        observation_ref: observation.ci-release-request-workflow.result
         claim:
           kind: observable-result
           op: present
@@ -32,7 +32,7 @@ contracts:
             value: request-handoff
       - id: ci-release-request-workflow-failure-observed
         when: ci-release-request-workflow-failure-route-required
-        observation_ref: observation.ci.release-request-workflow.result
+        observation_ref: observation.ci-release-request-workflow.result
         claim:
           kind: observable-result
           op: present

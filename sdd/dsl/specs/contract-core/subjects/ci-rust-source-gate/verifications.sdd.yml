@@ -14,6 +14,7 @@ verifications:
         input:
           language-profile: rust
           authority-path: authority.json
+          authority-source-sha: checked-out-head
         checks:
           - id: check-rust-source-processing-success
             guarantee_ref: rust-source-processing-succeeds
@@ -22,6 +23,7 @@ verifications:
         input:
           language-profile: rust
           authority-path: authority.json
+          authority-source-sha: different-commit
         checks:
           - id: check-rust-source-processing-failure
             guarantee_ref: rust-source-processing-fails

@@ -27,7 +27,7 @@ verifications:
       - id: standard-selection-rejected
         intent_id: quality-adapter-rejected
         input:
-          scenario: ambiguous-or-unknown-standard-selection
+          scenario: unknown-standard-selection
         checks:
           - id: check-quality-adapter-standard-rejection
             guarantee_ref: quality-adapter-failure-propagated

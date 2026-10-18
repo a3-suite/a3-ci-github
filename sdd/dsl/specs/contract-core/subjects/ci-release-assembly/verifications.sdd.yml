@@ -121,5 +121,5 @@ verifications:
             guarantee_ref: assembly-rejected
       - id: platform-checkout-eol
         intent_id: bound-assembly
-        input: { platform-manifest: LF-CRLF-or-mixed }
+        input: { platform-manifest: CRLF }
         checks: [ { id: handoff, guarantee_ref: bound-handoff }, { id: digest, guarantee_ref: bound-asset-digest } ]

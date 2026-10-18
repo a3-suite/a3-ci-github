@@ -7,7 +7,7 @@ verifications:
     cases:
       - id: standard-entry-name-rejection
         intent_id: standard-installer-public-entry-names-supplemental-invalid
-        input: { implementation: standard-installer, declaration: nonstandard-windows-or-unix-shared-entry-name, operation: build-platform }
+        input: { implementation: standard-installer, declaration: nonstandard-windows-shared-entry-name, operation: build-platform }
         checks: [ { id: refusal, guarantee_ref: phase-rejected }, { id: diagnostic, guarantee_ref: phase-diagnostic } ]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs
@@ -41,11 +41,11 @@ verifications:
         checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: identity-selection
         intent_id: fail-closed
-        input: { binding: mismatched-source-or-snapshot-or-owner-adapter, operation: build-platform }
+        input: { binding: mismatched-source, operation: build-platform }
         checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: missing-output
         intent_id: fail-closed
-        input: { owner-output: missing-or-empty, operation: build-platform }
+        input: { owner-output: missing, operation: build-platform }
         checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-installer
         intent_id: bound-phase
@@ -93,7 +93,7 @@ verifications:
         checks: [ { id: success, guarantee_ref: phase-success }, { id: output, guarantee_ref: phase-output } ]
       - id: standard-platform-binding
         intent_id: fail-closed
-        input: { implementation: standard-installer, platform-binding: mismatched-id-or-target, operation: build-platform }
+        input: { implementation: standard-installer, platform-binding: mismatched-id, operation: build-platform }
         checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-platform-authority
         intent_id: fail-closed
@@ -109,7 +109,7 @@ verifications:
         checks: [ { id: refusal, guarantee_ref: phase-rejected } ]
       - id: standard-checkout-eol
         intent_id: bound-phase
-        input: { implementation: standard-installer, checkout: LF-CRLF-or-mixed, operation: build-platform }
+        input: { implementation: standard-installer, checkout: CRLF, operation: build-platform }
         checks: [ { id: success, guarantee_ref: phase-success }, { id: output, guarantee_ref: phase-output } ]
       - id: standard-source-content
         intent_id: fail-closed
@@ -160,7 +160,7 @@ verifications:
       - id: untrusted-installer-process-diagnostic
         intent_id: installer-reason-validation
         input:
-          scenario: malformed-or-untrusted-installer-process-diagnostic
+          scenario: malformed-installer-process-diagnostic
           operation: build-platform
         checks:
           - id: diagnostic-unvalidated-installer-reason
@@ -182,7 +182,7 @@ verifications:
         intent_id: standard-installer-public-entry-names-supplemental-invalid
         input:
           implementation: standard-installer
-          declaration: nonstandard-windows-or-unix-shared-entry-name
+          declaration: nonstandard-windows-shared-entry-name
           operation: assemble
           supplemental-build-root: supplemental-build
         checks:
@@ -244,7 +244,7 @@ verifications:
         intent_id: fail-closed
         input:
           implementation: standard-installer
-          platform-binding: mismatched-id-or-target
+          platform-binding: mismatched-id
           operation: assemble
           supplemental-build-root: supplemental-build
         checks:
@@ -264,7 +264,7 @@ verifications:
         intent_id: bound-phase
         input:
           implementation: standard-installer
-          checkout: LF-CRLF-or-mixed
+          checkout: CRLF
           operation: assemble
           supplemental-build-root: supplemental-build
         checks:

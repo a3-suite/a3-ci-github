@@ -23,7 +23,7 @@ contracts:
     guarantees:
       - id: ci-release-publication-workflow-success-observed
         when: ci-release-publication-workflow-canonical-source-available
-        observation_ref: observation.ci.release-publication-workflow.result
+        observation_ref: observation.ci-release-publication-workflow.result
         claim:
           kind: observable-result
           op: present
@@ -32,7 +32,7 @@ contracts:
             value: publication-boundary
       - id: ci-release-publication-workflow-failure-observed
         when: ci-release-publication-workflow-failure-route-required
-        observation_ref: observation.ci.release-publication-workflow.result
+        observation_ref: observation.ci-release-publication-workflow.result
         claim:
           kind: observable-result
           op: present
@@ -41,7 +41,7 @@ contracts:
             value: failure-summary
       - id: ci-release-publication-workflow-evidence-transfer-declared
         when: ci-release-publication-workflow-canonical-source-available
-        observation_ref: observation.ci.release-publication-workflow.result
+        observation_ref: observation.ci-release-publication-workflow.result
         claim:
           kind: observable-result
           op: present

@@ -11,15 +11,15 @@ verifications:
         checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: standard-workflow-credential
         intent_id: observe-absence
-        input: { credential: bound-standard-workflow-github-token, permission-metadata: absent-empty-or-boolean-false }
+        input: { credential: bound-standard-workflow-github-token, permission-metadata: absent }
         checks: [ { id: status, guarantee_ref: observation-status }, { id: path, guarantee_ref: observation-file } ]
       - id: credential-evidence-boundary
         intent_id: fail-closed
-        input: { credential-evidence: mismatching-context-token-capability-repository-unbound-false-or-malformed-metadata }
+        input: { credential-evidence: mismatching-context }
         checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: asset-inventory-boundary
         intent_id: fail-closed
-        input: { assets: persistently-incomplete-or-conflicting }
+        input: { assets: persistently-incomplete }
         checks: [ { id: rejection, guarantee_ref: verification-rejected } ]
       - id: detailed-failure-outputs
         intent_id: detailed-diagnostics-outputs

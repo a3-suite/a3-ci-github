@@ -269,8 +269,8 @@ contracts:
         goal: Verify the selective-distribution-application-incomplete partition for plan.
         guarantee_refs:
           - selective-distribution-incomplete-application-rejected
-      - id: plan-diagnostic-required-application
-        goal: Verify the diagnostic-required-application partition for plan.
+      - id: detailed-diagnostics-plan
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs:
           - diagnostic-details-application
       - id: plan-independent-destination
@@ -386,8 +386,8 @@ contracts:
         goal: Verify the selective-distribution-plan-changed partition for apply.
         guarantee_refs:
           - selective-distribution-changed-input-rejected
-      - id: apply-diagnostic-required-application
-        goal: Verify the diagnostic-required-application partition for apply.
+      - id: detailed-diagnostics-application
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs:
           - diagnostic-details-application
       - id: apply-partial-apply-restorable
@@ -474,8 +474,8 @@ contracts:
         guarantee_refs:
           - selective-distribution-rollback-exposed
           - rollback-files-restored
-      - id: rollback-diagnostic-required-application
-        goal: Verify the diagnostic-required-application partition for rollback.
+      - id: detailed-diagnostics-rollback
+        goal: On a rejected, failed or unresolved invocation of this contract, retain its subject-specific details under contract.ci-failure-diagnostics.actionable.
         guarantee_refs:
           - diagnostic-details-application
       - id: rollback-independent-destination-stable

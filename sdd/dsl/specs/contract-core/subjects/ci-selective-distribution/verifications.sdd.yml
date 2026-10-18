@@ -159,7 +159,7 @@ verifications:
           - id: check-selective-distribution-plan
             guarantee_ref: selective-distribution-plan-exposed
       - id: detailed-failure-plan
-        intent_id: plan-diagnostic-required-application
+        intent_id: detailed-diagnostics-plan
         input:
           operation: plan
           repo-root: consumer
@@ -227,11 +227,11 @@ verifications:
           - id: independent-destination-binding
             guarantee_ref: independent-destination-binding
       - id: detailed-failure-application
-        intent_id: apply-diagnostic-required-application
+        intent_id: detailed-diagnostics-application
         input: { operation: apply, repo-root: consumer, required-arguments: missing }
         checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-application } ]
       - id: apply-recovery-diagnostic-1
-        intent_id: apply-diagnostic-required-application
+        intent_id: detailed-diagnostics-application
         input:
           operation: apply
           transaction-state: completed
@@ -262,7 +262,7 @@ verifications:
           - id: independent-destination-binding
             guarantee_ref: independent-destination-binding
       - id: detailed-failure-rollback
-        intent_id: rollback-diagnostic-required-application
+        intent_id: detailed-diagnostics-rollback
         input:
           operation: rollback
           repo-root: consumer
@@ -271,7 +271,7 @@ verifications:
           - id: diagnostic-details
             guarantee_ref: diagnostic-details-application
       - id: rollback-recovery-diagnostic-1
-        intent_id: rollback-diagnostic-required-application
+        intent_id: detailed-diagnostics-rollback
         input:
           operation: rollback
           transaction-state: restoration-rejected
@@ -280,7 +280,7 @@ verifications:
           - id: diagnostic-details
             guarantee_ref: diagnostic-details-application
       - id: rollback-recovery-diagnostic-2
-        intent_id: rollback-diagnostic-required-application
+        intent_id: detailed-diagnostics-rollback
         input:
           operation: rollback
           transaction-state: completed
@@ -289,7 +289,7 @@ verifications:
           - id: diagnostic-details
             guarantee_ref: diagnostic-details-application
       - id: rollback-recovery-diagnostic-3
-        intent_id: rollback-diagnostic-required-application
+        intent_id: detailed-diagnostics-rollback
         input:
           operation: rollback
           transaction-state: restoration-rejected

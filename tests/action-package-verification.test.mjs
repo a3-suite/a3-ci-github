@@ -108,7 +108,7 @@ describe("action-package-verification", () => {
         phase: 'test',
       }, {
         command: '/node',
-        args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...['assembly.test.mjs', 'observation.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((file) => path.join(root, 'runtime/release-publication/tests', file))],
+        args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...['assembly.test.mjs', 'observation.test.mjs', 'observation-policy.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((file) => path.join(root, 'runtime/release-publication/tests', file))],
         cwd: path.join(root, 'actions/ci-release-assembly'),
         action: 'shared-release-publication',
         phase: 'test',

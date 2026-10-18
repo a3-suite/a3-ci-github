@@ -2,7 +2,7 @@ version: 1
 name: contract-observations
 subject_ref: subject.ci.release-publication-workflow
 observations:
-  - id: observation.ci.release-publication-workflow.result
+  - id: observation.ci-release-publication-workflow.result
     summary: Observable canonical workflow definition for this capability.
     boundary:
       ref: boundary.workflow-definition

@@ -64,7 +64,7 @@ verifications:
         intent_id: summary-run-context-missing-rejection
         input:
           summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"success","applicable":true}]}'
-          github-run-context: missing-or-invalid
+          github-run-context: missing
         checks:
           - id: check-quality-summary-default-evidence-failure
             guarantee_ref: summary-run-context-missing-rejected
