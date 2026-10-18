@@ -370,7 +370,8 @@
           "node_modules/@vercel/ncc/dist/ncc/cli.js",
           "build",
           "src/index.ts",
-          "--minify"
+          "--minify",
+          "--no-cache"
         ]
       },
       "segments": [
@@ -542,7 +543,8 @@
           "node_modules/@vercel/ncc/dist/ncc/cli.js",
           "build",
           "src/index.ts",
-          "--minify"
+          "--minify",
+          "--no-cache"
         ]
       },
       "segments": [

@@ -50,6 +50,7 @@ describe('standard installer', () => {
           result = runDistributedAction(f, f.options, [path.join(distribution, 'dist/index.js')]).result;
         } else {
           fs.copyFileSync(path.join(repository, 'runtime/installer/run-installer.mjs'), path.join(distribution, 'run-installer.mjs'));
+          fs.copyFileSync(path.join(repository, 'runtime/installer/package.json'), path.join(distribution, 'package.json'));
           result = spawnSync(process.execPath, [path.join(distribution, 'run-installer.mjs'),
             '--operation', f.options.operation, '--source-root', f.root, '--authority-path', 'authority.json',
             '--snapshot-path', 'snapshot.json', '--standard-build-root', f.options.standardBuildRoot,

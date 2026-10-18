@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "ncc build src/verify-platform-manifest.mjs -o dist --minify"
+    "build": "ncc build src/verify-platform-manifest.mjs -o dist --minify --no-cache"
   },
   "dependencies": {
     "yaml": "2.9.1"

@@ -14,7 +14,9 @@ export function verifyActionReferenceContracts(root, references, snapshot) {
     for (const uses of selected) {
       const [, actionPath, sha] = /^a3-suite\/a3-ci-github\/(actions\/[a-z0-9-]+)@([0-9a-f]{40})$/.exec(uses) ?? [];
       if (!actionPath) throw new Error(`Invalid Action reference: ${uses}`);
-      const entrypoint = path.join(directory, `${path.basename(actionPath)}-${sha}.cjs`);
+      // The fixed revision may predate the ESM dist, so its own dist/package.json decides the module format.
+      const esm = spawnSync('git', ['cat-file', '-e', `${sha}:${actionPath}/dist/package.json`], { cwd: root }).status === 0;
+      const entrypoint = path.join(directory, `${path.basename(actionPath)}-${sha}.${esm ? 'mjs' : 'cjs'}`);
       writeFileSync(entrypoint, execFileSync('git', ['show', `${sha}:${actionPath}/dist/index.js`], { cwd: root, stdio: 'pipe', maxBuffer: 16 * 1024 * 1024 }));
       const run = (name, inputs) => {
         const working = path.join(directory, `${path.basename(actionPath)}-${name}`);

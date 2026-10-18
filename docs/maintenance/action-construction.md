@@ -29,9 +29,11 @@ Node で実装した共通処理を、bundle 作成を省くためだけに Comp
 各 bundled Action は既存 package と同じ構成を用います。
 
 - `package.json`、`package-lock.json`、`tsconfig.json`
-- `src/index.ts`、bundle 済み `dist/index.js`
+- `package.json` の `"type": "module"`、`src/index.ts`、ESM で bundle した `dist/index.js` と ncc が生成する `dist/package.json`
 - `tests/*.test.ts`、`README.md`、`action.yml`
 - `build` は既存の ncc 経路、`lint` は `tsc --noEmit`
+- ncc は `--no-cache` で実行する。キャッシュ済みの module を別の build から再利用すると、ESM の出力に `createRequire` の導入が欠け、Node 組込み module の `require` が実行時に失敗することがある
+- TypeScript は 6 系を使い、7 系は採用しない。7 系は `require('typescript')` で使う JS API を提供せず、ncc の ts-loader と `runtime/repository/check-runtime-boundaries.mjs` が動かないため。ncc が 7 系に対応した時点、または型検査（7 系）と bundle・検査ツール（6 系の Compiler API）で compiler を分ける構成や bundle の方式を見直す時点で再判断する
 
 新しい依存を足す前に、既存の runtime・標準ライブラリ・固定された toolchain で目的を満たせるか確認します。package manager の変更を Action 追加へ混在させません。
 

@@ -1,17 +1,18 @@
 {
   "name": "@a3-suite/ci-package-publication-request",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "GitHub Action for package publication request handoffs",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.ts --minify",
+    "build": "ncc build src/index.ts --minify --no-cache",
     "lint": "tsc --noEmit",
     "test:contract": "npm run build && node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-package-publication-request/tests/action-contract.test.ts actions/ci-package-publication-request/tests/entrypoint.test.ts",
     "test": "npm run build && node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-package-publication-request/tests/"
   },
   "dependencies": {
-    "@actions/core": "2.0.3"
+    "@actions/core": "3.0.1"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

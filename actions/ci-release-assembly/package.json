@@ -1,11 +1,12 @@
 {
   "name": "@a3-suite/ci-release-assembly",
   "private": true,
+  "type": "module",
   "version": "0.2.0",
   "description": "GitHub Action for provider-write-free Release assembly",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.ts --minify",
+    "build": "ncc build src/index.ts --minify --no-cache",
     "lint": "tsc --noEmit",
     "test": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-assembly/tests/",
     "test:contract": "node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-release-assembly/tests/action-contract.test.ts actions/ci-release-assembly/tests/entrypoint.test.ts"

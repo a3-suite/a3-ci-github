@@ -1,11 +1,12 @@
 {
   "name": "@a3-suite/ci-jq-provisioner",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "GitHub Action for checksummed jq provisioning",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/index.ts --minify",
+    "build": "ncc build src/index.ts --minify --no-cache",
     "lint": "tsc --noEmit",
     "test": "npm run build && node ../../node_modules/vitest/vitest.mjs run --config ../../vitest.config.mjs actions/ci-jq-provisioner/tests/"
   },

@@ -1,6 +1,7 @@
 {
   "name": "@a3-suite/ci-release-supplemental-asset",
   "private": true,
+  "type": "module",
   "version": "0.2.0",
   "description": "GitHub Action for authority-bound owner supplemental asset invocation",
   "main": "dist/index.js",

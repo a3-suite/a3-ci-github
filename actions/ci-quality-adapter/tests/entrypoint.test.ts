@@ -124,7 +124,7 @@ test('entrypoint executes the embedded standard without reading a project descri
     const bin = path.join(root, 'bin');
     fs.mkdirSync(bin);
     const commands = path.join(root, 'commands.jsonl');
-    fs.writeFileSync(path.join(bin, 'npm'), `#!${process.execPath}\nrequire('node:fs').appendFileSync(${JSON.stringify(commands)}, JSON.stringify(process.argv.slice(2)) + '\\n');\n`, { mode: 0o700 });
+    fs.writeFileSync(path.join(bin, 'npm'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(commands)}, JSON.stringify(process.argv.slice(2)) + '\\n');\n`, { mode: 0o700 });
     const scripts = Object.fromEntries(['format:check', 'lint', 'typecheck', 'test'].map((name) => [name, 'node --version']));
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ scripts }));
     fs.writeFileSync(path.join(root, 'package-lock.json'), '{}');
@@ -155,7 +155,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
   fs.writeFileSync(path.join(root, 'Cargo.toml'), '[package]\nname="fixture"\nversion="0.1.0"\n');
   fs.writeFileSync(path.join(root, 'Cargo.lock'), '');
   fs.writeFileSync(path.join(bin, 'rustc'), `#!${process.execPath}\nconsole.log('rustc 1.80.0');\n`, { mode: 0o700 });
-  fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nrequire('node:fs').appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2))+'\\n');\n`, { mode: 0o700 });
+  fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2))+'\\n');\n`, { mode: 0o700 });
   const inputs = { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality', 'INPUT_TOOLCHAIN-VERSION': '1.80.0', 'INPUT_LANGUAGE-PROFILE': 'rust',
     CI_CARGO_MANIFEST_PATH: 'Cargo.toml', CI_CARGO_LOCK_PATH: 'Cargo.lock', PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   // Act
