@@ -27,19 +27,9 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 - `skills-deploy` スキルと `project-skill-deploy` スキルが所有する配備対象、配備先、候補分類、差分反映の意味
 - `regression-test` スキルが所有する回帰範囲、実行順序、報告形式
 
-## 最初に確認すること
-1. git スキルのコミットフローで、今回のコミット対象と staged snapshot を確定する。
-2. `references/run-repository-commit-gates.guide.md` を開き、適用ゲート、実行入口、停止条件を確認する。
-3. 適用ゲートを実行し、成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返す。
-
 ## 実行時の姿勢
 - ゲートの適用条件、順序、終了条件を他スキルへ分散させない。
 - 配備整合ゲートの差分確認、候補分類、反映、再検査は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本スキルでは再実装しない。
-- 配備先の更新差分は削除を伴わない範囲で自動反映し、削除、prune、管理外 skill の削除は自動反映せず停止する。
-- 改名・廃止で公開スキルの root（`skills/<name>`）全体を削除した場合は、配備先の旧 root が `skills-deploy` の明示操作で削除済みであるときだけ続行する。SKILL.md だけが欠けた root と、入れ子のスキルの削除は停止する。
-- 対象 root に未ステージ差分または未追跡ファイルがある場合は、推測で整合済みとせず停止する。
-- 配備先は `skills-deploy` のデプロイコンテキストに従って明示設定し、未設定を非適用として通さない。
-- 実行後に staged snapshot または対象 root の状態が変わった場合は、配備整合証拠を失効させる。
 
 ## コミットフローへの引き渡し
 - 固有ゲート結果を共通 `git` の `local_gate_result` 契約で返す。配備先などの固有外部状態はゲート固有の証拠として扱い、共通契約へ昇格させない。
@@ -55,6 +45,5 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 - 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
 
 ## 参照
-- `references/run-repository-commit-gates.guide.md`
 - skills-deploy スキル
 - git スキル
