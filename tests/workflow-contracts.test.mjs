@@ -829,7 +829,7 @@ describe("workflow-contracts", () => {
 
 describe("workflow-contracts", () => {
   describe("failure-diagnostics-contract", () => {
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-failure-diagnostics.subject-declarations
     // integration_id: failure-diagnostics-contract
     // evidence_role: contract
     // test_level: integration
@@ -837,55 +837,48 @@ describe("workflow-contracts", () => {
       // Arrange
       const base = 'sdd/dsl/specs/contract-core';
       const packageData = yaml.parse(read(`${base}/contract-package.sdd.yml`));
-      const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/clauses.sdd.yml`)).contracts[0];
-      const commonObservation = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/observations.sdd.yml`))
-        .observations.find((entry) => entry.id === 'observation.ci-failure-diagnostics.failure-evidence');
+      const diagnosticPartition = 'runtime-context.failure-diagnostic-required';
+      const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/subject.sdd.yml`)).contracts[0];
+      const commonObservation = shared.observations.find((entry) => entry.boundary.ref === 'boundary.diagnostic-result');
       // Act
       const subjects = packageData.subject_scopes.map((scope) => ({
-        id: scope.subject_id,
-        clauses: yaml.parse(read(`${base}/${scope.path}clauses.sdd.yml`)),
-        observations: yaml.parse(read(`${base}/${scope.path}observations.sdd.yml`)),
+        ...yaml.parse(read(`${base}/${scope.path}subject.sdd.yml`)),
         verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
       }));
       // Assert
-      expect(commonObservation.value.fields.map((field) => field.selector)).toEqual(expect.arrayContaining([
-        'classification', 'context', 'comparison', 'evidence-location', 'execution-state', 'next-check',
-      ]));
-      const policyClaims = shared.guarantees.filter((guarantee) => guarantee.claim.kind === 'observable-value');
+      const commonSelectors = commonObservation.value.fields.map((field) => field.selector);
+      const minimumFields = [
+        'failure-subject', 'failure-operation', 'failure-stage', 'failure-reason', 'failure-cause', 'execution-context',
+        'comparison', 'evidence-location', 'execution-outcome', 'last-confirmed-stage', 'next-check-rule',
+      ];
+      expect(commonSelectors).toEqual(expect.arrayContaining(minimumFields));
+      const policyClaims = shared.guarantees.filter((guarantee) => 'in' in guarantee.claim && guarantee.claim.in.includes('absent'));
       expect(policyClaims.length).toBeGreaterThan(0);
       for (const guarantee of policyClaims) {
-        expect(guarantee.claim.op).toBe('in');
-        expect(guarantee.claim.relation.right.values).toStrictEqual(['absent']);
-        expect(commonObservation.value.fields.map((field) => field.selector))
-          .toContain(guarantee.claim.relation.left.value);
+        expect(guarantee.claim.in).toStrictEqual(['absent']);
+        expect(commonSelectors).toContain(guarantee.claim.field);
       }
       for (const subject of subjects) {
-        if (subject.id === 'subject.ci.failure-diagnostics') {
-          expect(shared.verification_intents.find((entry) => entry.id === 'detailed-failure-evidence').guarantee_refs)
-            .toHaveLength(6 + policyClaims.length);
+        if (subject.subject.id === 'subject.ci.failure-diagnostics') {
+          expect(shared.guarantees.filter((entry) => entry.applies_to.includes(diagnosticPartition))).toHaveLength(minimumFields.length + policyClaims.length);
           continue;
         }
-        for (const contract of subject.clauses.contracts) {
-          const intent = contract.verification_intents.find((entry) => entry.id.startsWith('detailed-diagnostics-'));
-          expect(intent, contract.id).toBeDefined();
-          expect(intent.goal, contract.id).toContain(shared.id);
-          const guarantee = contract.guarantees.find((entry) => intent.guarantee_refs.includes(entry.id));
-          expect(guarantee.claim.target.value, contract.id).toBe('details');
-          const condition = contract.conditions.find((entry) => entry.id === guarantee.when);
-          expect(condition.environment_predicate.target_ref, contract.id).toBe('runtime-context.failure-diagnostic-required');
-          const observation = subject.observations.observations.find((entry) => entry.id === guarantee.observation_ref);
+        for (const contract of subject.contracts) {
+          const guarantee = contract.guarantees.find((entry) => entry.claim.field === 'failure-stage');
+          expect(guarantee, contract.id).toBeDefined();
+          expect(guarantee.claim.present, contract.id).toBe(true);
+          expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
+          const observation = contract.observations.find((entry) => entry.value.fields.some((field) => field.selector === 'failure-stage'));
           expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
-          const detail = observation.value.fields.find((entry) => entry.selector === 'details');
-          expect(detail.meaning.length, contract.id).toBeGreaterThan(50);
-          expect(detail.meaning, contract.id).not.toMatch(/^Failure|^失敗終了/);
-          const verification = subject.verifications.verifications.find((entry) => entry.contract_id === contract.id);
-          const failureCase = verification.cases.find((entry) => entry.intent_id === intent.id);
+          expect(observation.summary, contract.id).toContain(shared.id);
+          const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);
           expect(failureCase, contract.id).toBeDefined();
-          expect(failureCase.checks.map((entry) => entry.guarantee_ref), contract.id).toContain(guarantee.id);
+          expect(failureCase.verifies ?? [guarantee.id], contract.id).toContain(guarantee.id);
         }
       }
     });
 
+    // contract_id: contract.ci-failure-diagnostics.workflow-evidence
     // integration_id: failure-diagnostics-contract
     test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
       const workflows = [

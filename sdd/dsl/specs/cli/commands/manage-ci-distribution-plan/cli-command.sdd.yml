@@ -1,0 +1,37 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution-plan
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+    - plan
+  summary: Generate configured canonical callers and required registry pin companions and classify actions without changing managed consumer files
+  usage_targets:
+    - id: plan
+      summary: Generate configured canonical callers and required registry pin companions and classify actions without changing managed consumer files
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: source-revision
+          presence: required
+        - option_id: preset
+          presence: optional
+        - option_id: asset
+          presence: optional
+        - option_id: set
+          presence: optional
+  option_groups:
+    - id: selection
+      title: Distribution selection
+      options:
+        - preset
+        - asset
+        - source-revision
+    - id: application
+      title: Planned application or recovery
+      options:
+        - repo-root
+        - set
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs plan [options]

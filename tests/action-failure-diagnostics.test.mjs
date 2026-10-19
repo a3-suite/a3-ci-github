@@ -26,12 +26,15 @@ describe.each(actions)('%s failure boundary', (action) => {
     const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
     expect(result.status).toBe(action === 'ci-change-scope' ? 0 : 1);
     expect(evidence.classification.subject).toBe(action);
+    expect(evidence.classification.operation).toBeTruthy();
     expect(evidence.classification.reason).not.toBe('unknown-failure');
+    expect(evidence.classification.cause).toBe('known');
     expect(evidence.classification.stage).toBeTruthy();
     expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test' });
     expect(evidence.comparison).toBeTruthy();
     expect(evidence['evidence-location']).toMatchObject({ log: 'workflow-run-job-step-log', artifact: 'not-generated' });
     expect(evidence['execution-state'].outcome).toBe(action === 'ci-change-scope' ? 'unresolved' : 'failure');
+    expect(evidence['execution-state'].lastConfirmed).toBeTruthy();
     expect(evidence['next-check'].rule).toBe(evidence.classification.reason);
     expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
     expect(fs.readFileSync(sentinel, 'utf8')).toBe('unchanged');

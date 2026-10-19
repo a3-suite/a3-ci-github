@@ -1,38 +1,40 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.change-scope
 test_maps:
-  - verification_id: verification.ci-change-scope.outputs
+  - contract_id: contract.ci-change-scope.outputs
     case_id: valid-change-range
     tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint reports a valid range"
-        check_refs:
-          - check-change-scope-status
+        symbol: source entrypoint > entrypoint reports a valid range
+        guarantees:
+          - change-scope-status-produced
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint reports a valid range"
-        check_refs:
-          - check-change-scope-status
-  - verification_id: verification.ci-change-scope.outputs
+        symbol: dist entrypoint > entrypoint reports a valid range
+        guarantees:
+          - change-scope-status-produced
+  - contract_id: contract.ci-change-scope.outputs
     case_id: invalid-sha-unresolved
     tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails open for an invalid SHA"
-        check_refs:
-          - check-change-scope-unresolved-status
+        symbol: source entrypoint > entrypoint fails open for an invalid SHA
+        guarantees:
+          - change-scope-unresolved-status-produced
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint fails open for an invalid SHA"
-        check_refs:
-          - check-change-scope-unresolved-status
-  - verification_id: verification.ci-change-scope.outputs
+        symbol: dist entrypoint > entrypoint fails open for an invalid SHA
+        guarantees:
+          - change-scope-unresolved-status-produced
+  - contract_id: contract.ci-change-scope.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-change-scope failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-change-scope failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails open for an invalid SHA"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > entrypoint fails open for an invalid SHA
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails open and keeps both SHAs when the base commit is unavailable"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > entrypoint fails open and keeps both SHAs when the base commit is unavailable
+        guarantees:
+          - diagnostic-failure-stage-outputs

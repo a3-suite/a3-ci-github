@@ -1,138 +1,85 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.failure-diagnostics
-verifications:
-  - id: verification.ci-failure-diagnostics.detailed-evidence
-    contract_id: contract.ci-failure-diagnostics.actionable
-    cases:
-      - id: known-validation-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: known-validation-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-known-cause-omission
-            guarantee_ref: diagnostic-known-cause-omission
-      - id: unknown-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: unknown-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-unsubstantiated-remediation
-            guarantee_ref: diagnostic-unsubstantiated-remediation
-      - id: external-request-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: external-request-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-unsubstantiated-context
-            guarantee_ref: diagnostic-unsubstantiated-context
-      - id: child-process-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: child-process-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-unsafe-diagnostic-disclosure
-            guarantee_ref: diagnostic-unsafe-diagnostic-disclosure
-      - id: evidence-generation-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: evidence-generation-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-original-diagnostic-loss
-            guarantee_ref: diagnostic-original-diagnostic-loss
-      - id: evidence-transfer-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: evidence-transfer-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-invalid-evidence-reference
-            guarantee_ref: diagnostic-invalid-evidence-reference
-      - id: summary-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: summary-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-original-outcome-replacement
-            guarantee_ref: diagnostic-original-outcome-replacement
-      - id: partial-write-failure
-        intent_id: detailed-failure-evidence
-        input: { scenario: partial-write-failure }
-        checks:
-          - { id: classification, guarantee_ref: detailed-failure-classification }
-          - { id: context, guarantee_ref: detailed-failure-context }
-          - { id: comparison, guarantee_ref: detailed-failure-comparison }
-          - { id: retention, guarantee_ref: detailed-failure-retention }
-          - { id: state, guarantee_ref: detailed-failure-state }
-          - { id: next-check, guarantee_ref: detailed-failure-next-check }
-          - id: diagnostic-diagnostic-only-retry
-            guarantee_ref: diagnostic-diagnostic-only-retry
-  - id: verification.ci-failure-diagnostics.subject-declarations
-    contract_id: contract.ci-failure-diagnostics.actionable
-    cases:
-      - id: all-subject-diagnostics-defined
-        intent_id: subject-diagnostic-declarations
-        input: { scenario: packaged-subject-contract-definitions }
-        checks:
-          - id: check.ci-failure-diagnostics.subject-contract-coverage
-            guarantee_ref: subject-diagnostic-contract-coverage
-  - id: verification.ci-failure-diagnostics.workflow-evidence
-    contract_id: contract.ci-failure-diagnostics.actionable
-    cases:
-      - id: workflow-evidence-declared
-        intent_id: ci-failure-diagnostics-workflow-evidence-intent
-        input:
-          scenario: managed-workflow-source
-        checks:
-          - id: check.ci-failure-diagnostics.workflow-evidence
-            guarantee_ref: ci-failure-diagnostics-workflow-evidence-declared
-          - id: check.ci-failure-diagnostics.workflow-correlation
-            guarantee_ref: ci-failure-diagnostics-workflow-correlation-declared
-          - id: check.ci-failure-diagnostics.workflow-summary-secret-safe
-            guarantee_ref: ci-failure-diagnostics-workflow-summary-secret-safe
-          - id: check.ci-failure-diagnostics.workflow-source-state-preserved
-            guarantee_ref: ci-failure-diagnostics-workflow-source-state-preserved
-  - id: verification.ci-failure-diagnostics.bootstrap-diagnostic
-    contract_id: contract.ci-failure-diagnostics.actionable
-    cases:
-      - id: bootstrap-diagnostic-emitted
-        intent_id: ci-failure-diagnostics-bootstrap-intent
-        input:
-          scenario: invalid-bootstrap-invocation
-        checks:
-          - id: check.ci-failure-diagnostics.bootstrap-diagnostic
-            guarantee_ref: ci-failure-diagnostics-bootstrap-envelope-emitted
+cases:
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: known-validation-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: known-validation-failure
+    verifies:
+      - failure-subject-recorded
+      - failure-operation-recorded
+      - failure-stage-recorded
+      - failure-reason-recorded
+      - failure-cause-classified
+      - execution-context-recorded
+      - comparison-recorded
+      - evidence-location-recorded
+      - execution-outcome-retained
+      - last-confirmed-stage-recorded
+      - next-check-rule-recorded
+      - diagnostic-known-cause-omission
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: unknown-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: unknown-failure
+    verifies:
+      - diagnostic-unsubstantiated-remediation
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: external-request-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: external-request-failure
+    verifies:
+      - diagnostic-unsubstantiated-context
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: child-process-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: child-process-failure
+    verifies:
+      - diagnostic-unsafe-diagnostic-disclosure
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: evidence-generation-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: evidence-generation-failure
+    verifies:
+      - diagnostic-original-diagnostic-loss
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: evidence-transfer-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: evidence-transfer-failure
+    verifies:
+      - diagnostic-invalid-evidence-reference
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: summary-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: summary-failure
+    verifies:
+      - diagnostic-original-outcome-replacement
+  - contract_id: contract.ci-failure-diagnostics.actionable
+    id: partial-write-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: partial-write-failure
+    verifies:
+      - diagnostic-diagnostic-only-retry
+  - contract_id: contract.ci-failure-diagnostics.subject-declarations
+    id: all-subject-diagnostics-defined
+    partition: subject-contract-source-available
+    input:
+      scenario: packaged-subject-contract-definitions
+  - contract_id: contract.ci-failure-diagnostics.workflow-evidence
+    id: workflow-evidence-declared
+    partition: ci-failure-diagnostics-workflow-source-available
+    input:
+      scenario: managed-workflow-source
+  - contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
+    id: bootstrap-diagnostic-emitted
+    partition: ci-failure-diagnostics-bootstrap-fails
+    input:
+      scenario: invalid-bootstrap-invocation

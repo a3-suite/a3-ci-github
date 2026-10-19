@@ -1,27 +1,20 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.publish-version
-verifications:
-  - id: verification.ci-publish-version.outputs
-    contract_id: contract.ci-publish-version.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: valid-version-plan
-        intent_id: publish-version-output-set
-        input:
-          version-plan-json: .ci/version-plan.json
-        checks:
-          - id: check-publish-version-output
-            guarantee_ref: publish-version-output-produced
-      - id: invalid-plan-rejected
-        intent_id: publish-version-plan-rejected
-        input:
-          strategy: ciGenerated
-          template: "{baseVersion}"
-          components: {}
-        checks:
-          - id: check-publish-version-failure
-            guarantee_ref: publish-version-failure-propagated
+cases:
+  - contract_id: contract.ci-publish-version.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-publish-version.outputs
+    id: valid-version-plan
+    partition: runtime-context.publish-version-plan-valid
+    input:
+      version-plan-json: .ci/version-plan.json
+  - contract_id: contract.ci-publish-version.outputs
+    id: invalid-plan-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      strategy: ciGenerated
+      template: "{baseVersion}"
+      components: {}

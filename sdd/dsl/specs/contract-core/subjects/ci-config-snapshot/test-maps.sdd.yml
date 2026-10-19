@@ -1,44 +1,48 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.config-snapshot
 test_maps:
-  - verification_id: verification.ci-config-snapshot.outputs
+  - contract_id: contract.ci-config-snapshot.outputs
     case_id: valid-config-sources
     tests:
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint writes snapshot and outputs"
-        check_refs:
-          - check-config-snapshot-status
+        symbol: source entrypoint > entrypoint writes snapshot and outputs
+        guarantees:
+          - config-snapshot-status-produced
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint writes snapshot and outputs"
-        check_refs:
-          - check-config-snapshot-status
-  - verification_id: verification.ci-config-snapshot.outputs
+        symbol: dist entrypoint > entrypoint writes snapshot and outputs
+        guarantees:
+          - config-snapshot-status-produced
+  - contract_id: contract.ci-config-snapshot.outputs
     case_id: command-file-collision-rejected
     tests:
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT"
-        check_refs:
-          - check-config-snapshot-failure-status
+        symbol: source entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
+        guarantees:
+          - config-snapshot-failure-propagated
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT"
-        check_refs:
-          - check-config-snapshot-failure-status
-  - verification_id: verification.ci-config-snapshot.outputs
+        symbol: dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
+        guarantees:
+          - config-snapshot-failure-propagated
+  - contract_id: contract.ci-config-snapshot.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails"
-        check_refs: [diagnostic-details]
+        symbol: dist entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-config-snapshot failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "owner validation comparisons > source retains owner field comparisons without private values"
-        check_refs: [diagnostic-details]
+        symbol: owner validation comparisons > source retains owner field comparisons without private values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "owner validation comparisons > dist retains owner field comparisons without private values"
-        check_refs: [diagnostic-details]
+        symbol: owner validation comparisons > dist retains owner field comparisons without private values
+        guarantees:
+          - diagnostic-failure-stage-outputs

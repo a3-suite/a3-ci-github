@@ -3,3 +3,79 @@ name: contract-subject
 subject:
   id: subject.ci.quality-summary
   summary: Rendering quality results and exposing deterministic summary evidence.
+contracts:
+  - id: contract.ci-quality-summary.outputs
+    summary: Quality result input to the quality summary Action.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Aggregate quality status.
+            - selector: digest
+              meaning: SHA-256 digest of rendered summary evidence.
+            - selector: evidence-path
+              meaning: Path written for rendered summary evidence.
+            - selector: outcome
+              meaning: Failure outcome of the rejected quality summary step.
+            - selector: applicable-only-status-comparison
+              meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
+            - selector: default-evidence-comparison
+              meaning: Comparison of missing-row evidence with the current workflow run URL.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: summary-input-present
+      - environment: runtime-context.action-input-invalid
+      - environment: runtime-context.ci-quality-summary-summary-mixed-applicability
+      - environment: runtime-context.ci-quality-summary-summary-default-evidence-valid
+      - environment: runtime-context.ci-quality-summary-summary-all-excluded
+      - environment: runtime-context.ci-quality-summary-summary-run-context-missing
+    guarantees:
+      - id: quality-summary-status-produced
+        applies_to:
+          - summary-input-present
+        claim:
+          field: status
+          present: true
+      - id: quality-summary-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+          - runtime-context.ci-quality-summary-summary-all-excluded
+          - runtime-context.ci-quality-summary-summary-run-context-missing
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: excluded-rows-not-aggregated
+        applies_to:
+          - runtime-context.ci-quality-summary-summary-mixed-applicability
+        claim:
+          field: applicable-only-status-comparison
+          in:
+            - equal
+      - id: run-url-used-for-missing-evidence
+        applies_to:
+          - runtime-context.ci-quality-summary-summary-default-evidence-valid
+        claim:
+          field: default-evidence-comparison
+          in:
+            - equal

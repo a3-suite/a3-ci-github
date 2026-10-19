@@ -1,99 +1,76 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.quality-summary
-verifications:
-  - id: verification.ci-quality-summary.outputs
-    contract_id: contract.ci-quality-summary.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: { scenario: rejected-public-invocation }
-        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-outputs } ]
-      - id: successful-quality-result
-        intent_id: quality-summary-output-set
-        input:
-          summary-json: '{"tests":[{"unit":"contract","execution":"node","result":"success","evidence":"tests","collection":"完了"}]}'
-        checks:
-          - id: check-quality-summary-status
-            guarantee_ref: quality-summary-status-produced
-      - id: raw-job-results-normalized
-        intent_id: quality-summary-output-set
-        input:
-          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true,"evidence":"run"},{"unit":"optional","execution":"optional","rawResult":"skipped","applicable":false,"evidence":"owner-policy","reason":"disabled by owner policy"}]}'
-        checks:
-          - id: check-quality-summary-raw-result-status
-            guarantee_ref: quality-summary-status-produced
-      - id: missing-summary-path-rejected
-        intent_id: quality-summary-rejected
-        input:
-          summary-json: valid
-          github-step-summary: unset
-        checks:
-          - id: check-quality-summary-failure-status
-            guarantee_ref: quality-summary-failure-propagated
-      - id: unresolved-quality-evidence-rejected
-        intent_id: quality-summary-rejected
-        input:
-          summary-json: '{"tests":[{"unit":"unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"missing evidence"}]}'
-        checks:
-          - id: check-quality-summary-unresolved-failure
-            guarantee_ref: quality-summary-failure-propagated
-      - id: excluded-rows-ignored-in-aggregation
-        intent_id: quality-summary-output-set
-        input:
-          summary-json: '{"tests":[{"unit":"considered","execution":"node","result":"success","evidence":"tests","collection":"完了"},{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
-        checks:
-          - id: check-quality-summary-excluded-status
-            guarantee_ref: quality-summary-status-produced
-      - id: all-excluded-rows-rejected
-        intent_id: summary-all-excluded-rejection
-        input:
-          summary-json: '{"tests":[{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
-        checks:
-          - id: check-quality-summary-all-excluded-failure
-            guarantee_ref: summary-all-excluded-rejected
-      - id: omitted-evidence-uses-run-url
-        intent_id: quality-summary-output-set
-        input:
-          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true}]}'
-          github-run-context: valid
-        checks:
-          - id: check-quality-summary-default-evidence-status
-            guarantee_ref: quality-summary-status-produced
-      - id: omitted-evidence-without-run-context-rejected
-        intent_id: summary-run-context-missing-rejection
-        input:
-          summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"success","applicable":true}]}'
-          github-run-context: missing
-        checks:
-          - id: check-quality-summary-default-evidence-failure
-            guarantee_ref: summary-run-context-missing-rejected
-      - id: mixed-applicability
-        intent_id: mixed-applicability
-        input:
-          summary-json:
-            jobs:
-              - unit: unit
-                execution: test command
-                result: success
-                evidence: evidence.log
-                collection: 完了
-              - unit: unit
-                execution: test command
-                result: 対象外
-                evidence: evidence.log
-                collection: 取得不可
-                reason: disabled by owner contract
-        checks:
-          - id: excluded-rows-not-aggregated
-            guarantee_ref: excluded-rows-not-aggregated
-      - id: default-evidence
-        intent_id: default-evidence
-        input:
-          row-evidence: null
-          server-url: https://github.com
-          repository: owner/project
-          run-id: "123"
-        checks:
-          - id: run-url-used-for-missing-evidence
-            guarantee_ref: run-url-used-for-missing-evidence
+cases:
+  - contract_id: contract.ci-quality-summary.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-quality-summary.outputs
+    id: successful-quality-result
+    partition: summary-input-present
+    input:
+      summary-json: '{"tests":[{"unit":"contract","execution":"node","result":"success","evidence":"tests","collection":"完了"}]}'
+  - contract_id: contract.ci-quality-summary.outputs
+    id: raw-job-results-normalized
+    partition: summary-input-present
+    input:
+      summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true,"evidence":"run"},{"unit":"optional","execution":"optional","rawResult":"skipped","applicable":false,"evidence":"owner-policy","reason":"disabled by owner policy"}]}'
+  - contract_id: contract.ci-quality-summary.outputs
+    id: missing-summary-path-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      summary-json: valid
+      github-step-summary: unset
+  - contract_id: contract.ci-quality-summary.outputs
+    id: unresolved-quality-evidence-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      summary-json: '{"tests":[{"unit":"unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"missing evidence"}]}'
+  - contract_id: contract.ci-quality-summary.outputs
+    id: excluded-rows-ignored-in-aggregation
+    partition: summary-input-present
+    input:
+      summary-json: '{"tests":[{"unit":"considered","execution":"node","result":"success","evidence":"tests","collection":"完了"},{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
+  - contract_id: contract.ci-quality-summary.outputs
+    id: all-excluded-rows-rejected
+    partition: runtime-context.ci-quality-summary-summary-all-excluded
+    input:
+      summary-json: '{"tests":[{"unit":"intentionally-excluded","execution":"node","result":"対象外","evidence":"owner-policy","collection":"完了","reason":"excluded by owner policy"}]}'
+  - contract_id: contract.ci-quality-summary.outputs
+    id: omitted-evidence-uses-run-url
+    partition: summary-input-present
+    input:
+      summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true}]}'
+      github-run-context: valid
+  - contract_id: contract.ci-quality-summary.outputs
+    id: omitted-evidence-without-run-context-rejected
+    partition: runtime-context.ci-quality-summary-summary-run-context-missing
+    input:
+      summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"success","applicable":true}]}'
+      github-run-context: missing
+  - contract_id: contract.ci-quality-summary.outputs
+    id: mixed-applicability
+    partition: runtime-context.ci-quality-summary-summary-mixed-applicability
+    input:
+      summary-json:
+        jobs:
+          - unit: unit
+            execution: test command
+            result: success
+            evidence: evidence.log
+            collection: 完了
+          - unit: unit
+            execution: test command
+            result: 対象外
+            evidence: evidence.log
+            collection: 取得不可
+            reason: disabled by owner contract
+  - contract_id: contract.ci-quality-summary.outputs
+    id: default-evidence
+    partition: runtime-context.ci-quality-summary-summary-default-evidence-valid
+    input:
+      row-evidence: null
+      server-url: https://github.com
+      repository: owner/project
+      run-id: "123"

@@ -3,3 +3,58 @@ name: contract-subject
 subject:
   id: subject.ci.gh-provisioner
   summary: Provisioning an exact GitHub CLI Release asset for later GitHub CI steps.
+contracts:
+  - id: contract.ci-gh-provisioner.provision
+    summary: A checked official GitHub CLI Release asset enters the job PATH; failed provisioning exposes no executable.
+    observations:
+      - summary: The provisioned GitHub CLI command is visible to later steps.
+        boundary:
+          ref: boundary.runner-path
+        value:
+          root: runner.path
+          kind: object
+          fields:
+            - selector: gh
+              meaning: Checked GitHub CLI executable on the job command search path.
+      - summary: Provisioning success or failure is visible to the caller.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action.step-result
+          kind: object
+          fields:
+            - selector: outcome
+              meaning: Success after checksum verification, extraction, and PATH handoff, or failure before handoff.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.gh-release-asset-valid
+      - environment: runtime-context.gh-release-asset-invalid
+    guarantees:
+      - id: checked-gh-available
+        applies_to:
+          - runtime-context.gh-release-asset-valid
+        claim:
+          field: gh
+          present: true
+      - id: failed-provisioning-stops
+        applies_to:
+          - runtime-context.gh-release-asset-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-provision
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

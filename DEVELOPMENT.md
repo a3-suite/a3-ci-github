@@ -3,7 +3,7 @@
 ## 読む順序
 
 1. `README.md`
-2. `sdd/dsl/requirements/requirement-manifest.sdd.yml`
+2. `sdd/dsl/requirements/items/requirements/`
 3. `sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`
 4. `sdd/dsl/designs/global/physical-structure.sdd.yml`
 5. `docs/maintenance/action-construction.md`

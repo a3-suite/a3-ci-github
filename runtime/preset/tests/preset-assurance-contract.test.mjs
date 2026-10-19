@@ -72,12 +72,12 @@ describe("preset-assurance-contract", () => {
   });
 });
 
-describe("contract.ci-failure-diagnostics.actionable", () => {
+describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
   describe("failure-diagnostics-contract", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test('preset assurance rejects unavailable or inconsistent prepared runtime without changing the project', () => {
       // Arrange
       fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
@@ -159,12 +159,12 @@ const withPreparedBootstrap = (callback) => {
   }
 };
 
-describe("contract.ci-failure-diagnostics.actionable", () => {
+describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
   describe("failure-diagnostics-contract", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap confines dependency files and accepts internal symlink cycles', () => {
       // Arrange
       withPreparedBootstrap((fixture) => {
@@ -245,7 +245,7 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports unavailable npm and cleans up state after dependency command failures', () => {
       // Arrange
       withPreparedBootstrap(({ fixture, consumer, execute }) => {
@@ -277,7 +277,7 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports validator startup and completion failures without consumer changes', () => {
       // Arrange
       withPreparedBootstrap(({ consumer, validator, execute }) => {

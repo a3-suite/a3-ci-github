@@ -47,3 +47,5 @@ related_contracts:
       contract_id: contract.ci-quality-adapter.outputs
   - contract_ref:
       contract_id: contract.ci-quality-summary.outputs
+  - contract_ref:
+      contract_id: contract.ci-quality-toolchain.preparation

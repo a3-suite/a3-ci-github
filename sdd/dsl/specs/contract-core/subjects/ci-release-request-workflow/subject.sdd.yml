@@ -3,3 +3,77 @@ name: contract-subject
 subject:
   id: subject.ci.release-request-workflow
   summary: Bind an annotated tag event to an immutable release request handoff without publication authority.
+contracts:
+  - id: contract.ci-release-request-workflow.handoff
+    summary: Canonical release request workflow definition.
+    observations:
+      - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
+        boundary:
+          ref: boundary.workflow-definition
+        value:
+          root: canonical-workflow
+          kind: object
+          fields:
+            - selector: request-handoff
+              meaning: Declared request handoff route.
+            - selector: failure-summary
+              meaning: Declared request aggregate route.
+            - selector: request-no-publication-permission
+              meaning: Occurrence of contents-write permission in the request workflow.
+            - selector: request-tag-before-handoff
+              meaning: Declared order of annotated-tag resolution and immutable request handoff.
+            - selector: request-failure-summary-always
+              meaning: Declared request failure summary condition.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: ci-release-request-workflow-canonical-source-available
+      - input: ci-release-request-workflow-failure-route-required
+    guarantees:
+      - id: ci-release-request-workflow-success-observed
+        applies_to:
+          - ci-release-request-workflow-canonical-source-available
+        claim:
+          field: request-handoff
+          present: true
+      - id: ci-release-request-workflow-failure-observed
+        applies_to:
+          - ci-release-request-workflow-failure-route-required
+        claim:
+          field: failure-summary
+          present: true
+      - id: diagnostic-failure-stage-handoff
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: request-no-publication-permission
+        applies_to:
+          - ci-release-request-workflow-canonical-source-available
+        claim:
+          field: request-no-publication-permission
+          in:
+            - absent
+      - id: request-tag-before-handoff
+        applies_to:
+          - ci-release-request-workflow-canonical-source-available
+        claim:
+          field: request-tag-before-handoff
+          in:
+            - tag-before-handoff
+      - id: request-failure-summary-always
+        applies_to:
+          - ci-release-request-workflow-failure-route-required
+        claim:
+          field: request-failure-summary-always
+          in:
+            - always

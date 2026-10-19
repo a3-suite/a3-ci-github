@@ -1,35 +1,36 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.annotated-tag-resolver
 test_maps:
-  - verification_id: verification.ci-annotated-tag-resolver.outputs
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
     case_id: annotated-tag-resolution
     tests:
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint resolves an annotated tag to its commit"
-        check_refs:
-          - check-tag-resolution-output
+        symbol: source entrypoint > entrypoint resolves an annotated tag to its commit
+        guarantees:
+          - tag-resolution-outputs-produced
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint resolves an annotated tag to its commit"
-        check_refs:
-          - check-tag-resolution-output
-  - verification_id: verification.ci-annotated-tag-resolver.outputs
+        symbol: dist entrypoint > entrypoint resolves an annotated tag to its commit
+        guarantees:
+          - tag-resolution-outputs-produced
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
     case_id: missing-token-rejected
     tests:
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails when the token is missing"
-        check_refs:
-          - check-tag-resolution-failure
+        symbol: source entrypoint > entrypoint fails when the token is missing
+        guarantees:
+          - tag-resolution-failure-propagated
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint fails when the token is missing"
-        check_refs:
-          - check-tag-resolution-failure
-  - verification_id: verification.ci-annotated-tag-resolver.outputs
+        symbol: dist entrypoint > entrypoint fails when the token is missing
+        guarantees:
+          - tag-resolution-failure-propagated
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-annotated-tag-resolver/tests/tag.test.ts
-        symbol: "resolveAnnotatedTag(string,string,string,string,fetch) > retains safe provider correlation without the response body or token"
-        check_refs: [diagnostic-details]
+        symbol: resolveAnnotatedTag(string,string,string,string,fetch) > retains safe provider correlation without the response body or token
+        guarantees:
+          - diagnostic-failure-stage-outputs

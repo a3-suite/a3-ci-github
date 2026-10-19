@@ -42,7 +42,7 @@ describe("contract.repository-action-distribution.integrity", () => {
     // integration_id: repository-action-distribution-gates
     test('every Action has contract coverage for its public outputs', () => {
       const packageText = readFileSync(path.join(root, 'sdd/dsl/specs/contract-core/contract-package.sdd.yml'), 'utf8');
-      const subjectPaths = new Set([...packageText.matchAll(/^    path: subjects\/([^/]+)\/$/gm)].map((match) => match[1]));
+      const subjectPaths = new Set([...packageText.matchAll(/^ +(?:- )?path: subjects\/([^/]+)\/$/gm)].map((match) => match[1]));
 
       for (const action of collectActions(root)) {
         expect(subjectPaths.has(action.name), `missing contract subject for ${action.name}`).toBe(true);
@@ -50,10 +50,10 @@ describe("contract.repository-action-distribution.integrity", () => {
         const outputSection = actionText.match(/^outputs:\n([\s\S]*?)^runs:/m)?.[1] ?? '';
         const outputs = [...outputSection.matchAll(/^  ([a-z0-9-]+):/gm)].map((match) => match[1]);
         const subjectRoot = path.join(root, 'sdd/dsl/specs/contract-core/subjects', action.name);
-        const observations = readFileSync(path.join(subjectRoot, 'observations.sdd.yml'), 'utf8');
-        const selectors = new Set([...observations.matchAll(/selector:\s*([a-z0-9-]+)/g)].map((match) => match[1]));
+        const subject = readFileSync(path.join(subjectRoot, 'subject.sdd.yml'), 'utf8');
+        const selectors = new Set([...subject.matchAll(/selector:\s*([a-z0-9-]+)/g)].map((match) => match[1]));
         for (const output of outputs) expect(selectors.has(output), `${action.name} output is not observed: ${output}`).toBe(true);
-        for (const contractFile of ['clauses.sdd.yml', 'verifications.sdd.yml', 'test-maps.sdd.yml']) {
+        for (const contractFile of ['verifications.sdd.yml', 'test-maps.sdd.yml']) {
           expect(existsSync(path.join(subjectRoot, contractFile)), `${action.name} is missing ${contractFile}`).toBe(true);
         }
       }

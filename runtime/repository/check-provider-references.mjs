@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
-import { verifyImplementationBinding } from './verify-implementation-binding.mjs';
+import { assertImplementationReachable, verifyImplementationBinding } from './verify-implementation-binding.mjs';
 
 export const registryPath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
 export const parseYaml = (text, relative) => {
@@ -159,11 +159,7 @@ export function checkActionReferences(root, snapshot, options = {}) {
     let sourceTree;
     if (options.preparation) {
       // Preparation checks the existing binding; the new implementation cannot be bound before its commit exists.
-      try { git('merge-base', '--is-ancestor', binding.exactRef, git('rev-parse', 'HEAD')); }
-      catch (error) {
-        if (error.status === 1) throw new DiagnosticError('implementation-source-not-contained', { diagnostics: { field: 'source-revision', expected: 'contains-existing-implementation-sha', observed: 'not-contained' } });
-        throw error;
-      }
+      assertImplementationReachable(git, binding.exactRef);
       sourceRevision = binding.exactRef;
       sourceTree = binding.exactRef;
     } else if (options.candidate) {

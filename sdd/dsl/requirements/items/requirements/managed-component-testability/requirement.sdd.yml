@@ -18,7 +18,3 @@ requirements:
       - 判断ロジックと外部副作用を分離し、対象外コンポーネントの内部実装を起動せずに主要な正常系、失敗系、境界条件を検証できる
       - 結果、エラー、終了状態、状態遷移、生成物を公開契約または責務境界から観測でき、非公開状態の直接操作を必須にしない
       - テスト容易性は依存注入と責務分割の結果として成立し、テストのためだけの実装、実行モード、条件分岐、公開入口を本番コードへ追加しない
-    derived_artifacts:
-      quality_scenarios:
-        - quality_scenario_ref:
-            quality_scenario_id: managed-component-testability-maintained

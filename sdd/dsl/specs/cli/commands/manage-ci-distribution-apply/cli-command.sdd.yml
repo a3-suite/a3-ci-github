@@ -1,0 +1,28 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution-apply
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+    - apply
+  summary: Apply one reviewed unchanged plan within the authorized scope under an exclusive transaction
+  usage_targets:
+    - id: apply
+      summary: Apply one reviewed unchanged plan within the authorized scope under an exclusive transaction
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: plan
+          presence: required
+        - option_id: approve
+          presence: required
+  option_groups:
+    - id: application
+      title: Planned application or recovery
+      options:
+        - repo-root
+        - plan
+        - approve
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs apply [options]

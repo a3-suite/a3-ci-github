@@ -3,3 +3,158 @@ name: contract-subject
 subject:
   id: subject.ci.quality-adapter
   summary: Execute validated read-only quality adapters against fixed source checkouts.
+contracts:
+  - id: contract.ci-quality-adapter.outputs
+    summary: Quality adapter invocation with a standard bundle or trusted descriptor.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Aggregate quality adapter status.
+            - selector: result-path
+              meaning: Path to the quality adapter result JSON.
+            - selector: outcome
+              meaning: Failure outcome of the rejected quality adapter step.
+            - selector: diagnostic-codes
+              meaning: Stable diagnostic codes reported by the failed step.
+            - selector: format-command-state
+              meaning: Occurrence of format commands in the native execution trace.
+            - selector: security-command-state
+              meaning: Occurrence of security commands in the native execution trace.
+            - selector: native-task-order
+              meaning: Ordered IDs in the observed native result trace.
+            - selector: consumer-descriptor-read-state
+              meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
+            - selector: rejected-command-state
+              meaning: Occurrence of project command execution after scope rejection.
+            - selector: native-terminal-prerequisite-status
+              meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
+            - selector: native-failed-prerequisite-followup-state
+              meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+      - boundary:
+          ref: boundary.workspace-files
+        value:
+          root: action.embedded-standard-bundle
+          kind: object
+          fields:
+            - selector: accepted-source-binding
+              meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
+            - selector: accepted-content-digest
+              meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: quality-adapter-bundle-present
+      - environment: runtime-context.action-input-invalid
+      - input: quality-adapter-standard-bundle-present
+      - environment: runtime-context.quality-adapter-toolchain-version-report-rejected
+      - environment: runtime-context.ci-quality-adapter-native-rust-valid
+      - environment: runtime-context.ci-quality-adapter-native-scope-rejected
+      - environment: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+    guarantees:
+      - id: quality-adapter-status-produced
+        applies_to:
+          - quality-adapter-bundle-present
+          - quality-adapter-standard-bundle-present
+        claim:
+          field: status
+          present: true
+      - id: quality-adapter-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: quality-adapter-toolchain-version-diagnostic-present
+        applies_to:
+          - runtime-context.quality-adapter-toolchain-version-report-rejected
+        claim:
+          field: diagnostic-codes
+          contains: quality-adapter-toolchain-version-mismatch
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: native-format-omitted
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: format-command-state
+          in:
+            - absent
+      - id: native-security-omitted
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: security-command-state
+          in:
+            - absent
+      - id: native-command-order
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: native-task-order
+          in:
+            - toolchain-verify
+            - toolchain-verify,dependency-restore
+            - toolchain-verify,dependency-restore,lint,test,structure
+      - id: standard-descriptor-independent
+        applies_to:
+          - quality-adapter-standard-bundle-present
+        claim:
+          field: consumer-descriptor-read-state
+          in:
+            - absent
+      - id: rejected-scope-no-commands
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-scope-rejected
+        claim:
+          field: rejected-command-state
+          in:
+            - absent
+      - id: standard-source-path-validated
+        applies_to:
+          - runtime-context.ci-quality-adapter-embedded-bundle-supplied
+        claim:
+          field: accepted-source-binding
+          in:
+            - allowed-source-path
+      - id: standard-content-digest-checked
+        applies_to:
+          - runtime-context.ci-quality-adapter-embedded-bundle-supplied
+        claim:
+          field: accepted-content-digest
+          in:
+            - equal
+      - id: native-terminal-prerequisite-status
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: native-terminal-prerequisite-status
+          in:
+            - failed
+            - 判定不能
+            - continued
+      - id: native-no-followup-after-failed-prerequisite
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: native-failed-prerequisite-followup-state
+          in:
+            - absent

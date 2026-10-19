@@ -3,3 +3,154 @@ name: contract-subject
 subject:
   id: subject.repository.action-distribution
   summary: Maintaining Action distribution inputs and the repository Action catalog consistently.
+contracts:
+  - id: contract.repository-action-distribution.integrity
+    summary: Repository Action distribution gate invocation.
+    observations:
+      - summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
+        boundary:
+          ref: boundary.repository-gate-result
+        value:
+          root: repository.gate-result
+          kind: object
+          fields:
+            - selector: distribution
+              meaning: Distribution gate result.
+            - selector: catalog
+              meaning: Maintained Action catalog projection written by the gate.
+            - selector: catalog-action-set
+              meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
+            - selector: catalog-usage-text
+              meaning: Comparison of curated usage text before and after projection; equal or changed.
+            - selector: contract-coverage
+              meaning: Contract coverage report for the discovered Actions.
+            - selector: contract-subject-coverage
+              meaning: Comparison of discovered Actions with Actions that have a packaged contract subject; matched or missing.
+            - selector: contract-output-coverage
+              meaning: Comparison of each Action public output with the observation selectors of its contract subject; matched or missing.
+            - selector: source-verification
+              meaning: Source verification plan of typecheck and test steps.
+            - selector: source-verification-action-coverage
+              meaning: Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.
+            - selector: source-verification-runtime-tests
+              meaning: Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.
+            - selector: source-verification-rebuild
+              meaning: Dependency installation or distribution build steps inside the source verification plan; absent or present.
+            - selector: release-version
+              meaning: Repository VERSION confirmed for an annotated exact release tag, or failure.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.repository-action-distribution-inputs-available
+      - environment: runtime-context.repository-action-distribution-inconsistent
+      - environment: runtime-context.repository-action-catalog-inputs-available
+      - environment: runtime-context.repository-exact-release-tag-available
+      - environment: runtime-context.repository-release-version-invalid-or-mismatched
+    guarantees:
+      - id: distribution-plan-produced
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        claim:
+          field: distribution
+          present: true
+      - id: inconsistent-distribution-rejected
+        applies_to:
+          - runtime-context.repository-action-distribution-inconsistent
+        claim:
+          field: distribution
+          in:
+            - failure
+      - id: action-catalog-projected
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: catalog
+          present: true
+      - id: action-contract-coverage-confirmed
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: contract-coverage
+          present: true
+      - id: action-source-verification-plan-produced
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        claim:
+          field: source-verification
+          present: true
+      - id: release-version-confirmed
+        applies_to:
+          - runtime-context.repository-exact-release-tag-available
+        claim:
+          field: release-version
+          present: true
+      - id: invalid-or-mismatched-release-version-rejected
+        applies_to:
+          - runtime-context.repository-release-version-invalid-or-mismatched
+        claim:
+          field: release-version
+          in:
+            - failure
+      - id: catalog-action-set-matched
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: catalog-action-set
+          in:
+            - matched
+      - id: catalog-usage-text-preserved
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: catalog-usage-text
+          in:
+            - equal
+      - id: action-contract-subject-covered
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: contract-subject-coverage
+          in:
+            - matched
+      - id: action-contract-output-covered
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        claim:
+          field: contract-output-coverage
+          in:
+            - matched
+      - id: source-verification-actions-covered
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        claim:
+          field: source-verification-action-coverage
+          in:
+            - matched
+      - id: source-verification-runtime-tests-covered
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        claim:
+          field: source-verification-runtime-tests
+          in:
+            - matched
+      - id: source-verification-without-rebuild
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        claim:
+          field: source-verification-rebuild
+          in:
+            - absent
+      - id: diagnostic-failure-stage-integrity
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

@@ -3,3 +3,59 @@ name: contract-subject
 subject:
   id: subject.ci.handoff-integrity
   summary: Validating release handoff identity, manifest, and artifact digests.
+contracts:
+  - id: contract.ci-handoff-integrity.outputs
+    summary: A matching handoff descriptor and manifest produce a handoff status output.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Whether handoff validation succeeded.
+            - selector: descriptor
+              meaning: Validated descriptor path relative to the handoff root.
+            - selector: manifest
+              meaning: Validated manifest path relative to the handoff root.
+            - selector: manifest-digest
+              meaning: SHA-256 digest of manifest bytes.
+            - selector: entries
+              meaning: Number of validated manifest entries.
+            - selector: outcome
+              meaning: Failure outcome of the rejected handoff validation step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: handoff-input-present
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: handoff-status-produced
+        applies_to:
+          - handoff-input-present
+        claim:
+          field: status
+          present: true
+      - id: handoff-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

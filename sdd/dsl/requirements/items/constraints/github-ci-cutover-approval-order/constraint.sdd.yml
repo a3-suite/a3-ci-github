@@ -1,0 +1,15 @@
+version: 1
+name: constraint
+constraint_id: github-ci-cutover-approval-order
+summary: Release公開とコピー元の削除を代表フローの検証と承認の後に行う
+scope:
+  namespace: ci
+  key: github-source-consolidation
+rule: >-
+  Release tagの公開と利用側の接続、コピー元からの削除またはarchiveは、代表フローの検証と別途承認の後に行う。
+rationale:
+  why: 未検証の状態で公開や削除を行うと、利用側が検証されていない資材へ切り替わり、戻し先も失われるため
+violation_impact: 利用側が未検証の資材を採用し、旧資産へ戻せなくなる
+related_requirements:
+  - requirement_ref:
+      requirement_id: github-ci-source-consolidation

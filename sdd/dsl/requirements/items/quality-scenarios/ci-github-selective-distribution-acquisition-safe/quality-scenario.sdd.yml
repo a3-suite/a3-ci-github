@@ -1,0 +1,20 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-github-selective-distribution-acquisition-safe
+summary: 選択配布の取得が改変、欠落または通信失敗を取得成功として扱わない
+quality_attribute: reliability
+stimulus: CI管理者が固定Releaseからpresetまたはassetを選択して取得する
+environment: GitHub Releaseとfull SHA Raw source、または同一repository snapshotを利用できる導入・保守環境
+response: 選択閉包と全fileの完全性を検証した後にだけ、取得したdistributionをproject-localに受け入れる
+response_measure:
+  - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合は取得を成功扱いにしない
+  - 通信が応答しない場合も無期限に待たず失敗として識別でき、検証済みlocal distributionは同一manifest digestの場合だけ再利用される
+  - asset単体選択の不足依存、preset閉包の欠落、外部owner identity不足を成功扱いにしない
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.selection
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.delivery
