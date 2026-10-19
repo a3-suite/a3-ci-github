@@ -1,47 +1,18 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.package-publication-workflow
-verifications:
-  - id: verification.ci-package-publication-workflow.publication
-    contract_id: contract.ci-package-publication-workflow.publication
-    cases:
-      - id: detailed-failure-publication
-        intent_id: detailed-diagnostics-publication
-        input: { scenario: rejected-public-invocation }
-        checks: [ { id: diagnostic-details, guarantee_ref: diagnostic-details-publication } ]
-      - id: ci-package-publication-workflow-success
-        intent_id: ci-package-publication-workflow-success-intent
-        input:
-          scenario: valid
-        checks:
-          - id: check-ci-package-publication-workflow-success
-            guarantee_ref: ci-package-publication-workflow-success-observed
-          - id: package-fixed-provider-reference
-            guarantee_ref: package-fixed-provider-reference
-          - id: package-explicit-owner-inputs
-            guarantee_ref: package-explicit-owner-inputs
-          - id: package-request-before-preparation
-            guarantee_ref: package-request-before-preparation
-          - id: package-preparation-before-publication
-            guarantee_ref: package-preparation-before-publication
-          - id: package-control-sha-bound
-            guarantee_ref: package-control-sha-bound
-          - id: package-control-head-verified
-            guarantee_ref: package-control-head-verified
-          - id: package-handoff-before-publication
-            guarantee_ref: package-handoff-before-publication
-          - id: package-credential-scope
-            guarantee_ref: package-credential-scope
-          - id: package-owner-publisher-invoked
-            guarantee_ref: package-owner-publisher-invoked
-      - id: ci-package-publication-workflow-failure
-        intent_id: ci-package-publication-workflow-failure-intent
-        input:
-          scenario: rejected
-        checks:
-          - id: check-ci-package-publication-workflow-failure
-            guarantee_ref: ci-package-publication-workflow-failure-observed
-          - id: package-failure-summary-always
-            guarantee_ref: package-failure-summary-always
-          - id: package-failed-prerequisite-blocks
-            guarantee_ref: package-failed-prerequisite-blocks
+cases:
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: detailed-failure-publication
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: ci-package-publication-workflow-success
+    partition: ci-package-publication-workflow-canonical-source-available
+    input:
+      scenario: valid
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: ci-package-publication-workflow-failure
+    partition: ci-package-publication-workflow-failure-route-required
+    input:
+      scenario: rejected

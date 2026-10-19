@@ -7,8 +7,16 @@ commands:
     path: commands/generate-ci-asset-lock/cli-command.sdd.yml
   - id: materialize-adapter-bundle
     path: commands/materialize-adapter-bundle/cli-command.sdd.yml
-  - id: manage-ci-distribution
-    path: commands/manage-ci-distribution/cli-command.sdd.yml
+  - id: manage-ci-distribution-fetch
+    path: commands/manage-ci-distribution-fetch/cli-command.sdd.yml
+  - id: manage-ci-distribution-verify
+    path: commands/manage-ci-distribution-verify/cli-command.sdd.yml
+  - id: manage-ci-distribution-plan
+    path: commands/manage-ci-distribution-plan/cli-command.sdd.yml
+  - id: manage-ci-distribution-apply
+    path: commands/manage-ci-distribution-apply/cli-command.sdd.yml
+  - id: manage-ci-distribution-rollback
+    path: commands/manage-ci-distribution-rollback/cli-command.sdd.yml
   - id: generate-ci-distribution-release
     path: commands/generate-ci-distribution-release/cli-command.sdd.yml
   - id: assemble-standard-installer

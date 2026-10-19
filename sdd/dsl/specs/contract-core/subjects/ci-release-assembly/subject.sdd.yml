@@ -3,3 +3,131 @@ name: contract-subject
 subject:
   id: subject.ci.release-assembly
   summary: Assemble authority-bound Release assets and opaque owner evidence without provider write or source execution.
+contracts:
+  - id: contract.ci-release-assembly.outputs
+    summary: Release assembly request from authority, snapshot and build inventories.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Success only after complete validation and handoff creation.
+            - selector: release-handoff
+              meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
+            - selector: asset-digest
+              meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
+            - selector: outcome
+              meaning: Failed step outcome when assembly is rejected.
+            - selector: asset-digest-serialization
+              meaning: Serialization of the verified asset list whose SHA-256 equals asset-digest.
+            - selector: asset-digest-asset-order
+              meaning: Order of the assets in the asset-digest serialization.
+            - selector: asset-digest-field-order
+              meaning: Field order of each asset projection in the asset-digest serialization.
+            - selector: accepted-checksum-encoding
+              meaning: Text encoding of a checksum sidecar accepted by a successful assembly.
+            - selector: accepted-checksum-digest-form
+              meaning: Representation of the digest in a checksum sidecar accepted by a successful assembly.
+            - selector: accepted-checksum-separator
+              meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
+            - selector: accepted-checksum-line-ending
+              meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.release-assembly-valid
+      - environment: runtime-context.release-assembly-invalid
+    guarantees:
+      - id: assembly-success
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: status
+          in:
+            - success
+      - id: bound-handoff
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: release-handoff
+          present: true
+      - id: bound-asset-digest
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: asset-digest
+          present: true
+      - id: assembly-rejected
+        applies_to:
+          - runtime-context.release-assembly-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: asset-digest-serialization
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: asset-digest-serialization
+          in:
+            - compact-utf8-json-without-terminal-newline
+      - id: asset-digest-asset-order
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: asset-digest-asset-order
+          in:
+            - name-order-localecompare-en
+      - id: asset-digest-field-order
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: asset-digest-field-order
+          in:
+            - name-sha256-size
+      - id: accepted-checksum-encoding
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: accepted-checksum-encoding
+          in:
+            - utf8-without-bom
+      - id: accepted-checksum-digest-form
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: accepted-checksum-digest-form
+          in:
+            - lowercase-sha256
+      - id: accepted-checksum-separator
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: accepted-checksum-separator
+          in:
+            - two-spaces
+      - id: accepted-checksum-line-ending
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: accepted-checksum-line-ending
+          in:
+            - single-terminal-lf
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

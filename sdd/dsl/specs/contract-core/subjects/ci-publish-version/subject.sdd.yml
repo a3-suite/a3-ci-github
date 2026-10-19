@@ -3,3 +3,53 @@ name: contract-subject
 subject:
   id: subject.ci.publish-version
   summary: Materializing an owner-approved version plan into a publish version.
+contracts:
+  - id: contract.ci-publish-version.outputs
+    summary: An owner-approved version plan produces a publish-version output.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Whether the version plan was materialized successfully.
+            - selector: publish-version
+              meaning: The materialized publish version.
+            - selector: outcome
+              meaning: Failure outcome of the rejected publish version step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.publish-version-plan-valid
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: publish-version-output-produced
+        applies_to:
+          - runtime-context.publish-version-plan-valid
+        claim:
+          field: publish-version
+          present: true
+      - id: publish-version-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

@@ -3,3 +3,106 @@ name: contract-subject
 subject:
   id: subject.ci.quality-toolchain
   summary: Preparing the selected fixed quality toolchain without executing project commands or changing workflow trust decisions.
+contracts:
+  - id: contract.ci-quality-toolchain.preparation
+    summary: Toolchain preparation request for a selected language profile.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: outcome
+              meaning: Preparation step outcome.
+            - selector: resolved-toolchain-version
+              meaning: Published resolved toolchain version.
+            - selector: unselected-setup-state
+              meaning: Occurrence of dependency setup for an unselected language profile.
+            - selector: resolved-selector-comparison
+              meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
+            - selector: source-fallback-state
+              meaning: Occurrence of source installation after registered binary acquisition fails.
+            - selector: failed-path-export-state
+              meaning: Occurrence of a PATH export after registered binary acquisition fails.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+            - selector: diagnostic-only-tool-acquisition-state
+              meaning: Occurrence state (present or absent) of an unselected tool acquired solely to obtain diagnostics.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.quality-toolchain-inputs-ready
+      - environment: runtime-context.quality-toolchain-inputs-unusable
+      - environment: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+      - environment: runtime-context.quality-toolchain-request-valid
+    guarantees:
+      - id: resolved-quality-toolchain-produced
+        applies_to:
+          - runtime-context.quality-toolchain-inputs-ready
+        claim:
+          field: resolved-toolchain-version
+          present: true
+      - id: selected-quality-toolchain-ready
+        applies_to:
+          - runtime-context.quality-toolchain-inputs-ready
+        claim:
+          field: outcome
+          in:
+            - success
+      - id: invalid-or-failed-quality-toolchain-stops
+        applies_to:
+          - runtime-context.quality-toolchain-inputs-unusable
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-preparation
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: diagnostic-diagnostic-only-tool-acquisition
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: diagnostic-only-tool-acquisition-state
+          in:
+            - absent
+      - id: selected-profile-dependencies-only
+        applies_to:
+          - runtime-context.quality-toolchain-request-valid
+        claim:
+          field: unselected-setup-state
+          in:
+            - absent
+      - id: resolved-version-satisfies-selector
+        applies_to:
+          - runtime-context.quality-toolchain-request-valid
+        claim:
+          field: resolved-selector-comparison
+          in:
+            - matched
+            - not-published
+      - id: registered-failure-no-source-fallback
+        applies_to:
+          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+        claim:
+          field: source-fallback-state
+          in:
+            - absent
+      - id: registered-failure-no-path-output
+        applies_to:
+          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+        claim:
+          field: failed-path-export-state
+          in:
+            - absent

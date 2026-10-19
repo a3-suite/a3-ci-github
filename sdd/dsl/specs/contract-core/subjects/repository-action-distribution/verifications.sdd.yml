@@ -1,75 +1,77 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.repository.action-distribution
-verifications:
-  - id: verification.repository-action-distribution.integrity
-    contract_id: contract.repository-action-distribution.integrity
-    cases:
-      - id: detailed-failure-integrity
-        intent_id: detailed-diagnostics-integrity
-        input: {scenario: rejected-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-integrity}]
-      - id: maintained-distribution-inputs
-        intent_id: distribution-plan-derived
-        input:
-          actions-root: actions
-          runtime-root: runtime
-        checks:
-          - id: check-distribution-plan-produced
-            guarantee_ref: distribution-plan-produced
-      - id: inconsistent-distribution-state
-        intent_id: inconsistent-distribution-stopped
-        input:
-          actions-root: actions
-          runtime-root: runtime
-        checks:
-          - id: check-inconsistent-distribution-rejected
-            guarantee_ref: inconsistent-distribution-rejected
-      - id: maintained-action-catalog
-        intent_id: action-catalog-derived
-        input:
-          actions-root: actions
-          catalog-path: README.md
-        checks:
-          - id: check-action-catalog-projected
-            guarantee_ref: action-catalog-projected
-      - id: maintained-action-contract-coverage
-        intent_id: action-contract-coverage-derived
-        input:
-          actions-root: actions
-          contract-package: sdd/dsl/specs/contract-core/contract-package.sdd.yml
-        checks:
-          - id: check-action-contract-coverage
-            guarantee_ref: action-contract-coverage-confirmed
-      - id: maintained-action-source-verification
-        intent_id: action-source-verification-derived
-        input:
-          actions-root: actions
-          prepared-by: distribution-plan
-        checks:
-          - id: check-action-source-verification-plan
-            guarantee_ref: action-source-verification-plan-produced
-      - id: matching-release-version
-        intent_id: release-version-bound
-        input:
-          tag: v1.2.3
-          repository-version: 1.2.3
-        checks:
-          - id: check-release-version-confirmed
-            guarantee_ref: release-version-confirmed
-      - id: invalid-release-version
-        intent_id: release-version-rejected
-        input:
-          tag: v1.2.3
-          repository-version-variants: [missing, 01.2.3]
-        checks:
-          - id: check-invalid-release-version-rejected
-            guarantee_ref: invalid-or-mismatched-release-version-rejected
-      - id: mismatched-release-version
-        intent_id: release-version-rejected
-        input:
-          tag: v1.2.3
-          repository-version: 1.2.4
-        checks:
-          - id: check-mismatched-release-version-rejected
-            guarantee_ref: invalid-or-mismatched-release-version-rejected
+cases:
+  - contract_id: contract.repository-action-distribution.integrity
+    id: detailed-failure-integrity
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.repository-action-distribution.integrity
+    id: maintained-distribution-inputs
+    partition: runtime-context.repository-action-distribution-inputs-available
+    input:
+      actions-root: actions
+      runtime-root: runtime
+    verifies:
+      - distribution-plan-produced
+  - contract_id: contract.repository-action-distribution.integrity
+    id: inconsistent-distribution-state
+    partition: runtime-context.repository-action-distribution-inconsistent
+    input:
+      actions-root: actions
+      runtime-root: runtime
+  - contract_id: contract.repository-action-distribution.integrity
+    id: maintained-action-catalog
+    partition: runtime-context.repository-action-catalog-inputs-available
+    input:
+      actions-root: actions
+      catalog-path: README.md
+    verifies:
+      - action-catalog-projected
+      - catalog-action-set-matched
+      - catalog-usage-text-preserved
+  - contract_id: contract.repository-action-distribution.integrity
+    id: maintained-action-contract-coverage
+    partition: runtime-context.repository-action-catalog-inputs-available
+    input:
+      actions-root: actions
+      contract-package: sdd/dsl/specs/contract-core/contract-package.sdd.yml
+    verifies:
+      - action-contract-coverage-confirmed
+      - action-contract-subject-covered
+      - action-contract-output-covered
+  - contract_id: contract.repository-action-distribution.integrity
+    id: maintained-action-source-verification
+    partition: runtime-context.repository-action-distribution-inputs-available
+    input:
+      actions-root: actions
+      prepared-by: distribution-plan
+    verifies:
+      - action-source-verification-plan-produced
+      - source-verification-actions-covered
+      - source-verification-runtime-tests-covered
+      - source-verification-without-rebuild
+  - contract_id: contract.repository-action-distribution.integrity
+    id: matching-release-version
+    partition: runtime-context.repository-exact-release-tag-available
+    input:
+      tag: v1.2.3
+      repository-version: 1.2.3
+  - contract_id: contract.repository-action-distribution.integrity
+    id: missing-release-version
+    partition: runtime-context.repository-release-version-invalid-or-mismatched
+    input:
+      tag: v1.2.3
+      repository-version: missing
+  - contract_id: contract.repository-action-distribution.integrity
+    id: noncanonical-release-version
+    partition: runtime-context.repository-release-version-invalid-or-mismatched
+    input:
+      tag: v1.2.3
+      repository-version: 01.2.3
+  - contract_id: contract.repository-action-distribution.integrity
+    id: mismatched-release-version
+    partition: runtime-context.repository-release-version-invalid-or-mismatched
+    input:
+      tag: v1.2.3
+      repository-version: 1.2.4

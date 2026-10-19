@@ -1,90 +1,67 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.gh-provisioner
-verifications:
-  - id: verification.ci-gh-provisioner.provision
-    contract_id: contract.ci-gh-provisioner.provision
-    cases:
-      - id: detailed-failure-provision
-        intent_id: detailed-diagnostics-provision
-        input: {scenario: rejected-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-provision}]
-      - id: supported-runner-assets
-        intent_id: checked-gh-provisioned
-        input:
-          runner-os-arch: supported-matrix
-        checks:
-          - id: check-supported-runner-assets
-            guarantee_ref: checked-gh-available
-      - id: checked-release-asset
-        intent_id: checked-gh-provisioned
-        input:
-          gh-version: 2.80.0
-          runner-os: Linux
-          runner-arch: X64
-        checks:
-          - id: check-gh-on-path
-            guarantee_ref: checked-gh-available
-      - id: mismatched-release-asset
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          checksum: mismatch
-        checks:
-          - id: check-gh-provisioning-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: invalid-version
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: not-exact
-        checks:
-          - id: check-invalid-version-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: unsupported-runner
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          runner-os: Windows
-          runner-arch: X64
-        checks:
-          - id: check-unsupported-runner-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: unavailable-release-asset
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          asset: unavailable
-        checks:
-          - id: check-download-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: invalid-checksum-manifest
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          checksum-entry: missing
-        checks:
-          - id: check-checksum-entry-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: extraction-failure
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          archive-extraction: failed
-        checks:
-          - id: check-extraction-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: installation-failure
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          installation: failed
-        checks:
-          - id: check-installation-failure
-            guarantee_ref: failed-provisioning-stops
-      - id: path-update-failure
-        intent_id: failed-gh-provisioning-rejected
-        input:
-          gh-version: 2.80.0
-          path-update: failed
-        checks:
-          - id: check-path-update-failure
-            guarantee_ref: failed-provisioning-stops
+cases:
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: detailed-failure-provision
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: supported-runner-assets
+    partition: runtime-context.gh-release-asset-valid
+    input:
+      runner-os-arch: supported-matrix
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: checked-release-asset
+    partition: runtime-context.gh-release-asset-valid
+    input:
+      gh-version: 2.80.0
+      runner-os: Linux
+      runner-arch: X64
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: mismatched-release-asset
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      checksum: mismatch
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: invalid-version
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: not-exact
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: unsupported-runner
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      runner-os: Windows
+      runner-arch: X64
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: unavailable-release-asset
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      asset: unavailable
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: invalid-checksum-manifest
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      checksum-entry: missing
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: extraction-failure
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      archive-extraction: failed
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: installation-failure
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      installation: failed
+  - contract_id: contract.ci-gh-provisioner.provision
+    id: path-update-failure
+    partition: runtime-context.gh-release-asset-invalid
+    input:
+      gh-version: 2.80.0
+      path-update: failed

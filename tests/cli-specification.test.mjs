@@ -21,7 +21,11 @@ describe("repository-cli-specification", () => {
       /id: validate-ci-preset/,
       /id: generate-ci-asset-lock/,
       /id: materialize-adapter-bundle/,
-      /id: manage-ci-distribution/,
+      /id: manage-ci-distribution-fetch\n/,
+      /id: manage-ci-distribution-verify\n/,
+      /id: manage-ci-distribution-plan\n/,
+      /id: manage-ci-distribution-apply\n/,
+      /id: manage-ci-distribution-rollback\n/,
       /id: generate-ci-distribution-release/,
       /id: assemble-standard-installer/,
     ]) {

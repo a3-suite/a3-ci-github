@@ -1,0 +1,25 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution-rollback
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+    - rollback
+  summary: Restore managed files changed by one successfully applied transaction
+  usage_targets:
+    - id: rollback
+      summary: Restore managed files changed by one successfully applied transaction
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: transaction
+          presence: required
+  option_groups:
+    - id: application
+      title: Planned application or recovery
+      options:
+        - repo-root
+        - transaction
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs rollback [options]

@@ -3,3 +3,206 @@ name: contract-subject
 subject:
   id: subject.ci.release-publication-verifier
   summary: Independently observe Release absence and verify owner publication evidence through read-only GitHub requests.
+contracts:
+  - id: contract.ci-release-publication-verifier.outputs
+    summary: Release publication observation and verification request.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Success only after the selected read-only verification completes.
+            - selector: observation-path
+              meaning: New pre-create observation file, produced only by observe-before.
+            - selector: observation-digest
+              meaning: SHA-256 of exact pre-create observation bytes, produced only by observe-before.
+            - selector: release-remote-identity
+              meaning: Immutable create-result Release object ID independently verified by verify-after.
+            - selector: publish-receipt
+              meaning: Schema-validated publication receipt exposed by the verifier.
+            - selector: readback-evidence
+              meaning: Readback evidence independently observed from the published Release.
+            - selector: outcome
+              meaning: Failed step outcome when remote observation or evidence verification is rejected.
+            - selector: diagnostic
+              meaning: Stable failure envelope of the rejected remote verification.
+            - selector: receipt-remote-id-binding
+              meaning: Equality of emitted publish-receipt.release_id with the immutable Release object ID from the independent GET response.
+            - selector: receipt-readback-id-binding
+              meaning: Equality of emitted readback-evidence.release_id with emitted publish-receipt.release_id.
+            - selector: release-output-id-binding
+              meaning: Equality of emitted release-remote-identity with emitted publish-receipt.release_id.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+            - selector: checksum-observation-conflation-state
+              meaning: Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.
+      - summary: Atomic boundary comparisons used by this contract.
+        boundary:
+          ref: boundary.release-provider-requests
+        value:
+          root: invocation.reads
+          kind: object
+          fields:
+            - selector: non-get-request-state
+              meaning: Occurrence state of provider requests using a method other than GET during one invocation.
+            - selector: release-inventory-attempts
+              meaning: Maximum number of attempted Release inventory observations, including failed or incomplete attempts, in one pre-create or post-create observation sequence, represented as a decimal integer string; zero when no such observation begins.
+            - selector: asset-inventory-attempts
+              meaning: Maximum number of asset inventory observations in one readback sequence, represented as a decimal integer string; zero when none begins.
+      - summary: Requested delays at the runner clock boundary.
+        boundary:
+          ref: boundary.observation-clock
+        value:
+          root: invocation.clock
+          kind: object
+          fields:
+            - selector: release-reobservation-delay
+              meaning: Canonical comma-separated distinct millisecond durations requested between successive Release inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.
+            - selector: asset-reobservation-delay
+              meaning: Canonical comma-separated distinct millisecond durations requested between successive asset inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.release-pre-observation-valid
+      - environment: runtime-context.release-post-verification-valid
+      - environment: runtime-context.release-observation-invalid
+      - environment: runtime-context.release-verification-invocation
+    guarantees:
+      - id: observation-status
+        applies_to:
+          - runtime-context.release-pre-observation-valid
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: status
+          in:
+            - success
+      - id: observation-file
+        applies_to:
+          - runtime-context.release-pre-observation-valid
+        claim:
+          field: observation-path
+          present: true
+      - id: observation-digest
+        applies_to:
+          - runtime-context.release-pre-observation-valid
+        claim:
+          field: observation-digest
+          present: true
+      - id: immutable-release-id
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: release-remote-identity
+          present: true
+      - id: bound-receipt
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: publish-receipt
+          present: true
+      - id: independent-readback
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: readback-evidence
+          present: true
+      - id: verification-rejected
+        applies_to:
+          - runtime-context.release-observation-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: verification-diagnostic
+        applies_to:
+          - runtime-context.release-observation-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: diagnostic-checksum-observation-conflation
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: checksum-observation-conflation-state
+          in:
+            - absent
+      - id: get-only-requests
+        applies_to:
+          - runtime-context.release-verification-invocation
+        claim:
+          field: non-get-request-state
+          in:
+            - absent
+      - id: release-inventory-attempts
+        applies_to:
+          - runtime-context.release-verification-invocation
+        claim:
+          field: release-inventory-attempts
+          in:
+            - "0"
+            - "1"
+            - "2"
+            - "3"
+      - id: asset-inventory-attempts
+        applies_to:
+          - runtime-context.release-verification-invocation
+        claim:
+          field: asset-inventory-attempts
+          in:
+            - "0"
+            - "1"
+            - "2"
+            - "3"
+      - id: release-reobservation-delay
+        applies_to:
+          - runtime-context.release-verification-invocation
+        claim:
+          field: release-reobservation-delay
+          in:
+            - "1000"
+            - not-applicable
+      - id: asset-reobservation-delay
+        applies_to:
+          - runtime-context.release-verification-invocation
+        claim:
+          field: asset-reobservation-delay
+          in:
+            - "1000"
+            - not-applicable
+      - id: receipt-remote-id-binding
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: receipt-remote-id-binding
+          in:
+            - matched
+      - id: receipt-readback-id-binding
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: receipt-readback-id-binding
+          in:
+            - matched
+      - id: release-output-id-binding
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: release-output-id-binding
+          in:
+            - matched

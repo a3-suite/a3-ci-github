@@ -3,3 +3,193 @@ name: contract-subject
 subject:
   id: subject.ci.release-publication-workflow
   summary: Publish a release only after request, approval, publication entry, asset, and provenance verification.
+contracts:
+  - id: contract.ci-release-publication-workflow.publication
+    summary: Canonical release publication workflow definitions.
+    observations:
+      - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
+        boundary:
+          ref: boundary.workflow-definition
+        value:
+          root: canonical-workflow
+          kind: object
+          fields:
+            - selector: publication-boundary
+              meaning: Declared publication call and dependency graph.
+            - selector: failure-summary
+              meaning: Declared publication aggregate route.
+            - selector: evidence-transfer
+              meaning: Declared supplemental artifact transfer routes.
+            - selector: release-fixed-provider-reference
+              meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
+            - selector: release-explicit-owner-inputs
+              meaning: Comparison of caller owner bindings with the provider typed required inputs.
+            - selector: release-request-before-publication
+              meaning: Declared dependency order of request validation and privileged publication call.
+            - selector: release-authority-before-publication
+              meaning: Declared dependency order of authority validation and publication.
+            - selector: release-control-sha-bound
+              meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
+            - selector: release-control-head-verified
+              meaning: Declared order of control checkout and immediate HEAD verification.
+            - selector: release-handoff-before-publication
+              meaning: Declared order of handoff validation and credential-bearing publication.
+            - selector: release-publication-before-readback
+              meaning: Declared order of the publish step and independent verify-publication step.
+            - selector: release-tokens-explicit
+              meaning: Comparison of credential-bearing step token bindings with github.token.
+            - selector: supplemental-upload-selected-root
+              meaning: Declared supplemental build upload path.
+            - selector: supplemental-hidden-files-selected
+              meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
+            - selector: supplemental-download-root
+              meaning: Declared supplemental artifact download root.
+            - selector: supplemental-final-assembly-input
+              meaning: Declared supplemental build root passed to final assemble.
+            - selector: release-failure-summary-always
+              meaning: Declared publication aggregate condition.
+            - selector: release-failed-prerequisite-blocks
+              meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: ci-release-publication-workflow-canonical-source-available
+      - input: ci-release-publication-workflow-failure-route-required
+    guarantees:
+      - id: ci-release-publication-workflow-success-observed
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: publication-boundary
+          present: true
+      - id: ci-release-publication-workflow-failure-observed
+        applies_to:
+          - ci-release-publication-workflow-failure-route-required
+        claim:
+          field: failure-summary
+          present: true
+      - id: ci-release-publication-workflow-evidence-transfer-declared
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: evidence-transfer
+          present: true
+      - id: diagnostic-failure-stage-publication
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: release-fixed-provider-reference
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-fixed-provider-reference
+          in:
+            - equal
+      - id: release-explicit-owner-inputs
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-explicit-owner-inputs
+          in:
+            - equal
+      - id: release-request-before-publication
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-request-before-publication
+          in:
+            - request-before-publication
+      - id: release-authority-before-publication
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-authority-before-publication
+          in:
+            - authority-before-publication
+      - id: release-control-sha-bound
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-control-sha-bound
+          in:
+            - equal
+      - id: release-control-head-verified
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-control-head-verified
+          in:
+            - checkout-before-verification
+      - id: release-handoff-before-publication
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-handoff-before-publication
+          in:
+            - handoff-before-publication
+      - id: release-publication-before-readback
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publication-before-readback
+          in:
+            - publication-before-readback
+      - id: release-tokens-explicit
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-tokens-explicit
+          in:
+            - equal
+      - id: supplemental-upload-selected-root
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: supplemental-upload-selected-root
+          in:
+            - supplemental-build/${{ matrix.id }}
+      - id: supplemental-hidden-files-selected
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: supplemental-hidden-files-selected
+          in:
+            - equal
+      - id: supplemental-download-root
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: supplemental-download-root
+          in:
+            - supplemental-build
+      - id: supplemental-final-assembly-input
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: supplemental-final-assembly-input
+          in:
+            - supplemental-build
+      - id: release-failure-summary-always
+        applies_to:
+          - ci-release-publication-workflow-failure-route-required
+        claim:
+          field: release-failure-summary-always
+          in:
+            - always
+      - id: release-failed-prerequisite-blocks
+        applies_to:
+          - ci-release-publication-workflow-failure-route-required
+        claim:
+          field: release-failed-prerequisite-blocks
+          in:
+            - absent

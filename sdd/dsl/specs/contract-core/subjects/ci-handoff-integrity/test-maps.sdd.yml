@@ -1,38 +1,40 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.handoff-integrity
 test_maps:
-  - verification_id: verification.ci-handoff-integrity.outputs
+  - contract_id: contract.ci-handoff-integrity.outputs
     case_id: valid-handoff
     tests:
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint validates a handoff"
-        check_refs:
-          - check-handoff-status
+        symbol: source entrypoint > entrypoint validates a handoff
+        guarantees:
+          - handoff-status-produced
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint validates a handoff"
-        check_refs:
-          - check-handoff-status
-  - verification_id: verification.ci-handoff-integrity.outputs
+        symbol: dist entrypoint > entrypoint validates a handoff
+        guarantees:
+          - handoff-status-produced
+  - contract_id: contract.ci-handoff-integrity.outputs
     case_id: source-identity-mismatch-rejected
     tests:
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails an identity mismatch"
-        check_refs:
-          - check-handoff-failure-status
+        symbol: source entrypoint > entrypoint fails an identity mismatch
+        guarantees:
+          - handoff-failure-propagated
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint fails an identity mismatch"
-        check_refs:
-          - check-handoff-failure-status
-  - verification_id: verification.ci-handoff-integrity.outputs
+        symbol: dist entrypoint > entrypoint fails an identity mismatch
+        guarantees:
+          - handoff-failure-propagated
+  - contract_id: contract.ci-handoff-integrity.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-handoff-integrity failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-handoff-integrity failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint retains the failed artifact path and digest comparison"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > entrypoint retains the failed artifact path and digest comparison
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint retains the failed artifact path and digest comparison"
-        check_refs: [diagnostic-details]
+        symbol: dist entrypoint > entrypoint retains the failed artifact path and digest comparison
+        guarantees:
+          - diagnostic-failure-stage-outputs

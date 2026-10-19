@@ -1,69 +1,73 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.package-publication-request
 test_maps:
-  - verification_id: verification.ci-package-publication-request.outputs
+  - contract_id: contract.ci-package-publication-request.outputs
     case_id: package-request-round-trip
     tests:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint creates and verifies a request"
-        check_refs:
-          - check-package-request-status
-          - check-package-request-source
+        symbol: source entrypoint > entrypoint creates and verifies a request
+        guarantees:
+          - package-request-status-produced
+          - package-request-source-produced
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint creates and verifies a request"
-        check_refs:
-          - check-package-request-status
-          - check-package-request-source
-  - verification_id: verification.ci-package-publication-request.outputs
+        symbol: dist entrypoint > entrypoint creates and verifies a request
+        guarantees:
+          - package-request-status-produced
+          - package-request-source-produced
+  - contract_id: contract.ci-package-publication-request.outputs
     case_id: source-sha-mismatch-rejected
     tests:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a source SHA mismatch"
-        check_refs:
-          - check-package-request-failure-status
+        symbol: source entrypoint > entrypoint rejects a source SHA mismatch
+        guarantees:
+          - package-request-failure-propagated
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a source SHA mismatch"
-        check_refs:
-          - check-package-request-failure-status
-  - verification_id: verification.ci-package-publication-request.outputs
+        symbol: dist entrypoint > entrypoint rejects a source SHA mismatch
+        guarantees:
+          - package-request-failure-propagated
+  - contract_id: contract.ci-package-publication-request.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-package-publication-request failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-package-publication-request failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a source SHA mismatch"
-        check_refs: [diagnostic-details]
-  - verification_id: verification.ci-package-publication-request.outputs
+        symbol: source entrypoint > entrypoint rejects a source SHA mismatch
+        guarantees:
+          - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-package-publication-request.outputs
     case_id: request-trigger-accepted
     tests:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-status
-          - check-request-trigger-run-bound
+        symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - package-request-status-produced
+          - request-trigger-run-bound
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-status
-          - check-request-trigger-run-bound
+        symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - package-request-status-produced
+          - request-trigger-run-bound
       - path: runtime/workflow-run/tests/request-trigger.test.ts
-        symbol: "verifyRequestTrigger(requestWorkflow, env) > accepts a successful default-branch dispatch of the request workflow"
-        check_refs:
-          - check-request-trigger-run-bound
-  - verification_id: verification.ci-package-publication-request.outputs
+        symbol: verifyRequestTrigger(requestWorkflow, env) > accepts a successful default-branch dispatch of the request workflow
+        guarantees:
+          - request-trigger-run-bound
+  - contract_id: contract.ci-package-publication-request.outputs
     case_id: request-trigger-rejected
     tests:
-      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-failure
-      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-failure
       - path: runtime/workflow-run/tests/request-trigger.test.ts
-        symbol: "verifyRequestTrigger(requestWorkflow, env) > rejects each trigger field that does not match the request workflow dispatch"
-        check_refs:
-          - check-request-trigger-run-bound
+        symbol: verifyRequestTrigger(requestWorkflow, env) > rejects each trigger field that does not match the request workflow dispatch
+        guarantees:
+          - request-trigger-run-bound
+  - contract_id: contract.ci-package-publication-request.outputs
+    case_id: request-trigger-failure-propagated
+    tests:
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - package-request-failure-propagated
+      - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - package-request-failure-propagated

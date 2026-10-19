@@ -160,12 +160,11 @@ describe("repository-contract-subject-execution", () => {
     // Arrange
     const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const definition = loadDefinition();
-    const contractPackage = readFileSync(
-      path.join(projectRoot, 'sdd/dsl/specs/contract-core/contract-package.sdd.yml'),
-      'utf8',
-    );
+    const contractCore = path.join(projectRoot, 'sdd/dsl/specs/contract-core');
+    const contractPackage = readFileSync(path.join(contractCore, 'contract-package.sdd.yml'), 'utf8');
     // Act
-    const packageSubjects = [...contractPackage.matchAll(/^\s*- subject_id:\s*(\S+)\s*$/gm)].map((match) => match[1]);
+    const packageSubjects = [...contractPackage.matchAll(/^\s*- path:\s*(subjects\/\S+\/)\s*$/gm)]
+      .map((match) => readFileSync(path.join(contractCore, match[1], 'subject.sdd.yml'), 'utf8').match(/^subject:\n {2}id:\s*(\S+)\s*$/m)[1]);
     const executionSubjects = definition.subjects.map((subject) => subject.subjectId);
     // Assert
     expect([...executionSubjects].sort()).toStrictEqual([...packageSubjects].sort());

@@ -1,65 +1,52 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-publication-control
-verifications:
-  - id: verification.ci-release-publication-control.outputs
-    contract_id: contract.ci-release-publication-control.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: request-trigger-accepted
-        intent_id: request-trigger-verified
-        input:
-          operation: verify-trigger
-          workflow-run: successful-default-branch-dispatch-of-release-publication-request
-        checks:
-          - id: check-request-trigger-status
-            guarantee_ref: publication-control-status-produced
-          - id: check-request-trigger-run-bound
-            guarantee_ref: request-trigger-run-bound
-      - id: request-trigger-rejected
-        intent_id: request-trigger-rejection
-        input:
-          operation: verify-trigger
-          workflow-run: non-default-branch
-        checks:
-          - id: check-request-trigger-failure
-            guarantee_ref: publication-control-failure-propagated
-          - id: check-request-trigger-run-bound
-            guarantee_ref: request-trigger-run-bound
-      - id: publication-request-round-trip
-        intent_id: publication-request-binding
-        input:
-          operation: verify-publication-request
-        checks:
-          - id: check-publication-control-status
-            guarantee_ref: publication-control-status-produced
-          - id: check-publication-request-run-id
-            guarantee_ref: publication-request-run-id-produced
-      - id: changed-approval-rejected
-        intent_id: publication-control-rejected
-        input:
-          operation: verify-approval
-          approval-id: changed
-        checks:
-          - id: check-publication-control-failure-status
-            guarantee_ref: publication-control-failure-propagated
-      - id: owner-decision-required
-        intent_id: publication-control-rejected
-        input:
-          operation: create-request
-          release-version: ""
-          target-identity: ""
-        checks:
-          - id: check-publication-control-failure-status
-            guarantee_ref: publication-control-failure-propagated
-      - id: unsupported-publication-request-rejected
-        intent_id: publication-control-rejected
-        input:
-          operation: verify-publication-request
-          schema: ci.release-publication-request.v1
-        checks:
-          - id: check-publication-control-failure-status
-            guarantee_ref: publication-control-failure-propagated
+cases:
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: request-trigger-accepted
+    partition: runtime-context.request-trigger-verification-invoked
+    input:
+      operation: verify-trigger
+      workflow-run: successful-default-branch-dispatch-of-release-publication-request
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: request-trigger-rejected
+    partition: runtime-context.request-trigger-verification-invoked
+    input:
+      operation: verify-trigger
+      workflow-run: non-default-branch
+    verifies:
+      - request-trigger-run-bound
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: request-trigger-failure-propagated
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: verify-trigger
+      workflow-run: non-default-branch
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: publication-request-round-trip
+    partition: runtime-context.release-publication-request-verified
+    input:
+      operation: verify-publication-request
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: changed-approval-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: verify-approval
+      approval-id: changed
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: owner-decision-required
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: create-request
+      release-version: ""
+      target-identity: ""
+  - contract_id: contract.ci-release-publication-control.outputs
+    id: unsupported-publication-request-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: verify-publication-request
+      schema: ci.release-publication-request.v1

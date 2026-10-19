@@ -31,20 +31,3 @@ requirements:
         locator: commonContract
       - document_id: a3-prompts-ci-adapter-bundles
         locator: contract.toolchain
-    derived_artifacts:
-      use_cases:
-        - use_case_ref:
-            use_case_id: rust-cli-release-asset-preparation
-        - use_case_ref:
-            use_case_id: ci-quality-gate-execution
-        - use_case_ref:
-            use_case_id: github-tool-exact-version-provisioning
-        - use_case_ref:
-            use_case_id: github-release-request-preparation
-        - use_case_ref:
-            use_case_id: github-release-publication
-        - use_case_ref:
-            use_case_id: github-package-publication
-      quality_scenarios:
-        - quality_scenario_ref:
-            quality_scenario_id: ci-common-processing-action-reuse-safe

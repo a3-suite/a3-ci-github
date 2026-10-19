@@ -72,9 +72,9 @@ runtime_contexts:
   - id: runtime-context.release-request-handoff-valid
     summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
   - id: runtime-context.supplemental-phase-valid
-    summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints.
+    summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints. Selected native targets are Linux, macOS or Windows; Windows installer execution runs on Windows PowerShell 5.1 or later, and a shared wrapper targets Linux and macOS only.
   - id: runtime-context.supplemental-phase-invalid
-    summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change.
+    summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change. A selected native target or installer shell can also be unsupported.
   - id: runtime-context.release-assembly-valid
     summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed. Selected public skills satisfy ci-github.release-skills-contract and bind to the same Release source and version.
   - id: runtime-context.release-assembly-invalid
@@ -173,10 +173,8 @@ runtime_contexts:
     summary: A copyable asset was fetched directly without selecting the preset dependency closure required for application.
   - id: runtime-context.selective-distribution-plan-changed
     summary: The manifest, source, destination, approval digest, or plan input changed after planning.
-  - id: runtime-context.preset-materialization-valid
-    summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation.
-  - id: runtime-context.preset-materialization-conflict
-    summary: A selected source is invalid or a destination already contains different content.
+  - id: runtime-context.preset-materialization-rejected
+    summary: A selected source is invalid, a destination already contains different content, declared consumer settings are unsatisfied, or a copy fails after the invocation starts.
   - id: runtime-context.preset-assurance-roots-missing
     summary: Preset assurance is invoked without an explicit repository root.
   - id: runtime-context.preset-assurance-read-only-output-requested
@@ -191,12 +189,10 @@ runtime_contexts:
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
   - id: runtime-context.standard-installer-evidence-valid
     summary: Standard-installer assemble receives authority-bound transported candidates whose exact file inventories and SHA-256 bytes match their platform records and whose native verification succeeds.
-  - id: runtime-context.preset-materialization-invocation
-    summary: The declared materialization boundary is invoked with its normal input and filesystem interfaces, including incomplete or invalid inputs and storage faults.
   - id: runtime-context.preset-standard-materialization-valid
-    summary: Inputs satisfy runtime-context.preset-materialization-valid and select a registered standard Action bundle; an external source-root is not required for this selection.
+    summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a registered standard Action bundle and needs no external source-root.
   - id: runtime-context.preset-custom-materialization-valid
-    summary: Inputs satisfy runtime-context.preset-materialization-valid and select a copyable custom bundle through an explicit source-root.
+    summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a copyable custom bundle with an explicit source-root.
   - id: runtime-context.release-publisher-invocation
     summary: The declared publisher boundary is invoked with its normal input and provider interfaces, including incomplete or invalid inputs and any provider response or transport fault.
   - id: runtime-context.quality-selection-shared-checks-supplied

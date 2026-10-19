@@ -3,3 +3,55 @@ name: contract-subject
 subject:
   id: subject.ci.annotated-tag-resolver
   summary: Resolve an annotated Git tag to its tag object and source commit.
+contracts:
+  - id: contract.ci-annotated-tag-resolver.outputs
+    summary: A valid annotated tag produces tag object and source commit outputs.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: tag-object-sha
+              meaning: SHA of the annotated tag object.
+            - selector: tag-object-type
+              meaning: Git object type.
+            - selector: source-sha
+              meaning: SHA of the commit referenced by the tag.
+            - selector: outcome
+              meaning: Failure outcome of the rejected tag resolution step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.annotated-tag-resolution-valid
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: tag-resolution-outputs-produced
+        applies_to:
+          - runtime-context.annotated-tag-resolution-valid
+        claim:
+          field: source-sha
+          present: true
+      - id: tag-resolution-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

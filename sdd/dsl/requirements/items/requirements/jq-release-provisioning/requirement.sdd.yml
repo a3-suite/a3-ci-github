@@ -13,10 +13,3 @@ requirements:
     fit_criteria:
       - 対応 runner の後続処理から、指定した exact version の検証済み公式 jq を利用できる
       - 供給に失敗した場合は、未検証の実行ファイルを後続処理へ渡さず、供給失敗を識別できる
-    derived_artifacts:
-      use_cases:
-        - use_case_ref:
-            use_case_id: github-tool-exact-version-provisioning
-      quality_scenarios:
-        - quality_scenario_ref:
-            quality_scenario_id: jq-release-provisioning-safe

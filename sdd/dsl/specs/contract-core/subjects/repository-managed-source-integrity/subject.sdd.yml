@@ -3,3 +3,105 @@ name: contract-subject
 subject:
   id: subject.repository.managed-source-integrity
   summary: Maintain canonical workflows, runtime, rules, guidance, SDD, and verification assets as one resolvable repository source.
+contracts:
+  - id: contract.repository-managed-source-integrity.integrity
+    summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
+    observations:
+      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
+        boundary:
+          ref: boundary.repository-gate-result
+        value:
+          root: repository.gate
+          kind: object
+          fields:
+            - selector: canonical-assets
+              meaning: Existence checks for every repository-owned canonical asset family and registered source.
+            - selector: stale-locations
+              meaning: Absence check results for registered legacy source locations.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: repository-managed-source-integrity-source-available
+      - input: repository-managed-source-integrity-legacy-check-required
+    guarantees:
+      - id: repository-managed-source-integrity-success-observed
+        applies_to:
+          - repository-managed-source-integrity-source-available
+        claim:
+          field: canonical-assets
+          present: true
+      - id: repository-managed-source-integrity-failure-observed
+        applies_to:
+          - repository-managed-source-integrity-legacy-check-required
+        claim:
+          field: stale-locations
+          present: true
+      - id: diagnostic-failure-stage-integrity
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.repository-managed-source-integrity.execution-mapping
+    summary: Repository contract execution definition.
+    observations:
+      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
+        boundary:
+          ref: boundary.repository-gate-result
+        value:
+          root: repository.gate
+          kind: object
+          fields:
+            - selector: contract-execution
+              meaning: Execution definition entries for the packaged contract subjects.
+            - selector: contract-execution-subject-coverage
+              meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
+            - selector: contract-execution-escaping-test-paths
+              meaning: Execution test paths that resolve outside the repository; absent or present.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: repository-contract-execution-definition-available
+    guarantees:
+      - id: repository-contract-execution-mapped
+        applies_to:
+          - repository-contract-execution-definition-available
+        claim:
+          field: contract-execution
+          present: true
+      - id: repository-contract-execution-subjects-covered
+        applies_to:
+          - repository-contract-execution-definition-available
+        claim:
+          field: contract-execution-subject-coverage
+          in:
+            - matched
+      - id: repository-contract-execution-paths-contained
+        applies_to:
+          - repository-contract-execution-definition-available
+        claim:
+          field: contract-execution-escaping-test-paths
+          in:
+            - absent
+      - id: diagnostic-failure-stage-execution-mapping
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

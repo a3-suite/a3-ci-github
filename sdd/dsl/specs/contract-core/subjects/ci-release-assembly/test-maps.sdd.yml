@@ -1,141 +1,168 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.release-assembly
 test_maps:
-  - verification_id: verification.ci-release-assembly.outputs
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: bundled-assembly
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "source entrypoint > assembly bundle emits bound outputs only on complete success"
-        check_refs: [ success, handoff, digest ]
+        symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
+        guarantees:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > assembly bundle emits bound outputs only on complete success"
-        check_refs: [ success, handoff, digest ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: dist entrypoint > assembly bundle emits bound outputs only on complete success
+        guarantees:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: output-line-injection
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "source entrypoint > assembly bundle rejects output path line injection before assembly"
-        check_refs: [ rejection ]
+        symbol: source entrypoint > assembly bundle rejects output path line injection before assembly
+        guarantees:
+          - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > assembly bundle rejects output path line injection before assembly"
-        check_refs: [ rejection ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: dist entrypoint > assembly bundle rejects output path line injection before assembly
+        guarantees:
+          - assembly-rejected
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: identity-rejection
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "source entrypoint > assembly bundle rejects invalid input without successful outputs"
-        check_refs: [ rejection ]
+        symbol: source entrypoint > assembly bundle rejects invalid input without successful outputs
+        guarantees:
+          - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > assembly bundle rejects invalid input without successful outputs"
-        check_refs: [ rejection ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: dist entrypoint > assembly bundle rejects invalid input without successful outputs
+        guarantees:
+          - assembly-rejected
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: build-validation
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
-        check_refs: [ handoff, digest ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order
+        guarantees:
+          - bound-asset-digest
+          - asset-digest-serialization
+          - asset-digest-asset-order
+          - asset-digest-field-order
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: supplemental-binding
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > release-supplemental-evidence-binding > supplemental evidence binds opaque owner records and rejects mismatches"
-        check_refs: [ handoff ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: contract.ci-release-assembly.outputs > release-supplemental-evidence-binding > supplemental evidence binds opaque owner records and rejects mismatches
+        guarantees:
+          - bound-handoff
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: unsafe-build-inputs
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: "assembly > assembly > assembly fails closed: source"
-        check_refs: [ rejection ]
-  - verification_id: verification.ci-release-assembly.outputs
-    case_id: canonical-asset-digest
-    tests:
-      - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order"
-        check_refs: [ digest, asset-digest-serialization, asset-digest-asset-order, asset-digest-field-order ]
-  - verification_id: verification.ci-release-assembly.outputs
+        guarantees:
+          - assembly-rejected
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: noncanonical-checksum-sidecar
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
-        check_refs: [ rejection ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs
+        guarantees:
+          - assembly-rejected
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: canonical-checksum-sidecar
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
-        symbol: "contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs"
-        check_refs: [ accepted-checksum-encoding, accepted-checksum-digest-form, accepted-checksum-separator, accepted-checksum-line-ending ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs
+        guarantees:
+          - accepted-checksum-encoding
+          - accepted-checksum-digest-form
+          - accepted-checksum-separator
+          - accepted-checksum-line-ending
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: platform-checkout-eol
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: "standard installer > assembly > accepts lf checkout declarations through both phases and release assembly"
-        check_refs: [ handoff, digest ]
+        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: "standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly"
-        check_refs: [ handoff, digest ]
+        symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: "standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly"
-        check_refs: [ handoff, digest ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-release-assembly failure boundary > source retains actionable input failure without private input values"
-        check_refs: [ diagnostic-details ]
+        symbol: ci-release-assembly failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "source entrypoint > missing build inventory retains the failing stage and exact missing entries"
-        check_refs: [ diagnostic-details ]
-  - verification_id: verification.ci-release-assembly.outputs
+        symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
+        guarantees:
+          - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: same-release-skills-assembly-valid
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills exceed former individual limits
-        check_refs:
-          - handoff
+        guarantees:
+          - bound-handoff
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills retain the aggregate size boundary
-        check_refs:
-          - handoff
+        guarantees:
+          - bound-handoff
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages
-        check_refs:
-          - handoff
-          - digest
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle packages selected release skills
-        check_refs:
-          - handoff
-          - digest
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle packages selected release skills
-        check_refs:
-          - handoff
-          - digest
-  - verification_id: verification.ci-release-assembly.outputs
+        guarantees:
+          - bound-handoff
+          - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
     case_id: same-release-skills-assembly-invalid
     tests:
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills retain the aggregate size boundary
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md before an unreadable later blob
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md even when the read-ahead batch fails
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle packages selected release skills
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle packages selected release skills
-        check_refs:
-          - rejection
+        guarantees:
+          - assembly-rejected

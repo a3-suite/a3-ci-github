@@ -1,150 +1,182 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.quality-adapter
 test_maps:
-  - verification_id: verification.ci-quality-adapter.outputs
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-adapter-execution
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint executes the embedded standard without reading a project descriptor"
-        check_refs: [ check-quality-adapter-standard-status, standard-descriptor-independent ]
+        symbol: source entrypoint > entrypoint executes the embedded standard without reading a project descriptor
+        guarantees:
+          - quality-adapter-status-produced
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint executes the embedded standard without reading a project descriptor"
-        check_refs: [ check-quality-adapter-standard-status, standard-descriptor-independent ]
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: dist entrypoint > entrypoint executes the embedded standard without reading a project descriptor
+        guarantees:
+          - quality-adapter-status-produced
+          - standard-descriptor-independent
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-rust-scopes
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands"
-        check_refs: [ check-quality-adapter-rust-scope-status ]
+        symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands"
-        check_refs: [ check-quality-adapter-rust-scope-status ]
+        symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        guarantees:
+          - quality-adapter-status-produced
       - path: tests/shared-quality-checks.test.mjs
-        symbol: "shared standard quality checks > only trusted declared standard Rust secondary platforms select native"
-        check_refs: [ check-quality-adapter-rust-scope-status ]
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: shared standard quality checks > only trusted declared standard Rust secondary platforms select native
+        guarantees:
+          - quality-adapter-status-produced
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-selection-rejected
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > repository-quality-delivery-regression > fixed quality Action references preserve rejection contracts and expose old registry pins"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: workflow-contracts > repository-quality-delivery-regression > fixed quality Action references preserve rejection contracts and expose old registry pins
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects simultaneous standard ID and descriptor before execution"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: source entrypoint > entrypoint rejects simultaneous standard ID and descriptor before execution
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects simultaneous standard ID and descriptor before execution"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: dist entrypoint > entrypoint rejects simultaneous standard ID and descriptor before execution
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: source entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: dist entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a standard bundle supplied through a local descriptor"
-        check_refs: [ check-quality-adapter-standard-rejection ]
+        symbol: source entrypoint > entrypoint rejects a standard bundle supplied through a local descriptor
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a standard bundle supplied through a local descriptor"
-        check_refs: [ check-quality-adapter-standard-rejection ]
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: dist entrypoint > entrypoint rejects a standard bundle supplied through a local descriptor
+        guarantees:
+          - quality-adapter-failure-propagated
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: read-only-adapter-execution
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint emits status and result path"
-        check_refs:
-          - check-quality-adapter-status
+        symbol: source entrypoint > entrypoint emits status and result path
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint emits status and result path"
-        check_refs:
-          - check-quality-adapter-status
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: dist entrypoint > entrypoint emits status and result path
+        guarantees:
+          - quality-adapter-status-produced
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: writable-adapter-rejected
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a non-read-only descriptor"
-        check_refs:
-          - check-quality-adapter-failure-status
+        symbol: source entrypoint > entrypoint rejects a non-read-only descriptor
+        guarantees:
+          - quality-adapter-failure-propagated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a non-read-only descriptor"
-        check_refs:
-          - check-quality-adapter-failure-status
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: dist entrypoint > entrypoint rejects a non-read-only descriptor
+        guarantees:
+          - quality-adapter-failure-propagated
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: toolchain-version-report-rejected
     tests:
       - path: actions/ci-quality-adapter/tests/adapter.test.ts
-        symbol: "ci-quality-adapter-source > rejects a missing or mismatched toolchain version token with the stable diagnostic"
-        check_refs:
-          - check-quality-adapter-toolchain-version-diagnostic
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: ci-quality-adapter-source > rejects a missing or mismatched toolchain version token with the stable diagnostic
+        guarantees:
+          - quality-adapter-toolchain-version-diagnostic-present
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > native Rust scope retains toolchain preparation and native command failure"
-        check_refs: [ diagnostic-details ]
+        symbol: source entrypoint > native Rust scope retains toolchain preparation and native command failure
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > native Rust scope retains toolchain preparation and native command failure"
-        check_refs: [ diagnostic-details ]
+        symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-quality-adapter failure boundary > source retains actionable input failure without private input values"
-        check_refs: [ diagnostic-details ]
+        symbol: ci-quality-adapter failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint keeps unsafe child output out of logs and the public result"
-        check_refs: [ diagnostic-details ]
+        symbol: source entrypoint > entrypoint keeps unsafe child output out of logs and the public result
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint keeps unsafe child output out of logs and the public result"
-        check_refs: [ diagnostic-details ]
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: dist entrypoint > entrypoint keeps unsafe child output out of logs and the public result
+        guarantees:
+          - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-python-adapter-execution
     tests:
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: .venv"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: .tools/env space+[x]"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: ../external-environment"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: module.py"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: src/product/main.py"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: tests/test_main.py"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: packages/one/main.py"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
         symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: .venv-product/code.py"
-        check_refs: [ check-quality-adapter-python-status ]
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains the full syntax scan when a managed virtualenv cannot be confirmed"
-        check_refs: [ check-quality-adapter-python-status ]
+        symbol: ci-quality-adapter Python standard > managed environment scope > retains the full syntax scan when a managed virtualenv cannot be confirmed
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > prepared environment reuse > skips format and lint sync while keeping preparation and post-test security sync"
-        check_refs: [ check-quality-adapter-python-status ]
+        symbol: ci-quality-adapter Python standard > prepared environment reuse > skips format and lint sync while keeping preparation and post-test security sync
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > prepared environment reuse > does not execute no-sync commands when initial preparation fails"
-        check_refs: [ check-quality-adapter-python-status ]
+        symbol: ci-quality-adapter Python standard > prepared environment reuse > does not execute no-sync commands when initial preparation fails
+        guarantees:
+          - quality-adapter-status-produced
       - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > propagates traversal failures instead of silently omitting product directories"
-        check_refs: [ check-quality-adapter-python-status ]
-  - verification_id: verification.ci-quality-adapter.outputs
+        symbol: ci-quality-adapter Python standard > managed environment scope > propagates traversal failures instead of silently omitting product directories
+        guarantees:
+          - quality-adapter-status-produced
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: native-rust-rules
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        check_refs:
+        guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-command-order
@@ -152,37 +184,37 @@ test_maps:
           - native-no-followup-after-failed-prerequisite
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        check_refs:
+        guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
-  - verification_id: verification.ci-quality-adapter.outputs
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: unsupported-native-scope
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        check_refs:
+        guarantees:
           - rejected-scope-no-commands
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        check_refs:
+        guarantees:
           - rejected-scope-no-commands
-  - verification_id: verification.ci-quality-adapter.outputs
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: embedded-bundle-integrity
     tests:
       - path: actions/ci-quality-adapter/tests/standard-bundles.test.ts
         symbol: ci-quality-adapter-standard-selection > fixed standard bundles preserve repository owner metadata and require no copied assets
-        check_refs:
+        guarantees:
           - standard-source-path-validated
           - standard-content-digest-checked
-  - verification_id: verification.ci-quality-adapter.outputs
+  - contract_id: contract.ci-quality-adapter.outputs
     case_id: native-preparation-failure
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > native Rust scope retains toolchain preparation and native command failure
-        check_refs:
+        guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-command-order
@@ -190,7 +222,7 @@ test_maps:
           - native-no-followup-after-failed-prerequisite
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
-        check_refs:
+        guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-command-order

@@ -295,10 +295,8 @@ subjects:
         revision: latest-standard-alignment.baselineResolutionの比較基準commit
         pathBase: fixed-provider-repository-root
         contractId: contract.ci-failure-diagnostics.actionable
-        observationId: observation.ci-failure-diagnostics.failure-evidence
         paths:
-          - sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/clauses.sdd.yml
-          - sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/observations.sdd.yml
+          - sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/subject.sdd.yml
         subjectDetails: 同じrevisionのcontract packageから対象subjectの固有診断契約を解決する。
         sourceAccess: 検証済みprovider sourceに含まれなければ、同じcommitのrepository内容を読み取りで取得する。Skill配備先やconsumer rootから上記pathを解決しない。
       projectOwned: 対象ownerの現行契約と標準との差分を解決する。標準providerの実装形式を独自ownerへ一律に要求しない。

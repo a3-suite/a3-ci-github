@@ -3,3 +3,95 @@ name: contract-subject
 subject:
   id: subject.ci.release-authority
   summary: Verify existing owner Release decisions through a read-only common authority binding without choosing owner policy or executing source code.
+contracts:
+  - id: contract.ci-release-authority.outputs
+    summary: Release authority request from an owner publication request.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: authority-path
+              meaning: Path to the generated authority handoff.
+            - selector: source_sha
+              meaning: Verified annotated tag commit SHA.
+            - selector: version
+              meaning: Explicit owner version bound to the publication request.
+            - selector: target_identity
+              meaning: Explicit opaque owner publication target.
+            - selector: approval-id
+              meaning: Verified notes approval ID.
+            - selector: body-sha256
+              meaning: Digest of separately approved Release notes body.
+            - selector: outcome
+              meaning: Authority validation step outcome.
+            - selector: successful-output-state
+              meaning: Occurrence state of successful outputs.
+            - selector: platform-manifest-source-text-comparison
+              meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+      - summary: Provider requests issued during one authority invocation.
+        boundary:
+          ref: boundary.release-provider-requests
+        value:
+          root: provider.requests
+          kind: object
+          fields:
+            - selector: non-get-request-state
+              meaning: Occurrence state (present or absent) of provider requests using a method other than GET during one invocation.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.release-authority-valid
+      - environment: runtime-context.release-authority-invalid
+    guarantees:
+      - id: authority-file
+        applies_to:
+          - runtime-context.release-authority-valid
+        claim:
+          field: authority-path
+          present: true
+      - id: rejected
+        applies_to:
+          - runtime-context.release-authority-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: no-success-outputs
+        applies_to:
+          - runtime-context.release-authority-invalid
+        claim:
+          field: successful-output-state
+          in:
+            - absent
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: platform-source-text-digest
+        applies_to:
+          - runtime-context.release-authority-valid
+        claim:
+          field: platform-manifest-source-text-comparison
+          in:
+            - equal
+      - id: authority-get-only-requests
+        applies_to:
+          - runtime-context.release-authority-valid
+        claim:
+          field: non-get-request-state
+          in:
+            - absent

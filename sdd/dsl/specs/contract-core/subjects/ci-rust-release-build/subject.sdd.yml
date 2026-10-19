@@ -3,3 +3,127 @@ name: contract-subject
 subject:
   id: subject.ci.rust-release-build
   summary: Building, packaging, and verifying Rust CLI release assets.
+contracts:
+  - id: contract.ci-rust-release-build.processing
+    summary: Rust release build script invocation.
+    observations:
+      - summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
+        boundary:
+          ref: boundary.script-result
+        value:
+          root: script.result
+          kind: object
+          fields:
+            - selector: outcome
+              meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
+            - selector: final-output
+              meaning: A verified asset is published on success; failure leaves no agent-owned final asset and preserves a destination owned by another process.
+            - selector: diagnostic-codes
+              meaning: Stable diagnostic codes reported by the failed step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.rust-release-build-inputs-match-authority
+      - environment: runtime-context.rust-release-build-rejected
+      - environment: runtime-context.rust-release-build-commands-succeed
+      - environment: runtime-context.rust-release-version-report-rejected
+    guarantees:
+      - id: rust-release-processing-succeeds
+        applies_to:
+          - runtime-context.rust-release-build-commands-succeed
+        claim:
+          field: outcome
+          in:
+            - success
+      - id: rust-release-final-output-safe
+        applies_to:
+          - runtime-context.rust-release-build-inputs-match-authority
+        claim:
+          field: final-output
+          in:
+            - verified
+            - absent
+            - preserved
+      - id: rust-release-processing-fails
+        applies_to:
+          - runtime-context.rust-release-build-rejected
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: rust-release-rejected-final-output-safe
+        applies_to:
+          - runtime-context.rust-release-build-rejected
+        claim:
+          field: final-output
+          in:
+            - absent
+            - preserved
+      - id: rust-release-version-diagnostic-present
+        applies_to:
+          - runtime-context.rust-release-version-report-rejected
+        claim:
+          field: diagnostic-codes
+          contains: binary-version-mismatch
+      - id: diagnostic-failure-stage-processing
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-rust-release-build.outputs
+    summary: The Composite Action maps shared script success to completed output and propagates script failure.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: completed
+              meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
+            - selector: outcome
+              meaning: The success or failure outcome of the release build step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.rust-release-build-script-succeeded
+      - environment: runtime-context.rust-release-build-script-failed
+    guarantees:
+      - id: completed-output-produced
+        applies_to:
+          - runtime-context.rust-release-build-script-succeeded
+        claim:
+          field: completed
+          in:
+            - "true"
+      - id: release-build-failure-propagated
+        applies_to:
+          - runtime-context.rust-release-build-script-failed
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

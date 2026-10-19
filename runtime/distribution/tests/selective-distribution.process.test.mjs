@@ -408,12 +408,13 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(applied.status).toBe('applied');
         const requireFromPreset = createRequire(path.join(repositoryRoot, 'runtime/preset/package.json'));
         const { parse } = requireFromPreset('yaml');
-        const command = parse(fs.readFileSync(path.join(repositoryRoot, 'sdd/dsl/specs/cli/commands/manage-ci-distribution/cli-command.sdd.yml'), 'utf8')).command;
+        const commands = ['fetch', 'verify', 'plan', 'apply', 'rollback'].map((operation) => parse(fs.readFileSync(path.join(repositoryRoot, `sdd/dsl/specs/cli/commands/manage-ci-distribution-${operation}/cli-command.sdd.yml`), 'utf8')).command);
         const vocabulary = parse(fs.readFileSync(path.join(repositoryRoot, 'sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml'), 'utf8'));
         const flags = new Map(vocabulary.options.map((option) => [option.id, option.long]));
-        const publicOptions = command.option_groups.flatMap((group) => group.options);
+        // The operations share one parser, so every option published by any operation must be rejected where it is not bound.
+        const publicOptions = [...new Set(commands.flatMap((command) => command.option_groups.flatMap((group) => group.options)))];
         const beforeRejection = snapshotTree(projectRoot);
-        for (const target of command.usage_targets) {
+        for (const target of commands.flatMap((command) => command.usage_targets)) {
           const allowed = new Set(target.option_bindings.map((binding) => binding.option_id));
           const required = target.option_bindings
             .filter((binding) => binding.presence === 'required')

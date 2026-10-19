@@ -3,3 +3,290 @@ name: contract-subject
 subject:
   id: subject.ci.failure-diagnostics
   summary: Expose actionable CI failure context and evidence without replacing the original failure or disclosing protected values.
+contracts:
+  - id: contract.ci-failure-diagnostics.actionable
+    summary: Failure of a selected contract boundary.
+    observations:
+      - summary: Failure evidence in final logs and existing referenced evidence.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-subject
+              meaning: 失敗した契約対象の識別子。
+            - selector: failure-operation
+              meaning: 失敗した操作の識別子。
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+            - selector: failure-reason
+              meaning: 失敗理由を表す安定した識別子。
+            - selector: failure-cause
+              meaning: 失敗原因の判別状態（known、unknown、unavailable のいずれか）。
+            - selector: execution-context
+              meaning: 失敗時に観測した実行文脈の記録。
+            - selector: comparison
+              meaning: 違反した規則に対する期待値と観測値の記録。
+            - selector: evidence-location
+              meaning: 元の診断と関連証跡の所在の記録。
+            - selector: execution-outcome
+              meaning: 元の失敗の結果（failure または unresolved）。
+            - selector: last-confirmed-stage
+              meaning: 失敗前に最後に確定した段階の識別子。
+            - selector: next-check-rule
+              meaning: 次に確認すべき規則の識別子。
+            - selector: known-cause-omission-state
+              meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
+            - selector: unsubstantiated-context-state
+              meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
+            - selector: unsafe-diagnostic-disclosure-state
+              meaning: Occurrence state (present or absent) of protected inputs, unchecked child/provider output, signed URLs, or whole input/response/argv/environment payloads exposed in diagnostics.
+            - selector: original-diagnostic-loss-state
+              meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
+            - selector: invalid-evidence-reference-state
+              meaning: Occurrence state (present or absent) of a reference to evidence that was not generated or retained.
+            - selector: original-outcome-replacement-state
+              meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
+            - selector: diagnostic-only-retry-state
+              meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
+            - selector: unsubstantiated-remediation-state
+              meaning: Occurrence state (present or absent) of remediation or rerun safety asserted without applicable state evidence.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+    guarantees:
+      - id: failure-subject-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-subject
+          present: true
+      - id: failure-operation-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-operation
+          present: true
+      - id: failure-stage-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: failure-reason-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-reason
+          present: true
+      - id: failure-cause-classified
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-cause
+          in:
+            - known
+            - unknown
+            - unavailable
+      - id: execution-context-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: execution-context
+          present: true
+      - id: comparison-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: comparison
+          present: true
+      - id: evidence-location-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: evidence-location
+          present: true
+      - id: execution-outcome-retained
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: execution-outcome
+          in:
+            - failure
+            - unresolved
+      - id: last-confirmed-stage-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: last-confirmed-stage
+          present: true
+      - id: next-check-rule-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: next-check-rule
+          present: true
+      - id: diagnostic-known-cause-omission
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: known-cause-omission-state
+          in:
+            - absent
+      - id: diagnostic-unsubstantiated-context
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: unsubstantiated-context-state
+          in:
+            - absent
+      - id: diagnostic-unsafe-diagnostic-disclosure
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: unsafe-diagnostic-disclosure-state
+          in:
+            - absent
+      - id: diagnostic-original-diagnostic-loss
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: original-diagnostic-loss-state
+          in:
+            - absent
+      - id: diagnostic-invalid-evidence-reference
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: invalid-evidence-reference-state
+          in:
+            - absent
+      - id: diagnostic-original-outcome-replacement
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: original-outcome-replacement-state
+          in:
+            - absent
+      - id: diagnostic-diagnostic-only-retry
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: diagnostic-only-retry-state
+          in:
+            - absent
+      - id: diagnostic-unsubstantiated-remediation
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: unsubstantiated-remediation-state
+          in:
+            - absent
+  - id: contract.ci-failure-diagnostics.subject-declarations
+    summary: Packaged contract definitions of failure diagnostics.
+    observations:
+      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: diagnostic
+          kind: object
+          fields:
+            - selector: subject-diagnostic-details
+              meaning: Comparison of packaged contracts with contracts that guarantee a failure-stage diagnostic; matched or missing.
+            - selector: subject-diagnostic-minimum-reference
+              meaning: Comparison of packaged contracts with contracts whose subject-specific failure evidence observation refers to contract.ci-failure-diagnostics.actionable; matched or missing.
+    conditions:
+      - input: subject-contract-source-available
+    guarantees:
+      - id: subject-diagnostic-details-defined
+        applies_to:
+          - subject-contract-source-available
+        claim:
+          field: subject-diagnostic-details
+          in:
+            - matched
+      - id: subject-diagnostic-minimum-referenced
+        applies_to:
+          - subject-contract-source-available
+        claim:
+          field: subject-diagnostic-minimum-reference
+          in:
+            - matched
+  - id: contract.ci-failure-diagnostics.workflow-evidence
+    summary: Managed workflow failure summary definitions.
+    observations:
+      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: diagnostic
+          kind: object
+          fields:
+            - selector: workflow-evidence
+              meaning: Declared workflow summary route preserving evidence and reason fields.
+            - selector: workflow-classification-correlation
+              meaning: Failure correlation fields declared in each managed summary route.
+            - selector: workflow-secret-safe-summary
+              meaning: Secret context references in managed diagnostic summary definitions; absent or present.
+            - selector: workflow-diagnostic-order
+              meaning: Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.
+            - selector: workflow-source-result-replacement
+              meaning: Aggregate diagnostic outcomes that replace an original source job result; absent or present.
+    conditions:
+      - input: ci-failure-diagnostics-workflow-source-available
+    guarantees:
+      - id: ci-failure-diagnostics-workflow-evidence-declared
+        applies_to:
+          - ci-failure-diagnostics-workflow-source-available
+        claim:
+          field: workflow-evidence
+          present: true
+      - id: ci-failure-diagnostics-workflow-correlation-declared
+        applies_to:
+          - ci-failure-diagnostics-workflow-source-available
+        claim:
+          field: workflow-classification-correlation
+          present: true
+      - id: ci-failure-diagnostics-workflow-summary-secret-safe
+        applies_to:
+          - ci-failure-diagnostics-workflow-source-available
+        claim:
+          field: workflow-secret-safe-summary
+          in:
+            - absent
+      - id: ci-failure-diagnostics-workflow-diagnostic-order
+        applies_to:
+          - ci-failure-diagnostics-workflow-source-available
+        claim:
+          field: workflow-diagnostic-order
+          in:
+            - after-source-jobs
+      - id: ci-failure-diagnostics-workflow-source-result-retained
+        applies_to:
+          - ci-failure-diagnostics-workflow-source-available
+        claim:
+          field: workflow-source-result-replacement
+          in:
+            - absent
+  - id: contract.ci-failure-diagnostics.bootstrap-diagnostic
+    summary: A failing public runtime bootstrap emits a stable machine-readable failure envelope.
+    observations:
+      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: diagnostic
+          kind: object
+          fields:
+            - selector: bootstrap-diagnostic
+              meaning: Machine-readable failure envelope emitted by a failing public runtime bootstrap.
+    conditions:
+      - input: ci-failure-diagnostics-bootstrap-fails
+    guarantees:
+      - id: ci-failure-diagnostics-bootstrap-envelope-emitted
+        applies_to:
+          - ci-failure-diagnostics-bootstrap-fails
+        claim:
+          field: bootstrap-diagnostic
+          present: true

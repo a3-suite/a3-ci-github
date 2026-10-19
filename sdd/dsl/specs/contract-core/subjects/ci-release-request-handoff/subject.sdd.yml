@@ -3,3 +3,53 @@ name: contract-subject
 subject:
   id: subject.ci.release-request-handoff
   summary: Write an immutable annotated-tag release request handoff.
+contracts:
+  - id: contract.ci-release-request-handoff.outputs
+    summary: Valid request inputs produce a request handoff and digest path.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: request-path
+              meaning: Path to the immutable release request JSON.
+            - selector: request-digest
+              meaning: Path to the request digest file.
+            - selector: outcome
+              meaning: Failure outcome of the rejected release request handoff step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.release-request-handoff-valid
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: request-handoff-output-produced
+        applies_to:
+          - runtime-context.release-request-handoff-valid
+        claim:
+          field: request-path
+          present: true
+      - id: request-handoff-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

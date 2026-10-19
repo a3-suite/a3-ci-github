@@ -41,7 +41,7 @@ node {project-root}/runtime/repository/check-provider-references.mjs --staged --
 
 実装準備コミットでは、既存の固定参照に対する検査を実行する。対象版の実装資材とdistの検証は別途実行し、既存固定参照の成功を新しい実装の成功と取り違えない。
 
-`--preparation`は既存の実装SHAの包含・版・実行資材・固定参照先の契約を検証し、最終tagを要求しない。成功時も`preparationOnly: true`、`implementationBindingStatus: unverified`を返す。新しいstaged実装の資材同一性と接続は、実装コミット確定後の接続候補検査で確認する。
+`--preparation`は既存の実装SHAの到達可能性・版・実行資材・固定参照先の契約を検証し、最終tagを要求しない。成功時も`preparationOnly: true`、`implementationBindingStatus: unverified`を返す。新しいstaged実装の資材同一性と接続は、実装コミット確定後の接続候補検査で確認する。
 
 ```sh
 node {project-root}/runtime/repository/check-provider-references.mjs --staged --contracts --preparation
@@ -53,7 +53,6 @@ node {project-root}/runtime/repository/check-provider-references.mjs --staged --
 
 - 適用条件に該当しなければ`非適用`。
 - 終了コード0は`PASS`、診断ありの1は`STOP`、実行不能・解析失敗・snapshot変化の2は`判定不能`。
-- `{project-root}/docs/maintenance/action-construction.md` の「公開済みtagへ接続した状態からの回復」の実装コミットAに限り、`--preparation`の停止理由が`implementation-source-not-contained`だけで、staged snapshotの`VERSION`が同名tagのない対象版へ更新されている場合は`PASS`とする。停止理由と後続の接続コミットBが必要なことを証拠へ記録する。それ以外の停止理由は通常どおり扱う。
 - pending-releaseはprovider内部の外部Action placeholderを許可する理由にならない。consumer canonicalの置換用placeholderは本ゲートの対象外。
 - `preparationOnly: true` は実装準備を示し、新実装の接続・利用可能化を証明しない。既存固定参照の検査成功と、全Action targetとavailabilityGateがpendingで接続診断を残す状態を区別し、`interfaceDiagnostics` と `connection.diagnostics` を確認結果へ残す。接続診断の免除は後者の準備コミットだけに限り、Actionのavailable targetがある場合は適用しない。calleeのsource宣言はこの免除の根拠にしない。接続更新には上記の候補検査を使い、`--preparation`を付けない。
 
@@ -62,12 +61,12 @@ node {project-root}/runtime/repository/check-provider-references.mjs --staged --
 ### 確認（手動）
 - 更新順序の正本は `{project-root}/docs/maintenance/action-construction.md` の「固定参照の更新順序」。手順を本ゲートへ複製しない。
 - staged snapshotの変更を実装準備、確定済み実装SHAへの接続、再利用workflowの公開準備、callerの生成・接続に分類し、正本の順序に照合する。実装の事前Releaseや接続専用の次版を要求しない。
-- 候補の接続は正本のpublication契約に従って包含・実行資材の同一性と固定SHA先の契約を確認する。consumerの利用可能状態は当該Releaseの公開後に確認する。作業ツリーの実装や別SHAの成功を接続先の証拠に読み替えない。
+- 候補の接続は正本のpublication契約に従って到達可能性・実行資材の同一性と固定SHA先の契約を確認する。consumerの利用可能状態は当該Releaseの公開後に確認する。作業ツリーの実装や別SHAの成功を接続先の証拠に読み替えない。
 - 準備段階で残したpending状態・placeholderと、後続の公開・受入・切替が必要な箇所を確認結果へ明示する。未公開という理由だけで準備コミットを停止しない。
 
 ### 終了条件
 - 適用条件を満たさない場合は`非適用`。
-- 正本の順序と接続先の証拠が整合し候補検査が成功する、または既存固定参照の検査と実装検証が成功した実装準備コミットとして整合する場合は`PASS`。公開済みtagへ接続した状態からの回復の実装コミットAは、provider固定参照ゲートの回復条件と実装検証が成功し、後続Bの必要を確認結果へ記録した場合に`PASS`。最終tag作成後の公開検査はRelease workflowで再実行する。
+- 正本の順序と接続先の証拠が整合し候補検査が成功する、または既存固定参照の検査と実装検証が成功した実装準備コミットとして整合する場合は`PASS`。最終tag作成後の公開検査はRelease workflowで再実行する。
 - 将来SHAの自己参照、未確定・不適合なActionへの接続、registryとcanonical sourceのAction参照不一致、manifestとcalleeの固定参照不一致は`STOP`。templateのcallee placeholderは導入時生成の入力として維持する。
 - 必要な正本・参照先・証拠を確認できなければ`判定不能`。未確認の段階を成功として補完しない。
 

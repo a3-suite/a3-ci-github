@@ -3,3 +3,153 @@ name: contract-subject
 subject:
   id: subject.ci.platform-matrix
   summary: Validating a CI platform manifest and producing a deterministic include matrix.
+contracts:
+  - id: contract.ci-platform-matrix.outputs
+    summary: Platform manifest and optional quality selection inputs to the platform matrix Action.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: matrix
+              meaning: Compact JSON object containing the validated platform entries under include.
+            - selector: quality-matrix
+              meaning: Compact JSON include matrix of the selected platforms.
+            - selector: expected-platforms
+              meaning: Comma-separated IDs of the selected platforms.
+            - selector: outcome
+              meaning: Success for a valid bounded manifest and failure otherwise.
+            - selector: matrix-output-state
+              meaning: Present when a matrix output was emitted and absent otherwise.
+            - selector: quality-output-state
+              meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.
+            - selector: full-matrix-binding
+              meaning: Equality of the complete matrix include array, including order and all entry values, with the validated manifest.
+            - selector: quality-id-order
+              meaning: Equality of the quality matrix platform_id sequence with the supplied selection ID sequence.
+            - selector: quality-runner-binding
+              meaning: Equality of each quality entry runner with the validated manifest runner for that entry platform_id.
+            - selector: expected-id-order
+              meaning: Equality of the comma-separated expected-platforms value with the supplied selection ID sequence.
+            - selector: shared-checks-value
+              meaning: Equality of each quality entry shared_standard_checks value with the explicitly supplied boolean sharedStandardChecks.
+            - selector: shared-checks-absence
+              meaning: Occurrence state of shared_standard_checks keys when sharedStandardChecks was omitted from the selection.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.platform-manifest-valid
+      - environment: runtime-context.platform-manifest-invalid
+      - environment: runtime-context.quality-platform-selection-invalid
+      - environment: runtime-context.quality-selection-shared-checks-supplied
+      - environment: runtime-context.quality-selection-shared-checks-omitted
+    guarantees:
+      - id: platform-matrix-produced
+        applies_to:
+          - runtime-context.platform-manifest-valid
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: matrix
+          present: true
+      - id: invalid-platform-manifest-fails
+        applies_to:
+          - runtime-context.platform-manifest-invalid
+          - runtime-context.quality-platform-selection-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: invalid-platform-manifest-has-no-output
+        applies_to:
+          - runtime-context.platform-manifest-invalid
+          - runtime-context.quality-platform-selection-invalid
+        claim:
+          field: matrix-output-state
+          in:
+            - absent
+      - id: ordered-quality-matrix-produced
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: quality-matrix
+          present: true
+      - id: ordered-expected-platforms-produced
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: expected-platforms
+          present: true
+      - id: invalid-selection-has-no-quality-outputs
+        applies_to:
+          - runtime-context.quality-platform-selection-invalid
+        claim:
+          field: quality-output-state
+          in:
+            - absent
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: manifest-matrix-binding
+        applies_to:
+          - runtime-context.platform-manifest-valid
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: full-matrix-binding
+          in:
+            - matched
+      - id: quality-id-order
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: quality-id-order
+          in:
+            - matched
+      - id: quality-runner-binding
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: quality-runner-binding
+          in:
+            - matched
+      - id: expected-id-order
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: expected-id-order
+          in:
+            - matched
+      - id: shared-checks-value
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-supplied
+        claim:
+          field: shared-checks-value
+          in:
+            - matched
+      - id: shared-checks-absence
+        applies_to:
+          - runtime-context.quality-selection-shared-checks-omitted
+        claim:
+          field: shared-checks-absence
+          in:
+            - absent

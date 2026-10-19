@@ -19,7 +19,7 @@ installer はこのリポジトリの機能として保守します。公開仕�
 
 ## 実装方式
 
-Windows installerの対応環境は、[標準installerの契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/clauses.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
+Windows installerの対応環境は、[標準installerの区分定義](../../sdd/dsl/specs/contract-core/environments/github-actions.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
 
 配布する`.ps1`はUTF-8 BOM付きで生成します。5.1が日本語などを含む配置先をシステムのANSI文字コードで誤読しないためです。ZIPの安全検査後の展開には.NET APIを使い、外部tarの文字コードで配置先が変わることを避けます。
 
@@ -29,7 +29,7 @@ ActionとCLIは同じ `src/` のPython payloadを正本とします。利用側�
 
 共有入口の組立では、`assembly.py`が全native候補の証跡を照合した後、wrapper builderとdispatch検証へUnix候補だけを渡します。Windows候補は対象別assetとしてhandoffへ含めます。宣言の選択条件は[標準組立契約](../../skills/ci-release-installer/references/installer-standard-assembly-contract.reference.yml)、保証は上記のSDD契約を参照します。
 
-組立とcleanupが併発する失敗の診断は[観測契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/observations.sdd.yml)に従います。Pythonの失敗からNodeのsanitizerを経てAction／CLIの最終ログへ届く経路を、配布物への障害注入テストで確認します。
+組立とcleanupが併発する失敗の診断は[観測契約](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/subject.sdd.yml)に従います。Pythonの失敗からNodeのsanitizerを経てAction／CLIの最終ログへ届く経路を、配布物への障害注入テストで確認します。
 
 ## 検証と生成
 

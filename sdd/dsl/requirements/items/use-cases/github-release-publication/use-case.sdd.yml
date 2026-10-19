@@ -46,3 +46,7 @@ related_contracts:
       contract_id: contract.ci-release-authority.outputs
   - contract_ref:
       contract_id: contract.ci-release-publisher.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-assembly.outputs
+  - contract_ref:
+      contract_id: contract.ci-release-publication-verifier.outputs

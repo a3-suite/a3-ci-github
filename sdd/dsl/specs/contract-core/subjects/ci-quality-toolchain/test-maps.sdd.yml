@@ -1,98 +1,111 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.quality-toolchain
 test_maps:
-  - verification_id: verification.ci-quality-toolchain.preparation
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: selected-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
-        check_refs: [ check-resolved-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        guarantees:
+          - resolved-quality-toolchain-produced
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution"
-        check_refs: [ check-selected-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution
+        guarantees:
+          - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures"
-        check_refs: [ check-selected-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        guarantees:
+          - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > verified archive is extracted executed and exported without cargo compilation"
-        check_refs: [ check-selected-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > verified archive is extracted executed and exported without cargo compilation
+        guarantees:
+          - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > unregistered versions and targets retain source install and its exit status"
-        check_refs: [ check-selected-quality-toolchain ]
-  - verification_id: verification.ci-quality-toolchain.preparation
+        symbol: contract.ci-quality-toolchain.preparation > unregistered versions and targets retain source install and its exit status
+        guarantees:
+          - selected-quality-toolchain-ready
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: compatible-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > compatible policy accepts bounded Node and Python selectors while exact policy stays strict"
-        check_refs: [ check-compatible-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > compatible policy accepts bounded Node and Python selectors while exact policy stays strict
+        guarantees:
+          - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
-        check_refs: [ check-compatible-resolved-version ]
-  - verification_id: verification.ci-quality-toolchain.preparation
+        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        guarantees:
+          - resolved-quality-toolchain-produced
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: invalid-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup"
-        check_refs: [ check-invalid-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup"
-        check_refs: [ check-invalid-quality-toolchain ]
+        symbol: contract.ci-quality-toolchain.preparation > quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > invalid cargo-audit version stops before download or source install"
-        check_refs: [ check-invalid-quality-toolchain ]
-  - verification_id: verification.ci-quality-toolchain.preparation
+        symbol: contract.ci-quality-toolchain.preparation > invalid cargo-audit version stops before download or source install
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: failed-quality-toolchain-setup
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures"
-        check_refs: [ check-failed-quality-toolchain-setup ]
+        symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > registered asset failures stop without source fallback or PATH output"
-        check_refs: [ check-failed-quality-toolchain-setup ]
-  - verification_id: verification.ci-quality-toolchain.preparation
+        symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop without source fallback or PATH output
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: detailed-failure-preparation
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: "contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup"
-        check_refs: [ diagnostic-details, diagnostic-diagnostic-only-tool-acquisition ]
-  - verification_id: verification.ci-quality-toolchain.preparation
+        symbol: contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup
+        guarantees:
+          - diagnostic-failure-stage-preparation
+          - diagnostic-diagnostic-only-tool-acquisition
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: registered-binary-failure
     tests:
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop without source fallback or PATH output
-        check_refs:
+        guarantees:
           - registered-failure-no-source-fallback
           - registered-failure-no-path-output
-  - verification_id: verification.ci-quality-toolchain.preparation
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: valid-toolchain-request
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        check_refs:
+        guarantees:
           - resolved-version-satisfies-selector
       - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution
-        check_refs:
+        guarantees:
           - selected-profile-dependencies-only
-  - verification_id: verification.ci-quality-toolchain.preparation
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: valid-request-mismatching-resolution
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        check_refs:
+        guarantees:
           - resolved-version-satisfies-selector
-  - verification_id: verification.ci-quality-toolchain.preparation
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: mismatching-provider-version
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        check_refs:
-          - check-mismatching-provider-version
-  - verification_id: verification.ci-quality-toolchain.preparation
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+  - contract_id: contract.ci-quality-toolchain.preparation
     case_id: missing-provider-version
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        check_refs:
-          - check-missing-provider-version
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
