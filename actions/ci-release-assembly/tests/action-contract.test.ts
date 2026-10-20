@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { describe, test, expect } from 'vitest';
 import path from 'node:path';
+import { parse } from 'yaml';
 
 const root = path.resolve(__dirname, '..');
 
@@ -13,5 +14,9 @@ describe('release-assembly-action-contract', () => {
     expect(contract).not.toMatch(/node-version|using: composite/);
     for (const input of ['authority-path', 'snapshot-path', 'platform-manifest-path', 'platform-matrix', 'build-root', 'output-directory']) expect(contract).toMatch(new RegExp(`  ${input}:\\n    required: true`));
     for (const output of ['status', 'release-handoff', 'asset-digest']) expect(contract).toMatch(new RegExp(`  ${output}:`));
+    // Assembly must not be able to write to the provider, so its interface accepts no credential.
+    const inputs = Object.keys(parse(contract).inputs);
+    expect(inputs).toStrictEqual(['repository', 'authority-path', 'snapshot-path', 'platform-manifest-path', 'platform-matrix', 'build-root', 'supplemental-root', 'skills-source-root', 'output-directory']);
+    expect(contract).not.toMatch(/token|credential|secret|password/i);
   });
 });

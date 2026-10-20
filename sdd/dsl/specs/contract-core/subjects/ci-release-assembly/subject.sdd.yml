@@ -45,6 +45,15 @@ contracts:
           fields:
             - selector: failure-stage
               meaning: 失敗した段階の識別子。
+      - summary: Inputs declared by the assembly Action for its caller.
+        boundary:
+          ref: boundary.action-caller
+        value:
+          root: action.inputs
+          kind: object
+          fields:
+            - selector: credential-input-state
+              meaning: Occurrence state (present or absent) of a declared input that accepts a provider credential.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-assembly-valid
@@ -69,6 +78,13 @@ contracts:
         claim:
           field: asset-digest
           present: true
+      - id: assembly-no-credential-input
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: credential-input-state
+          in:
+            - absent
       - id: assembly-rejected
         applies_to:
           - runtime-context.release-assembly-invalid
