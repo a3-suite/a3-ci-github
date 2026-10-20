@@ -669,7 +669,7 @@ describe("workflow-contracts", () => {
       expect(() => checkProviderReferences('jobs: [', '.github/workflows/check.yml', approved)).toThrow();
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
       const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
-      const checked = checkRepository(root, false, { candidate });
+      const checked = checkRepository(root, false, { candidate, preparation: !candidate });
       expect(checked.diagnostics).toEqual([]);
       expect(checked.interfaceDiagnostics).toEqual([]);
       const lintProfiles = yaml.parse(read('a3-lint.repository.yaml')).project.rule_sets;

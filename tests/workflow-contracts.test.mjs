@@ -589,7 +589,7 @@ describe("workflow-contracts", () => {
       // Act
       const releaseTag = snapshot.registry.actionization.implementationSource.releaseTag;
       const candidate = releaseTag === `v${read('VERSION').trim()}` && !execFileSync('git', ['tag', '--list', releaseTag], { cwd: root, encoding: 'utf8', timeout: spawnTimeoutMs }).trim();
-      const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate });
+      const result = checkActionReferences(root, { ...snapshot, read: (target) => target === relative ? yaml.stringify(workflow) : snapshot.read(target) }, { candidate, preparation: !candidate });
       // Assert
       expect(result.interfaceDiagnostics.join('\n')).toContain('missing required Action input operation');
       expect(result.interfaceDiagnostics.join('\n')).toContain('undeclared Action input undeclared-input');
