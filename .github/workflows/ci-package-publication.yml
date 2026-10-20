@@ -100,7 +100,7 @@ jobs:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           artifact-ids: ${{ inputs.package_artifact_id }}
           path: package-handoff

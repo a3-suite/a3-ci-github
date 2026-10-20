@@ -78,7 +78,7 @@ jobs:
           test -n "$CI_SOURCE_SHA"; test -n "$CI_VERSION"; test -n "$CI_TARGET_IDENTITY"
           .ci/scripts/ci-package-build.sh "$CI_LANGUAGE_PROFILE" "$CI_TOOLCHAIN" "$CI_SOURCE_SHA" "$CI_VERSION" "$CI_TARGET_IDENTITY" package-handoff
       - id: upload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: package-handoff
           path: package-handoff
