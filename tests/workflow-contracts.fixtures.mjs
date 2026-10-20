@@ -127,7 +127,7 @@ const referenceFixture = (t) => {
       execFileSync('git', ['clone', '--shared', '--no-checkout', root, fixture], { stdio: 'pipe', timeout: spawnTimeoutMs });
       const releaseTag = repositorySnapshot(root).registry.actionization.implementationSource.releaseTag;
       if (spawnSync('git', ['merge-base', '--is-ancestor', actionRef, `${releaseTag}^{commit}`], { cwd: fixture, timeout: spawnTimeoutMs }).status !== 0) {
-        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, 'HEAD'], { cwd: fixture, stdio: 'pipe', timeout: spawnTimeoutMs });
+        execFileSync('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'tag', '-f', '-a', releaseTag, '-m', releaseTag, actionRef], { cwd: fixture, stdio: 'pipe', timeout: spawnTimeoutMs });
       }
       mkdirSync(path.join(fixture, 'actions'));
       for (const relative of [registryPath, ...repositorySnapshot(root).targets]) {
