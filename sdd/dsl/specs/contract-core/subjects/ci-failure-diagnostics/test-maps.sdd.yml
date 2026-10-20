@@ -1,93 +1,126 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.failure-diagnostics
 test_maps:
-  - verification_id: verification.ci-failure-diagnostics.subject-declarations
-    case_id: all-subject-diagnostics-defined
-    tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > failure-diagnostics-contract > every packaged contract defines subject-specific diagnostics under the shared minimum"
-        check_refs: [check.ci-failure-diagnostics.subject-contract-coverage]
-  - verification_id: verification.ci-failure-diagnostics.workflow-evidence
-    case_id: workflow-evidence-declared
-    tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > failure-diagnostics-contract > managed workflows expose correlated secret-safe failure evidence without hiding source results"
-        check_refs:
-          - check.ci-failure-diagnostics.workflow-evidence
-          - check.ci-failure-diagnostics.workflow-correlation
-          - check.ci-failure-diagnostics.workflow-summary-secret-safe
-          - check.ci-failure-diagnostics.workflow-source-state-preserved
-  - verification_id: verification.ci-failure-diagnostics.bootstrap-diagnostic
-    case_id: bootstrap-diagnostic-emitted
-    tests:
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap confines dependency files and accepts internal symlink cycles"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap reports unavailable npm and cleans up state after dependency command failures"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: "contract.ci-failure-diagnostics.actionable > failure-diagnostics-contract > preset bootstrap reports validator startup and completion failures without consumer changes"
-        check_refs: [check.ci-failure-diagnostics.bootstrap-diagnostic]
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: "preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots"
-        check_refs:
-          - check.ci-failure-diagnostics.bootstrap-diagnostic
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: known-validation-failure
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: "source entrypoint > missing build inventory retains the failing stage and exact missing entries"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
+        guarantees:
+          - diagnostic-known-cause-omission
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
+        guarantees: &a1
+          - failure-subject-recorded
+          - failure-operation-recorded
+          - failure-stage-recorded
+          - failure-reason-recorded
+          - failure-cause-classified
+          - execution-context-recorded
+          - comparison-recorded
+          - evidence-location-recorded
+          - execution-outcome-retained
+          - last-confirmed-stage-recorded
+          - next-check-rule-recorded
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
+        guarantees: *a1
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: unknown-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when unknown fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > retains source failure when unknown fails
+        guarantees:
+          - diagnostic-unsubstantiated-remediation
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: external-request-failure
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
+        guarantees:
+          - diagnostic-unsubstantiated-context
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: child-process-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: "source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        guarantees:
+          - diagnostic-unsafe-diagnostic-disclosure
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: evidence-generation-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when evidence-generation fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > retains source failure when evidence-generation fails
+        guarantees:
+          - diagnostic-original-diagnostic-loss
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: evidence-transfer-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: "standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed
+        guarantees:
+          - diagnostic-invalid-evidence-reference
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: summary-failure
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when summary-write fails"
-        check_refs: [classification, context, comparison, retention, state, next-check]
-  - verification_id: verification.ci-failure-diagnostics.detailed-evidence
+        symbol: source entrypoint > retains source failure when summary-write fails
+        guarantees:
+          - diagnostic-original-outcome-replacement
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: partial-write-failure
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        guarantees:
+          - diagnostic-diagnostic-only-retry
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        guarantees:
+          - diagnostic-diagnostic-only-retry
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
-        check_refs: [classification, context, comparison, retention, state, next-check]
+        guarantees:
+          - diagnostic-diagnostic-only-retry
+  - contract_id: contract.ci-failure-diagnostics.subject-declarations
+    case_id: all-subject-diagnostics-defined
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > failure-diagnostics-contract > every packaged contract defines subject-specific diagnostics under the shared minimum
+        guarantees:
+          - subject-diagnostic-details-defined
+          - subject-diagnostic-minimum-referenced
+  - contract_id: contract.ci-failure-diagnostics.workflow-evidence
+    case_id: workflow-evidence-declared
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > failure-diagnostics-contract > managed workflows expose correlated secret-safe failure evidence without hiding source results
+        guarantees:
+          - ci-failure-diagnostics-workflow-evidence-declared
+          - ci-failure-diagnostics-workflow-correlation-declared
+          - ci-failure-diagnostics-workflow-summary-secret-safe
+          - ci-failure-diagnostics-workflow-diagnostic-order
+          - ci-failure-diagnostics-workflow-source-result-retained
+  - contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
+    case_id: bootstrap-diagnostic-emitted
+    tests:
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project
+        guarantees:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap confines dependency files and accepts internal symlink cycles
+        guarantees:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports unavailable npm and cleans up state after dependency command failures
+        guarantees:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports validator startup and completion failures without consumer changes
+        guarantees:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted
+      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
+        symbol: preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots
+        guarantees:
+          - ci-failure-diagnostics-bootstrap-envelope-emitted

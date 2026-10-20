@@ -1,25 +1,18 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.package-publication-workflow
-verifications:
-  - id: verification.ci-package-publication-workflow.publication
-    contract_id: contract.ci-package-publication-workflow.publication
-    cases:
-      - id: detailed-failure-publication
-        intent_id: detailed-diagnostics-publication
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-publication}]
-      - id: ci-package-publication-workflow-success
-        intent_id: ci-package-publication-workflow-success-intent
-        input:
-          scenario: valid
-        checks:
-          - id: check-ci-package-publication-workflow-success
-            guarantee_ref: ci-package-publication-workflow-success-observed
-      - id: ci-package-publication-workflow-failure
-        intent_id: ci-package-publication-workflow-failure-intent
-        input:
-          scenario: rejected
-        checks:
-          - id: check-ci-package-publication-workflow-failure
-            guarantee_ref: ci-package-publication-workflow-failure-observed
+cases:
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: detailed-failure-publication
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: ci-package-publication-workflow-success
+    partition: ci-package-publication-workflow-canonical-source-available
+    input:
+      scenario: valid
+  - contract_id: contract.ci-package-publication-workflow.publication
+    id: ci-package-publication-workflow-failure
+    partition: ci-package-publication-workflow-failure-route-required
+    input:
+      scenario: rejected

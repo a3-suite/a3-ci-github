@@ -12,7 +12,7 @@ const scopeStep = workflow.jobs.platform.steps.find(step => step.id === 'executi
 
 describe('shared standard quality checks', () => {
   // contract_id: contract.ci-quality-adapter.outputs
-  // integration_id: ci-quality-platforms-shared-execution
+  // flow_id: ci-quality-platforms-shared-execution
   test('only trusted declared standard Rust secondary platforms select native', (t) => {
     // Arrange
     const root = fs.mkdtempSync(path.join(repository, 'tmp/shared-quality-'));
@@ -45,7 +45,7 @@ describe('shared standard quality checks', () => {
   });
 
   // contract_id: contract.ci-platform-matrix.outputs
-  // integration_id: ci-quality-platforms-shared-trust
+  // flow_id: ci-quality-platforms-shared-trust
   test('trusted base declaration wins over head and bootstrap keeps full execution', (t) => {
     // Arrange
     const root = fs.mkdtempSync(path.join(repository, 'tmp/shared-quality-trust-'));

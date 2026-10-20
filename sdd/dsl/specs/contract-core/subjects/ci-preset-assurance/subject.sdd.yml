@@ -3,3 +3,219 @@ name: contract-subject
 subject:
   id: subject.ci.preset-assurance
   summary: Validate applied preset identity and configuration while preserving read-only audit and explicit remediation boundaries.
+contracts:
+  - id: contract.ci-preset-assurance.verification
+    summary: Preset assurance verification request for an applied consumer project.
+    observations:
+      - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
+        boundary:
+          ref: boundary.cli-result
+        value:
+          root: cli.result
+          kind: object
+          fields:
+            - selector: outcome
+              meaning: Bootstrap outcome when assurance cannot start.
+            - selector: reason
+              meaning: Stable machine-readable rejection reason.
+            - selector: message
+              meaning: Actionable explanation of the rejected invocation.
+            - selector: status
+              meaning: Success or failed provider preflight status.
+            - selector: inspectedPresets
+              meaning: Applied presets included in the preflight decision.
+            - selector: missingSettings
+              meaning: Required settings or assets that could not be resolved.
+            - selector: mismatches
+              meaning: Canonical, identity, permission, trust, or integrity mismatches.
+            - selector: evidence
+              meaning: Evidence collected for inspected workflows and assets.
+            - selector: semanticReviewRequired
+              meaning: Whether evidence outside provider preflight still requires semantic review.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+      - summary: Individually observed contract values and comparisons.
+        boundary:
+          ref: boundary.project-ci-assets
+        value:
+          root: consumer-state
+          kind: object
+          fields:
+            - selector: valid-tree-comparison
+              meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
+            - selector: drift-tree-comparison
+              meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.preset-assurance-roots-missing
+      - environment: runtime-context.preset-assurance-read-only-output-requested
+      - input: selected-action-unavailable
+      - input: supplemental-phase-drift
+      - input: retired-release-entrypoints-present
+      - input: ci-preset-assurance-applied-preset-valid
+      - input: ci-preset-assurance-applied-preset-drifted
+    guarantees:
+      - id: ci-preset-assurance-explicit-roots-required
+        applies_to:
+          - runtime-context.preset-assurance-roots-missing
+          - runtime-context.preset-assurance-read-only-output-requested
+        claim:
+          field: reason
+          present: true
+      - id: unavailable-action-reported
+        applies_to:
+          - selected-action-unavailable
+        claim:
+          field: missingSettings
+          present: true
+      - id: supplemental-phase-drift-reported
+        applies_to:
+          - supplemental-phase-drift
+          - retired-release-entrypoints-present
+        claim:
+          field: mismatches
+          present: true
+      - id: ci-preset-assurance-valid-preset-succeeds
+        applies_to:
+          - ci-preset-assurance-applied-preset-valid
+        claim:
+          field: status
+          in:
+            - success
+      - id: ci-preset-assurance-valid-evidence-exposed
+        applies_to:
+          - ci-preset-assurance-applied-preset-valid
+        claim:
+          field: evidence
+          present: true
+      - id: ci-preset-assurance-semantic-review-state-exposed
+        applies_to:
+          - ci-preset-assurance-applied-preset-valid
+        claim:
+          field: semanticReviewRequired
+          present: true
+      - id: ci-preset-assurance-drift-fails
+        applies_to:
+          - ci-preset-assurance-applied-preset-drifted
+        claim:
+          field: status
+          in:
+            - failed
+      - id: diagnostic-failure-stage-verification
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: valid-consumer-unchanged
+        applies_to:
+          - ci-preset-assurance-applied-preset-valid
+        claim:
+          field: valid-tree-comparison
+          in:
+            - equal
+      - id: drift-consumer-unchanged
+        applies_to:
+          - ci-preset-assurance-applied-preset-drifted
+        claim:
+          field: drift-tree-comparison
+          in:
+            - equal
+  - id: contract.ci-preset-assurance.asset-lock
+    summary: Asset lock generation request for applied canonical assets.
+    observations:
+      - summary: Canonical and project-owned CI assets materialized into a consumer project.
+        boundary:
+          ref: boundary.project-ci-assets
+        value:
+          root: ci-assets-lock+consumer-state
+          kind: object
+          fields:
+            - selector: sourceRevision
+              meaning: Full immutable distribution commit SHA.
+            - selector: generatedAt
+              meaning: Minute-normalized observation timestamp that is not used as version identity.
+            - selector: assets
+              meaning: Canonical and applied SHA-256 identity for every managed asset.
+            - selector: requested-source-comparison
+              meaning: Comparison of lock sourceRevision with the requested full source revision.
+            - selector: canonical-digest-comparison
+              meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
+            - selector: applied-digest-comparison
+              meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
+      - summary: Rejection exposed when an asset lock cannot be generated safely.
+        boundary:
+          ref: boundary.script-result
+        value:
+          root: process.result
+          kind: object
+          fields:
+            - selector: diagnostic
+              meaning: Stable reason that prevents an invalid lock from being written.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - input: ci-preset-assurance-lock-input-valid
+      - input: ci-preset-assurance-lock-input-invalid
+      - environment: runtime-context.ci-preset-assurance-canonical-lock-input
+    guarantees:
+      - id: ci-preset-assurance-lock-source-bound
+        applies_to:
+          - ci-preset-assurance-lock-input-valid
+        claim:
+          field: sourceRevision
+          present: true
+      - id: ci-preset-assurance-lock-assets-recorded
+        applies_to:
+          - ci-preset-assurance-lock-input-valid
+        claim:
+          field: assets
+          present: true
+      - id: ci-preset-assurance-invalid-revision-rejected
+        applies_to:
+          - ci-preset-assurance-lock-input-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-asset-lock
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: lock-source-equals-request
+        applies_to:
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        claim:
+          field: requested-source-comparison
+          in:
+            - equal
+      - id: lock-canonical-digests-match
+        applies_to:
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        claim:
+          field: canonical-digest-comparison
+          in:
+            - equal
+      - id: lock-applied-digests-match
+        applies_to:
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        claim:
+          field: applied-digest-comparison
+          in:
+            - equal

@@ -3,3 +3,81 @@ name: contract-subject
 subject:
   id: subject.ci.package-publication-request
   summary: Create and verify immutable package publication request handoffs.
+contracts:
+  - id: contract.ci-package-publication-request.outputs
+    summary: A package publication request operation exposes its completion status and verified source identity.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Package publication request operation status.
+            - selector: request-path
+              meaning: Package publication request path.
+            - selector: source-sha
+              meaning: Verified source commit SHA.
+            - selector: version
+              meaning: Verified package version.
+            - selector: target-identity
+              meaning: Verified package target identity.
+            - selector: language-profile
+              meaning: Verified language profile.
+            - selector: toolchain
+              meaning: Verified fixed toolchain.
+            - selector: outcome
+              meaning: Failure outcome of the rejected package publication request step.
+            - selector: accepted-trigger-run
+              meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.package-publication-request-succeeded
+      - environment: runtime-context.request-trigger-verification-invoked
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: package-request-status-produced
+        applies_to:
+          - runtime-context.request-trigger-verification-invoked
+          - runtime-context.package-publication-request-succeeded
+        claim:
+          field: status
+          present: true
+      - id: package-request-source-produced
+        applies_to:
+          - runtime-context.package-publication-request-succeeded
+        claim:
+          field: source-sha
+          present: true
+      - id: package-request-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: request-trigger-run-bound
+        applies_to:
+          - runtime-context.request-trigger-verification-invoked
+        claim:
+          field: accepted-trigger-run
+          in:
+            - successful-default-branch-dispatch-of-own-request-workflow
+            - absent

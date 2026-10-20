@@ -1,38 +1,40 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.release-request-handoff
 test_maps:
-  - verification_id: verification.ci-release-request-handoff.outputs
+  - contract_id: contract.ci-release-request-handoff.outputs
     case_id: tag-request-handoff
     tests:
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint writes a tag handoff"
-        check_refs:
-          - check-request-handoff-output
+        symbol: source entrypoint > entrypoint writes a tag handoff
+        guarantees:
+          - request-handoff-output-produced
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint writes a tag handoff"
-        check_refs:
-          - check-request-handoff-output
-  - verification_id: verification.ci-release-request-handoff.outputs
+        symbol: dist entrypoint > entrypoint writes a tag handoff
+        guarantees:
+          - request-handoff-output-produced
+  - contract_id: contract.ci-release-request-handoff.outputs
     case_id: tag-ref-mismatch-rejected
     tests:
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a tag ref mismatch"
-        check_refs:
-          - check-request-handoff-failure
+        symbol: source entrypoint > entrypoint rejects a tag ref mismatch
+        guarantees:
+          - request-handoff-failure-propagated
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a tag ref mismatch"
-        check_refs:
-          - check-request-handoff-failure
-  - verification_id: verification.ci-release-request-handoff.outputs
+        symbol: dist entrypoint > entrypoint rejects a tag ref mismatch
+        guarantees:
+          - request-handoff-failure-propagated
+  - contract_id: contract.ci-release-request-handoff.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-release-request-handoff failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-release-request-handoff failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a tag ref mismatch"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > entrypoint rejects a tag ref mismatch
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-request-handoff/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint writes a tag handoff"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > entrypoint writes a tag handoff
+        guarantees:
+          - diagnostic-failure-stage-outputs

@@ -1,77 +1,95 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.release-publication-control
 test_maps:
-  - verification_id: verification.ci-release-publication-control.outputs
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: publication-request-round-trip
     tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint creates and verifies a publication request"
-        check_refs:
-          - check-publication-control-status
-          - check-publication-request-run-id
+        symbol: source entrypoint > entrypoint creates and verifies a publication request
+        guarantees:
+          - publication-control-status-produced
+          - publication-request-run-id-produced
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint creates and verifies a publication request"
-        check_refs:
-          - check-publication-control-status
-          - check-publication-request-run-id
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: dist entrypoint > entrypoint creates and verifies a publication request
+        guarantees:
+          - publication-control-status-produced
+          - publication-request-run-id-produced
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: changed-approval-rejected
     tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a changed approval ID"
-        check_refs:
-          - check-publication-control-failure-status
+        symbol: source entrypoint > entrypoint rejects a changed approval ID
+        guarantees:
+          - publication-control-failure-propagated
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a changed approval ID"
-        check_refs:
-          - check-publication-control-failure-status
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: dist entrypoint > entrypoint rejects a changed approval ID
+        guarantees:
+          - publication-control-failure-propagated
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: owner-decision-required
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > repository-quality-delivery-regression > fixed publication Action references require owner decisions and expose old registry pins"
-        check_refs: [check-publication-control-failure-status]
+        symbol: workflow-contracts > repository-quality-delivery-regression > fixed publication Action references require owner decisions and expose old registry pins
+        guarantees:
+          - publication-control-failure-propagated
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects missing owner decision before creating artifacts"
-        check_refs: [check-publication-control-failure-status]
+        symbol: source entrypoint > entrypoint rejects missing owner decision before creating artifacts
+        guarantees:
+          - publication-control-failure-propagated
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects missing owner decision before creating artifacts"
-        check_refs: [check-publication-control-failure-status]
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: dist entrypoint > entrypoint rejects missing owner decision before creating artifacts
+        guarantees:
+          - publication-control-failure-propagated
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: unsupported-publication-request-rejected
     tests:
       - path: actions/ci-release-publication-control/tests/control.test.ts
-        symbol: "ci-release-publication-control-source > rejects publication requests without a v2 owner decision"
-        check_refs: [check-publication-control-failure-status]
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: ci-release-publication-control-source > rejects publication requests without a v2 owner decision
+        guarantees:
+          - publication-control-failure-propagated
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-release-publication-control failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-release-publication-control failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects release notes that differ from the approved body digest"
-        check_refs: [diagnostic-details]
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: source entrypoint > entrypoint rejects release notes that differ from the approved body digest
+        guarantees:
+          - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: request-trigger-accepted
     tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-status
+        symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - publication-control-status-produced
+          - request-trigger-run-bound
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-status
-  - verification_id: verification.ci-release-publication-control.outputs
+        symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - publication-control-status-produced
+          - request-trigger-run-bound
+      - path: runtime/workflow-run/tests/request-trigger.test.ts
+        symbol: verifyRequestTrigger(requestWorkflow, env) > accepts a successful default-branch dispatch of the request workflow
+        guarantees:
+          - request-trigger-run-bound
+  - contract_id: contract.ci-release-publication-control.outputs
     case_id: request-trigger-rejected
     tests:
+      - path: runtime/workflow-run/tests/request-trigger.test.ts
+        symbol: verifyRequestTrigger(requestWorkflow, env) > rejects each trigger field that does not match the request workflow dispatch
+        guarantees:
+          - request-trigger-run-bound
+  - contract_id: contract.ci-release-publication-control.outputs
+    case_id: request-trigger-failure-propagated
+    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-failure
+        symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - publication-control-failure-propagated
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download"
-        check_refs:
-          - check-request-trigger-failure
+        symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        guarantees:
+          - publication-control-failure-propagated

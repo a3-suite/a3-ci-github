@@ -1,39 +1,89 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.quality-toolchain
-verifications:
-  - id: verification.ci-quality-toolchain.preparation
-    contract_id: contract.ci-quality-toolchain.preparation
-    cases:
-      - id: detailed-failure-preparation
-        intent_id: detailed-diagnostics-preparation
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-preparation}]
-      - id: selected-quality-toolchain
-        intent_id: quality-toolchain-selection-verified
-        input: {language-profile: rust, toolchain-version: 1.90.0, cargo-audit-version: 0.21.0}
-        checks:
-          - id: check-resolved-quality-toolchain
-            guarantee_ref: resolved-quality-toolchain-produced
-          - id: check-selected-quality-toolchain
-            guarantee_ref: selected-quality-toolchain-ready
-      - id: compatible-quality-toolchain
-        intent_id: quality-toolchain-selection-verified
-        input: {language-profile: typescript, toolchain-version: '24', version-policy: compatible}
-        checks:
-          - id: check-compatible-quality-toolchain
-            guarantee_ref: selected-quality-toolchain-ready
-          - id: check-compatible-resolved-version
-            guarantee_ref: resolved-quality-toolchain-produced
-      - id: invalid-quality-toolchain
-        intent_id: quality-toolchain-failure-verified
-        input: {language-profile: unsupported, toolchain-version: latest}
-        checks:
-          - id: check-invalid-quality-toolchain
-            guarantee_ref: invalid-or-failed-quality-toolchain-stops
-      - id: failed-quality-toolchain-setup
-        intent_id: quality-toolchain-failure-verified
-        input: {language-profile: rust, rustup-exit-code: 13}
-        checks:
-          - id: check-failed-quality-toolchain-setup
-            guarantee_ref: invalid-or-failed-quality-toolchain-stops
+cases:
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: detailed-failure-preparation
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: selected-quality-toolchain
+    partition: runtime-context.quality-toolchain-inputs-ready
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      cargo-audit-version: 0.21.0
+      rustup-exit-code: 0
+      cargo-exit-code: 0
+      io-destinations: writable
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: compatible-quality-toolchain
+    partition: runtime-context.quality-toolchain-inputs-ready
+    input:
+      language-profile: typescript
+      toolchain-version: "24"
+      version-policy: compatible
+      provider-node-version: v24.21.0
+      provider-status: 0
+      io-destinations: writable
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: invalid-quality-toolchain
+    partition: runtime-context.quality-toolchain-inputs-unusable
+    input:
+      language-profile: unsupported
+      toolchain-version: latest
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: failed-quality-toolchain-setup
+    partition: runtime-context.quality-toolchain-inputs-unusable
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      cargo-audit-version: 0.21.0
+      rustup-exit-code: 13
+      io-destinations: writable
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: registered-binary-failure
+    partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+    input:
+      tool: cargo-audit
+      version: 0.22.2
+      registered-target: x86_64-unknown-linux-gnu
+      archive-sha256: mismatch
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: valid-toolchain-request
+    partition: runtime-context.quality-toolchain-request-valid
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      version-policy: exact
+      cargo-audit-version: 0.21.0
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: valid-request-mismatching-resolution
+    partition: runtime-context.quality-toolchain-request-valid
+    input:
+      language-profile: typescript
+      toolchain-version: "24"
+      version-policy: compatible
+      provider-node-version: v26.0.0
+    verifies:
+      - resolved-version-satisfies-selector
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: mismatching-provider-version
+    partition: runtime-context.quality-toolchain-inputs-unusable
+    input:
+      language-profile: typescript
+      toolchain-version: "24"
+      version-policy: compatible
+      provider-node-version: v26.0.0
+      provider-status: 0
+      io-destinations: writable
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: missing-provider-version
+    partition: runtime-context.quality-toolchain-inputs-unusable
+    input:
+      language-profile: typescript
+      toolchain-version: "24"
+      version-policy: compatible
+      provider-node-version: ""
+      provider-status: 0
+      io-destinations: writable

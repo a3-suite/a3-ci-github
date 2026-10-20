@@ -22,7 +22,7 @@ const runBundled = (snapshotPath: string, outputPath: string, sources: unknown, 
 };
 
 // contract_id: contract.ci-config-snapshot.outputs
-// integration_id: ci-config-snapshot-contract-entrypoint
+// flow_id: ci-config-snapshot-contract-entrypoint
 test('entrypoint writes snapshot and outputs', () => {
   // Arrange
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
@@ -46,7 +46,7 @@ test('entrypoint writes snapshot and outputs', () => {
 });
 
 // contract_id: contract.ci-config-snapshot.outputs
-// integration_id: ci-config-snapshot-entrypoint-regression
+// flow_id: ci-config-snapshot-entrypoint-regression
 test('retains saved snapshot evidence when GITHUB_OUTPUT fails', () => {
   // Arrange
   fs.mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
@@ -78,7 +78,7 @@ test('retains saved snapshot evidence when GITHUB_OUTPUT fails', () => {
   expect(result.stdout + result.stderr).not.toContain('private-valid-value');
 });
 
-// integration_id: ci-config-snapshot-entrypoint-regression
+// flow_id: ci-config-snapshot-entrypoint-regression
 test('entrypoint rejects snapshot and output collisions', () => {
   // Arrange
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
@@ -91,7 +91,7 @@ test('entrypoint rejects snapshot and output collisions', () => {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
-// integration_id: ci-config-snapshot-entrypoint-regression
+// flow_id: ci-config-snapshot-entrypoint-regression
 test('entrypoint rejects a snapshot colliding with GITHUB_OUTPUT', () => {
   // Arrange
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));

@@ -3,3 +3,71 @@ name: contract-subject
 subject:
   id: subject.ci.release-publication-control
   summary: Bind release publication requests, provenance, and approval evidence.
+contracts:
+  - id: contract.ci-release-publication-control.outputs
+    summary: Release publication control operation request.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: status
+              meaning: Publication control operation status.
+            - selector: request-run-id
+              meaning: Verified release request workflow run ID.
+            - selector: outcome
+              meaning: Failure outcome of the rejected publication control step.
+            - selector: accepted-trigger-run
+              meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.release-publication-request-verified
+      - environment: runtime-context.request-trigger-verification-invoked
+      - environment: runtime-context.action-input-invalid
+    guarantees:
+      - id: publication-control-status-produced
+        applies_to:
+          - runtime-context.request-trigger-verification-invoked
+          - runtime-context.release-publication-request-verified
+        claim:
+          field: status
+          present: true
+      - id: publication-request-run-id-produced
+        applies_to:
+          - runtime-context.release-publication-request-verified
+        claim:
+          field: request-run-id
+          present: true
+      - id: publication-control-failure-propagated
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+      - id: request-trigger-run-bound
+        applies_to:
+          - runtime-context.request-trigger-verification-invoked
+        claim:
+          field: accepted-trigger-run
+          in:
+            - successful-default-branch-dispatch-of-own-request-workflow
+            - absent

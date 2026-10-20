@@ -13,7 +13,7 @@ import { requestTriggerEnvironment } from '../../../runtime/workflow-run/tests/r
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint creates and verifies a publication request', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-'));
@@ -56,7 +56,7 @@ test('entrypoint creates and verifies a publication request', () => {
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint rejects missing owner decision before creating artifacts', (t) => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-owner-'));
@@ -76,7 +76,7 @@ test('entrypoint rejects missing owner decision before creating artifacts', (t) 
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint rejects a changed approval ID', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-rejected-'));
@@ -98,7 +98,7 @@ test('entrypoint rejects a changed approval ID', () => {
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint rejects release notes that differ from the approved body digest', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-digest-'));
@@ -125,7 +125,7 @@ test('entrypoint rejects release notes that differ from the approved body digest
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint rejects the authority-internal provenance operation', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-operation-'));
@@ -147,7 +147,7 @@ test('entrypoint rejects the authority-internal provenance operation', () => {
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
-// integration_id: ci-release-publication-control-contract-entrypoint
+// flow_id: ci-release-publication-control-contract-entrypoint
 test('entrypoint verifies the triggering request workflow run before artifact download', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-trigger-'));

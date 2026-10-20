@@ -8,7 +8,7 @@ environment: Linux X64/ARM64 の runner と cli/cli の GitHub Release
 response: Release の取得物を checksum 照合後にだけ展開し、検証済みの gh を job の PATH へ追加する
 response_measure:
   - checksum が一致する取得物だけを展開し PATH へ追加する
-  - 取得失敗、checksum 不一致、未対応 runner、抽出失敗、配置失敗、PATH 更新失敗は gh-provision-failed で停止し、gh を PATH に追加しない
+  - 取得失敗、checksum 不一致、未対応 runner、抽出失敗、配置失敗、PATH 更新失敗では停止し、gh を PATH に追加しない
 related_requirements:
   - requirement_ref:
       requirement_id: gh-release-provisioning

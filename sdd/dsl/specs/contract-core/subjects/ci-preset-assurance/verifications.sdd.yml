@@ -1,161 +1,125 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.preset-assurance
-verifications:
-  - id: verification.ci-preset-assurance.verification
-    contract_id: contract.ci-preset-assurance.verification
-    cases:
-      - id: detailed-failure-verification
-        intent_id: detailed-diagnostics-verification
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-verification}]
-      - id: case.ci-preset-assurance.explicit-roots-required
-        intent_id: ci-preset-assurance-explicit-roots-intent
-        input:
-          audit-mode: read-only
-        _authoring:
-          case_focus: Invoke the bootstrap without required roots and inspect the stable rejection envelope.
-        checks:
-          - id: check.ci-preset-assurance.explicit-roots-required
-            guarantee_ref: ci-preset-assurance-explicit-roots-required
-      - id: case.ci-preset-assurance.read-only-output-rejected
-        intent_id: ci-preset-assurance-read-only-output-intent
-        input:
-          audit-mode: read-only
-          output: remediation-output.json
-        _authoring:
-          case_focus: Invoke read-only audit with remediation output and inspect the stable rejection envelope.
-        checks:
-          - id: check.ci-preset-assurance.read-only-output-rejected
-            guarantee_ref: ci-preset-assurance-read-only-output-rejected
-      - id: pending-publication-actions
-        intent_id: pending-action-blocked
-        input:
-          selected-pending-action: ci-release-assembly
-          preset: release-publication
-        checks:
-          - id: availability
-            guarantee_ref: unavailable-action-reported
-      - id: pending-quality-platform-action
-        intent_id: pending-action-blocked
-        input:
-          selected-pending-action: ci-platform-matrix
-          preset: quality-gate
-          optional-workflow: quality-gate-platforms
-        checks:
-          - id: quality-platform-availability
-            guarantee_ref: unavailable-action-reported
-      - id: pending-release-publisher
-        intent_id: pending-action-blocked
-        input:
-          selected-pending-action: ci-release-publisher
-          preset: release-publication
-        checks:
-          - id: publisher-availability
-            guarantee_ref: unavailable-action-reported
-      - id: standard-publisher-drift
-        intent_id: ci-preset-assurance-drift-intent
-        input:
-          applied-preset-drift: standard-publisher-condition-credential-input-or-local-fallback
-        checks:
-          - id: publisher-drift
-            guarantee_ref: ci-preset-assurance-drift-fails
-      - id: standard-authority-drift
-        intent_id: ci-preset-assurance-drift-intent
-        input:
-          applied-preset-drift: standard-authority-condition-credential-input-or-missing-owner-decision
-        checks:
-          - id: authority-drift
-            guarantee_ref: ci-preset-assurance-drift-fails
-      - id: supplemental-phase-drift
-        intent_id: supplemental-phase-checked
-        input:
-          supplemental-phase-drift: bypass-or-argument-mismatch-or-failure-suppression
-        checks:
-          - id: phase-mismatch
-            guarantee_ref: supplemental-phase-drift-reported
-      - id: retired-release-entrypoints
-        intent_id: retired-release-entrypoints-blocked
-        input:
-          retired-release-entrypoints-file-or-invocation: any-registered-retired-release-entrypoint
-          preset: release-publication
-        checks:
-          - id: fallback-rejection
-            guarantee_ref: retired-release-entrypoints-reported
-      - id: case.ci-preset-assurance.valid-preset-succeeds
-        intent_id: ci-preset-assurance-valid-intent
-        input:
-          audit-mode: read-only
-          preset: configured-preset
-        _authoring:
-          case_focus: Validate a configured canonical preset and compare the project tree before and after preflight.
-        checks:
-          - id: check.ci-preset-assurance.valid-preset-succeeds
-            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
-          - id: check.ci-preset-assurance.valid-evidence-exposed
-            guarantee_ref: ci-preset-assurance-valid-evidence-exposed
-          - id: check.ci-preset-assurance.semantic-review-state-exposed
-            guarantee_ref: ci-preset-assurance-semantic-review-state-exposed
-      - id: case.ci-preset-assurance.drift-fails
-        intent_id: ci-preset-assurance-drift-intent
-        input:
-          applied-preset-drift: true
-        _authoring:
-          case_focus: Drift an applied canonical workflow and inspect the failed report without remediation side effects.
-        checks:
-          - id: check.ci-preset-assurance.drift-fails
-            guarantee_ref: ci-preset-assurance-drift-fails
-      - id: conditional-owner-extension
-        intent_id: ci-preset-assurance-valid-intent
-        input:
-          preset: release-publication
-          applied-preset: canonical-remote-caller-with-selected-executable-owner-adapter
-        _authoring:
-          case_focus: Verify conditional reachability without fabricating a consumer-local callee; publication availability remains a separate preflight gate.
-        checks:
-          - id: conditional-reachability
-            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
-      - id: supplemental-static-selections
-        intent_id: ci-preset-assurance-valid-intent
-        input:
-          preset: release-publication
-          applied-preset: disabled-or-owner-adapter-or-standard-installer
-        _authoring:
-          case_focus: Verify static caller selections in the publication validation stage; this does not assert Hosted acceptance or overall pending-preset availability.
-        checks:
-          - id: static-selection
-            guarantee_ref: ci-preset-assurance-valid-preset-succeeds
-      - id: supplemental-snapshot-reachability-drift
-        intent_id: supplemental-phase-checked
-        input:
-          supplemental-phase-drift: missing-or-invalid-snapshot-binding-or-unconsumed-snapshot
-        checks:
-          - id: snapshot-reachability-rejected
-            guarantee_ref: supplemental-phase-drift-reported
-  - id: verification.ci-preset-assurance.asset-lock
-    contract_id: contract.ci-preset-assurance.asset-lock
-    cases:
-      - id: detailed-failure-asset-lock
-        intent_id: detailed-diagnostics-asset-lock
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-asset-lock}]
-      - id: case.ci-preset-assurance.asset-lock-generated
-        intent_id: ci-preset-assurance-lock-generation-intent
-        input:
-          source-revision: full-source-revision
-        _authoring:
-          case_focus: Generate a lock from a valid configured preset and inspect source revision and managed asset digests.
-        checks:
-          - id: check.ci-preset-assurance.asset-lock-source-bound
-            guarantee_ref: ci-preset-assurance-lock-source-bound
-          - id: check.ci-preset-assurance.asset-lock-assets-recorded
-            guarantee_ref: ci-preset-assurance-lock-assets-recorded
-      - id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
-        intent_id: ci-preset-assurance-lock-rejection-intent
-        input:
-          source-revision: noncanonical-source-revision
-        _authoring:
-          case_focus: Request generation with a noncanonical source revision and confirm rejection before output creation.
-        checks:
-          - id: check.ci-preset-assurance.asset-lock-invalid-revision-rejected
-            guarantee_ref: ci-preset-assurance-invalid-revision-rejected
+cases:
+  - contract_id: contract.ci-preset-assurance.verification
+    id: detailed-failure-verification
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-preset-assurance.verification
+    id: case.ci-preset-assurance.explicit-roots-required
+    partition: runtime-context.preset-assurance-roots-missing
+    input:
+      audit-mode: read-only
+    case_focus: Invoke the bootstrap without required roots and inspect the stable rejection envelope.
+  - contract_id: contract.ci-preset-assurance.verification
+    id: case.ci-preset-assurance.read-only-output-rejected
+    partition: runtime-context.preset-assurance-read-only-output-requested
+    input:
+      audit-mode: read-only
+      output: remediation-output.json
+    case_focus: Invoke read-only audit with remediation output and inspect the stable rejection envelope.
+  - contract_id: contract.ci-preset-assurance.verification
+    id: pending-publication-actions
+    partition: selected-action-unavailable
+    input:
+      selected-pending-action: ci-release-assembly
+      preset: release-publication
+  - contract_id: contract.ci-preset-assurance.verification
+    id: pending-quality-platform-action
+    partition: selected-action-unavailable
+    input:
+      selected-pending-action: ci-platform-matrix
+      preset: quality-gate
+      optional-workflow: quality-gate-platforms
+  - contract_id: contract.ci-preset-assurance.verification
+    id: pending-release-publisher
+    partition: selected-action-unavailable
+    input:
+      selected-pending-action: ci-release-publisher
+      preset: release-publication
+  - contract_id: contract.ci-preset-assurance.verification
+    id: standard-publisher-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: standard-publisher-condition
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: standard-authority-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: standard-authority-condition
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: supplemental-phase-drift
+    partition: supplemental-phase-drift
+    input:
+      supplemental-phase-drift: bypass
+  - contract_id: contract.ci-preset-assurance.verification
+    id: retired-release-entrypoints
+    partition: retired-release-entrypoints-present
+    input:
+      retired-release-entrypoints-file-or-invocation: any-registered-retired-release-entrypoint
+      preset: release-publication
+  - contract_id: contract.ci-preset-assurance.verification
+    id: case.ci-preset-assurance.valid-preset-succeeds
+    partition: ci-preset-assurance-applied-preset-valid
+    input:
+      audit-mode: read-only
+      preset: configured-preset
+    case_focus: Validate a configured canonical preset and compare the project tree before and after preflight.
+  - contract_id: contract.ci-preset-assurance.verification
+    id: case.ci-preset-assurance.drift-fails
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: true
+    case_focus: Drift an applied canonical workflow and inspect the failed report without remediation side effects.
+  - contract_id: contract.ci-preset-assurance.verification
+    id: conditional-owner-extension
+    partition: ci-preset-assurance-applied-preset-valid
+    input:
+      preset: release-publication
+      applied-preset: canonical-remote-caller-with-selected-executable-owner-adapter
+    case_focus: Verify conditional reachability without fabricating a consumer-local callee; publication availability remains a separate preflight gate.
+    verifies:
+      - ci-preset-assurance-valid-preset-succeeds
+  - contract_id: contract.ci-preset-assurance.verification
+    id: supplemental-static-selections
+    partition: ci-preset-assurance-applied-preset-valid
+    input:
+      preset: release-publication
+      applied-preset: disabled
+    case_focus: Verify static caller selections in the publication validation stage; this does not assert Hosted acceptance or overall pending-preset availability.
+    verifies:
+      - ci-preset-assurance-valid-preset-succeeds
+  - contract_id: contract.ci-preset-assurance.verification
+    id: supplemental-snapshot-reachability-drift
+    partition: supplemental-phase-drift
+    input:
+      supplemental-phase-drift: missing-snapshot-binding
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    id: detailed-failure-asset-lock
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    id: case.ci-preset-assurance.asset-lock-generated
+    partition: ci-preset-assurance-lock-input-valid
+    input:
+      source-revision: full-source-revision
+    case_focus: Generate a lock from a valid configured preset and inspect source revision and managed asset digests.
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
+    partition: ci-preset-assurance-lock-input-invalid
+    input:
+      source-revision: noncanonical-source-revision
+    case_focus: Request generation with a noncanonical source revision and confirm rejection before output creation.
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    id: canonical-lock-bindings
+    partition: runtime-context.ci-preset-assurance-canonical-lock-input
+    input:
+      source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      preset: quality-gate
+      consumer-assets: canonical-with-complete-pin-projection

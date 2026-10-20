@@ -1,25 +1,83 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.preset-materialization
-verifications:
-  - id: verification.ci-preset-materialization.application
-    contract_id: contract.ci-preset-materialization.application
-    cases:
-      - id: detailed-failure-application
-        intent_id: detailed-diagnostics-application
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-application}]
-      - id: ci-preset-materialization-success
-        intent_id: ci-preset-materialization-success-intent
-        input:
-          scenario: valid
-        checks:
-          - id: check-ci-preset-materialization-success
-            guarantee_ref: ci-preset-materialization-success-observed
-      - id: ci-preset-materialization-failure
-        intent_id: ci-preset-materialization-failure-intent
-        input:
-          scenario: rejected
-        checks:
-          - id: check-ci-preset-materialization-failure
-            guarantee_ref: ci-preset-materialization-failure-observed
+cases:
+  - contract_id: contract.ci-preset-materialization.application
+    id: detailed-failure-application
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+    verifies:
+      - diagnostic-failure-stage-application
+  - contract_id: contract.ci-preset-materialization.application
+    id: ci-preset-materialization-success
+    partition: runtime-context.preset-custom-materialization-valid
+    input:
+      selection: custom-bundle
+      source-root: explicit
+    verifies:
+      - ci-preset-materialization-success-observed
+  - contract_id: contract.ci-preset-materialization.application
+    id: ci-preset-materialization-failure
+    partition: runtime-context.preset-materialization-rejected
+    input:
+      scenario: rejected
+    verifies:
+      - ci-preset-materialization-failure-observed
+  - contract_id: contract.ci-preset-materialization.application
+    id: standard-binding-footprint
+    partition: runtime-context.preset-standard-materialization-valid
+    input:
+      selection: registered-standard-bundle
+      source-root: omitted
+    verifies:
+      - standard-selected-bundle-match
+      - standard-copy-state
+      - standard-report-files
+      - standard-binding-action
+      - standard-binding-bundle
+      - standard-binding-source
+      - standard-binding-digest
+      - consumer-settings-change
+      - consumer-dependency-change
+      - ci-preset-materialization-success-observed
+  - contract_id: contract.ci-preset-materialization.application
+    id: custom-copy-report
+    partition: runtime-context.preset-custom-materialization-valid
+    input:
+      selection: custom-bundle
+      destination: initially-absent-then-identical
+    verifies:
+      - standard-selected-bundle-match
+      - copy-report-sources
+      - copy-report-destinations
+      - copy-report-actions
+      - consumer-settings-change
+      - consumer-dependency-change
+  - contract_id: contract.ci-preset-materialization.application
+    id: conflicting-destination-protection
+    partition: runtime-context.preset-materialization-rejected
+    input:
+      destination: conflicting-existing-file
+    verifies:
+      - conflicting-destination-change
+  - contract_id: contract.ci-preset-materialization.application
+    id: late-copy-failure-retention
+    partition: runtime-context.preset-materialization-rejected
+    input:
+      selection: custom-bundle
+      copy-failure: after-one-completed-copy
+    verifies:
+      - consumer-settings-change
+      - consumer-dependency-change
+      - completed-copy-loss
+      - changed-range-evidence
+  - contract_id: contract.ci-preset-materialization.application
+    id: standard-rejection-footprint
+    partition: runtime-context.preset-materialization-rejected
+    input:
+      selection: registered-standard-typescript-bundle
+      project-settings: missing-required-scripts
+    verifies:
+      - standard-copy-state
+      - consumer-settings-change
+      - consumer-dependency-change

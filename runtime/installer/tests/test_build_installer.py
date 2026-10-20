@@ -60,6 +60,8 @@ def _temporary_directory() -> tempfile.TemporaryDirectory[str]:
     return tempfile.TemporaryDirectory(dir=temp_root)
 
 
+# test_level: e2e
+# flow_id: provider-installer-builder
 class BuildInstallerContractTest(unittest.TestCase):
     """Exercise the provider builder through its command-line boundary."""
 

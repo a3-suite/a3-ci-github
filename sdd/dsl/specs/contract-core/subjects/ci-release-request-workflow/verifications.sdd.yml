@@ -1,25 +1,18 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-request-workflow
-verifications:
-  - id: verification.ci-release-request-workflow.handoff
-    contract_id: contract.ci-release-request-workflow.handoff
-    cases:
-      - id: detailed-failure-handoff
-        intent_id: detailed-diagnostics-handoff
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-handoff}]
-      - id: ci-release-request-workflow-success
-        intent_id: ci-release-request-workflow-success-intent
-        input:
-          scenario: valid
-        checks:
-          - id: check-ci-release-request-workflow-success
-            guarantee_ref: ci-release-request-workflow-success-observed
-      - id: ci-release-request-workflow-failure
-        intent_id: ci-release-request-workflow-failure-intent
-        input:
-          scenario: rejected
-        checks:
-          - id: check-ci-release-request-workflow-failure
-            guarantee_ref: ci-release-request-workflow-failure-observed
+cases:
+  - contract_id: contract.ci-release-request-workflow.handoff
+    id: detailed-failure-handoff
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-release-request-workflow.handoff
+    id: ci-release-request-workflow-success
+    partition: ci-release-request-workflow-canonical-source-available
+    input:
+      scenario: valid
+  - contract_id: contract.ci-release-request-workflow.handoff
+    id: ci-release-request-workflow-failure
+    partition: ci-release-request-workflow-failure-route-required
+    input:
+      scenario: rejected

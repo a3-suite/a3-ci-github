@@ -104,20 +104,20 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 
 ### CI資材の採用記録
 
-道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17 です。版を更新したときは、この表の該当行を書き換えます。
+道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17（jq、GitHub CLI、setup-node、upload-artifact、download-artifact、setup-uv、uv は 2026-10-20）です。版を更新したときは、この表の該当行を書き換えます。
 
 | 対象 | 版 | 公開日時（UTC） | 採用 commit・日時（JST） | 待機期間 |
 | --- | --- | --- | --- | --- |
 | actions/checkout | v7.0.1（`3d3c42e5`） | 2026-07-20 15:10 | 703133c 2026-09-28 | 満たす |
-| actions/setup-node | v7.0.0（`82076278`） | 2026-07-14 02:46 | 2ab8f21 2026-09-29 | 満たす |
+| actions/setup-node | v7.1.0（`949feb24`） | 2026-10-08 02:52 | このcommit 2026-10-20 | 満たす |
 | actions/setup-python | v7.0.0（`5fda3b95`） | 2026-07-20 03:15 | e66d02a 2026-10-01 | 満たす |
-| astral-sh/setup-uv | v10.2.0（`c18668ad`） | 2026-09-21 13:15 | e66d02a 2026-10-01 | 満たす |
-| actions/upload-artifact | v7.0.1（`043fb46d`） | 2026-04-10 17:31 | 2ab8f21 2026-09-29 | 満たす |
-| actions/download-artifact | v8.0.1（`3e5f45b2`） | 2026-03-11 15:44 | 2ab8f21 2026-09-29 | 満たす |
+| astral-sh/setup-uv | v10.3.0（`1c37ad07`） | 2026-10-09 20:41 | このcommit 2026-10-20 | 満たす |
+| actions/upload-artifact | v7.0.2（`cf430e03`） | 2026-10-07 10:08 | このcommit 2026-10-20 | 満たす |
+| actions/download-artifact | v8.0.2（`9000827c`） | 2026-10-07 10:09 | このcommit 2026-10-20 | 満たす |
 | Node | 24.21.0 | 2026-09-08 21:51 | 4b694d0 2026-10-03 | 満たす |
-| uv | 0.11.15 | 2026-05-18 19:59 | b066848 2026-10-05 | 満たす |
-| jq | 1.7.1 | 2023-12-13 19:56 | 6d7f6fc 2026-09-28 | 満たす |
-| GitHub CLI | 2.80.0 | 2025-09-23 16:57 | 6d7f6fc 2026-09-28 | 満たす |
+| uv | 0.13.0 | 2026-10-09 19:49 | このcommit 2026-10-20 | 満たす |
+| jq | 1.8.2 | 2026-06-20 14:11 | このcommit 2026-10-20 | 満たす |
+| GitHub CLI | 2.102.0 | 2026-09-30 02:40 | このcommit 2026-10-20 | 満たす |
 | cargo-audit | 0.22.2 | 2026-06-05 12:38 | ca6d0d4 2026-10-14 | 満たす |
 
 ## 追加判断

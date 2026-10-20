@@ -1,99 +1,120 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.quality-summary
 test_maps:
-  - verification_id: verification.ci-quality-summary.outputs
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: successful-quality-result
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint writes matching evidence and outputs"
-        check_refs:
-          - check-quality-summary-status
+        symbol: source entrypoint > entrypoint writes matching evidence and outputs
+        guarantees:
+          - quality-summary-status-produced
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint writes matching evidence and outputs"
-        check_refs:
-          - check-quality-summary-status
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: dist entrypoint > entrypoint writes matching evidence and outputs
+        guarantees:
+          - quality-summary-status-produced
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: raw-job-results-normalized
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint normalizes a raw GitHub job result"
-        check_refs:
-          - check-quality-summary-raw-result-status
+        symbol: source entrypoint > entrypoint normalizes a raw GitHub job result
+        guarantees:
+          - quality-summary-status-produced
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint normalizes a raw GitHub job result"
-        check_refs:
-          - check-quality-summary-raw-result-status
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: dist entrypoint > entrypoint normalizes a raw GitHub job result
+        guarantees:
+          - quality-summary-status-produced
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: missing-summary-path-rejected
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects a missing summary path"
-        check_refs:
-          - check-quality-summary-failure-status
+        symbol: source entrypoint > entrypoint rejects a missing summary path
+        guarantees:
+          - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects a missing summary path"
-        check_refs:
-          - check-quality-summary-failure-status
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: dist entrypoint > entrypoint rejects a missing summary path
+        guarantees:
+          - quality-summary-failure-propagated
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: unresolved-quality-evidence-rejected
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint fails unresolved and invalid path relationships"
-        check_refs:
-          - check-quality-summary-unresolved-failure
+        symbol: source entrypoint > entrypoint fails unresolved and invalid path relationships
+        guarantees:
+          - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint fails unresolved and invalid path relationships"
-        check_refs:
-          - check-quality-summary-unresolved-failure
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: dist entrypoint > entrypoint fails unresolved and invalid path relationships
+        guarantees:
+          - quality-summary-failure-propagated
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: excluded-rows-ignored-in-aggregation
     tests:
       - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: "renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation"
-        check_refs:
-          - check-quality-summary-excluded-status
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+        guarantees:
+          - quality-summary-status-produced
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: all-excluded-rows-rejected
     tests:
       - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: "renderQualitySummary(QualitySummaryInput) > rejects an input where every row is excluded"
-        check_refs:
-          - check-quality-summary-all-excluded-failure
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: renderQualitySummary(QualitySummaryInput) > rejects an input where every row is excluded
+        guarantees:
+          - quality-summary-failure-propagated
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: detailed-failure-outputs
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
-        symbol: "ci-quality-summary failure boundary > source retains actionable input failure without private input values"
-        check_refs: [diagnostic-details]
+        symbol: ci-quality-summary failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when evidence-generation fails"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > retains source failure when evidence-generation fails
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when summary-write fails"
-        check_refs: [diagnostic-details]
+        symbol: source entrypoint > retains source failure when summary-write fails
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > retains source failure when unknown fails"
-        check_refs: [diagnostic-details]
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: source entrypoint > retains source failure when unknown fails
+        guarantees:
+          - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: omitted-evidence-uses-run-url
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint uses the workflow run URL for rows without evidence"
-        check_refs:
-          - check-quality-summary-default-evidence-status
+        symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        guarantees:
+          - quality-summary-status-produced
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint uses the workflow run URL for rows without evidence"
-        check_refs:
-          - check-quality-summary-default-evidence-status
-  - verification_id: verification.ci-quality-summary.outputs
+        symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        guarantees:
+          - quality-summary-status-produced
+  - contract_id: contract.ci-quality-summary.outputs
     case_id: omitted-evidence-without-run-context-rejected
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid"
-        check_refs:
-          - check-quality-summary-default-evidence-failure
+        symbol: source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
+        guarantees:
+          - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid"
-        check_refs:
-          - check-quality-summary-default-evidence-failure
+        symbol: dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
+        guarantees:
+          - quality-summary-failure-propagated
+  - contract_id: contract.ci-quality-summary.outputs
+    case_id: mixed-applicability
+    tests:
+      - path: actions/ci-quality-summary/tests/summary.test.ts
+        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+        guarantees:
+          - excluded-rows-not-aggregated
+  - contract_id: contract.ci-quality-summary.outputs
+    case_id: default-evidence
+    tests:
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        guarantees:
+          - run-url-used-for-missing-evidence
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        guarantees:
+          - run-url-used-for-missing-evidence

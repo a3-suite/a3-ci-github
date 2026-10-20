@@ -1,0 +1,15 @@
+version: 1
+name: constraint
+constraint_id: ci-diagnostics-artifact-on-demand
+summary: 診断用artifactはlogとsummaryで原因を切り分けられない場合だけ生成する
+scope:
+  namespace: ci
+  key: failure-diagnostics
+rule: >-
+  診断用artifactは、logとjob summaryだけでは原因を切り分けられない場合に限って生成する。
+rationale:
+  why: 常にartifactを生成すると保持費用と確認対象が増え、必要な診断情報がlogとsummaryから読み取れない状態を隠すため
+violation_impact: artifactの保持費用と確認手順が増え、logとsummaryの診断情報の不足が見過ごされる
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-failure-diagnostics

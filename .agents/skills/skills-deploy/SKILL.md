@@ -1,6 +1,6 @@
 ---
 name: skills-deploy
-description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を外部スキルルートへ反映するときに、対象、配備先、差分、stale、prune の承認境界を固定し、汎用 project-skill-deploy へ安全に委譲するために使う。
+description: a3-ci-github の公開 Agent Skill（`skills/`）を外部スキルルートへ反映するときに、対象、配備先、差分、stale、prune の承認境界を固定し、汎用 project-skill-deploy へ安全に委譲するために使う。
 ---
 
 # skills-deploy / SKILL
@@ -41,16 +41,9 @@ description: a3-ci-github の公開 Agent Skill `skills/` の公開スキル を
 - 外部書き込みの明示許可後に限り、差分検査と同じ固定入力を `project-skill-deploy` へ渡す。
 - stale の削除は prune 対象を個別に確認し、明示許可がある場合だけ委譲する。
 
-### 旧 ci-github スキルを置換したい
-
-- 既存配備先と新しい配備先を同一の明示入力として扱い、二重配置を作らない。
-- 旧スキル内の実装資産は stale 候補として報告し、削除対象を確認してから prune する。
-- 反映後は新しい `SKILL.md` と `references/` について、許可された反映対象の残存差分を成功扱いしない。
-
 ### コミットゲートから配備整合を確認したい
 
-- `references/deploy-context.reference.md` に従い配備先をリポジトリのローカルGit設定に保存し、`commit-gate` スキルの `skill-deploy-parity` から公開root全体の差分検査、削除を伴わない反映、再検査を実行する。
-- 削除候補がある場合は自動反映せず、明示操作として報告する。
+- 配備先の設定と許可の範囲は `references/deploy-context.reference.md` のコミットゲート連携に従い、ゲートの実行は `commit-gate` スキルへ委ねる。
 
 ## 参照
 

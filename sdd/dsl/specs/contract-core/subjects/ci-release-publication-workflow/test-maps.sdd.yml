@@ -1,63 +1,94 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.release-publication-workflow
 test_maps:
-  - verification_id: verification.ci-release-publication-workflow.publication
+  - contract_id: contract.ci-release-publication-workflow.publication
     case_id: ci-release-publication-workflow-success
     tests:
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+          - release-fixed-provider-reference
+          - release-explicit-owner-inputs
+          - release-request-before-publication
+          - release-authority-before-publication
+          - release-control-sha-bound
+          - release-control-head-verified
+          - release-handoff-before-publication
+          - release-publication-before-readback
+          - release-tokens-explicit
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication"
-        check_refs:
-          - check-ci-release-publication-workflow-success
-      - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: .ci/platforms.yml"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: platforms.yml"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: custom path/platform [literal]*?#!.yml"
-        check_refs: [check-ci-release-publication-workflow-success]
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
+        symbol: release control checkout > trusted source identity and file scope > keeps Git identity and artifact handoffs without product working files for publish
+        guarantees:
+          - ci-release-publication-workflow-success-observed
       - path: tests/control-checkout.test.mjs
-        symbol: "release control checkout > trusted source identity and file scope > keeps Git identity and artifact handoffs without product working files for publish"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
-        symbol: "release control checkout > trusted source identity and file scope > keeps public skill source complete with credentials removed"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
-        symbol: "release control checkout > trusted source identity and file scope > avoids fetching and materializing unrelated large product blobs"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
-        symbol: "release control checkout > unsupported and missing selections > preserves full checkout fallback and rejects multiline scope injection"
-        check_refs: [check-ci-release-publication-workflow-success]
-      - path: tests/control-checkout.test.mjs
-        symbol: "release control checkout > unsupported and missing selections > does not silently supply another file when the declared manifest is missing"
-        check_refs: [check-ci-release-publication-workflow-success]
-  - verification_id: verification.ci-release-publication-workflow.publication
+        symbol: release control checkout > trusted source identity and file scope > keeps public skill source complete with credentials removed
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
+        symbol: release control checkout > trusted source identity and file scope > avoids fetching and materializing unrelated large product blobs
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
+        symbol: release control checkout > unsupported and missing selections > preserves full checkout fallback and rejects multiline scope injection
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+      - path: tests/control-checkout.process.test.mjs
+        symbol: release control checkout > unsupported and missing selections > does not silently supply another file when the declared manifest is missing
+        guarantees:
+          - ci-release-publication-workflow-success-observed
+  - contract_id: contract.ci-release-publication-workflow.publication
     case_id: ci-release-publication-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-publication-workflow-contract > release publication workflows preserve failed and unknown outcomes"
-        check_refs:
-          - check-ci-release-publication-workflow-failure
-  - verification_id: verification.ci-release-publication-workflow.publication
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows preserve failed and unknown outcomes
+        guarantees:
+          - ci-release-publication-workflow-failure-observed
+          - release-failure-summary-always
+          - release-failed-prerequisite-blocks
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
+        guarantees:
+          - release-failed-prerequisite-blocks
+  - contract_id: contract.ci-release-publication-workflow.publication
     case_id: ci-release-publication-workflow-evidence-transfer
     tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication"
-        check_refs: [check-ci-release-publication-workflow-evidence-transfer]
-  - verification_id: verification.ci-release-publication-workflow.publication
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication
+        guarantees:
+          - ci-release-publication-workflow-evidence-transfer-declared
+          - supplemental-upload-selected-root
+          - supplemental-hidden-files-selected
+          - supplemental-download-root
+          - supplemental-final-assembly-input
+  - contract_id: contract.ci-release-publication-workflow.publication
     case_id: detailed-failure-publication
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > release-publication aggregate retains failed job identity and run evidence"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > release-publication aggregate retains failed job identity and run evidence
+        guarantees:
+          - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job failure result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job failure result
+        guarantees:
+          - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job cancelled result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job cancelled result
+        guarantees:
+          - diagnostic-failure-stage-publication

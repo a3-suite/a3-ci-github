@@ -1,0 +1,40 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution-fetch
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+    - fetch
+  summary: Fetch selected preset or asset files into a verified project-local distribution
+  usage_targets:
+    - id: fetch
+      summary: Fetch selected preset or asset files into a verified project-local distribution
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: manifest
+          presence: optional
+        - option_id: manifest-url
+          presence: optional
+        - option_id: preset
+          presence: optional
+        - option_id: asset
+          presence: optional
+        - option_id: source-root
+          presence: optional
+  option_groups:
+    - id: selection
+      title: Distribution selection
+      options:
+        - manifest
+        - manifest-url
+        - preset
+        - asset
+        - source-root
+    - id: application
+      title: Planned application or recovery
+      options:
+        - repo-root
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs fetch [options]

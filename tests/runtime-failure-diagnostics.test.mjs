@@ -16,7 +16,7 @@ const commands = [
 
 describe('runtime failure diagnostics', () => {
   // contract_id: contract.ci-failure-diagnostics.actionable
-  // integration_id: runtime-failure-diagnostics
+  // flow_id: runtime-failure-diagnostics
   test.each(commands)('%s preserves its outcome and safe diagnostic context', (_name, subject, args, status) => {
     for (const [githubActions, log] of [['false', 'stderr'], ['true', 'workflow-run-job-step-log']]) {
       const result = spawnSync(process.execPath, args, { cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: githubActions } });
@@ -34,13 +34,13 @@ describe('runtime failure diagnostics', () => {
   });
 
   // contract_id: contract.ci-failure-diagnostics.actionable
-  test.each(['selection', 'delivery', 'application'])('distribution %s rejection preserves state and diagnostic context', operation => {
+  test.each(['selection', 'delivery', 'application', 'rollback'])('distribution %s rejection preserves state and diagnostic context', operation => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const directory = fs.mkdtempSync(path.resolve('tests/tmp/distribution-diagnostic-'));
     onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
     const sentinel = path.join(directory, 'state');
     fs.writeFileSync(sentinel, 'unchanged');
-    const command = { selection: 'plan', delivery: 'fetch', application: 'apply' }[operation];
+    const command = { selection: 'plan', delivery: 'fetch', application: 'apply', rollback: 'rollback' }[operation];
     const result = spawnSync(process.execPath, ['runtime/distribution/fetch-a3-ci-github.mjs', command, '--repo-root', directory], { cwd: root, encoding: 'utf8' });
     const envelope = JSON.parse(result.stderr);
     expect(result.status).toBe(2);
@@ -88,7 +88,7 @@ describe('runtime failure diagnostics', () => {
 
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: runtime-failure-diagnostics
+// flow_id: runtime-failure-diagnostics
 test('distribution gate retains its status when the final sink fails', () => {
   fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
   const fixture = fs.mkdtempSync(path.resolve('tests/tmp/distribution-sink-'));

@@ -19,9 +19,3 @@ requirements:
       - build、assemble、publishの各責務は検証済みhandoffで接続し、write権限を持つ処理は未検証入力を使用しない
       - 公開後はrelease identityと公開結果をreadbackし、不一致または状態不明を成功扱いしない
       - request、承認、identity、source、assetまたは公開結果の不一致時は後続の公開を停止する
-    derived_artifacts:
-      use_cases:
-        - use_case_ref:
-            use_case_id: github-release-request-preparation
-        - use_case_ref:
-            use_case_id: github-release-publication

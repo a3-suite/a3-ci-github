@@ -10,7 +10,7 @@ import { requestTriggerEnvironment } from '../../../runtime/workflow-run/tests/r
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 // contract_id: contract.ci-package-publication-request.outputs
-// integration_id: ci-package-publication-request-contract-entrypoint
+// flow_id: ci-package-publication-request-contract-entrypoint
 test('entrypoint creates and verifies a request', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-package-entry-'));
@@ -52,7 +52,7 @@ test('entrypoint creates and verifies a request', () => {
 });
 
 // contract_id: contract.ci-package-publication-request.outputs
-// integration_id: ci-package-publication-request-contract-entrypoint
+// flow_id: ci-package-publication-request-contract-entrypoint
 test('entrypoint rejects a source SHA mismatch', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-package-entry-rejected-'));
@@ -81,7 +81,7 @@ test('entrypoint rejects a source SHA mismatch', () => {
 });
 
 // contract_id: contract.ci-package-publication-request.outputs
-// integration_id: ci-package-publication-request-contract-entrypoint
+// flow_id: ci-package-publication-request-contract-entrypoint
 test('entrypoint verifies the triggering request workflow run before artifact download', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-request-trigger-'));

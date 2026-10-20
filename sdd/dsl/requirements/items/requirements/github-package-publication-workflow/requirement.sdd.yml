@@ -19,7 +19,3 @@ requirements:
       - credentialを使用するpublish処理は検証済みhandoffだけを入力とし、buildやversion決定をやり直さない
       - 公開後はregistryからversionとpackage identityをreadbackし、不一致または状態不明を成功扱いしない
       - request、preparation、identity、handoff、publishまたはreadbackの失敗時は未検証の後続処理を停止する
-    derived_artifacts:
-      use_cases:
-        - use_case_ref:
-            use_case_id: github-package-publication

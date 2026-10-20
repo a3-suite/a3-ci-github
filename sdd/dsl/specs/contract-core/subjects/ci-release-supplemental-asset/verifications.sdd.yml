@@ -1,164 +1,413 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-supplemental-asset
-verifications:
-  - id: verification.ci-release-supplemental-asset.outputs
-    contract_id: contract.ci-release-supplemental-asset.outputs
-    cases:
-      - id: standard-entry-name-publication
-        intent_id: standard-installer-public-entry-names
-        input: {implementation: standard-installer, declaration: standard-public-entry-name}
-        checks: [{id: assets, guarantee_ref: standard-installer-publication-assets-produced}]
-      - id: standard-entry-name-rejection
-        intent_id: standard-installer-public-entry-names
-        input: {implementation: standard-installer, declaration: nonstandard-windows-or-unix-shared-entry-name}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}, {id: diagnostic, guarantee_ref: phase-diagnostic}]
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: platform-phase
-        intent_id: bound-phase
-        input: {operation: build-platform}
-        checks:
-          - {id: success, guarantee_ref: phase-success}
-          - {id: output, guarantee_ref: phase-output}
-      - id: assembly-phase
-        intent_id: bound-phase
-        input: {operation: assemble, supplemental-build-root: supplemental-build}
-        checks:
-          - {id: success, guarantee_ref: phase-success}
-          - {id: output, guarantee_ref: phase-output}
-      - id: unselected-binding
-        intent_id: fail-closed
-        input: {enabled: false}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: injected-output
-        intent_id: fail-closed
-        input: {output-directory: "output\nstatus=success"}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: owner-failure
-        intent_id: fail-closed
-        input: {owner-exit: 23}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: input-mutation
-        intent_id: fail-closed
-        input: {owner-mutates: standard-build-input}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: unsafe-phase-path
-        intent_id: fail-closed
-        input: {path: ../escape, operation: unsupported}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: identity-selection
-        intent_id: fail-closed
-        input: {binding: mismatched-source-or-snapshot-or-owner-adapter}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: missing-output
-        intent_id: fail-closed
-        input: {owner-output: missing-or-empty}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-installer
-        intent_id: bound-phase
-        input:
-          implementation: standard-installer
-          config: committed-product-declaration
-        checks:
-          - id: success
-            guarantee_ref: phase-success
-          - id: output
-            guarantee_ref: phase-output
-      - id: standard-declaration-mutation
-        intent_id: fail-closed
-        input:
-          implementation: standard-installer
-          config: committed-product-declaration
-        checks:
-          - id: refusal
-            guarantee_ref: phase-rejected
-      - id: standard-candidate-mutation
-        intent_id: fail-closed
-        input:
-          implementation: standard-installer
-          config: committed-product-declaration
-        checks:
-          - id: refusal
-            guarantee_ref: phase-rejected
-      - id: standard-local-cli
-        intent_id: bound-phase
-        input:
-          implementation: standard-installer
-          config: committed-product-declaration
-        checks:
-          - id: success
-            guarantee_ref: phase-success
-          - id: output
-            guarantee_ref: phase-output
-      - id: standard-provider-profile-refusal
-        intent_id: fail-closed
-        input:
-          implementation: standard-installer
-          profile: unsupported
-        checks:
-          - id: refusal
-            guarantee_ref: phase-rejected
-      - id: standard-platform-subset
-        intent_id: bound-phase
-        input: {implementation: standard-installer, release-targets: selected-and-unselected}
-        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
-      - id: standard-platform-binding
-        intent_id: fail-closed
-        input: {implementation: standard-installer, platform-binding: mismatched-id-or-target}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-platform-authority
-        intent_id: fail-closed
-        input: {implementation: standard-installer, platform-manifest: authority-checksum-mismatch}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-platform-mutation
-        intent_id: fail-closed
-        input: {implementation: standard-installer, provider-mutates: platform-manifest}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-checksum-bytes
-        intent_id: fail-closed
-        input: {implementation: standard-installer, checksum: noncanonical-bytes}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-checkout-eol
-        intent_id: bound-phase
-        input: {implementation: standard-installer, checkout: LF-CRLF-or-mixed}
-        checks: [{id: success, guarantee_ref: phase-success}, {id: output, guarantee_ref: phase-output}]
-      - id: standard-source-content
-        intent_id: fail-closed
-        input: {implementation: standard-installer, source-change: beyond-CRLF-to-LF}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-execution-eol-mutation
-        intent_id: fail-closed
-        input: {implementation: standard-installer, provider-mutates: newline-only}
-        checks: [{id: refusal, guarantee_ref: phase-rejected}]
-      - id: standard-evidence-preserved
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: preserved}
-        checks:
-          - {id: inventory, guarantee_ref: standard-installer-evidence-preserved}
-          - {id: assets, guarantee_ref: standard-installer-publication-assets-produced}
-      - id: standard-evidence-missing
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: missing}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
-      - id: standard-evidence-modified
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: modified}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
-      - id: standard-evidence-extra
-        intent_id: standard-installer-evidence-transfer
-        input: {implementation: standard-installer, transferred-evidence: extra}
-        checks:
-          - {id: refusal, guarantee_ref: phase-rejected}
-      - id: diagnostic-standard-installer-diagnostic
-        intent_id: safe-diagnostics
-        input: {failure: standard-installer-diagnostic}
-        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]
-      - id: diagnostic-owner-process-diagnostic
-        intent_id: safe-diagnostics
-        input: {failure: owner-process-diagnostic}
-        checks: [{id: diagnostic, guarantee_ref: phase-diagnostic}]
+cases:
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-entry-name-rejection
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      declaration: nonstandard-windows-shared-entry-name
+      operation: build-platform
+    verifies:
+      - phase-rejected
+      - phase-diagnostic
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+      operation: build-platform
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: platform-phase
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      operation: build-platform
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: unselected-binding
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      enabled: false
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: injected-output
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      output-directory: |-
+        output
+        status=success
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: owner-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      owner-exit: 23
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: input-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      owner-mutates: standard-build-input
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: unsafe-phase-path
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      path: ../escape
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: identity-selection
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      binding: mismatched-source
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: missing-output
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      owner-output: missing
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-installer
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      implementation: standard-installer
+      config: committed-product-declaration
+      operation: build-platform
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-declaration-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      config: committed-product-declaration
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-provider-profile-refusal
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      profile: unsupported
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-platform-subset
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      implementation: standard-installer
+      release-targets: selected-and-unselected
+      operation: build-platform
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-platform-binding
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      platform-binding: mismatched-id
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-platform-authority
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      platform-manifest: authority-checksum-mismatch
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-platform-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      provider-mutates: platform-manifest
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-checksum-bytes
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      checksum: noncanonical-bytes
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-checkout-eol
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      implementation: standard-installer
+      checkout: CRLF
+      operation: build-platform
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-source-content
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      source-change: beyond-CRLF-to-LF
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: standard-execution-eol-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      provider-mutates: newline-only
+      operation: build-platform
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: diagnostic-standard-installer-diagnostic
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      failure: standard-installer-diagnostic
+      operation: build-platform
+    verifies:
+      - phase-diagnostic
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: diagnostic-owner-process-diagnostic
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      failure: owner-process-diagnostic
+      operation: build-platform
+    verifies:
+      - phase-diagnostic
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: primary-and-cleanup-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      scenario: primary-failure-followed-by-cleanup-failure
+      operation: build-platform
+    verifies:
+      - diagnostic-cleanup-status-mismatch
+      - diagnostic-cleanup-state-inference
+      - diagnostic-cleanup-residual-claim
+      - diagnostic-cleanup-extra-field
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: sole-cleanup-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      scenario: cleanup-fails-after-successful-primary-operation
+      operation: build-platform
+    verifies:
+      - diagnostic-cleanup-only-code-mismatch
+      - diagnostic-cleanup-status-mismatch
+      - diagnostic-cleanup-state-inference
+      - diagnostic-cleanup-residual-claim
+      - diagnostic-cleanup-extra-field
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    id: untrusted-installer-process-diagnostic
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      scenario: malformed-installer-process-diagnostic
+      operation: build-platform
+    verifies:
+      - diagnostic-unvalidated-installer-reason
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-entry-name-publication
+    partition: runtime-context.standard-installer-evidence-valid
+    input:
+      implementation: standard-installer
+      declaration: standard-public-entry-name
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - standard-installer-publication-assets-produced
+      - standard-installer-source-snapshots-excluded
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-entry-name-rejection
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      declaration: nonstandard-windows-shared-entry-name
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+      - phase-diagnostic
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+      operation: assemble
+      supplemental-build-root: supplemental-build
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: assembly-phase
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      operation: assemble
+      supplemental-build-root: supplemental-build
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: owner-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      owner-exit: 23
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-candidate-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      config: committed-product-declaration
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-platform-subset
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      implementation: standard-installer
+      release-targets: selected-and-unselected
+      operation: assemble
+      supplemental-build-root: supplemental-build
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-platform-binding
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      platform-binding: mismatched-id
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-checksum-bytes
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      checksum: noncanonical-bytes
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-checkout-eol
+    partition: runtime-context.supplemental-phase-valid
+    input:
+      implementation: standard-installer
+      checkout: CRLF
+      operation: assemble
+      supplemental-build-root: supplemental-build
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-source-content
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      source-change: beyond-CRLF-to-LF
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-execution-eol-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      provider-mutates: newline-only
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-evidence-preserved
+    partition: runtime-context.standard-installer-evidence-valid
+    input:
+      implementation: standard-installer
+      transferred-evidence: preserved
+      operation: assemble
+      supplemental-build-root: supplemental-build
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-evidence-missing
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      transferred-evidence: missing
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-evidence-modified
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      transferred-evidence: modified
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: standard-evidence-extra
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      implementation: standard-installer
+      transferred-evidence: extra
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: diagnostic-owner-process-diagnostic
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      failure: owner-process-diagnostic
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - phase-diagnostic
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: primary-and-cleanup-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      scenario: primary-failure-followed-by-cleanup-failure
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - diagnostic-cleanup-status-mismatch
+      - diagnostic-cleanup-state-inference
+      - diagnostic-cleanup-residual-claim
+      - diagnostic-cleanup-extra-field
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: sole-cleanup-failure
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      scenario: cleanup-fails-after-successful-primary-operation
+      operation: assemble
+      supplemental-build-root: supplemental-build
+    verifies:
+      - diagnostic-cleanup-only-code-mismatch
+      - diagnostic-cleanup-status-mismatch
+      - diagnostic-cleanup-state-inference
+      - diagnostic-cleanup-residual-claim
+      - diagnostic-cleanup-extra-field
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: input-mutation
+    partition: runtime-context.supplemental-phase-invalid
+    input:
+      operation: assemble
+      supplemental-build-root: supplemental-build
+      owner-mutates: supplemental-input
+    verifies:
+      - phase-rejected

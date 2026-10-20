@@ -1,27 +1,31 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.release-request-workflow
 test_maps:
-  - verification_id: verification.ci-release-request-workflow.handoff
+  - contract_id: contract.ci-release-request-workflow.handoff
     case_id: ci-release-request-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-request-workflow-contract > release request workflow binds annotated tags without release publication permission"
-        check_refs:
-          - check-ci-release-request-workflow-success
-  - verification_id: verification.ci-release-request-workflow.handoff
+        symbol: workflow-contracts > release-request-workflow-contract > release request workflow binds annotated tags without release publication permission
+        guarantees:
+          - ci-release-request-workflow-success-observed
+          - request-no-publication-permission
+          - request-tag-before-handoff
+  - contract_id: contract.ci-release-request-workflow.handoff
     case_id: ci-release-request-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary"
-        check_refs:
-          - check-ci-release-request-workflow-failure
-  - verification_id: verification.ci-release-request-workflow.handoff
+        symbol: workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary
+        guarantees:
+          - ci-release-request-workflow-failure-observed
+          - request-failure-summary-always
+  - contract_id: contract.ci-release-request-workflow.handoff
     case_id: detailed-failure-handoff
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result
+        guarantees:
+          - diagnostic-failure-stage-handoff
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result
+        guarantees:
+          - diagnostic-failure-stage-handoff

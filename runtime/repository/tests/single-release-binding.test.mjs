@@ -1,6 +1,6 @@
 import { describe, test, expect, onTestFinished, beforeAll, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
@@ -32,7 +32,12 @@ beforeAll(() => {
     const actionPath = `actions/${name}`;
     const action = yaml.parse(readFileSync(path.join(root, actionPath, 'action.yml'), 'utf8'));
     write(`${actionPath}/action.yml`, readFileSync(path.join(root, actionPath, 'action.yml')));
-    if (action.runs.main) write(`${actionPath}/${action.runs.main}`, readFileSync(path.join(root, actionPath, action.runs.main)));
+    if (action.runs.main) {
+      write(`${actionPath}/${action.runs.main}`, readFileSync(path.join(root, actionPath, action.runs.main)));
+      // The ESM dist runs only with the module scope that ncc writes beside it.
+      const scope = path.posix.join(path.posix.dirname(action.runs.main), 'package.json');
+      if (existsSync(path.join(root, actionPath, scope))) write(`${actionPath}/${scope}`, readFileSync(path.join(root, actionPath, scope)));
+    }
     return { uses: `a3-suite/a3-ci-github/${actionPath}@${zero}`, env: { A3_INSTALLER_PROVIDER_REVISION: zero }, with: Object.fromEntries(Object.entries(action.inputs).filter(([, value]) => value.required && !Object.hasOwn(value, 'default')).map(([key]) => [key, 'fixed'])) };
   });
   write(registryPath, yaml.stringify(registry)); write('VERSION', '0.2.10\n'); write('runtime/payload.mjs', 'export const payload = 1;\n');
@@ -140,6 +145,36 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(rejectedGate.status).not.toBe(0); expect(readFileSync(output, 'utf8')).toBe('');
   });
 
+  test('one Release verifies a squashed main tag by execution closure while the implementation stays reachable', () => {
+    // Arrange
+    const f = fixture(); const base = f.git('rev-parse', `${f.implementation}^`);
+    f.git('switch', '-c', 'release/0.2.11');
+    applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    f.git('add', '.'); f.git('commit', '-m', 'connect implementation');
+    const squashed = f.git('commit-tree', f.git('rev-parse', 'HEAD^{tree}'), '-p', base, '-m', 'squash release');
+    f.git('switch', 'main'); f.git('reset', '--hard', squashed); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
+    // Act
+    const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
+    // Assert
+    expect(spawnSync('git', ['merge-base', '--is-ancestor', f.implementation, 'HEAD'], { cwd: f.directory, timeout: spawnTimeoutMs }).status).toBe(1);
+    expect(checked.diagnostics).toEqual([]); expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(checked.implementationBinding).toMatchObject({ implementationSourceRevision: f.implementation, sourceRevision: squashed });
+    expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).toContain('runtime');
+    for (const entry of checked.implementationBinding.checkedObjects) {
+      expect(entry.implementationObject).toBe(f.git('rev-parse', `${f.implementation}:${entry.path}`));
+      expect(entry.sourceObject).toBe(f.git('rev-parse', `${squashed}:${entry.path}`));
+    }
+    // A hotfix branches from this tag, so preparation must accept the reachable implementation outside its ancestry.
+    expect(checkRepository(f.directory, false, { preparation: true }).implementationBinding.implementationSourceRevision).toBe(f.implementation);
+    // Arrange
+    const released = f.git('rev-parse', 'release/0.2.11');
+    f.git('branch', '-D', 'release/0.2.11'); f.git('update-ref', 'refs/remotes/pull/1/merge', released);
+    // Act
+    const unreachable = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    // Assert
+    expect(unreachable).toMatch(/implementation-source-unreachable/);
+  });
+
   test.each(['VERSION', 'runtime/payload.mjs', 'actions/ci-quality-adapter/action.yml', 'actions/ci-quality-adapter/dist/index.js', 'actions/ci-quality-adapter/scripts/composite.sh'])('single Release rejects changed execution input %s', (relative) => {
     // Arrange
     const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
@@ -161,7 +196,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     const missingObject = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', 'f'.repeat(40)));
     const unrelatedObject = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', unrelated));
     // Assert
-    expect(missingArgument).toMatch(/full implementation/); expect(missingObject).toBeDefined(); expect(unrelatedObject).toMatch(/not-contained/);
+    expect(missingArgument).toMatch(/full implementation/); expect(missingObject).toBeDefined(); expect(unrelatedObject).toMatch(/unreachable/);
     // Arrange
     const plan = planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation);
     f.write(registryPath, `${plan.before.get(registryPath)}\n# changed after plan\n`);

@@ -1,0 +1,19 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-github-selective-distribution-publication-safe
+summary: 選択配布の公開が改変、欠落または未検証の接続を公開成功として扱わない
+quality_attribute: reliability
+stimulus: Repository保守者が固定revisionの配布bootstrapをexact tagのReleaseとして公開する
+environment: GitHub Releaseとfull SHA Raw source、または同一repository snapshotを利用できる導入・保守環境
+response: 配布資材の公開を、実装・接続・資材bytesの完全性検証後にだけ成功として受け入れる
+response_measure:
+  - 通常リリースとhotfixの各公開で、consumerが同じReleaseだけを採用して修正実装を利用でき、実装の事前公開や接続専用の追加公開を要求しない
+  - 公開対象に含まれない実装SHA、実行資材の差異、または旧実装への接続を検出した場合は公開を成功扱いにしない
+  - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開を成功扱いにしない
+  - GitHub Releaseの3 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.publication

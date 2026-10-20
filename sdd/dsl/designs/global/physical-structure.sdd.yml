@@ -163,3 +163,19 @@ elements:
     area_kinds: [delivery]
     source_control: managed
     placement_purpose: このリポジトリ自身の検証・公開 workflow と固定参照される reusable workflow の配置先を所有する
+  - element_id: distribution-asset-registry
+    element_kind: file
+    path: skills/ci-github/assets/registry/ci-distribution-assets.yml
+    primary_area_kind: implementation
+    area_kinds:
+    - implementation
+    source_control: managed
+    placement_purpose: 選択配布の資材identity・依存閉包・公開名・local state境界の宣言正本を所有する
+  - element_id: canonical-preset-registry
+    element_kind: file
+    path: skills/ci-github/assets/registry/ci-github-preset-assets.yml
+    primary_area_kind: implementation
+    area_kinds:
+    - implementation
+    source_control: managed
+    placement_purpose: canonical presetのworkflow membership・配置先・入力設定の宣言正本を所有する

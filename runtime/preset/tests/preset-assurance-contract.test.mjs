@@ -21,8 +21,8 @@ const diagnosticOf = (result) => {
 
 describe("preset-assurance-contract", () => {
   describe("failure-diagnostics-contract", () => {
-    // integration_id: preset-assurance-contract
-    // integration_id: failure-diagnostics-contract
+    // flow_id: preset-assurance-contract
+    // flow_id: failure-diagnostics-contract
     test('preset assurance rejects a request without explicit roots', () => {
       // Arrange
       const cases = [
@@ -47,7 +47,7 @@ describe("preset-assurance-contract", () => {
 
 describe("preset-assurance-contract", () => {
   describe("preset-assurance-contract", () => {
-    // integration_id: preset-assurance-contract
+    // flow_id: preset-assurance-contract
     test('preset assurance rejects remediation output in read-only mode', () => {
       const diagnostic = diagnosticOf(run([
         '--audit-mode', 'read-only',
@@ -60,7 +60,7 @@ describe("preset-assurance-contract", () => {
       expect(diagnostic.message).toMatch(/--output is not allowed in read-only mode/);
     });
 
-    // integration_id: preset-assurance-contract
+    // flow_id: preset-assurance-contract
     test('preset assurance keeps validation of an explicitly supplied external skill root', () => {
       const diagnostic = diagnosticOf(run([
         '--audit-mode', 'read-only',
@@ -72,12 +72,12 @@ describe("preset-assurance-contract", () => {
   });
 });
 
-describe("contract.ci-failure-diagnostics.actionable", () => {
+describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
   describe("failure-diagnostics-contract", () => {
     // evidence_role: contract
-    // test_level: integration
-    // integration_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // test_level: e2e
+    // flow_id: failure-diagnostics-contract
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test('preset assurance rejects unavailable or inconsistent prepared runtime without changing the project', () => {
       // Arrange
       fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
@@ -159,12 +159,12 @@ const withPreparedBootstrap = (callback) => {
   }
 };
 
-describe("contract.ci-failure-diagnostics.actionable", () => {
+describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
   describe("failure-diagnostics-contract", () => {
     // evidence_role: contract
-    // test_level: integration
-    // integration_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // test_level: e2e
+    // flow_id: failure-diagnostics-contract
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap confines dependency files and accepts internal symlink cycles', () => {
       // Arrange
       withPreparedBootstrap((fixture) => {
@@ -243,9 +243,9 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
-    // integration_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // test_level: e2e
+    // flow_id: failure-diagnostics-contract
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports unavailable npm and cleans up state after dependency command failures', () => {
       // Arrange
       withPreparedBootstrap(({ fixture, consumer, execute }) => {
@@ -275,9 +275,9 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
-    // integration_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.actionable
+    // test_level: e2e
+    // flow_id: failure-diagnostics-contract
+    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports validator startup and completion failures without consumer changes', () => {
       // Arrange
       withPreparedBootstrap(({ consumer, validator, execute }) => {
@@ -310,8 +310,8 @@ describe("contract.ci-failure-diagnostics.actionable", () => {
 describe("preset-assurance-contract", () => {
   describe("preset-bootstrap-delegation", () => {
     // evidence_role: supplemental
-    // test_level: integration
-    // integration_id: preset-bootstrap-delegation
+    // test_level: e2e
+    // flow_id: preset-bootstrap-delegation
     test.runIf(process.platform !== 'win32')('preset bootstrap forwards explicit remediation inputs and preserves child results', () => {
       // Arrange
       withPreparedBootstrap(({ fixture, consumer, runtime, execute }) => {

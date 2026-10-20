@@ -37,7 +37,7 @@ const runBundled = (manifest: string, selection?: string, runnerPolicy?: string)
 };
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint emits the validated matrix', () => {
   // Arrange
   // Act
@@ -47,12 +47,15 @@ test('entrypoint emits the validated matrix', () => {
   const output = fs.readFileSync(run.outputPath, 'utf8');
   expect(output).toMatch(/^matrix=/);
   expect(output).toMatch(/x86_64-unknown-linux-gnu/);
+  expect(JSON.parse(output.trim().slice('matrix='.length))).toStrictEqual({ include: [
+    { id: 'linux-x64', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' },
+  ] });
   expect(output.trim().split('\n').length).toBe(1);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint fails closed for an unsupported runner', () => {
   // Arrange
   // Act
@@ -65,7 +68,7 @@ test('entrypoint fails closed for an unsupported runner', () => {
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint accepts consumer versioned runners only with trusted policy', () => {
   const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, 'trusted');
   try {
@@ -75,7 +78,7 @@ test('entrypoint accepts consumer versioned runners only with trusted policy', (
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
   for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
     const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
@@ -88,7 +91,7 @@ test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint rejects an oversized manifest before parsing', () => {
   // Arrange
   // Act
@@ -101,7 +104,7 @@ test('entrypoint rejects an oversized manifest before parsing', () => {
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint emits ordered quality outputs without changing the manifest matrix', () => {
   const run = runBundled(`platforms:
   - id: linux-x64
@@ -115,7 +118,10 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
     expect(run.result.status, run.result.stderr).toBe(0);
     const outputs = Object.fromEntries(fs.readFileSync(run.outputPath, 'utf8').trim().split('\n')
       .map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-    expect(JSON.parse(outputs.matrix).include.map((entry: { id: string }) => entry.id)).toStrictEqual(['linux-x64', 'macos-arm64']);
+    expect(JSON.parse(outputs.matrix)).toStrictEqual({ include: [
+      { id: 'linux-x64', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' },
+      { id: 'macos-arm64', runner: 'macos-14', target: 'aarch64-apple-darwin' },
+    ] });
     expect(JSON.parse(outputs['quality-matrix'])).toStrictEqual({ include: [
       { platform_id: 'macos-arm64', runner: 'macos-14' },
       { platform_id: 'linux-x64', runner: 'ubuntu-24.04' },
@@ -125,7 +131,7 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-shared-checks
+// flow_id: ci-platform-matrix-shared-checks
 test('entrypoint projects explicit shared checks without changing build identities or selection order', () => {
   // Arrange
   const manifest = 'platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]';
@@ -144,7 +150,7 @@ test('entrypoint projects explicit shared checks without changing build identiti
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-shared-checks
+// flow_id: ci-platform-matrix-shared-checks
 test('entrypoint rejects malformed shared checks and unknown selection fields without outputs', () => {
   // Arrange
   const manifest = 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]';
@@ -164,7 +170,7 @@ test('entrypoint rejects malformed shared checks and unknown selection fields wi
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
-// integration_id: ci-platform-matrix-contract-entrypoint
+// flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint fails without any outputs for invalid selection', () => {
   const run = runBundled('platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]', 'platforms: [{id: unknown}]');
   try {

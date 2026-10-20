@@ -33,6 +33,10 @@ const setup = async (t, changes = {}, { realObservation = false } = {}) => {
     async finalize(identity, id) { writes.push(['finalize', id]); return { id, tag_name: identity.tag, draft: false, body: 'approved notes' }; },
     ...changes,
   };
+  // Record prohibited operations even if the publisher catches their rejection.
+  for (const operation of ['delete', 'remove', 'replace', 'recover']) {
+    client[operation] = async (...args) => { writes.push([operation, ...args]); throw new Error('unexpected-recovery-write'); };
+  }
   return { f, assembly, writes, client, options: { ...options, beforePath, outputRoot: path.join(f.root, 'write') } };
 };
 
@@ -178,10 +182,20 @@ describe("publisher", () => {
       test(`publisher does not retry or recover failed create upload finalize and readback: ${phase}`, async (t) => {
         const state = await setup(t);
         const failures = [];
+        const recovery = [];
+        for (const operation of ['delete', 'remove', 'replace', 'recover']) {
+          state.client[operation] = async (...args) => { recovery.push([operation, ...args]); throw new Error('unexpected-recovery-write'); };
+        }
         const method = phase === 'readback' ? 'assetDigest' : phase;
         state.client[method] = async (...args) => { failures.push(args); throw new Error('provider-state-unknown'); };
         await expect(publishRelease(state.options, state.client)).rejects.toThrow();
         expect(failures).toHaveLength(phase === 'readback' ? state.assembly.assets.length : 1);
+        const expectedWrites = phase === 'create' ? [] : ['create',
+          ...(phase === 'upload' ? [] : state.assembly.assets.map(() => 'upload'))];
+        expect(state.writes.map(([operation]) => operation)).toStrictEqual(expectedWrites);
+        expect(state.writes.filter(([operation]) => operation !== 'create').every(([, id]) => id === '42')).toBe(true);
+        if (phase === 'upload' || phase === 'finalize') expect(failures[0][1]).toBe('42');
+        expect(recovery).toStrictEqual([]);
         if (phase === 'readback') {
           expect(new Set(failures.map(([endpoint]) => endpoint)).size).toBe(failures.length);
           expect(state.writes.some(([operation]) => operation === 'finalize')).toBe(false);

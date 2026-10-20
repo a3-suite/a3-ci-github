@@ -29,9 +29,11 @@ Node で実装した共通処理を、bundle 作成を省くためだけに Comp
 各 bundled Action は既存 package と同じ構成を用います。
 
 - `package.json`、`package-lock.json`、`tsconfig.json`
-- `src/index.ts`、bundle 済み `dist/index.js`
+- `package.json` の `"type": "module"`、`src/index.ts`、ESM で bundle した `dist/index.js` と ncc が生成する `dist/package.json`
 - `tests/*.test.ts`、`README.md`、`action.yml`
 - `build` は既存の ncc 経路、`lint` は `tsc --noEmit`
+- ncc は `--no-cache` で実行する。キャッシュ済みの module を別の build から再利用すると、ESM の出力に `createRequire` の導入が欠け、Node 組込み module の `require` が実行時に失敗することがある
+- TypeScript は 6 系を使い、7 系は採用しない。7 系は `require('typescript')` で使う JS API を提供せず、ncc の ts-loader と `runtime/repository/check-runtime-boundaries.mjs` が動かないため。ncc が 7 系に対応した時点、または型検査（7 系）と bundle・検査ツール（6 系の Compiler API）で compiler を分ける構成や bundle の方式を見直す時点で再判断する
 
 新しい依存を足す前に、既存の runtime・標準ライブラリ・固定された toolchain で目的を満たせるか確認します。package manager の変更を Action 追加へ混在させません。
 
@@ -45,27 +47,22 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 
 以下は外部の固定SHAを使う接続の更新順序です。repository自身のCIで使う`uses: ./actions/...`は同一checkoutの検証であり、Actionと検証用workflowを同じコミットで更新できます。
 
-通常リリースとhotfixの公開単位、実装SHAの包含・同一性、公開前の接続保証は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とします。公開を1回にまとめる準備順序は次のとおりです。
+通常リリースとhotfixの公開単位、実装SHAの到達可能性と実行範囲の同一性、公開前の接続保証は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)の`contract.ci-selective-distribution.publication`を正本とします。公開を1回にまとめる準備順序は次のとおりです。
 
 1. **実装コミットAを確定する。** 対象版のVERSION、Action、共有runtime、生成物と依存を揃え、source検証とdist同一性を確認してコミットします。この段階で別Releaseを公開しません。
 2. **接続コミットBを作る。** Aの確定済みfull SHAへcanonical workflow、provider callee、installer revisionとregistryのAction bindingを揃えます。接続とその検証以外で実行資材を変えた場合は、実装コミットの確定からやり直します。
 3. **最終候補を検証する。** Bと実際の参照先Aを使ってpublication契約を確認します。callee自身のSHAはmanifest生成で解決し、sourceへ将来の自己SHAを書き戻しません。third-party Actionの承認pinは従来どおり検証します。
-4. **Bを1回だけ公開する。** 承認済みannotated exact tagとReleaseをBに作成し、配布資材のreadbackまで確認します。consumerはそのReleaseからcallerを生成して環境を受け入れます。
+4. **1回だけ公開する。** Bと同じtreeを持つコミットからtagとReleaseを1回だけ作成します。手順は[Release手順](../release/README.md#このrepositoryの公開実行)に従います。consumerはそのReleaseからcallerを生成して環境を受け入れます。
 
-準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致は要求せず、正本の包含・同一性を確認します。rebaseやsquashで参照先が変わる、または実行資材が変わる場合は接続・検証を確定し直します。
+準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致や祖先関係は要求せず、Aがbranchまたはtagから到達可能であることと、実行範囲のtreeの同一性を確認します。consumerはAのSHAを取得するため、公開後もAを含むbranchを残します。rebaseなどでAが書き換わる、または実行資材が変わる場合は接続・検証を確定し直します。
 
-mainへの統合方式と確認操作は[固定SHA接続を含むmain統合](../release/README.md#固定sha接続を含むmain統合)を参照してください。
+mainへの統合で確認する内容は[mainへの統合](../release/README.md#mainへの統合)を参照してください。
 
-接続候補の版は未公開でなければなりません。同名のtagが存在する版は、実装SHAを含まない場合も候補にしません。tagの再作成は既存tagの削除を伴う別承認の操作であり、削除後に通常の候補として検証します。
+接続候補の版は未公開でなければなりません。同名のtagが存在する版は、実装SHAを含まない場合も候補にしません。tagの削除・再作成の可否はgit-branch-strategyの`tagDeletion`に従い、再作成する場合も削除後に通常の候補として検証します。
 
 ### 公開済みtagへ接続した状態からの回復
 
-registryの接続先版のtagが既に別のcommitで公開済みで、既存参照検査が`implementation-source-not-contained`、候補検査が`implementation-candidate-release-tag-exists`で停止する状態は、上記の順序から外れています。版運用の正本（ブランチ戦略）に従って未公開の対象版を決め、通常の順序のまま次の手順で回復します。
-
-1. 実装コミットAで`VERSION`を対象版へ更新します。既存参照検査の`implementation-source-not-contained`は引き継いだ不整合として記録し、Aの判定はsource検証、dist同一性、関連テストで行います。既存参照検査の成功へ読み替えません。
-2. 直後の接続コミットBで対象版とAの確定済みSHAへ接続し、候補検査の成功を必須とします。Bが成功するまでAを単独で公開・統合しません。
-
-上記以外の停止理由はこの回復の対象外とし、通常どおり停止します。
+registryの接続先版のtagが既に公開済みで、候補検査が`implementation-candidate-release-tag-exists`で停止する状態は、上記の順序から外れています。版運用の正本（ブランチ戦略）に従って未公開の対象版を決め、通常の順序のまま回復します。実装コミットAで`VERSION`を対象版へ更新し、直後の接続コミットBで対象版とAの確定済みSHAへ接続して、候補検査の成功を必須とします。Bが成功するまでAを単独で公開・統合しません。
 
 接続の更新には、対象版の`RELEASE_TAG`と確定済みAの`IMPLEMENTATION_SHA`を明示します。事前のtag・Releaseは不要です。
 
@@ -77,23 +74,15 @@ node runtime/repository/check-provider-references.mjs --candidate --contracts
 
 `--check`は変更予定を出力し、差分があれば1、差分がなければ0、検査不能なら2で終了します。差分と接続検査の結果を確認してから`--write`を実行します。staged snapshotの最終候補は`--staged --candidate --contracts`で検査します。参照Actionのmetadataが宣言するNode entrypointとCompositeの固定scriptの存在を確認し、参照するActionディレクトリ全体と共有`runtime/`のGit treeでバイト列とmodeの一致を確認します。この範囲に変更があればAを確定し直します。
 
-Bにannotated exact tagを作成した後、そのtagのcheckoutで公開検査を実行します。
-
-```sh
-node runtime/repository/check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG"
-```
-
-Release workflowはこの公開検査が成功した後だけ資材を生成します。検査JSONとworkflowの結果要約に`implementationSourceRevision`と`implementationBindingStatus`を残します。引数なしの既存参照検査はregistryが宣言するtagを確認する保守用入口であり、今回の公開検査には使いません。
-
 固定参照の実体・I/O・実dist動作を検証する既存ゲートは維持します。必要なGit objectの欠落や実行不能は判定不能とし、別checkoutの成功やSHA形式だけを接続先の動作保証に読み替えません。Hosted受入は別の証拠です。
 
-公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
+tag作成後の公開検査は[Release手順](../release/README.md#このrepositoryの公開実行)、公開後の配布物・Skill配備までの確認は[Release手順](../release/README.md#公開後の整合確認)、コミット時の判定は[リポジトリ固有ゲート](../../.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md#固定参照更新順序ゲート)を参照してください。
 
 ### 再利用workflowの公開と導入後受入
 
 公開前の生成・固定参照・接続契約の検証と、導入先のHosted環境受入の責務は[Release手順](../release/README.md#Release公開と利用側受入の順序)が参照する配布契約に従います。公開workflowは既存の生成回帰を実行します。導入先では通常のfetch・plan・applyでcallerを生成し、製品設定・認証・required checkを受け入れます。
 
-Hosted実行・環境への書き込み・試験公開・Release公開は、ローカル修正とは別の承認工程です。実行した経路とSHA、run URL、条件と結果を記録し、ローカル検証や生成成功をHosted成功へ読み替えません。Hostedでの代表検証は[テスト戦略](test-strategy.md)に従います。
+Hosted実行・環境への書き込み・試験公開は、ローカル修正とは別の承認工程です。Release公開の承認はgitの正本に従います。実行した経路とSHA、run URL、条件と結果を記録し、ローカル検証や生成成功をHosted成功へ読み替えません。Hostedでの代表検証は[テスト戦略](test-strategy.md)に従います。
 
 ## runtime の利用形態
 
@@ -145,4 +134,4 @@ provider固定参照の保守用入口は`npm run lint:provider`です。接続�
 
 Hosted runner / 実 provider の検証は [テスト戦略](test-strategy.md) の受入境界に従います。ローカル成功を Hosted 成功へ読み替えません。
 
-実装が存在するだけでは公開済み Action と扱いません。公開前の候補検証とconsumerが採用できる公開状態を区別し、publication契約を満たした単一Releaseから導入します。既存の公開SHAに新Actionが存在するように装いません。公開操作は実装・ローカル検証と別の承認で行います。
+実装が存在するだけでは公開済み Action と扱いません。公開前の候補検証とconsumerが採用できる公開状態を区別し、publication契約を満たした単一Releaseから導入します。既存の公開SHAに新Actionが存在するように装いません。

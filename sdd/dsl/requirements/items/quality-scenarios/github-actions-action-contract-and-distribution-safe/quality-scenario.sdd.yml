@@ -12,7 +12,7 @@ response_measure:
   - secret、token、credential はログ、output、summary、証跡へ出力しない
   - source、依存、ビルド設定から再生成した配布物と同梱 dist の内容が一致する
   - Composite Action が参照する script は同じ ref に存在し、Action 外でも同じ入力契約と終了状態を検証できる
-  - Action の追加・削除時に README.md の Action 一覧と用途が同期し、未同期の変更はコミットゲートで停止する
+  - Action の追加・削除後に README.md の Action 一覧と用途が実在する Action と一致し、不一致の変更は確定されない
   - workflow の権限、runner、trigger、job 境界を Action 内部へ取り込まない
 related_requirements:
   - requirement_ref:

@@ -123,6 +123,7 @@ assets:
     application: local-reference
     sourcePaths:
       - runtime/installer/run-installer.mjs
+      - runtime/installer/package.json
       - runtime/installer/dist/index.js
       - runtime/installer/src/assembly.py
       - runtime/installer/src/diagnostic-reasons.json

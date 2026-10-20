@@ -4,41 +4,49 @@
 
 ## Release ref
 
-- リリース ref の命名・起点、バージョンの表記・確定条件、公開後の統合・forward-port の可否は git-branch-strategy の正本で判定し、操作の承認は git の正本に従います。
-- 固定SHA接続を含むmain統合の判定単位と準備コミットの扱いは、下記のrepository固有条件を適用します。
-- 実際のタグ作成・push は、対象コミットと検証結果を確認した別の release 操作で行います。
+- リリース ref の命名・起点、バージョンの表記・確定条件、mainへの統合方式、tagの作成元、公開後の統合・forward-port の可否は git-branch-strategy の正本で判定し、操作の承認は git の正本に従います。
+- このrepositoryに固有なのは、固定SHA接続の準備コミット、下記のRelease作成の例外、main統合で追加する確認、alias更新の条件だけです。
 
 ## このrepositoryの公開実行
 
 source versionの正本は`VERSION`です。
 
-通常リリースとhotfixは、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)に従い、実装と接続を1つのexact tagとReleaseで公開します。準備と検査コマンドは[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)へ委譲します。Release workflowは最終tagのcheckoutで包含・同一性と固定SHA先の契約を検査してから資材を生成します。
+通常リリースとhotfixは、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)に従い、実装と接続を1つのexact tagとReleaseで公開します。実装コミットAと接続コミットBの準備と候補検査は[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)に従います。
 
-`.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするworkflow revisionも承認対象に含め、今回の検証済み実装を使います。
+Bと同じtreeを持つコミットにannotated exact tagを作成した後、そのtagのcheckoutで公開検査を実行します。
 
-sourceとhotfix baseのmain統合証拠は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とし、`runtime/repository/update-release-aliases.sh`が検証します。
+```sh
+node runtime/repository/check-provider-references.mjs --contracts --release-tag "$RELEASE_TAG"
+```
+
+Release workflowはこの公開検査が成功した後だけ資材を生成します。検査JSONとworkflowの結果要約に`implementationSourceRevision`と`implementationBindingStatus`を残します。引数なしの既存参照検査はregistryが宣言するtagを確認する保守用入口であり、公開検査には使いません。
+
+`.github/workflows/release.yml`は`workflow_dispatch`で実行します。`release-tag`には承認したannotated exact tag、`release-notes`には承認した本文をそのまま指定します。titleはexact tagです。タグのpushだけでは公開しません。dispatchするrefは`release-tag`と同じexact tagとし（例：`gh workflow run release.yml --ref v0.6.0`）、通常リリースとhotfixのどちらもbranchから起動しません。workflowはそれ以外のrefからの起動を公開前に拒否します。
+
+aliasは公開済みの安定版だけへ向けます。そのため`runtime/repository/update-release-aliases.sh`は、alias更新の前にtag sourceとhotfix baseのmain統合状態を確かめます。この条件はrepository固有で、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)の`selective-distribution-alias-source-integrated`に従います。git-branch-strategyのmain統合の判定（`mainIntegrationSafety`）の代わりにはなりません。
 
 公開処理はdraft作成、3資材の登録、asset IDとbytesのreadback、tag・Release identity・承認本文の再確認、draft解除の順です。既存資材を上書きせず、公開済みReleaseへ不足資材を追記しません。既存本文が承認本文と異なる場合も停止します。公開前に失敗したdraftは保持し、修正後の再実行で同じ資材を検証します。公開後の最終確認または独立readbackの失敗でもalias更新は停止し、公開物を上書きせず原因と次の対応を判断します。
 
-公開後の独立readbackが成功してからaliasを更新します。exact tagは移動しません。
+公開後の独立readbackが成功してからaliasを更新します。
 
-## 固定SHA接続を含むmain統合
+### Release作成の例外
 
-このrepositoryの統合条件は、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)の`selective-distribution-publication-intent`を正本とします。実装コミットAと接続コミットBを使う理由と準備手順は、[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)を参照してください。
+gitスキルのmainタグリリース手順（`run-main-tag-release-flow`）の実行コマンドのうち、手順5〜10（`gh release create`によるRelease作成から資材登録、draft解除、最終状態の確認まで）を上書きする例外です。
 
-統合前に、取得したmainのSHAを`MAIN_SHA`、参照先Aを`IMPLEMENTATION_SHA`、検証済みBを`SOURCE_SHA`として記録します。publication契約に適合する方式で作成した実際の統合候補を`CANDIDATE_SHA`とし、次の結果を契約条件と照合します。
+- 差分：annotated exact tagの作成・push（手順1〜4）とリリースノートの承認はgitの手順に従います。手順5〜10は実行せず、上記の`.github/workflows/release.yml`をdispatchして、上記の公開処理とその結果で置き換えます。
+- 理由：公開検査の成功、3資材の登録とreadback、alias更新を1つのworkflowで順に条件付ける必要があり、手動のRelease作成では資材と検査結果の対応を保証できないためです。
+- 適用範囲：このrepositoryの通常リリースとhotfixのRelease作成・資材登録・公開状態の確認だけです。tagの作成元・削除・再作成と操作の承認は、git-branch-strategyとgitの正本に従います。
 
-```sh
-git rev-list "$MAIN_SHA..$CANDIDATE_SHA"
-git merge-base --is-ancestor "$IMPLEMENTATION_SHA" "$CANDIDATE_SHA"
-git rev-parse "$SOURCE_SHA^{tree}" "$CANDIDATE_SHA^{tree}"
-```
+## mainへの統合
 
-候補checkoutの検証は[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)の該当段階で行います。統合直前に取得し直したmainと`MAIN_SHA`を照合し、統合後は実際のmain SHAを`CANDIDATE_SHA`として上記を再実行します。そのSHAのCI runと公開workflowの結果を別々に確認して報告します。
+統合方式、統合前後に集める証拠、拒否条件はgit-branch-strategyの`mainIntegrationSafety`に従います。このrepositoryでは、次を追加で確認します。
+
+- 統合後にtagを作るコミットのtreeが、検証済みの接続コミットBと一致すること。準備と検査は[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)に従います。
+- 実装コミットAがbranchまたはtagから到達可能なまま残ること。squashで統合する場合もAを含むbranchを削除しません。
 
 ## Release公開と利用側受入の順序
 
-公開条件と導入時生成・導入後検証の責務は、[配布契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/clauses.sdd.yml)のpublication／applicationを正本とします。
+公開条件と導入時生成・導入後検証の責務は、[配布契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)のpublication／applicationを正本とします。
 
 公開前は提供元CIで生成・固定参照・接続契約を検証します。公開後、導入先は提供スクリプトでtemplateへ製品設定と固定参照を埋め込み、生成したcallerを配置して環境を検証します。全5経路のHosted成功証拠を公開・導入の必須条件にしません。
 

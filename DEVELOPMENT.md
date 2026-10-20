@@ -3,7 +3,7 @@
 ## 読む順序
 
 1. `README.md`
-2. `sdd/dsl/requirements/requirement-manifest.sdd.yml`
+2. `sdd/dsl/requirements/items/requirements/`
 3. `sdd/dsl/designs/scopes/repository/logical-structure.sdd.yml`
 4. `sdd/dsl/designs/global/physical-structure.sdd.yml`
 5. `docs/maintenance/action-construction.md`
@@ -42,6 +42,12 @@ npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 ```
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
+
+```sh
+runtime/preset/node_modules/.bin/tsx runtime/distribution/generate-distribution-release.ts \
+  --repository-root . --output-directory <new-directory> \
+  --source-revision <full-commit-sha> --release-tag <exact-tag>
+```
 
 標準品質bundleの正本は `runtime/adapter/bundles/` です。言語共通の規約・lintルールは言語ownerに残し、標準CIで実行するcommandと準備・実行境界はこのリポジトリで保守します。生成物は正本pathとSHA256を保持し、固定Actionへ同梱します。通常のbuild、生成、consumerは外部skill checkoutを必要としません。commandを生成物側で手書き更新しません。
 

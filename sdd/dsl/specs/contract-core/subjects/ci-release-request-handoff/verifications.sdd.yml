@@ -1,32 +1,25 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-request-handoff
-verifications:
-  - id: verification.ci-release-request-handoff.outputs
-    contract_id: contract.ci-release-request-handoff.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: tag-request-handoff
-        intent_id: request-handoff-output-set
-        input:
-          output-directory: release-request
-          tag-source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-          tag-object-sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-          github-ref: refs/tags/v1.2.3
-          github-ref-name: v1.2.3
-          request-run-id: "42"
-          request-actor: release-operator
-        checks:
-          - id: check-request-handoff-output
-            guarantee_ref: request-handoff-output-produced
-      - id: tag-ref-mismatch-rejected
-        intent_id: request-handoff-rejected
-        input:
-          tag: v1.2.3
-          ref: refs/tags/v1.2.4
-        checks:
-          - id: check-request-handoff-failure
-            guarantee_ref: request-handoff-failure-propagated
+cases:
+  - contract_id: contract.ci-release-request-handoff.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-release-request-handoff.outputs
+    id: tag-request-handoff
+    partition: runtime-context.release-request-handoff-valid
+    input:
+      output-directory: release-request
+      tag-source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      tag-object-sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      github-ref: refs/tags/v1.2.3
+      github-ref-name: v1.2.3
+      request-run-id: "42"
+      request-actor: release-operator
+  - contract_id: contract.ci-release-request-handoff.outputs
+    id: tag-ref-mismatch-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      tag: v1.2.3
+      ref: refs/tags/v1.2.4

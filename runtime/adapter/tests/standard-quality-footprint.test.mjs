@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
@@ -15,7 +16,7 @@ const filesIn = (directory) => fs.readdirSync(directory, { withFileTypes: true }
   entry.isDirectory() ? filesIn(path.join(directory, entry.name)) : [path.join(directory, entry.name)]);
 
 describe("adapter-bundle-materialization-contract", () => {
-  // integration_id: adapter-bundle-materialization-contract
+  // flow_id: adapter-bundle-materialization-contract
   test('registered standard quality bundles require no consumer copies and preserve consumer files', () => {
       const inventory = yaml.parse(fs.readFileSync(path.join(root, inventoryPath), 'utf8'));
       fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
@@ -66,10 +67,11 @@ describe("adapter-bundle-materialization-contract", () => {
           expect(cli.status, cli.stderr).toBe(0);
           expect(JSON.parse(cli.stdout)).toStrictEqual(report);
           expect(report.schema).toBe('ci.adapter-materializer.v2');
+          expect(report.bundle).toBe(bundle.id);
           expect(report.files).toStrictEqual([]);
           expect(report.descriptor).toBe('');
           expect(report.binding).toStrictEqual({ action: 'ci-quality-adapter', standardBundleId: bundle.id,
-            sourcePath: bundle.source.path, sha256: standardQualityBundle(bundle.id).sha256 });
+            sourcePath: bundle.source.path, sha256: createHash('sha256').update(original).digest('hex') });
           for (const mutation of [
             source => { source.skill = profile; },
             source => { source.path = 'runtime/adapter/bundles/other-quality.yml'; },
@@ -92,7 +94,12 @@ describe("adapter-bundle-materialization-contract", () => {
           expect(fs.existsSync(path.join(project, 'missing-report.json'))).toBe(false);
           if (descriptor.projectSettings.requiredScripts.length > 0) {
             fs.writeFileSync(path.join(project, 'package.json'), JSON.stringify({ scripts: {} }));
+            const fileState = (file) => fs.lstatSync(file).isSymbolicLink()
+              ? { link: fs.readlinkSync(file) } : { bytes: fs.readFileSync(file) };
+            const invalidBefore = new Map(filesIn(project).map((file) => [file, fileState(file)]));
             expect(() => materializeAdapterBundle(options)).toThrow(/project-script/);
+            expect(filesIn(project)).toStrictEqual([...invalidBefore.keys()]);
+            for (const [file, state] of invalidBefore) expect(fileState(file)).toStrictEqual(state);
           }
         }
       } finally {

@@ -11,7 +11,7 @@
 | 公開スキル | 同梱の選択 | CI・READMEの扱い |
 | --- | --- | --- |
 | なし | 同梱しない | `__unset__`。ZIPとスキル導入案内を要求しない。 |
-| あり | 同梱する | 公開宣言を指定し、同じReleaseのZIPとセット導入を案内する。 |
+| あり | 同梱する（推奨） | 公開宣言を指定し、同じReleaseのZIPとセット導入を案内する。 |
 | あり | 同梱しない | `__unset__`。理由を監査レポートへ残し、ZIPの導入案内を掲載しない。 |
 | あり | 未確認 | 選択を製品ownerへ確認する。未同梱・監査完了として扱わない。 |
 
@@ -24,7 +24,7 @@
 3. Release publication callerの生成時に、planの`--set`で`<release-skills-config-path>`へ宣言JSONのrepository相対pathをJSON文字列として渡す（例：`".ci/release-skills.json"`）。同梱しない場合は`"__unset__"`を渡す。生成済みcallerを手編集しない。installerの選択とは独立して設定する。採用する固定providerのworkflowとActionがこの入力へ対応することを、同じReleaseの配布manifestと固定SHA先で確認する。
 4. `references/release-skills-contract.reference.yml`に従い、固定製品sourceからの収録内容、禁止資材の除外、必須fileの充足、ZIPと証跡を確認する。除外規則はruntimeのpolicy JSONを参照し、このガイドへ複製しない。公開scriptsや必要な実行資材は残し、コンパイル残骸の除外で必要資材が欠けた場合は配置・宣言を直す。
 5. 同じ製品Releaseへ`<repository-name>-skills.zip`とその`.sha256`を公開する。生成はOS別matrixで繰り返さず、assembleで一度だけ行う。installerを同梱する場合も、各ownerの証跡を個別に保持して同じhandoffへ集約する。別のReleaseは作らない。
-6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。ci-release-installerスキルのREADMEインストール節の記載例を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。スキル本文に固定versionを埋め込まず、版対応はReleaseとCI証跡で保持する。
+6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。ci-release-installerスキルのREADMEインストール節の記載例を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。案内の内容は`references/release-skills-contract.reference.yml`の`adoption.readme`に従う。
 
 ## 取得・配備・削除の案内
 
@@ -32,10 +32,10 @@
 - ZIP直下には公開スキルのrootだけが並ぶ。展開した各スキルrootを、利用者環境の適切なスキルフォルダへ配置する。専用の配備CLIは前提にしない。
 - 同名の既存スキルに差分がある場合は更新対象・影響を確認する。管理外スキルや共有rootを削除せず、製品installerからの自動配備は行わない。
 - 削除は今回配備したスキルrootだけを対象にする。外部skill root全体や他製品のスキル、製品本体の設定・データは削除対象にしない。
-- 製品READMEには対応スキルをセットでインストールする旨、ZIPのリンク、同じReleaseの`.sha256`で検証してから展開し、利用者環境の適切なスキルフォルダへ配置する短い案内、スキル専用rootだけを削除する短い案内を残す。専用導入ガイドや配備CLIを要求せず、詳細なCI構造、検証ログ、通常ツールの前提一覧は展開しない。
+- 製品READMEの案内は`references/release-skills-contract.reference.yml`の`adoption.readme`に従い、ZIPのリンクを含める。詳細なCI構造、検証ログ、通常ツールの前提一覧は展開しない。
 
 ## 監査
 
-構成監査ではまず「同梱の選択」を確認し、CI設定とREADMEへの一致を検査する。同梱する場合は選択rootとSKILL.mdのname、宣言、requiredFiles、収録規則、固定provider対応、READMEの同じ製品Releaseへの案内を確認する。製品と対応スキルをセットで使う場合、READMEのスキル導入を任意扱いにしない。installerなし・スキルなしの配布選択は別々に判断し、対応スキルを提供しない製品へ案内を要求しない。
+構成監査ではまず「同梱の選択」を確認し、CI設定とREADMEへの一致を検査する。同梱する場合は選択rootとSKILL.mdのname、宣言、requiredFiles、収録規則、固定provider対応を確認し、READMEの案内を`adoption.readme`に照合する。installerなし・スキルなしの配布選択は別々に判断し、対応スキルを提供しない製品へ案内を要求しない。
 
 証跡監査では、収録一覧・ファイルのsizeとSHA-256、declaration/source/version、ZIP checksum、各ownerの証跡、転送後のhandoffと公開後readbackを確認する。必要file欠落、改変、公開名衝突、版やSHAの不一致は公開停止対象とする。ローカル成功だけでHostedや公開後readbackを確認済みにしない。

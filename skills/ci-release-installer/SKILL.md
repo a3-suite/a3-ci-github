@@ -31,7 +31,6 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - production installer は未知の manifest field、未許可 download URL、unsafe archive entry、checksum または署名の不一致を拒否し、包括的な強制オプションで迂回させない。
 - 標準経路で実行基盤が存在しない、または要求 version を満たさない場合は、installer が取得・導入せず失敗する。
 - production installer は本番ホストで source build を暗黙に実行しない。project override で source build を扱う場合も、入力、toolchain、依存解決、出力検証、失敗時状態を固定する。
-- 同一 managed root に対する並行実行は lock で拒否する。
 - 設定ファイルはデータとして解析し、privileged execution context では user-editable な設定を shell 実行しない。
 - 既存データ、secret、ユーザー編集済み設定は既定で上書きしない。
 - rollback は変更済み resource ごとの rollback plan として定義し、activation、service、process、shared asset、state、data restore を混同しない。

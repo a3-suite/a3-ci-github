@@ -1,50 +1,39 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.rust-source-gate
-verifications:
-  - id: verification.ci-rust-source-gate.processing
-    contract_id: contract.ci-rust-source-gate.processing
-    cases:
-      - id: detailed-failure-processing
-        intent_id: detailed-diagnostics-processing
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-processing}]
-      - id: matching-rust-source-processing
-        intent_id: rust-source-processing-verified
-        input:
-          language-profile: rust
-          authority-path: authority.json
-        checks:
-          - id: check-rust-source-processing-success
-            guarantee_ref: rust-source-processing-succeeds
-      - id: mismatching-rust-source-processing
-        intent_id: rust-source-processing-rejected
-        input:
-          language-profile: rust
-          authority-path: authority.json
-        checks:
-          - id: check-rust-source-processing-failure
-            guarantee_ref: rust-source-processing-fails
-  - id: verification.ci-rust-source-gate.outputs
-    contract_id: contract.ci-rust-source-gate.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: matching-rust-source-authority
-        intent_id: rust-source-identity-verified
-        input:
-          language-profile: rust
-          authority-path: authority.json
-        checks:
-          - id: check-verified-output
-            guarantee_ref: verified-output-produced
-      - id: mismatching-rust-source-authority
-        intent_id: mismatching-rust-source-rejected
-        input:
-          language-profile: python
-          authority-path: authority.json
-        checks:
-          - id: check-source-verification-failure
-            guarantee_ref: source-verification-failure-propagated
+cases:
+  - contract_id: contract.ci-rust-source-gate.processing
+    id: detailed-failure-processing
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-rust-source-gate.processing
+    id: matching-rust-source-processing
+    partition: runtime-context.rust-source-matches-authority
+    input:
+      language-profile: rust
+      authority-path: authority.json
+      authority-source-sha: checked-out-head
+  - contract_id: contract.ci-rust-source-gate.processing
+    id: mismatching-rust-source-processing
+    partition: runtime-context.rust-source-does-not-match-authority
+    input:
+      language-profile: rust
+      authority-path: authority.json
+      authority-source-sha: different-commit
+  - contract_id: contract.ci-rust-source-gate.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-rust-source-gate.outputs
+    id: matching-rust-source-authority
+    partition: runtime-context.rust-source-script-succeeded
+    input:
+      language-profile: rust
+      authority-path: authority.json
+  - contract_id: contract.ci-rust-source-gate.outputs
+    id: mismatching-rust-source-authority
+    partition: runtime-context.rust-source-script-failed
+    input:
+      language-profile: python
+      authority-path: authority.json

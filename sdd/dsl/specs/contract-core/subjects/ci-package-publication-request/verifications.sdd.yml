@@ -1,44 +1,39 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.package-publication-request
-verifications:
-  - id: verification.ci-package-publication-request.outputs
-    contract_id: contract.ci-package-publication-request.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: request-trigger-accepted
-        intent_id: request-trigger-verified
-        input:
-          operation: verify-trigger
-          workflow-run: successful-default-branch-dispatch-of-package-publication-request
-        checks:
-          - id: check-request-trigger-status
-            guarantee_ref: package-request-status-produced
-      - id: request-trigger-rejected
-        intent_id: package-request-rejected
-        input:
-          operation: verify-trigger
-          workflow-run: non-default-branch
-        checks:
-          - id: check-request-trigger-failure
-            guarantee_ref: package-request-failure-propagated
-      - id: package-request-round-trip
-        intent_id: package-request-source-binding
-        input:
-          operation: verify
-        checks:
-          - id: check-package-request-status
-            guarantee_ref: package-request-status-produced
-          - id: check-package-request-source
-            guarantee_ref: package-request-source-produced
-      - id: source-sha-mismatch-rejected
-        intent_id: package-request-rejected
-        input:
-          operation: verify
-          source-sha: mismatched-source
-        checks:
-          - id: check-package-request-failure-status
-            guarantee_ref: package-request-failure-propagated
+cases:
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: request-trigger-accepted
+    partition: runtime-context.request-trigger-verification-invoked
+    input:
+      operation: verify-trigger
+      workflow-run: successful-default-branch-dispatch-of-package-publication-request
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: request-trigger-rejected
+    partition: runtime-context.request-trigger-verification-invoked
+    input:
+      operation: verify-trigger
+      workflow-run: non-default-branch
+    verifies:
+      - request-trigger-run-bound
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: request-trigger-failure-propagated
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: verify-trigger
+      workflow-run: non-default-branch
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: package-request-round-trip
+    partition: runtime-context.package-publication-request-succeeded
+    input:
+      operation: verify
+  - contract_id: contract.ci-package-publication-request.outputs
+    id: source-sha-mismatch-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      operation: verify
+      source-sha: mismatched-source

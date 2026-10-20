@@ -12,7 +12,7 @@ const workflows = [
 
 describe('workflow failure diagnostics', () => {
   // contract_id: contract.ci-failure-diagnostics.actionable
-  // integration_id: workflow-summary-failure-retention
+  // flow_id: workflow-summary-failure-retention
   test.each(['workflows/release/release-publication-request.yml', 'workflows/release/release-request-tag.yml', 'workflows/package/package-publication-request.yml'].flatMap(file => ['success', 'failure', 'cancelled'].map(status => [file, status])))('%s summary preserves the current job %s result', (file, status) => {
     // Arrange
     const workflow = parse(fs.readFileSync(file, 'utf8'));
@@ -52,7 +52,7 @@ describe('workflow failure diagnostics', () => {
   });
 
   // contract_id: contract.ci-failure-diagnostics.actionable
-  // integration_id: workflow-summary-failure-retention
+  // flow_id: workflow-summary-failure-retention
   test.each(workflows)('%s aggregate retains failed job identity and run evidence', (_name, file) => {
     // Local component wiring; GitHub scheduling and expressions need Hosted evidence.
     const workflow = parse(fs.readFileSync(file, 'utf8'));

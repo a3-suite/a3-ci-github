@@ -1,44 +1,66 @@
 # a3-ci-github
 
-GitHub Actions 向けの CI 契約、canonical workflow、再利用可能な Action、配置・検証 runtime を一元管理するプロジェクトです。
+GitHub Actions の CI を、標準の preset（品質検証、Release、Package 公開）として導入・更新・監査するための CI 資材を提供します。
 
-`a3-actions` と `a3-prompts` の追跡済み資産を移行 baseline として取り込み、SDD を正本として契約と実装を再構築しました。canonical workflow と Action registry の Action binding は、source cutover により `a3-suite/a3-ci-github` の固定 SHA を参照します。旧 `a3-suite/a3-actions` の公開資産は既存 consumer 向けに維持し、削除または archive は別途承認まで行いません。
+## 概要
 
-## 公開面
+利用 project は、必要な preset だけを Release から取得し、製品設定を埋め込んだ workflow を差分確認してから配置します。共通処理は固定 SHA で参照する Action が担うため、利用 project は共通実装をコピーしません。
 
-- Agent Skill: `skills/ci-github/` と `skills/ci-release-installer/`
-- GitHub Actions: `actions/<action-name>/`
-- canonical workflow sourceとAction binding: [preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)
-- 選択配布registry: `skills/ci-github/assets/registry/ci-distribution-assets.yml`
-- 配置・検証 runtime: `runtime/`
-- 要求・仕様・設計: `sdd/`
-- repository Release version: `VERSION`
+| 提供物 | 用途 |
+| --- | --- |
+| 選択配布 CLI（Release asset） | preset・asset の取得、検証、配置計画、適用、復旧 |
+| GitHub Actions（`actions/<action-name>/`） | workflow から 40 桁 commit SHA で参照する共通処理 |
+| Agent Skill（`skills/ci-github/`、`skills/ci-release-installer/`） | AI エージェントによる CI の設計・導入・監査、インストーラの設計・監査の導線 |
 
-Action は新しい公開版の確定後、次の形式で利用します。
+各 Release は、配布 manifest、単独で実行できる fetch CLI（`fetch-a3-ci-github.mjs`）、`SHA256SUMS` を公開します。
+
+## 導入
+
+前提:
+
+- 導入先は GitHub Actions を使う Git repository
+- Node.js 24 または 26 以降
+- GitHub CLI（`gh`）と `sha256sum`（取得と checksum 検証に使用）
+- 採用する exact Release（例: `v0.6.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
+
+1. 採用する Release から fetch CLI、配布 manifest、`SHA256SUMS` を取得し、checksum を検証します。
+
+   ```bash
+   gh release download v0.6.0 --repo a3-suite/a3-ci-github \
+     --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
+   sha256sum --check SHA256SUMS
+   ```
+
+2. 導入先 repository の root で、検証した manifest を指定して preset を取得します。
+
+   ```bash
+   node fetch-a3-ci-github.mjs fetch \
+     --manifest a3-ci-github-distribution-manifest.json \
+     --preset quality-gate \
+     --repo-root .
+   ```
+
+3. 出力された `sourceRevision` を使い、plan 用 runtime の準備、製品設定（`--set`）を渡した `plan`、差分の確認、同じ digest での `apply` を行います。手順と設定値は [CI プリセット設定ガイドの導入手順](skills/ci-github/references/configure-ci-preset.guide.md#導入手順)、適用後の lock 生成と検証は[配布ガイド](skills/ci-github/references/deploy-ci-assets.guide.md#適用後)に従います。
+
+Agent Skill は、同じ manifest から asset `skill.ci-github` と `skill.ci-release-installer` を `--asset` で指定して取得できます。取得先は `.a3-skills/ci-github/distributions/<sourceRevision>/skills/` です。利用環境のスキルフォルダへの配置は利用者が行います。
+
+## 使い方
+
+workflow から Action を直接使う場合は、Release の manifest または [preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml) に記録された commit SHA を指定します。
 
 ```yaml
 uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 ```
 
-## Workflow source
-
-| 用途 | パス |
-| --- | --- |
-| 品質検証 | `workflows/quality/` |
-| Release | `workflows/release/` |
-| Package公開 | `workflows/package/` |
-
-`workflows/` は導入時に製品設定を埋め込むcaller・request templateです。`.github/workflows/` はproviderの再利用calleeと、このリポジトリ自身のCIを置きます。calleeの固定参照はRelease manifestから解決します。導入先では生成済みcallerを設定の正本として管理し、共通実装や個別の生成スクリプトはコピーしません。個々のcanonical sourceとAction bindingは[preset registry](skills/ci-github/assets/registry/ci-github-preset-assets.yml)を参照してください。
-
-## 選択配布
-
-Releaseは配布manifest、単独実行可能なfetch CLI、`SHA256SUMS`だけを公開します。tag sourceの検証後に公開し、3 assetのremote byte readbackが成功してからrelease aliasを更新します。consumerはpresetまたはassetを選択し、manifestのfull commit SHAに固定したGitHub Raw URLから必要fileだけを取得します。workflowの配置はfetch、差分planの確認、同じdigestでのapplyの順に行い、runtimeとlint ruleはproject-local distributionから導入・保守・検証時だけ参照します。具体的な手順は[配布ガイド](skills/ci-github/references/deploy-ci-assets.guide.md)に従います。
-
-操作契約は[`deploy-ci-assets.guide.md`](skills/ci-github/references/deploy-ci-assets.guide.md)、配布単位は[`ci-distribution-assets.yml`](skills/ci-github/assets/registry/ci-distribution-assets.yml)を参照してください。Agent Skillの外部skill rootへの反映、固定SHA Action、project-owned extensionは別境界です。
+導入済み CI の更新は、新しい Release で取得から適用までを同じ手順で行います。管理外の差分は上書きせず、`conflict` として停止します。
 
 ## 製品と対応スキルの同時Release
 
-製品の公開スキルを固定sourceへ宣言し、OS共通の`<repository-name>-skills.zip`とchecksumを製品と同じReleaseへ含められます。開発・一時資材を除外し、installerと併用しても各ownerの証跡を保持します。セットアップとREADMEへの導入・削除案内は[同時Releaseガイド](skills/ci-github/references/publish-project-skills.guide.md)を参照してください。
+製品の公開スキルを、OS 共通の `<repository-name>-skills.zip` と checksum として製品と同じ Release へ含められます。設定と README の導入案内は[同時Releaseガイド](skills/ci-github/references/publish-project-skills.guide.md)を参照してください。
+
+## 旧 a3-actions の利用者へ
+
+旧 `a3-suite/a3-actions` の公開資産は既存 consumer 向けに維持します。削除または archive は別途承認するまで行いません。
 
 ## Action一覧
 

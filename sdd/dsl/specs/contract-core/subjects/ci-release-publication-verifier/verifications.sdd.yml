@@ -1,173 +1,273 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-publication-verifier
-verifications:
-  - id: verification.ci-release-publication-verifier.outputs
-    contract_id: contract.ci-release-publication-verifier.outputs
-    cases:
-      - id: inventory-propagation-before-create
-        intent_id: fail-closed
-        input: {release-inventory: initially-empty-then-same-tag-draft}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
-      - id: standard-workflow-credential
-        intent_id: observe-absence
-        input: {credential: bound-standard-workflow-github-token, permission-metadata: absent-empty-or-boolean-false}
-        checks: [{id: status, guarantee_ref: observation-status}, {id: path, guarantee_ref: observation-file}]
-      - id: credential-evidence-boundary
-        intent_id: fail-closed
-        input: {credential-evidence: mismatching-context-token-capability-repository-unbound-false-or-malformed-metadata}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
-      - id: asset-inventory-boundary
-        intent_id: fail-closed
-        input: {assets: persistently-incomplete-or-conflicting}
-        checks: [{id: rejection, guarantee_ref: verification-rejected}]
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: bundled-pre-observation
-        intent_id: observe-absence
-        input:
-          operation: observe-before
-          handoff-root: handoff
-          observation-path: before.json
-        checks:
-          - id: status
-            guarantee_ref: observation-status
-          - id: path
-            guarantee_ref: observation-file
-          - id: digest
-            guarantee_ref: observation-digest
-      - id: bundled-post-verification
-        intent_id: verify-publication
-        input:
-          operation: verify-after
-          receipt-path: receipt.json
-          readback-path: readback.json
-        checks:
-          - id: status
-            guarantee_ref: verification-status
-          - id: release-id
-            guarantee_ref: immutable-release-id
-          - id: receipt
-            guarantee_ref: bound-receipt
-          - id: readback
-            guarantee_ref: independent-readback
-      - id: output-line-injection
-        intent_id: fail-closed
-        input:
-          operation: observe-before
-          observation-path: "before.json\nstatus=success"
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: missing-credentials
-        intent_id: fail-closed
-        input:
-          operation: observe-before
-          credential: absent
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: independent-readback
-        intent_id: verify-publication
-        input:
-          operation: verify-after
-        checks:
-          - id: release-id
-            guarantee_ref: immutable-release-id
-          - id: readback
-            guarantee_ref: independent-readback
-      - id: existing-release
-        intent_id: fail-closed
-        input:
-          operation: observe-before
-          remote-release: existing-draft
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: incomplete-pagination
-        intent_id: fail-closed
-        input:
-          operation: observe-before
-          remote-inventory: incomplete-at-page-limit
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: missing-after-reobservation
-        intent_id: fail-closed
-        input:
-          operation: verify-after
-          remote-inventory: absent-after-bounded-reobservation
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: mismatching-bindings
-        intent_id: fail-closed
-        input:
-          operation: verify-after
-          receipt-path: mismatching-receipt.json
-          readback-path: mismatching-readback.json
-        checks:
-          - id: rejection
-            guarantee_ref: verification-rejected
-      - id: diagnostic-network
-        intent_id: safe-diagnostics
-        input: {failure: network}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-body-timeout
-        intent_id: safe-diagnostics
-        input: {failure: body-timeout}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-timeout
-        intent_id: safe-diagnostics
-        input: {failure: timeout}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-http
-        intent_id: safe-diagnostics
-        input: {failure: http}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-json
-        intent_id: safe-diagnostics
-        input: {failure: json}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-empty
-        intent_id: safe-diagnostics
-        input: {failure: empty}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-oversized
-        intent_id: safe-diagnostics
-        input: {failure: oversized}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-permissions
-        intent_id: safe-diagnostics
-        input: {failure: permissions}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-push-missing
-        intent_id: safe-diagnostics
-        input: {failure: push-missing}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-push-denied
-        intent_id: safe-diagnostics
-        input: {failure: push-denied}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-push-invalid
-        intent_id: safe-diagnostics
-        input: {failure: push-invalid}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-repository
-        intent_id: safe-diagnostics
-        input: {failure: repository}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-inventory
-        intent_id: safe-diagnostics
-        input: {failure: inventory}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-duplicate
-        intent_id: safe-diagnostics
-        input: {failure: duplicate}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
-      - id: diagnostic-pagination
-        intent_id: safe-diagnostics
-        input: {failure: pagination}
-        checks: [{id: diagnostic, guarantee_ref: verification-diagnostic}]
+cases:
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: inventory-propagation-before-create
+    partition: runtime-context.release-observation-invalid
+    input:
+      release-inventory: initially-empty-then-same-tag-draft
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: standard-workflow-credential
+    partition: runtime-context.release-pre-observation-valid
+    input:
+      credential: bound-standard-workflow-github-token
+      permission-metadata: absent
+    verifies:
+      - observation-status
+      - observation-file
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: credential-evidence-boundary
+    partition: runtime-context.release-observation-invalid
+    input:
+      credential-evidence: mismatching-context
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: asset-inventory-boundary
+    partition: runtime-context.release-observation-invalid
+    input:
+      assets: persistently-incomplete
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+    verifies:
+      - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: bundled-pre-observation
+    partition: runtime-context.release-pre-observation-valid
+    input:
+      operation: observe-before
+      handoff-root: handoff
+      observation-path: before.json
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: bundled-post-verification
+    partition: runtime-context.release-post-verification-valid
+    input:
+      operation: verify-after
+      receipt-path: receipt.json
+      readback-path: readback.json
+    verifies:
+      - observation-status
+      - immutable-release-id
+      - bound-receipt
+      - independent-readback
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: output-line-injection
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: observe-before
+      observation-path: |-
+        before.json
+        status=success
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: missing-credentials
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: observe-before
+      credential: absent
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: independent-readback
+    partition: runtime-context.release-post-verification-valid
+    input:
+      operation: verify-after
+    verifies:
+      - immutable-release-id
+      - independent-readback
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: existing-release
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: observe-before
+      remote-release: existing-draft
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: incomplete-pagination
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: observe-before
+      remote-inventory: incomplete-at-page-limit
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: missing-after-reobservation
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: verify-after
+      remote-inventory: absent-after-bounded-reobservation
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: mismatching-bindings
+    partition: runtime-context.release-observation-invalid
+    input:
+      operation: verify-after
+      receipt-path: mismatching-receipt.json
+      readback-path: mismatching-readback.json
+    verifies:
+      - verification-rejected
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-network
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: network
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-body-timeout
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: body-timeout
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-timeout
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: timeout
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-http
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: http
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-json
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: json
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-empty
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: empty
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-oversized
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: oversized
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-permissions
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: permissions
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-push-missing
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: push-missing
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-push-denied
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: push-denied
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-push-invalid
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: push-invalid
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-repository
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: repository
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-inventory
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: inventory
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-duplicate
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: duplicate
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: diagnostic-pagination
+    partition: runtime-context.release-observation-invalid
+    input:
+      failure: pagination
+    verifies:
+      - verification-diagnostic
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: asset-readback-checksum
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: asset-readback-checksum-failure
+    verifies:
+      - diagnostic-checksum-observation-conflation
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: asset-readback-transport
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: asset-readback-transport-failure
+    verifies:
+      - diagnostic-checksum-observation-conflation
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: absence-observation-policy
+    partition: runtime-context.release-verification-invocation
+    input:
+      operation: observe-before
+      remote-inventory: empty
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: post-observation-policy
+    partition: runtime-context.release-verification-invocation
+    input:
+      operation: verify-after
+      remote-inventory: initially-absent-then-unique
+      assets: initially-empty-then-complete
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: rejected-observation-policy
+    partition: runtime-context.release-verification-invocation
+    input:
+      operation: verify-after
+      remote-inventory: persistently-absent
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: immutable-id-binding
+    partition: runtime-context.release-post-verification-valid
+    input:
+      operation: verify-after
+      evidence: matching-independent-readback
+    verifies:
+      - receipt-remote-id-binding
+      - receipt-readback-id-binding
+      - release-output-id-binding
+  - contract_id: contract.ci-release-publication-verifier.outputs
+    id: provider-transport-methods
+    partition: runtime-context.release-verification-invocation
+    input:
+      remote-response: paginated-json-and-asset-bytes
+    verifies:
+      - get-only-requests

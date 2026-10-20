@@ -49,7 +49,7 @@ const run = (bin, mode, overrides = {}) => spawnSync('/bin/bash', [script, mode]
 describe("contract.ci-github-toolchain-verifier.processing", () => {
   describe("ci-github-toolchain-script", () => {
     // contract_id: contract.ci-github-toolchain-verifier.processing
-    // integration_id: ci-github-toolchain-script
+    // flow_id: ci-github-toolchain-script
     test('accepts every supported verification mode', () => withToolchain((bin) => {
       // Arrange
       const modes = ['jq', 'gh-jq', 'jq-sha256', 'gh-jq-sha256'];
@@ -60,7 +60,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
     }));
 
     // contract_id: contract.ci-github-toolchain-verifier.processing
-    // integration_id: ci-github-toolchain-script
+    // flow_id: ci-github-toolchain-script
     test('rejects an unsupported mode', () => withToolchain((bin) => {
       // Arrange
       const mode = 'all';
@@ -72,7 +72,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
     }));
 
     // contract_id: contract.ci-github-toolchain-verifier.processing
-    // integration_id: ci-github-toolchain-script
+    // flow_id: ci-github-toolchain-script
     test('rejects an unavailable selected command', () => {
       const cases = [
         ['jq', 'jq', 'jq-required'],
@@ -95,7 +95,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
     });
 
     // contract_id: contract.ci-github-toolchain-verifier.processing
-    // integration_id: ci-github-toolchain-script
+    // flow_id: ci-github-toolchain-script
     test('requires an exact version for every selected command', () => withToolchain((bin) => {
       // Arrange
       const missingVersion = { CI_GH_VERSION: '' };

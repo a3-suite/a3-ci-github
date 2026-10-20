@@ -1,28 +1,21 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.annotated-tag-resolver
-verifications:
-  - id: verification.ci-annotated-tag-resolver.outputs
-    contract_id: contract.ci-annotated-tag-resolver.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: annotated-tag-resolution
-        intent_id: tag-resolution-output-set
-        input:
-          repository: owner/repo
-          tag: v1.2.3
-          github-token: test-token
-        checks:
-          - id: check-tag-resolution-output
-            guarantee_ref: tag-resolution-outputs-produced
-      - id: missing-token-rejected
-        intent_id: tag-resolution-rejected
-        input:
-          tag: v1.2.3
-          github-token: ""
-        checks:
-          - id: check-tag-resolution-failure
-            guarantee_ref: tag-resolution-failure-propagated
+cases:
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
+    id: annotated-tag-resolution
+    partition: runtime-context.annotated-tag-resolution-valid
+    input:
+      repository: owner/repo
+      tag: v1.2.3
+      github-token: test-token
+  - contract_id: contract.ci-annotated-tag-resolver.outputs
+    id: missing-token-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      tag: v1.2.3
+      github-token: ""

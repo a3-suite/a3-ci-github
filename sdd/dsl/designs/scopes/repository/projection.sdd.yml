@@ -48,3 +48,7 @@ mappings:
     element_id: docs-root
   - component_id: hosted-delivery
     element_id: github-root
+  - component_id: selective-distribution
+    element_id: distribution-asset-registry
+  - component_id: runtime-implementations
+    element_id: canonical-preset-registry

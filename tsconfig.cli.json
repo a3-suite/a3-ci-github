@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig.action.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true
   },
   "include": [

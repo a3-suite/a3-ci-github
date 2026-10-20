@@ -1,0 +1,28 @@
+version: 1
+name: cli-command
+command:
+  id: manage-ci-distribution-verify
+  path:
+    - node
+    - runtime/distribution/fetch-a3-ci-github.mjs
+    - verify
+  summary: Revalidate every file recorded by one fetched local distribution receipt
+  usage_targets:
+    - id: verify
+      summary: Revalidate every file recorded by one fetched local distribution receipt
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: source-revision
+          presence: required
+  option_groups:
+    - id: selection
+      title: Distribution selection
+      options:
+        - source-revision
+    - id: application
+      title: Planned application or recovery
+      options:
+        - repo-root
+  help:
+    usage: node runtime/distribution/fetch-a3-ci-github.mjs verify [options]

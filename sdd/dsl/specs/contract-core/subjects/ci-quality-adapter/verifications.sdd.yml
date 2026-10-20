@@ -1,60 +1,77 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.quality-adapter
-verifications:
-  - id: verification.ci-quality-adapter.outputs
-    contract_id: contract.ci-quality-adapter.outputs
-    cases:
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: standard-adapter-execution
-        intent_id: quality-adapter-standard-execution
-        input:
-          standard-bundle-id: typescript-npm-quality
-        checks:
-          - id: check-quality-adapter-standard-status
-            guarantee_ref: quality-adapter-standard-status-produced
-      - id: standard-rust-scopes
-        intent_id: quality-adapter-standard-execution
-        input: {standard-bundle-id: rust-cargo-quality, execution-scopes: [all, native]}
-        checks:
-          - id: check-quality-adapter-rust-scope-status
-            guarantee_ref: quality-adapter-standard-status-produced
-      - id: standard-selection-rejected
-        intent_id: quality-adapter-rejected
-        input:
-          scenario: ambiguous-or-unknown-standard-selection
-        checks:
-          - id: check-quality-adapter-standard-rejection
-            guarantee_ref: quality-adapter-failure-propagated
-      - id: standard-python-adapter-execution
-        intent_id: quality-adapter-standard-execution
-        input:
-          standard-bundle-id: python-uv-quality
-        checks:
-          - id: check-quality-adapter-python-status
-            guarantee_ref: quality-adapter-standard-status-produced
-      - id: read-only-adapter-execution
-        intent_id: quality-adapter-execution
-        input:
-          bundle-path: adapter.yml
-        checks:
-          - id: check-quality-adapter-status
-            guarantee_ref: quality-adapter-status-produced
-      - id: writable-adapter-rejected
-        intent_id: quality-adapter-rejected
-        input:
-          bundle-path: writable-adapter.yml
-        checks:
-          - id: check-quality-adapter-failure-status
-            guarantee_ref: quality-adapter-failure-propagated
-      - id: toolchain-version-report-rejected
-        intent_id: quality-adapter-toolchain-version-report-rejected
-        input:
-          bundle-path: adapter.yml
-          toolchain-version: 9.9.9
-        checks:
-          - id: check-quality-adapter-toolchain-version-diagnostic
-            guarantee_ref: quality-adapter-toolchain-version-diagnostic-present
+cases:
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: standard-adapter-execution
+    partition: quality-adapter-standard-bundle-present
+    input:
+      standard-bundle-id: typescript-npm-quality
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: standard-rust-scopes
+    partition: quality-adapter-standard-bundle-present
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+    verifies:
+      - quality-adapter-status-produced
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: standard-selection-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      scenario: unknown-standard-selection
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: standard-python-adapter-execution
+    partition: quality-adapter-standard-bundle-present
+    input:
+      standard-bundle-id: python-uv-quality
+    verifies:
+      - quality-adapter-status-produced
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: read-only-adapter-execution
+    partition: quality-adapter-bundle-present
+    input:
+      bundle-path: adapter.yml
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: writable-adapter-rejected
+    partition: runtime-context.action-input-invalid
+    input:
+      bundle-path: writable-adapter.yml
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: toolchain-version-report-rejected
+    partition: runtime-context.quality-adapter-toolchain-version-report-rejected
+    input:
+      bundle-path: adapter.yml
+      toolchain-version: 9.9.9
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: native-rust-rules
+    partition: runtime-context.ci-quality-adapter-native-rust-valid
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: native
+      toolchain-version: 1.80.0
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: unsupported-native-scope
+    partition: runtime-context.ci-quality-adapter-native-scope-rejected
+    input:
+      standard-bundle-id: typescript-npm-quality
+      execution-scope: native
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: embedded-bundle-integrity
+    partition: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+    input:
+      standard-bundle-id: rust-cargo-quality
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: native-preparation-failure
+    partition: runtime-context.ci-quality-adapter-native-rust-valid
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: native
+      toolchain-version: 1.80.0
+      failed-command: fetch
+      command-exit: 7

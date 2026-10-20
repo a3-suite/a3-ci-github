@@ -8,7 +8,7 @@ import { actionEntrypointArguments } from '../../../tests/support/action-entrypo
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
-// integration_id: ci-release-authority-bundle
+// flow_id: ci-release-authority-bundle
 // contract_id: contract.ci-release-authority.outputs
 test('authority entrypoint emits verified outputs and suppresses outputs on rejection', () => {
   for (const invalid of [false, true]) {

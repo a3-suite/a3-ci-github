@@ -28,7 +28,7 @@ const runBundled = (plan: unknown) => {
   return { result, output };
 };
 
-// integration_id: ci-publish-version-entrypoint-regression
+// flow_id: ci-publish-version-entrypoint-regression
 test('entrypoint publishes a materialized version', () => {
   // Arrange
   // Act
@@ -40,7 +40,7 @@ test('entrypoint publishes a materialized version', () => {
 });
 
 // contract_id: contract.ci-publish-version.outputs
-// integration_id: ci-publish-version-contract-entrypoint
+// flow_id: ci-publish-version-contract-entrypoint
 test('entrypoint publishes an exact version', () => {
   // Arrange
   // Act
@@ -51,7 +51,7 @@ test('entrypoint publishes an exact version', () => {
   expect(run.output).toMatch(/publish-version<<.*1\.2\.3/s);
 });
 
-// integration_id: ci-publish-version-entrypoint-regression
+// flow_id: ci-publish-version-entrypoint-regression
 test('entrypoint fails invalid plan input', () => {
   // Arrange
   // Act

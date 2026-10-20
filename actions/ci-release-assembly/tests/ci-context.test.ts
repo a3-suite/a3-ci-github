@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url';
 import { describe, test, expect } from 'vitest';
 
 describe('GitHub Actions fixture import', () => {
+  // flow_id: fixture-import-isolation
+  // evidence_role: supplemental
+  // test_level: e2e
   // Importing a fixture must not launch an Action in the parent CI test process.
   test('shared fixture import remains side-effect-free under GitHub Actions environment', () => {
     const root = path.resolve(__dirname, '..');

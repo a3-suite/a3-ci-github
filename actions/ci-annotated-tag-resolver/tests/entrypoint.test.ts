@@ -12,7 +12,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
-// integration_id: ci-annotated-tag-resolver-entrypoint-regression
+// flow_id: ci-annotated-tag-resolver-entrypoint-regression
 test('entrypoint fails when the token is missing', () => {
   // Arrange
   const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ci-tag-resolver-')), 'output');
@@ -28,7 +28,7 @@ test('entrypoint fails when the token is missing', () => {
 });
 
 // contract_id: contract.ci-annotated-tag-resolver.outputs
-// integration_id: ci-annotated-tag-resolver-contract-entrypoint
+// flow_id: ci-annotated-tag-resolver-contract-entrypoint
 test('entrypoint resolves an annotated tag to its commit', async () => {
   // Arrange
   const server = http.createServer((request, response) => {

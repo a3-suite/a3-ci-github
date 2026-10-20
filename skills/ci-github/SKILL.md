@@ -53,6 +53,7 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 通常は構成監査とし、証跡監査・両段階・リリース前の実行確認を指定された場合だけ、同じ対象について証跡監査へ進む。構成適合と実行証跡の結果を分けて報告する。
 - リリース前の確認では、最新の公開済み安定版の標準構成との整合を中心に監査する。
+- 最新標準への更新と、製品・installer・公開スキルを同じversionのReleaseで公開することを推奨対応として促す。採用済みの公開経路ではversionの整合も確認する。
 - 参照: references/verify-applied-ci-assets.guide.md
 - 参照: references/verify-applied-ci-preset.guide.md
 
@@ -75,37 +76,3 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。同梱する場合は、installerと独立したOS共通ZIPを同じReleaseへ含める。
 - 参照: references/publish-project-skills.guide.md
-
-## リファレンス
-
-### preset catalog
-
-- 参照: references/preset-catalog.reference.md
-
-### workflow作成ポリシー
-
-- 参照: references/workflow-authoring-policy.reference.md
-
-### バージョン指定ポリシー
-
-- 参照: references/workflow-version-policy.reference.md
-
-### runner trust policy
-
-- 参照: references/runner-trust-policy.reference.md
-
-### CI runtime境界
-
-- 参照: references/ci-runtime-boundary.reference.md
-
-### CI実行効率ポリシー
-
-- 参照: references/ci-execution-efficiency-policy.reference.md
-
-### CIスクリプトカタログ
-
-- 参照: references/ci-script-catalog.reference.md
-
-### CI結果サマリ形式
-
-- 参照: references/ci-summary-format.reference.md

@@ -23,7 +23,7 @@ export const run = (): void => {
       authorityPath: input('authority-path'), snapshotPath: input('snapshot-path'),
       standardBuildRoot: input('standard-build-root'), supplementalBuildRoot: input('supplemental-build-root', false),
       outputDirectory,
-      installerRoot: fs.existsSync(path.join(__dirname, 'installer')) ? path.join(__dirname, 'installer') : path.resolve(__dirname, '../../../runtime/installer'),
+      installerRoot: fs.existsSync(path.join(import.meta.dirname, 'installer')) ? path.join(import.meta.dirname, 'installer') : path.resolve(import.meta.dirname, '../../../runtime/installer'),
     });
     diagnostic.confirmed();
     diagnostic.retainedEvidence = 'configured-output-directory';

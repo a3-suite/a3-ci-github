@@ -3,3 +3,98 @@ name: contract-subject
 subject:
   id: subject.ci.rust-source-gate
   summary: Verifying Rust release authority against the checked-out source.
+contracts:
+  - id: contract.ci-rust-source-gate.processing
+    summary: The shared script accepts only checked-out Rust source bound to the release authority.
+    observations:
+      - summary: The shared script exposes whether the checked-out Rust source matches the release authority.
+        boundary:
+          ref: boundary.script-result
+        value:
+          root: script.result
+          kind: object
+          fields:
+            - selector: outcome
+              meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.rust-source-matches-authority
+      - environment: runtime-context.rust-source-does-not-match-authority
+    guarantees:
+      - id: rust-source-processing-succeeds
+        applies_to:
+          - runtime-context.rust-source-matches-authority
+        claim:
+          field: outcome
+          in:
+            - success
+      - id: rust-source-processing-fails
+        applies_to:
+          - runtime-context.rust-source-does-not-match-authority
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-processing
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-rust-source-gate.outputs
+    summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    observations:
+      - summary: GitHub Actions outputs and step result exposed by an Action.
+        boundary:
+          ref: boundary.action-output
+        value:
+          root: action
+          kind: object
+          fields:
+            - selector: verified
+              meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
+            - selector: outcome
+              meaning: The success or failure outcome of the source verification step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary:
+          ref: boundary.diagnostic-result
+        value:
+          root: failure-evidence
+          kind: object
+          fields:
+            - selector: failure-stage
+              meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.rust-source-script-succeeded
+      - environment: runtime-context.rust-source-script-failed
+    guarantees:
+      - id: verified-output-produced
+        applies_to:
+          - runtime-context.rust-source-script-succeeded
+        claim:
+          field: verified
+          in:
+            - "true"
+      - id: source-verification-failure-propagated
+        applies_to:
+          - runtime-context.rust-source-script-failed
+        claim:
+          field: outcome
+          in:
+            - failure
+      - id: diagnostic-failure-stage-outputs
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true

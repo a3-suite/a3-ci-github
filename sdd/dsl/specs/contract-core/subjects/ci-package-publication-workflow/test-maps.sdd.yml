@@ -1,34 +1,47 @@
 version: 1
 name: contract-test-maps
-subject_ref: subject.ci.package-publication-workflow
 test_maps:
-  - verification_id: verification.ci-package-publication-workflow.publication
+  - contract_id: contract.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-success
     tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > package-publication-workflow-contract > package workflows separate preparation request validation and publication"
-        check_refs:
-          - check-ci-package-publication-workflow-success
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > package-publication-workflow-contract > package workflows separate preparation request validation and publication
+        guarantees:
+          - ci-package-publication-workflow-success-observed
+          - package-fixed-provider-reference
+          - package-explicit-owner-inputs
+          - package-request-before-preparation
+          - package-preparation-before-publication
+          - package-control-sha-bound
+          - package-control-head-verified
+          - package-handoff-before-publication
+          - package-credential-scope
+          - package-owner-publisher-invoked
       - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
-        symbol: "contract.ci-package-publication-workflow.publication > package-preparation-reusable-preflight > package preparation fixed source preflight rejects drift and retains owner adapters without callee copies"
-        check_refs:
-          - check-ci-package-publication-workflow-success
-  - verification_id: verification.ci-package-publication-workflow.publication
+        symbol: contract.ci-package-publication-workflow.publication > package-preparation-reusable-preflight > package preparation fixed source preflight rejects drift and retains owner adapters without callee copies
+        guarantees:
+          - ci-package-publication-workflow-success-observed
+  - contract_id: contract.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: "workflow-contracts > package-publication-workflow-contract > package workflows preserve failed and unknown outcomes"
-        check_refs:
-          - check-ci-package-publication-workflow-failure
-  - verification_id: verification.ci-package-publication-workflow.publication
+        symbol: workflow-contracts > package-publication-workflow-contract > package workflows preserve failed and unknown outcomes
+        guarantees:
+          - ci-package-publication-workflow-failure-observed
+          - package-failure-summary-always
+          - package-failed-prerequisite-blocks
+  - contract_id: contract.ci-package-publication-workflow.publication
     case_id: detailed-failure-publication
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > package-publication aggregate retains failed job identity and run evidence"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > package-publication aggregate retains failed job identity and run evidence
+        guarantees:
+          - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job failure result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job failure result
+        guarantees:
+          - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: "workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job cancelled result"
-        check_refs: [diagnostic-details]
+        symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job cancelled result
+        guarantees:
+          - diagnostic-failure-stage-publication

@@ -7,7 +7,7 @@ stimulus: CIのstep、job、Action、runtimeまたは外部依存との通信が
 environment: GitHub Actions上で通常の品質検証、build、packageまたはrelease処理を実行している
 response: 元の失敗状態を保ったまま、失敗箇所、原因分類、必要な実行文脈、次の確認事項を安全に記録する
 response_measure:
-  - 全契約対象に固有の診断項目が定義され、未対応の実行境界や診断取得不能を網羅範囲から除外せず区別できる
+  - 全契約対象に失敗段階の診断が定義され、未対応の実行境界や診断取得不能を網羅範囲から除外せず区別できる
   - 失敗終了後も当該run/job/stepのlogから詳細を取得でき、既存artifactが必要な場合は所在・同一性・生成や転送の失敗を追跡できる
   - 失敗したcomponent、stageまたはoperationと、入力、設定、toolchain、外部依存、内部処理のどこに属する失敗かを判別できる
   - GitHub Actionsのrun、job、matrixおよびsource revisionと失敗証跡を対応付けられる
@@ -22,3 +22,9 @@ related_requirements:
 related_contracts:
   - contract_ref:
       contract_id: contract.ci-failure-diagnostics.actionable
+  - contract_ref:
+      contract_id: contract.ci-failure-diagnostics.subject-declarations
+  - contract_ref:
+      contract_id: contract.ci-failure-diagnostics.workflow-evidence
+  - contract_ref:
+      contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic

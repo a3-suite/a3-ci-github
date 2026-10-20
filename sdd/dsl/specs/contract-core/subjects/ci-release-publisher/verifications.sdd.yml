@@ -1,96 +1,119 @@
 version: 1
 name: contract-verifications
-subject_ref: subject.ci.release-publisher
-verifications:
-  - id: verification.ci-release-publisher.outputs
-    contract_id: contract.ci-release-publisher.outputs
-    cases:
-      - id: provider-rejection-diagnostics
-        intent_id: detailed-diagnostics-outputs
-        input: {provider: invalid-identity-shape-or-unbound-write-permission}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: provider-identity-rejection
-        intent_id: fail-closed
-        input: {provider: invalid-identity-shape-or-unbound-write-permission}
-        checks: [{id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
-      - id: standard-workflow-capability
-        intent_id: publish-evidence
-        input: {credential: bound-standard-workflow-github-token, permission-metadata: boolean-false}
-        checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
-      - id: provider-acceptance-not-predicted
-        intent_id: publish-evidence
-        input: {default-branch: moved, workflow-tree: unavailable}
-        checks: [{id: receipt, guarantee_ref: receipt-file}]
-      - id: canonical-repository-identity
-        intent_id: publish-evidence
-        input: {repository-response: canonical-casing}
-        checks: [{id: receipt, guarantee_ref: receipt-file}]
-      - id: pre-create-handoff-change
-        intent_id: fail-closed
-        input: {handoff: changed-during-final-absence-observation}
-        checks: [{id: rejection, guarantee_ref: rejected}, {id: no-outputs, guarantee_ref: no-success-outputs}]
-      - id: asset-inventory-propagation
-        intent_id: publish-evidence
-        input: {asset-inventory: initially-valid-subset-then-complete, writes: once}
-        checks: [{id: receipt, guarantee_ref: receipt-file}, {id: readback, guarantee_ref: readback-file}]
-      - id: detailed-failure-outputs
-        intent_id: detailed-diagnostics-outputs
-        input: {scenario: rejected-failed-or-unresolved-public-invocation}
-        checks: [{id: diagnostic-details, guarantee_ref: diagnostic-details-outputs}]
-      - id: bundle-publish
-        intent_id: publish-evidence
-        input:
-          invocation: bundle
-          handoff: validated
-        checks:
-          - id: receipt
-            guarantee_ref: receipt-file
-          - id: readback
-            guarantee_ref: readback-file
-      - id: independent-evidence
-        intent_id: publish-evidence
-        input:
-          provider: fake
-          handoff: validated
-        checks:
-          - id: receipt
-            guarantee_ref: receipt-file
-          - id: readback
-            guarantee_ref: readback-file
-      - id: bundle-rejection
-        intent_id: fail-closed
-        input:
-          scenario: missing-credential-or-invalid-output-path
-        checks:
-          - id: rejection
-            guarantee_ref: rejected
-          - id: no-outputs
-            guarantee_ref: no-success-outputs
-      - id: invalid-local-bindings
-        intent_id: fail-closed
-        input:
-          approval: expired-or-mismatching
-          handoff: tampered
-        checks:
-          - id: rejection
-            guarantee_ref: rejected
-          - id: no-outputs
-            guarantee_ref: no-success-outputs
-      - id: remote-rejection
-        intent_id: fail-closed
-        input:
-          remote: moved-source-existing-draft-or-unsupported
-        checks:
-          - id: rejection
-            guarantee_ref: rejected
-          - id: no-outputs
-            guarantee_ref: no-success-outputs
-      - id: partial-failure
-        intent_id: fail-closed
-        input:
-          provider: uncertain-create-upload-finalize-or-readback
-        checks:
-          - id: rejection
-            guarantee_ref: rejected
-          - id: no-outputs
-            guarantee_ref: no-success-outputs
+cases:
+  - contract_id: contract.ci-release-publisher.outputs
+    id: provider-rejection-diagnostics
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      provider: invalid-identity-shape
+  - contract_id: contract.ci-release-publisher.outputs
+    id: provider-identity-rejection
+    partition: runtime-context.release-publisher-invalid
+    input:
+      provider: invalid-identity-shape
+  - contract_id: contract.ci-release-publisher.outputs
+    id: standard-workflow-capability
+    partition: runtime-context.release-publisher-valid
+    input:
+      credential: bound-standard-workflow-github-token
+      permission-metadata: boolean-false
+  - contract_id: contract.ci-release-publisher.outputs
+    id: provider-acceptance-not-predicted
+    partition: runtime-context.release-publisher-valid
+    input:
+      default-branch: moved
+      workflow-tree: unavailable
+    verifies:
+      - receipt-file
+  - contract_id: contract.ci-release-publisher.outputs
+    id: canonical-repository-identity
+    partition: runtime-context.release-publisher-valid
+    input:
+      repository-response: canonical-casing
+    verifies:
+      - receipt-file
+  - contract_id: contract.ci-release-publisher.outputs
+    id: pre-create-handoff-change
+    partition: runtime-context.release-publisher-invalid
+    input:
+      handoff: changed-during-final-absence-observation
+  - contract_id: contract.ci-release-publisher.outputs
+    id: asset-inventory-propagation
+    partition: runtime-context.release-publisher-valid
+    input:
+      asset-inventory: initially-valid-subset-then-complete
+      writes: once
+  - contract_id: contract.ci-release-publisher.outputs
+    id: detailed-failure-outputs
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: rejected-public-invocation
+  - contract_id: contract.ci-release-publisher.outputs
+    id: bundle-publish
+    partition: runtime-context.release-publisher-valid
+    input:
+      invocation: bundle
+      handoff: validated
+  - contract_id: contract.ci-release-publisher.outputs
+    id: independent-evidence
+    partition: runtime-context.release-publisher-valid
+    input:
+      provider: fake
+      handoff: validated
+  - contract_id: contract.ci-release-publisher.outputs
+    id: bundle-rejection
+    partition: runtime-context.release-publisher-invalid
+    input:
+      scenario: missing-credential
+  - contract_id: contract.ci-release-publisher.outputs
+    id: invalid-local-bindings
+    partition: runtime-context.release-publisher-invalid
+    input:
+      approval: expired
+  - contract_id: contract.ci-release-publisher.outputs
+    id: tampered-handoff-asset
+    partition: runtime-context.release-publisher-invalid
+    input:
+      handoff: tampered
+  - contract_id: contract.ci-release-publisher.outputs
+    id: remote-rejection
+    partition: runtime-context.release-publisher-invalid
+    input:
+      remote: moved-source
+  - contract_id: contract.ci-release-publisher.outputs
+    id: partial-failure
+    partition: runtime-context.release-publisher-invalid
+    input:
+      provider: uncertain-upload
+  - contract_id: contract.ci-release-publisher.outputs
+    id: publication-write-failure-boundary
+    partition: runtime-context.release-publisher-invocation
+    input:
+      provider: uncertain-upload
+    verifies:
+      - publication-created-id-binding
+      - publication-write-retry
+      - publication-recovery-write
+      - publication-delete
+  - contract_id: contract.ci-release-publisher.outputs
+    id: publication-existing-release-protection
+    partition: runtime-context.release-publisher-invocation
+    input:
+      remote: existing-same-tag-published-release
+    verifies:
+      - publication-existing-release-write
+  - contract_id: contract.ci-release-publisher.outputs
+    id: publication-immutable-id
+    partition: runtime-context.release-publisher-invocation
+    input:
+      handoff: validated
+      provider: successful
+    verifies:
+      - publication-created-id-binding
+  - contract_id: contract.ci-release-publisher.outputs
+    id: publication-inventory-reobservation
+    partition: runtime-context.release-publisher-invocation
+    input:
+      asset-inventory: initially-valid-subset-then-complete
+    verifies:
+      - publication-write-retry

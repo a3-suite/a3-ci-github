@@ -99,7 +99,7 @@ options:
     long: --output-directory
     kind: value
     value_name: PATH
-    summary: New directory receiving prepared distribution Release assets
+    summary: New directory receiving the generated assets
   - id: release-tag
     long: --release-tag
     kind: value

@@ -7,7 +7,7 @@ import { describe, expect, test, onTestFinished } from 'vitest';
 const actions = fs.readdirSync('actions').filter((name) => fs.existsSync(`actions/${name}/src/index.ts`));
 describe.each(actions)('%s failure boundary', (action) => {
   // contract_id: contract.ci-failure-diagnostics.actionable
-  // integration_id: action-failure-diagnostics
+  // flow_id: action-failure-diagnostics
   test.each(['source', 'dist'])('%s retains actionable input failure without private input values', (surface) => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const fixture = fs.mkdtempSync(path.resolve('tests/tmp/action-failure-'));
@@ -26,12 +26,15 @@ describe.each(actions)('%s failure boundary', (action) => {
     const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
     expect(result.status).toBe(action === 'ci-change-scope' ? 0 : 1);
     expect(evidence.classification.subject).toBe(action);
+    expect(evidence.classification.operation).toBeTruthy();
     expect(evidence.classification.reason).not.toBe('unknown-failure');
+    expect(evidence.classification.cause).toBe('known');
     expect(evidence.classification.stage).toBeTruthy();
     expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test' });
     expect(evidence.comparison).toBeTruthy();
     expect(evidence['evidence-location']).toMatchObject({ log: 'workflow-run-job-step-log', artifact: 'not-generated' });
     expect(evidence['execution-state'].outcome).toBe(action === 'ci-change-scope' ? 'unresolved' : 'failure');
+    expect(evidence['execution-state'].lastConfirmed).toBeTruthy();
     expect(evidence['next-check'].rule).toBe(evidence.classification.reason);
     expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
     expect(fs.readFileSync(sentinel, 'utf8')).toBe('unchanged');
@@ -41,7 +44,7 @@ describe.each(actions)('%s failure boundary', (action) => {
 
 describe('failure output retention', () => {
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: failure-output-retention
+// flow_id: failure-output-retention
   test.each(['source', 'dist'])('%s preserves primary failure when failure outputs cannot be written', (surface) => {
   fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
   const fixture = fs.mkdtempSync(path.resolve('tests/tmp/output-failure-'));
@@ -61,7 +64,7 @@ describe('failure output retention', () => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: failure-output-retention
+// flow_id: failure-output-retention
 describe.each(actions)('%s final sink retention', (action) => {
   test.each(['source', 'dist'])('%s retains failure status when public sinks throw', (surface) => {
     const root = path.resolve('actions', action);
@@ -78,7 +81,7 @@ describe.each(actions)('%s final sink retention', (action) => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.actionable
-// integration_id: action-failure-diagnostics
+// flow_id: action-failure-diagnostics
 describe('owner validation comparisons', () => {
   test.each(['source', 'dist'])('%s retains owner field comparisons without private values', (surface) => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });

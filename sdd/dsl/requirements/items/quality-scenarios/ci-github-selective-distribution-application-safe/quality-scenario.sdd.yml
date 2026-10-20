@@ -1,0 +1,20 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-github-selective-distribution-application-safe
+summary: 選択配布の適用・更新が確認済みplan以外のconsumer変更を行わない
+quality_attribute: reliability
+stimulus: CI管理者が確認済みのplanで取得済みdistributionを利用projectへ適用または更新する
+environment: GitHub Releaseとfull SHA Raw source、または同一repository snapshotを利用できる導入・保守環境
+response: 許可された作業範囲で確認した同一digestのplanに一致する変更だけを適用し、それ以外のconsumer変更を拒否する
+response_measure:
+  - plan後にmanifest、source、destinationまたは所有権を示すasset lockのdigestが変化した場合はapplyを停止する
+  - 同一projectで並行するapplyは成功扱いにならない
+  - 管理外destinationを上書きせず、staleは自動削除しない
+related_requirements:
+  - requirement_ref:
+      requirement_id: ci-github-selective-distribution
+related_contracts:
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.plan
+  - contract_ref:
+      contract_id: contract.ci-selective-distribution.application
