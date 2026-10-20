@@ -39,6 +39,7 @@ cases:
       - assembly-success
       - bound-handoff
       - bound-asset-digest
+      - assembly-no-credential-input
   - contract_id: contract.ci-release-assembly.outputs
     id: output-line-injection
     partition: runtime-context.release-assembly-invalid

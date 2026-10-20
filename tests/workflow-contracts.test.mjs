@@ -295,7 +295,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /SHA256SUMS/,
         /check-provider-references\.mjs --contracts --release-tag/,
         /implementation_binding_status: \$\{\{ steps\.provider-binding\.outputs\.implementation_binding_status \}\}/,
-        /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/,
+        /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/,
       ]);
       expect(prepare).not.toMatch(/contents: write/);
       expect(prepare).not.toContain('actions: read');

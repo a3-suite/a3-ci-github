@@ -21,17 +21,19 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 
 ## 取得
 
-Releaseページから`fetch-a3-ci-github.mjs`と`SHA256SUMS`を取得し、CLIのchecksumを確認する。manifestは次のexact Release URLを指定する。
+採用するexact Releaseから`fetch-a3-ci-github.mjs`、`a3-ci-github-distribution-manifest.json`、`SHA256SUMS`を取得し、CLIとmanifestのchecksumを確認する。fetchには確認したmanifestを`--manifest`で渡し、CLIに別のmanifestを再取得させない。
 
-```text
-https://github.com/a3-suite/a3-ci-github/releases/download/{exact-tag}/a3-ci-github-distribution-manifest.json
+```bash
+gh release download "{exact-tag}" --repo a3-suite/a3-ci-github \
+  --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
+sha256sum --check SHA256SUMS
 ```
 
 presetの全必須閉包を取得する。
 
 ```bash
 node fetch-a3-ci-github.mjs fetch \
-  --manifest-url "{exact-manifest-url}" \
+  --manifest "{verified-manifest-path}" \
   --preset quality-gate \
   --repo-root "{project-root}"
 ```
@@ -40,7 +42,7 @@ assetだけを取得する場合は`--asset`を繰り返す。直接asset選択�
 
 ```bash
 node fetch-a3-ci-github.mjs fetch \
-  --manifest-url "{exact-manifest-url}" \
+  --manifest "{verified-manifest-path}" \
   --asset runtime.preset \
   --asset registry.ci-github \
   --repo-root "{project-root}"
@@ -50,7 +52,7 @@ node fetch-a3-ci-github.mjs fetch \
 
 ```bash
 node fetch-a3-ci-github.mjs fetch \
-  --manifest-url "{exact-manifest-url}" \
+  --manifest "{verified-manifest-path}" \
   --preset quality-gate \
   --asset runtime.adapter-materializer \
   --repo-root "{project-root}"
@@ -60,7 +62,7 @@ optional platform品質はcallerと検証用calleeソースを明示選択する
 
 ```bash
 node fetch-a3-ci-github.mjs fetch \
-  --manifest-url "{exact-manifest-url}" \
+  --manifest "{verified-manifest-path}" \
   --preset quality-gate \
   --asset workflow.quality-gate-platforms \
   --asset runtime.quality-platforms-workflow \
@@ -69,7 +71,7 @@ node fetch-a3-ci-github.mjs fetch \
 
 calleeソースは選択したworkflowの依存閉包だけ取得し、distribution内でpreflightが参照する。consumerへのcopy対象には含めない。依存assetのIDと構成は配布registryを正本とする。
 
-repository保守またはoffline再構成では、同じsnapshotのlocal manifestとsource rootを明示できる。通常consumer導入でbranch checkoutへ置き換えない。
+repository保守またはoffline再構成では、同じsnapshotのsource rootも明示できる。通常consumer導入でbranch checkoutへ置き換えない。
 
 取得済みdistributionを別の操作で利用する前に、receiptに記録された全fileを再検証できる。
 

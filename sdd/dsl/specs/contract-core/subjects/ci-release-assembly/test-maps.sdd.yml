@@ -4,6 +4,10 @@ test_maps:
   - contract_id: contract.ci-release-assembly.outputs
     case_id: bundled-assembly
     tests:
+      - path: actions/ci-release-assembly/tests/action-contract.test.ts
+        symbol: release-assembly-action-contract > assembly Action owns its Node runtime and exposes bounded assembly inputs
+        guarantees:
+          - assembly-no-credential-input
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:

@@ -87,20 +87,20 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@ccd9f289ed9bd40a6582fecacf94c9217981056c
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@9b2485881091c3ce649944dbcdd19c66d2b27db7
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@ccd9f289ed9bd40a6582fecacf94c9217981056c
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@9b2485881091c3ce649944dbcdd19c66d2b27db7
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@ccd9f289ed9bd40a6582fecacf94c9217981056c
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@9b2485881091c3ce649944dbcdd19c66d2b27db7
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
           jq-version: ${{ env.CI_JQ_VERSION }}
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           artifact-ids: ${{ inputs.package_artifact_id }}
           path: package-handoff
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@ccd9f289ed9bd40a6582fecacf94c9217981056c
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@9b2485881091c3ce649944dbcdd19c66d2b27db7
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -133,7 +133,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@ccd9f289ed9bd40a6582fecacf94c9217981056c
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b2485881091c3ce649944dbcdd19c66d2b27db7
         with:
           summary-json: >-
             {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish job result: ${{ needs.publish.result }}"}]}

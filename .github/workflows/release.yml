@@ -19,8 +19,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CI_GH_VERSION: '2.80.0'
-  CI_JQ_VERSION: '1.7.1'
+  CI_GH_VERSION: '2.102.0'
+  CI_JQ_VERSION: '1.8.2'
 
 # Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
 # runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
@@ -83,7 +83,7 @@ jobs:
         run: runtime/repository/update-release-aliases.sh
 
       - name: Set up Node.js 24
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '24.21.0'
           cache: npm
@@ -131,7 +131,7 @@ jobs:
           (cd release-distribution && sha256sum --check --strict SHA256SUMS)
 
       - name: Upload selective distribution handoff
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: selective-distribution-release
           path: release-distribution
@@ -152,7 +152,7 @@ jobs:
           ref: ${{ needs.prepare-distribution.outputs.source_sha }}
 
       - name: Download selective distribution handoff
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: selective-distribution-release
           path: release-distribution
@@ -198,7 +198,7 @@ jobs:
           ref: ${{ needs.prepare-distribution.outputs.source_sha }}
 
       - name: Download selective distribution handoff
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: selective-distribution-release
           path: release-distribution
