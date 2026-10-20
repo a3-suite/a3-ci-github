@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  CI_GH_VERSION: '2.80.0'
+  CI_GH_VERSION: '2.102.0'
 
 # Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
 # runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
@@ -162,16 +162,16 @@ jobs:
         shell: bash
         run: npm test -- tests/action-package-verification.test.mjs tests/installer-coverage.test.mjs tests/runtime-boundaries.test.mjs tests/action-entrypoint-process.test.mjs
 
-      - name: Provision jq 1.7.1
+      - name: Provision jq 1.8.2
         uses: ./actions/ci-jq-provisioner
         with:
-          jq-version: 1.7.1
+          jq-version: 1.8.2
 
-      - name: Verify provisioned jq 1.7.1
+      - name: Verify provisioned jq 1.8.2
         uses: ./actions/ci-github-toolchain-verifier
         with:
           mode: jq
-          jq-version: 1.7.1
+          jq-version: 1.8.2
 
       - name: Provision GitHub CLI ${{ env.CI_GH_VERSION }}
         uses: ./actions/ci-gh-provisioner

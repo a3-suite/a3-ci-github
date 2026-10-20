@@ -104,7 +104,7 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 
 ### CI資材の採用記録
 
-道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17 です。版を更新したときは、この表の該当行を書き換えます。
+道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17（jq と GitHub CLI は 2026-10-20）です。版を更新したときは、この表の該当行を書き換えます。
 
 | 対象 | 版 | 公開日時（UTC） | 採用 commit・日時（JST） | 待機期間 |
 | --- | --- | --- | --- | --- |
@@ -116,8 +116,8 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 | actions/download-artifact | v8.0.1（`3e5f45b2`） | 2026-03-11 15:44 | 2ab8f21 2026-09-29 | 満たす |
 | Node | 24.21.0 | 2026-09-08 21:51 | 4b694d0 2026-10-03 | 満たす |
 | uv | 0.11.15 | 2026-05-18 19:59 | b066848 2026-10-05 | 満たす |
-| jq | 1.7.1 | 2023-12-13 19:56 | 6d7f6fc 2026-09-28 | 満たす |
-| GitHub CLI | 2.80.0 | 2025-09-23 16:57 | 6d7f6fc 2026-09-28 | 満たす |
+| jq | 1.8.2 | 2026-06-20 14:11 | このcommit 2026-10-20 | 満たす |
+| GitHub CLI | 2.102.0 | 2026-09-30 02:40 | このcommit 2026-10-20 | 満たす |
 | cargo-audit | 0.22.2 | 2026-06-05 12:38 | ca6d0d4 2026-10-14 | 満たす |
 
 ## 追加判断

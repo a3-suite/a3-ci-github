@@ -19,8 +19,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CI_GH_VERSION: '2.80.0'
-  CI_JQ_VERSION: '1.7.1'
+  CI_GH_VERSION: '2.102.0'
+  CI_JQ_VERSION: '1.8.2'
 
 # Provider-owned jobs pin a versioned GitHub-hosted label per OS, while consumer-facing reusable workflows take the caller's
 # runner input. Maintainers move these labels when GitHub announces a retirement or a newer generation becomes generally
