@@ -22,7 +22,7 @@ inputs:
   cargo-deny-version:
     required: false
     default: ''
-    description: Exact cargo-deny version for the optional rust dependency policy check; empty skips its setup. Only the rust profile accepts a value.
+    description: Exact cargo-deny version (0.20.0 or later) for the optional rust dependency policy check; empty skips its setup. Only the rust profile accepts a value.
 outputs:
   resolved-toolchain-version:
     description: Exact selected toolchain version, produced only after all selected setup steps succeed. A failed or mismatched resolution has no successful output.
@@ -56,6 +56,12 @@ runs:
         if [[ "$CI_LANGUAGE_PROFILE" == python ]]; then exact_version "$CI_UV_VERSION" || { echo 'quality-toolchain-uv-version-invalid' >&2; exit 1; }; fi
         if [[ "$CI_LANGUAGE_PROFILE" == rust ]]; then exact_version "$CI_CARGO_AUDIT_VERSION" || { echo 'quality-toolchain-cargo-audit-version-invalid' >&2; exit 1; }; fi
         if [[ -n "${CI_CARGO_DENY_VERSION:-}" ]]; then [[ "$CI_LANGUAGE_PROFILE" == rust ]] && exact_version "$CI_CARGO_DENY_VERSION" || { echo 'quality-toolchain-cargo-deny-version-invalid' >&2; exit 1; }; fi
+        # The standard bundle passes --config before the check subcommand, which cargo-deny accepts only from 0.20.0.
+        if [[ -n "${CI_CARGO_DENY_VERSION:-}" ]]; then
+          deny_major=${CI_CARGO_DENY_VERSION%%.*}; deny_rest=${CI_CARGO_DENY_VERSION#*.}; deny_minor=${deny_rest%%.*}; deny_patch=${deny_rest#*.}
+          # A 0.20.0 prerelease precedes 0.20.0 and is not guaranteed to accept that syntax.
+          (( 10#$deny_major > 0 || 10#$deny_minor > 20 )) || { (( 10#$deny_minor == 20 )) && [[ "$deny_patch" != 0-* ]]; } || { echo 'quality-toolchain-cargo-deny-version-unsupported' >&2; exit 1; }
+        fi
     - name: Set up TypeScript toolchain
       id: typescript
       if: inputs.language-profile == 'typescript'

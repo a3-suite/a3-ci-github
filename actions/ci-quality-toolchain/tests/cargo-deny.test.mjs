@@ -128,7 +128,14 @@ describe('contract.ci-quality-toolchain.preparation', () => {
         expect(result.status, `${profile} ${deny}`).toBe(1);
         expect(result.stderr).toContain('quality-toolchain-cargo-deny-version-invalid');
       }
-      for (const [profile, deny] of [['rust', '0.20.2'], ['rust', ''], ['python', '']]) {
+      for (const deny of ['0.19.8', '0.1.0', '0.20.0-rc.1']) {
+        // Act
+        const result = spawnSync('bash', ['-c', validation], { encoding: 'utf8', env: selected('rust', deny) });
+        // Assert
+        expect(result.status, deny).toBe(1);
+        expect(result.stderr).toContain('quality-toolchain-cargo-deny-version-unsupported');
+      }
+      for (const [profile, deny] of [['rust', '0.20.2'], ['rust', '0.20.0'], ['rust', '0.20.0+build'], ['rust', '0.20.1-rc.1'], ['rust', '0.21.0-rc.1'], ['rust', '1.0.0'], ['rust', ''], ['python', '']]) {
         expect(spawnSync('bash', ['-c', validation], { encoding: 'utf8', env: selected(profile, deny) }).status, `${profile} ${deny}`).toBe(0);
       }
     } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }

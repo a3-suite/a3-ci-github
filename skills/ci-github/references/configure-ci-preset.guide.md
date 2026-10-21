@@ -239,7 +239,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 1. `assets/registry/ci-script-assets.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
    entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `references/ci-adapter-bundles.reference.yml` を参照する。
    plan前にlanguage profile、toolchain、runner、保護branch、必要なtoolのexact版を選ぶ。選択した言語で使わないuvまたはcargo-auditの版と、主qualityで使わないjqの版は、対応する生成設定へJSON文字列の空値を渡す。
-   標準Rustで依存ポリシー検査（cargo-deny の bans／licenses／sources）を使う場合は、`cargo-deny-version` にexact版、`cargo-deny-config-path` にproject root内の既存設定fileを指定する。使わない場合は両方を空値にし、結果は `not-run` として記録される。一方だけの指定は停止する。
+   標準Rustで依存ポリシー検査（cargo-deny の bans／licenses／sources）を使う場合は、`cargo-deny-version` に0.20.0以上のexact版、`cargo-deny-config-path` にproject root内の既存設定fileを指定する。使わない場合は両方を空値にし、結果は `not-run` として記録される。一方だけの指定は停止する。
 
 2. `references/deploy-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
    planに必要なruntimeを、取得済みdistributionの`runtime/preset/`固定依存定義から
