@@ -87,3 +87,42 @@ cases:
       provider-node-version: ""
       provider-status: 0
       io-destinations: writable
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: selected-cargo-deny
+    partition: runtime-context.quality-toolchain-inputs-ready
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      cargo-audit-version: 0.22.2
+      cargo-deny-version: 0.20.2
+      registered-target: x86_64-unknown-linux-musl
+      io-destinations: writable
+    verifies:
+      - selected-quality-toolchain-ready
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: invalid-cargo-deny-version
+    partition: runtime-context.quality-toolchain-inputs-unusable
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      cargo-audit-version: 0.22.2
+      cargo-deny-version: latest
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: registered-cargo-deny-failure
+    partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+    input:
+      tool: cargo-deny
+      version: 0.20.2
+      registered-target: x86_64-unknown-linux-musl
+      archive-sha256: mismatch
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: unrequested-cargo-deny
+    partition: runtime-context.quality-toolchain-request-valid
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      version-policy: exact
+      cargo-audit-version: 0.22.2
+      cargo-deny-version: ""
+    verifies:
+      - selected-profile-dependencies-only

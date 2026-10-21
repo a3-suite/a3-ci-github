@@ -36,6 +36,12 @@ contracts:
               meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
             - selector: native-failed-prerequisite-followup-state
               meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
+            - selector: dependency-policy-result-status
+              meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
+            - selector: dependency-policy-config-argument
+              meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
+            - selector: not-run-aggregate-effect
+              meaning: Change of the aggregate status caused by results whose status is not-run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
@@ -64,6 +70,9 @@ contracts:
       - environment: runtime-context.ci-quality-adapter-native-rust-valid
       - environment: runtime-context.ci-quality-adapter-native-scope-rejected
       - environment: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+      - environment: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+      - environment: runtime-context.ci-quality-adapter-dependency-policy-configured
+      - environment: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
     guarantees:
       - id: quality-adapter-status-produced
         applies_to:
@@ -158,3 +167,47 @@ contracts:
           field: native-failed-prerequisite-followup-state
           in:
             - absent
+      - id: native-dependency-policy-omitted
+        applies_to:
+          - runtime-context.ci-quality-adapter-native-rust-valid
+        claim:
+          field: dependency-policy-result-status
+          in:
+            - absent
+      - id: unconfigured-dependency-policy-not-run
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+        claim:
+          field: dependency-policy-result-status
+          in:
+            - not-run
+      - id: not-run-aggregate-unchanged
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+        claim:
+          field: not-run-aggregate-effect
+          in:
+            - none
+      - id: configured-dependency-policy-executed
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-configured
+        claim:
+          field: dependency-policy-result-status
+          in:
+            - success
+            - failed
+            - 判定不能
+      - id: configured-dependency-policy-explicit-config
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-configured
+        claim:
+          field: dependency-policy-config-argument
+          in:
+            - equal
+      - id: unusable-dependency-policy-config-stops
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+        claim:
+          field: outcome
+          in:
+            - failure

@@ -27,5 +27,5 @@ export const standardQualityBundle = (id: string): StandardQualityBundle => {
 
 export const standardSharedQualityCommandIds = (id: string): readonly string[] => {
   if (id !== 'rust-cargo-quality') throw new DiagnosticError('quality-adapter-native-scope-unsupported');
-  return ['format', 'security'];
+  return ['format', 'security', 'dependency-policy'];
 };

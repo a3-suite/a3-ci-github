@@ -75,3 +75,39 @@ cases:
       toolchain-version: 1.80.0
       failed-command: fetch
       command-exit: 7
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: unconfigured-dependency-policy
+    partition: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+      cargo-deny-version: ""
+      cargo-deny-config-path: ""
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: configured-dependency-policy
+    partition: runtime-context.ci-quality-adapter-dependency-policy-configured
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+      cargo-deny-version: 0.20.2
+      cargo-deny-config-path: runtime/deny.toml
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: missing-dependency-policy-config
+    partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+      cargo-deny-version: 0.20.2
+      cargo-deny-config-path: runtime/missing-deny.toml
+  - contract_id: contract.ci-quality-adapter.outputs
+    id: incomplete-dependency-policy-inputs
+    partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+      cargo-deny-version: 0.20.2
+      cargo-deny-config-path: ""

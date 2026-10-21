@@ -92,9 +92,9 @@ runtime_contexts:
   - id: runtime-context.quality-platform-selection-invalid
     summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.quality-toolchain-inputs-ready
-    summary: Caller inputs satisfy quality-toolchain-request-valid. For Node/Python, the external setup provider supplies a well-formed exact version record within the requested selector; Rust uses the requested exact version and requires no independent version record. For a registered cargo-audit binary only, the downloaded archive bytes match the registered digest, extraction supplies a nonempty executable and its external --version response matches the requested version. Rustup and unregistered cargo-audit source installation require zero external command status, not independently inspected version metadata. Other selected setup dependencies supply their normal zero-status responses; required files and output, environment and PATH destinations permit the selected reads/writes. These are external response and IO inputs, not the composite Action's own step outcomes, computed resolution or published outputs. Release and legacy callers retain the default exact policy.
+    summary: Caller inputs satisfy quality-toolchain-request-valid. For Node/Python, the external setup provider supplies a well-formed exact version record within the requested selector; Rust uses the requested exact version and requires no independent version record. For a registered cargo-audit or cargo-deny binary only, the downloaded archive bytes match the registered digest, extraction supplies a nonempty executable and its external --version response matches the requested version. Rustup and unregistered cargo-audit or cargo-deny source installation require zero external command status, not independently inspected version metadata. Other selected setup dependencies supply their normal zero-status responses; required files and output, environment and PATH destinations permit the selected reads/writes. These are external response and IO inputs, not the composite Action's own step outcomes, computed resolution or published outputs. Release and legacy callers retain the default exact policy.
   - id: runtime-context.quality-toolchain-inputs-unusable
-    summary: Caller inputs violate the supported profile, policy or selected version grammar; or a Node/Python provider supplies a missing, malformed or out-of-selector version record; or a registered cargo-audit binary has an unavailable download response, mismatching archive digest, empty/invalid executable bytes or a mismatching external --version response; or a selected external installation command/service returns nonzero or required IO is denied. Rustup and unregistered cargo-audit source installation do not require independent version records or executable metadata. No composite Action outcome or computed resolution is assumed.
+    summary: Caller inputs violate the supported profile, policy or selected version grammar; or a Node/Python provider supplies a missing, malformed or out-of-selector version record; or a registered cargo-audit or cargo-deny binary has an unavailable download response, mismatching archive digest, empty/invalid executable bytes or a mismatching external --version response; or a selected external installation command/service returns nonzero or required IO is denied. Rustup and unregistered cargo-audit or cargo-deny source installation do not require independent version records or executable metadata. No composite Action outcome or computed resolution is assumed.
   - id: runtime-context.github-toolchain-matches-request
     summary: The selected mode is supported, every required CLI is available, and each installed version exactly matches the requested version.
   - id: runtime-context.jq-release-asset-valid
@@ -213,6 +213,12 @@ runtime_contexts:
     summary: A valid embedded rust-cargo-quality invocation selects execution-scope native, valid fixed source paths and a matching toolchain.
   - id: runtime-context.ci-quality-adapter-native-scope-rejected
     summary: A native execution request selects a non-Rust bundle or a local descriptor, or the requested execution scope is unknown.
+  - id: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+    summary: A rust-cargo-quality invocation with execution scope all leaves both CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH empty, and its prerequisites succeed.
+  - id: runtime-context.ci-quality-adapter-dependency-policy-configured
+    summary: A rust-cargo-quality invocation with execution scope all supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed.
+  - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+    summary: A rust-cargo-quality invocation supplies only one of CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH, or a CI_CARGO_DENY_CONFIG_PATH that is absolute, missing, not a regular file, or outside the source checkout.
   - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
     summary: A registered embedded standard bundle is selected from a fixed Action artifact for execution; consumer descriptors are not selected.
   - id: runtime-context.ci-quality-summary-summary-mixed-applicability
@@ -224,7 +230,7 @@ runtime_contexts:
   - id: runtime-context.ci-quality-summary-summary-run-context-missing
     summary: Evidence is omitted and the GitHub run context needed to construct a URL is absent or invalid.
   - id: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-    summary: A registered cargo-audit version/target is requested with an unavailable download response, mismatching archive digest, invalid archive, mismatching executable version, or unwritable PATH output destination.
+    summary: A registered cargo-audit or cargo-deny version/target is requested with an unavailable download response, mismatching archive digest, invalid archive, mismatching executable version, or unwritable PATH output destination.
   - id: runtime-context.quality-toolchain-request-valid
     summary: The requested language profile and version policy are supported; the requested toolchain is exact or a bounded Node/Python selector under compatible policy, and selected auxiliary tool versions satisfy their input grammar. No setup outcome or observed resolved version is assumed.
   - id: runtime-context.ci-preset-assurance-canonical-lock-input

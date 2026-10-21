@@ -567,6 +567,7 @@ const validateCommon = (
         'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}',
         'uv-version': '${{ env.CI_UV_VERSION }}',
         'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}',
+        'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}',
       };
       const inputs = map(value.with);
       if (inputs['version-policy'] !== undefined) {
@@ -574,7 +575,7 @@ const validateCommon = (
       }
       if (Object.keys(inputs).length !== Object.keys(expected).length
         || Object.entries(expected).some(([name, expression]) => inputs[name] !== expression)) add(report.mismatches, {
-        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its four explicit workflow settings and the permitted version policy', settingLocation: displayPath,
+        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its five explicit workflow settings and the permitted version policy', settingLocation: displayPath,
       });
     }
   }

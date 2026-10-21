@@ -98,7 +98,7 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 | Windows PowerShell 5.1、PowerShell 7 | platform | 宣言の下限と現行系 | 5.1 以上を宣言している |
 | Python 3.11 | platform | 宣言の下限 | 3.10 は 2026-10 に EOL。3.11 の support は 2027-10 まで |
 | Node 24 | platform | 最古の互換版 | Action は `node24` で動き、engines の下限も 24 |
-| Node の patch、uv、jq、GitHub CLI、cargo-audit、Action の SHA | 道具 | dependency-selection の版選定（公開待機期間を含む） | patch まで固定し、更新は意図して行う |
+| Node の patch、uv、jq、GitHub CLI、cargo-audit、cargo-deny、Action の SHA | 道具 | dependency-selection の版選定（公開待機期間を含む） | patch まで固定し、更新は意図して行う |
 
 各 release 時と、提供元が廃止・EOL を告知した時に見直します。
 
@@ -119,6 +119,7 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 | jq | 1.8.2 | 2026-06-20 14:11 | このcommit 2026-10-20 | 満たす |
 | GitHub CLI | 2.102.0 | 2026-09-30 02:40 | このcommit 2026-10-20 | 満たす |
 | cargo-audit | 0.22.2 | 2026-06-05 12:38 | ca6d0d4 2026-10-14 | 満たす |
+| cargo-deny | 0.20.2 | 2026-07-09 17:58 | このcommit 2026-10-21 | 満たす |
 
 ## 追加判断
 
