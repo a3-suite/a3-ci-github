@@ -40,6 +40,10 @@ contracts:
               meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
             - selector: dependency-policy-config-argument
               meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
+            - selector: dependency-policy-diagnostics
+              meaning: Presence of structured diagnostics on a failed dependency-policy entry, limited to per-check error and warning counts and error findings with a validated diagnostic code and crate name and version.
+            - selector: dependency-policy-unchecked-output-state
+              meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
             - selector: not-run-aggregate-effect
               meaning: Change of the aggregate status caused by results whose status is not-run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -73,6 +77,7 @@ contracts:
       - environment: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
       - environment: runtime-context.ci-quality-adapter-dependency-policy-configured
       - environment: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+      - environment: runtime-context.ci-quality-adapter-dependency-policy-violation
     guarantees:
       - id: quality-adapter-status-produced
         applies_to:
@@ -211,3 +216,23 @@ contracts:
           field: outcome
           in:
             - failure
+      - id: dependency-policy-violation-failed
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-result-status
+          in:
+            - failed
+      - id: dependency-policy-violation-diagnosed
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-diagnostics
+          present: true
+      - id: dependency-policy-diagnostics-validated
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-unchecked-output-state
+          in:
+            - absent

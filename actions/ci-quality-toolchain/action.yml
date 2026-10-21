@@ -23,6 +23,10 @@ inputs:
     required: false
     default: ''
     description: Exact cargo-deny version (0.20.0 or later) for the optional rust dependency policy check; empty skips its setup. Only the rust profile accepts a value.
+  auxiliary-tools:
+    required: false
+    default: install
+    description: install sets up the rust auxiliary tools (cargo-audit and the requested cargo-deny) used by the full quality checks; skip omits them for jobs that run none of those checks. Their version inputs are validated either way.
 outputs:
   resolved-toolchain-version:
     description: Exact selected toolchain version, produced only after all selected setup steps succeed. A failed or mismatched resolution has no successful output.
@@ -40,11 +44,13 @@ runs:
         CI_UV_VERSION: ${{ inputs.uv-version }}
         CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
         CI_CARGO_DENY_VERSION: ${{ inputs.cargo-deny-version }}
+        CI_AUXILIARY_TOOLS: ${{ inputs.auxiliary-tools }}
       run: |
         set -euo pipefail
         exact_version() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; }
         case "$CI_LANGUAGE_PROFILE" in typescript|python|rust) ;; *) echo 'quality-toolchain-profile-invalid' >&2; exit 1 ;; esac
         case "${CI_VERSION_POLICY:-exact}" in exact|compatible) ;; *) echo 'quality-toolchain-version-policy-invalid' >&2; exit 1 ;; esac
+        case "${CI_AUXILIARY_TOOLS:-install}" in install|skip) ;; *) echo 'quality-toolchain-auxiliary-tools-invalid' >&2; exit 1 ;; esac
         if ! exact_version "$CI_TOOLCHAIN_VERSION"; then
           [[ "${CI_VERSION_POLICY:-exact}" == compatible ]] || { echo 'quality-toolchain-version-invalid' >&2; exit 1; }
           case "$CI_LANGUAGE_PROFILE" in
@@ -118,14 +124,14 @@ runs:
         echo "RUSTUP_TOOLCHAIN=$CI_TOOLCHAIN_VERSION" >> "$GITHUB_ENV"
     - name: Set up cargo-audit
       id: cargo-audit
-      if: inputs.language-profile == 'rust'
+      if: inputs.language-profile == 'rust' && inputs.auxiliary-tools != 'skip'
       shell: bash
       env:
         CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
       run: bash "${GITHUB_ACTION_PATH}/scripts/setup-cargo-audit.sh"
     - name: Set up cargo-deny
       id: cargo-deny
-      if: inputs.language-profile == 'rust' && inputs.cargo-deny-version != ''
+      if: inputs.language-profile == 'rust' && inputs.cargo-deny-version != '' && inputs.auxiliary-tools != 'skip'
       shell: bash
       env:
         CI_CARGO_DENY_VERSION: ${{ inputs.cargo-deny-version }}

@@ -197,7 +197,7 @@ const rustPolicyFixture = (root: string) => {
   fs.writeFileSync(path.join(root, 'runtime/Cargo.lock'), '');
   fs.writeFileSync(path.join(root, 'runtime/deny.toml'), '');
   fs.writeFileSync(path.join(bin, 'rustc'), `#!${process.execPath}\nconsole.log('rustc 1.80.0');\n`, { mode: 0o700 });
-  fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2))+'\\n');\nprocess.exit(process.argv[2]==='deny'?Number(process.env.DENY_EXIT||0):0);\n`, { mode: 0o700 });
+  fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2))+'\\n');\nif(process.argv[2]==='deny')process.stderr.write(process.env.DENY_STDERR||'');process.exit(process.argv[2]==='deny'?Number(process.env.DENY_EXIT||0):0);\n`, { mode: 0o700 });
   const inputs = { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality', 'INPUT_TOOLCHAIN-VERSION': '1.80.0', 'INPUT_LANGUAGE-PROFILE': 'rust',
     CI_CARGO_MANIFEST_PATH: 'runtime/Cargo.toml', CI_CARGO_LOCK_PATH: 'runtime/Cargo.lock', CI_CARGO_DENY_VERSION: '', CI_CARGO_DENY_CONFIG_PATH: '', PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   const commands = () => fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
@@ -242,7 +242,44 @@ test('configured dependency policy runs cargo-deny with the declared configurati
     expect(run.result.status).toBe(status === 'success' ? 0 : 1);
     expect(payload.status).toBe(status);
     expect(payload.results.find((entry: { id: string }) => entry.id === 'dependency-policy').status).toBe(status);
-    expect(commands().find(args => args[0] === 'deny')).toStrictEqual(['deny', '--manifest-path', 'runtime/Cargo.toml', '--config', 'runtime/deny.toml', 'check', 'bans', 'licenses', 'sources']);
+    expect(commands().find(args => args[0] === 'deny')).toStrictEqual(['deny', '--format', 'json', '--manifest-path', 'runtime/Cargo.toml', '--config', 'runtime/deny.toml', 'check', 'bans', 'licenses', 'sources']);
+  }
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-dependency-policy
+test('failed dependency policy retains only validated cargo-deny identifiers', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-diagnostics-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs } = rustPolicyFixture(root);
+  const diagnostic = (severity: string, code: string, krate: Record<string, string>) => JSON.stringify({ type: 'diagnostic', fields: {
+    severity, code, message: 'private-message-text', labels: [{ message: 'private-label-text', span: 'token = "private-span-text"' }], graphs: [{ Krate: krate }] } });
+  const stderr = [
+    diagnostic('error', 'wildcard', { name: 'fixture', version: '0.1.0' }),
+    diagnostic('error', 'Bad Code', { name: 'fixture', version: '0.1.0' }),
+    diagnostic('error', 'banned', { name: 'private crate name', version: '1.0.0' }),
+    diagnostic('error', 'banned', { name: 'prerelease', version: '1.0.0-alpha.1+build.1' }),
+    diagnostic('error', 'banned', { name: 'malformed', version: '1.0.0-..' }),
+    diagnostic('warning', 'duplicate', { name: 'syn', version: '2.0.0' }),
+    'private plain text line',
+    JSON.stringify({ type: 'summary', fields: { bans: { errors: 2, warnings: 1, helps: 0 }, licenses: { errors: 0, warnings: 0 }, unknown: { errors: 1, warnings: 0 } } }),
+  ].join('\n');
+  // Act
+  const run = runAction(root, 'ignored', { ...inputs, CI_CARGO_DENY_VERSION: '0.20.2', CI_CARGO_DENY_CONFIG_PATH: 'runtime/deny.toml', DENY_EXIT: '2', DENY_STDERR: stderr });
+  const published = fs.readFileSync(run.resultPath, 'utf8');
+  const entry = JSON.parse(published).results.find((result: { id: string }) => result.id === 'dependency-policy');
+  // Assert
+  expect(entry.status).toBe('failed');
+  expect(entry.diagnostics).toStrictEqual({
+    checks: { bans: { errors: 2, warnings: 1 }, licenses: { errors: 0, warnings: 0 } },
+    findings: [{ severity: 'error', code: 'wildcard', crates: [{ name: 'fixture', version: '0.1.0' }] }, { severity: 'error', code: 'banned', crates: [] },
+      { severity: 'error', code: 'banned', crates: [{ name: 'prerelease', version: '1.0.0-alpha.1+build.1' }] }, { severity: 'error', code: 'banned', crates: [] }],
+    omittedFindings: 0,
+  });
+  expect(entry.stderr).toBe('protected-child-output');
+  for (const output of [published, run.result.stdout, run.result.stderr]) {
+    expect(output).not.toMatch(/private-(message|label|span)-text|private crate name|private plain text line/);
   }
 });
 

@@ -5,9 +5,12 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { parseDocument } from 'yaml';
 
-type CommandSpec = { id: string; command: string; args?: string[]; enabledBy?: string; requiredEnvironmentPaths?: string[] };
+type DiagnosticFormat = 'cargo-deny-json';
+type CommandSpec = { id: string; command: string; args?: string[]; enabledBy?: string; requiredEnvironmentPaths?: string[]; diagnosticFormat?: DiagnosticFormat };
+// Only enumerated identifiers parsed from the tool's structured output are kept; message, label and span text stay private like other child output.
+type CommandDiagnostics = { checks: Record<string, { errors: number; warnings: number }>; findings: { severity: 'error'; code: string; crates: { name: string; version: string }[] }[]; omittedFindings: number };
 // not-run marks an optional command whose enabling environment value is empty; it never counts as success or changes the aggregate status.
-type CommandResult = CommandSpec & { status: 'success' | 'failed' | '判定不能' | 'not-run'; exitCode: number | null; stdout: string; stderr: string; reason?: 'not-configured' };
+type CommandResult = CommandSpec & { status: 'success' | 'failed' | '判定不能' | 'not-run'; exitCode: number | null; stdout: string; stderr: string; reason?: 'not-configured'; diagnostics?: CommandDiagnostics };
 export type AdapterCommandTiming = { phase: 'toolchain' | 'preparation' | 'command'; id: string; elapsedMs: number; status: CommandResult['status']; exitCode: number | null };
 type ProjectSettings = { requiredFiles: string[]; requiredScripts: string[]; requiredEnvironmentPaths: string[] };
 type Toolchain = { versionEnv: string; verify: CommandSpec };
@@ -57,6 +60,10 @@ const command = (value: unknown, fallbackId: string, taken: Set<string>): Comman
     // Command-scoped paths exist only to configure an optional command, so they require its enabling variable.
     if (spec.enabledBy === undefined) throw new DiagnosticError('quality-adapter-command-environment-paths-invalid');
     spec.requiredEnvironmentPaths = strings(value.requiredEnvironmentPaths, 'command-environment-paths').map(environmentName);
+  }
+  if (value.diagnosticFormat !== undefined) {
+    if (value.diagnosticFormat !== 'cargo-deny-json') throw new DiagnosticError('quality-adapter-command-diagnostic-format-invalid');
+    spec.diagnosticFormat = value.diagnosticFormat;
   }
   return spec;
 };
@@ -152,10 +159,44 @@ const prepareCommand = (spec: CommandSpec, environment: NodeJS.ProcessEnv, allow
   return { ...spec, args };
 };
 
+const cargoDenyChecks = new Set(['advisories', 'bans', 'licenses', 'sources']);
+// The SemVer 2.0.0 grammar; crate versions outside it are dropped rather than published.
+const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const count = (value: unknown): number | undefined => Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : undefined;
+const cargoDenyDiagnostics = (stderr: string): CommandDiagnostics | undefined => {
+  const checks: CommandDiagnostics['checks'] = {};
+  const findings: CommandDiagnostics['findings'] = [];
+  let omittedFindings = 0;
+  for (const line of stderr.split('\n')) {
+    let entry: unknown;
+    try { entry = JSON.parse(line); } catch { continue; }
+    if (!record(entry) || !record(entry.fields)) continue;
+    const fields = entry.fields;
+    if (entry.type === 'summary') {
+      for (const [check, value] of Object.entries(fields)) {
+        const errors = record(value) ? count(value.errors) : undefined;
+        const warnings = record(value) ? count(value.warnings) : undefined;
+        if (cargoDenyChecks.has(check) && errors !== undefined && warnings !== undefined) checks[check] = { errors, warnings };
+      }
+    } else if (entry.type === 'diagnostic' && fields.severity === 'error' && typeof fields.code === 'string' && /^[a-z][a-z0-9-]{0,63}$/.test(fields.code)) {
+      if (findings.length === 20) { omittedFindings++; continue; }
+      const crates = (Array.isArray(fields.graphs) ? fields.graphs : []).flatMap((graph: unknown) => {
+        const krate = record(graph) && record(graph.Krate) ? graph.Krate : undefined;
+        return krate && typeof krate.name === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(krate.name)
+          && typeof krate.version === 'string' && krate.version.length <= 128 && semver.test(krate.version) ? [{ name: krate.name, version: krate.version }] : [];
+      }).slice(0, 10);
+      findings.push({ severity: 'error', code: fields.code, crates });
+    }
+  }
+  return Object.keys(checks).length || findings.length ? { checks, findings, omittedFindings } : undefined;
+};
+
 const runCommand = (spec: CommandSpec & { args: string[] }, root: string, environment: NodeJS.ProcessEnv): { result: CommandResult; elapsedMs: number } => {
   const started = performance.now();
   const result = spawnSync(spec.command, spec.args, { cwd: root, encoding: 'utf8', shell: false, env: environment });
-  return { elapsedMs: performance.now() - started, result: { ...spec, status: result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed', exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' } };
+  const status = result.error ? '判定不能' : result.status === 0 ? 'success' : 'failed';
+  const diagnostics = status === 'failed' && spec.diagnosticFormat === 'cargo-deny-json' ? cargoDenyDiagnostics(result.stderr ?? '') : undefined;
+  return { elapsedMs: performance.now() - started, result: { ...spec, status, exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '', ...(diagnostics ? { diagnostics } : {}) } };
 };
 
 export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload => {

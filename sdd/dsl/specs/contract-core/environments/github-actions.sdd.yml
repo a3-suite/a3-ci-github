@@ -219,6 +219,8 @@ runtime_contexts:
     summary: A rust-cargo-quality invocation with execution scope all supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed.
   - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
     summary: A rust-cargo-quality invocation supplies only one of CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH, or a CI_CARGO_DENY_CONFIG_PATH that is absolute, missing, not a regular file, or outside the source checkout.
+  - id: runtime-context.ci-quality-adapter-dependency-policy-violation
+    summary: A configured rust-cargo-quality dependency-policy command exits non-zero, and its cargo-deny JSON output reports error diagnostics and a per-check summary together with message, label and span text.
   - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
     summary: A registered embedded standard bundle is selected from a fixed Action artifact for execution; consumer descriptors are not selected.
   - id: runtime-context.ci-quality-summary-summary-mixed-applicability

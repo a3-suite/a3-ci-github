@@ -262,13 +262,16 @@ describe("contract.ci-preset-assurance.verification", () => {
     test('quality toolchain preflight rejects missing extra and altered input bindings', () => {
       const registry = loadRegistry(createReport());
       const inputs = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}' };
-      for (const change of [null, (value) => delete value['uv-version'], (value) => { value.extra = 'unexpected'; }, (value) => { value['toolchain-version'] = '24.0.0'; }, (value) => { value['language-profile'] = 1; }]) {
+      const scopeSelection = "${{ steps.execution-scope.outputs.scope == 'native' && 'skip' || 'install' }}";
+      for (const [change, rejected] of [[null, false], [(value) => { value['auxiliary-tools'] = 'skip'; }, false], [(value) => { value['auxiliary-tools'] = scopeSelection; }, false],
+        [(value) => { value['auxiliary-tools'] = 'install'; }, true], [(value) => { value['auxiliary-tools'] = 'none'; }, true],
+        [(value) => delete value['uv-version'], true], [(value) => { value.extra = 'unexpected'; }, true], [(value) => { value['toolchain-version'] = '24.0.0'; }, true], [(value) => { value['language-profile'] = 1; }, true]]) {
         const withInputs = { ...inputs };
         change?.(withInputs);
         const workflow = { jobs: { quality: { steps: [{ uses: `${registry.actionRepository}/actions/ci-quality-toolchain@${'a'.repeat(40)}`, with: withInputs }] } } };
         const report = createReport();
         validateCommon(repository, 'workflow.yml', JSON.stringify(workflow), workflow, report, registry);
-        expect(report.mismatches.some((item) => item.path === 'workflow.yml:with.ci-quality-toolchain')).toBe(change !== null);
+        expect(report.mismatches.some((item) => item.path === 'workflow.yml:with.ci-quality-toolchain'), JSON.stringify(withInputs)).toBe(rejected);
       }
     });
   });

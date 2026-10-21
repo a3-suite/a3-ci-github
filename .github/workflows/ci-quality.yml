@@ -86,6 +86,8 @@ jobs:
     name: quality-gate / trusted
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ${{ inputs.runner }}
+    env:
+      CI_SOURCE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     outputs:
       run-ci: ${{ steps.change-scope.outputs['run-ci'] }}
     steps:
@@ -235,6 +237,8 @@ jobs:
     name: quality-gate / untrusted-pr
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ${{ inputs.runner }}
+    env:
+      CI_SOURCE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     outputs:
       run-ci: ${{ steps.change-scope.outputs['run-ci'] }}
     steps:

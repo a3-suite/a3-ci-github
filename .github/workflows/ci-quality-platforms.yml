@@ -85,6 +85,8 @@ jobs:
   resolve-platforms:
     name: quality-gate-platforms / resolve
     runs-on: ${{ inputs.runner }}
+    env:
+      CI_SOURCE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     outputs:
       run-ci: ${{ steps.change-scope.outputs['run-ci'] }}
       trusted_root: ${{ steps.trusted-assets.outputs.root }}
@@ -213,6 +215,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     env:
       CI_TOOLCHAIN_VERSION: ${{ needs.resolve-platforms.outputs.toolchain-version }}
+      CI_SOURCE_REVISION: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -230,14 +233,6 @@ jobs:
             .ci/adapters
             package.json
             package-lock.json
-      - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@d7ff4ce36d07790295cf473f52c963ea094ca3dd
-        with:
-          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
-          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
-          uv-version: ${{ env.CI_UV_VERSION }}
-          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
-          cargo-deny-version: ${{ env.CI_CARGO_DENY_VERSION }}
       - name: Select quality execution scope
         id: execution-scope
         shell: bash
@@ -255,6 +250,14 @@ jobs:
             scope=native
           fi
           printf 'scope=%s\n' "$scope" >> "$GITHUB_OUTPUT"
+      - name: Set up quality toolchain
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@d7ff4ce36d07790295cf473f52c963ea094ca3dd
+        with:
+          language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
+          toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
+          uv-version: ${{ env.CI_UV_VERSION }}
+          cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+          cargo-deny-version: ${{ env.CI_CARGO_DENY_VERSION }}
       - name: Run project quality adapter
         id: quality-adapter
         uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@d7ff4ce36d07790295cf473f52c963ea094ca3dd

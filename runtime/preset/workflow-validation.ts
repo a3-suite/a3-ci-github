@@ -15,6 +15,7 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const MINUTE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/;
 
 const PLACEHOLDER = /<[A-Za-z][A-Za-z0-9._-]*>/;
+const qualityAuxiliaryTools = ['skip', "${{ steps.execution-scope.outputs.scope == 'native' && 'skip' || 'install' }}"];
 
 
 const placeholderPattern = (
@@ -573,9 +574,13 @@ const validateCommon = (
       if (inputs['version-policy'] !== undefined) {
         expected['version-policy'] = qualityVersionPolicy;
       }
+      // Only jobs that run no full-scope check may skip the auxiliary tools, either unconditionally or by the selected execution scope.
+      if (inputs['auxiliary-tools'] !== undefined && qualityAuxiliaryTools.includes(inputs['auxiliary-tools'] as string)) {
+        expected['auxiliary-tools'] = inputs['auxiliary-tools'] as string;
+      }
       if (Object.keys(inputs).length !== Object.keys(expected).length
         || Object.entries(expected).some(([name, expression]) => inputs[name] !== expression)) add(report.mismatches, {
-        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its five explicit workflow settings and the permitted version policy', settingLocation: displayPath,
+        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its five explicit workflow settings, the permitted version policy and auxiliary tool selection', settingLocation: displayPath,
       });
     }
   }

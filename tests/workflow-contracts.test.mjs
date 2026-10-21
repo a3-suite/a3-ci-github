@@ -969,6 +969,8 @@ describe("workflow-contracts", () => {
       const resolver = jobs['resolve-platforms'];
       expect(resolver.steps.filter(step => step.id === 'toolchain-resolution')).toHaveLength(1);
       expect(resolver.steps.find(step => step.id === 'toolchain-resolution').if).toContain("steps.configuration.outputs['resolve-toolchain'] == 'true'");
+      const platformSteps = jobs.platform.steps;
+      expect(platformSteps.findIndex(step => step.id === 'execution-scope')).toBeLessThan(platformSteps.findIndex(step => step.uses?.includes('/ci-quality-toolchain@')));
       expect(resolver.outputs['toolchain-version']).toBe("${{ steps.configuration.outputs['resolve-toolchain'] == 'true' && steps.toolchain-resolution.outputs.resolved-toolchain-version || steps.configuration.outputs['toolchain-version'] }}");
       expect(jobs.platform.env.CI_TOOLCHAIN_VERSION).toBe('${{ needs.resolve-platforms.outputs.toolchain-version }}');
       expect(jobs.platform.steps.find(step => step.uses?.includes('/ci-quality-toolchain@')).with['version-policy']).toBeUndefined();

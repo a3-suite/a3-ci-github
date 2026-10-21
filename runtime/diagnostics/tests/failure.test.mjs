@@ -28,6 +28,21 @@ describe('failure evidence', () => {
     expect(evidence['next-check'].unknownCause).toBe(true);
   });
   // contract_id: contract.ci-failure-diagnostics.actionable
+  test('source reports the declared checked-out revision and never a pull request event SHA', () => {
+    const head = 'a'.repeat(40);
+    const merge = 'b'.repeat(40);
+    const source = (environment) => {
+      for (const [name, value] of Object.entries(environment)) vi.stubEnv(name, value);
+      try { return new FailureContext('ci-quality-adapter', 'quality-adapter').evidence(new DiagnosticError('quality-adapter-failed')).context.source; }
+      finally { vi.unstubAllEnvs(); }
+    };
+    expect(source({ CI_SOURCE_REVISION: head, GITHUB_EVENT_NAME: 'pull_request', GITHUB_SHA: merge })).toBe(head);
+    expect(source({ CI_SOURCE_REVISION: '', GITHUB_EVENT_NAME: 'pull_request', GITHUB_SHA: merge })).toBe('unavailable');
+    expect(source({ CI_SOURCE_REVISION: '', GITHUB_EVENT_NAME: 'pull_request_target', GITHUB_SHA: merge })).toBe('unavailable');
+    expect(source({ CI_SOURCE_REVISION: 'refs/heads/main', GITHUB_EVENT_NAME: 'push', GITHUB_SHA: merge })).toBe('unavailable');
+    expect(source({ CI_SOURCE_REVISION: '', GITHUB_EVENT_NAME: 'push', GITHUB_SHA: merge })).toBe(merge);
+  });
+  // contract_id: contract.ci-failure-diagnostics.actionable
   test('diagnostic sink failure does not mask primary failure or retry', () => {
     const sink = vi.spyOn(process.stderr, 'write').mockImplementation(() => { throw new Error('sink failed'); });
     try {
