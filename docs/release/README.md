@@ -1,5 +1,7 @@
 # Release
 
+対象読者は、このリポジトリの Release を準備・公開する保守者です。
+
 各 Action は bundle 済みの `dist/` を同一コミットに含めて配布します。
 
 ## Release ref
