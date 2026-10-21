@@ -45,7 +45,7 @@ jobs:
       contents: read
     steps:
       - name: Validate and write publication request
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@b05598b815f670765e0e8141b602200d781c0d5d
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@59c59b6802dc0424c184d99c82f652d072c60e05
         with:
           operation: create-request
           release-request-run-id: ${{ inputs.request_run_id }}
@@ -73,7 +73,7 @@ jobs:
 
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@b05598b815f670765e0e8141b602200d781c0d5d
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@59c59b6802dc0424c184d99c82f652d072c60e05
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"publication request handoff","rawResult":"${{ job.status }}","applicable":true,"reason":"request job result: ${{ job.status }}"}]}
