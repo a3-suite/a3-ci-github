@@ -52,8 +52,8 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 ### 適用済みCIを監査したい
 
 - 通常は構成監査とし、証跡監査・両段階・リリース前の実行確認を指定された場合だけ、同じ対象について証跡監査へ進む。構成適合と実行証跡の結果を分けて報告する。
-- リリース前の確認では、最新の公開済み安定版の標準構成との整合を中心に監査する。
-- 最新標準への更新と、製品・installer・公開スキルを同じversionのReleaseで公開することを推奨対応として促す。採用済みの公開経路ではversionの整合も確認する。
+- リリース前の確認では、採用可能な最新の公開済み安定版（`references/deploy-ci-assets.guide.md`の「対応条件」）の標準構成との整合を中心に監査する。
+- その標準への更新と、製品・installer・公開スキルを同じversionのReleaseで公開することを推奨対応として促す。採用済みの公開経路ではversionの整合も確認する。
 - 参照: references/verify-applied-ci-assets.guide.md
 - 参照: references/verify-applied-ci-preset.guide.md
 

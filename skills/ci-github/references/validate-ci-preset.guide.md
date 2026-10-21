@@ -137,7 +137,7 @@ provider preflight 後の継続可否は、同契約の `preAudit.continuation` 
 
 preflight の成功は hosted 実行、runner trust、Repository 設定、Secrets、公開先、
 remote readback の成功を証明しない。これらは別の実行証拠で確認する。
-また、lockは実行に使ったローカル配布元との一致を証明するものであり、remote上の最新revisionであることは証明しない。remote最新版との比較は配布元revisionを別途取得して照合する。
+また、lockは実行に使ったローカル配布元との一致を証明するものであり、remote上の最新revisionであることは証明しない。採用可能な最新の公開済み安定版（`references/deploy-ci-assets.guide.md`の「対応条件」）との比較は、そのReleaseの配布元revisionを別途取得して照合する。
 
 a3-lintは外部Action固定、runner、immutable image、untrusted式、権限付きcancel、inline script、
 CI runtime依存など単一workflowの一般規則を検査する。canonical構造比較はpreflightだけに置き、

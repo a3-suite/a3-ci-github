@@ -42,7 +42,7 @@ Windows PowerShell 5.1以降に対応する構成では、実行ファイルを`
 
 配備されたスキル・サンプルは導入案であり、利用projectが固定するproviderの対応証拠ではない。宣言を変更する前に、次を確認する。
 
-1. 最新公開安定版を比較基準にし、採用するproviderのRelease・full commit SHA・配布manifestを対応付ける。workflowが呼ぶ固定版とローカル照合に使う版を一致させ、開発中runtimeの対応を公開版へ読み替えない。
+1. ci-githubスキルのCI資材の選択配布にある対応条件で採用可能な最新の公開済み安定版を比較基準にし、採用するproviderのRelease・full commit SHA・配布manifestを対応付ける。workflowが呼ぶ固定版とローカル照合に使う版を一致させ、開発中runtimeの対応を公開版へ読み替えない。
 2. 固定版の入力検証・実装へ、選択するuse case・platform集合・profile・実行環境を構成として照合する。Unix共有入口とWindows対象別installerの同時宣言も、一つの組合せとして確認する。WindowsはPowerShell 5.1以降を第一案とし、固定版のscriptのAPI・要求とnative検証の実行ファイルが対応するかを確認する。`powershell`と`pwsh`は別の実行ファイルであり、呼出し名だけの変更で対応済みにしない。実候補の実行結果は別の証跡確認とする。
    README・セットアップガイドの前提ツール、要求version、権限も固定版の実装・契約へ照合する。既存の前提一覧を根拠にせず、READMEへの記載は「READMEに残す内容」で判断する。前提を確定できなければ確認元と未確認項目を報告する。
 3. URLの未確定値を確認する。assemblyサンプルの`sharedWrapper.deliveryUrls`は組立契約に従って固定製品Release URLへ置換する。READMEのURLも同じ製品版・asset名へ揃える。製品の公開状況とURL取得の実証結果は監査・リリース準備記録へ分け、READMEへ作業状況を追記しない。

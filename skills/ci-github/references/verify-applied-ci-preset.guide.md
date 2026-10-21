@@ -2,7 +2,7 @@
 
 ## 目的
 
-リリース前に、最新の公開済み安定版が提供する標準構成と、適用先のGitHub Actions workflow・`.ci/`資産の整合を中心に監査する。標準へ合わせる差分と必要な固有差分を明らかにし、安全性・動作・リリース前の検証証拠で裏付ける。目的と対象境界は`references/ci-audit-contract.reference.yml`の`auditContract.purpose`に固定する。
+リリース前に、採用可能な最新の公開済み安定版が提供する標準構成と、適用先のGitHub Actions workflow・`.ci/`資産の整合を中心に監査する。標準へ合わせる差分と必要な固有差分を明らかにし、安全性・動作・リリース前の検証証拠で裏付ける。目的と対象境界は`references/ci-audit-contract.reference.yml`の`auditContract.purpose`に固定する。
 
 `references/verify-applied-ci-assets.guide.md` でテスト対象と証拠役割を決め、このガイドで GitHub Actions 固有の検証へ写像する。
 
@@ -51,7 +51,7 @@ READMEの標準コマンドと宣言・manifestについて、OS別の実行フ�
 
 同時に`auditContract.stages`で段階を選択し、記録する。既定は構成監査のみ。証跡監査を指定された場合は同じ対象の構成監査から証跡監査へ進む。以下の手順は確認項目ごとに`stages.itemMapping`とsubjectの`stageChecks`へ写像し、実行結果の未取得を構成の不適合へ混ぜない。
 
-監査開始時に`references/ci-audit-subjects.reference.yml`の必須subject`latest-standard-alignment`を登録し、同subjectの`baselineResolution`で最新の公開済み安定版を比較基準に固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。GitHub Actionsの実workflow・Action binding・資材・設定・文書を`comparisonScope`へ対応付け、配置済み資産と比較する。差分分類・証拠・判定入力・報告順は同subjectに従う。読み取り専用監査では比較と移行案の提示までとし、既存実装を更新しない。
+監査開始時に`references/ci-audit-subjects.reference.yml`の必須subject`latest-standard-alignment`を登録し、同subjectの`baselineResolution`で採用可能な最新の公開済み安定版を比較基準に固定し、版の選定は`references/deploy-ci-assets.guide.md`の「対応条件」に従う。GitHub Actionsの実workflow・Action binding・資材・設定・文書を`comparisonScope`へ対応付け、配置済み資産と比較する。差分分類・証拠・判定入力・報告順は同subjectに従う。読み取り専用監査では比較と移行案の提示までとし、既存実装を更新しない。
 
 1. `references/validate-ci-preset.guide.md` の監査モード別手順に従って導入先 root の preflight を実行し、workflow、必要 asset、quality adapter descriptor、Action SHA、設定値の不一致を検出して記録する。読み取り専用監査では変更せず、修正を含む依頼では明示された変更許可の範囲だけを修正して再検証する。Release／Package の stage 別 descriptor が workflow から到達していない場合は追加せず、既存の未接続 descriptor を撤去対象として記録する。
 

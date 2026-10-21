@@ -31,10 +31,10 @@ usage:
   consumers: [human, agent, validator]
 auditContract:
   purpose:
-    objective: リリース前に、最新公開安定版の標準への適合、差分の正当性、公開準備を確認する。
+    objective: リリース前に、採用可能な最新の公開済み安定版（references/deploy-ci-assets.guide.mdの対応条件）の標準への適合、差分の正当性、公開準備を確認する。
     successMeaning: 選択した監査段階の確認に適合している。構成監査だけの成功は実動作やリリース準備完了を証明せず、両段階の成功も実公開の成功を証明しない。
     scopeRules:
-      - 最新標準の比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。
+      - 比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。
       - 公開経路の実装、権限設定、authority、handoff、artifact、checksum、停止条件は、静的照合とリリース前の契約検証で確認する。
       - 実公開時のrun・actor・公開後の配布物取得などは公開後確認として別記し、その未実施だけでリリース前監査を非成功にしない。
       - 選択した段階に必要な確認の不足は既存のstatusClassificationで非成功として保持し、実行証跡の未取得を構成不適合へ混ぜない。

@@ -36,7 +36,7 @@ subjects:
   - id: latest-standard-alignment
     requirement: required
     phase: use-case-simulation
-    discovery: installed-ci-assets-and-latest-published-stable-provider-distribution
+    discovery: installed-ci-assets-and-adoptable-latest-published-stable-provider-distribution
     decisionOwner:
       owner: ci-audit-orchestrator
       owns: [baseline-resolution, standard-comparison, difference-classification, subject-status-aggregation]
@@ -44,11 +44,11 @@ subjects:
     baselineResolution:
       ownerSkill: ci-github
       requirements:
-        - resolve-latest-published-stable-release-at-audit-start
+        - resolve-adoptable-latest-published-stable-release-at-audit-start-by-deploy-ci-assets-support-conditions
         - bind-release-commit-manifest-and-registry-to-the-same-distribution
         - record-installed-provider-revision-and-audit-target-identity
         - do-not-use-unpublished-working-tree-as-published-standard
-        - recheck-latest-release-before-reusing-comparison-evidence
+        - recheck-adoptable-latest-release-before-reusing-comparison-evidence
     comparisonScope:
       - selected-preset-workflows-and-action-bindings
       - reachable-ci-assets-and-required-configuration
@@ -75,7 +75,7 @@ subjects:
       - do-not-update-every-action-pin-to-its-upstream-latest-version
       - delegate-installer-differences-through-installer-distribution
       - do-not-substitute-old-revision-preflight-success-for-standard-alignment
-      - requires-standard-migrationの差分は最新標準への移行案を要対応に示す。差分がなく導入済みrevisionだけが比較基準より古い場合も、最新標準への更新を推奨対応として要対応に示し、statusは変えない。
+      - requires-standard-migrationの差分は比較基準の標準への移行案を要対応に示す。差分がなく導入済みrevisionだけが比較基準より古い場合も、比較基準の標準への更新を推奨対応として要対応に示し、statusは変えない。
       - project固有の契約・文書・有効な指示・ローカルスキルと標準の競合を確認し、該当ownerの意味判断と解決案を保持する。旧規則の存在だけで固有差分を正当化しない。
       - 適用するownerの必須比較について、対象identity・比較基準・選択段階に対応する証拠の受領と充足確認を終えてからsubject statusを確定する。ownerのsuccess表記だけで比較実施を代替しない。
     classificationInputs:

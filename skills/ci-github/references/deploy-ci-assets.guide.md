@@ -6,7 +6,7 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 
 ## 対応条件
 
-導入時に提供元の公開済み安定版Releaseを確認し、導入済みの配布元revisionと比較して採用するexact Releaseを確定する。fetch CLI、manifest、`SHA256SUMS`はその同じReleaseから取得する。特定のリリース番号を本スキルの導入条件として保持しない。
+導入時に、提供元の公開済み安定版Releaseのうち、dependency-selectionスキルの版選定（公開待機期間と例外を含む）で採用候補になる最新版を確認する。本スキルと監査で「採用可能な最新の公開済み安定版」と呼ぶ版はこれを指す。導入済みの配布元revisionと比較して採用するexact Releaseを確定する。fetch CLI、manifest、`SHA256SUMS`はその同じReleaseから取得する。特定のリリース番号を本スキルの導入条件として保持しない。
 
 採用するReleaseの公開契約と配布資材から、選択presetの利用可能性、caller生成、必要なpin companionの自動生成・lock管理・完全検証、旧distributionがない場合の分類診断に対応することを確認する。manifestのschemaだけで機能対応を推測しない。必要機能が未提供または確認不能なら導入を停止する。
 
