@@ -40,6 +40,7 @@ const prepareAssets = () => {
   mkdirSync(directory);
   const manifest = Buffer.from('{"kind":"manifest"}\n');
   const cli = Buffer.from('console.log("fetch");\n');
+  const skills = Buffer.from('skills zip\n');
   writeFileSync(path.join(directory, 'a3-ci-github-distribution-manifest.json'), manifest);
   writeFileSync(path.join(directory, 'fetch-a3-ci-github.mjs'), cli);
   writeFileSync(path.join(directory, 'SHA256SUMS'), [
@@ -47,6 +48,8 @@ const prepareAssets = () => {
     `${sha256(cli)}  fetch-a3-ci-github.mjs`,
     '',
   ].join('\n'));
+  writeFileSync(path.join(directory, 'a3-ci-github-skills.zip'), skills);
+  writeFileSync(path.join(directory, 'a3-ci-github-skills.zip.sha256'), `${sha256(skills)}  a3-ci-github-skills.zip\n`);
   return directory;
 };
 
@@ -164,18 +167,20 @@ fi
 if [[ "$*" == *'@tsv'* ]]; then
   offset=0
   test -f "$state/race" && offset=100
-  for name in a3-ci-github-distribution-manifest.json fetch-a3-ci-github.mjs SHA256SUMS; do
+  for name in a3-ci-github-distribution-manifest.json fetch-a3-ci-github.mjs SHA256SUMS a3-ci-github-skills.zip a3-ci-github-skills.zip.sha256; do
     test -f "$state/assets/$name" || continue
     case "$name" in
       a3-ci-github-distribution-manifest.json) id=$((101 + offset)) ;;
       fetch-a3-ci-github.mjs) id=$((102 + offset)) ;;
       SHA256SUMS) id=$((103 + offset)) ;;
+      a3-ci-github-skills.zip) id=$((104 + offset)) ;;
+      a3-ci-github-skills.zip.sha256) id=$((105 + offset)) ;;
     esac
     printf '%s\\t%s\\n' "$name" "$id"
   done
   test -d "$state/assets" && find "$state/assets" -maxdepth 1 -type f -exec basename {} \\; \\
     | while IFS= read -r name; do
-        case "$name" in a3-ci-github-distribution-manifest.json|fetch-a3-ci-github.mjs|SHA256SUMS) ;; *) printf '%s\\t999\\n' "$name" ;; esac
+        case "$name" in a3-ci-github-distribution-manifest.json|fetch-a3-ci-github.mjs|SHA256SUMS|a3-ci-github-skills.zip|a3-ci-github-skills.zip.sha256) ;; *) printf '%s\\t999\\n' "$name" ;; esac
       done
   exit 0
 fi
@@ -183,6 +188,8 @@ case "$*" in
   *'/releases/assets/101') name=a3-ci-github-distribution-manifest.json ;;
   *'/releases/assets/102') name=fetch-a3-ci-github.mjs ;;
   *'/releases/assets/103') name=SHA256SUMS ;;
+  *'/releases/assets/104') name=a3-ci-github-skills.zip ;;
+  *'/releases/assets/105') name=a3-ci-github-skills.zip.sha256 ;;
   *) exit 92 ;;
 esac
 cat "$state/assets/$name"
@@ -230,6 +237,14 @@ describe("contract.ci-selective-distribution.publication", () => {
       const unapproved = execute('publish', assetDirectory, binaryRoot, stateRoot, { APPROVED_RELEASE_NOTES: '' });
       expect(unapproved.status).toBe(1);
       expect(existsSync(path.join(stateRoot, 'tag'))).toBe(false);
+
+      const skillsZip = path.join(assetDirectory, 'a3-ci-github-skills.zip');
+      const skillsBytes = readFileSync(skillsZip);
+      writeFileSync(skillsZip, 'tampered\n');
+      const tamperedSkills = execute('publish', assetDirectory, binaryRoot, stateRoot);
+      expect(tamperedSkills.status).toBe(1);
+      expect(existsSync(path.join(stateRoot, 'tag'))).toBe(false);
+      writeFileSync(skillsZip, skillsBytes);
 
       const apiFailure = execute('publish', assetDirectory, binaryRoot, stateRoot, {
         GH_FAIL_ENDPOINT: '/git/ref/tags/',
@@ -284,7 +299,7 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('false');
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(published.stdout).toMatch(/"readbackStatus":"verified"/);
-      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(5);
       const observedEndpoints = readFileSync(path.join(stateRoot, 'api-endpoints'), 'utf8');
       expect(observedEndpoints).not.toContain('/releases/tags/');
       expect(observedEndpoints).toContain('/releases/1');
@@ -292,7 +307,7 @@ describe("contract.ci-selective-distribution.publication", () => {
       const repeated = execute('publish', assetDirectory, binaryRoot, stateRoot);
       expect(repeated.status, repeated.stderr).toBe(0);
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
-      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(3);
+      expect(readFileSync(path.join(stateRoot, 'uploads'), 'utf8').trim().split('\n').length).toBe(5);
 
       const wrongNotes = execute('publish', assetDirectory, binaryRoot, stateRoot, { APPROVED_RELEASE_NOTES: 'different' });
       expect(wrongNotes.status).toBe(1);

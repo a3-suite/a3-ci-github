@@ -63,6 +63,7 @@ beforeAll(() => {
   committedSourceRoot = fs.mkdtempSync(path.join(temporaryRoot, 'distribution-source-'));
   for (const relative of [
     'VERSION',
+    '.ci/release-skills.json',
     '.github/workflows/ci-quality.yml',
     '.github/workflows/ci-quality-platforms.yml',
     '.github/workflows/ci-package-preparation.yml',

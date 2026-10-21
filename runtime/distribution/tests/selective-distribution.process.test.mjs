@@ -14,7 +14,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     test('release generator derives deterministic selective assets and checksums from registries', async () => {
       await withFixture('a3-ci-github-distribution-release-', (root) => {
         const first = generateRelease(root);
-        for (const filename of fs.readdirSync(first.output)) {
+        for (const filename of fs.readdirSync(first.output, { recursive: true })) {
+          if (fs.statSync(path.join(first.output, filename)).isDirectory()) continue;
           expect(fs.readFileSync(path.join(first.output, filename))).toEqual(fs.readFileSync(path.join(baseline.output, filename)));
         }
         const manifest = validateDistributionManifest(first.manifest);
@@ -63,6 +64,20 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const checksums = fs.readFileSync(path.join(first.output, 'SHA256SUMS'), 'utf8');
         expect(checksums).toMatch(new RegExp(sha256(first.manifestBytes)));
         expect(checksums).toMatch(/fetch-a3-ci-github\.mjs/);
+        expect(fs.readdirSync(first.output).sort()).toStrictEqual([
+          'SHA256SUMS',
+          'a3-ci-github-distribution-manifest.json',
+          'a3-ci-github-skills.zip',
+          'a3-ci-github-skills.zip.sha256',
+          'fetch-a3-ci-github.mjs',
+          'skills-evidence',
+        ]);
+        const skillsZip = fs.readFileSync(path.join(first.output, 'a3-ci-github-skills.zip'));
+        expect(fs.readFileSync(path.join(first.output, 'a3-ci-github-skills.zip.sha256'), 'utf8'))
+          .toBe(`${sha256(skillsZip)}  a3-ci-github-skills.zip\n`);
+        const owner = JSON.parse(fs.readFileSync(path.join(first.output, 'skills-evidence/a3-ci-github-skills.zip.owner.json'), 'utf8'));
+        expect(owner).toMatchObject({ owner_contract: 'ci.release-skills-package', source_sha: sourceRevision, asset_sha256: sha256(skillsZip) });
+        for (const entry of ['ci-github/SKILL.md', 'ci-release-installer/SKILL.md']) expect(skillsZip.includes(entry), entry).toBe(true);
       });
     });
   });

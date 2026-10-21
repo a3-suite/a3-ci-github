@@ -41,7 +41,7 @@ installer の実装・配布生成・テストは `runtime/installer/` で保守
 npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 ```
 
-Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
+Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksums、`.ci/release-skills.json`で宣言したスキルのZIPとその`.sha256`を生成します。スキルのowner証跡は`skills-evidence/`へ出力してhandoffに含め、Releaseには公開しません。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して5 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
 
 ```sh
 runtime/preset/node_modules/.bin/tsx runtime/distribution/generate-distribution-release.ts \

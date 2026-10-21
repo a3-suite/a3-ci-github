@@ -28,6 +28,8 @@ release:
   manifestAsset: a3-ci-github-distribution-manifest.json
   fetchCliAsset: fetch-a3-ci-github.mjs
   checksumAsset: SHA256SUMS
+  skillsAsset: a3-ci-github-skills.zip
+  skillsChecksumAsset: a3-ci-github-skills.zip.sha256
   trustBoundary: github-release-publisher-and-tls
 localState:
   root: .a3-skills/ci-github

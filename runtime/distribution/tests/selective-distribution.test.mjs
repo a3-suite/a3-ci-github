@@ -15,7 +15,9 @@ describe('distribution test fixtures', () => {
       // Arrange
       await withFixture('distribution-mutated-copy-', async (firstRoot) => {
         const first = prepareRelease(firstRoot);
-        const bytes = new Map(fs.readdirSync(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
+        const files = (output) => fs.readdirSync(output, { recursive: true })
+          .filter((name) => fs.statSync(path.join(output, name)).isFile());
+        const bytes = new Map(files(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
         // Act
         first.manifest.sourceRevision = 'mutated';
         first.manifestBytes.fill(0);
@@ -27,7 +29,7 @@ describe('distribution test fixtures', () => {
           expect(second.manifest).not.toBe(first.manifest);
           expect(second.manifestBytes).not.toBe(first.manifestBytes);
           expect(second.manifestBytes).toEqual(bytes.get('a3-ci-github-distribution-manifest.json'));
-          expect(fs.readdirSync(second.output).sort()).toEqual([...bytes.keys()].sort());
+          expect(files(second.output).sort()).toEqual([...bytes.keys()].sort());
           for (const [name, expected] of bytes) expect(fs.readFileSync(path.join(second.output, name))).toEqual(expected);
         });
       });

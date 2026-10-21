@@ -293,6 +293,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /a3-ci-github-distribution-manifest\.json/,
         /fetch-a3-ci-github\.mjs/,
         /SHA256SUMS/,
+        /sha256sum --check --strict a3-ci-github-skills\.zip\.sha256/,
         /check-provider-references\.mjs --contracts --release-tag/,
         /implementation_binding_status: \$\{\{ steps\.provider-binding\.outputs\.implementation_binding_status \}\}/,
         /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/,

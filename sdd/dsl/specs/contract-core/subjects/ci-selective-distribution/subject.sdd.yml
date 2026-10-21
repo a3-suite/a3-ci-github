@@ -117,7 +117,7 @@ contracts:
             - selector: releaseTag
               meaning: Exact validated SemVer tag that owns the published assets.
             - selector: assetNames
-              meaning: Manifest, standalone fetch CLI, and checksum asset names without bundled implementation files.
+              meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
             - selector: readbackStatus
               meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
             - selector: implementationSourceRevision

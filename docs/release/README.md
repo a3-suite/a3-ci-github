@@ -27,7 +27,7 @@ Release workflowはこの公開検査が成功した後だけ資材を生成し�
 
 aliasは公開済みの安定版だけへ向けます。そのため`runtime/repository/update-release-aliases.sh`は、alias更新の前にtag sourceとhotfix baseのmain統合状態を確かめます。この条件はrepository固有で、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)の`selective-distribution-alias-source-integrated`に従います。git-branch-strategyのmain統合の判定（`mainIntegrationSafety`）の代わりにはなりません。
 
-公開処理はdraft作成、3資材の登録、asset IDとbytesのreadback、tag・Release identity・承認本文の再確認、draft解除の順です。既存資材を上書きせず、公開済みReleaseへ不足資材を追記しません。既存本文が承認本文と異なる場合も停止します。公開前に失敗したdraftは保持し、修正後の再実行で同じ資材を検証します。公開後の最終確認または独立readbackの失敗でもalias更新は停止し、公開物を上書きせず原因と次の対応を判断します。
+公開処理はdraft作成、5資材（manifest、fetch CLI、`SHA256SUMS`、スキルZIPとその`.sha256`）の登録、asset IDとbytesのreadback、tag・Release identity・承認本文の再確認、draft解除の順です。既存資材を上書きせず、公開済みReleaseへ不足資材を追記しません。既存本文が承認本文と異なる場合も停止します。公開前に失敗したdraftは保持し、修正後の再実行で同じ資材を検証します。公開後の最終確認または独立readbackの失敗でもalias更新は停止し、公開物を上書きせず原因と次の対応を判断します。
 
 公開後の独立readbackが成功してからaliasを更新します。
 
@@ -36,7 +36,7 @@ aliasは公開済みの安定版だけへ向けます。そのため`runtime/rep
 gitスキルのmainタグリリース手順（`run-main-tag-release-flow`）の実行コマンドのうち、手順5〜10（`gh release create`によるRelease作成から資材登録、draft解除、最終状態の確認まで）を上書きする例外です。
 
 - 差分：annotated exact tagの作成・push（手順1〜4）とリリースノートの承認はgitの手順に従います。手順5〜10は実行せず、上記の`.github/workflows/release.yml`をdispatchして、上記の公開処理とその結果で置き換えます。
-- 理由：公開検査の成功、3資材の登録とreadback、alias更新を1つのworkflowで順に条件付ける必要があり、手動のRelease作成では資材と検査結果の対応を保証できないためです。
+- 理由：公開検査の成功、5資材の登録とreadback、alias更新を1つのworkflowで順に条件付ける必要があり、手動のRelease作成では資材と検査結果の対応を保証できないためです。
 - 適用範囲：このrepositoryの通常リリースとhotfixのRelease作成・資材登録・公開状態の確認だけです。tagの作成元・削除・再作成と操作の承認は、git-branch-strategyとgitの正本に従います。
 
 ## mainへの統合
@@ -60,7 +60,7 @@ Action実装からworkflow・callerへ接続するコミットの順序は、[�
 
 Release公開結果を確認し、接続変更・利用可能化・Skill配備を行う場合は該当する項目を確認します。
 
-1. `.github/workflows/release.yml`の公開・3資材のreadback・alias更新結果と、対象tagのpeeled full SHAを確認します。
+1. `.github/workflows/release.yml`の公開・5資材のreadback・alias更新結果と、対象tagのpeeled full SHAを確認します。
 2. manifestのcallee参照が公開tagのpeeled SHAに一致し、Action・installerの固定参照が同じReleaseのpublication契約を満たすことを確認します。公開後に参照更新を必須の後続作業として残さず、実装SHAとcalleeのSHAを混同しません。
 3. 導入先では選択presetのcallerを生成し、製品設定・認証・required checkの受入を行います。生成・接続契約の検証は導入先の環境確認の代替にはしません。
 4. 公開物は更新しません。実装・template・契約の修正は次のReleaseへ含めます。

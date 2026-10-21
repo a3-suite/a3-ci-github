@@ -13,7 +13,7 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 ## 境界
 
 - 配布assetと依存閉包の正本は`assets/registry/ci-distribution-assets.yml`と`assets/registry/ci-github-preset-assets.yml`とする。
-- Releaseはmanifest、単独実行できるfetch CLI、`SHA256SUMS`だけを公開する。
+- Releaseはmanifest、単独実行できるfetch CLI、`SHA256SUMS`と、提供元の公開スキルZIPとその`.sha256`だけを公開する。
 - checksumは取得byteの完全性を検証する。発行者の真正性はGitHub repositoryのRelease公開権限、protected source、exact tag、TLSを信頼境界とする。
 - workflow以外のruntime、lint rule、registryは`{project-root}/.a3-skills/ci-github/distributions/{sourceRevision}/`から導入・保守・検証時だけ参照する。
 - Actionはdownloadせず、registryの40桁commit SHAをworkflowへ設定する。
