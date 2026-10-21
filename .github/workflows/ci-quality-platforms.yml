@@ -31,6 +31,16 @@ on:
         description: Project Cargo lock path, or empty outside Rust.
         required: true
         type: string
+      cargo-deny-version:
+        description: Exact cargo-deny version for the optional Rust dependency policy check, or empty to leave it not-run.
+        required: false
+        type: string
+        default: ""
+      cargo-deny-config-path:
+        description: Project cargo-deny configuration path, required together with cargo-deny-version.
+        required: false
+        type: string
+        default: ""
       standard-bundle-id:
         description: Standard quality bundle ID, or empty for an owner descriptor.
         required: true
@@ -62,6 +72,8 @@ env:
   CI_CARGO_AUDIT_VERSION: ${{ inputs.cargo-audit-version }}
   CI_CARGO_MANIFEST_PATH: ${{ inputs.cargo-manifest-path }}
   CI_CARGO_LOCK_PATH: ${{ inputs.cargo-lock-path }}
+  CI_CARGO_DENY_VERSION: ${{ inputs.cargo-deny-version }}
+  CI_CARGO_DENY_CONFIG_PATH: ${{ inputs.cargo-deny-config-path }}
   CI_STANDARD_BUNDLE_ID: ${{ inputs.standard-bundle-id }}
   CI_ADAPTER_DESCRIPTOR: ${{ inputs.adapter-descriptor }}
   CI_DOCS_ONLY_PATTERNS: ${{ inputs.docs-only-patterns }}
@@ -118,7 +130,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -174,7 +186,7 @@ jobs:
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
       - name: Resolve platform matrix
         id: resolve
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           manifest-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_PLATFORM_MANIFEST }}
           selection-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_QUALITY_PLATFORM_SELECTION }}
@@ -182,12 +194,13 @@ jobs:
       - name: Resolve selected toolchain once
         id: toolchain-resolution
         if: steps.change-scope.outputs['run-ci'] != 'false' && steps.configuration.outputs['resolve-toolchain'] == 'true'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
           uv-version: ${{ env.CI_UV_VERSION }}
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+          cargo-deny-version: ${{ env.CI_CARGO_DENY_VERSION }}
           version-policy: compatible
 
   platform:
@@ -218,12 +231,13 @@ jobs:
             package.json
             package-lock.json
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
           uv-version: ${{ env.CI_UV_VERSION }}
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
+          cargo-deny-version: ${{ env.CI_CARGO_DENY_VERSION }}
       - name: Select quality execution scope
         id: execution-scope
         shell: bash
@@ -243,7 +257,7 @@ jobs:
           printf 'scope=%s\n' "$scope" >> "$GITHUB_OUTPUT"
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           execution-scope: ${{ steps.execution-scope.outputs.scope }}
@@ -335,6 +349,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@2cf207d8ce5f19221247cd3018c812a8851eb1d6
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}
