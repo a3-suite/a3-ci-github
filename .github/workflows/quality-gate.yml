@@ -41,7 +41,7 @@ jobs:
       - name: Set up verification Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
 
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -460,7 +460,7 @@ jobs:
       - name: Set up verification Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Test contract-subject coverage reporter
@@ -472,7 +472,7 @@ jobs:
       - name: Set up Python source coverage tool
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
         with:
-          version: '0.13.0'
+          version: '0.13.4'
 
       - name: Test installer regression with source coverage
         env:
@@ -501,7 +501,7 @@ jobs:
       - name: Set up verification Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
 
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -529,7 +529,7 @@ jobs:
       - name: Set up installer boundary test Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
 
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -616,7 +616,7 @@ jobs:
       - name: Set up installer boundary test Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
 
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -672,7 +672,7 @@ jobs:
       - name: Set up installer transport Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
 
       - name: Install maintenance test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
@@ -742,7 +742,7 @@ jobs:
       - name: Set up verification Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
       - name: Verify same-job token draft visibility
         env:
           GITHUB_TOKEN: ${{ github.token }}

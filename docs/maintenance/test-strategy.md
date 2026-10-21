@@ -104,7 +104,7 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 
 ### CI資材の採用記録
 
-道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17（jq、GitHub CLI、setup-node、upload-artifact、download-artifact、setup-uv、uv は 2026-10-20）です。版を更新したときは、この表の該当行を書き換えます。
+道具に区分した版の選定記録です。適用した公開待機期間は dependency-selection の標準の7日です。公開日時は各 GitHub Release、採用日時はその値が `.github/workflows/`、`actions/`、registry に初めて現れた commit です。確認日時は 2026-10-17（jq、GitHub CLI、setup-node、upload-artifact、download-artifact、setup-uv は 2026-10-20、Node と uv は 2026-10-21）です。脆弱性修正の例外で待機期間内に採用した版は、待機期間の列に例外と修正内容の参照先を残します。版を更新したときは、この表の該当行を書き換えます。
 
 | 対象 | 版 | 公開日時（UTC） | 採用 commit・日時（JST） | 待機期間 |
 | --- | --- | --- | --- | --- |
@@ -114,8 +114,8 @@ A3_LINT_BIN="$(command -v a3-lint)" node tests/a3-lint-rule-regression.mjs
 | astral-sh/setup-uv | v10.3.0（`1c37ad07`） | 2026-10-09 20:41 | このcommit 2026-10-20 | 満たす |
 | actions/upload-artifact | v7.0.2（`cf430e03`） | 2026-10-07 10:08 | このcommit 2026-10-20 | 満たす |
 | actions/download-artifact | v8.0.2（`9000827c`） | 2026-10-07 10:09 | このcommit 2026-10-20 | 満たす |
-| Node | 24.21.0 | 2026-09-08 21:51 | 4b694d0 2026-10-03 | 満たす |
-| uv | 0.13.0 | 2026-10-09 19:49 | このcommit 2026-10-20 | 満たす |
+| Node | 24.22.1 | 2026-10-21 10:38 | このcommit 2026-10-21 | 例外（脆弱性修正：[v24.22.1](https://github.com/nodejs/node/releases/tag/v24.22.1)） |
+| uv | 0.13.4 | 2026-10-20 15:24 | このcommit 2026-10-21 | 例外（脆弱性修正：[GHSA-hq85-5cpj-mr62](https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62)） |
 | jq | 1.8.2 | 2026-06-20 14:11 | このcommit 2026-10-20 | 満たす |
 | GitHub CLI | 2.102.0 | 2026-09-30 02:40 | このcommit 2026-10-20 | 満たす |
 | cargo-audit | 0.22.2 | 2026-06-05 12:38 | ca6d0d4 2026-10-14 | 満たす |
