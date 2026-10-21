@@ -62,6 +62,6 @@ Release公開結果を確認し、接続変更・利用可能化・Skill配備�
 2. manifestのcallee参照が公開tagのpeeled SHAに一致し、Action・installerの固定参照が同じReleaseのpublication契約を満たすことを確認します。公開後に参照更新を必須の後続作業として残さず、実装SHAとcalleeのSHAを混同しません。
 3. 導入先では選択presetのcallerを生成し、製品設定・認証・required checkの受入を行います。生成・接続契約の検証は導入先の環境確認の代替にはしません。
 4. 公開物は更新しません。実装・template・契約の修正は次のReleaseへ含めます。
-5. 公開Skillを配備する場合は、[skills-deploy](../../.agents/skills/skills-deploy/SKILL.md)で対象Skillと明示された配備先の差分確認・承認された反映・再検査を行います。
+5. 公開Skillを配備する場合は、[skills-deploy](../../.agents/skills/skills-deploy/SKILL.md)で対象Skillと`.env`で指定した配備先の差分確認・承認された反映・再検査を行います。
 
 完了報告では、今回の対象となったRelease公開、registryの利用可能化、経路別Hosted受入、配布物への反映、Skill配備の達成状態と未確認・受入待ちを分けて示します。対応する後続操作が未実施なら、公開成功だけで全体の切替完了としません。

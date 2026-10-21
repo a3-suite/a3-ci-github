@@ -147,37 +147,52 @@ const validateDescriptor = (
       settingLocation: descriptorPath,
     });
   }
-  for (const name of strings(projectSettings.requiredEnvironmentPaths)) {
-    const value = workflowEnv[name];
-    if (!/^CI_[A-Z0-9_]+$/.test(name) || typeof value !== 'string'
-      || value === '' || path.isAbsolute(value)) {
-      add(report.mismatches, {
-        path: `${descriptorPath}:projectSettings.requiredEnvironmentPaths.${name}`,
-        message: 'required environment path must resolve from a valid workflow setting',
-        settingLocation: descriptorPath,
-      });
-      continue;
+  const validateEnvironmentPaths = (names: string[], declaration: string): void => {
+    for (const name of names) {
+      const value = workflowEnv[name];
+      if (!/^CI_[A-Z0-9_]+$/.test(name) || typeof value !== 'string'
+        || value === '' || path.isAbsolute(value)) {
+        add(report.mismatches, {
+          path: `${descriptorPath}:${declaration}.${name}`,
+          message: 'required environment path must resolve from a valid workflow setting',
+          settingLocation: descriptorPath,
+        });
+        continue;
+      }
+      try {
+        const absoluteFile = inside(root, value);
+        if (!fs.existsSync(absoluteFile) || !fs.statSync(absoluteFile).isFile()) add(report.missingSettings, {
+          path: value,
+          message: 'required environment path is missing',
+          settingLocation: descriptorPath,
+        });
+        else if (!realPathIsInside(root, absoluteFile)) add(report.mismatches, {
+          path: value,
+          message: 'required environment path resolves outside the project root',
+          settingLocation: descriptorPath,
+        });
+      } catch (error) {
+        add(report.mismatches, {
+          path: value,
+          message: error instanceof Error ? error.message : 'invalid required environment path',
+          settingLocation: descriptorPath,
+        });
+      }
     }
-    try {
-      const absoluteFile = inside(root, value);
-      if (!fs.existsSync(absoluteFile) || !fs.statSync(absoluteFile).isFile()) add(report.missingSettings, {
-        path: value,
-        message: 'required environment path is missing',
-        settingLocation: descriptorPath,
-      });
-      else if (!realPathIsInside(root, absoluteFile)) add(report.mismatches, {
-        path: value,
-        message: 'required environment path resolves outside the project root',
-        settingLocation: descriptorPath,
-      });
-    } catch (error) {
-      add(report.mismatches, {
-        path: value,
-        message: error instanceof Error ? error.message : 'invalid required environment path',
-        settingLocation: descriptorPath,
-      });
-    }
-  }
+  };
+  validateEnvironmentPaths(strings(projectSettings.requiredEnvironmentPaths), 'projectSettings.requiredEnvironmentPaths');
+  (Array.isArray(descriptor.commands) ? descriptor.commands : []).map(map).forEach((spec, index) => {
+    if (typeof spec.enabledBy !== 'string') return;
+    const enabled = typeof workflowEnv[spec.enabledBy] === 'string' && workflowEnv[spec.enabledBy] !== '';
+    const names = strings(spec.requiredEnvironmentPaths);
+    // An optional command is configured only by all of its settings together; a partial setting stops CI before any command.
+    if (names.some((name) => (typeof workflowEnv[name] === 'string' && workflowEnv[name] !== '') !== enabled)) add(report.mismatches, {
+      path: `${descriptorPath}:commands[${index}].requiredEnvironmentPaths`,
+      message: `optional command settings must be supplied together with ${spec.enabledBy}`,
+      settingLocation: descriptorPath,
+    });
+    else if (enabled) validateEnvironmentPaths(names, `commands[${index}].requiredEnvironmentPaths`);
+  });
   for (const file of strings(projectSettings.requiredFiles)) {
     try {
       const absoluteFile = inside(root, file);

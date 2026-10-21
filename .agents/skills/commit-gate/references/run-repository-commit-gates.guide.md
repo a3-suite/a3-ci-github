@@ -80,44 +80,36 @@ node {project-root}/runtime/repository/check-provider-references.mjs --staged --
 ## スキル配備整合ゲート
 
 ### 適用条件
-- staged snapshot にコミット対象の変更がある場合、`skills/` の公開root全体に適用する。公開スキルの変更がないコミットでも、配備先に残った差分を検出・反映する。
-- 配備対象外は `_build/`、`__pycache__/`、`*.pyc`、`*.pyo` とする。Gitのignore対象でも、委譲CLIが収集する公開ファイルはindexへ照合し、公開root内の `.git/` を含む未追跡の配備候補があれば停止する。
-- 対象は `skills-deploy` のデプロイコンテキストで定義する公開root全体とする。公開ソースが index と一致することを確認し、未ステージ・未追跡の配備対象があれば停止する。
+- staged snapshot にコミット対象の変更がある場合に適用する。配備先がある状態で、HEAD から staged snapshot までに公開スキルの配布内容が変わらず、公開スキルの削除もない場合は `非適用` とする。
+- 対象スキルと配備先は `skills-deploy` スキルのデプロイコンテキストを正本とする。
 
 ### 証拠の採用条件
-- 現行 staged snapshot と、直前実行時に解決した対象 skill root が一致する。
-- 対象 root の未ステージ差分と未追跡ファイルの状態が変わっていない。
-- 配備先 root、配備 CLI、`project-skill-deploy` の公開契約が変わっていない。
+- 現行 staged snapshot と HEAD が直前実行時と一致する。
+- `.agents/skill-deploy.yml`、`.env` の配備先、`project-skill-deploy` の公開契約が変わっていない。
 - 直前結果が成功で、実行後に配備先を変更する操作がない。
 
 ### 実行
 プロジェクトルートで実行する。
 
 ```sh
-python3 {skill-root}/scripts/check_staged_skill_deploy.py
+uv run {skill-root}/scripts/check_staged_skill_deploy.py --project-skill-deploy-root {project-skill-deploy-root}
 ```
 
-- 配備先の設定は skills-deploy スキルのデプロイコンテキストを正本とする。未設定の場合は `STOP` とし、コミットへ進めない。
-- 差分確認、候補分類、反映、再検査の順序と判定は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本ゲートでは再定義しない。
-- 削除を伴わない更新差分は prune なしで自動反映し、同じ scope を再検査して一致を確認する。
-- 削除候補、明示 prune 対象、category replacement root、管理外 skill の削除は自動反映せず `STOP` とする。
-- 反映する変更は staged snapshot と一致する作業ツリーの内容に限る。対象 root に未ステージ差分がある場合は実行しない。
+- HEAD と index を一時ディレクトリへ書き出し、`project-skill-deploy` のスナップショット差分 API（`plan_snapshot_change`）へ渡す。変更・削除したスキル、配備先、削除候補の判定は同 API を正本とし、本ゲートでは再定義しない。作業ツリーの未ステージ変更は判定にも反映にも使わない。
+- 削除を伴わない更新差分は自動反映し、同じスナップショットで再計画して一致を確認する。
+- 削除候補（stale、削除したスキルのコピー、同名旧カテゴリの置換）は自動反映せず `STOP` とする。削除は `skills-deploy` の明示操作で行う。
+- 他のプロジェクトのものである可能性があり削除しないコピーは `KEPT` として報告し、判定に使わない。
 
 ### 停止条件
-- staged snapshot から対象 skill root を解決できない、または 変更対象の公開rootの `SKILL.md` が index に存在しない。ただし、改名・廃止で root 全体を削除し、配備先の旧 root が skills-deploy の明示操作で削除済みの場合は続行する。
-- `skills/<name>` より深い位置に `SKILL.md` がある（入れ子のスキル）。
-- 対象 root に未ステージ差分または未追跡ファイルがある。
-- 配備先に削除候補、明示 prune 対象、または category replacement root がある。
-- 反映の直前に確認し直した計画が、最初の dry-run から変わっている。
-- 自動反映後も配備先に差分が残る。
-- 配備 CLI または配備先 root を解決できない。
+- `.env` に配備先が1つもない。
+- 配備先に削除候補がある。
+- 自動反映後の再検査で、配備先が変わる、または差分が残る。
 
 ### 終了条件
-- 適用条件を満たさない場合は `非適用` とする。
-- 配備先 root が未設定の場合は `STOP` とし、理由と設定方法を返す。
-- `0`: 更新を反映し、配備先が canonical source と一致する、または一致済み。`PASS`。
+- 適用条件を満たさない場合は `非適用` とする（終了コード `0`）。
+- `0`: 更新を反映し、配備先が staged snapshot に一致する、または一致済み。`PASS`。
 - `1`: 検証失敗。`STOP`。
-- `2`: 実行エラー、または配備 CLI の計画に必須項目がない・型が違う。`判定不能`。
+- `2`: 実行エラー（設定ファイルの不備、API の拒否、git の失敗を含む）。`判定不能`。
 
 ### 再実行条件
-- staged snapshot、対象 root の未ステージ状態、配備先 root、配備 CLI、`project-skill-deploy` の公開契約のいずれかが変わった場合は、配備整合証拠を失効させて再実行する。
+- staged snapshot、HEAD、`.agents/skill-deploy.yml`、`.env` の配備先、`project-skill-deploy` の公開契約のいずれかが変わった場合は、配備整合証拠を失効させて再実行する。

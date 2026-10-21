@@ -261,7 +261,7 @@ describe("contract.ci-preset-assurance.verification", () => {
     // contract_id: contract.ci-preset-assurance.verification
     test('quality toolchain preflight rejects missing extra and altered input bindings', () => {
       const registry = loadRegistry(createReport());
-      const inputs = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}' };
+      const inputs = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}' };
       for (const change of [null, (value) => delete value['uv-version'], (value) => { value.extra = 'unexpected'; }, (value) => { value['toolchain-version'] = '24.0.0'; }, (value) => { value['language-profile'] = 1; }]) {
         const withInputs = { ...inputs };
         change?.(withInputs);

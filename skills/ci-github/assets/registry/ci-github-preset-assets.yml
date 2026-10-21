@@ -66,7 +66,7 @@ distribution:
 conformance:
   comparison: canonical-yaml-structure
   configurableValues: canonical-placeholders
-  emptyAllowedPlaceholders: [optional-jq-version, uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
+  emptyAllowedPlaceholders: [optional-jq-version, uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, optional-cargo-deny-version, optional-cargo-deny-config-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
   listPlaceholderRule: placeholder だけで構成する list は一つ以上の非空 project 値へ置換できる。
   workflowTriggerExtensions:
     quality-gate:
@@ -112,8 +112,8 @@ actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.6.0
-    exactRef: "9b2485881091c3ce649944dbcdd19c66d2b27db7"
+    releaseTag: v0.7.0
+    exactRef: "d7ff4ce36d07790295cf473f52c963ea094ca3dd"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available

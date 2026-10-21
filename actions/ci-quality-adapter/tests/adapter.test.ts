@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, test, expect } from 'vitest';
-import { executeAdapter, loadAdapterBundle } from '../src/adapter.js';
+import { executeAdapter, loadAdapterBundle, parseAdapterBundle } from '../src/adapter.js';
 
 const descriptor = `schemaVersion: "1"\nkind: ci-adapter-bundle\nid: node-quality\ncontract: quality-scripts\nlanguageProfiles: [node]\nprovider: github\nexecutionBoundary: read-only\nsourceCheckout: fixed-source\ncopyable: true\nowner: ci\nassets:\n  - id: config\n    destination: .ci/config.yml\nprojectSettings:\n  requiredFiles: []\n  requiredScripts: []\n  requiredEnvironmentPaths: []\ntoolchain:\n  versionEnv: CI_TOOLCHAIN_VERSION\n  verify:\n    command: node\n    args: [--version]\npreparation:\n  - id: prepare\n    command: node\n    args: [-e, "process.exit(0)"]\ncommands:\n  - id: test\n    command: node\n    args: [-e, "process.exit(0)"]\n`;
 
@@ -12,6 +12,26 @@ const descriptorWithVerify = (command: string, args: string[]): string =>
     .replace('args: [--version]', `args: [${args.map((arg) => JSON.stringify(arg)).join(', ')}]`);
 
 describe('ci-quality-adapter-source', () => {
+  // integration_id: ci-quality-adapter-source
+  test('rejects optional command declarations outside the command phase or without an enabling variable', () => {
+    // Arrange
+    const optional = (spec: string) => descriptor.replace('  - id: test\n    command: node\n', `  - id: test\n    command: node\n${spec}`);
+    const cases: [string, string][] = [
+      [descriptor.replace('  - id: prepare\n    command: node\n', '  - id: prepare\n    command: node\n    enabledBy: CI_OPTIONAL\n'), 'quality-adapter-optional-command-phase-invalid'],
+      [optional('    requiredEnvironmentPaths: [CI_OPTIONAL_PATH]\n'), 'quality-adapter-command-environment-paths-invalid'],
+      [optional('    enabledBy: OPTIONAL\n'), 'quality-adapter-environment-path-name-invalid:OPTIONAL'],
+      [optional('    enabledBy: CI_OPTIONAL\n    requiredEnvironmentPaths: [optional_path]\n'), 'quality-adapter-environment-path-name-invalid:optional_path'],
+    ];
+    for (const [content, code] of cases) {
+      // Act
+      const parse = () => parseAdapterBundle(content);
+      // Assert
+      expect(parse).toThrow(code);
+    }
+    expect(parseAdapterBundle(optional('    enabledBy: CI_OPTIONAL\n    requiredEnvironmentPaths: [CI_OPTIONAL_PATH]\n')).commands[0])
+      .toStrictEqual(expect.objectContaining({ enabledBy: 'CI_OPTIONAL', requiredEnvironmentPaths: ['CI_OPTIONAL_PATH'] }));
+  });
+
   // integration_id: ci-quality-adapter-source
   test('executes a read-only adapter in the source root', () => {
     // Arrange

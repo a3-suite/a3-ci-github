@@ -1,0 +1,5 @@
+fe67d82a10d8597a3549364cb733a3f9cc1bfff9031b7ae46384a9f2a72090c3  cargo-deny-0.20.2-aarch64-apple-darwin.tar.gz
+995c82be0defc7a025cae49a2aa2644ce8245c9a3318fc4103907c6a285e8c7d  cargo-deny-0.20.2-aarch64-unknown-linux-musl.tar.gz
+248da7f581724e470071990c088ffc55c811981715f4cbdb258621fb79f8b7a6  cargo-deny-0.20.2-x86_64-apple-darwin.tar.gz
+975a22143262fd27476d19ee00c7af67978426e40e1dee94eed6bbade1cf87dc  cargo-deny-0.20.2-x86_64-pc-windows-msvc.tar.gz
+9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz

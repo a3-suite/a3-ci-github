@@ -24,6 +24,7 @@ describe("action-dist-gate", () => {
           expect(action.distPath).toBe(null);
           if (action.name === 'ci-quality-toolchain') expect(action.referencedPaths).toStrictEqual([
             'actions/ci-quality-toolchain/scripts/setup-cargo-audit.sh',
+            'actions/ci-quality-toolchain/scripts/setup-cargo-deny.sh',
             'runtime/diagnostics/failure.sh',
           ]);
           else expect(action.referencedPaths.length > 0).toBeTruthy();

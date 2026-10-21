@@ -937,7 +937,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
     // integration_id: quality-workflow-contract
-    test('quality toolchain callers bind four inputs and preserve execution gates', () => {
+    test('quality toolchain callers bind five inputs and preserve execution gates', () => {
       const pairs = [['.github/workflows/ci-quality.yml', 'trusted'], ['.github/workflows/ci-quality.yml', 'untrusted-pr'], ['.github/workflows/ci-quality-platforms.yml', 'platform'], ['.github/workflows/ci-release-publication.yml', 'quality']];
       const contract = yaml.parse(read('actions/ci-quality-toolchain/action.yml'));
       for (const [file, jobId] of pairs) {
@@ -946,7 +946,7 @@ describe("workflow-contracts", () => {
         const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
         expect(call.length, file).toBe(1);
         expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
-        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', ...(call[0].with['version-policy'] !== undefined ? { 'version-policy': file.includes('ci-quality.yml') ? 'compatible' : 'exact' } : {}) };
+        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}', ...(call[0].with['version-policy'] !== undefined ? { 'version-policy': file.includes('ci-quality.yml') ? 'compatible' : 'exact' } : {}) };
         expect(call[0].with).toStrictEqual(expected);
         expect(contract.inputs['version-policy'].default).toBe('exact');
         expect(call[0].if).toBe(file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);

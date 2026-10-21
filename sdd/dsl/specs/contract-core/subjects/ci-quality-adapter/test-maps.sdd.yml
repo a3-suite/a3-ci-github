@@ -182,6 +182,7 @@ test_maps:
           - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         guarantees:
@@ -190,6 +191,7 @@ test_maps:
           - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: unsupported-native-scope
     tests:
@@ -220,6 +222,7 @@ test_maps:
           - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
         guarantees:
@@ -228,3 +231,52 @@ test_maps:
           - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
+  - contract_id: contract.ci-quality-adapter.outputs
+    case_id: unconfigured-dependency-policy
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > unconfigured dependency policy is recorded as not-run without changing the aggregate status
+        guarantees:
+          - unconfigured-dependency-policy-not-run
+          - not-run-aggregate-unchanged
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > unconfigured dependency policy is recorded as not-run without changing the aggregate status
+        guarantees:
+          - unconfigured-dependency-policy-not-run
+          - not-run-aggregate-unchanged
+  - contract_id: contract.ci-quality-adapter.outputs
+    case_id: configured-dependency-policy
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > configured dependency policy runs cargo-deny with the declared configuration
+        guarantees:
+          - configured-dependency-policy-executed
+          - configured-dependency-policy-explicit-config
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > configured dependency policy runs cargo-deny with the declared configuration
+        guarantees:
+          - configured-dependency-policy-executed
+          - configured-dependency-policy-explicit-config
+  - contract_id: contract.ci-quality-adapter.outputs
+    case_id: missing-dependency-policy-config
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > dependency policy rejects an unusable configuration before commands
+        guarantees:
+          - unusable-dependency-policy-config-stops
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > dependency policy rejects an unusable configuration before commands
+        guarantees:
+          - unusable-dependency-policy-config-stops
+  - contract_id: contract.ci-quality-adapter.outputs
+    case_id: incomplete-dependency-policy-inputs
+    tests:
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > dependency policy rejects incomplete inputs before commands
+        guarantees:
+          - unusable-dependency-policy-config-stops
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > dependency policy rejects incomplete inputs before commands
+        guarantees:
+          - unusable-dependency-policy-config-stops
