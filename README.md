@@ -21,12 +21,12 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 - 導入先は GitHub Actions を使う Git repository
 - Node.js 24 または 26 以降
 - GitHub CLI（`gh`）と `sha256sum`（取得と checksum 検証に使用）
-- 採用する exact Release（例: `v0.6.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
+- 採用する exact Release（例: `v0.7.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
 
 1. 採用する Release から fetch CLI、配布 manifest、`SHA256SUMS` を取得し、checksum を検証します。
 
    ```bash
-   gh release download v0.6.0 --repo a3-suite/a3-ci-github \
+   gh release download v0.7.0 --repo a3-suite/a3-ci-github \
      --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
    sha256sum --check SHA256SUMS
    ```
