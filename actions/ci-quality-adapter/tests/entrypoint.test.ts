@@ -167,7 +167,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
     expect(saved.results.map((entry: { id: string }) => entry.id)).toStrictEqual(scope === 'native'
       ? ['toolchain-verify', 'dependency-restore', 'lint', 'test', 'structure']
-      : ['toolchain-verify', 'dependency-restore', 'format', 'lint', 'test', 'security', 'structure']);
+      : ['toolchain-verify', 'dependency-restore', 'format', 'lint', 'test', 'security', 'dependency-policy', 'structure']);
     expect(fs.readFileSync(log, 'utf8').trim().split('\n').map(line => JSON.parse(line)[0])).toStrictEqual(scope === 'native'
       ? ['fetch', 'clippy', 'test', 'metadata'] : ['fetch', 'fmt', 'clippy', 'test', 'audit', 'metadata']);
   }
@@ -184,6 +184,107 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     expect(run.result.stderr + run.result.stdout).toMatch(/quality-adapter-(execution-scope-invalid|native-scope-unsupported)/);
     expect(fs.readFileSync(log, 'utf8')).toBe('');
     expect(fs.existsSync(run.resultPath)).toBe(false);
+  }
+});
+
+const rustPolicyFixture = (root: string) => {
+  const bin = path.join(root, 'bin');
+  fs.mkdirSync(bin);
+  fs.mkdirSync(path.join(root, 'runtime'));
+  const log = path.join(root, 'commands.jsonl');
+  fs.writeFileSync(log, '');
+  fs.writeFileSync(path.join(root, 'runtime/Cargo.toml'), '[package]\nname="fixture"\nversion="0.1.0"\n');
+  fs.writeFileSync(path.join(root, 'runtime/Cargo.lock'), '');
+  fs.writeFileSync(path.join(root, 'runtime/deny.toml'), '');
+  fs.writeFileSync(path.join(bin, 'rustc'), `#!${process.execPath}\nconsole.log('rustc 1.80.0');\n`, { mode: 0o700 });
+  fs.writeFileSync(path.join(bin, 'cargo'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2))+'\\n');\nprocess.exit(process.argv[2]==='deny'?Number(process.env.DENY_EXIT||0):0);\n`, { mode: 0o700 });
+  const inputs = { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality', 'INPUT_TOOLCHAIN-VERSION': '1.80.0', 'INPUT_LANGUAGE-PROFILE': 'rust',
+    CI_CARGO_MANIFEST_PATH: 'runtime/Cargo.toml', CI_CARGO_LOCK_PATH: 'runtime/Cargo.lock', CI_CARGO_DENY_VERSION: '', CI_CARGO_DENY_CONFIG_PATH: '', PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+  const commands = () => fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+  return { inputs, commands };
+};
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-dependency-policy
+test('unconfigured dependency policy is recorded as not-run without changing the aggregate status', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-unconfigured-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs, commands } = rustPolicyFixture(root);
+  // Act
+  const run = runAction(root, 'ignored', inputs);
+  const payload = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
+  // Assert
+  expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
+  expect(payload.status).toBe('success');
+  expect(payload.results.find((entry: { id: string }) => entry.id === 'dependency-policy')).toStrictEqual(expect.objectContaining({ status: 'not-run', reason: 'not-configured', exitCode: null }));
+  expect(payload.results.filter((entry: { status: string }) => entry.status !== 'not-run').every((entry: { status: string }) => entry.status === 'success')).toBe(true);
+  expect(commands().map(args => args[0])).not.toContain('deny');
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*success/s);
+  const timing = run.result.stderr.split('\n').filter(line => line.startsWith('ci-quality-command-timing:')).map(line => JSON.parse(line.slice('ci-quality-command-timing:'.length)))
+    .find(entry => entry.id === 'dependency-policy');
+  expect(timing).toStrictEqual(expect.objectContaining({ phase: 'command', status: 'not-run', exit_code: null }));
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-dependency-policy
+test('configured dependency policy runs cargo-deny with the declared configuration', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-configured-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs, commands } = rustPolicyFixture(root);
+  for (const [exit, status] of [['0', 'success'], ['2', 'failed']] as const) {
+    fs.writeFileSync(path.join(root, 'commands.jsonl'), '');
+    // Act
+    const run = runAction(root, 'ignored', { ...inputs, CI_CARGO_DENY_VERSION: '0.20.2', CI_CARGO_DENY_CONFIG_PATH: 'runtime/deny.toml', DENY_EXIT: exit });
+    const payload = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
+    // Assert
+    expect(run.result.status).toBe(status === 'success' ? 0 : 1);
+    expect(payload.status).toBe(status);
+    expect(payload.results.find((entry: { id: string }) => entry.id === 'dependency-policy').status).toBe(status);
+    expect(commands().find(args => args[0] === 'deny')).toStrictEqual(['deny', '--manifest-path', 'runtime/Cargo.toml', '--config', 'runtime/deny.toml', 'check', 'bans', 'licenses', 'sources']);
+  }
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-dependency-policy
+test('dependency policy rejects an unusable configuration before commands', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-unusable-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs, commands } = rustPolicyFixture(root);
+  fs.mkdirSync(path.join(root, 'runtime/deny-directory'));
+  for (const [config, code] of [['runtime/missing-deny.toml', 'environment-path-missing'], ['runtime/deny-directory', 'environment-path-missing'],
+    [path.join(root, 'runtime/deny.toml'), 'environment-path-invalid'], ['../deny.toml', 'environment-path-missing']] as const) {
+    for (const scope of ['all', 'native']) {
+      // Act
+      const run = runAction(root, 'ignored', { ...inputs, 'INPUT_EXECUTION-SCOPE': scope, CI_CARGO_DENY_VERSION: '0.20.2', CI_CARGO_DENY_CONFIG_PATH: config });
+      // Assert
+      expect(run.result.status, `${scope} ${config}`).toBe(1);
+      expect(run.result.stderr + run.result.stdout).toContain(`"reason":"quality-adapter-${code}"`);
+      expect(commands()).toStrictEqual([]);
+      expect(fs.existsSync(run.resultPath)).toBe(false);
+    }
+  }
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-dependency-policy
+test('dependency policy rejects incomplete inputs before commands', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-incomplete-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs, commands } = rustPolicyFixture(root);
+  for (const partial of [{ CI_CARGO_DENY_VERSION: '0.20.2' }, { CI_CARGO_DENY_CONFIG_PATH: 'runtime/deny.toml' }]) {
+    for (const scope of ['all', 'native']) {
+      // Act
+      const run = runAction(root, 'ignored', { ...inputs, 'INPUT_EXECUTION-SCOPE': scope, ...partial });
+      // Assert
+      expect(run.result.status, scope).toBe(1);
+      expect(run.result.stderr + run.result.stdout).toContain('"reason":"quality-adapter-optional-command-incomplete"');
+      expect(commands()).toStrictEqual([]);
+      expect(fs.existsSync(run.resultPath)).toBe(false);
+    }
   }
 });
 

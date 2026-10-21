@@ -1,0 +1,6 @@
+# 書式と、システムが常に除外・保護するものは
+# project-skill-deploy スキルの assets/templates/skill-deploy.yml を参照する。
+version: 1
+name: project-skill-deploy-config
+sources:
+  - root: skills

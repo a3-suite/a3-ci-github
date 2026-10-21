@@ -11,7 +11,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   // contract_id: contract.ci-quality-toolchain.preparation
   test('quality toolchain contract selects only fixed profile dependencies without project execution', () => {
     expect(action.runs.using).toBe('composite');
-    expect(Object.keys(action.inputs).sort()).toStrictEqual(['cargo-audit-version', 'language-profile', 'toolchain-version', 'uv-version', 'version-policy']);
+    expect(Object.keys(action.inputs).sort()).toStrictEqual(['cargo-audit-version', 'cargo-deny-version', 'language-profile', 'toolchain-version', 'uv-version', 'version-policy']);
     expect(action.inputs['language-profile'].required).toBe(true);
     expect(action.inputs['toolchain-version'].required).toBe(true);
     expect(action.inputs['version-policy'].default).toBe('exact');
@@ -36,4 +36,21 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     }
   });
 
+  // contract_id: contract.ci-quality-toolchain.preparation
+  test('cargo-deny setup runs only when its version is requested', () => {
+    // Arrange
+    const steps = action.runs.steps;
+    // Act
+    const setup = steps.find((step) => step.id === 'cargo-deny');
+    const validation = steps.find((step) => step.id === 'validate-inputs');
+    // Assert
+    expect(action.inputs['cargo-deny-version']).toStrictEqual(expect.objectContaining({ required: false, default: '' }));
+    expect(setup.if).toBe("inputs.language-profile == 'rust' && inputs.cargo-deny-version != ''");
+    expect(setup.env).toStrictEqual({ CI_CARGO_DENY_VERSION: '${{ inputs.cargo-deny-version }}' });
+    expect(setup.run).toBe('bash "${GITHUB_ACTION_PATH}/scripts/setup-cargo-deny.sh"');
+    expect(steps.indexOf(setup)).toBeGreaterThan(steps.findIndex((step) => step.id === 'cargo-audit'));
+    expect(steps.indexOf(setup)).toBeLessThan(steps.findIndex((step) => step.id === 'publish-version'));
+    expect(validation.run).toContain("quality-toolchain-cargo-deny-version-invalid");
+    expect(steps.at(-1).env.CARGO_DENY_RESULT).toBe('${{ steps.cargo-deny.outcome }}');
+  });
 });

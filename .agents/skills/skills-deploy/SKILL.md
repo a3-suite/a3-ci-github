@@ -13,7 +13,7 @@ description: a3-ci-github の公開 Agent Skill（`skills/`）を外部スキル
 ## 原則
 
 - 正本は `skills/` でSKILL.mdを持つ公開root とし、配備先を直接編集しない。
-- source root、対象スキル、配備先を明示し、作業ディレクトリや既知のホームディレクトリから推測しない。
+- 対象スキルは `.agents/skill-deploy.yml`、配備先は `.env` で明示し、作業ディレクトリや既知のホームディレクトリから推測しない。
 - dry-run で更新、stale、管理外、prune 候補を確認してから反映する。
 - 外部スキルルートへの書き込みと削除は、利用者が明示的に許可した場合だけ実行する。
 - workflow、Action、runtime、lint rule は公開 Agent Skill に複製しない。

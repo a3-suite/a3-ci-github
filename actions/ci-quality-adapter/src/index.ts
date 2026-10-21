@@ -22,13 +22,13 @@ export const run = (): void => {
     }
     const scope = readActionInput(core.getInput, 'execution-scope') || 'all';
     if (scope !== 'all' && scope !== 'native') throw new DiagnosticError('quality-adapter-execution-scope-invalid');
+    let excludedCommandIds: readonly string[] = [];
     if (scope === 'native') {
       if (!standard) throw new DiagnosticError('quality-adapter-native-scope-unsupported');
-      const sharedIds = standardSharedQualityCommandIds(standard.id);
-      if (sharedIds.some(id => !bundle.commands.some(command => command.id === id))) {
+      excludedCommandIds = standardSharedQualityCommandIds(standard.id);
+      if (excludedCommandIds.some(id => !bundle.commands.some(command => command.id === id))) {
         throw new DiagnosticError('quality-adapter-standard-bundle-metadata-invalid');
       }
-      bundle.commands = bundle.commands.filter(command => !sharedIds.includes(command.id));
     }
     const resultPath = path.resolve(readActionInput(core.getInput, 'result-path', { required: true }));
     diagnostic.confirmed();
@@ -42,6 +42,7 @@ export const run = (): void => {
       requireTrustedProjectScripts: core.getBooleanInput('require-trusted-project-scripts'),
       trustedProjectRoot: readActionInput(core.getInput, 'trusted-project-root') || undefined,
       commandTimings,
+      excludedCommandIds,
     });
     for (const timing of commandTimings) process.stderr.write(`ci-quality-command-timing:${JSON.stringify({
       phase: timing.phase,

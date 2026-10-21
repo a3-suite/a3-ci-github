@@ -27,6 +27,8 @@ jobs:
       cargo-audit-version: <cargo-audit-version>
       cargo-manifest-path: <cargo-manifest-path>
       cargo-lock-path: <cargo-lock-path>
+      cargo-deny-version: <optional-cargo-deny-version>
+      cargo-deny-config-path: <optional-cargo-deny-config-path>
       jq-version: <optional-jq-version>
       standard-bundle-id: <standard-bundle-id>
       adapter-descriptor: <adapter-descriptor>
@@ -39,6 +41,6 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@9b2485881091c3ce649944dbcdd19c66d2b27db7
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@d7ff4ce36d07790295cf473f52c963ea094ca3dd
         with:
           summary-json: '{"jobs":[{"unit":"quality","execution":"fixed reusable quality workflow","rawResult":"${{ needs.quality.result }}","applicable":true,"reason":"reusable quality workflow result: ${{ needs.quality.result }}"}]}'

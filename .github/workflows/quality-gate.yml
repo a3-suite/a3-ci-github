@@ -146,6 +146,7 @@ jobs:
           actions/ci-github-toolchain-verifier/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/action-contract.test.mjs
           actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
+          actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
 
       - name: Test repository commit gate scripts
         shell: bash

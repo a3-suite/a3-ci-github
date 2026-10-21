@@ -5,8 +5,9 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { parseDocument } from 'yaml';
 
-type CommandSpec = { id: string; command: string; args?: string[] };
-type CommandResult = CommandSpec & { status: 'success' | 'failed' | '判定不能'; exitCode: number | null; stdout: string; stderr: string };
+type CommandSpec = { id: string; command: string; args?: string[]; enabledBy?: string; requiredEnvironmentPaths?: string[] };
+// not-run marks an optional command whose enabling environment value is empty; it never counts as success or changes the aggregate status.
+type CommandResult = CommandSpec & { status: 'success' | 'failed' | '判定不能' | 'not-run'; exitCode: number | null; stdout: string; stderr: string; reason?: 'not-configured' };
 export type AdapterCommandTiming = { phase: 'toolchain' | 'preparation' | 'command'; id: string; elapsedMs: number; status: CommandResult['status']; exitCode: number | null };
 type ProjectSettings = { requiredFiles: string[]; requiredScripts: string[]; requiredEnvironmentPaths: string[] };
 type Toolchain = { versionEnv: string; verify: CommandSpec };
@@ -19,7 +20,7 @@ export type AdapterBundle = {
 export type AdapterOptions = {
   sourceRoot: string; languageProfile?: string; toolchainVersion: string;
   requireTrustedProjectScripts: boolean; trustedProjectRoot?: string; environment?: NodeJS.ProcessEnv;
-  commandTimings?: AdapterCommandTiming[];
+  commandTimings?: AdapterCommandTiming[]; excludedCommandIds?: readonly string[];
 };
 export type AdapterPayload = { schema: 'ci.adapter-runner.v1'; adapter: string; contract: string; languageProfiles: string[]; status: 'success' | 'failed' | '判定不能'; results: CommandResult[] };
 
@@ -33,6 +34,11 @@ const strings = (value: unknown, field: string, optional = false): string[] => {
   if (!Array.isArray(value) || (!optional && value.length === 0)) throw new DiagnosticError(`quality-adapter-${field}-invalid`);
   return value.map((item) => text(item, field));
 };
+const environmentName = (value: unknown): string => {
+  const name = text(value, 'environment-name');
+  if (!/^CI_[A-Z0-9_]+$/.test(name)) throw new DiagnosticError(`quality-adapter-environment-path-name-invalid:${name}`);
+  return name;
+};
 const command = (value: unknown, fallbackId: string, taken: Set<string>): CommandSpec => {
   if (!record(value)) throw new DiagnosticError('quality-adapter-command-invalid');
   let id: string;
@@ -45,7 +51,14 @@ const command = (value: unknown, fallbackId: string, taken: Set<string>): Comman
     id = text(value.id, 'command-id');
   }
   taken.add(id);
-  return { id, command: text(value.command, 'command'), ...(value.args === undefined ? {} : { args: strings(value.args, 'args') }) };
+  const spec: CommandSpec = { id, command: text(value.command, 'command'), ...(value.args === undefined ? {} : { args: strings(value.args, 'args') }) };
+  if (value.enabledBy !== undefined) spec.enabledBy = environmentName(value.enabledBy);
+  if (value.requiredEnvironmentPaths !== undefined) {
+    // Command-scoped paths exist only to configure an optional command, so they require its enabling variable.
+    if (spec.enabledBy === undefined) throw new DiagnosticError('quality-adapter-command-environment-paths-invalid');
+    spec.requiredEnvironmentPaths = strings(value.requiredEnvironmentPaths, 'command-environment-paths').map(environmentName);
+  }
+  return spec;
 };
 const commands = (value: unknown, field: string, taken: Set<string>): CommandSpec[] => {
   if (!Array.isArray(value) || value.length === 0) throw new DiagnosticError(`quality-adapter-${field}-invalid`);
@@ -87,6 +100,7 @@ export const parseAdapterBundle = (content: string): AdapterBundle => {
     preparation: commands(value.preparation, 'preparation', commandIds), commands: commands(value.commands, 'commands', commandIds),
   };
   if (bundle.contract !== 'quality-scripts') throw new DiagnosticError('quality-adapter-contract-invalid');
+  if ([...bundle.preparation, bundle.toolchain.verify].some((spec) => spec.enabledBy !== undefined)) throw new DiagnosticError('quality-adapter-optional-command-phase-invalid');
   const ids = new Set<string>();
   const assetIds = new Set<string>();
   for (const asset of bundle.assets) {
@@ -116,9 +130,9 @@ const packageScripts = (root: string): Record<string, string> => {
   return scripts;
 };
 
-const verifyPaths = (settings: ProjectSettings, root: string, environment: NodeJS.ProcessEnv): void => {
+const verifyPaths = (names: string[], root: string, environment: NodeJS.ProcessEnv): void => {
   const realRoot = fs.realpathSync(root);
-  for (const name of settings.requiredEnvironmentPaths) {
+  for (const name of names) {
     if (!/^CI_[A-Z0-9_]+$/.test(name)) throw new DiagnosticError(`quality-adapter-environment-path-name-invalid:${name}`);
     const value = environment[name];
     if (!value || path.isAbsolute(value) || /[\0\r\n]/.test(value)) throw new DiagnosticError(`quality-adapter-environment-path-invalid:${name}`);
@@ -146,7 +160,7 @@ const runCommand = (spec: CommandSpec & { args: string[] }, root: string, enviro
 
 export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload => {
   const sourceRoot = fs.realpathSync(options.sourceRoot);
-  const environment = { ...(options.environment ?? process.env), CI_TOOLCHAIN_VERSION: options.toolchainVersion };
+  const environment: NodeJS.ProcessEnv = { ...(options.environment ?? process.env), CI_TOOLCHAIN_VERSION: options.toolchainVersion };
   if (!options.toolchainVersion || /[\0\r\n]/.test(options.toolchainVersion)) throw new DiagnosticError('quality-adapter-toolchain-version-missing');
   if (options.languageProfile && !bundle.languageProfiles.includes(options.languageProfile)) throw new DiagnosticError('quality-adapter-language-profile-mismatch');
   if (options.requireTrustedProjectScripts && bundle.projectSettings.requiredScripts.length) {
@@ -155,10 +169,21 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
     const trusted = packageScripts(fs.realpathSync(options.trustedProjectRoot));
     for (const name of bundle.projectSettings.requiredScripts) if (current[name] === undefined || current[name] !== trusted[name]) throw new DiagnosticError(`quality-adapter-project-script-binding-mismatch:${name}`);
   }
-  verifyPaths(bundle.projectSettings, sourceRoot, environment);
+  verifyPaths(bundle.projectSettings.requiredEnvironmentPaths, sourceRoot, environment);
+  const enabled = (spec: CommandSpec): boolean => spec.enabledBy === undefined || Boolean(environment[spec.enabledBy]);
+  for (const spec of bundle.commands) {
+    const paths = spec.requiredEnvironmentPaths ?? [];
+    // A half-configured optional command must stop instead of silently running with defaults or being skipped.
+    if (paths.some((name) => Boolean(environment[name]) !== enabled(spec))) throw new DiagnosticError(`quality-adapter-optional-command-incomplete:${spec.id}`);
+    if (enabled(spec)) verifyPaths(paths, sourceRoot, environment);
+  }
   const verifyCommand = prepareCommand(bundle.toolchain.verify, environment, []);
   const preparationCommands = bundle.preparation.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
-  const commands = bundle.commands.map((spec) => prepareCommand(spec, environment, bundle.projectSettings.requiredEnvironmentPaths));
+  // Scope exclusion applies after the settings checks so that every scope rejects the same unusable configuration.
+  const executed = bundle.commands.filter((spec) => !options.excludedCommandIds?.includes(spec.id));
+  const commands = executed.map((spec) => enabled(spec)
+    ? prepareCommand(spec, environment, [...bundle.projectSettings.requiredEnvironmentPaths, ...(spec.requiredEnvironmentPaths ?? [])])
+    : undefined);
   const results: CommandResult[] = [];
   const recordResult = (phase: AdapterCommandTiming['phase'], timed: ReturnType<typeof runCommand>): void => {
     results.push(timed.result);
@@ -183,7 +208,13 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
       recordResult('preparation', timed);
       if (timed.result.status !== 'success') break;
     }
-    if (results.every((result) => result.status === 'success')) for (const spec of commands) recordResult('command', runCommand(spec, sourceRoot, environment));
+    if (results.every((result) => result.status === 'success')) {
+      executed.forEach((spec, index) => {
+        const prepared = commands[index];
+        recordResult('command', prepared ? runCommand(prepared, sourceRoot, environment)
+          : { elapsedMs: 0, result: { ...spec, status: 'not-run', reason: 'not-configured', exitCode: null, stdout: '', stderr: '' } });
+      });
+    }
   }
   const status = results.some((result) => result.status === 'failed') ? 'failed' : results.some((result) => result.status === '判定不能') ? '判定不能' : 'success';
   return { schema: 'ci.adapter-runner.v1', adapter: bundle.id, contract: bundle.contract, languageProfiles: bundle.languageProfiles, status, results };

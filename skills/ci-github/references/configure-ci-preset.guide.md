@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | workflow 構成 | `.github/workflows/` | trigger、runner、固定 Action／Reusable Workflow SHA、固有入力 |
 | 非秘匿の環境・運用値 | GitHub Variables（下記の必要性判定で必須または条件付きとなる場合だけ） | environment選択、運用ポリシー |
-| toolchain・tool version | projectのversion設定またはworkflow初期パラメータ | 言語runtime、uv、cargo-audit、gh、jq |
+| toolchain・tool version | projectのversion設定またはworkflow初期パラメータ | 言語runtime、uv、cargo-audit、cargo-deny、gh、jq |
 | 秘匿値 | GitHub Secrets | registry token など |
 | 実行ごとの入力 | `workflow_dispatch.inputs` | 例外的な request または手動 publication request の非秘匿入力 |
 | quality adapter | workflowの標準bundle ID、または独自 `.ci/adapters/*.yml` | 選択とproject固有設定。標準commandは固定Actionが供給 |
@@ -239,6 +239,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 1. `assets/registry/ci-script-assets.yml`の`adapterBundles`から、`languageProfiles`が対象言語と一致する
    entryを選ぶ。主callerでは `delivery: action` のentryのIDを `jobs.quality.with.standard-bundle-id` に対応する生成設定へ渡し、`adapter-descriptor` は空にする。独自descriptor経路では標準IDを空にする。標準bundleをdescriptorとして配置する経路は使用しない。optional／Release品質stepの選択は引き続き `CI_STANDARD_BUNDLE_ID`／`CI_ADAPTER_DESCRIPTOR`。選択契約は `references/ci-adapter-bundles.reference.yml` を参照する。
    plan前にlanguage profile、toolchain、runner、保護branch、必要なtoolのexact版を選ぶ。選択した言語で使わないuvまたはcargo-auditの版と、主qualityで使わないjqの版は、対応する生成設定へJSON文字列の空値を渡す。
+   標準Rustで依存ポリシー検査（cargo-deny の bans／licenses／sources）を使う場合は、`cargo-deny-version` に0.20.0以上のexact版、`cargo-deny-config-path` にproject root内の既存設定fileを指定する。使わない場合は両方を空値にし、結果は `not-run` として記録される。一方だけの指定は停止する。
 
 2. `references/deploy-ci-assets.guide.md`に従って`quality-gate` presetをfetchする。
    planに必要なruntimeを、取得済みdistributionの`runtime/preset/`固定依存定義から
@@ -302,7 +303,7 @@ platform 固有の runtime、artifact、installer の検証が必要な project 
 manifestの作成・追加・変更・削除前に、[OS・版の選定と廃止判断](references/workflow-version-policy.reference.md#os-version-selection)を適用し、対応範囲・代表OS・共通検査・固定粒度の判断を既存の設計またはissueへ残す。
 
 1. `.ci/platform-manifest.yml` に platform を宣言する（`id`、`runner`、`target`）。consumerが選ぶ版付きHosted labelと初回導入時の制約は[runner trust policy](references/runner-trust-policy.reference.md#platform-quality-check)に従う。
-2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。 任意の `sharedStandardChecks: true` は、標準Rustのformat/securityについてHOMEとprojectの設定・OS/architecture対象が全runnerで同等と利用projectが確認した場合だけ指定する。未指定/falseは全検査を維持し、trueは信頼済みbaseの宣言だけ有効になる。先頭platformが全検査、残りがnative検査を実行し、全platform成功を要求する。PR headだけの宣言やbootstrapでは省略しない。
+2. `.ci/quality-platforms.yml` に検証する platform の `id` だけを列挙する。manifest に無い id、重複 id は preflight で停止する。 任意の `sharedStandardChecks: true` は、標準Rustのformat/security/dependency-policyについてHOMEとprojectの設定・OS/architecture対象が全runnerで同等と利用projectが確認した場合だけ指定する。未指定/falseは全検査を維持し、trueは信頼済みbaseの宣言だけ有効になる。先頭platformが全検査、残りがnative検査を実行し、全platform成功を要求する。PR headだけの宣言やbootstrapでは省略しない。
 3. 配布ガイドのoptional platform品質の取得手順に従い、callerとcallee検証用資材をfetchし、planにも同じasset選択を渡す。`jobs.platforms.with`に対応する製品設定を`--set`で渡し、確認済みplanのapplyで薄いcallerを配置する。入力定義はproviderの `.github/workflows/ci-quality-platforms.yml`、固定参照・公開状態はregistryの `qualityPlatformsReusableWorkflow` を参照する。calleeはconsumerへコピーしない。platform workflowのみの配置は停止する。companionのみの先行配置は後続導入のために許容する。
 4. lock を再生成し、preflight を通す。
 5. callerの `platform-summary` は `quality-gate-platforms / summary` の固定名で、calleeの失敗・中断・未実施・結果欠落を成功に読み替えない。provider側は期待platformの欠落、docs-only時の対象外記録、matrix結果を集約する。Hostedでcheck名と失敗伝播を受け入れるまで利用可能扱いにしない。

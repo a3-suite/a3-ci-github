@@ -109,3 +109,32 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
+  - contract_id: contract.ci-quality-toolchain.preparation
+    case_id: selected-cargo-deny
+    tests:
+      - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > verified cargo-deny archive is extracted executed and exported without cargo compilation
+        guarantees:
+          - selected-quality-toolchain-ready
+  - contract_id: contract.ci-quality-toolchain.preparation
+    case_id: invalid-cargo-deny-version
+    tests:
+      - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > invalid cargo-deny version stops before download or source install
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+  - contract_id: contract.ci-quality-toolchain.preparation
+    case_id: registered-cargo-deny-failure
+    tests:
+      - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > registered cargo-deny asset failures stop without source fallback or PATH output
+        guarantees:
+          - registered-failure-no-source-fallback
+          - registered-failure-no-path-output
+  - contract_id: contract.ci-quality-toolchain.preparation
+    case_id: unrequested-cargo-deny
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > cargo-deny setup runs only when its version is requested
+        guarantees:
+          - selected-profile-dependencies-only

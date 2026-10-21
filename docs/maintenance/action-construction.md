@@ -60,6 +60,12 @@ mainへの統合で確認する内容は[mainへの統合](../release/README.md#
 
 接続候補の版は未公開でなければなりません。同名のtagが存在する版は、実装SHAを含まない場合も候補にしません。tagの削除・再作成の可否はgit-branch-strategyの`tagDeletion`に従い、再作成する場合も削除後に通常の候補として検証します。
 
+release branch作成後にdevelopの版を上げる時機はgit-branch-strategyの`versionPolicy.developAdvancement`に従い、対象版のRelease公開を待ちません。このためdevelopでは、registryの接続先版のtagがまだ無いまま、VERSIONが次の版へ進んだ状態があり得ます。CIとテストの検査モードは、この状態でも手順が前後しないように次のとおり選びます。
+
+- registryの接続先版がVERSIONと一致し、そのexact tagがまだ無い場合だけ、接続候補として候補検査（`--candidate`）を行います。
+- それ以外は、既存の接続先に対する準備検査（`--preparation`）を行います。公開済みtagを必須にする公開検査（`--release-tag`）と引数なしの既定検査は、tagの作成前に使いません。
+- テストfixtureで公開済みのtagを模す場合は、tagを実装コミットAへ付け、作業中のHEADのVERSIONに依存させません。
+
 ### 公開済みtagへ接続した状態からの回復
 
 registryの接続先版のtagが既に公開済みで、候補検査が`implementation-candidate-release-tag-exists`で停止する状態は、上記の順序から外れています。版運用の正本（ブランチ戦略）に従って未公開の対象版を決め、通常の順序のまま回復します。実装コミットAで`VERSION`を対象版へ更新し、直後の接続コミットBで対象版とAの確定済みSHAへ接続して、候補検査の成功を必須とします。Bが成功するまでAを単独で公開・統合しません。
@@ -118,7 +124,7 @@ actionlintは `.github/actionlint.yaml` を使用します。publication workflo
 
 検査は `a3-lint.repository.yaml` から選択し、正常・違反・誤検知防止は `tests/a3-lint-rule-regression.mjs` で実 a3-lint に対して確認します。package / 配布物 / テストの存在や dist 同一性は lint に重複実装せず、既存 repository gate が所有します。
 
-`a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIはregistryの対象版がVERSIONと一致しexact tagがまだない接続候補では事前tag不要の候補検査、それ以外では既存tagの固定参照検査を行い、Release資材生成前は最終tagの公開検査とworkflow契約回帰を実行し、外部CLIの未公開能力に依存させません。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。
+`a3-lint.repository.yaml` は外部 Skill・`A3_SKILLS_ROOT` を必要としません。言語・Vitest の外部 Skill 検査は `a3-lint.yaml` に分離します。`npm run lint:repository` は3つの構築用profile、Lua規則回帰、provider runner接続を含むworkflow契約回帰を順に実行します。ローカル検証は `A3_LINT_BIN=/absolute/path/to/a3-lint npm run lint:repository` で利用可能なCLIを明示して実行します。未指定ならPATH上の `a3-lint` を使います。版番号を固定せず、各profileの能力必須宣言と実CLI回帰で必要な能力・検証結果を確認します。自己CIは[固定参照の更新順序](#固定参照の更新順序)の検査モードで固定参照を検査し、Release資材生成前は最終tagの公開検査とworkflow契約回帰を実行し、外部CLIの未公開能力に依存させません。公開版a3-lintによるLua規則のCI検証は、必要能力を持つ公開版の実体とchecksumを確認した後に別途接続します。設定と実行scriptは非配布のrepository保守資材であり、provider callee・consumer runtimeへ組み込みません。
 
 内部依存は `runtime/repository/check-runtime-boundaries.mjs` を source verification gate から実行します。既存の固定版 TypeScript compiler で Action entrypoint から到達する local source の静的 import、reexport、literal dynamic import、直接の literal require を解決し、別 Action の内部 source への実装依存、runtime から Action への逆依存、runtime 内の実装循環を拒否します。type-only import、テスト・保守 CLI の独立 entrypoint、任意の動的 module 名の網羅解析は対象外です。正常・違反・誤検知防止は `tests/runtime-boundaries.test.mjs` で検証します。
 

@@ -28,7 +28,7 @@ test_maps:
         guarantees:
           - ci-quality-workflow-success-observed
       - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > quality toolchain callers bind four inputs and preserve execution gates
+        symbol: workflow-contracts > quality-workflow-contract > quality toolchain callers bind five inputs and preserve execution gates
         guarantees:
           - ci-quality-workflow-success-observed
       - path: tests/workflow-contracts.test.mjs

@@ -19,7 +19,7 @@ contracts:
             - selector: resolved-toolchain-version
               meaning: Published resolved toolchain version.
             - selector: unselected-setup-state
-              meaning: Occurrence of dependency setup for an unselected language profile.
+              meaning: Occurrence of dependency setup for an unselected language profile or for an optional tool whose version input is empty.
             - selector: resolved-selector-comparison
               meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
             - selector: source-fallback-state

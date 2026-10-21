@@ -2,268 +2,185 @@
 
 from __future__ import annotations
 
-import json
-import os
+import contextlib
+import importlib.util
+import io
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 GATE = Path(__file__).resolve().parents[2] / "scripts/check_staged_skill_deploy.py"
 PROJECT_ROOT = GATE.parents[4]
+SPEC = importlib.util.spec_from_file_location("check_staged_skill_deploy", GATE)
+assert SPEC and SPEC.loader
+gate = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(gate)
 
 
-# test_level: e2e
+class FakeApi:
+    """配備判定を持たず、渡されたスナップショットと反映呼出しだけを記録する。"""
+
+    def __init__(self, plans: list[SimpleNamespace], error: Exception | None = None) -> None:
+        self.plans = plans
+        self.error = error
+        self.snapshots: list[tuple[str | None, str]] = []
+        self.applied: list[bool] = []
+
+    def plan_snapshot_change(self, project_root: Path, *, base_root: Path | None, source_root: Path):
+        if self.error:
+            raise self.error
+        read = lambda root: (root / "skills/demo/SKILL.md").read_text(encoding="utf-8") if root else None
+        self.snapshots.append((read(base_root), read(source_root)))
+        return self.plans.pop(0)
+
+    def apply_snapshot_change(self, plan: SimpleNamespace, *, delete_confirmed: bool) -> None:
+        self.applied.append(delete_confirmed)
+
+
+def plan(*, targets: bool = True, changed: bool = True, copied: tuple[str, ...] = (), stale: tuple[str, ...] = ()) -> SimpleNamespace:
+    target = SimpleNamespace(
+        target=SimpleNamespace(env_key="SKILLS_CODEX_DIR"),
+        kept_residue=(),
+        plan=SimpleNamespace(
+            target_root=Path("/target"), copied_files=tuple(Path(p) for p in copied),
+            stale_files=tuple(Path(p) for p in stale), explicit_prune_skills=(), replacement_skill_roots=(),
+        ),
+    )
+    return SimpleNamespace(
+        targets=(target,) if targets else (), changed_skills=("skills/demo",) if changed else (),
+        removed_skills=(), needs_delete_confirmation=bool(stale),
+    )
+
+
+# test_level: integration
 # flow_id: repository-staged-skill-deploy-gate
 class SkillDeployGateTest(unittest.TestCase):
     def setUp(self) -> None:
         (PROJECT_ROOT / "tmp").mkdir(exist_ok=True)
-        self.temporary = tempfile.TemporaryDirectory(
-            prefix="skill-deploy-gate-", dir=PROJECT_ROOT / "tmp"
-        )
-        self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
-        self.repo = self.root / "repo"
-        self.repo.mkdir()
-        self.target = self.root / "target"
-        self.target.mkdir()
-        self.cli = self.root / "deploy.py"
-        self.cli.write_text(
-            """import argparse, json, os
-from pathlib import Path
-p = argparse.ArgumentParser()
-p.add_argument('--source-root')
-p.add_argument('--target-root')
-p.add_argument('--json', action='store_true')
-p.add_argument('--dry-run', action='store_true')
-p.add_argument('--yes', action='store_true')
-a = p.parse_args()
-s = Path(a.source_root) / 'demo/SKILL.md'
-t = Path(a.target_root) / 'demo/SKILL.md'
-updates = [] if t.is_file() and t.read_bytes() == s.read_bytes() else ['demo/SKILL.md']
-stale = ['stale.txt'] if (Path(a.target_root) / 'stale.txt').exists() else []
-calls = Path(a.target_root).parent / 'dry-runs'
-if a.dry_run:
-    count = int(calls.read_text()) + 1 if calls.exists() else 1
-    calls.write_text(str(count))
-    stale = stale or (['changed.txt'] if count >= int(os.environ.get('FIXTURE_CHANGE_AT_DRY_RUN') or 99) else [])
-else:
-    t.parent.mkdir(exist_ok=True)
-    t.write_bytes(s.read_bytes())
-plan = {'updates': updates, 'stale_files': stale, 'explicit_prune_skills': [], 'replacement_skill_roots': []}
-print(os.environ.get('FIXTURE_PLAN') or json.dumps(plan))
-""",
-            encoding="utf-8",
-        )
+        temporary = tempfile.TemporaryDirectory(prefix="skill-deploy-gate-", dir=PROJECT_ROOT / "tmp")
+        self.addCleanup(temporary.cleanup)
+        self.repo = Path(temporary.name)
         self.git("init", "-q")
         self.git("config", "user.name", "Fixture")
         self.git("config", "user.email", "fixture@example.test")
-        skill = self.repo / "skills/demo/SKILL.md"
-        skill.parent.mkdir(parents=True)
-        skill.write_text("current public skill\n", encoding="utf-8")
-        (self.repo / "README.md").write_text("initial\n", encoding="utf-8")
+        self.skill = self.repo / "skills/demo/SKILL.md"
+        self.skill.parent.mkdir(parents=True)
+        self.skill.write_text("committed\n", encoding="utf-8")
         self.git("add", ".")
         self.git("commit", "-qm", "fixture")
 
-    def git(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", *args], cwd=self.repo, text=True, capture_output=True, check=True
-        )
+    def git(self, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=self.repo, capture_output=True, check=True)
 
-    def stage_repository_change(self) -> None:
-        (self.repo / "README.md").write_text("changed\n", encoding="utf-8")
-        self.git("add", "README.md")
+    def stage(self, text: str) -> None:
+        self.skill.write_text(text, encoding="utf-8")
+        self.git("add", ".")
 
-    def configure_destination(self) -> None:
-        self.git("config", "--local", "a3-ci-github.skillDeployRoot", str(self.target))
+    def run_gate(self, api: FakeApi) -> tuple[int, str]:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            code = gate.main(["--project-skill-deploy-root", "/unused"], repo_root=self.repo, load_api=lambda _root: api)
+        return code, output.getvalue()
 
-    def run_gate(self, **extra: str) -> subprocess.CompletedProcess[str]:
-        environment = os.environ.copy()
-        environment.pop("A3_CI_GITHUB_SKILL_DEPLOY_ROOT", None)
-        environment.update(
-            A3_REPO_ROOT=str(self.repo), A3_PROJECT_SKILL_DEPLOY_CLI=str(self.cli), **extra
-        )
-        return subprocess.run(
-            [sys.executable, str(GATE)], env=environment, text=True,
-            capture_output=True, check=False,
-        )
-
-    def test_non_skill_commit_repairs_existing_deployment_drift(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("auto-deployed", result.stdout)
-        self.assertEqual(
-            (self.target / "demo/SKILL.md").read_bytes(),
-            (self.repo / "skills/demo/SKILL.md").read_bytes(),
-        )
-
-    def test_missing_destination_stops_commit(self) -> None:
-        self.stage_repository_change()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("STOP", result.stderr)
-        self.assertFalse((self.target / "demo").exists())
+    def test_staged_snapshot_is_planned_and_unstaged_content_is_not(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        self.skill.write_text("unstaged\n", encoding="utf-8")
+        api = FakeApi([plan(copied=("demo/SKILL.md",)), plan()])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 0, output)
+        self.assertEqual(api.snapshots[0], ("committed\n", "staged\n"))
+        self.assertEqual(api.applied, [False])
+        self.assertIn("PASS (auto-deployed updates=1, deletions=0)", output)
 
     def test_no_staged_commit_is_not_applicable(self) -> None:
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("非適用", result.stdout)
+        # Arrange
+        api = FakeApi([])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 0)
+        self.assertIn("非適用", output)
+        self.assertEqual(api.snapshots, [])
 
-    def test_unstaged_public_source_is_not_deployed(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        (self.repo / "skills/demo/SKILL.md").write_text("unstaged\n", encoding="utf-8")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse((self.target / "demo").exists())
+    def test_missing_destination_stops_commit(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([plan(targets=False)])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 1)
+        self.assertIn("SKILLS_<KEY>_DIR", output)
+        self.assertEqual(api.applied, [])
+
+    def test_commit_without_skill_change_is_not_applicable(self) -> None:
+        # Arrange
+        (self.repo / "README.md").write_text("changed\n", encoding="utf-8")
+        self.git("add", "README.md")
+        api = FakeApi([plan(changed=False)])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 0)
+        self.assertIn("no public skill change", output)
+        self.assertEqual(api.applied, [])
 
     def test_deletion_candidate_stops_before_updates(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        (self.target / "stale.txt").write_text("keep\n", encoding="utf-8")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse((self.target / "demo").exists())
-        self.assertTrue((self.target / "stale.txt").exists())
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([plan(copied=("demo/SKILL.md",), stale=("demo/old.md",))])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 1)
+        self.assertIn("/target/demo/old.md", output)
+        self.assertEqual(api.applied, [])
 
-    def commit_and_stage_removed_skill(self, keep_asset: bool = False) -> None:
-        old = self.repo / "skills/old"
-        (old / "references").mkdir(parents=True)
-        (old / "SKILL.md").write_text("old public skill\n", encoding="utf-8")
-        (old / "references/guide.md").write_text("guide\n", encoding="utf-8")
-        self.git("add", ".")
-        self.git("commit", "-qm", "old skill")
-        if keep_asset:
-            self.git("rm", "-q", "skills/old/SKILL.md")
-        else:
-            self.git("rm", "-q", "-r", "skills/old")
+    def test_matching_destination_passes_without_writing(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([plan()])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 0)
+        self.assertIn("updates=0", output)
+        self.assertEqual(api.applied, [])
 
-    def test_removed_skill_still_deployed_stops_before_updates(self) -> None:
-        self.configure_destination()
-        self.commit_and_stage_removed_skill()
-        (self.target / "old").mkdir()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("配備先に残っています", result.stderr)
-        self.assertTrue((self.target / "old").exists())
-        self.assertFalse((self.target / "demo").exists())
+    def test_remaining_drift_after_apply_stops(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([plan(copied=("demo/SKILL.md",)), plan(copied=("demo/SKILL.md",))])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 1)
+        self.assertIn("自動反映後も", output)
 
-    def test_removed_skill_absent_from_destination_continues(self) -> None:
-        self.configure_destination()
-        self.commit_and_stage_removed_skill()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 0, result.stderr)
+    def test_destination_change_after_apply_stops(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([plan(copied=("demo/SKILL.md",)), plan(targets=False)])
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 1)
+        self.assertIn("配備先が変わりました", output)
 
-    def test_removed_nested_skill_still_deployed_stops(self) -> None:
-        self.configure_destination()
-        child = self.repo / "skills/old/child/SKILL.md"
-        child.parent.mkdir(parents=True)
-        child.write_text("nested public skill\n", encoding="utf-8")
-        self.commit_and_stage_removed_skill()
-        (self.target / "child").mkdir()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("入れ子", result.stderr)
-
-    def test_removed_group_without_skill_md_stops(self) -> None:
-        self.configure_destination()
-        child = self.repo / "skills/group/child/SKILL.md"
-        child.parent.mkdir(parents=True)
-        child.write_text("nested public skill\n", encoding="utf-8")
-        self.git("add", ".")
-        self.git("commit", "-qm", "group skill")
-        self.git("rm", "-q", "-r", "skills/group")
-        (self.target / "child").mkdir()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertTrue((self.target / "child").exists())
-
-    def test_removed_nested_skill_under_kept_parent_stops(self) -> None:
-        self.configure_destination()
-        child = self.repo / "skills/demo/child/SKILL.md"
-        child.parent.mkdir(parents=True)
-        child.write_text("nested public skill\n", encoding="utf-8")
-        self.git("add", ".")
-        self.git("commit", "-qm", "nested skill")
-        self.git("rm", "-q", "-r", "skills/demo/child")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("入れ子", result.stderr)
-
-    def test_removed_root_name_is_matched_literally(self) -> None:
-        self.configure_destination()
-        literal = self.repo / "skills/old*/SKILL.md"
-        literal.parent.mkdir(parents=True)
-        literal.write_text("symbol public skill\n", encoding="utf-8")
-        (self.repo / "skills/old-notes.md").write_text("notes\n", encoding="utf-8")
-        self.git("add", ".")
-        self.git("commit", "-qm", "symbol skill")
-        self.git("rm", "-q", "-r", "--", ":(literal)skills/old*")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_missing_skill_md_with_remaining_assets_stops(self) -> None:
-        self.configure_destination()
-        self.commit_and_stage_removed_skill(keep_asset=True)
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("no longer contains", result.stderr)
-
-    def test_ignored_untracked_public_source_is_not_deployed(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        (self.repo / ".gitignore").write_text("local-only.md\n", encoding="utf-8")
-        (self.repo / "skills/demo/local-only.md").write_text("local only\n", encoding="utf-8")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse((self.target / "demo").exists())
-
-    def test_nested_git_metadata_is_not_deployed(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        metadata = self.repo / "skills/demo/.git/config"
-        metadata.parent.mkdir()
-        metadata.write_text("local metadata\n", encoding="utf-8")
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertFalse((self.target / "demo").exists())
-
-    def test_incomplete_plan_is_not_treated_as_empty(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        complete = {"updates": [], "stale_files": ["old.txt"], "explicit_prune_skills": [], "replacement_skill_roots": []}
-        plans = ["{}"] + [
-            json.dumps({**complete, key: None}) for key in complete
-        ] + [json.dumps({key: value for key, value in complete.items() if key != missing}) for missing in complete]
-        for plan in plans:
-            with self.subTest(plan=plan):
-                result = self.run_gate(FIXTURE_PLAN=plan)
-                self.assertEqual(result.returncode, 2, result.stdout)
-                self.assertFalse((self.target / "demo").exists())
-
-    def test_plan_change_before_apply_stops(self) -> None:
-        self.configure_destination()
-        self.stage_repository_change()
-        result = self.run_gate(FIXTURE_CHANGE_AT_DRY_RUN="2")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("検査後に", result.stderr)
-        self.assertFalse((self.target / "demo").exists())
-
-    def test_kept_nested_skill_stops(self) -> None:
-        self.configure_destination()
-        child = self.repo / "skills/demo/child/SKILL.md"
-        child.parent.mkdir(parents=True)
-        child.write_text("nested public skill\n", encoding="utf-8")
-        self.git("add", ".")
-        self.git("commit", "-qm", "nested skill")
-        self.stage_repository_change()
-        result = self.run_gate()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("入れ子", result.stderr)
-        self.assertFalse((self.target / "demo").exists())
+    def test_api_failure_is_undeterminable(self) -> None:
+        # Arrange
+        self.stage("staged\n")
+        api = FakeApi([], error=ValueError("invalid config"))
+        # Act
+        code, output = self.run_gate(api)
+        # Assert
+        self.assertEqual(code, 2)
+        self.assertIn("ERROR: invalid config", output)
 
 
 if __name__ == "__main__":

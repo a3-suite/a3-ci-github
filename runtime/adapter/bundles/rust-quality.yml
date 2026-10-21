@@ -35,6 +35,11 @@ commands:
   - id: security
     command: cargo
     args: [audit, --file, "${CI_CARGO_LOCK_PATH}"]
+  - id: dependency-policy
+    command: cargo
+    args: [deny, --manifest-path, "${CI_CARGO_MANIFEST_PATH}", --config, "${CI_CARGO_DENY_CONFIG_PATH}", check, bans, licenses, sources]
+    enabledBy: CI_CARGO_DENY_VERSION
+    requiredEnvironmentPaths: [CI_CARGO_DENY_CONFIG_PATH]
   - id: structure
     command: cargo
     args: [metadata, --manifest-path, "${CI_CARGO_MANIFEST_PATH}", --no-deps, --format-version, "1"]
