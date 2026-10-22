@@ -32,7 +32,7 @@ jobs:
     permissions: {}
     steps:
       - name: Validate and write request handoff
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@59c59b6802dc0424c184d99c82f652d072c60e05
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@db176f166fbc7051df9ef1dc57b42b3c7f6d9927
         with:
           operation: create
           source-sha: ${{ inputs.source_sha }}
@@ -49,7 +49,7 @@ jobs:
 
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@59c59b6802dc0424c184d99c82f652d072c60e05
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@db176f166fbc7051df9ef1dc57b42b3c7f6d9927
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"workflow_dispatch package publication handoff","rawResult":"${{ job.status }}","applicable":true,"reason":"request job result: ${{ job.status }}"}]}
