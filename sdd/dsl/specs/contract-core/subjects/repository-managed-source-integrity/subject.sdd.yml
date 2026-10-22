@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.repository-gate-result
         value:
-          root: repository.gate
           kind: object
           fields:
             - selector: canonical-assets
@@ -22,7 +21,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -57,7 +55,6 @@ contracts:
         boundary:
           ref: boundary.repository-gate-result
         value:
-          root: repository.gate
           kind: object
           fields:
             - selector: contract-execution
@@ -70,7 +67,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage

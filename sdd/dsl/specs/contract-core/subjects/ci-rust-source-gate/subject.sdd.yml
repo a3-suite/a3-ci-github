@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.script-result
         value:
-          root: script.result
           kind: object
           fields:
             - selector: outcome
@@ -20,7 +19,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -57,7 +55,6 @@ contracts:
         boundary:
           ref: boundary.action-output
         value:
-          root: action
           kind: object
           fields:
             - selector: verified
@@ -68,7 +65,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage

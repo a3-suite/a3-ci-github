@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.action-output
         value:
-          root: action
           kind: object
           fields:
             - selector: status
@@ -38,7 +37,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -129,7 +127,6 @@ contracts:
         boundary:
           ref: boundary.action-output
         value:
-          root: action
           kind: object
           fields:
             - selector: status
@@ -154,7 +151,6 @@ contracts:
         boundary:
           ref: boundary.workspace-files
         value:
-          root: supplemental-phase-files
           kind: object
           fields:
             - selector: candidate-files
@@ -167,7 +163,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage

@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-subject
@@ -189,7 +188,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: diagnostic
           kind: object
           fields:
             - selector: subject-diagnostic-details
@@ -220,7 +218,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: diagnostic
           kind: object
           fields:
             - selector: workflow-evidence
@@ -276,7 +273,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: diagnostic
           kind: object
           fields:
             - selector: bootstrap-diagnostic

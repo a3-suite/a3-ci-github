@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.runner-path
         value:
-          root: runner.path
           kind: object
           fields:
             - selector: gh
@@ -20,7 +19,6 @@ contracts:
         boundary:
           ref: boundary.action-output
         value:
-          root: action.step-result
           kind: object
           fields:
             - selector: outcome
@@ -29,7 +27,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage

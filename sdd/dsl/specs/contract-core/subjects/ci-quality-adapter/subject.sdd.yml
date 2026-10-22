@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.action-output
         value:
-          root: action
           kind: object
           fields:
             - selector: status
@@ -50,7 +49,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -58,7 +56,6 @@ contracts:
       - boundary:
           ref: boundary.workspace-files
         value:
-          root: action.embedded-standard-bundle
           kind: object
           fields:
             - selector: accepted-source-binding
@@ -89,6 +86,7 @@ contracts:
       - id: quality-adapter-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         claim:
           field: outcome
           in:
@@ -209,13 +207,6 @@ contracts:
           field: dependency-policy-config-argument
           in:
             - equal
-      - id: unusable-dependency-policy-config-stops
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        claim:
-          field: outcome
-          in:
-            - failure
       - id: dependency-policy-violation-failed
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-violation

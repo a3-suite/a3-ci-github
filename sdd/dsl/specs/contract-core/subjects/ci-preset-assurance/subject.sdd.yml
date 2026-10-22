@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.cli-result
         value:
-          root: cli.result
           kind: object
           fields:
             - selector: outcome
@@ -36,7 +35,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -45,7 +43,6 @@ contracts:
         boundary:
           ref: boundary.project-ci-assets
         value:
-          root: consumer-state
           kind: object
           fields:
             - selector: valid-tree-comparison
@@ -135,7 +132,6 @@ contracts:
         boundary:
           ref: boundary.project-ci-assets
         value:
-          root: ci-assets-lock+consumer-state
           kind: object
           fields:
             - selector: sourceRevision
@@ -154,7 +150,6 @@ contracts:
         boundary:
           ref: boundary.script-result
         value:
-          root: process.result
           kind: object
           fields:
             - selector: diagnostic
@@ -163,7 +158,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage

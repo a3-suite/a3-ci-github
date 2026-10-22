@@ -11,7 +11,6 @@ contracts:
         boundary:
           ref: boundary.cli-result
         value:
-          root: distribution.selection
           kind: object
           fields:
             - selector: selectedAssets
@@ -22,7 +21,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -57,7 +55,6 @@ contracts:
         boundary:
           ref: boundary.cli-result
         value:
-          root: distribution.fetch
           kind: object
           fields:
             - selector: sourceRevision
@@ -70,7 +67,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -111,7 +107,6 @@ contracts:
         boundary:
           ref: boundary.script-result
         value:
-          root: distribution.publication
           kind: object
           fields:
             - selector: releaseTag
@@ -136,7 +131,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -199,7 +193,6 @@ contracts:
         boundary:
           ref: boundary.project-ci-assets
         value:
-          root: distribution
           kind: object
           fields:
             - selector: planDigest
@@ -216,7 +209,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -259,7 +251,6 @@ contracts:
         boundary:
           ref: boundary.cli-result
         value:
-          root: distribution.apply
           kind: object
           fields:
             - selector: transactionId
@@ -270,7 +261,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -279,7 +269,6 @@ contracts:
         boundary:
           ref: boundary.project-ci-assets
         value:
-          root: distribution.restoration
           kind: object
           fields:
             - selector: partial-apply-files-binding
@@ -334,7 +323,6 @@ contracts:
         boundary:
           ref: boundary.cli-result
         value:
-          root: distribution.apply
           kind: object
           fields:
             - selector: rollbackStatus
@@ -343,7 +331,6 @@ contracts:
         boundary:
           ref: boundary.diagnostic-result
         value:
-          root: failure-evidence
           kind: object
           fields:
             - selector: failure-stage
@@ -352,7 +339,6 @@ contracts:
         boundary:
           ref: boundary.project-ci-assets
         value:
-          root: distribution.restoration
           kind: object
           fields:
             - selector: rollback-files-binding
