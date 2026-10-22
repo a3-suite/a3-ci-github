@@ -21,6 +21,8 @@ contracts:
               meaning: Declared aggregate failure route.
             - selector: optional-platform-chain
               meaning: Declared platform quality dependency graph.
+            - selector: profiles-chain
+              meaning: Declared per-language-profile quality dependency graph and its single aggregate decision.
             - selector: quality-fixed-reference
               meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
             - selector: quality-explicit-input-binding
@@ -67,6 +69,7 @@ contracts:
       - input: ci-quality-workflow-canonical-source-available
       - input: ci-quality-workflow-failure-route-required
       - input: ci-quality-workflow-platform-source-selected
+      - input: ci-quality-workflow-profiles-source-selected
     guarantees:
       - id: ci-quality-workflow-reusable-binding-observed
         applies_to:
@@ -91,6 +94,12 @@ contracts:
           - ci-quality-workflow-platform-source-selected
         claim:
           field: optional-platform-chain
+          present: true
+      - id: ci-quality-workflow-profiles-chain-observed
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        claim:
+          field: profiles-chain
           present: true
       - id: diagnostic-failure-stage-execution
         applies_to:

@@ -15,17 +15,19 @@ goal: 変更に応じた品質チェックを再現可能な設定で実行し�
 preconditions:
   - 固定提供元の標準 bundle または repository 内の trusted descriptor から品質 command を選択できる
   - platform 別検証を選択する場合は platform manifest が repository 内で管理されている
+  - 複数の language profile を検証する場合は profile ごとの品質入力が caller に宣言されている
   - 品質チェックの対象 source が固定 commit で checkout されている
 trigger: pull request または push で品質ゲートが起動する
 main_success_scenario:
   - summary: 差分を分類し、不要なチェックの実行要否を決める
   - summary: 複数の設定源を解決し、後続処理へ同じ設定 snapshot を渡す
   - summary: platform 別検証を選択した場合は platform manifest を検証し、strategy へ渡す matrix を生成する
-  - summary: 選択した標準 bundle または trusted descriptor の read-only command を fixed source に対して実行する
+  - summary: 選択した標準 bundle または trusted descriptor の read-only command を fixed source に対して実行する。複数の language profile を宣言した場合は profile ごとに実行する
   - summary: テストや監査の結果を集約し、status と evidence を summary へ出力する
 success_outcomes:
   - 実行対象の品質チェックと結果が再現可能な形で記録される
   - 未実行、実行不可、失敗を成功として扱わない
+  - 複数の language profile を宣言した場合も集約 check は一つで、いずれかの profile の失敗・未実行で失敗する
 failure_outcomes:
   - 入力、標準 bundle または descriptor が不正な場合は対象コマンドを実行せず失敗する
   - workflow の権限、runner、job 境界、publish は Action が決定せず provider 側へ委譲する

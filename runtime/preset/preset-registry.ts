@@ -187,20 +187,22 @@ const collectApprovedProviderActionPins = (
   return { pins, entries };
 };
 
-const collectQualityTriggerExtensions = (
+const collectWorkflowTriggerExtensions = (
   conformance: ValueMap,
   report: DiagnosticReport,
-): Record<string, TriggerExtensionRule> => {
-  const triggerExtensions = map(map(conformance.workflowTriggerExtensions)['quality-gate']);
-  const qualityTriggerExtensions: Record<string, TriggerExtensionRule> = {};
-  for (const [event, rule] of Object.entries(triggerExtensions)) {
-    if (rule === 'empty-map' || rule === 'cron-list') qualityTriggerExtensions[event] = rule;
-    else add(report.mismatches, {
-      path: `conformance.workflowTriggerExtensions.quality-gate.${event}`,
-      message: 'unsupported trigger extension rule',
-    });
+): Record<string, Record<string, TriggerExtensionRule>> => {
+  const workflowTriggerExtensions: Record<string, Record<string, TriggerExtensionRule>> = {};
+  for (const [assetId, triggerExtensions] of Object.entries(map(conformance.workflowTriggerExtensions))) {
+    workflowTriggerExtensions[assetId] = {};
+    for (const [event, rule] of Object.entries(map(triggerExtensions))) {
+      if (rule === 'empty-map' || rule === 'cron-list') workflowTriggerExtensions[assetId][event] = rule;
+      else add(report.mismatches, {
+        path: `conformance.workflowTriggerExtensions.${assetId}.${event}`,
+        message: 'unsupported trigger extension rule',
+      });
+    }
   }
-  return qualityTriggerExtensions;
+  return workflowTriggerExtensions;
 };
 
 const interpretActionization = (
@@ -286,7 +288,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
       exactRef: available ? String(manifest.sourceRevision) : undefined,
     };
   }
-  const qualityTriggerExtensions = collectQualityTriggerExtensions(conformance, report);
+  const workflowTriggerExtensions = collectWorkflowTriggerExtensions(conformance, report);
   const actionization = map(registry.actionization);
   const { implementationSource, actionReleaseTag, actionExactRef } =
     interpretActionization(actionization, report);
@@ -340,7 +342,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     providerActionPinCompanionComparison,
     providerActionPinFields,
     emptyAllowedPlaceholders: new Set(strings(conformance.emptyAllowedPlaceholders)),
-    qualityTriggerExtensions,
+    workflowTriggerExtensions,
     ...reusableBindings,
   };
 };

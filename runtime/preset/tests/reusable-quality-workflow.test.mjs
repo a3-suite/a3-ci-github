@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { test, describe, expect } from 'vitest';
 import { loadRegistry } from '../preset-registry.ts';
-import { managedAssets, resolveQualityWorkflow } from '../ci-preset-assets.ts';
+import { managedAssets, qualityProfileCallers, resolveQualityWorkflow } from '../ci-preset-assets.ts';
 import { inspectWorkflowAsset, validateProviderActionPinCompanion, validateCommon } from '../workflow-validation.ts';
 import { validateQualityPreset, validateActionCoverage, validateQualityPlatformSelection } from '../quality-validation.ts';
 import { createReport } from '../validation-report.ts';
@@ -106,6 +106,79 @@ describe("contract.ci-quality-workflow.execution", () => {
           const workflow = structuredClone(original); mutate(workflow);
           const result = inspect(workflow).report;
           expect(JSON.stringify([...result.mismatches, ...result.missingSettings])).toMatch(diagnostic);
+        }
+      } finally { fs.rmSync(root, { recursive: true, force: true }); }
+    });
+  });
+});
+
+describe("contract.ci-quality-workflow.execution", () => {
+  describe("quality-profiles-reusable-preflight", () => {
+    // integration_id: quality-profiles-reusable-preflight
+    // contract_id: contract.ci-quality-workflow.execution
+    test('profiles preflight validates every language profile as its own quality caller and rejects malformed profiles', () => {
+      fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
+      const root = fs.mkdtempSync(path.join(repository, 'tmp/profiles-quality-preflight-'));
+      const registry = loadRegistry(createReport());
+      const preset = registry.presets.find((entry) => entry.id === 'quality-gate-profiles');
+      const asset = preset.workflowAssets[0];
+      const original = yaml.parse(fs.readFileSync(path.join(repository, asset.source), 'utf8'));
+      original.on.push.branches = ['main'];
+      original.jobs['profiles-summary']['runs-on'] = 'ubuntu-24.04';
+      original.jobs.quality.with.runner = 'ubuntu-24.04';
+      const unused = Object.fromEntries(Object.keys(original.jobs.quality.with)
+        .filter((name) => !['runner', 'docs-only-patterns'].includes(name)).map((name) => [name, '']));
+      original.jobs.quality.strategy.matrix.include = [
+        { ...unused, 'language-profile': 'rust', 'toolchain-version': '1.90.0', 'cargo-audit-version': '0.21.0',
+          'cargo-manifest-path': 'Cargo.toml', 'cargo-lock-path': 'Cargo.lock', 'standard-bundle-id': 'rust-cargo-quality' },
+        { ...unused, 'language-profile': 'python', 'toolchain-version': '3.13.1', 'uv-version': '0.8.0', 'standard-bundle-id': 'python-uv-quality' },
+      ];
+      const inspect = (workflow) => {
+        const report = createReport();
+        fs.writeFileSync(path.join(root, asset.destination), yaml.stringify(workflow));
+        const observed = new Set();
+        const context = { root, registry, report, parsed: new Map(), actionByPath: new Map(registry.actionTargets.map((target) => [`${registry.actionRepository}/${target.actionPath}`, target])) };
+        inspectWorkflowAsset(context, preset, asset, observed);
+        validateQualityPreset(context, preset);
+        validateActionCoverage(context, preset, [asset], observed);
+        return { report, observed };
+      };
+      const findings = (report) => JSON.stringify([...report.mismatches, ...report.missingSettings]);
+      try {
+        fs.mkdirSync(path.dirname(path.join(root, asset.destination)), { recursive: true });
+        for (const file of ['Cargo.toml', 'Cargo.lock', 'pyproject.toml', 'uv.lock']) fs.writeFileSync(path.join(root, file), '\n');
+        // Act
+        const { report, observed } = inspect(original);
+        // Assert
+        expect(report.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA'), findings(report)).toBeTruthy();
+        // The fixture keeps the unreleased callee reference, which preflight reports as pending rather than as a profile problem.
+        expect(report.missingSettings.every((entry) => /pending-release|unresolved placeholders/.test(entry.message)), findings(report)).toBeTruthy();
+        for (const action of ['ci-quality-adapter', 'ci-quality-toolchain', 'ci-change-scope', 'ci-quality-summary']) expect(observed.has(action), action).toBeTruthy();
+        expect(managedAssets(root, registry, [preset]).map((entry) => entry.path)).toStrictEqual([asset.destination]);
+        expect(fs.existsSync(path.join(root, registry.qualityReusableWorkflow.source))).toBe(false);
+        expect(qualityProfileCallers(original).map((caller) => resolveQualityWorkflow(caller, registry).env.CI_LANGUAGE_PROFILE)).toStrictEqual(['rust', 'python']);
+        expect(resolveQualityWorkflow(qualityProfileCallers(original)[1], registry).env.CI_CARGO_AUDIT_VERSION).toBe('');
+        const profiles = (value) => value.jobs.quality.strategy.matrix.include;
+        for (const [mutate, diagnostic] of [
+          [(value) => { profiles(value)[1]['uv-version'] = ''; }, /CI_UV_VERSION is required/],
+          [(value) => { delete profiles(value)[1]['jq-version']; }, /include\[1\]\.jq-version.*must state every per-profile input/],
+          [(value) => { profiles(value)[0]['toolchain-version'] = ''; }, /include\[0\]\.toolchain-version.*required quality workflow input is empty/],
+          [(value) => { profiles(value)[0].constructor = 'ignored'; }, /include\[0\]\.constructor.*not a per-profile/],
+          [(value) => { profiles(value)[1]['standard-bundle-id'] = 'rust-cargo-quality'; }, /not registered for this language profile/],
+          [(value) => { profiles(value)[1]['adapter-descriptor'] = '.ci/adapters/python.yml'; }, /select exactly one/],
+          [(value) => { delete profiles(value)[0]['toolchain-version']; }, /include\[0\]\.toolchain-version.*must state every per-profile input/],
+          [(value) => { profiles(value)[0].runner = 'ubuntu-24.04'; }, /include\[0\]\.runner.*not a per-profile/],
+          [(value) => { profiles(value)[0].unexpected = 'value'; }, /not a per-profile/],
+          [(value) => { profiles(value)[0]['jq-version'] = 'latest'; }, /empty or an exact version/],
+          [(value) => { profiles(value).push(structuredClone(profiles(value)[1])); }, /listed more than once/],
+          [(value) => { value.jobs.quality.strategy.matrix.include = []; }, /matrix include must list/],
+          [(value) => { profiles(value)[0]['uv-version'] = 1; }, /matrix include must list/],
+          [(value) => { value.jobs.quality.with['language-profile'] = 'rust'; }, /canonical drift/],
+          [(value) => { value.jobs.quality.strategy['fail-fast'] = true; }, /canonical drift/],
+          [(value) => { value.jobs['profiles-summary'].name = 'summary'; }, /canonical drift/],
+        ]) {
+          const workflow = structuredClone(original); mutate(workflow);
+          expect(findings(inspect(workflow).report)).toMatch(diagnostic);
         }
       } finally { fs.rmSync(root, { recursive: true, force: true }); }
     });

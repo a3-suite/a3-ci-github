@@ -101,6 +101,18 @@ node fetch-a3-ci-github.mjs plan \
   --repo-root "{project-root}"
 ```
 
+`quality-gate-profiles` プリセットでは、profile ごとの入力を `quality-profiles` にmapの配列として渡す。各mapのkeyと必須入力は`references/configure-ci-preset.guide.md`の複数 language profile の節に従う。
+
+```bash
+node fetch-a3-ci-github.mjs plan \
+  --source-revision "{distribution-full-commit-sha}" \
+  --preset quality-gate-profiles \
+  --set 'workflow.quality-gate-profiles:protected-branch=["main"]' \
+  --set 'workflow.quality-gate-profiles:versioned-runner="ubuntu-24.04"' \
+  --set 'workflow.quality-gate-profiles:quality-profiles=[{"language-profile":"rust","toolchain-version":"{rust-version}","uv-version":"","cargo-audit-version":"{cargo-audit-version}","cargo-manifest-path":"Cargo.toml","cargo-lock-path":"Cargo.lock","cargo-deny-version":"","cargo-deny-config-path":"","jq-version":"","standard-bundle-id":"rust-cargo-quality","adapter-descriptor":""},{"language-profile":"python","toolchain-version":"{python-version}","uv-version":"{uv-version}","cargo-audit-version":"","cargo-manifest-path":"","cargo-lock-path":"","cargo-deny-version":"","cargo-deny-config-path":"","jq-version":"","standard-bundle-id":"","adapter-descriptor":".ci/adapters/python-quality.yml"}]' \
+  --repo-root "{project-root}"
+```
+
 planはworkflow destinationを`create`、`reuse`、`update`、`conflict`へ分類する。直接参照する外部Actionがあるcallerには、provider CLIがregistryの`providerActions.entries`と`pinCompanion.fields`から完全なpin companionを生成し、同じ分類・差分確認対象に含める。companionは独自編集しない。品質callerだけを持つprojectでは生成しない。既存asset lockが現在のdestination digestを所有する場合だけ`update`とし、それ以外の差分は`conflict`とする。所有権判定に使ったasset lockの存在状態とdigestもplanへ固定する。過去のlockにあり今回選択されないpathは`stale`として報告するが削除しない。
 
 ### 旧配布からの初回移行（create経路）

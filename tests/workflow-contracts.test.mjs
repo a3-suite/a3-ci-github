@@ -228,6 +228,29 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: quality-workflow-contract
+    test('profiles caller runs the quality callee once per language profile and retains one summary identity', () => {
+      const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
+      const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
+      const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
+      expect(Object.keys(caller.jobs)).toStrictEqual(['quality', 'profiles-summary']);
+      expect(caller.env).toBe(undefined);
+      expect(caller.jobs.quality.steps).toBe(undefined);
+      expect(caller.jobs.quality.secrets).toBe(undefined);
+      expect(caller.jobs.quality.permissions).toStrictEqual({ contents: 'read' });
+      expect(caller.jobs.quality.uses).toBe(single.jobs.quality.uses);
+      expect(caller.jobs.quality.strategy).toStrictEqual({ 'fail-fast': false, matrix: { include: '<quality-profiles>' } });
+      expect(Object.keys(caller.jobs.quality.with).sort()).toStrictEqual(Object.keys(callee.on.workflow_call.inputs).sort());
+      for (const [name, value] of Object.entries(caller.jobs.quality.with)) {
+        expect(value, name).toBe(['runner', 'docs-only-patterns'].includes(name) ? single.jobs.quality.with[name] : `\${{ matrix.${name} }}`);
+      }
+      expect(caller.on).toStrictEqual(single.on);
+      expect(caller.concurrency).toStrictEqual(single.concurrency);
+      expect(caller.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
+      expect(caller.jobs['profiles-summary'].needs).toBe('quality');
+      expect(caller.jobs['profiles-summary'].if).toBe('always()');
+    });
+
+    // integration_id: quality-workflow-contract
     test('optional platform quality workflow preserves trusted assets matrix execution and summary', () => {
       const workflow = read('.github/workflows/ci-quality-platforms.yml');
       const resolve = jobBlock(workflow, 'resolve-platforms');
@@ -808,6 +831,7 @@ describe("workflow-contracts", () => {
         ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
+        ['workflows/quality/quality-gate-profiles.yml', 'profiles-summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
@@ -887,6 +911,7 @@ describe("workflow-contracts", () => {
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
+        ['workflows/quality/quality-gate-profiles.yml', 'profiles-summary'],
         ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],

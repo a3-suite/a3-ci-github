@@ -81,6 +81,7 @@ describe("workflow-contracts", () => {
       const templates = [
         ['workflows/quality/quality-gate.yml', 'summary', 'quality'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary', 'platforms'],
+        ['workflows/quality/quality-gate-profiles.yml', 'profiles-summary', 'quality'],
       ].map(([file, job, source]) => ({ source, template: yaml.parse(read(file)).jobs[job].steps.find((step) => step.with?.['summary-json']).with['summary-json'] }));
       mkdirSync(path.join(root, 'tmp'), { recursive: true });
       const directory = mkdtempSync(path.join(root, 'tmp/reusable-quality-summary-'));

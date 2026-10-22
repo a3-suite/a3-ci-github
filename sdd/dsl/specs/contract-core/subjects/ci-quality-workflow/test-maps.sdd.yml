@@ -83,6 +83,21 @@ test_maps:
           - platform-resolution-before-execution
           - platform-execution-before-summary
   - contract_id: contract.ci-quality-workflow.execution
+    case_id: ci-quality-workflow-profiles
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > quality-workflow-contract > profiles caller runs the quality callee once per language profile and retains one summary identity
+        guarantees:
+          - ci-quality-workflow-profiles-chain-observed
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
+        guarantees:
+          - ci-quality-workflow-profiles-chain-observed
+      - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
+        symbol: contract.ci-quality-workflow.execution > quality-profiles-reusable-preflight > profiles preflight validates every language profile as its own quality caller and rejects malformed profiles
+        guarantees:
+          - ci-quality-workflow-profiles-chain-observed
+  - contract_id: contract.ci-quality-workflow.execution
     case_id: detailed-failure-execution
     tests:
       - path: tests/workflow-failure-diagnostics.test.mjs

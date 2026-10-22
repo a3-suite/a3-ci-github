@@ -277,7 +277,7 @@ describe("preset-validation-contract", () => {
           let workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
           if (asset.id === 'release-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.releasePublicationReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePublicationReusableWorkflow.source), 'utf8');
-          if (asset.id === 'quality-gate') workflow += readFileSync(path.join(repositoryRoot, registry.qualityReusableWorkflow.source), 'utf8');
+          if (['quality-gate', 'quality-gate-profiles'].includes(asset.id)) workflow += readFileSync(path.join(repositoryRoot, registry.qualityReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePreparationReusableWorkflow.source), 'utf8');
           if (asset.id === 'quality-gate-platforms') workflow += readFileSync(path.join(repositoryRoot, registry.qualityPlatformsReusableWorkflow.source), 'utf8');
           for (const [, action, ref] of workflow.matchAll(actionUse)) {

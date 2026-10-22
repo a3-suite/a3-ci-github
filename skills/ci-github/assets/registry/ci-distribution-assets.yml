@@ -141,10 +141,13 @@ assets:
 workflowDependencies:
   workflow.quality-gate: [runtime.quality-workflow]
   workflow.quality-gate-platforms: [runtime.quality-platforms-workflow]
+  workflow.quality-gate-profiles: [runtime.quality-workflow]
   workflow.release-publication-caller: [runtime.release-publication-workflow]
   workflow.package-publication-caller: [runtime.package-publication-workflow]
 presets:
   - id: quality-gate
+    requiredAssets: [runtime.preset, lint.github-actions]
+  - id: quality-gate-profiles
     requiredAssets: [runtime.preset, lint.github-actions]
   - id: release-request
     requiredAssets: [runtime.preset, lint.github-actions]

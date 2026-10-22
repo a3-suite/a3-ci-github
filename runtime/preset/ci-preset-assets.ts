@@ -149,6 +149,21 @@ export const resolvePublicationWorkflow = (
   return { ...callee, env };
 };
 
+// A profiles caller runs the quality callee once per matrix entry; each entry is checked as the single caller it stands for.
+export const qualityProfileCallers = (workflow: ValueMap): ValueMap[] => {
+  const call = map(map(workflow.jobs).quality);
+  const include = map(map(call.strategy).matrix).include;
+  if (!Array.isArray(include)) return [workflow];
+  return include.map((entry) => {
+    const profile = map(entry);
+    const inputs = Object.fromEntries(Object.entries(map(call.with)).map(([name, value]) => {
+      const bound = typeof value === 'string' ? value.match(/^\$\{\{ matrix\.([a-z0-9-]+) \}\}$/) : undefined;
+      return [name, bound ? profile[bound[1]] ?? '' : value];
+    }));
+    return { ...workflow, jobs: { ...map(workflow.jobs), quality: { ...call, strategy: undefined, with: inputs } } };
+  });
+};
+
 export const resolveQualityWorkflow = (
   workflow: ValueMap, registry: RegistryData, report: DiagnosticReport = { missingSettings: [], mismatches: [] },
 ): ValueMap => {
@@ -258,8 +273,8 @@ export const managedAssets = (root: string, registry: RegistryData, selected: Pr
       }
     }
     if (preset.qualityAdapter) {
-      for (const installed of installedPresetWorkflows(root, preset)) {
-        const workflowEnv = map(resolvePublicationWorkflow(resolveQualityWorkflow(installed.workflow, registry), registry).env);
+      for (const caller of installedPresetWorkflows(root, preset).flatMap(({ workflow }) => qualityProfileCallers(workflow))) {
+        const workflowEnv = map(resolvePublicationWorkflow(resolveQualityWorkflow(caller, registry), registry).env);
         if (typeof workflowEnv.CI_STANDARD_BUNDLE_ID === 'string' && workflowEnv.CI_STANDARD_BUNDLE_ID !== '') continue;
         const descriptor = workflowEnv.CI_ADAPTER_DESCRIPTOR;
         const profile = workflowEnv.CI_LANGUAGE_PROFILE;

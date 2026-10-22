@@ -72,6 +72,9 @@ conformance:
     quality-gate:
       merge_group: empty-map
       schedule: cron-list
+    quality-gate-profiles:
+      merge_group: empty-map
+      schedule: cron-list
   externalVariability:
     triggerSelection: registry.presets[].workflowAssets
     triggerExtension: conformance.workflowTriggerExtensions
@@ -139,7 +142,7 @@ actionization:
     - id: ci-jq-provisioner
       status: available
       actionPath: actions/ci-jq-provisioner
-      workflows: [quality-gate, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
       trust: read-only
       privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
@@ -155,7 +158,7 @@ actionization:
     - id: ci-github-toolchain-verifier
       status: available
       actionPath: actions/ci-github-toolchain-verifier
-      workflows: [quality-gate, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
       trust: read-only
       privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
@@ -179,7 +182,7 @@ actionization:
     - id: ci-quality-summary
       status: available
       actionPath: actions/ci-quality-summary
-      workflows: [quality-gate, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts.output
@@ -195,7 +198,7 @@ actionization:
     - id: ci-change-scope
       status: available
       actionPath: actions/ci-change-scope
-      workflows: [quality-gate, quality-gate-platforms]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
@@ -243,7 +246,7 @@ actionization:
     - id: ci-quality-toolchain
       status: available
       actionPath: actions/ci-quality-toolchain
-      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -251,7 +254,7 @@ actionization:
     - id: ci-quality-adapter
       status: available
       actionPath: actions/ci-quality-adapter
-      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -378,6 +381,17 @@ registry:
           destination: .github/workflows/quality-gate-platforms.yml
           companionPaths:
             - .ci/quality-platforms.yml
+      assets:
+        copyable: []
+        requiredExtensions: []
+      qualityAdapter:
+        source: ci.adapter-bundles
+        selection: standard-or-owner
+    - id: quality-gate-profiles
+      workflowAssets:
+        - id: quality-gate-profiles
+          source: workflows/quality/quality-gate-profiles.yml
+          destination: .github/workflows/quality-gate-profiles.yml
       assets:
         copyable: []
         requiredExtensions: []

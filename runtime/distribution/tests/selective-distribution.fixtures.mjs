@@ -33,6 +33,14 @@ const fixtureSettings = {
   'supplemental-release-asset-enabled': false, 'supplemental-release-asset-owner-contract': 'owner-v2',
   'supplemental-release-asset-implementation': 'owner-adapter', 'supplemental-release-asset-config-path': '.ci/installer.yml',
   'release-skills-config-path': '__unset__',
+  'quality-profiles': [
+    { 'language-profile': 'rust', 'toolchain-version': '1.90.0', 'uv-version': '', 'cargo-audit-version': '0.21.0',
+      'cargo-manifest-path': 'Cargo.toml', 'cargo-lock-path': 'Cargo.lock', 'cargo-deny-version': '', 'cargo-deny-config-path': '',
+      'jq-version': '', 'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '' },
+    { 'language-profile': 'python', 'toolchain-version': '3.13.1', 'uv-version': '0.8.0', 'cargo-audit-version': '',
+      'cargo-manifest-path': '', 'cargo-lock-path': '', 'cargo-deny-version': '', 'cargo-deny-config-path': '',
+      'jq-version': '', 'standard-bundle-id': '', 'adapter-descriptor': '.ci/adapters/python-quality.yml' },
+  ],
 };
 const planDistributionApplication = (options) => {
   const distributionRoot = path.join(options.projectRoot, '.a3-skills/ci-github/distributions', options.sourceRevision);
