@@ -104,12 +104,10 @@ packagePreparationReusableWorkflow:
 qualityPlatformsReusableWorkflow:
   source: .github/workflows/ci-quality-platforms.yml
   referencePlaceholder: <quality-platforms-workflow-sha>
-  requiredCallerCheck: quality-gate-platforms / summary
 
 qualityReusableWorkflow:
   source: .github/workflows/ci-quality.yml
   referencePlaceholder: <quality-workflow-sha>
-  requiredCallerCheck: summary
 providerAssets: []
 actionization:
   implementationSource:

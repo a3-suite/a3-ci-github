@@ -158,6 +158,24 @@ describe("contract.ci-quality-workflow.execution", () => {
         expect(fs.existsSync(path.join(root, registry.qualityReusableWorkflow.source))).toBe(false);
         expect(qualityProfileCallers(original).map((caller) => resolveQualityWorkflow(caller, registry).env.CI_LANGUAGE_PROFILE)).toStrictEqual(['rust', 'python']);
         expect(resolveQualityWorkflow(qualityProfileCallers(original)[1], registry).env.CI_CARGO_AUDIT_VERSION).toBe('');
+        // The auxiliary language commonly carries its own descriptor beside the primary standard bundle.
+        const descriptorPath = '.ci/adapters/python-quality.yml';
+        const descriptor = { schemaVersion: '1', kind: 'ci-adapter-bundle', id: 'python-lint', contract: 'quality-scripts',
+          languageProfiles: ['python'], provider: 'provider-neutral', executionBoundary: 'read-only', sourceCheckout: 'fixed-source',
+          copyable: true, owner: 'project', projectSettings: { requiredFiles: ['pyproject.toml'], requiredScripts: [], requiredEnvironmentPaths: [] },
+          toolchain: { versionEnv: 'CI_TOOLCHAIN_VERSION', verify: { id: 'version', command: 'python', args: ['--version'] } },
+          preparation: [{ id: 'sync', command: 'uv', args: ['sync', '--locked'] }], commands: [{ id: 'lint', command: 'uv', args: ['run', 'ruff', 'check'] }] };
+        fs.mkdirSync(path.join(root, '.ci/adapters'), { recursive: true });
+        fs.writeFileSync(path.join(root, descriptorPath), yaml.stringify(descriptor));
+        const mixed = structuredClone(original);
+        Object.assign(mixed.jobs.quality.strategy.matrix.include[1], { 'standard-bundle-id': '', 'adapter-descriptor': descriptorPath });
+        const mixedReport = inspect(mixed).report;
+        expect(mixedReport.mismatches.every((entry) => entry.message === 'external Action must use a full commit SHA'), findings(mixedReport)).toBeTruthy();
+        expect(mixedReport.missingSettings.every((entry) => /pending-release|unresolved placeholders/.test(entry.message)), findings(mixedReport)).toBeTruthy();
+        fs.writeFileSync(path.join(root, descriptorPath), yaml.stringify({ ...descriptor, languageProfiles: ['rust'] }));
+        expect(findings(inspect(mixed).report)).toMatch(/does not support the selected language profile/);
+        fs.rmSync(path.join(root, descriptorPath));
+        expect(findings(inspect(mixed).report)).toMatch(/python-quality\.yml/);
         const profiles = (value) => value.jobs.quality.strategy.matrix.include;
         for (const [mutate, diagnostic] of [
           [(value) => { profiles(value)[1]['uv-version'] = ''; }, /CI_UV_VERSION is required/],

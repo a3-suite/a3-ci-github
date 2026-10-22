@@ -271,7 +271,7 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
     const reusable = map(registry[key]);
     if (typeof reusable.source !== 'string' || !/^\.github\/workflows\/[a-z0-9-]+\.ya?ml$/.test(reusable.source)
       || typeof reusable.referencePlaceholder !== 'string'
-      || Object.keys(reusable).some((field) => !['source', 'referencePlaceholder', 'requiredCallerCheck'].includes(field))) add(report.mismatches, {
+      || Object.keys(reusable).some((field) => !['source', 'referencePlaceholder'].includes(field))) add(report.mismatches, {
       path: key, message: 'reusable workflow declaration is invalid',
     });
     const resolved = map(map(manifest.reusableWorkflows)[String(reusable.source)]);
