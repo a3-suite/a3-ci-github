@@ -148,10 +148,6 @@ jobs:
           actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
           actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
 
-      - name: Test repository commit gate scripts
-        shell: bash
-        run: python3 -m unittest discover -s .agents/skills/commit-gate/_build/tests -v
-
       - name: Install coverage tool dependencies
         run: npm --prefix tests/coverage-tools ci --ignore-scripts --no-audit --no-fund
 

@@ -1,6 +1,6 @@
 ---
 name: commit-gate
-description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、Action・workflowの固定参照更新順序と公開 Agent Skill全体の自動配備・整合を含むコミット可否を確認するときに使う。
+description: a3-ci-github リポジトリでコミット前に staged snapshot を検証し、Action・workflowの固定参照と更新順序を含むコミット可否を確認するときに使う。
 ---
 
 # commit-gate / SKILL
@@ -16,23 +16,18 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 ## このスキルが所有すること
 - リポジトリ固有ゲートの適用条件と実行入口
 - 固定参照更新順序ゲートによる、実装準備と利用可能化の区別・接続先の証拠確認
-- スキル配備整合ゲートの検証結果、証拠、停止理由の解決
-- 配置先差分の検出と、削除候補を含む停止判断
-- 配置先の更新差分を、削除を伴わない範囲で自動反映すること
 - 共通 `git` の `local_gate_result` 契約に従う各ゲート結果の返却
 - 成功、検証失敗、実行エラーの終了条件
 
 ## このスキルが所有しないこと
-- git スキルが所有する基本コミットゲートと SDD 適用監査ゲート
-- `skills-deploy` スキルと `project-skill-deploy` スキルが所有する配備対象、配備先、候補分類、差分反映の意味
+- git スキルが所有する基本コミットゲート、SDD 適用監査ゲート、スキルデプロイゲート
 - `regression-test` スキルが所有する回帰範囲、実行順序、報告形式
 
 ## 実行時の姿勢
 - ゲートの適用条件、順序、終了条件を他スキルへ分散させない。
-- 配備整合ゲートの差分確認、候補分類、反映、再検査は `skills-deploy` スキルが委譲する `project-skill-deploy` を正本とし、本スキルでは再実装しない。
 
 ## コミットフローへの引き渡し
-- 固有ゲート結果を共通 `git` の `local_gate_result` 契約で返す。配備先などの固有外部状態はゲート固有の証拠として扱い、共通契約へ昇格させない。
+- 固有ゲート結果を共通 `git` の `local_gate_result` 契約で返す。
 - `commit author`、コミットメッセージ、push の有無、最終承認 payload は git スキルへ委譲する。
 
 ## 注意
@@ -45,5 +40,4 @@ description: a3-ci-github リポジトリでコミット前に staged snapshot �
 - 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
 
 ## 参照
-- skills-deploy スキル
 - git スキル
