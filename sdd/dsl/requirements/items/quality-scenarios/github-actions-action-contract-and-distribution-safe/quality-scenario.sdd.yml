@@ -15,8 +15,6 @@ response_measure:
   - Action の追加・削除後に README.md の Action 一覧と用途が実在する Action と一致し、不一致の変更は確定されない
   - workflow の権限、runner、trigger、job 境界を Action 内部へ取り込まない
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-actions-action-contract-and-distribution
+  - github-actions-action-contract-and-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.integrity

@@ -11,10 +11,7 @@ response_measure:
   - 通信が応答しない場合も無期限に待たず失敗として識別でき、検証済みlocal distributionは同一manifest digestの場合だけ再利用される
   - asset単体選択の不足依存、preset閉包の欠落、外部owner identity不足を成功扱いにしない
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.selection
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.delivery
+  - contract.ci-selective-distribution.selection
+  - contract.ci-selective-distribution.delivery

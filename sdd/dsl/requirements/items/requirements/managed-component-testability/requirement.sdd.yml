@@ -4,10 +4,9 @@ requirements:
   - requirement_id: managed-component-testability
     type: quality
     summary: 本リポジトリが管理するコンポーネントは、本番実装の責務境界を保ったまま容易にテストできる
-    rationale:
-      why: >-
-        テスト専用実装や本番コード内の特別な分岐で検証を成立させると、実運用経路とテスト経路が乖離し、
-        変更時の信頼性と保守性が低下するため
+    rationale: >-
+      テスト専用実装や本番コード内の特別な分岐で検証を成立させると、実運用経路とテスト経路が乖離し、
+      変更時の信頼性と保守性が低下するため
     subject:
       namespace: ci
       key: managed-components

@@ -1,6 +1,5 @@
 version: 1
 name: physical-structure
-structure_id: a3-ci-github-repository-layout
 elements:
   - element_id: repository-version
     element_kind: file
@@ -168,7 +167,7 @@ elements:
     path: skills/ci-github/assets/registry/ci-distribution-assets.yml
     primary_area_kind: implementation
     area_kinds:
-    - implementation
+      - implementation
     source_control: managed
     placement_purpose: 選択配布の資材identity・依存閉包・公開名・local state境界の宣言正本を所有する
   - element_id: canonical-preset-registry
@@ -176,6 +175,6 @@ elements:
     path: skills/ci-github/assets/registry/ci-github-preset-assets.yml
     primary_area_kind: implementation
     area_kinds:
-    - implementation
+      - implementation
     source_control: managed
     placement_purpose: canonical presetのworkflow membership・配置先・入力設定の宣言正本を所有する

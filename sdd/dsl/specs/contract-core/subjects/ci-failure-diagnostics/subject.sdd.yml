@@ -8,8 +8,7 @@ contracts:
     summary: Failure of a selected contract boundary.
     observations:
       - summary: Failure evidence in final logs and existing referenced evidence.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-subject
             meaning: 失敗した契約対象の識別子。
@@ -183,8 +182,7 @@ contracts:
     summary: Packaged contract definitions of failure diagnostics.
     observations:
       - summary: Packaged contract definition files read from the checked-out workspace.
-        boundary:
-          ref: boundary.workspace-files
+        boundary: boundary.workspace-files
         fields:
           - selector: subject-diagnostic-details
             meaning: Comparison of packaged contracts with contracts that guarantee a failure-stage diagnostic; matched or missing.
@@ -211,8 +209,7 @@ contracts:
     summary: Managed workflow failure summary definitions.
     observations:
       - summary: Failure summary routes declared in managed workflow definitions.
-        boundary:
-          ref: boundary.workflow-definition
+        boundary: boundary.workflow-definition
         fields:
           - selector: workflow-evidence
             meaning: Declared workflow summary route preserving evidence and reason fields.
@@ -264,8 +261,7 @@ contracts:
     summary: A failing public runtime bootstrap emits a stable machine-readable failure envelope.
     observations:
       - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: bootstrap-diagnostic
             meaning: Machine-readable failure envelope emitted by a failing public runtime bootstrap.

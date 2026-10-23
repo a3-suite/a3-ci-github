@@ -8,8 +8,7 @@ contracts:
     summary: Release publication observation and verification request.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Success only after the selected read-only verification completes.
@@ -34,16 +33,14 @@ contracts:
           - selector: release-output-id-binding
             meaning: Equality of emitted release-remote-identity with emitted publish-receipt.release_id.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
           - selector: checksum-observation-conflation-state
             meaning: Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.release-provider-requests
+        boundary: boundary.release-provider-requests
         fields:
           - selector: non-get-request-state
             meaning: Occurrence state of provider requests using a method other than GET during one invocation.
@@ -52,8 +49,7 @@ contracts:
           - selector: asset-inventory-attempts
             meaning: Maximum number of asset inventory observations in one readback sequence, represented as a decimal integer string; zero when none begins.
       - summary: Requested delays at the runner clock boundary.
-        boundary:
-          ref: boundary.observation-clock
+        boundary: boundary.observation-clock
         fields:
           - selector: release-reobservation-delay
             meaning: Canonical comma-separated distinct millisecond durations requested between successive Release inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.

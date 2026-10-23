@@ -864,11 +864,11 @@ describe("workflow-contracts", () => {
       const packageData = yaml.parse(read(`${base}/contract-package.sdd.yml`));
       const diagnosticPartition = 'runtime-context.failure-diagnostic-required';
       const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/subject.sdd.yml`)).contracts[0];
-      const commonObservation = shared.observations.find((entry) => entry.boundary.ref === 'boundary.diagnostic-result');
+      const commonObservation = shared.observations.find((entry) => entry.boundary === 'boundary.diagnostic-result');
       // Act
-      const subjects = packageData.subject_scopes.map((scope) => ({
-        ...yaml.parse(read(`${base}/${scope.path}subject.sdd.yml`)),
-        verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
+      const subjects = packageData.subject_scopes.map((scopePath) => ({
+        ...yaml.parse(read(`${base}/${scopePath}subject.sdd.yml`)),
+        verifications: yaml.parse(read(`${base}/${scopePath}verifications.sdd.yml`)),
       }));
       // Assert
       const commonSelectors = commonObservation.fields.map((field) => field.selector);
@@ -894,7 +894,7 @@ describe("workflow-contracts", () => {
           expect(guarantee.claim.present, contract.id).toBe(true);
           expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
           const observation = contract.observations.find((entry) => entry.fields.some((field) => field.selector === 'failure-stage'));
-          expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
+          expect(observation.boundary, contract.id).toBe('boundary.diagnostic-result');
           expect(observation.summary, contract.id).toContain(shared.id);
           const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);
           expect(failureCase, contract.id).toBeDefined();

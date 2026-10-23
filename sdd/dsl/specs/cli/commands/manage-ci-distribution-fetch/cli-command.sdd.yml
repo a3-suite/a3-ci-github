@@ -36,5 +36,5 @@ command:
       title: Planned application or recovery
       options:
         - repo-root
-  help:
-    usage: node runtime/distribution/fetch-a3-ci-github.mjs fetch [options]
+  usage:
+    - node runtime/distribution/fetch-a3-ci-github.mjs fetch [options]

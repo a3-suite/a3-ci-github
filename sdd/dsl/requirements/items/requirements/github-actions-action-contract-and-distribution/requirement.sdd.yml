@@ -4,10 +4,9 @@ requirements:
   - requirement_id: github-actions-action-contract-and-distribution
     type: functional
     summary: GitHub Action を利用者が action.yml の公開契約だけで安全に実行でき、実装と配布物の同一性を保てる
-    rationale:
-      why: >-
-        Action の実装、workflow、provider 固有の接続を分離し、利用者がソースの build や内部依存を用意せずに
-        再利用できる状態を共通要件として保証するため
+    rationale: >-
+      Action の実装、workflow、provider 固有の接続を分離し、利用者がソースの build や内部依存を用意せずに
+      再利用できる状態を共通要件として保証するため
     subject:
       namespace: skills
       key: github-actions

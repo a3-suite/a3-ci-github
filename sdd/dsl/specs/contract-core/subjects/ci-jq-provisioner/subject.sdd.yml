@@ -8,20 +8,17 @@ contracts:
     summary: A checked official jq Release asset enters the job PATH; failed provisioning exposes no executable.
     observations:
       - summary: The provisioned jq command is visible to later steps.
-        boundary:
-          ref: boundary.runner-path
+        boundary: boundary.runner-path
         fields:
           - selector: jq
             meaning: Checked jq executable on the job command search path.
       - summary: Provisioning success or failure is visible to the caller.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: outcome
             meaning: Success after checksum verification and PATH handoff, or failure before handoff.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

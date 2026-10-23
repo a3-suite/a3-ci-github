@@ -13,12 +13,8 @@ response_measure:
   - 利用 project に同じ処理の script または runtime を要求しない
   - Release publication control、package publication request、quality adapter の各契約を独立して検証できる
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-common-processing-action-reuse
+  - ci-common-processing-action-reuse
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-release-publication-control.outputs
-  - contract_ref:
-      contract_id: contract.ci-package-publication-request.outputs
-  - contract_ref:
-      contract_id: contract.ci-quality-adapter.outputs
+  - contract.ci-release-publication-control.outputs
+  - contract.ci-package-publication-request.outputs
+  - contract.ci-quality-adapter.outputs

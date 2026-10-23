@@ -8,14 +8,12 @@ contracts:
     summary: The shared script accepts only checked-out Rust source bound to the release authority.
     observations:
       - summary: The shared script exposes whether the checked-out Rust source matches the release authority.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: outcome
             meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -48,16 +46,14 @@ contracts:
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: verified
             meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
           - selector: outcome
             meaning: The success or failure outcome of the source verification step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

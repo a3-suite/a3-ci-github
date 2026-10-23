@@ -4,10 +4,9 @@ requirements:
   - requirement_id: github-ci-source-consolidation
     type: functional
     summary: GitHub Actions向けCIの契約、workflow、Action、runtime、検証を一つの責務境界で保守できる
-    rationale:
-      why: >-
-        CIスキルとcanonical workflow、再利用Actionが別リポジトリに分散した状態では、契約変更の追跡と
-        受入検証が複数の変更集合に分かれ、正本と実装の整合を一度に確認できないため
+    rationale: >-
+      CIスキルとcanonical workflow、再利用Actionが別リポジトリに分散した状態では、契約変更の追跡と
+      受入検証が複数の変更集合に分かれ、正本と実装の整合を一度に確認できないため
     subject:
       namespace: ci
       key: github-source-consolidation

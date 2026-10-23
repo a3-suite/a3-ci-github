@@ -8,9 +8,7 @@ scope:
 rule: >-
   source cutoverにより、canonical workflow と Action registry の Action binding は a3-ci-github の固定SHAで管理し、
   同じ契約を本リポジトリとコピー元で独立に変更しない。
-rationale:
-  why: 移行中に複数の正本が同時に更新され、公開済み利用者と再構築中の実装が追跡不能に分岐することを防ぐため
+rationale: 移行中に複数の正本が同時に更新され、公開済み利用者と再構築中の実装が追跡不能に分岐することを防ぐため
 violation_impact: 公開Action、workflow、スキル契約の不一致と、固定SHA利用者の再現性喪失を招く
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-ci-source-consolidation
+  - github-ci-source-consolidation

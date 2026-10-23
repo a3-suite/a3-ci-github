@@ -8,8 +8,7 @@ contracts:
     summary: Quality adapter invocation with a standard bundle or trusted descriptor.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Aggregate quality adapter status.
@@ -44,13 +43,11 @@ contracts:
           - selector: not-run-aggregate-effect
             meaning: Change of the aggregate status caused by results whose status is not-run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
-      - boundary:
-          ref: boundary.workspace-files
+      - boundary: boundary.workspace-files
         fields:
           - selector: accepted-source-binding
             meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.

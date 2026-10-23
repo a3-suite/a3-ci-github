@@ -42,5 +42,5 @@ command:
         - bundle
         - target-root
         - output
-  help:
-    usage: tsx runtime/adapter/materialize-adapter-bundle.ts [--source-root <PATH>] --inventory <PATH> --bundle <ID> --target-root <PATH> [--output <PATH>] (source-root required for custom bundles)
+  usage:
+    - tsx runtime/adapter/materialize-adapter-bundle.ts [--source-root <PATH>] --inventory <PATH> --bundle <ID> --target-root <PATH> [--output <PATH>] (source-root required for custom bundles)

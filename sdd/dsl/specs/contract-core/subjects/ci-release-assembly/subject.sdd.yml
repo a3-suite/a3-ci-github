@@ -8,8 +8,7 @@ contracts:
     summary: Release assembly request from authority, snapshot and build inventories.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Success only after complete validation and handoff creation.
@@ -34,14 +33,12 @@ contracts:
           - selector: accepted-checksum-line-ending
             meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Inputs declared by the assembly Action for its caller.
-        boundary:
-          ref: boundary.action-caller
+        boundary: boundary.action-caller
         fields:
           - selector: credential-input-state
             meaning: Occurrence state (present or absent) of a declared input that accepts a provider credential.

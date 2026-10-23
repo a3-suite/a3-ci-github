@@ -8,16 +8,14 @@ contracts:
     summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
     observations:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary:
-          ref: boundary.repository-gate-result
+        boundary: boundary.repository-gate-result
         fields:
           - selector: canonical-assets
             meaning: Existence checks for every repository-owned canonical asset family and registered source.
           - selector: stale-locations
             meaning: Absence check results for registered legacy source locations.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -48,8 +46,7 @@ contracts:
     summary: Repository contract execution definition.
     observations:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary:
-          ref: boundary.repository-gate-result
+        boundary: boundary.repository-gate-result
         fields:
           - selector: contract-execution
             meaning: Execution definition entries for the packaged contract subjects.
@@ -58,8 +55,7 @@ contracts:
           - selector: contract-execution-escaping-test-paths
             meaning: Execution test paths that resolve outside the repository; absent or present.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

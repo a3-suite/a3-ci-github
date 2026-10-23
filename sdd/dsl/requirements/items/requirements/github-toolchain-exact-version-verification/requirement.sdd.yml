@@ -4,8 +4,7 @@ requirements:
   - requirement_id: github-toolchain-exact-version-verification
     type: functional
     summary: GitHub CI の定型処理が利用する CLI を supported mode ごとに完全一致の version で検証できる
-    rationale:
-      why: toolchain の暗黙更新や不足した CLI によって同じ CI 入力の結果が変化することを防ぐため
+    rationale: toolchain の暗黙更新や不足した CLI によって同じ CI 入力の結果が変化することを防ぐため
     subject:
       namespace: skills
       key: ci-github

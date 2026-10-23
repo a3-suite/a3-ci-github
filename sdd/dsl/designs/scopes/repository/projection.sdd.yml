@@ -1,6 +1,5 @@
 version: 2
 name: projection
-projection_id: a3-ci-github-repository-layout
 mappings:
   - component_id: action-contracts
     element_id: actions-root

@@ -77,6 +77,6 @@ describe("repository-cli-specification", () => {
     // Assert
     expect(readOnly).not.toMatch(/option_id: output/);
     expect(remediation).toMatch(/option_id: output/);
-    expect(specification).toMatch(/--audit-mode read-only[^\n]*\n      - node[^\n]*--audit-mode remediation[^\n]*--output/);
+    expect(specification).toMatch(/--audit-mode read-only[^\n]*\n    - node[^\n]*--audit-mode remediation[^\n]*--output/);
   });
 });

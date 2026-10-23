@@ -8,8 +8,7 @@ contracts:
     summary: Supplemental platform phase request.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Phase completion status output; success.
@@ -32,8 +31,7 @@ contracts:
           - selector: cleanup-extra-field-state
             meaning: Occurrence state (present or absent) of cleanup metadata fields outside status and temporary-state.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -120,8 +118,7 @@ contracts:
     summary: Supplemental final assembly request from transferred platform candidates.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Phase completion status output; success.
@@ -142,8 +139,7 @@ contracts:
           - selector: cleanup-extra-field-state
             meaning: Occurrence state (present or absent) of cleanup metadata fields outside status and temporary-state.
       - summary: Transported standard-installer candidate files and finalized publication assets.
-        boundary:
-          ref: boundary.workspace-files
+        boundary: boundary.workspace-files
         fields:
           - selector: candidate-files
             meaning: Comparison of the transferred candidate directory filenames and SHA-256 bytes with the files declared by platform-record.json, including .installer-source.zip; matched or mismatched.
@@ -152,8 +148,7 @@ contracts:
           - selector: publication-source-snapshots
             meaning: Verification-only installer source snapshots in the final supplemental handoff; absent or present.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

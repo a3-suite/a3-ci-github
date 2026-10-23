@@ -8,8 +8,7 @@ contracts:
     summary: Canonical quality caller and reusable workflow definitions.
     observations:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-        boundary:
-          ref: boundary.workflow-definition
+        boundary: boundary.workflow-definition
         fields:
           - selector: reusable-binding
             meaning: Declared caller-to-callee binding.
@@ -54,8 +53,7 @@ contracts:
           - selector: quality-untrusted-cargo-cache-use
             meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

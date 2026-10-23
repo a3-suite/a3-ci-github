@@ -8,8 +8,7 @@ contracts:
     summary: Release publication write request from a validated handoff.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: receipt-path
             meaning: Path of the publication receipt written by the publisher.
@@ -20,14 +19,12 @@ contracts:
           - selector: successful-output-state
             meaning: Successful evidence outputs are absent on failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Provider request and response trace observed across the publication boundary.
-        boundary:
-          ref: boundary.release-provider-requests
+        boundary: boundary.release-provider-requests
         fields:
           - selector: publication-write-retry
             meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.

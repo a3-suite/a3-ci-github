@@ -8,8 +8,7 @@ contracts:
     summary: Release publication control operation request.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Publication control operation status.
@@ -20,8 +19,7 @@ contracts:
           - selector: accepted-trigger-run
             meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

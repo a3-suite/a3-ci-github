@@ -13,10 +13,10 @@ preconditions:
   - read-only監査に必要な検証runtimeが管理対象外の専用状態領域へ準備されている
 trigger: 導入確認、定期監査、更新前確認または障害後の構成確認を行う
 main_success_scenario:
-  - summary: 配置済みworkflow、Action pin、lock、adapter、extensionおよびproject設定を対象として解決する
-  - summary: canonical構造、配布同一性、権限、runner trust、handoffおよび停止条件を利用可能な証拠へ照合する
-  - summary: hosted実行、Secret、repository設定、remote readbackなど静的監査で確認できない範囲を区別する
-  - summary: 適合、不一致、未確認、対象外と根拠を記録し、remediationへ進む条件を提示する
+  - 配置済みworkflow、Action pin、lock、adapter、extensionおよびproject設定を対象として解決する
+  - canonical構造、配布同一性、権限、runner trust、handoffおよび停止条件を利用可能な証拠へ照合する
+  - hosted実行、Secret、repository設定、remote readbackなど静的監査で確認できない範囲を区別する
+  - 適合、不一致、未確認、対象外と根拠を記録し、remediationへ進む条件を提示する
 success_outcomes:
   - 管理対象資産を変更せず、適用済みpresetの状態と不足証拠を再読可能な形で確認できる
   - provider preflightの結果と監査全体の判定を区別できる
@@ -24,8 +24,6 @@ failure_outcomes:
   - 検証runtime不足などで監査を開始できない場合はcannot-startとして記録し、適合扱いにしない
   - 不一致や証拠不足を監査中に生成・変更した資産で暗黙補完しない
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-ci-project-lifecycle
+  - github-ci-project-lifecycle
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-preset-assurance.verification
+  - contract.ci-preset-assurance.verification

@@ -8,8 +8,7 @@ contracts:
     summary: Valid request inputs produce a request handoff and digest path.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: request-path
             meaning: Path to the immutable release request JSON.
@@ -18,8 +17,7 @@ contracts:
           - selector: outcome
             meaning: Failure outcome of the rejected release request handoff step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

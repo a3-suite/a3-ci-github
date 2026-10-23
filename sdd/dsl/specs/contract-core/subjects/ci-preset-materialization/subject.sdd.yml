@@ -8,8 +8,7 @@ contracts:
     summary: Adapter bundle materialization request for a consumer project.
     observations:
       - summary: Materialization report or thrown rejection diagnostic exposed by the materializer boundary.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: schema
             meaning: Stable materialization report schema identity.
@@ -40,16 +39,14 @@ contracts:
           - selector: selected-bundle-match
             meaning: Equality of the report bundle ID and the selected input bundle ID.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
           - selector: changed-range-evidence
             meaning: Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.
       - summary: Consumer file state before and after materialization, including a failed invocation.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: standard-copy-state
             meaning: Presence of consumer files newly copied by a standard Action bundle invocation.

@@ -8,9 +8,7 @@ scope:
 rule: >-
   準備コミットは分けてよいが、公開するworkflowとinstallerの実行参照はfull SHAへ固定し、
   将来の自己SHA、mutable ref、未検証の参照へ置き換えない。
-rationale:
-  why: mutable refや未検証の参照へ置き換えると、同じReleaseを採用しても実行される資材が変わり得るため
+rationale: mutable refや未検証の参照へ置き換えると、同じReleaseを採用しても実行される資材が変わり得るため
 violation_impact: 実行資材の追跡可能性と再現性が失われる
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution

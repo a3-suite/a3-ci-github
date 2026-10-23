@@ -8,8 +8,7 @@ contracts:
     summary: Repository Action distribution gate invocation.
     observations:
       - summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
-        boundary:
-          ref: boundary.repository-gate-result
+        boundary: boundary.repository-gate-result
         fields:
           - selector: distribution
             meaning: Distribution gate result.
@@ -36,8 +35,7 @@ contracts:
           - selector: release-version
             meaning: Repository VERSION confirmed for an annotated exact release tag, or failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

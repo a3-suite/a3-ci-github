@@ -8,16 +8,14 @@ contracts:
     summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
     observations:
       - summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: selectedAssets
             meaning: Stable asset identities in the validated selection closure.
           - selector: diagnostic
             meaning: Stable rejection reason for an unknown or incomplete selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -48,8 +46,7 @@ contracts:
     summary: Selected files are published locally only after immutable source identity and file integrity validation.
     observations:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: sourceRevision
             meaning: Full immutable source commit SHA.
@@ -58,8 +55,7 @@ contracts:
           - selector: diagnostic
             meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -96,8 +92,7 @@ contracts:
     summary: Exact-tag distribution Release publication request.
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: releaseTag
             meaning: Exact validated SemVer tag that owns the published assets.
@@ -118,8 +113,7 @@ contracts:
           - selector: diagnostic
             meaning: Stable failure evidence of the rejected publication.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -178,8 +172,7 @@ contracts:
     summary: Distribution application planning request.
     observations:
       - summary: Plan result or rejection diagnostic returned by the distribution CLI.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: planDigest
             meaning: Digest of the approved distribution plan.
@@ -190,14 +183,12 @@ contracts:
           - selector: diagnostic
             meaning: Diagnostic exposed for rejected planning input.
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -236,22 +227,19 @@ contracts:
     summary: Approved distribution plan application request.
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: transactionId
             meaning: Identity of the exclusive application transaction and its before state.
           - selector: diagnostic
             meaning: Stable rejection reason of the refused application.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: partial-apply-files-binding
             meaning: Equality of paths written earlier by the interrupted apply with their recorded before-state bytes and existence; the later independently changed destination is excluded.
@@ -302,20 +290,17 @@ contracts:
     summary: Restore a recorded transaction under verified restoration preconditions while retaining independent consumer changes.
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: rollbackStatus
             meaning: Explicit evidence that transaction changes were restored.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: rollback-files-binding
             meaning: Equality of transaction-owned paths with their recorded before-state bytes and existence after explicit rollback; independently changed paths are not part of this comparison.

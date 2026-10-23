@@ -8,8 +8,7 @@ contracts:
     summary: A valid annotated tag produces tag object and source commit outputs.
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: tag-object-sha
             meaning: SHA of the annotated tag object.
@@ -20,8 +19,7 @@ contracts:
           - selector: outcome
             meaning: Failure outcome of the rejected tag resolution step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

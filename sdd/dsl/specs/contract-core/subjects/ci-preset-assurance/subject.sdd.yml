@@ -8,8 +8,7 @@ contracts:
     summary: Preset assurance verification request for an applied consumer project.
     observations:
       - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: outcome
             meaning: Bootstrap outcome when assurance cannot start.
@@ -30,14 +29,12 @@ contracts:
           - selector: semanticReviewRequired
             meaning: Whether evidence outside provider preflight still requires semantic review.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Individually observed contract values and comparisons.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: valid-tree-comparison
             meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
@@ -123,8 +120,7 @@ contracts:
     summary: Asset lock generation request for applied canonical assets.
     observations:
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: sourceRevision
             meaning: Full immutable distribution commit SHA.
@@ -139,14 +135,12 @@ contracts:
           - selector: applied-digest-comparison
             meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
       - summary: Rejection exposed when an asset lock cannot be generated safely.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: diagnostic
             meaning: Stable reason that prevents an invalid lock from being written.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
