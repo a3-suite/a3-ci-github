@@ -6,6 +6,47 @@ subject:
 contracts:
   - id: contract.ci-release-supplemental-asset.outputs
     summary: Supplemental platform phase request.
+    inputs:
+      - name: implementation
+        meaning: "Received by the contract target: supplemental asset implementation recorded in the snapshot."
+      - name: declaration
+        meaning: "Received by the contract target: standard installer declaration content."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: enabled
+        meaning: "Received by the contract target: supplemental asset selection recorded in the snapshot."
+      - name: output-directory
+        meaning: "Received by the contract target: output directory path passed by the caller."
+      - name: owner-exit
+        meaning: "Precondition prepared by the case: exit status of the owner adapter."
+      - name: owner-mutates
+        meaning: "Precondition prepared by the case: input that the owner adapter changes."
+      - name: path
+        meaning: "Received by the contract target: path input passed to the Action."
+      - name: binding
+        meaning: "Precondition prepared by the case: relation between the snapshot binding and the checkout."
+      - name: owner-output
+        meaning: "Precondition prepared by the case: output produced by the owner adapter."
+      - name: config
+        meaning: "Received by the contract target: installer configuration source."
+      - name: profile
+        meaning: "Received by the contract target: installer profile selected by the declaration."
+      - name: release-targets
+        meaning: "Received by the contract target: release targets selected by the declaration."
+      - name: platform-binding
+        meaning: "Precondition prepared by the case: relation between the platform identity and the build directory."
+      - name: platform-manifest
+        meaning: "Precondition prepared by the case: relation between the platform manifest and the authority checksum."
+      - name: provider-mutates
+        meaning: "Precondition prepared by the case: input that the provider runtime changes."
+      - name: checksum
+        meaning: "Precondition prepared by the case: checksum content available to the contract target."
+      - name: checkout
+        meaning: "Precondition prepared by the case: line endings of the fixed checkout."
+      - name: source-change
+        meaning: "Precondition prepared by the case: change made to the fixed source after checkout."
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
@@ -116,6 +157,41 @@ contracts:
             - absent
   - id: contract.ci-release-supplemental-asset.assembly
     summary: Supplemental final assembly request from transferred platform candidates.
+    inputs:
+      - name: implementation
+        meaning: "Received by the contract target: supplemental asset implementation recorded in the snapshot."
+      - name: declaration
+        meaning: "Received by the contract target: standard installer declaration content."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: supplemental-build-root
+        meaning: "Received by the contract target: supplemental build root path."
+      - name: owner-exit
+        meaning: "Precondition prepared by the case: exit status of the owner adapter."
+      - name: config
+        meaning: "Received by the contract target: installer configuration source."
+      - name: release-targets
+        meaning: "Received by the contract target: release targets selected by the declaration."
+      - name: platform-binding
+        meaning: "Precondition prepared by the case: relation between the platform identity and the build directory."
+      - name: checksum
+        meaning: "Precondition prepared by the case: checksum content available to the contract target."
+      - name: checkout
+        meaning: "Precondition prepared by the case: line endings of the fixed checkout."
+      - name: source-change
+        meaning: "Precondition prepared by the case: change made to the fixed source after checkout."
+      - name: provider-mutates
+        meaning: "Precondition prepared by the case: input that the provider runtime changes."
+      - name: transferred-evidence
+        meaning: "Precondition prepared by the case: state of the owner evidence transferred between jobs."
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
+      - name: owner-mutates
+        meaning: "Precondition prepared by the case: input that the owner adapter changes."
+      - name: release-implementation
+        meaning: "Received by the contract target: release implementation recorded in the snapshot."
+      - name: build-roots
+        meaning: "Precondition prepared by the case: content of the standard and supplemental build roots."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

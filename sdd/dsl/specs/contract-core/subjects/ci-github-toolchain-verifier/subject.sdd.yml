@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-github-toolchain-verifier.processing
     summary: The shared script accepts only supported modes whose selected CLI versions exactly match the request.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: mode
+        meaning: "Received by the contract target: verification mode."
+      - name: unavailable-command
+        meaning: "Precondition prepared by the case: command missing from the runner."
+      - name: jq-version
+        meaning: "Precondition prepared by the case: jq version reported by the runner."
     observations:
       - summary: The shared script exposes whether exact toolchain verification succeeded or failed.
         boundary: boundary.script-result
@@ -44,6 +53,17 @@ contracts:
           present: true
   - id: contract.ci-github-toolchain-verifier.outputs
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: mode
+        meaning: "Received by the contract target: verification mode."
+      - name: gh-version
+        meaning: "Precondition prepared by the case: GitHub CLI version reported by the runner."
+      - name: jq-version
+        meaning: "Precondition prepared by the case: jq version reported by the runner."
+      - name: sha256sum-version
+        meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

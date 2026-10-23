@@ -6,6 +6,27 @@ subject:
 contracts:
   - id: contract.ci-preset-assurance.verification
     summary: Preset assurance verification request for an applied consumer project.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: audit-mode
+        meaning: "Received by the contract target: audit mode selected by the request."
+      - name: output
+        meaning: "Received by the contract target: output path requested by the caller."
+      - name: selected-pending-action
+        meaning: "Precondition prepared by the case: selected Action whose release is pending."
+      - name: preset
+        meaning: "Received by the contract target: preset identifier selected for validation."
+      - name: optional-workflow
+        meaning: "Precondition prepared by the case: optional workflow installed in the consumer project."
+      - name: applied-preset-drift
+        meaning: "Precondition prepared by the case: drift of the applied preset from the canonical assets."
+      - name: supplemental-phase-drift
+        meaning: "Precondition prepared by the case: drift of the supplemental phase wiring."
+      - name: retired-release-entrypoints-file-or-invocation
+        meaning: "Precondition prepared by the case: retired release entrypoint file or invocation present in the project."
+      - name: applied-preset
+        meaning: "Precondition prepared by the case: preset assets applied to the consumer project."
     observations:
       - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
         boundary: boundary.cli-result
@@ -118,6 +139,15 @@ contracts:
             - equal
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation request for applied canonical assets.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: preset
+        meaning: "Received by the contract target: preset identifier selected for validation."
+      - name: consumer-assets
+        meaning: "Precondition prepared by the case: CI assets present in the consumer project."
     observations:
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
         boundary: boundary.project-ci-assets

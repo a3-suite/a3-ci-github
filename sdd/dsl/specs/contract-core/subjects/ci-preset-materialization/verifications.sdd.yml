@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-application
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments: []
     verifies:
       - diagnostic-failure-stage-application
   - contract_id: contract.ci-preset-materialization.application
@@ -20,7 +20,7 @@ cases:
     id: ci-preset-materialization-failure
     partition: runtime-context.preset-materialization-rejected
     input:
-      scenario: rejected
+      selection: invalid-custom-bundle
     verifies:
       - ci-preset-materialization-failure-observed
   - contract_id: contract.ci-preset-materialization.application

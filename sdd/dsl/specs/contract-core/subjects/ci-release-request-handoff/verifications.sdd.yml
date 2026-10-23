@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-release-request-handoff.outputs
     id: tag-request-handoff
     partition: runtime-context.release-request-handoff-valid

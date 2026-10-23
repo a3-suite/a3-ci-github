@@ -4,40 +4,28 @@ environment_id: a3-ci-github-github-environment
 boundaries:
   - id: boundary.action-caller
     summary: Action metadata files that declare the inputs a caller can pass.
-    kind: file-tree
   - id: boundary.action-output
     summary: GitHub Actions outputs and step result exposed by an Action.
-    kind: operation-response
   - id: boundary.runner-path
     summary: Command search path inherited by later steps in the same job.
-    kind: data-store
   - id: boundary.workspace-files
     summary: Files read or written in the checked-out workspace.
-    kind: file-tree
   - id: boundary.script-result
     summary: Exit status and generated state exposed by a shared script to its caller.
-    kind: operation-response
   - id: boundary.repository-gate-result
     summary: Repository consistency result exposed by a maintenance gate.
-    kind: operation-response
   - id: boundary.workflow-definition
     summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-    kind: file-tree
   - id: boundary.project-ci-assets
     summary: Canonical and project-owned CI assets materialized into a consumer project.
-    kind: file-tree
   - id: boundary.cli-result
     summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-    kind: operation-response
   - id: boundary.diagnostic-result
     summary: Failure status, classified reason, correlation identity, and evidence reference exposed by CI processing.
-    kind: operation-response
   - id: boundary.release-provider-requests
     summary: GitHub Release provider requests and responses observed during publication or independent verification.
-    kind: external-system
   - id: boundary.observation-clock
     summary: Reobservation delays requested from the runner clock.
-    kind: external-system
 runtime_contexts:
   - id: runtime-context.failure-diagnostic-required
     summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.

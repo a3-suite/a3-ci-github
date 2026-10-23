@@ -6,6 +6,19 @@ subject:
 contracts:
   - id: contract.ci-preset-materialization.application
     summary: Adapter bundle materialization request for a consumer project.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: selection
+        meaning: "Received by the contract target: adapter bundle selection passed to the materializer."
+      - name: source-root
+        meaning: "Received by the contract target: source root argument."
+      - name: destination
+        meaning: "Precondition prepared by the case: state of the consumer destination path."
+      - name: copy-failure
+        meaning: "Precondition prepared by the case: copy operation that fails."
+      - name: project-settings
+        meaning: "Precondition prepared by the case: state of the project settings required by the bundle."
     observations:
       - summary: Materialization report or thrown rejection diagnostic exposed by the materializer boundary.
         boundary: boundary.script-result

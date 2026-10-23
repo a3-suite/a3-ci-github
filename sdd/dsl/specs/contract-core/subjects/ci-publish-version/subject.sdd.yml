@@ -6,6 +6,17 @@ subject:
 contracts:
   - id: contract.ci-publish-version.outputs
     summary: An owner-approved version plan produces a publish-version output.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: version-plan-json
+        meaning: "Received by the contract target: version plan file path."
+      - name: strategy
+        meaning: "Received by the contract target: version strategy in the plan."
+      - name: template
+        meaning: "Received by the contract target: version template in the plan."
+      - name: components
+        meaning: "Received by the contract target: version components in the plan."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

@@ -6,6 +6,13 @@ subject:
 contracts:
   - id: contract.ci-selective-distribution.selection
     summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: assets
+        meaning: "Received by the contract target: asset identifiers selected by the request."
     observations:
       - summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
         boundary: boundary.cli-result
@@ -44,6 +51,17 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.delivery
     summary: Selected files are published locally only after immutable source identity and file integrity validation.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: file-sha256
+        meaning: "Precondition prepared by the case: digest of a delivered file compared with the manifest."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
     observations:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
         boundary: boundary.cli-result
@@ -90,6 +108,33 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.publication
     summary: Exact-tag distribution Release publication request.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: implementation-revision
+        meaning: "Received by the contract target: implementation revision bound by the registry."
+      - name: integration
+        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
+      - name: dispatch-ref
+        meaning: "Received by the contract target: ref that dispatched the publication."
+      - name: readback
+        meaning: "Precondition prepared by the case: content returned by the Release readback."
+      - name: main-tip-tree
+        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
+      - name: branch
+        meaning: "Received by the contract target: release branch name."
+      - name: implementation-release
+        meaning: "Precondition prepared by the case: presence of the implementation Release."
+      - name: connection-candidate
+        meaning: "Precondition prepared by the case: state of the approved connection candidate."
+      - name: execution-input-change
+        meaning: "Precondition prepared by the case: execution input changed after approval."
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
         boundary: boundary.script-result
@@ -170,6 +215,23 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.plan
     summary: Distribution application planning request.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: assets
+        meaning: "Received by the contract target: asset identifiers selected by the request."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: destination
+        meaning: "Precondition prepared by the case: state of the consumer destination path."
+      - name: ownership
+        meaning: "Precondition prepared by the case: ownership recorded for the consumer destination."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
     observations:
       - summary: Plan result or rejection diagnostic returned by the distribution CLI.
         boundary: boundary.cli-result
@@ -225,6 +287,31 @@ contracts:
             - matched
   - id: contract.ci-selective-distribution.application
     summary: Approved distribution plan application request.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: plan
+        meaning: "Precondition prepared by the case: state of the approved plan file."
+      - name: approval
+        meaning: "Received by the contract target: approval digest passed for the plan."
+      - name: destination
+        meaning: "Precondition prepared by the case: state of the consumer destination path."
+      - name: ownership
+        meaning: "Precondition prepared by the case: ownership recorded for the consumer destination."
+      - name: destination-change
+        meaning: "Precondition prepared by the case: change made to a consumer destination outside the invocation."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
+      - name: rollback-io
+        meaning: "Precondition prepared by the case: availability of rollback file operations."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: transaction-state
+        meaning: "Precondition prepared by the case: state of the recorded application transaction."
+      - name: secondary-io
+        meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary: boundary.cli-result
@@ -288,6 +375,23 @@ contracts:
             - matched
   - id: contract.ci-selective-distribution.rollback
     summary: Restore a recorded transaction under verified restoration preconditions while retaining independent consumer changes.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: transaction
+        meaning: "Precondition prepared by the case: state of the recorded transaction to restore."
+      - name: destination-change
+        meaning: "Precondition prepared by the case: change made to a consumer destination outside the invocation."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: transaction-state
+        meaning: "Precondition prepared by the case: state of the recorded application transaction."
+      - name: secondary-io
+        meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary: boundary.cli-result

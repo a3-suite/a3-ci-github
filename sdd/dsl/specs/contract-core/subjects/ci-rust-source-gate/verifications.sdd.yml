@@ -5,7 +5,8 @@ cases:
     id: detailed-failure-processing
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - invalid
   - contract_id: contract.ci-rust-source-gate.processing
     id: matching-rust-source-processing
     partition: runtime-context.rust-source-matches-authority
@@ -24,7 +25,8 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - invalid
   - contract_id: contract.ci-rust-source-gate.outputs
     id: matching-rust-source-authority
     partition: runtime-context.rust-source-script-succeeded

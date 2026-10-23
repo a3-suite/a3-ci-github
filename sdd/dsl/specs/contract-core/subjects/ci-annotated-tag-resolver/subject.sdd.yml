@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-annotated-tag-resolver.outputs
     summary: A valid annotated tag produces tag object and source commit outputs.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: repository
+        meaning: "Received by the contract target: repository identity passed by the caller."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: github-token
+        meaning: "Received by the contract target: token passed to the Action."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

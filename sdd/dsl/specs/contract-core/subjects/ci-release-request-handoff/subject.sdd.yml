@@ -6,6 +6,27 @@ subject:
 contracts:
   - id: contract.ci-release-request-handoff.outputs
     summary: Valid request inputs produce a request handoff and digest path.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: output-directory
+        meaning: "Received by the contract target: output directory path passed by the caller."
+      - name: tag-source-sha
+        meaning: "Received by the contract target: commit SHA that the tag points to."
+      - name: tag-object-sha
+        meaning: "Received by the contract target: annotated tag object SHA."
+      - name: github-ref
+        meaning: "Received by the contract target: ref of the triggering event."
+      - name: github-ref-name
+        meaning: "Received by the contract target: ref name of the triggering event."
+      - name: request-run-id
+        meaning: "Received by the contract target: workflow run ID of the request."
+      - name: request-actor
+        meaning: "Received by the contract target: actor of the request."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: ref
+        meaning: "Received by the contract target: tag ref passed to the Action."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

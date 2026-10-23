@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-execution
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      job-result: failure
   - contract_id: contract.ci-quality-workflow.execution
     id: ci-quality-workflow-reusable-binding
     partition: ci-quality-workflow-caller-selected
@@ -15,19 +15,19 @@ cases:
     id: ci-quality-workflow-success
     partition: ci-quality-workflow-canonical-source-available
     input:
-      scenario: valid
+      workflow-source: .github/workflows/ci-quality.yml
   - contract_id: contract.ci-quality-workflow.execution
     id: ci-quality-workflow-failure
     partition: ci-quality-workflow-failure-route-required
     input:
-      scenario: rejected
+      job-result: failure
   - contract_id: contract.ci-quality-workflow.execution
     id: ci-quality-workflow-platform
     partition: ci-quality-workflow-platform-source-selected
     input:
-      scenario: optional-platform-source-selected
+      workflow-source: .github/workflows/ci-quality-platforms.yml
   - contract_id: contract.ci-quality-workflow.execution
     id: ci-quality-workflow-profiles
     partition: ci-quality-workflow-profiles-source-selected
     input:
-      scenario: profiles-source-selected
+      caller-source: workflows/quality/quality-gate-profiles.yml

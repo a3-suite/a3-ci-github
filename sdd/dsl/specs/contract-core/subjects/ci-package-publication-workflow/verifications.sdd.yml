@@ -5,14 +5,14 @@ cases:
     id: detailed-failure-publication
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      job-result: failure
   - contract_id: contract.ci-package-publication-workflow.publication
     id: ci-package-publication-workflow-success
     partition: ci-package-publication-workflow-canonical-source-available
     input:
-      scenario: valid
+      workflow-source: .github/workflows/ci-package-publication.yml
   - contract_id: contract.ci-package-publication-workflow.publication
     id: ci-package-publication-workflow-failure
     partition: ci-package-publication-workflow-failure-route-required
     input:
-      scenario: rejected
+      workflow-source: workflows/package/package-publication-caller.yml

@@ -6,6 +6,19 @@ subject:
 contracts:
   - id: contract.ci-handoff-integrity.outputs
     summary: A matching handoff descriptor and manifest produce a handoff status output.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: handoff-root
+        meaning: "Received by the contract target: handoff root directory path."
+      - name: descriptor
+        meaning: "Received by the contract target: handoff descriptor file name."
+      - name: source-sha
+        meaning: "Received by the contract target: source commit SHA passed by the caller."
+      - name: version
+        meaning: "Received by the contract target: version value passed to the contract target."
+      - name: target-identity
+        meaning: "Received by the contract target: target identity bound to the handoff."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

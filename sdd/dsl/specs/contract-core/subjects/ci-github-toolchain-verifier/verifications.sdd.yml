@@ -5,7 +5,8 @@ cases:
     id: detailed-failure-processing
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - invalid
   - contract_id: contract.ci-github-toolchain-verifier.processing
     id: matching-exact-toolchain-processing
     partition: runtime-context.github-toolchain-matches-request
@@ -32,7 +33,8 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - invalid
   - contract_id: contract.ci-github-toolchain-verifier.outputs
     id: matching-selected-tool-versions
     partition: runtime-context.github-toolchain-script-succeeded

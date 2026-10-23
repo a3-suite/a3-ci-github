@@ -6,6 +6,11 @@ subject:
 contracts:
   - id: contract.ci-failure-diagnostics.actionable
     summary: Failure of a selected contract boundary.
+    inputs:
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the instrumented CI processing encounters."
+      - name: checkout
+        meaning: "Precondition prepared by the case: source checked out for the failing run."
     observations:
       - summary: Failure evidence in final logs and existing referenced evidence.
         boundary: boundary.diagnostic-result
@@ -180,6 +185,9 @@ contracts:
             - absent
   - id: contract.ci-failure-diagnostics.subject-declarations
     summary: Packaged contract definitions of failure diagnostics.
+    inputs:
+      - name: subject-contracts
+        meaning: "Received by the contract target: packaged subject contract definitions read by the check."
     observations:
       - summary: Packaged contract definition files read from the checked-out workspace.
         boundary: boundary.workspace-files
@@ -207,6 +215,9 @@ contracts:
             - matched
   - id: contract.ci-failure-diagnostics.workflow-evidence
     summary: Managed workflow failure summary definitions.
+    inputs:
+      - name: workflow-source
+        meaning: "Received by the contract target: workflow definition file read by repository verification."
     observations:
       - summary: Failure summary routes declared in managed workflow definitions.
         boundary: boundary.workflow-definition
@@ -259,6 +270,9 @@ contracts:
             - absent
   - id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     summary: A failing public runtime bootstrap emits a stable machine-readable failure envelope.
+    inputs:
+      - name: prepared-runtime
+        meaning: "Precondition prepared by the case: state of the prepared runtime that the bootstrap starts."
     observations:
       - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
         boundary: boundary.diagnostic-result

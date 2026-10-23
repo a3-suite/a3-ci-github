@@ -5,12 +5,12 @@ cases:
     id: detailed-failure-publication
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      job-result: failure
   - contract_id: contract.ci-release-publication-workflow.publication
     id: ci-release-publication-workflow-success
     partition: ci-release-publication-workflow-canonical-source-available
     input:
-      scenario: valid
+      workflow-source: .github/workflows/ci-release-publication.yml
     verifies:
       - ci-release-publication-workflow-success-observed
       - release-fixed-provider-reference
@@ -26,12 +26,12 @@ cases:
     id: ci-release-publication-workflow-failure
     partition: ci-release-publication-workflow-failure-route-required
     input:
-      scenario: rejected
+      job-result: failure
   - contract_id: contract.ci-release-publication-workflow.publication
     id: ci-release-publication-workflow-evidence-transfer
     partition: ci-release-publication-workflow-canonical-source-available
     input:
-      scenario: canonical-transfer
+      workflow-source: .github/workflows/ci-release-publication.yml
     verifies:
       - ci-release-publication-workflow-evidence-transfer-declared
       - supplemental-upload-selected-root

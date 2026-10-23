@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-change-scope.outputs
     summary: A resolvable change range produces a change-scope status output.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: base-sha
+        meaning: "Received by the contract target: base commit SHA."
+      - name: head-sha
+        meaning: "Received by the contract target: head commit SHA."
+      - name: docs-only-patterns
+        meaning: "Received by the contract target: documentation-only path patterns."
     observations:
       - summary: The Action exposes deterministic change-scope outputs to the caller.
         boundary: boundary.action-output

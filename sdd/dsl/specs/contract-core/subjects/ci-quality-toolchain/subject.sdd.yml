@@ -6,6 +6,39 @@ subject:
 contracts:
   - id: contract.ci-quality-toolchain.preparation
     summary: Toolchain preparation request for a selected language profile.
+    inputs:
+      - name: language-profile
+        meaning: "Received by the contract target: language profile selected by the caller."
+      - name: toolchain-version
+        meaning: "Received by the contract target: toolchain version passed by the caller."
+      - name: cargo-audit-version
+        meaning: "Received by the contract target: cargo-audit version requested by the caller."
+      - name: rustup-exit-code
+        meaning: "Precondition prepared by the case: exit status of rustup."
+      - name: cargo-exit-code
+        meaning: "Precondition prepared by the case: exit status of cargo."
+      - name: io-destinations
+        meaning: "Precondition prepared by the case: state of the output destinations."
+      - name: version-policy
+        meaning: "Received by the contract target: version policy of the selected tool."
+      - name: provider-node-version
+        meaning: "Precondition prepared by the case: Node.js version available on the runner."
+      - name: provider-status
+        meaning: "Precondition prepared by the case: exit status of the provider setup."
+      - name: tool
+        meaning: "Received by the contract target: auxiliary tool selected for installation."
+      - name: version
+        meaning: "Received by the contract target: version value passed to the contract target."
+      - name: registered-target
+        meaning: "Precondition prepared by the case: target registered for the tool archive."
+      - name: archive-sha256
+        meaning: "Precondition prepared by the case: digest of the downloaded tool archive."
+      - name: cargo-deny-version
+        meaning: "Received by the contract target: cargo-deny version requested by the caller."
+      - name: auxiliary-tools
+        meaning: "Received by the contract target: auxiliary tool installation selection."
+      - name: rust-setup-result
+        meaning: "Precondition prepared by the case: result of the Rust setup step that the failure retention step reads."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

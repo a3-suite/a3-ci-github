@@ -6,6 +6,37 @@ subject:
 contracts:
   - id: contract.ci-release-assembly.outputs
     summary: Release assembly request from authority, snapshot and build inventories.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: repository
+        meaning: "Received by the contract target: repository identity passed by the caller."
+      - name: public-skills
+        meaning: "Received by the contract target: public skills selected by the release skills declaration."
+      - name: installer
+        meaning: "Received by the contract target: standard installer selection."
+      - name: required-file
+        meaning: "Precondition prepared by the case: state of a file required by a public skill."
+      - name: authority-path
+        meaning: "Received by the contract target: path to the release authority file."
+      - name: snapshot-path
+        meaning: "Received by the contract target: path to the configuration snapshot file."
+      - name: build-root
+        meaning: "Received by the contract target: build root path."
+      - name: output-directory
+        meaning: "Received by the contract target: output directory path passed by the caller."
+      - name: supplemental-root
+        meaning: "Received by the contract target: supplemental asset root path."
+      - name: checksum-sidecar
+        meaning: "Precondition prepared by the case: format of the checksum sidecar."
+      - name: platform-manifest
+        meaning: "Received by the contract target: content of the platform manifest file."
+      - name: release-implementation
+        meaning: "Received by the contract target: release implementation recorded in the snapshot."
+      - name: supplemental-asset
+        meaning: "Received by the contract target: supplemental asset implementation selected for the release."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

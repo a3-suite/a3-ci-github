@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-platform-matrix.outputs
     summary: Platform manifest and optional quality selection inputs to the platform matrix Action.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: manifest-path
+        meaning: "Received by the contract target: platform manifest path."
+      - name: selection-path
+        meaning: "Received by the contract target: platform selection file path."
+      - name: selection-document
+        meaning: "Received by the contract target: content of the platform selection file."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

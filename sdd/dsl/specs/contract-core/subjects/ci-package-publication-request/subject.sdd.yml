@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-package-publication-request.outputs
     summary: A package publication request operation exposes its completion status and verified source identity.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: workflow-run
+        meaning: "Precondition prepared by the case: triggering workflow run."
+      - name: source-sha
+        meaning: "Received by the contract target: source commit SHA passed by the caller."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

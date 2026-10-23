@@ -6,6 +6,11 @@ subject:
 contracts:
   - id: contract.ci-release-publication-workflow.publication
     summary: Canonical release publication workflow definitions.
+    inputs:
+      - name: workflow-source
+        meaning: "Received by the contract target: workflow definition file read by repository verification."
+      - name: job-result
+        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
     observations:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary: boundary.workflow-definition

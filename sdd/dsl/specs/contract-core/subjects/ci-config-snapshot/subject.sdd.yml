@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-config-snapshot.outputs
     summary: Valid configuration sources produce a snapshot status output.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: sources-json
+        meaning: "Received by the contract target: configuration sources JSON."
+      - name: snapshot-path
+        meaning: "Received by the contract target: path to the configuration snapshot file."
+      - name: github-output
+        meaning: "Precondition prepared by the case: GitHub output file provided by the runner."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

@@ -6,6 +6,21 @@ subject:
 contracts:
   - id: contract.ci-release-publication-control.outputs
     summary: Release publication control operation request.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: workflow-run
+        meaning: "Precondition prepared by the case: triggering workflow run."
+      - name: approval-id
+        meaning: "Precondition prepared by the case: state of the approval identity."
+      - name: release-version
+        meaning: "Received by the contract target: release version passed to the Action."
+      - name: target-identity
+        meaning: "Received by the contract target: target identity bound to the handoff."
+      - name: schema
+        meaning: "Received by the contract target: schema of the publication request file."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

@@ -5,7 +5,8 @@ cases:
     id: detailed-failure-selection
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      assets:
+        - runtime.preset
   - contract_id: contract.ci-selective-distribution.selection
     id: selective-distribution-selection-selective-distribution-selection-valid
     partition: runtime-context.selective-distribution-selection-valid
@@ -26,7 +27,8 @@ cases:
     id: detailed-failure-delivery
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      operation: fetch
+      required-arguments: missing
   - contract_id: contract.ci-selective-distribution.delivery
     id: selective-distribution-delivery-selective-distribution-source-valid
     partition: runtime-context.selective-distribution-source-valid
@@ -47,7 +49,8 @@ cases:
     id: detailed-failure-publication
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - invalid
   - contract_id: contract.ci-selective-distribution.publication
     id: selective-distribution-publication-selective-distribution-publication-valid
     partition: runtime-context.selective-distribution-publication-valid

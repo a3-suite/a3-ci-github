@@ -6,6 +6,29 @@ subject:
 contracts:
   - id: contract.ci-gh-provisioner.provision
     summary: A checked official GitHub CLI Release asset enters the job PATH; failed provisioning exposes no executable.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: runner-os-arch
+        meaning: "Precondition prepared by the case: runner operating system and architecture combination."
+      - name: gh-version
+        meaning: "Received by the contract target: GitHub CLI version requested by the caller."
+      - name: runner-os
+        meaning: "Precondition prepared by the case: runner operating system."
+      - name: runner-arch
+        meaning: "Precondition prepared by the case: runner CPU architecture."
+      - name: checksum
+        meaning: "Precondition prepared by the case: checksum content available to the contract target."
+      - name: asset
+        meaning: "Precondition prepared by the case: availability of the release asset to download."
+      - name: checksum-entry
+        meaning: "Precondition prepared by the case: checksum list entry for the selected asset."
+      - name: archive-extraction
+        meaning: "Precondition prepared by the case: outcome of extracting the archive."
+      - name: installation
+        meaning: "Precondition prepared by the case: outcome of the installation step."
+      - name: path-update
+        meaning: "Precondition prepared by the case: outcome of updating the runner command path."
     observations:
       - summary: The provisioned GitHub CLI command is visible to later steps.
         boundary: boundary.runner-path

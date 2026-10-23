@@ -6,6 +6,23 @@ subject:
 contracts:
   - id: contract.ci-release-authority.outputs
     summary: Release authority request from an owner publication request.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: repository-response
+        meaning: "Precondition prepared by the case: repository identity response returned by the provider."
+      - name: decision
+        meaning: "Precondition prepared by the case: owner decision recorded for the release."
+      - name: provenance
+        meaning: "Precondition prepared by the case: provenance of the release request."
+      - name: binding
+        meaning: "Precondition prepared by the case: state of the approval binding."
+      - name: invocation
+        meaning: "Received by the contract target: form in which the authority is invoked."
+      - name: platform-manifest
+        meaning: "Received by the contract target: content of the platform manifest file."
+      - name: release-implementation
+        meaning: "Received by the contract target: release implementation recorded in the snapshot."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

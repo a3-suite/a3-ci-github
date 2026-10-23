@@ -6,6 +6,23 @@ subject:
 contracts:
   - id: contract.ci-quality-summary.outputs
     summary: Quality result input to the quality summary Action.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: summary-json
+        meaning: "Received by the contract target: summary JSON passed to the Action."
+      - name: github-step-summary
+        meaning: "Precondition prepared by the case: step summary destination provided by the runner."
+      - name: github-run-context
+        meaning: "Precondition prepared by the case: run context provided by the runner."
+      - name: row-evidence
+        meaning: "Received by the contract target: evidence reference of a summary row."
+      - name: server-url
+        meaning: "Precondition prepared by the case: GitHub server URL provided by the runner."
+      - name: repository
+        meaning: "Received by the contract target: repository identity passed by the caller."
+      - name: run-id
+        meaning: "Precondition prepared by the case: run ID provided by the runner."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

@@ -6,6 +6,15 @@ subject:
 contracts:
   - id: contract.ci-rust-source-gate.processing
     summary: The shared script accepts only checked-out Rust source bound to the release authority.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: language-profile
+        meaning: "Received by the contract target: language profile selected by the caller."
+      - name: authority-path
+        meaning: "Received by the contract target: path to the release authority file."
+      - name: authority-source-sha
+        meaning: "Precondition prepared by the case: relation between the authority source SHA and the checked-out commit."
     observations:
       - summary: The shared script exposes whether the checked-out Rust source matches the release authority.
         boundary: boundary.script-result
@@ -44,6 +53,13 @@ contracts:
           present: true
   - id: contract.ci-rust-source-gate.outputs
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: language-profile
+        meaning: "Received by the contract target: language profile selected by the caller."
+      - name: authority-path
+        meaning: "Received by the contract target: path to the release authority file."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

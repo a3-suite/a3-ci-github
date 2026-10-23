@@ -6,6 +6,23 @@ subject:
 contracts:
   - id: contract.repository-action-distribution.integrity
     summary: Repository Action distribution gate invocation.
+    inputs:
+      - name: action-metadata
+        meaning: "Received by the contract target: Action metadata file read by the distribution gate."
+      - name: actions-root
+        meaning: "Received by the contract target: Actions root directory."
+      - name: runtime-root
+        meaning: "Received by the contract target: shared runtime root directory."
+      - name: catalog-path
+        meaning: "Received by the contract target: path to the Action catalog file."
+      - name: contract-package
+        meaning: "Received by the contract target: contract package definition path."
+      - name: prepared-by
+        meaning: "Precondition prepared by the case: process that prepared the distribution input."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: repository-version
+        meaning: "Received by the contract target: content of the repository VERSION file."
     observations:
       - summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
         boundary: boundary.repository-gate-result

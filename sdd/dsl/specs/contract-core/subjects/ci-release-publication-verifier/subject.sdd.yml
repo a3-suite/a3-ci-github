@@ -6,6 +6,39 @@ subject:
 contracts:
   - id: contract.ci-release-publication-verifier.outputs
     summary: Release publication observation and verification request.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: release-inventory
+        meaning: "Precondition prepared by the case: Release inventory returned by the provider."
+      - name: credential
+        meaning: "Precondition prepared by the case: credential route available to the step."
+      - name: permission-metadata
+        meaning: "Precondition prepared by the case: permission metadata returned by the provider."
+      - name: credential-evidence
+        meaning: "Precondition prepared by the case: credential evidence context."
+      - name: assets
+        meaning: "Precondition prepared by the case: asset inventory returned by the provider."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: handoff-root
+        meaning: "Received by the contract target: handoff root directory path."
+      - name: observation-path
+        meaning: "Received by the contract target: path of the pre-publication observation file."
+      - name: receipt-path
+        meaning: "Received by the contract target: path of the publish receipt file."
+      - name: readback-path
+        meaning: "Received by the contract target: path of the readback file."
+      - name: remote-release
+        meaning: "Precondition prepared by the case: state of the remote Release."
+      - name: remote-inventory
+        meaning: "Precondition prepared by the case: remote Release inventory observed over time."
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
+      - name: evidence
+        meaning: "Precondition prepared by the case: independent readback evidence available to the verifier."
+      - name: remote-response
+        meaning: "Precondition prepared by the case: form of the provider responses."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
