@@ -16,7 +16,6 @@ authority:
     - audit reporting status layers and their owners
     - semantic audit subject aggregation interface
     - evidence applicability and reuse conditions
-    - local audit evidence cache lifecycle and storage shape
     - audit completion and conformance success boundary
   excludes:
     - workflow runtime status semantics
@@ -27,7 +26,6 @@ usage:
   whenToRead:
     - 適用先 CI 資産を読み取り専用で監査するとき
     - CI 資産を修正して再検証するとき
-    - provider 固有の監査手順を共通監査へ写像するとき
   consumers: [human, agent, validator]
 auditContract:
   purpose:
@@ -39,6 +37,7 @@ auditContract:
       - 実公開時のrun・actor・公開後の配布物取得などは公開後確認として別記し、その未実施だけでリリース前監査を非成功にしない。
       - 選択した段階に必要な確認の不足は既存のstatusClassificationで非成功として保持し、実行証跡の未取得を構成不適合へ混ぜない。
       - 監査を実公開操作へ拡張せず、公開後確認は対象ownerの運用手順へ引き継ぐ。
+      - 比較基準のplanがreuseとなった標準経路は、提供元の契約テストを証拠とする。経路の机上実行、失敗診断、シーケンス照合は、reuse以外の経路、project所有の部分、または詳細確認の依頼時に限って行う。
       - providerの設定（branch protection、ruleset、required check、Variables、公開先registryの設定）は監査の必須入力にしない。権限・機能・設定の可否は操作の結果で判定する。任意に読み取った観測を読み取れない、または判定できない事実は監査statusへ入れず、事前確認の扱いはproviderの事前確認方針に従う。
   stages:
     defaultSelection: configuration-only
@@ -121,7 +120,8 @@ auditContract:
     - id: use-case-simulation
       requirement: required
       layer: semantic-audit
-      purpose: 通常・例外・再実行経路を契約と配置済み実装の間で双方向に照合する。
+      purpose: 意味監査subjectを確認し、適用条件に該当する通常・例外・再実行経路を契約と配置済み実装の間で双方向に照合する。
+      pathScope: reuse以外の経路、project所有の部分、詳細確認を依頼された経路
     - id: contract-evidence
       requirement: required
       layer: semantic-audit
@@ -302,77 +302,6 @@ auditContract:
         - audit-target-identity
         - remote-resource-identity
         - expected-source-or-artifact-identity
-    localCache:
-      owner: audit-orchestrator
-      path: .a3-skills/ci-github/audit-cache.json
-      format: json
-      role: optional-rebuildable-local-optimization
-      sourceOfTruth: false
-      versionControl: must-be-ignored
-      maxSnapshots: 1
-      timePolicy: observed-at-is-informational-not-reuse-authority
-      storedEvidenceKinds: [local]
-      record:
-        schemaVersion: "1"
-        requiredFields:
-          - schemaVersion
-          - repositoryIdentity
-          - auditTargetIdentity
-          - auditScopeIdentity
-          - evaluationContractIdentity
-          - resolvedConfigurationIdentity
-          - executorIdentity
-          - toolRuntimeIdentities
-          - completedAt
-          - evidence
-        evidenceEntryRequiredFields:
-          - phase
-          - status
-          - evidenceIdentity
-          - provenance
-          - requiredBindings
-          - observationFacts
-        observationFacts: non-secret-minimum-required-for-current-classification
-        forbiddenFields:
-          - secret-values
-          - environment-variable-values
-          - authenticated-urls
-          - raw-logs
-          - raw-error-output
-      read:
-        reusePolicy: reuseEvaluation
-        requiredBeforeReuse:
-          - current-audit-scope-rediscovered
-          - current-semantic-subject-applicability-recomputed
-          - current-semantic-candidates-rediscovered
-        missConditions:
-          - cache-absent
-          - cache-schema-unsupported-or-invalid
-          - required-binding-unresolved
-          - required-binding-mismatch
-          - evidence-status-not-reusable
-          - evidence-or-observation-facts-missing
-          - mutable-external-state-dependency
-        cacheMiss:
-          action: acquire-current-evidence
-          auditStatusEffect: none
-      write:
-        trigger: completed-audit
-        atomicReplace:
-          temporaryDirectory: .a3-skills/ci-github/tmp
-          replaceAfterValidation: true
-        failure:
-          reporting: warning
-          auditStatusEffect: none
-          previousCache: preserve
-      disposal:
-        stateLossEffect: cache-miss
-        incompatibleContinuation:
-          cachedEvidenceHandling: discard-from-reuse
-          historyReconciliation: forbidden
-          snapshotMerge: forbidden
-          replacement: next-completed-audit
-        cleanupAuthority: explicit-cache-owner-operation
   completion:
     scope: selected-stage-check-items-only
     terminalStatuses: [success, failed, blocked, 判定不能]
@@ -404,13 +333,3 @@ auditContract:
       - every-applicable-required-contract-is-satisfied
       - every-required-evidence-binding-matches-current-audit-target
       - no-required-result-is-failed-blocked-or-undecidable
-  providerMapping:
-    requirements:
-      - map-every-check-item-to-stage-without-moving-whole-mixed-phase
-      - map-every-pre-audit-step-exactly-once
-      - map-every-common-audit-phase-exactly-once
-      - map-every-post-preflight-provider-check-to-exactly-one-common-audit-phase
-      - preserve-common-status-without-redefinition
-      - preserve-evidence-provenance-and-identity-bindings
-      - derive-audit-completion-and-conformance-only-from-common-contract
-      - keep-review-severity-and-final-judgment-outside-audit-contract

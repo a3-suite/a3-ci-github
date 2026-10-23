@@ -63,5 +63,6 @@ a3 Actionはregistryの`actionization`、一般的なAction候補、選択順位
 
 - 導入と設定: `references/configure-ci-preset.guide.md`
 - 配置済み構成のpreflight: `references/validate-ci-preset.guide.md`
-- 契約テストからhosted／remote証拠までの確認: `references/verify-applied-ci-preset.guide.md`
+- 適用済みCIの監査: `references/verify-applied-ci-preset.guide.md`
+- 契約テストからhosted／remote証拠までの確認: `references/inspect-ci-audit-details.guide.md`
 - Release assets公開の実装: `references/implement-release-asset-publication-workflow.guide.md`

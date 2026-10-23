@@ -10,18 +10,16 @@
 | --- | --- |
 | `references/ci-audit-contract.reference.yml` | 監査モード、フェーズ、status、集約、監査完了、適合の正本 |
 | `references/ci-audit-subjects.reference.yml` | 意味監査 subject の発見、適用、owner 委譲、CI 側の接続確認、報告項目の正本 |
-| `references/verify-applied-ci-assets.guide.md` | 対象解決と共通監査フェーズの実行 |
-| provider 固有の検証ガイド | preflight 後の provider 固有検査と証拠を、一つの共通監査フェーズへ写像 |
+| `references/verify-applied-ci-preset.guide.md` | 機械監査と毎回必須の意味監査。検出時と詳細確認時は同ガイドの導線に従う |
 | provider preflight | 監査開始前の機械検証。監査全体の代替にはしない |
 | 本ガイドと review スキル | テーマ別確認、finding、修正案、最終報告 |
 
-実行導線は、本ガイドから共通検証、provider 固有検証、共通契約による集約、review 報告の順とする。各ガイドは共通契約と並立する status、監査完了条件、適合条件を定義しない。
+実行導線は、本ガイドから適用済みCIの監査、共通契約による集約、review 報告の順とする。各ガイドは共通契約と並立する status、監査完了条件、適合条件を定義しない。
 
 ## フロー
-1. 適用先 CI 資産の共通検証を実行する。
-   - `references/verify-applied-ci-assets.guide.md` の対象解決、検証順序、監査完了条件、適合判定を省略せず適用する。
-   - 選択した provider 固有の検証ガイドへ委譲し、共通検証の各段階を provider の実行経路と証拠へ写像する。
-   - 共通検証で確定した個別結果と証拠の provenance は上書きせず、後続のテーマ別確認で得た観測は該当する監査フェーズとsubjectのstatusへ集約する。findingの重大度は監査statusと分け、reviewスキルの合否と最終判断へ統合する。
+1. 適用先 CI 資産を監査する。
+   - `references/verify-applied-ci-preset.guide.md` の機械監査、毎回必須の意味監査、判定を省略せず適用し、検出または依頼に応じて同ガイドの導線から専用ガイドを適用する。
+   - 監査で確定した個別結果と証拠の provenance は上書きせず、後続のテーマ別確認で得た観測は該当する監査フェーズとsubjectのstatusへ集約する。findingの重大度は監査statusと分け、reviewスキルの合否と最終判断へ統合する。
 2. authority の重複を確認する。
    - ブランチ運用、承認要件、版運用を CI 側で再定義していないか確認する。
    - branch category、merge direction、version policy、publish trigger は git-branch-strategy スキルの正本 DSL に従っているか確認する。

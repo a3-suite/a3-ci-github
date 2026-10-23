@@ -16,10 +16,11 @@
         "references/design-ci-workflow.guide.md",
         "references/implement-package-publish-workflow.guide.md",
         "references/implement-release-asset-publication-workflow.guide.md",
+        "references/inspect-ci-audit-details.guide.md",
         "references/publish-project-skills.guide.md",
+        "references/resolve-ci-audit-findings.guide.md",
         "references/review-ci-workflow.guide.md",
         "references/validate-ci-preset.guide.md",
-        "references/verify-applied-ci-assets.guide.md",
         "references/verify-applied-ci-preset.guide.md"
       ]
     },
