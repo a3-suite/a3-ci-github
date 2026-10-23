@@ -3,7 +3,7 @@ import path from 'node:path';
 import childProcess, { execFileSync, spawnSync } from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { test, vi, describe, expect } from 'vitest';
-import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture } from './fixtures.mjs';
+import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
 import { assetDigest, validateEvidence } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
@@ -373,6 +373,50 @@ describe("contract.ci-release-assembly.outputs", () => {
       expect(() => validateEvidence('identity', {})).toThrow(/schema-mismatch/);
       expect(() => validateEvidence('asset', { name: 'a', sha256: 'a'.repeat(64), size: 1, extra: true })).toThrow(/schema-mismatch/);
       expect(() => validateEvidence('assets', Array.from({ length: 257 }, () => ({ name: 'a', sha256: 'a'.repeat(64), size: 1 })))).toThrow(/schema-mismatch/);
+    });
+  });
+});
+
+describe("contract.ci-release-assembly.outputs", () => {
+  describe("asset-release-assembly", () => {
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: asset-release-assembly
+    test('asset release assembles selected skills and supplemental assets without a build inventory', (t) => {
+      // Arrange
+      const f = putSupplementalAsset(toAssetRelease(releaseSkillsFixture(t)));
+      // Act
+      const result = f.assemble();
+      // Assert
+      expect(result.assets.map((asset) => asset.name).sort()).toStrictEqual(['instructions.zip', 'instructions.zip.sha256', 'project-skills.zip', 'project-skills.zip.sha256']);
+      expect(result.asset_digest).toBe(assetDigest(result.assets));
+      expect(JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'handoff.json'), 'utf8'))).toMatchObject({ schema: 'ci.handoff.v1', source_sha: f.identity.source_sha, version: f.identity.version });
+    });
+
+    // contract_id: contract.ci-release-assembly.outputs
+    // integration_id: asset-release-assembly
+    test('asset release rejects an empty asset selection, build inputs and a platform-bound authority', (t) => {
+      // Arrange
+      const empty = toAssetRelease(fixture(t));
+      const withBuild = toAssetRelease(releaseSkillsFixture(t));
+      withBuild.options.buildRoot = path.join(withBuild.root, 'build');
+      const platformAuthority = toAssetRelease(releaseSkillsFixture(t));
+      platformAuthority.authority.platform_manifest = 'platform.yml';
+      platformAuthority.put('authority.json', platformAuthority.authority);
+      const mixedSnapshot = toAssetRelease(releaseSkillsFixture(t));
+      mixedSnapshot.snapshot.values.CI_PLATFORM_MANIFEST = 'platform.yml';
+      mixedSnapshot.snapshot.digest = sha256(Buffer.from(canonicalJson({ sources: mixedSnapshot.snapshot.sources, values: mixedSnapshot.snapshot.values })));
+      mixedSnapshot.authority.config_snapshot_digest = mixedSnapshot.snapshot.digest;
+      mixedSnapshot.put('snapshot.json', mixedSnapshot.snapshot);
+      mixedSnapshot.put('authority.json', mixedSnapshot.authority);
+      const platformWithoutBuild = fixture(t);
+      delete platformWithoutBuild.options.buildRoot;
+      // Act and Assert
+      expect(empty.assemble).toThrow(/asset-set-empty/);
+      expect(withBuild.assemble).toThrow(/input-unexpected:build-root/);
+      expect(platformAuthority.assemble).toThrow(/platform-mismatch/);
+      expect(mixedSnapshot.assemble).toThrow(/platform-mismatch/);
+      expect(platformWithoutBuild.assemble).toThrow(/input-missing:build-root/);
+      for (const f of [empty, withBuild, platformAuthority, mixedSnapshot, platformWithoutBuild]) expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(false);
     });
   });
 });

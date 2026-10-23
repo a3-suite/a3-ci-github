@@ -53,6 +53,10 @@ runtime_contexts:
     summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change. A selected native target or installer shell can also be unsupported.
   - id: runtime-context.release-assembly-valid
     summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed. Selected public skills satisfy ci-github.release-skills-contract and bind to the same Release source and version.
+  - id: runtime-context.release-asset-only-assembly-valid
+    summary: Authority records an asset release without language profile, toolchain or platform manifest bindings; no build inventory is supplied; and the selected public skills, the selected supplemental asset evidence, or both bind to the same Release source and version with an unclaimed output destination.
+  - id: runtime-context.release-asset-only-assembly-empty
+    summary: Authority records an asset release without platform bindings, and neither public skills nor a supplemental asset is selected, so no Release asset exists to assemble.
   - id: runtime-context.release-assembly-invalid
     summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists. Selected public skills can also violate fixed source, required inventory, safe paths or publication name constraints.
   - id: runtime-context.release-pre-observation-valid
@@ -161,6 +165,8 @@ runtime_contexts:
     summary: Inputs are missing or mismatched, approval is expired, source moves, inventory is unknown, a Release already exists, or create/upload/finalize/readback fails.
   - id: runtime-context.release-authority-valid
     summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with the target repository identity.
+  - id: runtime-context.release-authority-asset-only-valid
+    summary: The same owner decision, request runs, approved notes, fixed tag/source and owner receiving workflow agree, and the trusted snapshot selects the asset release implementation without language profile, toolchain or platform manifest.
   - id: runtime-context.release-authority-invalid
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
   - id: runtime-context.standard-installer-evidence-valid

@@ -28,6 +28,8 @@ contracts:
             meaning: Occurrence state of successful outputs.
           - selector: platform-manifest-source-text-comparison
             meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
+          - selector: authority-platform-binding-state
+            meaning: Occurrence state (present or absent) of language profile, toolchain and platform manifest bindings in the authority handoff.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -41,11 +43,13 @@ contracts:
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-authority-valid
+      - environment: runtime-context.release-authority-asset-only-valid
       - environment: runtime-context.release-authority-invalid
     guarantees:
       - id: authority-file
         applies_to:
           - runtime-context.release-authority-valid
+          - runtime-context.release-authority-asset-only-valid
         claim:
           field: authority-path
           present: true
@@ -79,7 +83,15 @@ contracts:
       - id: authority-get-only-requests
         applies_to:
           - runtime-context.release-authority-valid
+          - runtime-context.release-authority-asset-only-valid
         claim:
           field: non-get-request-state
+          in:
+            - absent
+      - id: authority-asset-only-no-platform-binding
+        applies_to:
+          - runtime-context.release-authority-asset-only-valid
+        claim:
+          field: authority-platform-binding-state
           in:
             - absent

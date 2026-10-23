@@ -42,3 +42,12 @@ cases:
     verifies:
       - authority-file
       - platform-source-text-digest
+  - contract_id: contract.ci-release-authority.outputs
+    id: asset-release-selection
+    partition: runtime-context.release-authority-asset-only-valid
+    input:
+      release-implementation: asset-release
+    verifies:
+      - authority-file
+      - authority-get-only-requests
+      - authority-asset-only-no-platform-binding

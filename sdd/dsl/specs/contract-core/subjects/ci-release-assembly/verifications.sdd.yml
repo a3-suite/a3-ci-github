@@ -100,3 +100,24 @@ cases:
     verifies:
       - bound-handoff
       - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
+    id: asset-only-assembly-valid
+    partition: runtime-context.release-asset-only-assembly-valid
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      public-skills:
+        - ci-github
+      supplemental-asset: owner-adapter
+    verifies:
+      - assembly-success
+      - bound-handoff
+      - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
+    id: asset-only-assembly-empty
+    partition: runtime-context.release-asset-only-assembly-empty
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      public-skills: []
+      supplemental-asset: none

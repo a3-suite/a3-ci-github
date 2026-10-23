@@ -124,17 +124,29 @@ export const createAuthority = async (options: AuthorityOptions, client: ReadOnl
   diagnostic.at('snapshot-validation', { input: 'snapshot-path' });
   const snapshot = readRecord(safePath(root, options.snapshotPath));
   const values = validateSnapshot(snapshot, { config_snapshot_digest: snapshot.digest });
-  if (values.CI_RELEASE_OWNER_CONTRACT !== 'git.release-flow' || values.CI_RELEASE_IMPLEMENTATION !== 'rust-cli-release' || values.CI_LANGUAGE_PROFILE !== 'rust') {
-    fail('owner-contract-inconsistent', { field: 'snapshot-release-selection', expected: { CI_RELEASE_OWNER_CONTRACT: 'git.release-flow', CI_RELEASE_IMPLEMENTATION: 'rust-cli-release', CI_LANGUAGE_PROFILE: 'rust' },
+  // An asset release has no product build, so it binds no language, toolchain or platform and must say so explicitly.
+  const assetRelease = values.CI_RELEASE_IMPLEMENTATION === 'asset-release';
+  const expectedProfile = assetRelease ? '__unset__' : 'rust';
+  if (values.CI_RELEASE_OWNER_CONTRACT !== 'git.release-flow' || (values.CI_RELEASE_IMPLEMENTATION !== 'rust-cli-release' && !assetRelease) || values.CI_LANGUAGE_PROFILE !== expectedProfile) {
+    fail('owner-contract-inconsistent', { field: 'snapshot-release-selection', expected: { CI_RELEASE_OWNER_CONTRACT: 'git.release-flow', CI_RELEASE_IMPLEMENTATION: ['rust-cli-release', 'asset-release'], CI_LANGUAGE_PROFILE: expectedProfile },
       observed: { CI_RELEASE_OWNER_CONTRACT: diagnosticValue(values.CI_RELEASE_OWNER_CONTRACT), CI_RELEASE_IMPLEMENTATION: diagnosticValue(values.CI_RELEASE_IMPLEMENTATION), CI_LANGUAGE_PROFILE: diagnosticValue(values.CI_LANGUAGE_PROFILE) } });
   }
-  const manifestPath = text(values.CI_PLATFORM_MANIFEST, 'platform-manifest-invalid');
-  const manifestDigest = sourceTextSha256(readBytes(safePath(root, manifestPath)));
-  const toolchain = text(values.CI_TOOLCHAIN_VERSION, 'toolchain-invalid');
-  if (toolchain.includes('<') || toolchain === '__unset__') fail('toolchain-invalid', { field: 'CI_TOOLCHAIN_VERSION', expected: 'resolved-toolchain', observed: toolchain });
+  let platform: { language_profile: string | null; toolchain_version: string | null; platform_manifest: string | null; platform_manifest_sha256: string | null };
+  if (assetRelease) {
+    for (const key of ['CI_TOOLCHAIN_VERSION', 'CI_PLATFORM_MANIFEST']) {
+      if (values[key] !== '__unset__') fail('owner-contract-inconsistent', { field: key, expected: '__unset__', observed: diagnosticValue(values[key]) });
+    }
+    platform = { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null };
+  } else {
+    const manifestPath = text(values.CI_PLATFORM_MANIFEST, 'platform-manifest-invalid');
+    const manifestDigest = sourceTextSha256(readBytes(safePath(root, manifestPath)));
+    const toolchain = text(values.CI_TOOLCHAIN_VERSION, 'toolchain-invalid');
+    if (toolchain.includes('<') || toolchain === '__unset__') fail('toolchain-invalid', { field: 'CI_TOOLCHAIN_VERSION', expected: 'resolved-toolchain', observed: toolchain });
+    platform = { language_profile: 'rust', toolchain_version: toolchain, platform_manifest: manifestPath, platform_manifest_sha256: manifestDigest };
+  }
   const identity = validateEvidence('identity', { repository, tag: decision.tag, tag_object_sha: tagObjectSha, source_sha: sourceSha, version: decision.version, target_identity: decision.targetIdentity, body_sha256: bound.bodyDigest });
   const authority = { schema: 'ci.release-authority.v1', source_sha: sourceSha, tag_object_sha: tagObjectSha, version: decision.version, tag: decision.tag, target_identity: decision.targetIdentity,
-    language_profile: 'rust', toolchain_version: toolchain, platform_manifest: manifestPath, platform_manifest_sha256: manifestDigest,
+    ...platform,
     config_snapshot_digest: snapshot.digest, owner_contract: { id: 'git.release-flow', handoff_path: OWNER_HANDOFF_PATH, revision: publicationRun.head_sha }, owner_contract_digest: sha256(ownerBytes), publication: identity,
     approval_id: bound.approvalId, approved_body_sha256: bound.bodyDigest };
   diagnostic.at('authority-write', { output: 'output-directory' });

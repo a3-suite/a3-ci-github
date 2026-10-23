@@ -11,14 +11,17 @@ inputs:
     required: true
     description: Authority-bound ci.config-snapshot.v1 JSON.
   platform-manifest-path:
-    required: true
-    description: Authority-bound platform manifest bytes, at most 64 KiB.
+    required: false
+    default: ''
+    description: Authority-bound platform manifest bytes, at most 64 KiB. Empty only for an asset release.
   platform-matrix:
-    required: true
-    description: Validated ci-platform-matrix output from the authority job.
+    required: false
+    default: ''
+    description: Validated ci-platform-matrix output from the authority job. Empty only for an asset release.
   build-root:
-    required: true
-    description: Directory containing exactly one release-build-ID directory per platform.
+    required: false
+    default: ''
+    description: Directory containing exactly one release-build-ID directory per platform. Empty only for an asset release.
   supplemental-root:
     required: false
     default: ''

@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { fixture, selectedReleaseSkillsFixture } from '../../../runtime/release-publication/tests/fixtures.mjs';
+import { fixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -13,8 +13,9 @@ const bundle = entrypointArgs;
 const environment = (options: Record<string, string>, output: string): NodeJS.ProcessEnv => ({
   ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
   INPUT_REPOSITORY: options.repository, 'INPUT_AUTHORITY-PATH': options.authorityPath,
-  'INPUT_SNAPSHOT-PATH': options.snapshotPath, 'INPUT_PLATFORM-MANIFEST-PATH': options.platformManifestPath,
-  'INPUT_PLATFORM-MATRIX': options.platformMatrix, 'INPUT_BUILD-ROOT': options.buildRoot,
+  'INPUT_SNAPSHOT-PATH': options.snapshotPath, 'INPUT_PLATFORM-MANIFEST-PATH': options.platformManifestPath ?? '',
+  'INPUT_PLATFORM-MATRIX': options.platformMatrix ?? '', 'INPUT_BUILD-ROOT': options.buildRoot ?? '',
+  'INPUT_SUPPLEMENTAL-ROOT': options.supplementalRoot ?? '',
   'INPUT_OUTPUT-DIRECTORY': options.outputRoot,
   'INPUT_SKILLS-SOURCE-ROOT': options.skillsSourceRoot ?? '',
 });
@@ -107,6 +108,31 @@ test('assembly bundle rejects invalid input without successful outputs', (t) => 
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(result.stderr).toMatch(/authority-handoff-binding-mismatch/);
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint
+test('assembly bundle assembles an asset release without build inputs and fails an empty selection', (t) => {
+  // Arrange
+  const f = putSupplementalAsset(toAssetRelease(selectedReleaseSkillsFixture(t)));
+  const output = f.put('github-output', '');
+  const empty = toAssetRelease(fixture(t));
+  const emptyOutput = empty.put('github-output', '');
+  // Act
+  const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
+  const rejected = spawnSync(process.execPath, [...bundle], { env: environment(empty.options, emptyOutput), encoding: 'utf8', cwd: empty.root });
+  // Assert
+  expect(result.status, result.stderr).toBe(0);
+  const outputs = fs.readFileSync(output, 'utf8');
+  expect(outputs).toContain('status=success\n');
+  expect(outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
+  expect(outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
+  const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
+  expect(assembly.assets.map((asset: { name: string }) => asset.name)).toEqual(expect.arrayContaining(['project-skills.zip', 'instructions.zip']));
+  expect(rejected.status).toBe(1);
+  expect(rejected.stderr).toContain('asset-set-empty');
+  expect(fs.readFileSync(emptyOutput, 'utf8')).toBe('');
+  expect(fs.existsSync(empty.options.outputRoot)).toBe(false);
 });
 
 });

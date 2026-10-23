@@ -45,11 +45,14 @@ contracts:
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-assembly-valid
+      - environment: runtime-context.release-asset-only-assembly-valid
       - environment: runtime-context.release-assembly-invalid
+      - environment: runtime-context.release-asset-only-assembly-empty
     guarantees:
       - id: assembly-success
         applies_to:
           - runtime-context.release-assembly-valid
+          - runtime-context.release-asset-only-assembly-valid
         claim:
           field: status
           in:
@@ -57,12 +60,14 @@ contracts:
       - id: bound-handoff
         applies_to:
           - runtime-context.release-assembly-valid
+          - runtime-context.release-asset-only-assembly-valid
         claim:
           field: release-handoff
           present: true
       - id: bound-asset-digest
         applies_to:
           - runtime-context.release-assembly-valid
+          - runtime-context.release-asset-only-assembly-valid
         claim:
           field: asset-digest
           present: true
@@ -76,6 +81,7 @@ contracts:
       - id: assembly-rejected
         applies_to:
           - runtime-context.release-assembly-invalid
+          - runtime-context.release-asset-only-assembly-empty
         claim:
           field: outcome
           in:
