@@ -502,3 +502,35 @@ test_maps:
         symbol: supplemental source accepts empty markers and rejects their mutation > true
         guarantees:
           - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    case_id: supplemental-asset-release-valid
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        guarantees:
+          - phase-success
+          - phase-output
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        guarantees:
+          - phase-success
+          - phase-output
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
+        guarantees:
+          - phase-output
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    case_id: supplemental-asset-release-invalid
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        guarantees:
+          - phase-rejected
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        guarantees:
+          - phase-rejected
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
+        guarantees:
+          - phase-rejected

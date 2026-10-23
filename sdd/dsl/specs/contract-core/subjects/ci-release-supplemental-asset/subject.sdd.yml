@@ -157,10 +157,13 @@ contracts:
       - environment: runtime-context.supplemental-phase-valid
       - environment: runtime-context.supplemental-phase-invalid
       - environment: runtime-context.standard-installer-evidence-valid
+      - environment: runtime-context.supplemental-asset-release-valid
+      - environment: runtime-context.supplemental-asset-release-invalid
     guarantees:
       - id: phase-success
         applies_to:
           - runtime-context.supplemental-phase-valid
+          - runtime-context.supplemental-asset-release-valid
         claim:
           field: status
           in:
@@ -168,12 +171,14 @@ contracts:
       - id: phase-output
         applies_to:
           - runtime-context.supplemental-phase-valid
+          - runtime-context.supplemental-asset-release-valid
         claim:
           field: output-directory
           present: true
       - id: phase-rejected
         applies_to:
           - runtime-context.supplemental-phase-invalid
+          - runtime-context.supplemental-asset-release-invalid
         claim:
           field: outcome
           in:

@@ -49,6 +49,10 @@ runtime_contexts:
     summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
   - id: runtime-context.supplemental-phase-valid
     summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints. Selected native targets are Linux, macOS or Windows; Windows installer execution runs on Windows PowerShell 5.1 or later, and a shared wrapper targets Linux and macOS only.
+  - id: runtime-context.supplemental-asset-release-valid
+    summary: Authority and snapshot record an asset release; the owner adapter runs the assemble phase with empty standard and supplemental build roots, keeps them unchanged, exits zero and creates a new nonempty output directory.
+  - id: runtime-context.supplemental-asset-release-invalid
+    summary: An asset release supplies a nonempty build root, selects a platform phase or the standard installer, or mixes platform values between authority and snapshot.
   - id: runtime-context.supplemental-phase-invalid
     summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change. A selected native target or installer shell can also be unsupported.
   - id: runtime-context.release-assembly-valid

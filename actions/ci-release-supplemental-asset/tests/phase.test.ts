@@ -107,3 +107,48 @@ describe('supplemental source rejects missing and empty owner output', () => {
     expect(() => runSupplemental(f.options)).toThrow();
   });
 });
+
+describe('supplemental-asset-release-source', () => {
+  // contract_id: contract.ci-release-supplemental-asset.assembly
+  // integration_id: supplemental-asset-release-source
+  test('asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases', (t) => {
+    // Arrange
+    const assetRelease = (sub: Parameters<typeof fixture>[0], values: Record<string, string> = {}) => {
+      const f = fixture(sub);
+      f.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '__unset__', ...values },
+        { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
+      f.options.operation = 'assemble';
+      f.options.supplementalBuildRoot = 'supplemental build';
+      for (const directory of ['standard build', 'supplemental build']) fs.rmSync(path.join(f.root, directory, 'input'));
+      return f;
+    };
+    const valid = assetRelease(t);
+    const withBuild = assetRelease(t);
+    fs.writeFileSync(path.join(withBuild.root, 'standard build/input'), 'product build');
+    const platformPhase = assetRelease(t);
+    platformPhase.options.operation = 'build-platform';
+    delete platformPhase.options.supplementalBuildRoot;
+    const installer = assetRelease(t, { CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'standard-installer',
+      CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'installer.asset-assembly-evidence-contract', CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '.ci/installer/assembly.json' });
+    const platformEmpty = ['standard build', 'supplemental build'].map((directory) => {
+      const f = fixture(t);
+      f.options.operation = 'assemble';
+      f.options.supplementalBuildRoot = 'supplemental build';
+      fs.rmSync(path.join(f.root, directory, 'input'));
+      return f;
+    });
+    const mixed = assetRelease(t);
+    mixed.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '.ci/platform-manifest.yml' },
+      { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
+    // Act
+    runSupplemental(valid.options);
+    // Assert
+    expect(fs.readFileSync(path.join(valid.root, 'new output/arguments'), 'utf8')).toBe(['assemble', 'authority.json', 'snapshot.json', 'standard build', 'supplemental build', 'new output', ''].join('\n'));
+    expect(() => runSupplemental(withBuild.options)).toThrow(/unexpected-build-input/);
+    expect(() => runSupplemental(platformPhase.options)).toThrow(/asset-release-phase-invalid/);
+    expect(() => runSupplemental(installer.options)).toThrow(/asset-release-phase-invalid/);
+    for (const f of platformEmpty) expect(() => runSupplemental(f.options)).toThrow(/build-input-missing/);
+    expect(() => runSupplemental(mixed.options)).toThrow(/platform-mismatch/);
+    for (const f of [withBuild, platformPhase, installer, ...platformEmpty, mixed]) expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
+  });
+});

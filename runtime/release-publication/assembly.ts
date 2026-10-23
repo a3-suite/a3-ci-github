@@ -8,7 +8,7 @@ import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } fr
 import type { AssemblyType } from './schema';
 import { validateSnapshot } from './snapshot';
 import { buildReleaseSkills } from './skill-package';
-import { releaseSkillsConfigPath } from './selection';
+import { assetReleaseSelection, releaseSkillsConfigPath } from './selection';
 
 export type AssemblyOptionsType = {
   authorityPath: string; repository: string; snapshotPath: string; platformManifestPath?: string;
@@ -39,11 +39,7 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     if (supplementalEnabled !== Boolean(options.supplementalRoot)) fail(supplementalEnabled ? 'selected-supplemental-asset-missing' : 'unexpected-supplemental-asset');
     const skillsConfigPath = releaseSkillsConfigPath(config);
     if (Boolean(skillsConfigPath) !== Boolean(options.skillsSourceRoot)) fail('skills-source-selection-mismatch');
-    // An asset release is recognised only when authority and snapshot both record it; no build input may then be supplied.
-    const assetRelease = config.CI_RELEASE_IMPLEMENTATION === 'asset-release';
-    const platformFields = ['language_profile', 'toolchain_version', 'platform_manifest', 'platform_manifest_sha256'];
-    if (assetRelease && (config.CI_PLATFORM_MANIFEST !== '__unset__' || platformFields.some((field) => authority[field] !== null))) fail('platform-mismatch');
-    if (!assetRelease && authority.platform_manifest === null) fail('platform-mismatch');
+    const assetRelease = assetReleaseSelection(config, authority);
     diagnostic.confirmed();
     const buildInputs = { 'platform-manifest-path': options.platformManifestPath, 'platform-matrix': options.platformMatrix, 'build-root': options.buildRoot };
     let platforms: ReturnType<typeof validatePlatformManifestValue> = [];

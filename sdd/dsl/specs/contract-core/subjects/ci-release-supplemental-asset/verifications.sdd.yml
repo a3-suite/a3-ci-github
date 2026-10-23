@@ -411,3 +411,20 @@ cases:
       owner-mutates: supplemental-input
     verifies:
       - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: supplemental-asset-release-valid
+    partition: runtime-context.supplemental-asset-release-valid
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      build-roots: empty
+    verifies:
+      - phase-success
+      - phase-output
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: supplemental-asset-release-invalid
+    partition: runtime-context.supplemental-asset-release-invalid
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      build-roots: nonempty
