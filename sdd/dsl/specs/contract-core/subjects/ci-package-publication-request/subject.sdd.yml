@@ -10,35 +10,31 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: status
-              meaning: Package publication request operation status.
-            - selector: request-path
-              meaning: Package publication request path.
-            - selector: source-sha
-              meaning: Verified source commit SHA.
-            - selector: version
-              meaning: Verified package version.
-            - selector: target-identity
-              meaning: Verified package target identity.
-            - selector: language-profile
-              meaning: Verified language profile.
-            - selector: toolchain
-              meaning: Verified fixed toolchain.
-            - selector: outcome
-              meaning: Failure outcome of the rejected package publication request step.
-            - selector: accepted-trigger-run
-              meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
+        fields:
+          - selector: status
+            meaning: Package publication request operation status.
+          - selector: request-path
+            meaning: Package publication request path.
+          - selector: source-sha
+            meaning: Verified source commit SHA.
+          - selector: version
+            meaning: Verified package version.
+          - selector: target-identity
+            meaning: Verified package target identity.
+          - selector: language-profile
+            meaning: Verified language profile.
+          - selector: toolchain
+            meaning: Verified fixed toolchain.
+          - selector: outcome
+            meaning: Failure outcome of the rejected package publication request step.
+          - selector: accepted-trigger-run
+            meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.package-publication-request-succeeded

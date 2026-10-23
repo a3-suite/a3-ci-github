@@ -10,29 +10,25 @@ contracts:
       - summary: The Action exposes deterministic change-scope outputs to the caller.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: status
-              meaning: Whether the change range was evaluated successfully or unresolved.
-            - selector: run-ci
-              meaning: Whether CI checks should run.
-            - selector: run-docs
-              meaning: Whether documentation checks should run.
-            - selector: files
-              meaning: Newline-separated changed paths.
-            - selector: docs-files
-              meaning: Newline-separated documentation paths.
-            - selector: other-files
-              meaning: Newline-separated non-documentation paths.
+        fields:
+          - selector: status
+            meaning: Whether the change range was evaluated successfully or unresolved.
+          - selector: run-ci
+            meaning: Whether CI checks should run.
+          - selector: run-docs
+            meaning: Whether documentation checks should run.
+          - selector: files
+            meaning: Newline-separated changed paths.
+          - selector: docs-files
+            meaning: Newline-separated documentation paths.
+          - selector: other-files
+            meaning: Newline-separated non-documentation paths.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: change-range-input-present

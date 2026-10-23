@@ -10,31 +10,27 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: outcome
-              meaning: Preparation step outcome.
-            - selector: resolved-toolchain-version
-              meaning: Published resolved toolchain version.
-            - selector: unselected-setup-state
-              meaning: Occurrence of dependency setup for an unselected language profile, for an optional tool whose version input is empty, or for an auxiliary tool when auxiliary-tools is skip.
-            - selector: resolved-selector-comparison
-              meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
-            - selector: source-fallback-state
-              meaning: Occurrence of source installation after registered binary acquisition fails.
-            - selector: failed-path-export-state
-              meaning: Occurrence of a PATH export after registered binary acquisition fails.
+        fields:
+          - selector: outcome
+            meaning: Preparation step outcome.
+          - selector: resolved-toolchain-version
+            meaning: Published resolved toolchain version.
+          - selector: unselected-setup-state
+            meaning: Occurrence of dependency setup for an unselected language profile, for an optional tool whose version input is empty, or for an auxiliary tool when auxiliary-tools is skip.
+          - selector: resolved-selector-comparison
+            meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
+          - selector: source-fallback-state
+            meaning: Occurrence of source installation after registered binary acquisition fails.
+          - selector: failed-path-export-state
+            meaning: Occurrence of a PATH export after registered binary acquisition fails.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
-            - selector: diagnostic-only-tool-acquisition-state
-              meaning: Occurrence state (present or absent) of an unselected tool acquired solely to obtain diagnostics.
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+          - selector: diagnostic-only-tool-acquisition-state
+            meaning: Occurrence state (present or absent) of an unselected tool acquired solely to obtain diagnostics.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.quality-toolchain-inputs-ready

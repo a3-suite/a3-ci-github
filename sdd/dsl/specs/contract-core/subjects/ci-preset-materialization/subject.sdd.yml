@@ -10,63 +10,57 @@ contracts:
       - summary: Materialization report or thrown rejection diagnostic exposed by the materializer boundary.
         boundary:
           ref: boundary.script-result
-        value:
-          kind: object
-          fields:
-            - selector: schema
-              meaning: Stable materialization report schema identity.
-            - selector: bundle
-              meaning: Selected adapter bundle identity.
-            - selector: files
-              meaning: Canonical source, destination, and copy or reuse action for each materialized file.
-            - selector: binding
-              meaning: Fixed standard Action bundle identity and owner source revision and digest when no project files are copied.
-            - selector: diagnostic
-              meaning: Stable thrown diagnostic of the rejected materialization.
-            - selector: standard-binding-bundle
-              meaning: Equality of the returned standardBundleId and selected registry bundle ID.
-            - selector: standard-binding-source
-              meaning: Equality of the binding sourcePath and the selected repository-owned descriptor path.
-            - selector: standard-binding-digest
-              meaning: Equality of the binding SHA-256 and selected fixed standard descriptor content digest.
-            - selector: copy-report-sources
-              meaning: Equality of reported sources and the selected descriptor plus registered asset source inventory.
-            - selector: copy-report-destinations
-              meaning: Equality of reported destinations and the selected descriptor destination inventory.
-            - selector: copy-report-actions
-              meaning: Agreement of every reported copy or reuse action with the destination state before invocation.
-            - selector: standard-report-files
-              meaning: Cardinality classification of the returned standard bundle files array.
-            - selector: standard-binding-action
-              meaning: Action identifier in the returned standard bundle binding.
-            - selector: selected-bundle-match
-              meaning: Equality of the report bundle ID and the selected input bundle ID.
+        fields:
+          - selector: schema
+            meaning: Stable materialization report schema identity.
+          - selector: bundle
+            meaning: Selected adapter bundle identity.
+          - selector: files
+            meaning: Canonical source, destination, and copy or reuse action for each materialized file.
+          - selector: binding
+            meaning: Fixed standard Action bundle identity and owner source revision and digest when no project files are copied.
+          - selector: diagnostic
+            meaning: Stable thrown diagnostic of the rejected materialization.
+          - selector: standard-binding-bundle
+            meaning: Equality of the returned standardBundleId and selected registry bundle ID.
+          - selector: standard-binding-source
+            meaning: Equality of the binding sourcePath and the selected repository-owned descriptor path.
+          - selector: standard-binding-digest
+            meaning: Equality of the binding SHA-256 and selected fixed standard descriptor content digest.
+          - selector: copy-report-sources
+            meaning: Equality of reported sources and the selected descriptor plus registered asset source inventory.
+          - selector: copy-report-destinations
+            meaning: Equality of reported destinations and the selected descriptor destination inventory.
+          - selector: copy-report-actions
+            meaning: Agreement of every reported copy or reuse action with the destination state before invocation.
+          - selector: standard-report-files
+            meaning: Cardinality classification of the returned standard bundle files array.
+          - selector: standard-binding-action
+            meaning: Action identifier in the returned standard bundle binding.
+          - selector: selected-bundle-match
+            meaning: Equality of the report bundle ID and the selected input bundle ID.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
-            - selector: changed-range-evidence
-              meaning: Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+          - selector: changed-range-evidence
+            meaning: Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.
       - summary: Consumer file state before and after materialization, including a failed invocation.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          kind: object
-          fields:
-            - selector: standard-copy-state
-              meaning: Presence of consumer files newly copied by a standard Action bundle invocation.
-            - selector: consumer-settings-change
-              meaning: Changes to pre-existing consumer settings bytes during materialization.
-            - selector: consumer-dependency-change
-              meaning: Changes to pre-existing consumer dependency declarations during materialization.
-            - selector: conflicting-destination-change
-              meaning: Byte changes to an existing destination whose contents conflict with the selected source.
-            - selector: completed-copy-loss
-              meaning: Removal or byte changes of files successfully copied before a later copy failure.
+        fields:
+          - selector: standard-copy-state
+            meaning: Presence of consumer files newly copied by a standard Action bundle invocation.
+          - selector: consumer-settings-change
+            meaning: Changes to pre-existing consumer settings bytes during materialization.
+          - selector: consumer-dependency-change
+            meaning: Changes to pre-existing consumer dependency declarations during materialization.
+          - selector: conflicting-destination-change
+            meaning: Byte changes to an existing destination whose contents conflict with the selected source.
+          - selector: completed-copy-loss
+            meaning: Removal or byte changes of files successfully copied before a later copy failure.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.preset-standard-materialization-valid

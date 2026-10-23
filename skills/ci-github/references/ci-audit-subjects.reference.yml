@@ -1,21 +1,4 @@
-schemaVersion: "1"
-kind: ci-audit-subjects
 id: ci.audit-subjects
-title: CI audit semantic subjects
-summary: >-
-  CI 監査で横断確認する意味監査 subject の発見、適用判定、owner 委譲、
-  CI 側の接続確認、報告項目を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - semantic audit subject discovery and applicability
-    - semantic audit subject owner delegation
-    - CI-side integration and reporting requirements for delegated subjects
-  excludes:
-    - audit mode, phase, status, aggregation, completion, and conformance semantics
-    - delegated owner contract semantics
-    - repository release-shape and installer-adoption decision criteria
 integration:
   auditContract: ci.audit-contract
   stages: ci.audit-contract.stages
@@ -33,12 +16,6 @@ defaults:
     discoveryScope: required
     reason: required
     merge: subject側のinapplicableは、この既定へ追加する項目だけを定義する。
-usage:
-  whenToRead:
-    - CI 監査の意味監査 subject を発見して適用判定するとき
-    - owner スキルへ監査を委譲するとき
-    - 委譲結果を CI 実行経路と照合して報告するとき
-  consumers: [human, agent, validator]
 subjects:
   - id: latest-standard-alignment
     requirement: required

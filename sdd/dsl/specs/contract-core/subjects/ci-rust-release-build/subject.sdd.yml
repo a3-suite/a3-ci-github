@@ -10,23 +10,19 @@ contracts:
       - summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
         boundary:
           ref: boundary.script-result
-        value:
-          kind: object
-          fields:
-            - selector: outcome
-              meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
-            - selector: final-output
-              meaning: A verified asset is published on success; failure leaves no agent-owned final asset and preserves a destination owned by another process.
-            - selector: diagnostic-codes
-              meaning: Stable diagnostic codes reported by the failed step.
+        fields:
+          - selector: outcome
+            meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
+          - selector: final-output
+            meaning: A verified asset is published on success; failure leaves no agent-owned final asset and preserves a destination owned by another process.
+          - selector: diagnostic-codes
+            meaning: Stable diagnostic codes reported by the failed step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.rust-release-build-inputs-match-authority
@@ -83,21 +79,17 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: completed
-              meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
-            - selector: outcome
-              meaning: The success or failure outcome of the release build step.
+        fields:
+          - selector: completed
+            meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
+          - selector: outcome
+            meaning: The success or failure outcome of the release build step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.rust-release-build-script-succeeded

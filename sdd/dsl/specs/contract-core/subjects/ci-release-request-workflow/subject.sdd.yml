@@ -10,27 +10,23 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary:
           ref: boundary.workflow-definition
-        value:
-          kind: object
-          fields:
-            - selector: request-handoff
-              meaning: Declared request handoff route.
-            - selector: failure-summary
-              meaning: Declared request aggregate route.
-            - selector: request-no-publication-permission
-              meaning: Occurrence of contents-write permission in the request workflow.
-            - selector: request-tag-before-handoff
-              meaning: Declared order of annotated-tag resolution and immutable request handoff.
-            - selector: request-failure-summary-always
-              meaning: Declared request failure summary condition.
+        fields:
+          - selector: request-handoff
+            meaning: Declared request handoff route.
+          - selector: failure-summary
+            meaning: Declared request aggregate route.
+          - selector: request-no-publication-permission
+            meaning: Occurrence of contents-write permission in the request workflow.
+          - selector: request-tag-before-handoff
+            meaning: Declared order of annotated-tag resolution and immutable request handoff.
+          - selector: request-failure-summary-always
+            meaning: Declared request failure summary condition.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: ci-release-request-workflow-canonical-source-available

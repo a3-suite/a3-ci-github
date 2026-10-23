@@ -10,29 +10,25 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: status
-              meaning: Aggregate quality status.
-            - selector: digest
-              meaning: SHA-256 digest of rendered summary evidence.
-            - selector: evidence-path
-              meaning: Path written for rendered summary evidence.
-            - selector: outcome
-              meaning: Failure outcome of the rejected quality summary step.
-            - selector: applicable-only-status-comparison
-              meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
-            - selector: default-evidence-comparison
-              meaning: Comparison of missing-row evidence with the current workflow run URL.
+        fields:
+          - selector: status
+            meaning: Aggregate quality status.
+          - selector: digest
+            meaning: SHA-256 digest of rendered summary evidence.
+          - selector: evidence-path
+            meaning: Path written for rendered summary evidence.
+          - selector: outcome
+            meaning: Failure outcome of the rejected quality summary step.
+          - selector: applicable-only-status-comparison
+            meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
+          - selector: default-evidence-comparison
+            meaning: Comparison of missing-row evidence with the current workflow run URL.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: summary-input-present

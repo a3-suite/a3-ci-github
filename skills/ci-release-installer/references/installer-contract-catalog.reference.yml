@@ -1,23 +1,4 @@
-schemaVersion: "1"
-kind: installer-contract-catalog
 id: installer.contract-catalog
-title: インストーラ契約 ID catalog
-summary: >-
-  installer の横断監査で使う contract ID の正本。coverage matrix は本 catalog の ID だけを参照する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - installer contract id namespace
-    - contract id role classification
-usage:
-  whenToRead:
-    - coverage matrix の contractIds を追加または監査するとき
-    - 契約 reference の責務境界を確認するとき
-  consumers:
-    - human
-    - agent
-    - audit
 contractIds:
   - id: installer.use-case-contract
     role: use-case-selection-contract

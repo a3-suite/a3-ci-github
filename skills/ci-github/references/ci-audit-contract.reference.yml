@@ -1,32 +1,4 @@
-schemaVersion: "1"
-kind: ci-audit-contract
 id: ci.audit-contract
-title: CI audit contract
-summary: >-
-  適用先 CI 資産の監査モード、必須フェーズ、監査 status、集約、証拠適用性、
-  監査完了と適合 success の共通意味を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - audit stage selection and check-item scope
-    - audit mode semantics
-    - audit phase order and applicability
-    - audit status semantics and result aggregation
-    - audit reporting status layers and their owners
-    - semantic audit subject aggregation interface
-    - evidence applicability and reuse conditions
-    - audit completion and conformance success boundary
-  excludes:
-    - workflow runtime status semantics
-    - provider-specific commands and evidence acquisition procedures
-    - review finding severity and final review judgment
-    - semantic audit subject definitions and owner delegation
-usage:
-  whenToRead:
-    - 適用先 CI 資産を読み取り専用で監査するとき
-    - CI 資産を修正して再検証するとき
-  consumers: [human, agent, validator]
 auditContract:
   purpose:
     objective: リリース前に、採用可能な最新の公開済み安定版（references/deploy-ci-assets.guide.mdの対応条件）の標準への適合、差分の正当性、公開準備を確認する。

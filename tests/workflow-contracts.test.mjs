@@ -871,7 +871,7 @@ describe("workflow-contracts", () => {
         verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
       }));
       // Assert
-      const commonSelectors = commonObservation.value.fields.map((field) => field.selector);
+      const commonSelectors = commonObservation.fields.map((field) => field.selector);
       const minimumFields = [
         'failure-subject', 'failure-operation', 'failure-stage', 'failure-reason', 'failure-cause', 'execution-context',
         'comparison', 'evidence-location', 'execution-outcome', 'last-confirmed-stage', 'next-check-rule',
@@ -893,7 +893,7 @@ describe("workflow-contracts", () => {
           expect(guarantee, contract.id).toBeDefined();
           expect(guarantee.claim.present, contract.id).toBe(true);
           expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
-          const observation = contract.observations.find((entry) => entry.value.fields.some((field) => field.selector === 'failure-stage'));
+          const observation = contract.observations.find((entry) => entry.fields.some((field) => field.selector === 'failure-stage'));
           expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
           expect(observation.summary, contract.id).toContain(shared.id);
           const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);

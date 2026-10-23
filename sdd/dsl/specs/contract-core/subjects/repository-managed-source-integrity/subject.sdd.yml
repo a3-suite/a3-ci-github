@@ -10,21 +10,17 @@ contracts:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
         boundary:
           ref: boundary.repository-gate-result
-        value:
-          kind: object
-          fields:
-            - selector: canonical-assets
-              meaning: Existence checks for every repository-owned canonical asset family and registered source.
-            - selector: stale-locations
-              meaning: Absence check results for registered legacy source locations.
+        fields:
+          - selector: canonical-assets
+            meaning: Existence checks for every repository-owned canonical asset family and registered source.
+          - selector: stale-locations
+            meaning: Absence check results for registered legacy source locations.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: repository-managed-source-integrity-source-available
@@ -54,23 +50,19 @@ contracts:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
         boundary:
           ref: boundary.repository-gate-result
-        value:
-          kind: object
-          fields:
-            - selector: contract-execution
-              meaning: Execution definition entries for the packaged contract subjects.
-            - selector: contract-execution-subject-coverage
-              meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
-            - selector: contract-execution-escaping-test-paths
-              meaning: Execution test paths that resolve outside the repository; absent or present.
+        fields:
+          - selector: contract-execution
+            meaning: Execution definition entries for the packaged contract subjects.
+          - selector: contract-execution-subject-coverage
+            meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
+          - selector: contract-execution-escaping-test-paths
+            meaning: Execution test paths that resolve outside the repository; absent or present.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: repository-contract-execution-definition-available

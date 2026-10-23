@@ -1,29 +1,4 @@
-schemaVersion: "1"
-kind: ci-github-preset-assets
 id: ci.github-preset-assets
-title: GitHub Actions CI asset registry
-summary: >-
-  ci-github スキルの CI プリセットを、コピー先が確定した GitHub Actions workflow と
-  実行に必要な repository-owned asset へ写像する。
-placementRole: distributable_asset
-authority:
-  role: authoritative-definition
-  owns:
-    - preset ごとの GitHub workflow asset
-    - GitHub 固有の実行 asset と Action mapping
-    - 配置済み workflow を調べる preflight entrypoint
-    - provider 静的検証の設定 path の認識（内容は project-owned）
-  excludes:
-    - provider-neutral preset semantics
-    - language または project 固有の処理
-    - Action 自体の公開 API
-    - selective distribution の配布単位、取得手順、local state
-usage:
-  whenToRead:
-    - GitHub Actions 用の CI asset を選ぶとき
-    - コピー先と必要 asset を確定するとき
-    - 配置済み workflow を preflight するとき
-  consumers: [human, agent, validator]
 provider:
   id: github-actions
   workflowRoot: workflows

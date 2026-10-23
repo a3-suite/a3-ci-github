@@ -1,28 +1,4 @@
-schemaVersion: "1"
-kind: installer-source-mode-contract
 id: installer.source-mode-contract
-title: インストーラ source mode 契約
-summary: >-
-  installer の online / offline source mode ごとの manifest source、artifact source、
-  network 可否、fallback 禁止、audit reference の条件を定義する公開正本。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - source mode allowed values
-    - manifest and artifact source matrix
-    - local artifact path policy
-    - network fallback policy
-usage:
-  whenToRead:
-    - execution request の source mode 条件を確認するとき
-    - offline install の manifest / artifact 取得境界を監査するとき
-    - source mode に対応する fixture coverage を確認するとき
-  consumers:
-    - human
-    - agent
-    - installer-implementation
-    - audit
 sourceModes:
   online:
     description: "Manifest と artifact を固定入力に基づき online source から取得できる mode。"

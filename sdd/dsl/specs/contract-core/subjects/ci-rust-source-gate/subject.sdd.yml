@@ -10,19 +10,15 @@ contracts:
       - summary: The shared script exposes whether the checked-out Rust source matches the release authority.
         boundary:
           ref: boundary.script-result
-        value:
-          kind: object
-          fields:
-            - selector: outcome
-              meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
+        fields:
+          - selector: outcome
+            meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.rust-source-matches-authority
@@ -54,21 +50,17 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: verified
-              meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
-            - selector: outcome
-              meaning: The success or failure outcome of the source verification step.
+        fields:
+          - selector: verified
+            meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
+          - selector: outcome
+            meaning: The success or failure outcome of the source verification step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.rust-source-script-succeeded

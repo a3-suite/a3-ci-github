@@ -10,59 +10,55 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary:
           ref: boundary.workflow-definition
-        value:
-          kind: object
-          fields:
-            - selector: reusable-binding
-              meaning: Declared caller-to-callee binding.
-            - selector: execution-chain
-              meaning: Declared quality execution dependency graph.
-            - selector: failure-summary
-              meaning: Declared aggregate failure route.
-            - selector: optional-platform-chain
-              meaning: Declared platform quality dependency graph.
-            - selector: profiles-chain
-              meaning: Declared per-language-profile quality dependency graph and its single aggregate decision.
-            - selector: quality-fixed-reference
-              meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
-            - selector: quality-explicit-input-binding
-              meaning: Comparison of caller input names and typed bindings with the callee interface.
-            - selector: quality-summary-identity
-              meaning: Declared caller aggregate job ID.
-            - selector: quality-no-consumer-callee-copy
-              meaning: Occurrence of local copies of provider execution jobs in the caller.
-            - selector: quality-caller-read-permissions
-              meaning: Declared caller contents permission.
-            - selector: quality-caller-summary-always
-              meaning: Declared caller aggregate condition.
-            - selector: quality-source-before-adapter
-              meaning: Declared order of trusted checkout/asset resolution and adapter execution.
-            - selector: quality-results-before-summary
-              meaning: Declared dependency order of applicable execution jobs and aggregate decision.
-            - selector: quality-failure-summary-always
-              meaning: Declared summary condition on applicable job failure.
-            - selector: quality-unresolved-results-visible
-              meaning: Occurrence of unresolved applicable results in aggregate failure evidence.
-            - selector: platform-resolution-before-execution
-              meaning: Declared dependency order of trusted platform resolution and selected matrix execution.
-            - selector: platform-execution-before-summary
-              meaning: Declared dependency order of matrix execution and aggregate platform decision.
-            - selector: quality-cargo-cache-profile-condition
-              meaning: Declared language profile condition of the trusted Cargo cache path resolution step.
-            - selector: quality-cargo-cache-before-adapter
-              meaning: Declared order of the trusted Cargo cache step and adapter execution.
-            - selector: quality-cargo-cache-failure-dependency
-              meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
-            - selector: quality-untrusted-cargo-cache-use
-              meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
+        fields:
+          - selector: reusable-binding
+            meaning: Declared caller-to-callee binding.
+          - selector: execution-chain
+            meaning: Declared quality execution dependency graph.
+          - selector: failure-summary
+            meaning: Declared aggregate failure route.
+          - selector: optional-platform-chain
+            meaning: Declared platform quality dependency graph.
+          - selector: profiles-chain
+            meaning: Declared per-language-profile quality dependency graph and its single aggregate decision.
+          - selector: quality-fixed-reference
+            meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
+          - selector: quality-explicit-input-binding
+            meaning: Comparison of caller input names and typed bindings with the callee interface.
+          - selector: quality-summary-identity
+            meaning: Declared caller aggregate job ID.
+          - selector: quality-no-consumer-callee-copy
+            meaning: Occurrence of local copies of provider execution jobs in the caller.
+          - selector: quality-caller-read-permissions
+            meaning: Declared caller contents permission.
+          - selector: quality-caller-summary-always
+            meaning: Declared caller aggregate condition.
+          - selector: quality-source-before-adapter
+            meaning: Declared order of trusted checkout/asset resolution and adapter execution.
+          - selector: quality-results-before-summary
+            meaning: Declared dependency order of applicable execution jobs and aggregate decision.
+          - selector: quality-failure-summary-always
+            meaning: Declared summary condition on applicable job failure.
+          - selector: quality-unresolved-results-visible
+            meaning: Occurrence of unresolved applicable results in aggregate failure evidence.
+          - selector: platform-resolution-before-execution
+            meaning: Declared dependency order of trusted platform resolution and selected matrix execution.
+          - selector: platform-execution-before-summary
+            meaning: Declared dependency order of matrix execution and aggregate platform decision.
+          - selector: quality-cargo-cache-profile-condition
+            meaning: Declared language profile condition of the trusted Cargo cache path resolution step.
+          - selector: quality-cargo-cache-before-adapter
+            meaning: Declared order of the trusted Cargo cache step and adapter execution.
+          - selector: quality-cargo-cache-failure-dependency
+            meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
+          - selector: quality-untrusted-cargo-cache-use
+            meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: ci-quality-workflow-caller-selected

@@ -1,25 +1,4 @@
-schemaVersion: "1"
-kind: installer-fixture-catalog
 id: installer.fixture-catalog
-title: インストーラ fixture catalog
-summary: >-
-  installer fixture baseline の見出し ID、期待結果、coverage 上の主責務を定義する公開正本。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - fixture id namespace
-    - fixture expected outcome classification
-    - fixture primary invariant classification
-usage:
-  whenToRead:
-    - fixture の期待結果を監査するとき
-    - coverage matrix の fixture 参照を追加または分類するとき
-    - 重複 fixture の primary / secondary invariant を確認するとき
-  consumers:
-    - human
-    - agent
-    - audit
 outcomeValues:
   - success
   - reject

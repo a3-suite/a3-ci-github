@@ -10,41 +10,37 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: matrix
-              meaning: Compact JSON object containing the validated platform entries under include.
-            - selector: quality-matrix
-              meaning: Compact JSON include matrix of the selected platforms.
-            - selector: expected-platforms
-              meaning: Comma-separated IDs of the selected platforms.
-            - selector: outcome
-              meaning: Success for a valid bounded manifest and failure otherwise.
-            - selector: matrix-output-state
-              meaning: Present when a matrix output was emitted and absent otherwise.
-            - selector: quality-output-state
-              meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.
-            - selector: full-matrix-binding
-              meaning: Equality of the complete matrix include array, including order and all entry values, with the validated manifest.
-            - selector: quality-id-order
-              meaning: Equality of the quality matrix platform_id sequence with the supplied selection ID sequence.
-            - selector: quality-runner-binding
-              meaning: Equality of each quality entry runner with the validated manifest runner for that entry platform_id.
-            - selector: expected-id-order
-              meaning: Equality of the comma-separated expected-platforms value with the supplied selection ID sequence.
-            - selector: shared-checks-value
-              meaning: Equality of each quality entry shared_standard_checks value with the explicitly supplied boolean sharedStandardChecks.
-            - selector: shared-checks-absence
-              meaning: Occurrence state of shared_standard_checks keys when sharedStandardChecks was omitted from the selection.
+        fields:
+          - selector: matrix
+            meaning: Compact JSON object containing the validated platform entries under include.
+          - selector: quality-matrix
+            meaning: Compact JSON include matrix of the selected platforms.
+          - selector: expected-platforms
+            meaning: Comma-separated IDs of the selected platforms.
+          - selector: outcome
+            meaning: Success for a valid bounded manifest and failure otherwise.
+          - selector: matrix-output-state
+            meaning: Present when a matrix output was emitted and absent otherwise.
+          - selector: quality-output-state
+            meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.
+          - selector: full-matrix-binding
+            meaning: Equality of the complete matrix include array, including order and all entry values, with the validated manifest.
+          - selector: quality-id-order
+            meaning: Equality of the quality matrix platform_id sequence with the supplied selection ID sequence.
+          - selector: quality-runner-binding
+            meaning: Equality of each quality entry runner with the validated manifest runner for that entry platform_id.
+          - selector: expected-id-order
+            meaning: Equality of the comma-separated expected-platforms value with the supplied selection ID sequence.
+          - selector: shared-checks-value
+            meaning: Equality of each quality entry shared_standard_checks value with the explicitly supplied boolean sharedStandardChecks.
+          - selector: shared-checks-absence
+            meaning: Occurrence state of shared_standard_checks keys when sharedStandardChecks was omitted from the selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.platform-manifest-valid

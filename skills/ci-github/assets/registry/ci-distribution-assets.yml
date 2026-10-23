@@ -1,26 +1,3 @@
-schemaVersion: "1"
-kind: ci-github-distribution-assets
-id: ci.github-distribution-assets
-title: Selective CI asset distribution registry
-summary: >-
-  固定revisionから必要なCI資材だけを取得するため、配布単位、依存閉包、取得後の適用境界を定義する。
-placementRole: distributable_asset
-usage:
-  whenToRead: 固定revisionから必要なCI資材を選択して取得するとき。
-  consumers: [ci-github, ci-release-installer]
-authority:
-  role: authoritative-definition
-  owns:
-    - selective distribution asset identity
-    - repository-owned asset group membership
-    - presetごとの必須配布asset
-    - 配布manifestと取得CLIの公開名
-    - 取得資材のproject-local保存境界
-  excludes:
-    - presetのcanonical workflow membershipと配置先
-    - project-owned extension
-    - external skill assetのidentityと内容
-    - GitHub Actionの配布
 repository:
   slug: a3-suite/a3-ci-github
   rawOrigin: https://raw.githubusercontent.com

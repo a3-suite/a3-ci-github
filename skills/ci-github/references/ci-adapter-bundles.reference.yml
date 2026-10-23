@@ -1,27 +1,4 @@
-schemaVersion: "1"
-kind: ci-adapter-bundles
 id: ci.adapter-bundles
-title: CI adapter bundle contract
-summary: >-
-  quality-gate の品質コマンドを言語または project の実装へ接続する adapter bundle の選択と配置契約を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - adapter bundle descriptor contract and selection rules
-    - adapter bundle compatibility and placement contract
-    - adapter execution boundary metadata
-    - repository-owned standard quality command definitions
-  excludes:
-    - 処理契約の input/output semantics
-    - provider-specific workflow syntax
-    - 汎用の言語規約とlintルール
-usage:
-  whenToRead:
-    - workflow に adapter bundle を選択するとき
-    - adapter bundle をコピーして project に配置するとき
-    - language profile と provider の適合を検証するとき
-  consumers: [human, agent, validator]
 contract:
   requiredFields: [schemaVersion, kind, id, contract, languageProfiles, provider, executionBoundary, sourceCheckout, copyable, owner, assets, projectSettings, toolchain, preparation, commands]
   kind: ci-adapter-bundle

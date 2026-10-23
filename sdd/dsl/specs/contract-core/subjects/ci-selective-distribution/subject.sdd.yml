@@ -10,21 +10,17 @@ contracts:
       - summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
         boundary:
           ref: boundary.cli-result
-        value:
-          kind: object
-          fields:
-            - selector: selectedAssets
-              meaning: Stable asset identities in the validated selection closure.
-            - selector: diagnostic
-              meaning: Stable rejection reason for an unknown or incomplete selection.
+        fields:
+          - selector: selectedAssets
+            meaning: Stable asset identities in the validated selection closure.
+          - selector: diagnostic
+            meaning: Stable rejection reason for an unknown or incomplete selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-selection-valid
@@ -54,23 +50,19 @@ contracts:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
         boundary:
           ref: boundary.cli-result
-        value:
-          kind: object
-          fields:
-            - selector: sourceRevision
-              meaning: Full immutable source commit SHA.
-            - selector: selectedAssets
-              meaning: Asset identities whose selected files passed integrity validation.
-            - selector: diagnostic
-              meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
+        fields:
+          - selector: sourceRevision
+            meaning: Full immutable source commit SHA.
+          - selector: selectedAssets
+            meaning: Asset identities whose selected files passed integrity validation.
+          - selector: diagnostic
+            meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-source-valid
@@ -106,35 +98,31 @@ contracts:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
         boundary:
           ref: boundary.script-result
-        value:
-          kind: object
-          fields:
-            - selector: releaseTag
-              meaning: Exact validated SemVer tag that owns the published assets.
-            - selector: assetNames
-              meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
-            - selector: readbackStatus
-              meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
-            - selector: implementationSourceRevision
-              meaning: Full first-party implementation SHA verified against the final tagged source.
-            - selector: acceptedDispatchRef
-              meaning: Workflow ref of the release dispatch accepted for publication; absent when the dispatch is rejected before publication.
-            - selector: implementationBindingStatus
-              meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity and fixed-reference connections, otherwise unverified.
-            - selector: implementationBindingEvidence
-              meaning: Evidence record of the implementation binding check.
-            - selector: aliasSourceIntegration
-              meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
-            - selector: diagnostic
-              meaning: Stable failure evidence of the rejected publication.
+        fields:
+          - selector: releaseTag
+            meaning: Exact validated SemVer tag that owns the published assets.
+          - selector: assetNames
+            meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
+          - selector: readbackStatus
+            meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
+          - selector: implementationSourceRevision
+            meaning: Full first-party implementation SHA verified against the final tagged source.
+          - selector: acceptedDispatchRef
+            meaning: Workflow ref of the release dispatch accepted for publication; absent when the dispatch is rejected before publication.
+          - selector: implementationBindingStatus
+            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity and fixed-reference connections, otherwise unverified.
+          - selector: implementationBindingEvidence
+            meaning: Evidence record of the implementation binding check.
+          - selector: aliasSourceIntegration
+            meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected publication.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-publication-valid
@@ -189,30 +177,30 @@ contracts:
   - id: contract.ci-selective-distribution.plan
     summary: Distribution application planning request.
     observations:
+      - summary: Plan result or rejection diagnostic returned by the distribution CLI.
+        boundary:
+          ref: boundary.cli-result
+        fields:
+          - selector: planDigest
+            meaning: Digest of the approved distribution plan.
+          - selector: actions
+            meaning: Create, reuse, update, or conflict classification for canonical workflow destinations.
+          - selector: stale
+            meaning: Previously managed paths excluded from the current selection without automatic deletion.
+          - selector: diagnostic
+            meaning: Diagnostic exposed for rejected planning input.
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          kind: object
-          fields:
-            - selector: planDigest
-              meaning: Digest of the approved distribution plan.
-            - selector: actions
-              meaning: Create, reuse, update, or conflict classification for canonical workflow destinations.
-            - selector: stale
-              meaning: Previously managed paths excluded from the current selection without automatic deletion.
-            - selector: diagnostic
-              meaning: Diagnostic exposed for rejected planning input.
-            - selector: independent-destination-binding
-              meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+        fields:
+          - selector: independent-destination-binding
+            meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-application-incomplete
@@ -250,31 +238,25 @@ contracts:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary:
           ref: boundary.cli-result
-        value:
-          kind: object
-          fields:
-            - selector: transactionId
-              meaning: Identity of the exclusive application transaction and its before state.
-            - selector: diagnostic
-              meaning: Stable rejection reason of the refused application.
+        fields:
+          - selector: transactionId
+            meaning: Identity of the exclusive application transaction and its before state.
+          - selector: diagnostic
+            meaning: Stable rejection reason of the refused application.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          kind: object
-          fields:
-            - selector: partial-apply-files-binding
-              meaning: Equality of paths written earlier by the interrupted apply with their recorded before-state bytes and existence; the later independently changed destination is excluded.
-            - selector: independent-destination-binding
-              meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+        fields:
+          - selector: partial-apply-files-binding
+            meaning: Equality of paths written earlier by the interrupted apply with their recorded before-state bytes and existence; the later independently changed destination is excluded.
+          - selector: independent-destination-binding
+            meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-application-valid
@@ -322,29 +304,23 @@ contracts:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary:
           ref: boundary.cli-result
-        value:
-          kind: object
-          fields:
-            - selector: rollbackStatus
-              meaning: Explicit evidence that transaction changes were restored.
+        fields:
+          - selector: rollbackStatus
+            meaning: Explicit evidence that transaction changes were restored.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          kind: object
-          fields:
-            - selector: rollback-files-binding
-              meaning: Equality of transaction-owned paths with their recorded before-state bytes and existence after explicit rollback; independently changed paths are not part of this comparison.
-            - selector: independent-destination-binding
-              meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+        fields:
+          - selector: rollback-files-binding
+            meaning: Equality of transaction-owned paths with their recorded before-state bytes and existence after explicit rollback; independently changed paths are not part of this comparison.
+          - selector: independent-destination-binding
+            meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.distribution-rollback-restorable

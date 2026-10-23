@@ -1,21 +1,4 @@
-schemaVersion: "1"
-kind: ci-script-use-cases
 id: ci.script-use-cases
-title: CI script use cases
-summary: >-
-  workflow の内部段階を支える script ユースケース、対応 workflow、owner 境界を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - script use case classification
-    - workflow and processing contract mapping
-    - reusable and owner adapter boundary
-usage:
-  whenToRead:
-    - workflow の script 処理単位を選ぶとき
-    - 処理契約の構成と owner 委譲を確認するとき
-  consumers: [human, agent, validator]
 definition:
   rule: shell step や個別ファイルではなく、workflow 内で一つの判定または handoff を成立させる処理単位を script use case とする。
   composition: 複数の script を一つの処理契約に束ね、同じ処理契約を複数 workflow から利用できる。

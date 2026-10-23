@@ -10,58 +10,52 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          kind: object
-          fields:
-            - selector: status
-              meaning: Aggregate quality adapter status.
-            - selector: result-path
-              meaning: Path to the quality adapter result JSON.
-            - selector: outcome
-              meaning: Failure outcome of the rejected quality adapter step.
-            - selector: diagnostic-codes
-              meaning: Stable diagnostic codes reported by the failed step.
-            - selector: format-command-state
-              meaning: Occurrence of format commands in the native execution trace.
-            - selector: security-command-state
-              meaning: Occurrence of security commands in the native execution trace.
-            - selector: native-task-order
-              meaning: Ordered IDs in the observed native result trace.
-            - selector: consumer-descriptor-read-state
-              meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
-            - selector: rejected-command-state
-              meaning: Occurrence of project command execution after scope rejection.
-            - selector: native-terminal-prerequisite-status
-              meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
-            - selector: native-failed-prerequisite-followup-state
-              meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
-            - selector: dependency-policy-result-status
-              meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
-            - selector: dependency-policy-config-argument
-              meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
-            - selector: dependency-policy-diagnostics
-              meaning: Presence of structured diagnostics on a failed dependency-policy entry, limited to per-check error and warning counts and error findings with a validated diagnostic code and crate name and version.
-            - selector: dependency-policy-unchecked-output-state
-              meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
-            - selector: not-run-aggregate-effect
-              meaning: Change of the aggregate status caused by results whose status is not-run.
+        fields:
+          - selector: status
+            meaning: Aggregate quality adapter status.
+          - selector: result-path
+            meaning: Path to the quality adapter result JSON.
+          - selector: outcome
+            meaning: Failure outcome of the rejected quality adapter step.
+          - selector: diagnostic-codes
+            meaning: Stable diagnostic codes reported by the failed step.
+          - selector: format-command-state
+            meaning: Occurrence of format commands in the native execution trace.
+          - selector: security-command-state
+            meaning: Occurrence of security commands in the native execution trace.
+          - selector: native-task-order
+            meaning: Ordered IDs in the observed native result trace.
+          - selector: consumer-descriptor-read-state
+            meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
+          - selector: rejected-command-state
+            meaning: Occurrence of project command execution after scope rejection.
+          - selector: native-terminal-prerequisite-status
+            meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
+          - selector: native-failed-prerequisite-followup-state
+            meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
+          - selector: dependency-policy-result-status
+            meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
+          - selector: dependency-policy-config-argument
+            meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
+          - selector: dependency-policy-diagnostics
+            meaning: Presence of structured diagnostics on a failed dependency-policy entry, limited to per-check error and warning counts and error findings with a validated diagnostic code and crate name and version.
+          - selector: dependency-policy-unchecked-output-state
+            meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
+          - selector: not-run-aggregate-effect
+            meaning: Change of the aggregate status caused by results whose status is not-run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - boundary:
           ref: boundary.workspace-files
-        value:
-          kind: object
-          fields:
-            - selector: accepted-source-binding
-              meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
-            - selector: accepted-content-digest
-              meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
+        fields:
+          - selector: accepted-source-binding
+            meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
+          - selector: accepted-content-digest
+            meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: quality-adapter-bundle-present
