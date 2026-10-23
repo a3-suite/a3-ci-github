@@ -10,50 +10,41 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          root: action
-          kind: object
-          fields:
-            - selector: status
-              meaning: Success only after complete validation and handoff creation.
-            - selector: release-handoff
-              meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
-            - selector: asset-digest
-              meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
-            - selector: outcome
-              meaning: Failed step outcome when assembly is rejected.
-            - selector: asset-digest-serialization
-              meaning: Serialization of the verified asset list whose SHA-256 equals asset-digest.
-            - selector: asset-digest-asset-order
-              meaning: Order of the assets in the asset-digest serialization.
-            - selector: asset-digest-field-order
-              meaning: Field order of each asset projection in the asset-digest serialization.
-            - selector: accepted-checksum-encoding
-              meaning: Text encoding of a checksum sidecar accepted by a successful assembly.
-            - selector: accepted-checksum-digest-form
-              meaning: Representation of the digest in a checksum sidecar accepted by a successful assembly.
-            - selector: accepted-checksum-separator
-              meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
-            - selector: accepted-checksum-line-ending
-              meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
+        fields:
+          - selector: status
+            meaning: Success only after complete validation and handoff creation.
+          - selector: release-handoff
+            meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
+          - selector: asset-digest
+            meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
+          - selector: outcome
+            meaning: Failed step outcome when assembly is rejected.
+          - selector: asset-digest-serialization
+            meaning: Serialization of the verified asset list whose SHA-256 equals asset-digest.
+          - selector: asset-digest-asset-order
+            meaning: Order of the assets in the asset-digest serialization.
+          - selector: asset-digest-field-order
+            meaning: Field order of each asset projection in the asset-digest serialization.
+          - selector: accepted-checksum-encoding
+            meaning: Text encoding of a checksum sidecar accepted by a successful assembly.
+          - selector: accepted-checksum-digest-form
+            meaning: Representation of the digest in a checksum sidecar accepted by a successful assembly.
+          - selector: accepted-checksum-separator
+            meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
+          - selector: accepted-checksum-line-ending
+            meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - summary: Inputs declared by the assembly Action for its caller.
         boundary:
           ref: boundary.action-caller
-        value:
-          root: action.inputs
-          kind: object
-          fields:
-            - selector: credential-input-state
-              meaning: Occurrence state (present or absent) of a declared input that accepts a provider credential.
+        fields:
+          - selector: credential-input-state
+            meaning: Occurrence state (present or absent) of a declared input that accepts a provider credential.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-assembly-valid

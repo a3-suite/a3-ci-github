@@ -1,27 +1,3 @@
-schemaVersion: "1"
-kind: installer-contract-coverage
-id: installer.contract-coverage
-title: インストーラ契約 coverage matrix
-summary: >-
-  installer の主要契約 invariant、audit evidence boundary、fixture baseline を対応付ける公開正本。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - contract invariant to fixture coverage mapping
-    - core safety invariant definition
-    - project override classification definition
-    - audit evidence boundary to fixture coverage mapping
-    - cross-reference audit checklist
-usage:
-  whenToRead:
-    - 監査で fixture 漏れを確認するとき
-    - 契約を追加したときに positive / negative fixture の対応を確認するとき
-    - fixture と契約 surface の横断整合を確認するとき
-  consumers:
-    - human
-    - agent
-    - audit
 coverageScope:
   contractCatalogId: installer.contract-catalog
   fixtureCatalogId: installer.fixture-catalog

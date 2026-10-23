@@ -85,7 +85,7 @@ export type RegistryData = {
   providerActionPinCompanionComparison: string;
   providerActionPinFields: string[];
   emptyAllowedPlaceholders: Set<string>;
-  qualityTriggerExtensions: Record<string, TriggerExtensionRule>;
+  workflowTriggerExtensions: Record<string, Record<string, TriggerExtensionRule>>;
   qualityReusableWorkflow?: { source: string; status: 'available' | 'pending-release'; referencePlaceholder: string; exactRef?: string };
   qualityPlatformsReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
   packagePreparationReusableWorkflow?: RegistryData['qualityReusableWorkflow'];

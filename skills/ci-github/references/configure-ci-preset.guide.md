@@ -14,7 +14,7 @@
 
 用途と言語profileに対応する標準preset・Action・標準bundleを最初の導入案とする。製品固有の設定値やregistryが要求する`requiredExtensions`は、共通処理の固有再実装と区別する。
 
-宣言・手順の変更前に、`references/verify-applied-ci-preset.guide.md`の「機械検証の選択」と「プロジェクト固有規則との競合確認」を実施する。固有実装がなくても、契約・文書・ローカルスキルの規則が標準導入を妨げていないか確認し、競合があれば解決案とownerを採用方針へ含める。
+宣言・手順の変更前に、`references/verify-applied-ci-preset.guide.md`の「機械検証の選択」と`references/resolve-ci-audit-findings.guide.md`の「プロジェクト固有規則との競合確認」を実施する。固有実装がなくても、契約・文書・ローカルスキルの規則が標準導入を妨げていないか確認し、競合があれば解決案とownerを採用方針へ含める。
 
 既存の固有workflow・script・adapterがある場合は、変更前に標準構成との差分を整理し、利用者と次を確認する。
 
@@ -201,6 +201,7 @@ repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-s
 | プリセット | 配置する workflow | project が設定する値 | project が実装するもの |
 | --- | --- | --- | --- |
 | `quality-gate` | `quality-gate.yml`（platform 別検証は任意の `quality-gate-platforms.yml`） | language profile、toolchain、runner、標準bundle IDまたは独自descriptor名、platform 選択を使う場合は `.ci/platform-manifest.yml` と `.ci/quality-platforms.yml` | 標準 bundle がない場合の quality adapter |
+| `quality-gate-profiles` | `quality-gate-profiles.yml` | runner、profileごとのlanguage profile・toolchain・tool版・標準bundle IDまたは独自descriptor名 | 標準 bundle がない profile の quality adapter |
 | `release-request` | tag request | tag pattern、runner | なし |
 | `release-publication` | request、caller の2 workflow | request handoff、notes handoff、tool versions、`.ci/platform-manifest.yml`、release implementation、quality adapter、言語・製品設定 | 標準Release処理の個別実装は不要。補助assetで owner-adapter を選ぶ場合だけ補助extension |
 | `package-publication` | request、caller の2 workflow | runner、tool versions、registry secret、package policy | build と publish extension |
@@ -308,6 +309,15 @@ manifestの作成・追加・変更・削除前に、[OS・版の選定と廃止
 4. lock を再生成し、preflight を通す。
 5. callerの `platform-summary` は `quality-gate-platforms / summary` の固定名で、calleeの失敗・中断・未実施・結果欠落を成功に読み替えない。provider側は期待platformの欠落、docs-only時の対象外記録、matrix結果を集約する。Hostedでcheck名と失敗伝播を受け入れるまで利用可能扱いにしない。
 6. `.ci/README.md` の差分記録に、platform 別検証の採用と platform 選択の正本を残す。
+
+## 複数の language profile を1つの caller で検証する場合
+
+主言語に加えて補助言語の品質検査も必要な project は、`quality-gate` の代わりに `quality-gate-profiles` プリセットを導入する。一つの repository に両方を置かない。
+
+1. profile ごとに、`quality-gate` の主callerと同じ選択（language profile、toolchain、必要なtoolのexact版、標準bundle IDまたは独自descriptor名）を決める。補助言語のlintなど標準bundleに無い検査は、project-owned descriptorで持つ。
+2. 配布ガイドに従い `quality-gate-profiles` プリセットをfetchする。planでは `quality-profiles` に profile ごとのmapの配列を `--set` で渡す。各mapは、calleeの `workflow_call.inputs` のうち `runner` と `docs-only-patterns` を除く全入力をkeyに持ち、主callerと同じく使わない入力は空値にする。`language-profile` と `toolchain-version` は空にできない。`runner` と保護branchは全profileで共通の設定として渡す。
+3. 確認済みplanのapplyで caller を配置し、lock を再生成して preflight を通す。preflight は profile ごとに主callerと同じ品質設定の検証を行い、未知の入力、入力の欠落、空の必須入力、重複したprofileを失敗にする。
+4. caller の `profiles-summary` は `quality-gate-profiles / summary` の固定名で、matrix のいずれかの profile の失敗・中断・未実施を成功に読み替えない。`quality-gate` から移行する場合は required check をこの名前へ登録し直す。Hostedでcheck名と失敗伝播を受け入れるまで利用可能扱いにしない。
 
 ## Release・packageプリセットの導入差分
 

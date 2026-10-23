@@ -34,6 +34,7 @@ workflowのsource、配置先、必要assetはregistryのpreset entryから選�
 | プリセット | registry entry | workflowの用途 |
 | --- | --- | --- |
 | `quality-gate` | `registry.presets[quality-gate]` | 変更・統合の品質検証 |
+| `quality-gate-profiles` | `registry.presets[quality-gate-profiles]` | 複数のlanguage profileを持つrepositoryの変更・統合の品質検証 |
 | `release-request` | `registry.presets[release-request]` | tagから公開準備用request handoffを生成 |
 | `release-publication` | `registry.presets[release-publication]` | notes確認後の手動requestをdefault branchのcallerで検証し、Release資材を公開 |
 | `package-publication` | `registry.presets[package-publication]` | 検証済みpackageをregistryへ公開 |
@@ -41,6 +42,8 @@ workflowのsource、配置先、必要assetはregistryのpreset entryから選�
 registryの`source`は配布元の固定資材を解決するときだけ使う。callerの生成・配置は `references/configure-ci-preset.guide.md` に従う。配置後は`.github/`、`.ci/`、projectの設定だけで実行できる状態にする。provider固有の処理順と権限境界は配置したworkflowを正本とする。
 
 `quality-gate`のplatform別検証は任意選択とする。必要なprojectだけがregistryの`optionalWorkflowAssets`（`quality-gate-platforms`）を、companionの`.ci/quality-platforms.yml`と一組で導入する。既存projectへの後続導入ではcompanionを先行配置してよい。選択データはplatform manifestの`id`だけを列挙し、runner mappingはmanifestに残す。未選択のprojectは従来の単一runner構成を維持する。採用時は固定名の集約 check を別 required として追加し、base `quality-gate` の判定へ暗黙に混ぜない。
+
+主言語以外の品質検査も必要なrepositoryは、`quality-gate`の代わりに`quality-gate-profiles`を導入する。一つのcallerがlanguage profileごとに共通品質workflowを呼び、固定名の集約 check `quality-gate-profiles / summary` がいずれかのprofileの失敗・未実施で失敗する。補助言語の検査内容は標準bundleを増やさず、project-owned descriptorで持つ。`quality-gate`と併置しない。
 
 Release は `tag-preparation + manual-publication` を標準選択とする。GitHub Actions 上の詳細な公開経路は `references/implement-release-asset-publication-workflow.guide.md` に委譲する。
 
@@ -60,5 +63,6 @@ a3 Actionはregistryの`actionization`、一般的なAction候補、選択順位
 
 - 導入と設定: `references/configure-ci-preset.guide.md`
 - 配置済み構成のpreflight: `references/validate-ci-preset.guide.md`
-- 契約テストからhosted／remote証拠までの確認: `references/verify-applied-ci-preset.guide.md`
+- 適用済みCIの監査: `references/verify-applied-ci-preset.guide.md`
+- 契約テストからhosted／remote証拠までの確認: `references/inspect-ci-audit-details.guide.md`
 - Release assets公開の実装: `references/implement-release-asset-publication-workflow.guide.md`

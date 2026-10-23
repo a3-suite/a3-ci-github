@@ -12,6 +12,15 @@ export class DiagnosticError extends Error {
     }
 }
 const identifier = (value) => typeof value === 'string' && /^[a-zA-Z0-9_.\[\]-]{1,200}$/.test(value) ? value : 'unavailable';
+// The workflow declares the commit it checked out. Pull request events report a merge-ref SHA that differs from a checked-out head, so their event SHA is never presented as the source.
+const sourceRevision = () => {
+    const commit = /^[a-f0-9]{40}$/;
+    const declared = process.env.CI_SOURCE_REVISION;
+    if (declared)
+        return commit.test(declared) ? declared : 'unavailable';
+    const event = process.env.GITHUB_SHA ?? '';
+    return !(process.env.GITHUB_EVENT_NAME ?? '').startsWith('pull_request') && commit.test(event) ? event : 'unavailable';
+};
 const filesystemCodes = new Set(['ENOENT', 'EACCES', 'EPERM', 'EEXIST', 'ENOTDIR', 'EISDIR', 'ENOSPC', 'EROFS', 'EMFILE', 'EIO']);
 const safeValue = (value, depth = 0) => {
     if (depth > 4)
@@ -82,7 +91,7 @@ export class FailureContext {
         const stage = details && typeof details === 'object' && typeof details.stage === 'string' ? identifier(details.stage) : this.stage;
         return {
             classification: { subject: this.subject, operation: this.operation, stage, reason, cause: reason === 'unknown-failure' ? 'unknown' : 'known' },
-            context: { run: identifier(process.env.GITHUB_RUN_ID), job: identifier(process.env.GITHUB_JOB), source: /^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA ?? '') ? process.env.GITHUB_SHA : 'unavailable', platform: identifier(process.env.RUNNER_OS), arch: identifier(process.env.RUNNER_ARCH), inputs: safeValue(this.details) },
+            context: { run: identifier(process.env.GITHUB_RUN_ID), job: identifier(process.env.GITHUB_JOB), source: sourceRevision(), platform: identifier(process.env.RUNNER_OS), arch: identifier(process.env.RUNNER_ARCH), inputs: safeValue(this.details) },
             comparison: rawDetails ? safeValue(rawDetails) : { field: this.stage, expected: 'contract-satisfied', observed: reason, values: 'unavailable-or-protected' },
             'evidence-location': { log: process.env.GITHUB_ACTIONS === 'true' ? 'workflow-run-job-step-log' : 'stderr', artifact: 'not-generated', file: this.retainedEvidence ?? 'not-generated' },
             'execution-state': { outcome: this.outcome, lastConfirmed: this.lastConfirmed, write: this.writeState, rollback: details && typeof details === 'object' && details.rollback ? safeValue(details.rollback) : 'unavailable', retention: this.retainedEvidence ? 'log-and-file' : 'log-only' },

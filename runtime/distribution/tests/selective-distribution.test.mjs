@@ -15,7 +15,9 @@ describe('distribution test fixtures', () => {
       // Arrange
       await withFixture('distribution-mutated-copy-', async (firstRoot) => {
         const first = prepareRelease(firstRoot);
-        const bytes = new Map(fs.readdirSync(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
+        const files = (output) => fs.readdirSync(output, { recursive: true })
+          .filter((name) => fs.statSync(path.join(output, name)).isFile());
+        const bytes = new Map(files(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
         // Act
         first.manifest.sourceRevision = 'mutated';
         first.manifestBytes.fill(0);
@@ -27,7 +29,7 @@ describe('distribution test fixtures', () => {
           expect(second.manifest).not.toBe(first.manifest);
           expect(second.manifestBytes).not.toBe(first.manifestBytes);
           expect(second.manifestBytes).toEqual(bytes.get('a3-ci-github-distribution-manifest.json'));
-          expect(fs.readdirSync(second.output).sort()).toEqual([...bytes.keys()].sort());
+          expect(files(second.output).sort()).toEqual([...bytes.keys()].sort());
           for (const [name, expected] of bytes) expect(fs.readFileSync(path.join(second.output, name))).toEqual(expected);
         });
       });
@@ -315,6 +317,27 @@ describe("contract.ci-selective-distribution.application", () => {
       expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/structure-conflict/);
       expect(renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] })).toBe(rendered);
     });
+    // contract_id: contract.ci-selective-distribution.application
+    test('workflow generation expands only a matrix include into profile maps and reads them back', () => {
+      const template = 'jobs:\n  quality:\n    strategy:\n      matrix:\n        include: <quality-profiles>\n    with:\n      runner: <versioned-runner>\n      language-profile: ${{ matrix.language-profile }}\n';
+      const profiles = [{ 'language-profile': 'rust', 'toolchain-version': '1.90.0' }, { 'language-profile': 'python', 'uv-version': '0.8.0' }];
+      const values = { 'quality-profiles': profiles, 'versioned-runner': 'ubuntu-24.04' };
+      // Act
+      const rendered = renderWorkflowTemplate({ yaml, template, values });
+      // Assert
+      expect(yaml.parse(rendered).jobs.quality.strategy.matrix.include).toStrictEqual(profiles);
+      expect(yaml.parse(rendered).jobs.quality.with['language-profile']).toBe('${{ matrix.language-profile }}');
+      expect(readWorkflowSettings({ yaml, template, current: rendered }).values['quality-profiles']).toStrictEqual(profiles);
+      expect(yaml.parse(renderWorkflowTemplate({ yaml, template, values: { ...values, 'quality-profiles': [{ 'language-profile': 'rust', 'uv-version': '' }] } })).jobs.quality.strategy.matrix.include)
+        .toStrictEqual([{ 'language-profile': 'rust', 'uv-version': '' }]);
+      for (const invalid of ['rust', [], [{}], [{ 'language-profile': 1 }], [{ 'Language-Profile': 'rust' }], [{ nested: { a: 'b' } }]]) {
+        expect(() => renderWorkflowTemplate({ yaml, template, values: { ...values, 'quality-profiles': invalid } }), JSON.stringify(invalid)).toThrow(/setting-invalid:quality-profiles/);
+      }
+      const drifted = yaml.parse(rendered);
+      drifted.jobs.quality.strategy.matrix.include = [{ 'language-profile': ['rust'] }];
+      expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/setting-invalid:quality-profiles/);
+      expect(() => renderWorkflowTemplate({ yaml, template: template.replace('include: <quality-profiles>', 'other: <quality-profiles>'), values })).toThrow(/setting-invalid:quality-profiles/);
+    });
   });
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
@@ -395,6 +418,20 @@ describe("contract.ci-selective-distribution.application", () => {
           }
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
           expect(rollbackDistributionTransaction({ projectRoot, transactionId: optionalApplied.transactionId }).status).toBe('rolled-back');
+          expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
+          const profilesSelection = { requestedPresets: ['quality-gate-profiles'], requestedAssets: [] };
+          await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+            sourceRoot: repositoryRoot, ...profilesSelection });
+          const profilesPlan = planDistributionApplication({ projectRoot, sourceRevision, ...profilesSelection });
+          const profilesApplied = applyDistributionPlan({ projectRoot, planPath: profilesPlan.planPath, approvalDigest: profilesPlan.planDigest });
+          expect(ordinaryFiles(projectRoot).sort()).toStrictEqual([
+            '.ci/platform-manifest.yml', '.ci/quality-platforms.yml', '.github/workflows/quality-gate-profiles.yml', 'README.md',
+          ]);
+          const profilesWorkflow = yaml.parse(fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-profiles.yml'), 'utf8'));
+          expect(profilesWorkflow.jobs.quality.uses).toBe(`a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@${sourceRevision}`);
+          expect(profilesWorkflow.jobs.quality.strategy.matrix.include.map((entry) => entry['language-profile'])).toStrictEqual(['rust', 'python']);
+          expect(profilesWorkflow.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
+          expect(rollbackDistributionTransaction({ projectRoot, transactionId: profilesApplied.transactionId }).status).toBe('rolled-back');
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
           const releaseSelection = { requestedPresets: ['release-request', 'release-publication'], requestedAssets: [] };
           await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,

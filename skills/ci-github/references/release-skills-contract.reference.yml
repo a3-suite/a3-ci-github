@@ -1,15 +1,4 @@
-schemaVersion: "1"
-kind: ci-github-release-skills-contract
 id: ci-github.release-skills-contract
-title: 製品Releaseの公開スキル同梱契約
-summary: 製品と同じ固定sourceの公開スキルだけを単一ZIPにし、独立したowner証跡とともに同じReleaseへ公開する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns: [release skill declaration, skill packaging ownership, publication identity]
-usage:
-  whenToRead: [製品Releaseへスキルを同梱するとき, 同梱内容とREADMEの整合を確認するとき]
-  consumers: [human, agent, validator]
 selection:
   input: release_skills_config_path
   decision: 製品repositoryで管理するSKILL.mdを配置場所にかかわらず確認し、製品ownerが同梱するスキルをskills配列へ明示する。複数選択でき、.agents/skills/も名前だけで除外しない。宣言外のスキルを自動追加しない。

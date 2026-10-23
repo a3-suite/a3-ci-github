@@ -20,7 +20,7 @@ requirements:
       - 公開回数と準備コミット数を区別し、複数の準備コミットを使ってもexact tag、Release、consumerの採用版を分割しない
       - 配布assetとpresetの依存閉包をrepository registryから一意に選択できる
       - Release manifestは同一full commit SHAの登録済み通常ファイルについてpath、size、SHA-256を提示する
-      - exact tagのGitHub Releaseはmanifest、standalone fetch CLI、SHA256SUMSだけを公開し、remote readbackが準備済みbyteと一致した後だけ成功する
+      - exact tagのGitHub Releaseはmanifest、standalone fetch CLI、SHA256SUMSと、同じsourceの公開スキルZIPとそのchecksumだけを公開し、remote readbackが準備済みbyteと一致した後だけ成功する
       - consumerは選択した資材だけを固定SHA URLからstagingへ取得し、全file検証後にproject-local distributionとして利用できる
       - asset単体取得は不足依存を診断し、preset選択は必須依存閉包を解決する
       - canonical workflowのcopyは依頼で許可された範囲で、確認済みplanと適用時の状態が一致する場合だけ実行され、管理外差分を上書きしない

@@ -41,7 +41,7 @@ installer の実装・配布生成・テストは `runtime/installer/` で保守
 npm test -- runtime/distribution/tests/selective-distribution.test.mjs
 ```
 
-Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksumsを生成します。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して3 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
+Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksums、`.ci/release-skills.json`で宣言したスキルのZIPとその`.sha256`を生成します。スキルのowner証跡は`skills-evidence/`へ出力してhandoffに含め、Releaseには公開しません。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して5 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
 
 ```sh
 runtime/preset/node_modules/.bin/tsx runtime/distribution/generate-distribution-release.ts \
@@ -71,7 +71,7 @@ npm test -- runtime/preset/tests/reusable-quality-workflow.test.mjs
 
 Action・workflow・公開参照を変更する前に、[固定参照の更新順序](docs/maintenance/action-construction.md#固定参照の更新順序)を確認してください。コミットゲートで準備段階と利用可能化を区別し、Actionと再利用workflowそれぞれの確定SHA・受入証拠を確認します。
 
-コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備先設定と自動反映の境界は、同ガイドが参照する[デプロイコンテキスト](.agents/skills/skills-deploy/references/deploy-context.reference.md#コミットゲート連携)に従います。
+コミット前のリポジトリ固有ゲートと実行手順は[コミットゲート](.agents/skills/commit-gate/references/run-repository-commit-gates.guide.md)を正本とします。公開スキルの配備は、対象を`.agents/skill-deploy.yml`、配備先を`.env`で指定し、project-skill-deploy スキルに従います。
 
 ## Action catalog
 

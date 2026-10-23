@@ -39,3 +39,6 @@ cases:
     partition: runtime-context.release-authority-valid
     input:
       platform-manifest: CRLF
+    verifies:
+      - authority-file
+      - platform-source-text-digest

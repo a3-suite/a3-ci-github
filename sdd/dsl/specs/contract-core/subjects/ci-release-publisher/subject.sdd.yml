@@ -10,44 +10,35 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          root: action
-          kind: object
-          fields:
-            - selector: receipt-path
-              meaning: Path of the publication receipt written by the publisher.
-            - selector: readback-path
-              meaning: Path of the remote readback evidence written by the publisher.
-            - selector: outcome
-              meaning: Failed step on rejection or uncertain write result.
-            - selector: successful-output-state
-              meaning: Successful evidence outputs are absent on failure.
+        fields:
+          - selector: receipt-path
+            meaning: Path of the publication receipt written by the publisher.
+          - selector: readback-path
+            meaning: Path of the remote readback evidence written by the publisher.
+          - selector: outcome
+            meaning: Failed step on rejection or uncertain write result.
+          - selector: successful-output-state
+            meaning: Successful evidence outputs are absent on failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - summary: Provider request and response trace observed across the publication boundary.
         boundary:
           ref: boundary.release-provider-requests
-        value:
-          root: invocation.effects
-          kind: object
-          fields:
-            - selector: publication-write-retry
-              meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.
-            - selector: publication-recovery-write
-              meaning: Additional provider writes after the first failed or uncertain publication operation.
-            - selector: publication-delete
-              meaning: Provider DELETE requests during publication.
-            - selector: publication-existing-release-write
-              meaning: Provider writes to a same-tag Release observed before creation.
-            - selector: publication-created-id-binding
-              meaning: For every upload or finalize request, equality of its Release ID and the immutable ID from a preceding valid create response. With no such request, this comparison is vacuously matched; a request without that ID is unmatched.
+        fields:
+          - selector: publication-write-retry
+            meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.
+          - selector: publication-recovery-write
+            meaning: Additional provider writes after the first failed or uncertain publication operation.
+          - selector: publication-delete
+            meaning: Provider DELETE requests during publication.
+          - selector: publication-existing-release-write
+            meaning: Provider writes to a same-tag Release observed before creation.
+          - selector: publication-created-id-binding
+            meaning: For every upload or finalize request, equality of its Release ID and the immutable ID from a preceding valid create response. With no such request, this comparison is vacuously matched; a request without that ID is unmatched.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-publisher-valid

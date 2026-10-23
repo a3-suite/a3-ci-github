@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "ci.release-skills.v1",
+  "skills": [
+    {
+      "path": "skills/ci-github",
+      "include": [
+        "SKILL.md",
+        "references",
+        "assets"
+      ],
+      "requiredFiles": [
+        "SKILL.md",
+        "references/analyze-ci-result.guide.md",
+        "references/configure-ci-preset.guide.md",
+        "references/deploy-ci-assets.guide.md",
+        "references/design-ci-workflow.guide.md",
+        "references/implement-package-publish-workflow.guide.md",
+        "references/implement-release-asset-publication-workflow.guide.md",
+        "references/inspect-ci-audit-details.guide.md",
+        "references/publish-project-skills.guide.md",
+        "references/resolve-ci-audit-findings.guide.md",
+        "references/review-ci-workflow.guide.md",
+        "references/validate-ci-preset.guide.md",
+        "references/verify-applied-ci-preset.guide.md"
+      ]
+    },
+    {
+      "path": "skills/ci-release-installer",
+      "include": [
+        "SKILL.md",
+        "references",
+        "assets"
+      ],
+      "requiredFiles": [
+        "SKILL.md",
+        "references/audit-installer-compliance.guide.md",
+        "references/define-installer.guide.md",
+        "references/installer-asset-assembly-evidence-contract.reference.md",
+        "references/installer-contract-coverage.reference.yml",
+        "references/installer-input-examples.reference.md",
+        "references/installer-standard-assembly-contract.reference.yml",
+        "references/installer-state-machine.reference.md",
+        "references/installer-use-case-contract.reference.yml",
+        "references/organize-installer-tests.guide.md",
+        "references/use-standard-installer.guide.md"
+      ]
+    }
+  ]
+}

@@ -10,55 +10,49 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary:
           ref: boundary.workflow-definition
-        value:
-          root: canonical-workflow
-          kind: object
-          fields:
-            - selector: publication-boundary
-              meaning: Declared publication call and dependency graph.
-            - selector: failure-summary
-              meaning: Declared publication aggregate route.
-            - selector: evidence-transfer
-              meaning: Declared supplemental artifact transfer routes.
-            - selector: release-fixed-provider-reference
-              meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
-            - selector: release-explicit-owner-inputs
-              meaning: Comparison of caller owner bindings with the provider typed required inputs.
-            - selector: release-request-before-publication
-              meaning: Declared dependency order of request validation and privileged publication call.
-            - selector: release-authority-before-publication
-              meaning: Declared dependency order of authority validation and publication.
-            - selector: release-control-sha-bound
-              meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
-            - selector: release-control-head-verified
-              meaning: Declared order of control checkout and immediate HEAD verification.
-            - selector: release-handoff-before-publication
-              meaning: Declared order of handoff validation and credential-bearing publication.
-            - selector: release-publication-before-readback
-              meaning: Declared order of the publish step and independent verify-publication step.
-            - selector: release-tokens-explicit
-              meaning: Comparison of credential-bearing step token bindings with github.token.
-            - selector: supplemental-upload-selected-root
-              meaning: Declared supplemental build upload path.
-            - selector: supplemental-hidden-files-selected
-              meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
-            - selector: supplemental-download-root
-              meaning: Declared supplemental artifact download root.
-            - selector: supplemental-final-assembly-input
-              meaning: Declared supplemental build root passed to final assemble.
-            - selector: release-failure-summary-always
-              meaning: Declared publication aggregate condition.
-            - selector: release-failed-prerequisite-blocks
-              meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
+        fields:
+          - selector: publication-boundary
+            meaning: Declared publication call and dependency graph.
+          - selector: failure-summary
+            meaning: Declared publication aggregate route.
+          - selector: evidence-transfer
+            meaning: Declared supplemental artifact transfer routes.
+          - selector: release-fixed-provider-reference
+            meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
+          - selector: release-explicit-owner-inputs
+            meaning: Comparison of caller owner bindings with the provider typed required inputs.
+          - selector: release-request-before-publication
+            meaning: Declared dependency order of request validation and privileged publication call.
+          - selector: release-authority-before-publication
+            meaning: Declared dependency order of authority validation and publication.
+          - selector: release-control-sha-bound
+            meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
+          - selector: release-control-head-verified
+            meaning: Declared order of control checkout and immediate HEAD verification.
+          - selector: release-handoff-before-publication
+            meaning: Declared order of handoff validation and credential-bearing publication.
+          - selector: release-publication-before-readback
+            meaning: Declared order of the publish step and independent verify-publication step.
+          - selector: release-tokens-explicit
+            meaning: Comparison of credential-bearing step token bindings with github.token.
+          - selector: supplemental-upload-selected-root
+            meaning: Declared supplemental build upload path.
+          - selector: supplemental-hidden-files-selected
+            meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
+          - selector: supplemental-download-root
+            meaning: Declared supplemental artifact download root.
+          - selector: supplemental-final-assembly-input
+            meaning: Declared supplemental build root passed to final assemble.
+          - selector: release-failure-summary-always
+            meaning: Declared publication aggregate condition.
+          - selector: release-failed-prerequisite-blocks
+            meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: ci-release-publication-workflow-canonical-source-available

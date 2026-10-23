@@ -1,33 +1,4 @@
-schemaVersion: "1"
-kind: ci-release-asset-publication-contract
 id: ci.release-asset-publication-contract
-title: Release asset publication contract
-summary: >-
-  Release assets 公開時の tag identity、承認済み release notes、inventory、
-  補助 asset 選択、resource identity、成功状態を定義する公開参照 DSL。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - release tag identity contract
-    - approved release notes input contract
-    - release inventory contract
-    - supplemental Release asset set selection and publication contract
-    - release resource identity contract
-    - release publication success state
-    - provider operation failure attribution contract
-usage:
-  whenToRead:
-    - Release tag と承認済み release notes の入力境界を確認するとき
-    - 補助 Release asset の選択と公開境界を確認するとき
-    - Release assets の公開経路を設計または監査するとき
-    - Release object の一意性と操作対象 identity を確認するとき
-    - Release assets 公開の成功状態を判定するとき
-    - provider 操作の失敗診断の境界を確認するとき
-  consumers:
-    - human
-    - agent
-    - validator
 tagIdentity:
   releaseInputContract: git.release-flow
   releaseInputBinding:

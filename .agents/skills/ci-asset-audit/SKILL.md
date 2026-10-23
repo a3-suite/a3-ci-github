@@ -38,7 +38,7 @@ a3-ci-githubの資材分担を現在の正本と実体から確認し、必要�
 | 失敗診断の要求・共通保証・固有保証 | 要求: `{project-root}/sdd/dsl/requirements/items/requirements/ci-failure-diagnostics/requirement.sdd.yml`、共通契約: `{project-root}/sdd/dsl/specs/contract-core/subjects/ci-failure-diagnostics/`、各subjectの固有契約。公開監査への接続: `{project-root}/skills/ci-github/references/ci-audit-subjects.reference.yml`の`ci-failure-diagnostics` |
 | 導入説明と公開・互換性の前提 | preflight guide: `{project-root}/skills/ci-github/references/validate-ci-preset.guide.md`、trust policy: `{project-root}/skills/ci-github/references/runner-trust-policy.reference.md`、version policy: `{project-root}/skills/ci-github/references/workflow-version-policy.reference.md` |
 | installerの公開契約とrepository側の保守 | 利用・契約入口: `{project-root}/skills/ci-release-installer/SKILL.md`から参照先を解決、配置・生成・検証・計測: `{project-root}/docs/maintenance/installer-maintenance.md` |
-| Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: skills-deploy スキル。固定参照と利用可能条件は上記preset registry・version policyから解決 |
+| Release公開後の利用可能化・Skill配備 | 公開入口: `{project-root}/docs/release/README.md`、実行経路: `{project-root}/.github/workflows/release.yml`、配備入口: project-skill-deploy スキル（対象は`.agents/skill-deploy.yml`、配備先は`.env`）。固定参照と利用可能条件は上記preset registry・version policyから解決 |
 
 実体は上記から到達する `actions/`、`workflows/`、provider reusable workflow、`runtime/`、公開・ローカルSkill、lint、テスト、文書を照合する。registryからの到達だけで棚卸しを終えず、対象ディレクトリの実在資材との逆照合で未登録・互換用・保守用資材も区別する。
 

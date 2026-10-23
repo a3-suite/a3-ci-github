@@ -1,11 +1,4 @@
-schemaVersion: "1"
-kind: ci-script-assets
 id: ci.script-assets
-title: CI script asset inventory
-summary: >-
-  script use case と CIプリセットを実装する現在の reusable asset、project/provider adapter、
-  trusted control、外部補助を定義する。
-placementRole: distributable_asset
 assetPrinciples:
   - id: minimal-project-change
     rule: >-
@@ -27,22 +20,6 @@ assetPrinciples:
       Action binding を優先し、同じ処理を copyable asset または project-owned entrypoint として重複配置してはならない。
       trusted-control という分類だけを Action 化の禁止理由にせず、候補適格条件と移管しない責務は選択した provider registry
       の正本に従う。
-authority:
-  role: authoritative-definition
-  owns:
-    - script asset registry identity and classification
-    - asset implementation kind, status, scope, and owner
-    - asset entrypoint and copyability metadata
-    - repository-owned resource と外部 skill resource の解決境界
-  excludes:
-    - asset usage instructions and invocation examples
-    - provider-specific placement procedure
-    - provider-specific placement and Action mapping
-usage:
-  whenToRead:
-    - script asset、skill script、または処理契約を実装し、配置境界を確認するとき
-    - reusable asset と project/provider adapter の不足を確認するとき
-  consumers: [human, agent, validator]
 pathResolution:
   repositorySource:
     shape: "source: {path: <a3-ci-github repository root 相対>}"

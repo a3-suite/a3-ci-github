@@ -9,12 +9,18 @@ import type { Finding, ManagedAsset, Preset, RegistryData, TriggerExtensionRule,
 import type { InspectionContext, Report } from './validation-report.ts';
 import { findWorkflowAssetReferences, inside, realPathIsInside, sha256 } from './workflow-assets.ts';
 import { projectProviderActionPins, providerActionPinRepositories } from './provider-action-pins.mjs';
+import { isMatrixInclude } from './workflow-template.mjs';
 
 const SHA256 = /^[0-9a-f]{64}$/;
 
 const MINUTE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/;
 
 const PLACEHOLDER = /<[A-Za-z][A-Za-z0-9._-]*>/;
+const JQ_VERSION = /^\d+\.\d+(?:\.\d+)?$/;
+// Inputs every profile shares stay in the caller; the matrix carries only per-profile inputs.
+const SHARED_QUALITY_INPUTS = new Set(['runner', 'docs-only-patterns']);
+const QUALITY_PRESETS = new Set(['quality-gate', 'quality-gate-profiles']);
+const qualityAuxiliaryTools = ['skip', "${{ steps.execution-scope.outputs.scope == 'native' && 'skip' || 'install' }}"];
 
 
 const placeholderPattern = (
@@ -40,6 +46,13 @@ const compareCanonicalValue = (
 ): void => {
   if (typeof expected === 'string') {
     const pattern = placeholderPattern(expected, emptyAllowedPlaceholders);
+    if (pattern && currentPath.endsWith('.matrix.include') && Array.isArray(actual)) {
+      if (!isMatrixInclude(actual)) differences.push({
+        path: currentPath,
+        message: 'configured matrix include must list one or more maps of string values',
+      });
+      return;
+    }
     if (pattern) {
       const configured = isMap(actual) || Array.isArray(actual) ? undefined : String(actual ?? '');
       if (configured === undefined || !pattern.test(configured)) differences.push({
@@ -124,10 +137,10 @@ const normalizeTriggerExtensions = (
   asset: WorkflowAsset,
   canonical: ValueMap,
   workflow: ValueMap,
-  extensions: Record<string, TriggerExtensionRule>,
+  extensions: Record<string, TriggerExtensionRule> | undefined,
   report: Report,
 ): ValueMap => {
-  if (asset.id !== 'quality-gate' || !isMap(workflow.on)) return workflow;
+  if (!extensions || !isMap(workflow.on)) return workflow;
   const canonicalOn = map(canonical.on);
   const normalizedOn = { ...workflow.on };
   for (const [event, rule] of Object.entries(extensions)) {
@@ -168,7 +181,7 @@ const validateCanonicalWorkflow = (
     asset,
     canonical,
     workflow,
-    registry.qualityTriggerExtensions,
+    registry.workflowTriggerExtensions[asset.id],
     report,
   );
   const differences: Finding[] = [];
@@ -573,9 +586,13 @@ const validateCommon = (
       if (inputs['version-policy'] !== undefined) {
         expected['version-policy'] = qualityVersionPolicy;
       }
+      // Only jobs that run no full-scope check may skip the auxiliary tools, either unconditionally or by the selected execution scope.
+      if (inputs['auxiliary-tools'] !== undefined && qualityAuxiliaryTools.includes(inputs['auxiliary-tools'] as string)) {
+        expected['auxiliary-tools'] = inputs['auxiliary-tools'] as string;
+      }
       if (Object.keys(inputs).length !== Object.keys(expected).length
         || Object.entries(expected).some(([name, expression]) => inputs[name] !== expression)) add(report.mismatches, {
-        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its five explicit workflow settings and the permitted version policy', settingLocation: displayPath,
+        path: `${displayPath}:with.ci-quality-toolchain`, message: 'quality toolchain must bind its five explicit workflow settings, the permitted version policy and auxiliary tool selection', settingLocation: displayPath,
       });
     }
   }
@@ -613,6 +630,7 @@ const TRIGGERS_BY_ASSET: Record<string, string[]> = {
 
 const TRIGGERS_BY_PRESET: Record<string, string[]> = {
   'quality-gate': ['pull_request', 'push'],
+  'quality-gate-profiles': ['pull_request', 'push'],
 };
 
 const validateTrigger = (
@@ -630,7 +648,7 @@ const validateTrigger = (
       settingLocation: displayPath,
     });
   }
-  if (preset === 'quality-gate' && strings(map(on(workflow).push).branches).length === 0) {
+  if (QUALITY_PRESETS.has(preset) && strings(map(on(workflow).push).branches).length === 0) {
     add(report.missingSettings, {
       path: `${displayPath}:on.push.branches`,
       message: 'quality push trigger must select a protected branch',
@@ -733,6 +751,41 @@ const inspectPackagePreparation = (
   }
 };
 
+const validateQualityProfiles = (
+  asset: WorkflowAsset,
+  call: ValueMap,
+  definitions: ValueMap,
+  report: Report,
+): void => {
+  const include = map(map(call.strategy).matrix).include;
+  if (!isMatrixInclude(include)) return;
+  // Every profile states every per-profile input, as the single caller does, so no matrix reference relies on an absent key.
+  const inputs = Object.keys(definitions).filter((name) => !SHARED_QUALITY_INPUTS.has(name));
+  const listed = new Set<string>();
+  (include as ValueMap[]).forEach((entry, index) => {
+    const location = `${asset.destination}:jobs.quality.strategy.matrix.include[${index}]`;
+    for (const name of Object.keys(entry)) if (!Object.hasOwn(definitions, name) || SHARED_QUALITY_INPUTS.has(name)) add(report.mismatches, {
+      path: `${location}.${name}`, message: 'quality profile sets an input that is not a per-profile quality workflow input', settingLocation: asset.destination,
+    });
+    for (const name of inputs) {
+      if (!Object.hasOwn(entry, name)) add(report.missingSettings, {
+        path: `${location}.${name}`, message: 'quality profile must state every per-profile input; use an empty value when unused', settingLocation: asset.destination,
+      });
+      else if (map(definitions[name]).required === true && entry[name] === '') add(report.missingSettings, {
+        path: `${location}.${name}`, message: 'required quality workflow input is empty in the profile', settingLocation: asset.destination,
+      });
+    }
+    if (typeof entry['jq-version'] === 'string' && entry['jq-version'] !== '' && !JQ_VERSION.test(entry['jq-version'])) add(report.mismatches, {
+      path: `${location}.jq-version`, message: 'quality jq version must be empty or an exact version', settingLocation: asset.destination,
+    });
+    const identity = JSON.stringify(Object.entries(entry).sort(([left], [right]) => left.localeCompare(right)));
+    if (listed.has(identity)) add(report.mismatches, {
+      path: location, message: 'quality profile is listed more than once', settingLocation: asset.destination,
+    });
+    listed.add(identity);
+  });
+};
+
 const inspectWorkflowAsset = (
   context: InspectionContext,
   preset: Preset,
@@ -812,7 +865,7 @@ const inspectWorkflowAsset = (
         inactiveConditionalEntrypoints(root, registry, preset));
     }
   }
-  const binding = asset.id === 'quality-gate' ? registry.qualityReusableWorkflow
+  const binding = QUALITY_PRESETS.has(asset.id) ? registry.qualityReusableWorkflow
     : asset.id === 'quality-gate-platforms' ? registry.qualityPlatformsReusableWorkflow : undefined;
   if (binding) {
     const jobId = asset.id === 'quality-gate-platforms' ? 'platforms' : 'quality';
@@ -832,7 +885,7 @@ const inspectWorkflowAsset = (
     if (asset.id === 'quality-gate') {
       const jqVersion = map(call.with)['jq-version'];
       if (jqVersion !== undefined && jqVersion !== ''
-        && (typeof jqVersion !== 'string' || !/^\d+\.\d+(?:\.\d+)?$/.test(jqVersion))) add(report.mismatches, {
+        && (typeof jqVersion !== 'string' || !JQ_VERSION.test(jqVersion))) add(report.mismatches, {
         path: `${asset.destination}:jobs.quality.with.jq-version`,
         message: 'quality jq version must be empty or an exact version',
         settingLocation: asset.destination,
@@ -847,6 +900,7 @@ const inspectWorkflowAsset = (
         path: `${asset.destination}:jobs.${jobId}.with.${name}`, message: `required ${label} reusable workflow input is missing`, settingLocation: asset.destination,
       });
       validateCommon(root, `${asset.destination}:reusable`, JSON.stringify(execution), execution, report, registry, new Set(), 'compatible');
+      if (asset.id === 'quality-gate-profiles') validateQualityProfiles(asset, call, definitions, report);
     }
   }
   for (const value of new Set([...actionUses(workflow), ...actionUses(execution)].filter((item) =>

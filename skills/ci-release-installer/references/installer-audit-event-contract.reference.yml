@@ -1,28 +1,4 @@
-schemaVersion: "1"
-kind: installer-audit-event-contract
 id: installer.audit-event-contract
-title: インストーラ audit event 契約
-summary: >-
-  installer audit log の install.begin / install.result payload、event 間一致条件、
-  secret-free local artifact reference の扱いを定義する公開正本。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - audit event type contract
-    - audit event payload matrix
-    - begin/result consistency rules
-    - audit event rule fixture references
-usage:
-  whenToRead:
-    - audit log の event payload を設計するとき
-    - install.begin と install.result の対応を監査するとき
-    - audit event rule に対応する fixture を確認するとき
-  consumers:
-    - human
-    - agent
-    - installer-implementation
-    - audit
 identityFields:
   - operationMode
   - sourceMode

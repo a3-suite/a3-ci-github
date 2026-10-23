@@ -1,20 +1,4 @@
-schemaVersion: "1"
-kind: ci-script-contracts
 id: ci.script-contracts
-title: CI script processing contracts
-summary: >-
-  script の共通入力、出力、信頼境界を処理契約として定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - script processing input and output contracts
-    - script processing trust and failure boundaries
-usage:
-  whenToRead:
-    - workflow の script 処理を選ぶとき
-    - script asset または project adapter の接続条件を確定するとき
-  consumers: [human, agent, validator]
 commonContract:
   identity: 処理契約 ID、版、entrypoint の集合を実行開始時に固定する。
   input: execution_context、処理契約が要求する場合の config_snapshot、必要な source / handoff identity、language profile、adapter を明示する。

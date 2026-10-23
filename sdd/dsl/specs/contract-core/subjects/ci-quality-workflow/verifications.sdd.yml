@@ -26,3 +26,8 @@ cases:
     partition: ci-quality-workflow-platform-source-selected
     input:
       scenario: optional-platform-source-selected
+  - contract_id: contract.ci-quality-workflow.execution
+    id: ci-quality-workflow-profiles
+    partition: ci-quality-workflow-profiles-source-selected
+    input:
+      scenario: profiles-source-selected

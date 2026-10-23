@@ -3,65 +3,41 @@ name: contract-environment
 environment_id: a3-ci-github-github-environment
 boundaries:
   - id: boundary.action-caller
-    summary: Workflow or caller invoking an Action.
-    kind: workflow
-    direction: input
-    externality: caller-owned
+    summary: Action metadata files that declare the inputs a caller can pass.
+    kind: file-tree
   - id: boundary.action-output
     summary: GitHub Actions outputs and step result exposed by an Action.
-    kind: action-output
-    direction: output
-    externality: caller-owned
+    kind: operation-response
   - id: boundary.runner-path
     summary: Command search path inherited by later steps in the same job.
     kind: data-store
-    direction: output
-    externality: caller-owned
   - id: boundary.workspace-files
     summary: Files read or written in the checked-out workspace.
-    kind: data-store
-    direction: internal-state
-    externality: caller-owned
+    kind: file-tree
   - id: boundary.script-result
     summary: Exit status and generated state exposed by a shared script to its caller.
-    kind: process-output
-    direction: output
-    externality: caller-owned
+    kind: operation-response
   - id: boundary.repository-gate-result
     summary: Repository consistency result exposed by a maintenance gate.
-    kind: process-output
-    direction: output
-    externality: maintainer-owned
+    kind: operation-response
   - id: boundary.workflow-definition
     summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-    kind: data-store
-    direction: output
-    externality: maintainer-owned
+    kind: file-tree
   - id: boundary.project-ci-assets
     summary: Canonical and project-owned CI assets materialized into a consumer project.
-    kind: data-store
-    direction: output
-    externality: caller-owned
+    kind: file-tree
   - id: boundary.cli-result
     summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-    kind: process-output
-    direction: output
-    externality: caller-owned
+    kind: operation-response
   - id: boundary.diagnostic-result
     summary: Failure status, classified reason, correlation identity, and evidence reference exposed by CI processing.
-    kind: process-output
-    direction: output
-    externality: caller-owned
+    kind: operation-response
   - id: boundary.release-provider-requests
     summary: GitHub Release provider requests and responses observed during publication or independent verification.
     kind: external-system
-    direction: bidirectional
-    externality: provider-owned
   - id: boundary.observation-clock
     summary: Reobservation delays requested from the runner clock.
     kind: external-system
-    direction: output
-    externality: caller-owned
 runtime_contexts:
   - id: runtime-context.failure-diagnostic-required
     summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
@@ -219,6 +195,8 @@ runtime_contexts:
     summary: A rust-cargo-quality invocation with execution scope all supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed.
   - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
     summary: A rust-cargo-quality invocation supplies only one of CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH, or a CI_CARGO_DENY_CONFIG_PATH that is absolute, missing, not a regular file, or outside the source checkout.
+  - id: runtime-context.ci-quality-adapter-dependency-policy-violation
+    summary: A configured rust-cargo-quality dependency-policy command exits non-zero, and its cargo-deny JSON output reports error diagnostics and a per-check summary together with message, label and span text.
   - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
     summary: A registered embedded standard bundle is selected from a fixed Action artifact for execution; consumer descriptors are not selected.
   - id: runtime-context.ci-quality-summary-summary-mixed-applicability

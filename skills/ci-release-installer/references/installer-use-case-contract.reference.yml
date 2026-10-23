@@ -1,26 +1,4 @@
-schemaVersion: "1"
-kind: installer-use-case-contract
 id: installer.use-case-contract
-title: インストーラ use case 契約
-summary: standard target platform の選択、GitHub Release native asset、Maven Jar、 npm
-  package の入力差分、および固定 HTTPS URL から pipe 実行する共有 wrapper の delivery 契約を定義する公開正本。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - standard target platform id namespace
-    - installer use case id namespace
-    - source kind to use case mapping
-    - use case sample mapping
-    - use case distribution asset mapping
-usage:
-  whenToRead:
-    - installer の取得形態と target platform を決めるとき
-    - use case 別の manifest sample を選ぶとき
-  consumers:
-    - human
-    - agent
-    - validator
 samplePathBase: skill-root
 sampleSemantics:
   usage: copy-and-adapt
