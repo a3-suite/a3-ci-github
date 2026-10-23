@@ -10,27 +10,21 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          root: action
-          kind: object
-          fields:
-            - selector: status
-              meaning: Publication control operation status.
-            - selector: request-run-id
-              meaning: Verified release request workflow run ID.
-            - selector: outcome
-              meaning: Failure outcome of the rejected publication control step.
-            - selector: accepted-trigger-run
-              meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
+        fields:
+          - selector: status
+            meaning: Publication control operation status.
+          - selector: request-run-id
+            meaning: Verified release request workflow run ID.
+          - selector: outcome
+            meaning: Failure outcome of the rejected publication control step.
+          - selector: accepted-trigger-run
+            meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-publication-request-verified

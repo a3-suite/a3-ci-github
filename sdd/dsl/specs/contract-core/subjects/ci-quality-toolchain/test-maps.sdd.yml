@@ -138,3 +138,10 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > cargo-deny setup runs only when its version is requested
         guarantees:
           - selected-profile-dependencies-only
+  - contract_id: contract.ci-quality-toolchain.preparation
+    case_id: skipped-auxiliary-tools
+    tests:
+      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > auxiliary tools are installed by default and skipped only on request
+        guarantees:
+          - selected-profile-dependencies-only

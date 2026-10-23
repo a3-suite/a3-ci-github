@@ -25,6 +25,18 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   });
 
   // contract_id: contract.ci-quality-toolchain.preparation
+  test('auxiliary tool selection accepts install and skip but still validates tool versions', () => {
+    const script = action.runs.steps[0].run;
+    for (const tools of ['', 'install', 'skip']) expect(run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: tools }).status, tools).toBe(0);
+    const invalid = run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: 'none' });
+    expect(invalid.status).not.toBe(0);
+    expect(invalid.stderr).toContain('quality-toolchain-auxiliary-tools-invalid');
+    const skippedInvalidAudit = run(script, { ...selected('rust', '1.90.0', '', 'latest'), CI_AUXILIARY_TOOLS: 'skip' });
+    expect(skippedInvalidAudit.status).not.toBe(0);
+    expect(skippedInvalidAudit.stderr).toContain('quality-toolchain-cargo-audit-version-invalid');
+  });
+
+  // contract_id: contract.ci-quality-toolchain.preparation
   test('compatible policy accepts bounded Node and Python selectors while exact policy stays strict', () => {
     const script = action.runs.steps[0].run;
     expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).not.toBe(0);

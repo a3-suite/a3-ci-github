@@ -17,7 +17,7 @@ import { descriptorValues, validateDescriptor } from './descriptor-validation.ts
 import { uses } from './workflow-validation.ts';
 import { supplementalOwnerAdapterEntrypoint } from './publication-validation.ts';
 import { standardQualityBundle } from '../adapter/standard-quality-bundles.ts';
-import { resolvePublicationWorkflow, resolveQualityWorkflow } from './ci-preset-assets.ts';
+import { qualityProfileCallers, resolvePublicationWorkflow, resolveQualityWorkflow } from './ci-preset-assets.ts';
 
 const validateQualityPreset = (
   context: InspectionContext,
@@ -29,12 +29,14 @@ const validateQualityPreset = (
     ?? preset.workflowAssets.find((asset) => asset.id === `${preset.id}-caller`)
     ?? preset.workflowAssets[0];
   for (const installed of installedPresetWorkflows(root, preset)) {
-    const workflow = resolvePublicationWorkflow(resolveQualityWorkflow(installed.workflow, registry, context.report), registry, context.report);
-    const declared = descriptorValues(workflow).length > 0
-      || map(workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined
-      || map(workflow.env).CI_STANDARD_BUNDLE_ID !== undefined;
-    if (!declared && installed.path !== primary?.destination) continue;
-    validateQualityWorkflow(context, installed.path, workflow);
+    for (const caller of qualityProfileCallers(installed.workflow)) {
+      const workflow = resolvePublicationWorkflow(resolveQualityWorkflow(caller, registry, context.report), registry, context.report);
+      const declared = descriptorValues(workflow).length > 0
+        || map(workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined
+        || map(workflow.env).CI_STANDARD_BUNDLE_ID !== undefined;
+      if (!declared && installed.path !== primary?.destination) continue;
+      validateQualityWorkflow(context, installed.path, workflow);
+    }
   }
 };
 

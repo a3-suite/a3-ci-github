@@ -14,7 +14,6 @@
 | --- | --- | --- | --- | --- |
 | `provider-references` | provider固定参照ゲート | staged snapshotに`.github/workflows/`、`actions/`、provider pin registry、または本ゲート実装の変更が含まれる | provider固定参照ゲートの「実行」 | provider固定参照ゲートの「終了条件」 |
 | `fixed-reference-order` | 固定参照更新順序ゲート | staged snapshotにAction、Actionへ組み込む共有runtime、canonical workflow、provider callee、またはpreset registryの実装・接続・公開参照変更が含まれる | 固定参照更新順序ゲートの「確認（手動）」 | 固定参照更新順序ゲートの「終了条件」 |
-| `skill-deploy-parity` | スキル配備整合ゲート | staged snapshot にコミット対象の変更がある | スキル配備整合ゲートの「実行」 | スキル配備整合ゲートの「終了条件」 |
 
 ## 共通 git への返却
 - 本書のゲート一覧を期待する `gate_id` 集合とし、各ゲートについて適用判定を行う。非適用を含む各判定結果を1件ずつ返す。
@@ -24,8 +23,7 @@
 
 ## ゲート実行順序
 1. provider固定参照ゲートを実行し、続いて固定参照更新順序ゲートの適用条件を確認し、該当する場合は手動確認する。
-2. スキル配備整合ゲートの適用条件を確認し、該当する場合は実行する。
-3. 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
+2. 成功、停止、判定不能、非適用を含む各ゲート結果を git スキルのコミットフローへ返し、後続へ進むかは git スキルの集約規則に委譲する。
 
 ## provider固定参照ゲート
 
@@ -76,40 +74,3 @@ node {project-root}/runtime/repository/check-provider-references.mjs --staged --
 ## 直前実行証拠の共通採用条件
 - 共通採用条件は git スキルのコミットフローに委譲し、本書では再定義しない。
 - 本書では、各ゲートに固有の追加条件だけを定義する。
-
-## スキル配備整合ゲート
-
-### 適用条件
-- staged snapshot にコミット対象の変更がある場合に適用する。配備先がある状態で、HEAD から staged snapshot までに公開スキルの配布内容が変わらず、公開スキルの削除もない場合は `非適用` とする。
-- 対象スキルと配備先は `skills-deploy` スキルのデプロイコンテキストを正本とする。
-
-### 証拠の採用条件
-- 現行 staged snapshot と HEAD が直前実行時と一致する。
-- `.agents/skill-deploy.yml`、`.env` の配備先、`project-skill-deploy` の公開契約が変わっていない。
-- 直前結果が成功で、実行後に配備先を変更する操作がない。
-
-### 実行
-プロジェクトルートで実行する。
-
-```sh
-uv run {skill-root}/scripts/check_staged_skill_deploy.py --project-skill-deploy-root {project-skill-deploy-root}
-```
-
-- HEAD と index を一時ディレクトリへ書き出し、`project-skill-deploy` のスナップショット差分 API（`plan_snapshot_change`）へ渡す。変更・削除したスキル、配備先、削除候補の判定は同 API を正本とし、本ゲートでは再定義しない。作業ツリーの未ステージ変更は判定にも反映にも使わない。
-- 削除を伴わない更新差分は自動反映し、同じスナップショットで再計画して一致を確認する。
-- 削除候補（stale、削除したスキルのコピー、同名旧カテゴリの置換）は自動反映せず `STOP` とする。削除は `skills-deploy` の明示操作で行う。
-- 他のプロジェクトのものである可能性があり削除しないコピーは `KEPT` として報告し、判定に使わない。
-
-### 停止条件
-- `.env` に配備先が1つもない。
-- 配備先に削除候補がある。
-- 自動反映後の再検査で、配備先が変わる、または差分が残る。
-
-### 終了条件
-- 適用条件を満たさない場合は `非適用` とする（終了コード `0`）。
-- `0`: 更新を反映し、配備先が staged snapshot に一致する、または一致済み。`PASS`。
-- `1`: 検証失敗。`STOP`。
-- `2`: 実行エラー（設定ファイルの不備、API の拒否、git の失敗を含む）。`判定不能`。
-
-### 再実行条件
-- staged snapshot、HEAD、`.agents/skill-deploy.yml`、`.env` の配備先、`project-skill-deploy` の公開契約のいずれかが変わった場合は、配備整合証拠を失効させて再実行する。

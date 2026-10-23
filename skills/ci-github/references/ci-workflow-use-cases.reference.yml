@@ -1,27 +1,7 @@
-schemaVersion: "1"
-kind: ci-workflow-use-cases
-id: ci.workflow-use-cases
-title: CI workflow use cases
-summary: >-
-  CI workflow の通常・例外ユースケースと、標準 preset、内部段階（stage id は `ci.preset-contracts` の語彙と一致させる）、owner 委譲の対応を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - workflow use case classification
-    - CI preset selection boundary
-    - workflow exception delegation boundary
-  excludes:
-    - audit status classification and aggregation
 auditBoundary:
   observationSource: workflow-runtime-result-and-evidence
   classificationOwner: ci.audit-contract.statusClassification
   aggregationOwner: ci.audit-contract.statusAggregation
-usage:
-  whenToRead:
-    - CI workflow の用途と preset を選ぶとき
-    - workflow の例外経路と owner 委譲を確認するとき
-  consumers: [human, agent, validator]
 normalUseCases:
   - id: change-validation
     purpose: PR または untrusted source の変更を merge 前に検証する。
@@ -65,6 +45,7 @@ invariants:
     rule: change、integration、scheduled は trigger と trust boundary の違いであり、別 preset を増やさない。
   - id: request-trigger-is-an-adapter
     rule: manual と tag は release-request の trigger adapter の違いである。
+internalStageIdSource: ci.preset-contracts
 internalStages:
   - id: source-gate
     presets: [quality-gate, release-publication]
@@ -90,9 +71,6 @@ internalStages:
   - id: assemble
     presets: [release-publication]
     reason: publish 前 handoff の一部であり、単独では公開保証にならないから。
-  - id: remote-observe
-    presets: [release-publication, package-publication]
-    reason: 書込結果を同じ identity へ再結合する完了確認だから。
 exceptions:
   - id: fork-untrusted-pr
     appliesTo: [quality-gate]

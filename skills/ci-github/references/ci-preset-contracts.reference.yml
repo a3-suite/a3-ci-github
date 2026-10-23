@@ -1,23 +1,4 @@
-schemaVersion: "1"
-kind: ci-preset-contracts
 id: ci.preset-contracts
-title: CI preset contracts
-summary: >-
-  CI の標準 preset ごとの入力、出力、停止条件、provider へ渡す handoff 境界を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - CI preset input and output contracts
-    - CI preset stop and completion conditions
-    - provider handoff boundary
-  excludes:
-    - audit status classification and aggregation
-usage:
-  whenToRead:
-    - CIプリセットの入出力と停止条件を確定するとき
-    - provider workflow へ handoff を写像するとき
-  consumers: [human, agent, validator]
 configurationResolution:
   order: [runtime-config-source, workflow-initial-input, preset-default]
   rule: 解決後の値は実行開始時に固定し、後続 job が再選択しない。

@@ -27,6 +27,13 @@ cases:
     verifies:
       - diagnostic-unsubstantiated-remediation
   - contract_id: contract.ci-failure-diagnostics.actionable
+    id: pull-request-head-source
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      scenario: pull-request-head-checkout
+    verifies:
+      - diagnostic-unsubstantiated-context
+  - contract_id: contract.ci-failure-diagnostics.actionable
     id: external-request-failure
     partition: runtime-context.failure-diagnostic-required
     input:

@@ -1,7 +1,7 @@
 # ci-quality-toolchain
 
 品質検証で選択した固定toolchainを準備するcomposite Actionです。公開入力の正本は
-[action.yml](action.yml)です。TypeScriptはNode、PythonはPythonとuv、Rustはrustfmt／clippyを含むRustとcargo-audit、`cargo-deny-version`を指定した場合はcargo-denyを準備します。
+[action.yml](action.yml)です。TypeScriptはNode、PythonはPythonとuv、Rustはrustfmt／clippyを含むRustとcargo-audit、`cargo-deny-version`を指定した場合はcargo-denyを準備します。`auxiliary-tools: skip`を指定すると、cargo-auditとcargo-denyを準備しません。どちらの検査も実行しないjob（版の解決だけのjobや、native scopeのplatform job）のための指定で、版入力の検証は同じく行います。既定は`install`です。
 
 入力の検証を準備処理より先に実行します。既定の`version-policy: exact`は3成分の完全版（必要ならprerelease suffix）を要求します。通常の品質CIで`compatible`を選ぶと、Nodeのmajor/minorとPythonのmajor.minorも指定できます。Pythonではuv、Rustではcargo-auditの完全版も必要です。未選択の補助toolchain入力は使用しません。
 

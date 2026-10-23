@@ -5,6 +5,14 @@ const PLACEHOLDER = /<([A-Za-z][A-Za-z0-9._-]*)>/g;
 const WHOLE_PLACEHOLDER = /^<([A-Za-z][A-Za-z0-9._-]*)>$/;
 const isMap = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const MATRIX_KEY = /^[a-z][a-z0-9-]*$/;
+
+// A matrix include is the only place a setting expands into job instances, so it alone accepts a list of flat maps.
+export const isMatrixIncludeLocation = (location) => location.length >= 2
+  && location.at(-2) === 'matrix' && location.at(-1) === 'include';
+export const isMatrixInclude = (value) => Array.isArray(value) && value.length > 0
+  && value.every((entry) => isMap(entry) && Object.keys(entry).length > 0
+    && Object.entries(entry).every(([key, item]) => MATRIX_KEY.test(key) && typeof item === 'string'));
 const parse = (yaml, text) => {
   const document = yaml.parseDocument(text, { uniqueKeys: true });
   if (document.errors.length) throw new DiagnosticError('workflow-template-invalid-yaml');
@@ -18,7 +26,9 @@ export const readWorkflowSettings = ({ yaml, template, current, triggerExtension
   const visit = (expected, actual, location = []) => {
     if (typeof expected === 'string' && WHOLE_PLACEHOLDER.test(expected)) {
       const key = expected.match(WHOLE_PLACEHOLDER)[1];
-      if (isMap(actual) || actual === undefined || actual === null) throw new DiagnosticError(`workflow-template-setting-invalid:${key}`);
+      if (isMatrixIncludeLocation(location) ? !isMatrixInclude(actual) : isMap(actual) || actual === undefined || actual === null) {
+        throw new DiagnosticError(`workflow-template-setting-invalid:${key}`);
+      }
       if (Object.hasOwn(values, key) && !same(values[key], actual)) throw new DiagnosticError(`workflow-template-setting-inconsistent:${key}`);
       values[key] = actual;
       return;
@@ -96,6 +106,10 @@ export const renderWorkflowTemplate = ({ yaml, template, values = {}, carriedVal
           throw new DiagnosticError(`workflow-template-setting-missing:${key}`);
         }
         const setting = settings[key];
+        if (whole && isMatrixIncludeLocation(location)) {
+          if (!isMatrixInclude(setting)) throw new DiagnosticError(`workflow-template-setting-invalid:${key}`);
+          return setting;
+        }
         if (isMap(setting) || setting === null || setting === undefined
           || Array.isArray(setting) && typeof location.at(-1) !== 'number'
           || Array.isArray(setting) && (!setting.length || setting.some((item) => typeof item !== 'string' || !item))

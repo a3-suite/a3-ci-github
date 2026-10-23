@@ -10,48 +10,45 @@ contracts:
       - summary: Failure evidence in final logs and existing referenced evidence.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-subject
-              meaning: 失敗した契約対象の識別子。
-            - selector: failure-operation
-              meaning: 失敗した操作の識別子。
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
-            - selector: failure-reason
-              meaning: 失敗理由を表す安定した識別子。
-            - selector: failure-cause
-              meaning: 失敗原因の判別状態（known、unknown、unavailable のいずれか）。
-            - selector: execution-context
-              meaning: 失敗時に観測した実行文脈の記録。
-            - selector: comparison
-              meaning: 違反した規則に対する期待値と観測値の記録。
-            - selector: evidence-location
-              meaning: 元の診断と関連証跡の所在の記録。
-            - selector: execution-outcome
-              meaning: 元の失敗の結果（failure または unresolved）。
-            - selector: last-confirmed-stage
-              meaning: 失敗前に最後に確定した段階の識別子。
-            - selector: next-check-rule
-              meaning: 次に確認すべき規則の識別子。
-            - selector: known-cause-omission-state
-              meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
-            - selector: unsubstantiated-context-state
-              meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
-            - selector: unsafe-diagnostic-disclosure-state
-              meaning: Occurrence state (present or absent) of protected inputs, unchecked child/provider output, signed URLs, or whole input/response/argv/environment payloads exposed in diagnostics.
-            - selector: original-diagnostic-loss-state
-              meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
-            - selector: invalid-evidence-reference-state
-              meaning: Occurrence state (present or absent) of a reference to evidence that was not generated or retained.
-            - selector: original-outcome-replacement-state
-              meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
-            - selector: diagnostic-only-retry-state
-              meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
-            - selector: unsubstantiated-remediation-state
-              meaning: Occurrence state (present or absent) of remediation or rerun safety asserted without applicable state evidence.
+        fields:
+          - selector: failure-subject
+            meaning: 失敗した契約対象の識別子。
+          - selector: failure-operation
+            meaning: 失敗した操作の識別子。
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+          - selector: failure-reason
+            meaning: 失敗理由を表す安定した識別子。
+          - selector: failure-cause
+            meaning: 失敗原因の判別状態（known、unknown、unavailable のいずれか）。
+          - selector: execution-context
+            meaning: 失敗時に観測した実行文脈の記録。
+          - selector: comparison
+            meaning: 違反した規則に対する期待値と観測値の記録。
+          - selector: evidence-location
+            meaning: 元の診断と関連証跡の所在の記録。
+          - selector: execution-outcome
+            meaning: 元の失敗の結果（failure または unresolved）。
+          - selector: last-confirmed-stage
+            meaning: 失敗前に最後に確定した段階の識別子。
+          - selector: next-check-rule
+            meaning: 次に確認すべき規則の識別子。
+          - selector: known-cause-omission-state
+            meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
+          - selector: unsubstantiated-context-state
+            meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
+          - selector: unsafe-diagnostic-disclosure-state
+            meaning: Occurrence state (present or absent) of protected inputs, unchecked child/provider output, signed URLs, or whole input/response/argv/environment payloads exposed in diagnostics.
+          - selector: original-diagnostic-loss-state
+            meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
+          - selector: invalid-evidence-reference-state
+            meaning: Occurrence state (present or absent) of a reference to evidence that was not generated or retained.
+          - selector: original-outcome-replacement-state
+            meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
+          - selector: diagnostic-only-retry-state
+            meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
+          - selector: unsubstantiated-remediation-state
+            meaning: Occurrence state (present or absent) of remediation or rerun safety asserted without applicable state evidence.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
     guarantees:
@@ -185,17 +182,14 @@ contracts:
   - id: contract.ci-failure-diagnostics.subject-declarations
     summary: Packaged contract definitions of failure diagnostics.
     observations:
-      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+      - summary: Packaged contract definition files read from the checked-out workspace.
         boundary:
-          ref: boundary.diagnostic-result
-        value:
-          root: diagnostic
-          kind: object
-          fields:
-            - selector: subject-diagnostic-details
-              meaning: Comparison of packaged contracts with contracts that guarantee a failure-stage diagnostic; matched or missing.
-            - selector: subject-diagnostic-minimum-reference
-              meaning: Comparison of packaged contracts with contracts whose subject-specific failure evidence observation refers to contract.ci-failure-diagnostics.actionable; matched or missing.
+          ref: boundary.workspace-files
+        fields:
+          - selector: subject-diagnostic-details
+            meaning: Comparison of packaged contracts with contracts that guarantee a failure-stage diagnostic; matched or missing.
+          - selector: subject-diagnostic-minimum-reference
+            meaning: Comparison of packaged contracts with contracts whose subject-specific failure evidence observation refers to contract.ci-failure-diagnostics.actionable; matched or missing.
     conditions:
       - input: subject-contract-source-available
     guarantees:
@@ -216,23 +210,20 @@ contracts:
   - id: contract.ci-failure-diagnostics.workflow-evidence
     summary: Managed workflow failure summary definitions.
     observations:
-      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
+      - summary: Failure summary routes declared in managed workflow definitions.
         boundary:
-          ref: boundary.diagnostic-result
-        value:
-          root: diagnostic
-          kind: object
-          fields:
-            - selector: workflow-evidence
-              meaning: Declared workflow summary route preserving evidence and reason fields.
-            - selector: workflow-classification-correlation
-              meaning: Failure correlation fields declared in each managed summary route.
-            - selector: workflow-secret-safe-summary
-              meaning: Secret context references in managed diagnostic summary definitions; absent or present.
-            - selector: workflow-diagnostic-order
-              meaning: Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.
-            - selector: workflow-source-result-replacement
-              meaning: Aggregate diagnostic outcomes that replace an original source job result; absent or present.
+          ref: boundary.workflow-definition
+        fields:
+          - selector: workflow-evidence
+            meaning: Declared workflow summary route preserving evidence and reason fields.
+          - selector: workflow-classification-correlation
+            meaning: Failure correlation fields declared in each managed summary route.
+          - selector: workflow-secret-safe-summary
+            meaning: Secret context references in managed diagnostic summary definitions; absent or present.
+          - selector: workflow-diagnostic-order
+            meaning: Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.
+          - selector: workflow-source-result-replacement
+            meaning: Aggregate diagnostic outcomes that replace an original source job result; absent or present.
     conditions:
       - input: ci-failure-diagnostics-workflow-source-available
     guarantees:
@@ -275,12 +266,9 @@ contracts:
       - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: diagnostic
-          kind: object
-          fields:
-            - selector: bootstrap-diagnostic
-              meaning: Machine-readable failure envelope emitted by a failing public runtime bootstrap.
+        fields:
+          - selector: bootstrap-diagnostic
+            meaning: Machine-readable failure envelope emitted by a failing public runtime bootstrap.
     conditions:
       - input: ci-failure-diagnostics-bootstrap-fails
     guarantees:

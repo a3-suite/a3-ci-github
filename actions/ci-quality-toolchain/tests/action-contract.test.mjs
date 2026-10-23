@@ -11,7 +11,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   // contract_id: contract.ci-quality-toolchain.preparation
   test('quality toolchain contract selects only fixed profile dependencies without project execution', () => {
     expect(action.runs.using).toBe('composite');
-    expect(Object.keys(action.inputs).sort()).toStrictEqual(['cargo-audit-version', 'cargo-deny-version', 'language-profile', 'toolchain-version', 'uv-version', 'version-policy']);
+    expect(Object.keys(action.inputs).sort()).toStrictEqual(['auxiliary-tools', 'cargo-audit-version', 'cargo-deny-version', 'language-profile', 'toolchain-version', 'uv-version', 'version-policy']);
     expect(action.inputs['language-profile'].required).toBe(true);
     expect(action.inputs['toolchain-version'].required).toBe(true);
     expect(action.inputs['version-policy'].default).toBe('exact');
@@ -25,7 +25,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const [name, sha] = step.uses.split('@'); expect(sha).toBe(pins.get(name));
       expect(sha).toMatch(/^[a-f0-9]{40}$/);
     }
-    expect(action.runs.steps.filter((step) => step.uses || step.id === 'rust' || step.id === 'cargo-audit').map((step) => step.if)).toStrictEqual(["inputs.language-profile == 'typescript'", "inputs.language-profile == 'python'", "inputs.language-profile == 'python'", "inputs.language-profile == 'rust'", "inputs.language-profile == 'rust'"]);
+    expect(action.runs.steps.filter((step) => step.uses || step.id === 'rust' || step.id === 'cargo-audit').map((step) => step.if)).toStrictEqual(["inputs.language-profile == 'typescript'", "inputs.language-profile == 'python'", "inputs.language-profile == 'python'", "inputs.language-profile == 'rust'", "inputs.language-profile == 'rust' && inputs.auxiliary-tools != 'skip'"]);
     expect(dependencies[0].with.cache).toBe('npm');
     expect(dependencies[0].with['node-version']).toStrictEqual('${{ inputs.toolchain-version }}');
     expect(dependencies[1].with['python-version']).toStrictEqual('${{ inputs.toolchain-version }}');
@@ -37,6 +37,16 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   });
 
   // contract_id: contract.ci-quality-toolchain.preparation
+  test('auxiliary tools are installed by default and skipped only on request', () => {
+    const steps = action.runs.steps;
+    expect(action.inputs['auxiliary-tools']).toStrictEqual(expect.objectContaining({ required: false, default: 'install' }));
+    for (const id of ['cargo-audit', 'cargo-deny']) expect(steps.find((step) => step.id === id).if).toContain("inputs.auxiliary-tools != 'skip'");
+    expect(steps.find((step) => step.id === 'rust').if).toBe("inputs.language-profile == 'rust'");
+    expect(steps[0].env.CI_AUXILIARY_TOOLS).toBe('${{ inputs.auxiliary-tools }}');
+    expect(steps[0].run).toContain('quality-toolchain-auxiliary-tools-invalid');
+  });
+
+  // contract_id: contract.ci-quality-toolchain.preparation
   test('cargo-deny setup runs only when its version is requested', () => {
     // Arrange
     const steps = action.runs.steps;
@@ -45,7 +55,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     const validation = steps.find((step) => step.id === 'validate-inputs');
     // Assert
     expect(action.inputs['cargo-deny-version']).toStrictEqual(expect.objectContaining({ required: false, default: '' }));
-    expect(setup.if).toBe("inputs.language-profile == 'rust' && inputs.cargo-deny-version != ''");
+    expect(setup.if).toBe("inputs.language-profile == 'rust' && inputs.cargo-deny-version != '' && inputs.auxiliary-tools != 'skip'");
     expect(setup.env).toStrictEqual({ CI_CARGO_DENY_VERSION: '${{ inputs.cargo-deny-version }}' });
     expect(setup.run).toBe('bash "${GITHUB_ACTION_PATH}/scripts/setup-cargo-deny.sh"');
     expect(steps.indexOf(setup)).toBeGreaterThan(steps.findIndex((step) => step.id === 'cargo-audit'));

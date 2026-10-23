@@ -1,5 +1,6 @@
 #!/usr/bin/env -S node --import tsx
 import { completeFailure, DiagnosticError, FailureContext, safeErrorReason } from '../diagnostics/failure.mjs';
+import { buildReleaseSkills } from '../release-publication/skill-package';
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -16,6 +17,8 @@ const RELEASE_TAG = /^v\d+\.\d+\.\d+$/;
 const MANIFEST_NAME = 'a3-ci-github-distribution-manifest.json';
 const FETCH_CLI_NAME = 'fetch-a3-ci-github.mjs';
 const CHECKSUM_NAME = 'SHA256SUMS';
+const SKILLS_DECLARATION = '.ci/release-skills.json';
+const SKILLS_EVIDENCE_DIRECTORY = 'skills-evidence';
 
 type ValueMap = Record<string, unknown>;
 type DistributionAsset = {
@@ -248,7 +251,20 @@ export const prepareDistributionRelease = (options: {
     `${sha256(fetchBytes)}  ${FETCH_CLI_NAME}`,
   ].join('\n') + '\n';
   fs.writeFileSync(path.join(outputDirectory, CHECKSUM_NAME), checksums, { flag: 'wx' });
-  return { manifest, outputDirectory, assets: [MANIFEST_NAME, FETCH_CLI_NAME, CHECKSUM_NAME] };
+  // The skills ZIP carries its own checksum asset, as the release-skills contract defines for every product Release.
+  // Its owner evidence stays in the handoff beside the assets and is never published.
+  const skills = buildReleaseSkills(repositoryRoot, SKILLS_DECLARATION, options.sourceRevision, version, manifest.repository);
+  for (const file of skills.assets) fs.writeFileSync(path.join(outputDirectory, file.name), file.bytes, { flag: 'wx' });
+  fs.mkdirSync(path.join(outputDirectory, SKILLS_EVIDENCE_DIRECTORY));
+  for (const file of skills.evidence) {
+    fs.writeFileSync(path.join(outputDirectory, SKILLS_EVIDENCE_DIRECTORY, file.name), file.bytes, { flag: 'wx' });
+  }
+  return {
+    manifest,
+    outputDirectory,
+    assets: [MANIFEST_NAME, FETCH_CLI_NAME, CHECKSUM_NAME, ...skills.assets.map((file) => file.name)],
+    evidence: skills.evidence.map((file) => `${SKILLS_EVIDENCE_DIRECTORY}/${file.name}`),
+  };
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

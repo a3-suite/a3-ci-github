@@ -22,6 +22,8 @@ assets=(
   a3-ci-github-distribution-manifest.json
   fetch-a3-ci-github.mjs
   SHA256SUMS
+  a3-ci-github-skills.zip
+  a3-ci-github-skills.zip.sha256
 )
 
 [[ "$operation" == publish || "$operation" == readback ]] \
@@ -51,6 +53,7 @@ done
 (
   cd "$asset_directory"
   sha256sum --check --strict SHA256SUMS
+  sha256sum --check --strict a3-ci-github-skills.zip.sha256
 )
 
 gh_safe() {
@@ -99,7 +102,7 @@ validate_snapshot() {
   while IFS=$'\t' read -r name id; do
     [[ -z "$name" ]] && continue
     case "$name" in
-      a3-ci-github-distribution-manifest.json|fetch-a3-ci-github.mjs|SHA256SUMS) ;;
+      a3-ci-github-distribution-manifest.json|fetch-a3-ci-github.mjs|SHA256SUMS|a3-ci-github-skills.zip|a3-ci-github-skills.zip.sha256) ;;
       *) fail "GitHub Release contains an unmanaged asset" ;;
     esac
     [[ "$id" =~ ^[1-9][0-9]*$ ]] || fail "Release asset ID is invalid: $name"
@@ -250,4 +253,4 @@ if [[ "$operation" == publish ]]; then
   verify_tag_identity
   verify_release_metadata false
 fi
-printf '%s\n' "{\"schemaVersion\":\"1\",\"kind\":\"a3-ci-github-distribution-publication\",\"releaseTag\":\"$release_tag\",\"assetNames\":[\"a3-ci-github-distribution-manifest.json\",\"fetch-a3-ci-github.mjs\",\"SHA256SUMS\"],\"readbackStatus\":\"verified\",\"operation\":\"$operation\"}"
+printf '%s\n' "{\"schemaVersion\":\"1\",\"kind\":\"a3-ci-github-distribution-publication\",\"releaseTag\":\"$release_tag\",\"assetNames\":[\"a3-ci-github-distribution-manifest.json\",\"fetch-a3-ci-github.mjs\",\"SHA256SUMS\",\"a3-ci-github-skills.zip\",\"a3-ci-github-skills.zip.sha256\"],\"readbackStatus\":\"verified\",\"operation\":\"$operation\"}"

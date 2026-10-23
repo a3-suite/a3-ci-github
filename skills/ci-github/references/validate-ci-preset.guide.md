@@ -96,6 +96,7 @@ OS・版と共通検査の採否は[選定と廃止判断](references/workflow-v
 - trigger、versioned runner、未解決 placeholder、外部 Action の40桁 SHA、直接・間接 asset を確認する。
 - a3 Action は registry の target、workflow mapping、固定 ref と双方向に照合し、未登録、宣言漏れ、余剰接続を失敗にする。
 - 主quality callerはregistryの `qualityReusableWorkflow` と照合し、固定ref・明示input・型・静的versioned runner・read permissions・caller summaryを検証する。provider側calleeの固定sourceからAction接続と固有設定へのbindingを検証し、calleeをconsumerの配置assetやlockへ追加しない。正式固定版の生成・配置とHosted required-check受入は別に判定する。
+- `quality-gate-profiles` のcallerは主callerと同じ `qualityReusableWorkflow` と照合し、matrixの各profileを一つの主callerとして品質設定まで検証する。profileはcalleeのprofile別入力をすべて持ち、入力の欠落、空の必須入力、未知の入力、重複を失敗にする。
 - optional platform callerもregistryの `qualityPlatformsReusableWorkflow` と照合し、calleeの入力・品質設定・Action依存まで検証する。calleeは検証用local-referenceとして配布閉包へ含め、consumerのcopy対象へは含めない。calleeのexactRefはmanifestの固定参照から解決し、依存Actionのavailability gateはregistryで確認する。
 - 適用可能な Action 化 target が登録された共通処理を、project-owned entrypoint または copyable asset として重複配置していないことを確認する。project-owned 実装は、選択済み binding が充足しない登録済み `requiredExtensions` にだけ許可し、未登録の代替分岐として補完しない。Action 化 target がなく適用可能な reusable asset もない provider helper だけを copyable asset として許可する。
 - Releaseの廃止入口は registry の `actionization.retiredProjectEntrypoints.release-publication` を正本とする。登録pathは用途にかかわらず予約済みとして、ファイル保持またはworkflow内の参照を失敗にする。preflightはconsumerのファイルを削除しない。
@@ -137,7 +138,7 @@ provider preflight 後の継続可否は、同契約の `preAudit.continuation` 
 
 preflight の成功は hosted 実行、runner trust、Repository 設定、Secrets、公開先、
 remote readback の成功を証明しない。これらは別の実行証拠で確認する。
-また、lockは実行に使ったローカル配布元との一致を証明するものであり、remote上の最新revisionであることは証明しない。remote最新版との比較は配布元revisionを別途取得して照合する。
+また、lockは実行に使ったローカル配布元との一致を証明するものであり、remote上の最新revisionであることは証明しない。採用可能な最新の公開済み安定版（`references/deploy-ci-assets.guide.md`の「対応条件」）との比較は、そのReleaseの配布元revisionを別途取得して照合する。
 
 a3-lintは外部Action固定、runner、immutable image、untrusted式、権限付きcancel、inline script、
 CI runtime依存など単一workflowの一般規則を検査する。canonical構造比較はpreflightだけに置き、

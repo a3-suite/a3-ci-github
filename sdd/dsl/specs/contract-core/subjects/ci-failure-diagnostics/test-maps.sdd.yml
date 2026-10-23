@@ -33,6 +33,13 @@ test_maps:
         guarantees:
           - diagnostic-unsubstantiated-remediation
   - contract_id: contract.ci-failure-diagnostics.actionable
+    case_id: pull-request-head-source
+    tests:
+      - path: runtime/diagnostics/tests/failure.test.mjs
+        symbol: failure evidence > source reports the declared checked-out revision and never a pull request event SHA
+        guarantees:
+          - diagnostic-unsubstantiated-context
+  - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: external-request-failure
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts

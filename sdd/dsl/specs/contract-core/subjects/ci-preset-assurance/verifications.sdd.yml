@@ -11,14 +11,12 @@ cases:
     partition: runtime-context.preset-assurance-roots-missing
     input:
       audit-mode: read-only
-    case_focus: Invoke the bootstrap without required roots and inspect the stable rejection envelope.
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.read-only-output-rejected
     partition: runtime-context.preset-assurance-read-only-output-requested
     input:
       audit-mode: read-only
       output: remediation-output.json
-    case_focus: Invoke read-only audit with remediation output and inspect the stable rejection envelope.
   - contract_id: contract.ci-preset-assurance.verification
     id: pending-publication-actions
     partition: selected-action-unavailable
@@ -69,20 +67,17 @@ cases:
     input:
       audit-mode: read-only
       preset: configured-preset
-    case_focus: Validate a configured canonical preset and compare the project tree before and after preflight.
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.drift-fails
     partition: ci-preset-assurance-applied-preset-drifted
     input:
       applied-preset-drift: true
-    case_focus: Drift an applied canonical workflow and inspect the failed report without remediation side effects.
   - contract_id: contract.ci-preset-assurance.verification
     id: conditional-owner-extension
     partition: ci-preset-assurance-applied-preset-valid
     input:
       preset: release-publication
       applied-preset: canonical-remote-caller-with-selected-executable-owner-adapter
-    case_focus: Verify conditional reachability without fabricating a consumer-local callee; publication availability remains a separate preflight gate.
     verifies:
       - ci-preset-assurance-valid-preset-succeeds
   - contract_id: contract.ci-preset-assurance.verification
@@ -91,7 +86,6 @@ cases:
     input:
       preset: release-publication
       applied-preset: disabled
-    case_focus: Verify static caller selections in the publication validation stage; this does not assert Hosted acceptance or overall pending-preset availability.
     verifies:
       - ci-preset-assurance-valid-preset-succeeds
   - contract_id: contract.ci-preset-assurance.verification
@@ -109,13 +103,11 @@ cases:
     partition: ci-preset-assurance-lock-input-valid
     input:
       source-revision: full-source-revision
-    case_focus: Generate a lock from a valid configured preset and inspect source revision and managed asset digests.
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
     partition: ci-preset-assurance-lock-input-invalid
     input:
       source-revision: noncanonical-source-revision
-    case_focus: Request generation with a noncanonical source revision and confirm rejection before output creation.
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: canonical-lock-bindings
     partition: runtime-context.ci-preset-assurance-canonical-lock-input

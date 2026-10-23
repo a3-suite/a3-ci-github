@@ -10,7 +10,7 @@ response_measure:
   - 通常リリースとhotfixの各公開で、consumerが同じReleaseだけを採用して修正実装を利用でき、実装の事前公開や接続専用の追加公開を要求しない
   - 公開対象に含まれない実装SHA、実行資材の差異、または旧実装への接続を検出した場合は公開を成功扱いにしない
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開を成功扱いにしない
-  - GitHub Releaseの3 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
+  - GitHub Releaseの5 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
 related_requirements:
   - requirement_ref:
       requirement_id: ci-github-selective-distribution

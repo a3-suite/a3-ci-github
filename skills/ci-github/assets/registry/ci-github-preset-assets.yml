@@ -1,29 +1,4 @@
-schemaVersion: "1"
-kind: ci-github-preset-assets
 id: ci.github-preset-assets
-title: GitHub Actions CI asset registry
-summary: >-
-  ci-github スキルの CI プリセットを、コピー先が確定した GitHub Actions workflow と
-  実行に必要な repository-owned asset へ写像する。
-placementRole: distributable_asset
-authority:
-  role: authoritative-definition
-  owns:
-    - preset ごとの GitHub workflow asset
-    - GitHub 固有の実行 asset と Action mapping
-    - 配置済み workflow を調べる preflight entrypoint
-    - provider 静的検証の設定 path の認識（内容は project-owned）
-  excludes:
-    - provider-neutral preset semantics
-    - language または project 固有の処理
-    - Action 自体の公開 API
-    - selective distribution の配布単位、取得手順、local state
-usage:
-  whenToRead:
-    - GitHub Actions 用の CI asset を選ぶとき
-    - コピー先と必要 asset を確定するとき
-    - 配置済み workflow を preflight するとき
-  consumers: [human, agent, validator]
 provider:
   id: github-actions
   workflowRoot: workflows
@@ -72,6 +47,9 @@ conformance:
     quality-gate:
       merge_group: empty-map
       schedule: cron-list
+    quality-gate-profiles:
+      merge_group: empty-map
+      schedule: cron-list
   externalVariability:
     triggerSelection: registry.presets[].workflowAssets
     triggerExtension: conformance.workflowTriggerExtensions
@@ -101,19 +79,17 @@ packagePreparationReusableWorkflow:
 qualityPlatformsReusableWorkflow:
   source: .github/workflows/ci-quality-platforms.yml
   referencePlaceholder: <quality-platforms-workflow-sha>
-  requiredCallerCheck: quality-gate-platforms / summary
 
 qualityReusableWorkflow:
   source: .github/workflows/ci-quality.yml
   referencePlaceholder: <quality-workflow-sha>
-  requiredCallerCheck: summary
 providerAssets: []
 actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.7.0
-    exactRef: "d7ff4ce36d07790295cf473f52c963ea094ca3dd"
+    releaseTag: v0.8.0
+    exactRef: "1c7f2d610441d952004b6d96c7c8aad2d2242920"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available
@@ -139,7 +115,7 @@ actionization:
     - id: ci-jq-provisioner
       status: available
       actionPath: actions/ci-jq-provisioner
-      workflows: [quality-gate, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
       trust: read-only
       privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
@@ -155,7 +131,7 @@ actionization:
     - id: ci-github-toolchain-verifier
       status: available
       actionPath: actions/ci-github-toolchain-verifier
-      workflows: [quality-gate, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
       trust: read-only
       privilegedJobs: [release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
@@ -179,7 +155,7 @@ actionization:
     - id: ci-quality-summary
       status: available
       actionPath: actions/ci-quality-summary
-      workflows: [quality-gate, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts.output
@@ -195,7 +171,7 @@ actionization:
     - id: ci-change-scope
       status: available
       actionPath: actions/ci-change-scope
-      workflows: [quality-gate, quality-gate-platforms]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
@@ -243,7 +219,7 @@ actionization:
     - id: ci-quality-toolchain
       status: available
       actionPath: actions/ci-quality-toolchain
-      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -251,7 +227,7 @@ actionization:
     - id: ci-quality-adapter
       status: available
       actionPath: actions/ci-quality-adapter
-      workflows: [quality-gate, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -378,6 +354,17 @@ registry:
           destination: .github/workflows/quality-gate-platforms.yml
           companionPaths:
             - .ci/quality-platforms.yml
+      assets:
+        copyable: []
+        requiredExtensions: []
+      qualityAdapter:
+        source: ci.adapter-bundles
+        selection: standard-or-owner
+    - id: quality-gate-profiles
+      workflowAssets:
+        - id: quality-gate-profiles
+          source: workflows/quality/quality-gate-profiles.yml
+          destination: .github/workflows/quality-gate-profiles.yml
       assets:
         copyable: []
         requiredExtensions: []

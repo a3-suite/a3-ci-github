@@ -1,44 +1,15 @@
-schemaVersion: "1"
-kind: ci-audit-contract
 id: ci.audit-contract
-title: CI audit contract
-summary: >-
-  適用先 CI 資産の監査モード、必須フェーズ、監査 status、集約、証拠適用性、
-  監査完了と適合 success の共通意味を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - audit stage selection and check-item scope
-    - audit mode semantics
-    - audit phase order and applicability
-    - audit status semantics and result aggregation
-    - audit reporting status layers and their owners
-    - semantic audit subject aggregation interface
-    - evidence applicability and reuse conditions
-    - local audit evidence cache lifecycle and storage shape
-    - audit completion and conformance success boundary
-  excludes:
-    - workflow runtime status semantics
-    - provider-specific commands and evidence acquisition procedures
-    - review finding severity and final review judgment
-    - semantic audit subject definitions and owner delegation
-usage:
-  whenToRead:
-    - 適用先 CI 資産を読み取り専用で監査するとき
-    - CI 資産を修正して再検証するとき
-    - provider 固有の監査手順を共通監査へ写像するとき
-  consumers: [human, agent, validator]
 auditContract:
   purpose:
-    objective: リリース前に、最新公開安定版の標準への適合、差分の正当性、公開準備を確認する。
+    objective: リリース前に、採用可能な最新の公開済み安定版（references/deploy-ci-assets.guide.mdの対応条件）の標準への適合、差分の正当性、公開準備を確認する。
     successMeaning: 選択した監査段階の確認に適合している。構成監査だけの成功は実動作やリリース準備完了を証明せず、両段階の成功も実公開の成功を証明しない。
     scopeRules:
-      - 最新標準の比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。
+      - 比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。
       - 公開経路の実装、権限設定、authority、handoff、artifact、checksum、停止条件は、静的照合とリリース前の契約検証で確認する。
       - 実公開時のrun・actor・公開後の配布物取得などは公開後確認として別記し、その未実施だけでリリース前監査を非成功にしない。
       - 選択した段階に必要な確認の不足は既存のstatusClassificationで非成功として保持し、実行証跡の未取得を構成不適合へ混ぜない。
       - 監査を実公開操作へ拡張せず、公開後確認は対象ownerの運用手順へ引き継ぐ。
+      - 比較基準のplanがreuseとなった標準経路は、提供元の契約テストを証拠とする。経路の机上実行、失敗診断、シーケンス照合は、reuse以外の経路、project所有の部分、または詳細確認の依頼時に限って行う。
       - providerの設定（branch protection、ruleset、required check、Variables、公開先registryの設定）は監査の必須入力にしない。権限・機能・設定の可否は操作の結果で判定する。任意に読み取った観測を読み取れない、または判定できない事実は監査statusへ入れず、事前確認の扱いはproviderの事前確認方針に従う。
   stages:
     defaultSelection: configuration-only
@@ -121,7 +92,8 @@ auditContract:
     - id: use-case-simulation
       requirement: required
       layer: semantic-audit
-      purpose: 通常・例外・再実行経路を契約と配置済み実装の間で双方向に照合する。
+      purpose: 意味監査subjectを確認し、適用条件に該当する通常・例外・再実行経路を契約と配置済み実装の間で双方向に照合する。
+      pathScope: reuse以外の経路、project所有の部分、詳細確認を依頼された経路
     - id: contract-evidence
       requirement: required
       layer: semantic-audit
@@ -302,77 +274,6 @@ auditContract:
         - audit-target-identity
         - remote-resource-identity
         - expected-source-or-artifact-identity
-    localCache:
-      owner: audit-orchestrator
-      path: .a3-skills/ci-github/audit-cache.json
-      format: json
-      role: optional-rebuildable-local-optimization
-      sourceOfTruth: false
-      versionControl: must-be-ignored
-      maxSnapshots: 1
-      timePolicy: observed-at-is-informational-not-reuse-authority
-      storedEvidenceKinds: [local]
-      record:
-        schemaVersion: "1"
-        requiredFields:
-          - schemaVersion
-          - repositoryIdentity
-          - auditTargetIdentity
-          - auditScopeIdentity
-          - evaluationContractIdentity
-          - resolvedConfigurationIdentity
-          - executorIdentity
-          - toolRuntimeIdentities
-          - completedAt
-          - evidence
-        evidenceEntryRequiredFields:
-          - phase
-          - status
-          - evidenceIdentity
-          - provenance
-          - requiredBindings
-          - observationFacts
-        observationFacts: non-secret-minimum-required-for-current-classification
-        forbiddenFields:
-          - secret-values
-          - environment-variable-values
-          - authenticated-urls
-          - raw-logs
-          - raw-error-output
-      read:
-        reusePolicy: reuseEvaluation
-        requiredBeforeReuse:
-          - current-audit-scope-rediscovered
-          - current-semantic-subject-applicability-recomputed
-          - current-semantic-candidates-rediscovered
-        missConditions:
-          - cache-absent
-          - cache-schema-unsupported-or-invalid
-          - required-binding-unresolved
-          - required-binding-mismatch
-          - evidence-status-not-reusable
-          - evidence-or-observation-facts-missing
-          - mutable-external-state-dependency
-        cacheMiss:
-          action: acquire-current-evidence
-          auditStatusEffect: none
-      write:
-        trigger: completed-audit
-        atomicReplace:
-          temporaryDirectory: .a3-skills/ci-github/tmp
-          replaceAfterValidation: true
-        failure:
-          reporting: warning
-          auditStatusEffect: none
-          previousCache: preserve
-      disposal:
-        stateLossEffect: cache-miss
-        incompatibleContinuation:
-          cachedEvidenceHandling: discard-from-reuse
-          historyReconciliation: forbidden
-          snapshotMerge: forbidden
-          replacement: next-completed-audit
-        cleanupAuthority: explicit-cache-owner-operation
   completion:
     scope: selected-stage-check-items-only
     terminalStatuses: [success, failed, blocked, 判定不能]
@@ -404,13 +305,3 @@ auditContract:
       - every-applicable-required-contract-is-satisfied
       - every-required-evidence-binding-matches-current-audit-target
       - no-required-result-is-failed-blocked-or-undecidable
-  providerMapping:
-    requirements:
-      - map-every-check-item-to-stage-without-moving-whole-mixed-phase
-      - map-every-pre-audit-step-exactly-once
-      - map-every-common-audit-phase-exactly-once
-      - map-every-post-preflight-provider-check-to-exactly-one-common-audit-phase
-      - preserve-common-status-without-redefinition
-      - preserve-evidence-provenance-and-identity-bindings
-      - derive-audit-completion-and-conformance-only-from-common-contract
-      - keep-review-severity-and-final-judgment-outside-audit-contract

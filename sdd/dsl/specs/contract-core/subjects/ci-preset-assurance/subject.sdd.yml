@@ -10,48 +10,39 @@ contracts:
       - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
         boundary:
           ref: boundary.cli-result
-        value:
-          root: cli.result
-          kind: object
-          fields:
-            - selector: outcome
-              meaning: Bootstrap outcome when assurance cannot start.
-            - selector: reason
-              meaning: Stable machine-readable rejection reason.
-            - selector: message
-              meaning: Actionable explanation of the rejected invocation.
-            - selector: status
-              meaning: Success or failed provider preflight status.
-            - selector: inspectedPresets
-              meaning: Applied presets included in the preflight decision.
-            - selector: missingSettings
-              meaning: Required settings or assets that could not be resolved.
-            - selector: mismatches
-              meaning: Canonical, identity, permission, trust, or integrity mismatches.
-            - selector: evidence
-              meaning: Evidence collected for inspected workflows and assets.
-            - selector: semanticReviewRequired
-              meaning: Whether evidence outside provider preflight still requires semantic review.
+        fields:
+          - selector: outcome
+            meaning: Bootstrap outcome when assurance cannot start.
+          - selector: reason
+            meaning: Stable machine-readable rejection reason.
+          - selector: message
+            meaning: Actionable explanation of the rejected invocation.
+          - selector: status
+            meaning: Success or failed provider preflight status.
+          - selector: inspectedPresets
+            meaning: Applied presets included in the preflight decision.
+          - selector: missingSettings
+            meaning: Required settings or assets that could not be resolved.
+          - selector: mismatches
+            meaning: Canonical, identity, permission, trust, or integrity mismatches.
+          - selector: evidence
+            meaning: Evidence collected for inspected workflows and assets.
+          - selector: semanticReviewRequired
+            meaning: Whether evidence outside provider preflight still requires semantic review.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
       - summary: Individually observed contract values and comparisons.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          root: consumer-state
-          kind: object
-          fields:
-            - selector: valid-tree-comparison
-              meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
-            - selector: drift-tree-comparison
-              meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
+        fields:
+          - selector: valid-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
+          - selector: drift-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.preset-assurance-roots-missing
@@ -134,40 +125,31 @@ contracts:
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
         boundary:
           ref: boundary.project-ci-assets
-        value:
-          root: ci-assets-lock+consumer-state
-          kind: object
-          fields:
-            - selector: sourceRevision
-              meaning: Full immutable distribution commit SHA.
-            - selector: generatedAt
-              meaning: Minute-normalized observation timestamp that is not used as version identity.
-            - selector: assets
-              meaning: Canonical and applied SHA-256 identity for every managed asset.
-            - selector: requested-source-comparison
-              meaning: Comparison of lock sourceRevision with the requested full source revision.
-            - selector: canonical-digest-comparison
-              meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
-            - selector: applied-digest-comparison
-              meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
+        fields:
+          - selector: sourceRevision
+            meaning: Full immutable distribution commit SHA.
+          - selector: generatedAt
+            meaning: Minute-normalized observation timestamp that is not used as version identity.
+          - selector: assets
+            meaning: Canonical and applied SHA-256 identity for every managed asset.
+          - selector: requested-source-comparison
+            meaning: Comparison of lock sourceRevision with the requested full source revision.
+          - selector: canonical-digest-comparison
+            meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
+          - selector: applied-digest-comparison
+            meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
       - summary: Rejection exposed when an asset lock cannot be generated safely.
         boundary:
           ref: boundary.script-result
-        value:
-          root: process.result
-          kind: object
-          fields:
-            - selector: diagnostic
-              meaning: Stable reason that prevents an invalid lock from being written.
+        fields:
+          - selector: diagnostic
+            meaning: Stable reason that prevents an invalid lock from being written.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: ci-preset-assurance-lock-input-valid

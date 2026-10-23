@@ -228,6 +228,29 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: quality-workflow-contract
+    test('profiles caller runs the quality callee once per language profile and retains one summary identity', () => {
+      const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
+      const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
+      const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
+      expect(Object.keys(caller.jobs)).toStrictEqual(['quality', 'profiles-summary']);
+      expect(caller.env).toBe(undefined);
+      expect(caller.jobs.quality.steps).toBe(undefined);
+      expect(caller.jobs.quality.secrets).toBe(undefined);
+      expect(caller.jobs.quality.permissions).toStrictEqual({ contents: 'read' });
+      expect(caller.jobs.quality.uses).toBe(single.jobs.quality.uses);
+      expect(caller.jobs.quality.strategy).toStrictEqual({ 'fail-fast': false, matrix: { include: '<quality-profiles>' } });
+      expect(Object.keys(caller.jobs.quality.with).sort()).toStrictEqual(Object.keys(callee.on.workflow_call.inputs).sort());
+      for (const [name, value] of Object.entries(caller.jobs.quality.with)) {
+        expect(value, name).toBe(['runner', 'docs-only-patterns'].includes(name) ? single.jobs.quality.with[name] : `\${{ matrix.${name} }}`);
+      }
+      expect(caller.on).toStrictEqual(single.on);
+      expect(caller.concurrency).toStrictEqual(single.concurrency);
+      expect(caller.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
+      expect(caller.jobs['profiles-summary'].needs).toBe('quality');
+      expect(caller.jobs['profiles-summary'].if).toBe('always()');
+    });
+
+    // integration_id: quality-workflow-contract
     test('optional platform quality workflow preserves trusted assets matrix execution and summary', () => {
       const workflow = read('.github/workflows/ci-quality-platforms.yml');
       const resolve = jobBlock(workflow, 'resolve-platforms');
@@ -293,6 +316,7 @@ describe("contract.ci-selective-distribution.publication", () => {
         /a3-ci-github-distribution-manifest\.json/,
         /fetch-a3-ci-github\.mjs/,
         /SHA256SUMS/,
+        /sha256sum --check --strict a3-ci-github-skills\.zip\.sha256/,
         /check-provider-references\.mjs --contracts --release-tag/,
         /implementation_binding_status: \$\{\{ steps\.provider-binding\.outputs\.implementation_binding_status \}\}/,
         /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/,
@@ -807,6 +831,7 @@ describe("workflow-contracts", () => {
         ['workflows/release/release-request-tag.yml', 'summary'],
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
+        ['workflows/quality/quality-gate-profiles.yml', 'profiles-summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
@@ -846,7 +871,7 @@ describe("workflow-contracts", () => {
         verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
       }));
       // Assert
-      const commonSelectors = commonObservation.value.fields.map((field) => field.selector);
+      const commonSelectors = commonObservation.fields.map((field) => field.selector);
       const minimumFields = [
         'failure-subject', 'failure-operation', 'failure-stage', 'failure-reason', 'failure-cause', 'execution-context',
         'comparison', 'evidence-location', 'execution-outcome', 'last-confirmed-stage', 'next-check-rule',
@@ -868,7 +893,7 @@ describe("workflow-contracts", () => {
           expect(guarantee, contract.id).toBeDefined();
           expect(guarantee.claim.present, contract.id).toBe(true);
           expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
-          const observation = contract.observations.find((entry) => entry.value.fields.some((field) => field.selector === 'failure-stage'));
+          const observation = contract.observations.find((entry) => entry.fields.some((field) => field.selector === 'failure-stage'));
           expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
           expect(observation.summary, contract.id).toContain(shared.id);
           const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);
@@ -886,6 +911,7 @@ describe("workflow-contracts", () => {
         ['workflows/quality/quality-gate.yml', 'summary'],
         ['.github/workflows/ci-quality.yml', 'summary'],
         ['workflows/quality/quality-gate-platforms.yml', 'platform-summary'],
+        ['workflows/quality/quality-gate-profiles.yml', 'profiles-summary'],
         ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
         ['workflows/release/release-publication-caller.yml', 'summary'],
         ['.github/workflows/ci-release-publication.yml', 'summary'],
@@ -946,7 +972,8 @@ describe("workflow-contracts", () => {
         const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
         expect(call.length, file).toBe(1);
         expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
-        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}', ...(call[0].with['version-policy'] !== undefined ? { 'version-policy': file.includes('ci-quality.yml') ? 'compatible' : 'exact' } : {}) };
+        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}', ...(call[0].with['version-policy'] !== undefined ? { 'version-policy': file.includes('ci-quality.yml') ? 'compatible' : 'exact' } : {}),
+          ...(jobId === 'platform' ? { 'auxiliary-tools': "${{ steps.execution-scope.outputs.scope == 'native' && 'skip' || 'install' }}" } : {}) };
         expect(call[0].with).toStrictEqual(expected);
         expect(contract.inputs['version-policy'].default).toBe('exact');
         expect(call[0].if).toBe(file.includes('ci-quality.yml') ? "steps.change-scope.outputs['run-ci'] != 'false'" : undefined);
@@ -969,6 +996,9 @@ describe("workflow-contracts", () => {
       const resolver = jobs['resolve-platforms'];
       expect(resolver.steps.filter(step => step.id === 'toolchain-resolution')).toHaveLength(1);
       expect(resolver.steps.find(step => step.id === 'toolchain-resolution').if).toContain("steps.configuration.outputs['resolve-toolchain'] == 'true'");
+      expect(resolver.steps.find(step => step.id === 'toolchain-resolution').with['auxiliary-tools']).toBe('skip');
+      const platformSteps = jobs.platform.steps;
+      expect(platformSteps.findIndex(step => step.id === 'execution-scope')).toBeLessThan(platformSteps.findIndex(step => step.uses?.includes('/ci-quality-toolchain@')));
       expect(resolver.outputs['toolchain-version']).toBe("${{ steps.configuration.outputs['resolve-toolchain'] == 'true' && steps.toolchain-resolution.outputs.resolved-toolchain-version || steps.configuration.outputs['toolchain-version'] }}");
       expect(jobs.platform.env.CI_TOOLCHAIN_VERSION).toBe('${{ needs.resolve-platforms.outputs.toolchain-version }}');
       expect(jobs.platform.steps.find(step => step.uses?.includes('/ci-quality-toolchain@')).with['version-policy']).toBeUndefined();

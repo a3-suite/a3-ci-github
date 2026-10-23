@@ -126,3 +126,15 @@ cases:
       cargo-deny-version: ""
     verifies:
       - selected-profile-dependencies-only
+  - contract_id: contract.ci-quality-toolchain.preparation
+    id: skipped-auxiliary-tools
+    partition: runtime-context.quality-toolchain-request-valid
+    input:
+      language-profile: rust
+      toolchain-version: 1.90.0
+      version-policy: exact
+      cargo-audit-version: 0.22.2
+      cargo-deny-version: 0.20.2
+      auxiliary-tools: skip
+    verifies:
+      - selected-profile-dependencies-only

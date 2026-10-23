@@ -94,6 +94,15 @@ cases:
       cargo-deny-version: 0.20.2
       cargo-deny-config-path: runtime/deny.toml
   - contract_id: contract.ci-quality-adapter.outputs
+    id: dependency-policy-violation
+    partition: runtime-context.ci-quality-adapter-dependency-policy-violation
+    input:
+      standard-bundle-id: rust-cargo-quality
+      execution-scope: all
+      toolchain-version: 1.80.0
+      cargo-deny-version: 0.20.2
+      cargo-deny-config-path: runtime/deny.toml
+  - contract_id: contract.ci-quality-adapter.outputs
     id: missing-dependency-policy-config
     partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
     input:

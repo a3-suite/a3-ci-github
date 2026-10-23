@@ -12,7 +12,7 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 | GitHub Actions（`actions/<action-name>/`） | workflow から 40 桁 commit SHA で参照する共通処理 |
 | Agent Skill（`skills/ci-github/`、`skills/ci-release-installer/`） | AI エージェントによる CI の設計・導入・監査、インストーラの設計・監査の導線 |
 
-各 Release は、配布 manifest、単独で実行できる fetch CLI（`fetch-a3-ci-github.mjs`）、`SHA256SUMS` を公開します。
+各 Release は、配布 manifest、単独で実行できる fetch CLI（`fetch-a3-ci-github.mjs`）、`SHA256SUMS`、Agent Skill の ZIP（`a3-ci-github-skills.zip`）とその checksum（`a3-ci-github-skills.zip.sha256`）を公開します（ZIP は `v0.8.0` 以降）。
 
 ## 導入
 
@@ -21,12 +21,12 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 - 導入先は GitHub Actions を使う Git repository
 - Node.js 24 または 26 以降
 - GitHub CLI（`gh`）と `sha256sum`（取得と checksum 検証に使用）
-- 採用する exact Release（例: `v0.7.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
+- 採用する exact Release（例: `v0.8.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
 
 1. 採用する Release から fetch CLI、配布 manifest、`SHA256SUMS` を取得し、checksum を検証します。
 
    ```bash
-   gh release download v0.7.0 --repo a3-suite/a3-ci-github \
+   gh release download v0.8.0 --repo a3-suite/a3-ci-github \
      --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
    sha256sum --check SHA256SUMS
    ```
@@ -42,7 +42,18 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 
 3. 出力された `sourceRevision` を使い、plan 用 runtime の準備、製品設定（`--set`）を渡した `plan`、差分の確認、同じ digest での `apply` を行います。手順と設定値は [CI プリセット設定ガイドの導入手順](skills/ci-github/references/configure-ci-preset.guide.md#導入手順)、適用後の lock 生成と検証は[配布ガイド](skills/ci-github/references/deploy-ci-assets.guide.md#適用後)に従います。
 
-Agent Skill は、同じ manifest から asset `skill.ci-github` と `skill.ci-release-installer` を `--asset` で指定して取得できます。取得先は `.a3-skills/ci-github/distributions/<sourceRevision>/skills/` です。利用環境のスキルフォルダへの配置は利用者が行います。
+### Agent Skill の導入
+
+本製品は対応スキル（`ci-github`、`ci-release-installer`）とセットで使用します。採用した Release の[対応スキル ZIP](https://github.com/a3-suite/a3-ci-github/releases/download/v0.8.0/a3-ci-github-skills.zip)と同じ Release の `a3-ci-github-skills.zip.sha256` をダウンロードし、SHA-256 を照合してから展開します。
+
+```bash
+gh release download v0.8.0 --repo a3-suite/a3-ci-github \
+  --pattern a3-ci-github-skills.zip --pattern a3-ci-github-skills.zip.sha256 &&
+  sha256sum --check a3-ci-github-skills.zip.sha256 &&
+  unzip -d a3-ci-github-skills a3-ci-github-skills.zip
+```
+
+展開した `ci-github/` と `ci-release-installer/` を、利用環境のスキルフォルダに配置してください。削除する場合は、配置したこの2つのディレクトリだけを削除します。
 
 ## 使い方
 

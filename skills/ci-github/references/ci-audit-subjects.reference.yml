@@ -1,21 +1,4 @@
-schemaVersion: "1"
-kind: ci-audit-subjects
 id: ci.audit-subjects
-title: CI audit semantic subjects
-summary: >-
-  CI 監査で横断確認する意味監査 subject の発見、適用判定、owner 委譲、
-  CI 側の接続確認、報告項目を定義する。
-placementRole: public_reference
-authority:
-  role: authoritative-definition
-  owns:
-    - semantic audit subject discovery and applicability
-    - semantic audit subject owner delegation
-    - CI-side integration and reporting requirements for delegated subjects
-  excludes:
-    - audit mode, phase, status, aggregation, completion, and conformance semantics
-    - delegated owner contract semantics
-    - repository release-shape and installer-adoption decision criteria
 integration:
   auditContract: ci.audit-contract
   stages: ci.audit-contract.stages
@@ -26,17 +9,18 @@ stageHandling:
   mapping: 確認項目の段階選択・集約はci.audit-contract.stagesに従う。stageChecksはsubject固有の確認対象だけを定義する。
   delegationInputs: [audit-stage-selection, audit-target-identity, stage-specific-check-claims]
   delegatedResults: ownerの元の判断・根拠・証跡不足を保持し、対応する段階の確認項目へ写像する。owner結果を分離できなければ対象段階の未確認として扱い、構成適合や実証済みを推測しない。
-usage:
-  whenToRead:
-    - CI 監査の意味監査 subject を発見して適用判定するとき
-    - owner スキルへ監査を委譲するとき
-    - 委譲結果を CI 実行経路と照合して報告するとき
-  consumers: [human, agent, validator]
+defaults:
+  inapplicable:
+    appliesTo: requirementがconditionalで、適用条件を満たさないsubject
+    handling: excluded-from-aggregation
+    discoveryScope: required
+    reason: required
+    merge: subject側のinapplicableは、この既定へ追加する項目だけを定義する。
 subjects:
   - id: latest-standard-alignment
     requirement: required
     phase: use-case-simulation
-    discovery: installed-ci-assets-and-latest-published-stable-provider-distribution
+    discovery: installed-ci-assets-and-adoptable-latest-published-stable-provider-distribution
     decisionOwner:
       owner: ci-audit-orchestrator
       owns: [baseline-resolution, standard-comparison, difference-classification, subject-status-aggregation]
@@ -44,11 +28,11 @@ subjects:
     baselineResolution:
       ownerSkill: ci-github
       requirements:
-        - resolve-latest-published-stable-release-at-audit-start
+        - resolve-adoptable-latest-published-stable-release-at-audit-start-by-deploy-ci-assets-support-conditions
         - bind-release-commit-manifest-and-registry-to-the-same-distribution
         - record-installed-provider-revision-and-audit-target-identity
         - do-not-use-unpublished-working-tree-as-published-standard
-        - recheck-latest-release-before-reusing-comparison-evidence
+        - recheck-adoptable-latest-release-before-reusing-comparison-evidence
     comparisonScope:
       - selected-preset-workflows-and-action-bindings
       - reachable-ci-assets-and-required-configuration
@@ -56,6 +40,22 @@ subjects:
       - repository-root-readme-owner-result
       - ci-documentation-and-installer-owner-result-when-applicable
       - applicable-project-contracts-instructions-and-local-skills-for-ci-or-installer
+    machineComparison:
+      source: 比較基準Releaseのdistributionに対し、導入済みと同じpreset・asset選択で実行したfetch-a3-ci-githubのplan。applyしない。製品設定は、配置済みcallerのdigestが既存lockと一致し、導入済みrevisionのdistributionを読み取れる場合だけ引き継がれる。
+      mapping:
+        reuse: aligned
+        create: review-missing-standard-asset
+        update: review-standard-update
+        conflict: review-difference-justification
+        stale: review-removal-or-replacement
+        structure-conflict-stop: review-difference-justification
+      rules:
+        - review-で始まる結果は、差分ごとにdifferenceClassificationへ分類する。
+        - review-standard-updateのうち、固定参照・版の更新だけで契約上の差がない差分は比較基準への更新推奨として要対応に示し、statusを変えない。それ以外の実質差はrequires-standard-migrationとする。
+        - conflictのcallerには製品設定を展開した比較結果がない。preflightの構造照合とlock照合の結果を使い、許可された製品設定値の変更と構造差を分けて分類する。
+        - review-missing-standard-assetは、比較基準で追加された資産または現配置の欠落として、必要性と移行対象を判断する。
+        - plan対象外のcomparisonScope（文書、owner結果、project固有規則）は意味監査で比較する。
+        - planの成功やreuseは、plan対象外の比較や差分の正当性を代替しない。
     stageChecks:
       configuration: comparisonScopeの構成・実装・文書と、固有差分の必要性・許容条件を確認する。
       execution-evidence: 固有差分に実行検証が必要な場合、その検証結果をownerの証跡へ照合する。構成の差分分類を実動作の保証へ読み替えない。
@@ -75,7 +75,7 @@ subjects:
       - do-not-update-every-action-pin-to-its-upstream-latest-version
       - delegate-installer-differences-through-installer-distribution
       - do-not-substitute-old-revision-preflight-success-for-standard-alignment
-      - requires-standard-migrationの差分は最新標準への移行案を要対応に示す。差分がなく導入済みrevisionだけが比較基準より古い場合も、最新標準への更新を推奨対応として要対応に示し、statusは変えない。
+      - requires-standard-migrationの差分は比較基準の標準への移行案を要対応に示す。差分がなく導入済みrevisionだけが比較基準より古い場合も、比較基準の標準への更新を推奨対応として要対応に示し、statusは変えない。
       - project固有の契約・文書・有効な指示・ローカルスキルと標準の競合を確認し、該当ownerの意味判断と解決案を保持する。旧規則の存在だけで固有差分を正当化しない。
       - 適用するownerの必須比較について、対象identity・比較基準・選択段階に対応する証拠の受領と充足確認を終えてからsubject statusを確定する。ownerのsuccess表記だけで比較実施を代替しない。
     classificationInputs:
@@ -212,10 +212,6 @@ subjects:
     modeHandling:
       read-only: report-recommendation-without-mutation
       remediation: apply-after-product-owner-confirms-release-target
-    inapplicable:
-      handling: excluded-from-aggregation
-      discoveryScope: required
-      reason: required
   - id: repository-root-readme
     requirement: required
     phase: use-case-simulation
@@ -277,12 +273,14 @@ subjects:
       - supporting-audit-evidence
       - contradictions-and-omissions
       - status
-    inapplicable:
-      handling: excluded-from-aggregation
-      discoveryScope: required
-      reason: required
   - id: ci-failure-diagnostics
-    requirement: required
+    requirement: conditional
+    appliesWhen:
+      anyOf:
+        - project所有のadapter、extension、workflowに到達する失敗境界がある。
+        - 配置済みworkflowのplan結果がreuse以外である。
+        - 詳細確認または証跡監査が依頼された。
+      scope: 該当した経路と境界に限る。planがreuseの標準経路はevidenceOwnership.providerの証拠とする。
     phase: contract-evidence
     discovery: reachable-workflows-actions-public-cli-and-owner-adapters
     decisionOwner:
@@ -353,13 +351,9 @@ subjects:
       - workflow-connection
       - contract-test-evidence
       - status
-    inapplicable:
-      handling: excluded-from-aggregation
-      discoveryScope: required
-      reason: required
   - id: ci-workflow-sequence
     requirement: conditional
-    appliesWhen: 配置済み workflow が、選択した preset 契約で順序、状態遷移、または停止条件を定義された stage を実行している。
+    appliesWhen: 配置済み workflow が、選択した preset 契約で順序、状態遷移、または停止条件を定義された stage を実行し、そのworkflowのplan結果がreuse以外、project所有、または詳細確認の対象である。
     phase: contract-evidence
     stageChecks:
       configuration: contract-sequence-to-executable-check-mappingと実行可能な検査の配置・接続を確認し、test-gap/contract-gapを分類する。
@@ -394,10 +388,6 @@ subjects:
       - executable-check-identity-and-result
       - gap-classification
       - status
-    inapplicable:
-      handling: excluded-from-aggregation
-      discoveryScope: required
-      reason: required
   - id: installer-distribution
     requirement: conditional
     adoptionAssessment:
@@ -524,9 +514,6 @@ subjects:
       - remediation-routing-result
       - status
     inapplicable:
-      handling: excluded-from-aggregation
-      discoveryScope: required
-      reason: required
       preserve:
         - installer-adoption-result-and-reason
         - non-blocking-remediation-candidate

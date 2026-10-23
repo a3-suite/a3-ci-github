@@ -10,25 +10,19 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary:
           ref: boundary.action-output
-        value:
-          root: action
-          kind: object
-          fields:
-            - selector: status
-              meaning: Whether the version plan was materialized successfully.
-            - selector: publish-version
-              meaning: The materialized publish version.
-            - selector: outcome
-              meaning: Failure outcome of the rejected publish version step.
+        fields:
+          - selector: status
+            meaning: Whether the version plan was materialized successfully.
+          - selector: publish-version
+            meaning: The materialized publish version.
+          - selector: outcome
+            meaning: Failure outcome of the rejected publish version step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary:
           ref: boundary.diagnostic-result
-        value:
-          root: failure-evidence
-          kind: object
-          fields:
-            - selector: failure-stage
-              meaning: 失敗した段階の識別子。
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.publish-version-plan-valid

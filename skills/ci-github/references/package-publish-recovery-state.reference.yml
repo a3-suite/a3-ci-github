@@ -1,25 +1,4 @@
-schemaVersion: "1"
-kind: package-publish-recovery-state
-id: ci.package-publish-recovery-state
-title: package publication recovery state
-summary: >-
-  Package publication の再実行可否、完了済み判定、停止して owner へ委譲する境界を定義する。
-placementRole: public_reference
 recoveryStateVersion: "3"
-authority:
-  role: authoritative-definition
-  owns:
-    - package publication recovery state classification
-    - workflow rerun eligibility
-    - fail-closed delegation boundary
-usage:
-  whenToRead:
-    - package publication の失敗後に workflow を再実行できるか判断するとき
-    - publish target の状態が不明または不一致のとき
-  consumers:
-    - human
-    - agent
-    - validator
 states:
   - id: absent
     meaning: 対象identityのpublish済みresourceを確認できない。

@@ -1,0 +1,51 @@
+name: quality-gate-profiles
+
+on:
+  pull_request:
+  push:
+    branches:
+      - <protected-branch>
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.event_name == 'pull_request' && github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: <quality-profiles>
+    uses: a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@<quality-workflow-sha>
+    permissions:
+      contents: read
+    with:
+      runner: <versioned-runner>
+      language-profile: ${{ matrix.language-profile }}
+      toolchain-version: ${{ matrix.toolchain-version }}
+      uv-version: ${{ matrix.uv-version }}
+      cargo-audit-version: ${{ matrix.cargo-audit-version }}
+      cargo-manifest-path: ${{ matrix.cargo-manifest-path }}
+      cargo-lock-path: ${{ matrix.cargo-lock-path }}
+      cargo-deny-version: ${{ matrix.cargo-deny-version }}
+      cargo-deny-config-path: ${{ matrix.cargo-deny-config-path }}
+      jq-version: ${{ matrix.jq-version }}
+      standard-bundle-id: ${{ matrix.standard-bundle-id }}
+      adapter-descriptor: ${{ matrix.adapter-descriptor }}
+      docs-only-patterns: docs/**,README.md,**/*.md
+
+  profiles-summary:
+    name: quality-gate-profiles / summary
+    needs: quality
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        with:
+          summary-json: '{"jobs":[{"unit":"quality","execution":"fixed reusable quality workflow per language profile","rawResult":"${{ needs.quality.result }}","applicable":true,"reason":"reusable quality workflow matrix result: ${{ needs.quality.result }}"}]}'
