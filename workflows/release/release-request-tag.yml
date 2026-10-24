@@ -17,13 +17,13 @@ jobs:
     steps:
       - name: Resolve annotated tag identity
         id: tag
-        uses: a3-suite/a3-ci-github/actions/ci-annotated-tag-resolver@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-annotated-tag-resolver@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           repository: ${{ github.repository }}
           tag: ${{ github.ref_name }}
           github-token: ${{ env.CI_GITHUB_TOKEN }}
       - name: Write tag request handoff
-        uses: a3-suite/a3-ci-github/actions/ci-release-request-handoff@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-release-request-handoff@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           output-directory: release-request
           tag-source-sha: ${{ steps.tag.outputs.source-sha }}
@@ -46,7 +46,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           summary-json: >-
             {"jobs":[{"unit":"request","execution":"tag event handoff","rawResult":"${{ needs.request.result }}","applicable":true,"reason":"request job result: ${{ needs.request.result }}"}]}

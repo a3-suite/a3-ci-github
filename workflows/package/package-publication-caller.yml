@@ -26,7 +26,7 @@ jobs:
       toolchain: ${{ steps.request.outputs.toolchain }}
     steps:
       - name: Require successful request
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           operation: verify-trigger
       - uses: actions/download-artifact@<commit-sha>
@@ -37,7 +37,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
       - id: request
         name: Validate request identity
-        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-package-publication-request@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           operation: verify
           expected-source-sha: ${{ github.event.workflow_run.head_sha }}
@@ -82,7 +82,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@03984aed00a3ba5e76285440d89196c092da4046
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           summary-json: >-
             {"jobs":[{"unit":"validate-request","execution":"trusted package publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"prepare","execution":"trusted package preparation","rawResult":"${{ needs.prepare.result }}","applicable":true,"reason":"prepare result: ${{ needs.prepare.result }}"},{"unit":"publish","execution":"trusted package publication","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}
