@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
 import { checkRepository, repositorySnapshot, registryPath } from '../check-provider-references.mjs';
 import { planActionReferenceUpdate, applyActionReferenceUpdate } from '../update-action-references.mjs';
+import { providerMaintenanceRuntime } from '../verify-implementation-binding.mjs';
 // Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
 // Calls take up to 1.7s alone but over 7s under full-regression load; the limit is about 5x that load maximum.
 // A timeout means the call regressed: investigate its performance or split it before raising the limit.
@@ -159,7 +160,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(spawnSync('git', ['merge-base', '--is-ancestor', f.implementation, 'HEAD'], { cwd: f.directory, timeout: spawnTimeoutMs }).status).toBe(1);
     expect(checked.diagnostics).toEqual([]); expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding).toMatchObject({ implementationSourceRevision: f.implementation, sourceRevision: squashed });
-    expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).toContain('runtime');
+    expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).toContain('runtime/payload.mjs');
     for (const entry of checked.implementationBinding.checkedObjects) {
       expect(entry.implementationObject).toBe(f.git('rev-parse', `${f.implementation}:${entry.path}`));
       expect(entry.sourceObject).toBe(f.git('rev-parse', `${squashed}:${entry.path}`));
@@ -184,6 +185,44 @@ describe('contract.ci-selective-distribution.publication', () => {
     const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
     // Assert
     expect(rejected).toMatch(/version-mismatch|closure-mismatch/);
+  });
+
+  test.each(['runtime/preset/payload.mjs', 'runtime/distribution/payload.mjs', 'runtime/repository/payload.mjs', 'runtime/vitest/payload.mjs'])('single Release accepts changed provider maintenance runtime %s', (relative) => {
+    // Arrange
+    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    f.write(relative, 'export const payload = 2;\n');
+    f.git('add', '.'); f.git('commit', '-m', 'provider maintenance change'); f.git('tag', '-a', 'v0.2.11', '-m', 'maintenance source');
+    // Act
+    const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
+    // Assert
+    expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).not.toContain(path.posix.dirname(relative));
+  });
+
+  test('single Release rejects a runtime entry added outside provider maintenance', () => {
+    // Arrange
+    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    f.write('runtime/added/payload.mjs', 'export const payload = 1;\n');
+    f.git('add', '.'); f.git('commit', '-m', 'added runtime'); f.git('tag', '-a', 'v0.2.11', '-m', 'added runtime');
+    // Act
+    const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    // Assert
+    expect(rejected).toMatch(/closure-mismatch: runtime\/added/);
+  });
+
+  test('pinned Actions and canonical workflows never reach provider maintenance runtime', () => {
+    // Arrange
+    // The generator runs at build time only; Actions execute its committed output.
+    const buildTimeOnly = ['runtime/adapter/generate-standard-quality-bundles.mjs'];
+    const executed = execFileSync('git', ['ls-files', '--', 'actions', 'runtime', '.github/workflows/ci-*.yml', 'workflows', ...providerMaintenanceRuntime.map((directory) => `:(exclude)${directory}`)], { cwd: root, encoding: 'utf8' })
+      .split('\n').filter((relative) => relative && !/(^|\/)(tests?|node_modules)\//.test(relative) && !/\.(md|lock)$/.test(relative));
+    const names = providerMaintenanceRuntime.map((directory) => path.posix.basename(directory)).join('|');
+    // Slash-joined paths and segment lists such as path.join(root, 'runtime', 'preset') both count as references.
+    const reference = new RegExp(`(runtime(/|['"]\\s*,\\s*['"])|\\.\\./)(${names})(/|['"])|['"/](${buildTimeOnly.map((relative) => path.posix.basename(relative)).join('|')})`);
+    // Act
+    const reaching = executed.filter((relative) => !buildTimeOnly.includes(relative) && reference.test(readFileSync(path.join(root, relative), 'utf8')));
+    // Assert
+    expect(reaching).toEqual([]);
   });
 
   test('candidate updates reject missing and unrelated implementation commits and preserve approval inputs', () => {
@@ -227,10 +266,11 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(readFileSync(path.join(f.directory, 'registry-copy.yml'), 'utf8')).toBe(plan.before.get(registryPath));
   });
 
-  test('single Release rejects changed execution file modes', () => {
+  // runtime/payload.mjs is a top-level runtime blob, whose id alone does not record the mode.
+  test.each(['actions/ci-quality-adapter/scripts/composite.sh', 'runtime/payload.mjs'])('single Release rejects a changed execution file mode of %s', (relative) => {
     // Arrange
     const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
-    chmodSync(path.join(f.directory, 'actions/ci-quality-adapter/scripts/composite.sh'), 0o755);
+    chmodSync(path.join(f.directory, relative), 0o755);
     f.git('add', '.'); f.git('commit', '-m', 'change execution mode'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid closure');
     // Act
     const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));

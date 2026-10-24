@@ -246,6 +246,26 @@ test_maps:
         guarantees:
           - selective-distribution-implementation-binding-verified
           - selective-distribution-implementation-binding-evidence-exposed
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/preset/payload.mjs
+        guarantees:
+          - selective-distribution-implementation-binding-verified
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/distribution/payload.mjs
+        guarantees:
+          - selective-distribution-implementation-binding-verified
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/repository/payload.mjs
+        guarantees:
+          - selective-distribution-implementation-binding-verified
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/vitest/payload.mjs
+        guarantees:
+          - selective-distribution-implementation-binding-verified
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > pinned Actions and canonical workflows never reach provider maintenance runtime
+        guarantees:
+          - selective-distribution-implementation-binding-verified
       - path: runtime/repository/tests/manage-distribution-release.test.mjs
         symbol: contract.ci-selective-distribution.publication > repository-selective-distribution-release > distribution Release publication is idempotent and readback rejects changed remote bytes
         guarantees:
@@ -291,6 +311,10 @@ test_maps:
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release rejects a runtime entry added outside provider maintenance
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+      - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/action.yml
         guarantees:
           - selective-distribution-publication-failure-exposed
@@ -303,7 +327,11 @@ test_maps:
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
-        symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution file modes
+        symbol: contract.ci-selective-distribution.publication > single Release rejects a changed execution file mode of actions/ci-quality-adapter/scripts/composite.sh
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release rejects a changed execution file mode of runtime/payload.mjs
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
