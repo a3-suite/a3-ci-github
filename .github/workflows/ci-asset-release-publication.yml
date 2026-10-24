@@ -172,14 +172,14 @@ jobs:
           run-id: ${{ inputs.request_run_id }}
       - name: Resolve configuration snapshot
         id: config
-        uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-config-snapshot@d4e22467eca55e45a0ab5547076554733f112449
         with:
           sources-json: >-
             {"runtime":{"CI_LANGUAGE_PROFILE":"__unset__","CI_TOOLCHAIN_VERSION":"__unset__","CI_PLATFORM_MANIFEST":"__unset__","CI_RELEASE_IMPLEMENTATION":"asset-release","CI_RELEASE_OWNER_CONTRACT":"git.release-flow"},"workflow":{"CI_RELEASE_SKILLS_CONFIG_PATH":${{ toJSON(inputs.release_skills_config_path) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED":"${{ inputs.supplemental_release_asset_enabled }}","CI_SUPPLEMENTAL_RELEASE_ASSET_CONTRACT":"ci.release-asset-publication-contract#supplementalAsset","CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT":${{ toJSON(inputs.supplemental_release_asset_owner_contract) }},"CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER":".ci/scripts/ci-release-supplemental-asset.sh","CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION":"owner-adapter","CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH":"__unset__"},"preset":{}}
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
       - name: Verify asset Release authority
         id: authority
-        uses: a3-suite/a3-ci-github/actions/ci-release-authority@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-authority@d4e22467eca55e45a0ab5547076554733f112449
         with:
           root-directory: .
           snapshot-path: ${{ env.CI_CONFIG_SNAPSHOT_PATH }}
@@ -221,7 +221,7 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git -C .ci-base rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@d4e22467eca55e45a0ab5547076554733f112449
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -229,16 +229,16 @@ jobs:
           cargo-audit-version: ${{ env.CI_CARGO_AUDIT_VERSION }}
           cargo-deny-version: ${{ env.CI_CARGO_DENY_VERSION }}
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@d4e22467eca55e45a0ab5547076554733f112449
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Verify fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@d4e22467eca55e45a0ab5547076554733f112449
         with:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Run project quality adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@d4e22467eca55e45a0ab5547076554733f112449
         with:
           bundle-path: ${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
@@ -276,9 +276,9 @@ jobs:
         shell: bash
         run: mkdir build supplemental-build
       - name: Build and verify supplemental Release asset
-        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-supplemental-asset@d4e22467eca55e45a0ab5547076554733f112449
         env:
-          A3_INSTALLER_PROVIDER_REVISION: 1a81798fae68780bb25d6208e0d2963d290cdbe8
+          A3_INSTALLER_PROVIDER_REVISION: d4e22467eca55e45a0ab5547076554733f112449
         with:
           operation: assemble
           authority-path: authority/authority.json
@@ -341,7 +341,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Assemble release handoff
-        uses: a3-suite/a3-ci-github/actions/ci-release-assembly@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-assembly@d4e22467eca55e45a0ab5547076554733f112449
         with:
           repository: ${{ github.repository }}
           authority-path: release-source/authority/authority.json
@@ -401,7 +401,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
       - name: Validate release handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@d4e22467eca55e45a0ab5547076554733f112449
         with:
           handoff-root: release-handoff
           descriptor: handoff.json
@@ -409,14 +409,14 @@ jobs:
           version: ${{ needs.authority.outputs.version }}
           target-identity: ${{ needs.authority.outputs.target_identity }}
       - name: Verify approval is still valid
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@d4e22467eca55e45a0ab5547076554733f112449
         with:
           operation: verify-approval
           approval-id: ${{ needs.authority.outputs.approval_id }}
           approval-body-sha256: ${{ needs.authority.outputs.approval_body_sha256 }}
       - name: Observe complete Release absence
         id: publication_before
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@d4e22467eca55e45a0ab5547076554733f112449
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -428,7 +428,7 @@ jobs:
           observation-path: publication-before.json
       - id: publish
         name: Publish standard GitHub Release
-        uses: a3-suite/a3-ci-github/actions/ci-release-publisher@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-publisher@d4e22467eca55e45a0ab5547076554733f112449
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -439,7 +439,7 @@ jobs:
           write-output-directory: publication-write
       - name: Verify publication readback evidence
         id: verify_publication
-        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-verifier@d4e22467eca55e45a0ab5547076554733f112449
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -460,7 +460,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1a81798fae68780bb25d6208e0d2963d290cdbe8
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@d4e22467eca55e45a0ab5547076554733f112449
         with:
           summary-json: >-
             {"jobs":[{"unit":"authority","execution":"manual asset release publication / trusted control","rawResult":"${{ needs.authority.result }}","applicable":true,"reason":"authority job result: ${{ needs.authority.result }}"},{"unit":"quality","execution":"fixed source / trusted adapter","rawResult":"${{ needs.quality.result }}","applicable":${{ inputs.language-profile != '' }},"reason":"${{ inputs.language-profile == '' && 'quality not selected by the owner' || format('quality result: {0}', needs.quality.result) }}"},{"unit":"supplemental-asset","execution":"owner-selected supplemental Release asset","rawResult":"${{ needs.supplemental-asset.result }}","applicable":${{ inputs.supplemental_release_asset_enabled }},"reason":"${{ !inputs.supplemental_release_asset_enabled && 'supplemental asset not selected by the owner' || format('supplemental-asset result: {0}', needs.supplemental-asset.result) }}"},{"unit":"assemble","execution":"trusted handoff","rawResult":"${{ needs.assemble.result }}","applicable":true,"reason":"assemble result: ${{ needs.assemble.result }}"},{"unit":"publish","execution":"Release remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}
