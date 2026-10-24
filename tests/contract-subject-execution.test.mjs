@@ -163,7 +163,7 @@ describe("repository-contract-subject-execution", () => {
     const contractCore = path.join(projectRoot, 'sdd/dsl/specs/contract-core');
     const contractPackage = readFileSync(path.join(contractCore, 'contract-package.sdd.yml'), 'utf8');
     // Act
-    const packageSubjects = [...contractPackage.matchAll(/^\s*- path:\s*(subjects\/\S+\/)\s*$/gm)]
+    const packageSubjects = [...contractPackage.matchAll(/^\s*- (subjects\/\S+\/)\s*$/gm)]
       .map((match) => readFileSync(path.join(contractCore, match[1], 'subject.sdd.yml'), 'utf8').match(/^subject:\n {2}id:\s*(\S+)\s*$/m)[1]);
     const executionSubjects = definition.subjects.map((subject) => subject.subjectId);
     // Assert

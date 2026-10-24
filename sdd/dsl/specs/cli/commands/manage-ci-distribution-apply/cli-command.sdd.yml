@@ -24,5 +24,5 @@ command:
         - repo-root
         - plan
         - approve
-  help:
-    usage: node runtime/distribution/fetch-a3-ci-github.mjs apply [options]
+  usage:
+    - node runtime/distribution/fetch-a3-ci-github.mjs apply [options]

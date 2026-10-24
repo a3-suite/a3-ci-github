@@ -7,6 +7,7 @@ import { describe, expect, test, onTestFinished } from 'vitest';
 const workflows = [
   ['quality', '.github/workflows/ci-quality.yml'],
   ['release-publication', '.github/workflows/ci-release-publication.yml'],
+  ['asset-release-publication', '.github/workflows/ci-asset-release-publication.yml'],
   ['package-publication', '.github/workflows/ci-package-publication.yml'],
 ];
 

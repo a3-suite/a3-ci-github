@@ -10,9 +10,7 @@ rule: >-
   同じ版の実装と接続の利用可能化を、Action実装の先行Releaseと接続専用の後続Releaseへ分割してはならない。
   consumerはその1つのReleaseから導入するだけで修正実装を利用できなければならない。
   公開対象と実行される資材の対応は仕様側のpublication契約で検証する。
-rationale:
-  why: 修正の公開とその利用可能化を分離すると、公開済みの修正版を採用しても旧実装が動くため
+rationale: 修正の公開とその利用可能化を分離すると、公開済みの修正版を採用しても旧実装が動くため
 violation_impact: consumerで修正が有効にならない、または追加Releaseが必要になる
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution

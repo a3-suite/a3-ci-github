@@ -482,6 +482,68 @@ describe("workflow-contracts", () => {
 
 
 describe("workflow-contracts", () => {
+  describe("asset-release-publication-workflow-contract", () => {
+    const { jobs } = yaml.parse(read('.github/workflows/ci-asset-release-publication.yml'));
+    const evaluate = (condition, results, inputs, cancelled = false) => runInNewContext(
+      condition.trim().slice(3, -2).replace(/(needs|inputs)\.([a-zA-Z0-9_-]+)/g, "$1['$2']"),
+      { needs: Object.fromEntries(Object.entries(results).map(([id, result]) => [id, { result }])), inputs, cancelled: () => cancelled },
+    );
+
+    // integration_id: asset-release-publication-workflow-contract
+    test('asset release publication runs no product build, checks the asset selection before authority and runs quality only for a selected profile', () => {
+      // Arrange
+      const authoritySteps = jobs.authority.steps;
+      const selection = authoritySteps.find(step => step.name === 'Verify asset selection');
+      const selects = (skills, enabled) => spawnSync('bash', ['-c', selection.run], { env: { ...process.env, SKILLS_CONFIG_PATH: skills, SUPPLEMENTAL_ENABLED: enabled } }).status === 0;
+      const snapshot = authoritySteps.find(step => step.id === 'config');
+      const runtime = JSON.parse(snapshot.with['sources-json'].replace(/"?\$\{\{[^}]*\}\}"?/g, '"bound"')).runtime;
+      const supplemental = jobs['supplemental-asset'].steps.find(step => step.uses?.includes('/actions/ci-release-supplemental-asset@'));
+      const handoff = jobs.assemble.steps.find(step => step.name === 'Assemble release handoff');
+      const assemble = (results, inputs) => evaluate(jobs.assemble.if, results, inputs);
+      const unprofiled = { 'language-profile': '', supplemental_release_asset_enabled: false };
+      const profiled = { 'language-profile': 'node', supplemental_release_asset_enabled: true };
+      // Act
+      const withoutQuality = assemble({ authority: 'success', quality: 'skipped', 'supplemental-asset': 'skipped' }, unprofiled);
+      const withQuality = assemble({ authority: 'success', quality: 'success', 'supplemental-asset': 'success' }, profiled);
+      // Assert
+      expect(Object.keys(jobs)).toStrictEqual(['authority', 'quality', 'supplemental-asset', 'assemble', 'publish', 'summary']);
+      expect(authoritySteps.indexOf(selection)).toBeLessThan(authoritySteps.findIndex(step => step.id === 'authority'));
+      expect([selects('.ci/release-skills.yml', 'false'), selects('__unset__', 'true'), selects('__unset__', 'false'), selects('', 'true')]).toStrictEqual([true, true, false, false]);
+      expect(runtime).toMatchObject({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_LANGUAGE_PROFILE: '__unset__', CI_TOOLCHAIN_VERSION: '__unset__', CI_PLATFORM_MANIFEST: '__unset__' });
+      expect(jobs.quality.if).toBe("inputs.language-profile != ''");
+      expect(supplemental.with).toMatchObject({ operation: 'assemble', 'standard-build-root': 'build', 'supplemental-build-root': 'supplemental-build' });
+      expect(jobs['supplemental-asset'].steps.find(step => step.name === 'Create empty build roots').run).toBe('mkdir build supplemental-build');
+      for (const input of ['build-root', 'platform-manifest-path', 'platform-matrix']) expect(handoff.with).not.toHaveProperty(input);
+      expect(withoutQuality).toBe(true);
+      expect(withQuality).toBe(true);
+      expect(assemble({ authority: 'success', quality: 'skipped', 'supplemental-asset': 'success' }, profiled)).toBe(false);
+    });
+
+    // integration_id: asset-release-publication-workflow-contract
+    test('asset release publication blocks on every unsuccessful prerequisite and always summarizes', () => {
+      // Arrange
+      const successful = { authority: 'success', quality: 'success', 'supplemental-asset': 'success' };
+      const inputs = { 'language-profile': 'node', supplemental_release_asset_enabled: true };
+      const caller = yaml.parse(read('workflows/release/asset-release-publication-caller.yml'));
+      // Act
+      const blocked = Object.keys(successful).flatMap(id => ['failure', 'cancelled', 'skipped', '']
+        .map(result => [`${id}:${result}`, evaluate(jobs.assemble.if, { ...successful, [id]: result }, inputs)]))
+        .filter(([, allowed]) => allowed !== false);
+      // Assert
+      expect(blocked).toStrictEqual([]);
+      expect(evaluate(jobs.assemble.if, successful, inputs, true)).toBe(false);
+      expect(evaluate(jobs.publish.if, { authority: 'success', assemble: 'failure' }, inputs)).toBe(false);
+      expect(evaluate(jobs.publish.if, { authority: 'success', assemble: 'success' }, inputs)).toBe(true);
+      expect(jobs.summary.if).toBe('always()');
+      expect(jobs.summary.needs).toStrictEqual(['authority', 'quality', 'supplemental-asset', 'assemble', 'publish']);
+      expect(caller.jobs.publish.uses).toMatch(/\/\.github\/workflows\/ci-asset-release-publication\.yml@<asset-release-publication-workflow-sha>$/);
+      expect(caller.jobs.summary.if).toBe('always()');
+    });
+  });
+});
+
+
+describe("workflow-contracts", () => {
   describe("job-execution-condition", () => {
     // GitHub's implicit success() skips a job when any transitive ancestor was skipped, even if its direct needs succeeded.
     test('jobs below a conditional ancestor declare their own status-function condition', () => {
@@ -864,11 +926,11 @@ describe("workflow-contracts", () => {
       const packageData = yaml.parse(read(`${base}/contract-package.sdd.yml`));
       const diagnosticPartition = 'runtime-context.failure-diagnostic-required';
       const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/subject.sdd.yml`)).contracts[0];
-      const commonObservation = shared.observations.find((entry) => entry.boundary.ref === 'boundary.diagnostic-result');
+      const commonObservation = shared.observations.find((entry) => entry.boundary === 'boundary.diagnostic-result');
       // Act
-      const subjects = packageData.subject_scopes.map((scope) => ({
-        ...yaml.parse(read(`${base}/${scope.path}subject.sdd.yml`)),
-        verifications: yaml.parse(read(`${base}/${scope.path}verifications.sdd.yml`)),
+      const subjects = packageData.subject_scopes.map((scopePath) => ({
+        ...yaml.parse(read(`${base}/${scopePath}subject.sdd.yml`)),
+        verifications: yaml.parse(read(`${base}/${scopePath}verifications.sdd.yml`)),
       }));
       // Assert
       const commonSelectors = commonObservation.fields.map((field) => field.selector);
@@ -894,7 +956,7 @@ describe("workflow-contracts", () => {
           expect(guarantee.claim.present, contract.id).toBe(true);
           expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
           const observation = contract.observations.find((entry) => entry.fields.some((field) => field.selector === 'failure-stage'));
-          expect(observation.boundary.ref, contract.id).toBe('boundary.diagnostic-result');
+          expect(observation.boundary, contract.id).toBe('boundary.diagnostic-result');
           expect(observation.summary, contract.id).toContain(shared.id);
           const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);
           expect(failureCase, contract.id).toBeDefined();

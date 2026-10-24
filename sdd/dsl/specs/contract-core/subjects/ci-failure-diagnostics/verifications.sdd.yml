@@ -5,7 +5,7 @@ cases:
     id: known-validation-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: known-validation-failure
+      failure: known-validation
     verifies:
       - failure-subject-recorded
       - failure-operation-recorded
@@ -23,70 +23,70 @@ cases:
     id: unknown-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: unknown-failure
+      failure: unknown
     verifies:
       - diagnostic-unsubstantiated-remediation
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: pull-request-head-source
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: pull-request-head-checkout
+      checkout: pull-request-head
     verifies:
       - diagnostic-unsubstantiated-context
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: external-request-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: external-request-failure
+      failure: external-request
     verifies:
       - diagnostic-unsubstantiated-context
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: child-process-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: child-process-failure
+      failure: child-process
     verifies:
       - diagnostic-unsafe-diagnostic-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: evidence-generation-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: evidence-generation-failure
+      failure: evidence-generation
     verifies:
       - diagnostic-original-diagnostic-loss
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: evidence-transfer-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: evidence-transfer-failure
+      failure: evidence-transfer
     verifies:
       - diagnostic-invalid-evidence-reference
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: summary-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: summary-failure
+      failure: summary-write
     verifies:
       - diagnostic-original-outcome-replacement
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: partial-write-failure
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: partial-write-failure
+      failure: partial-write
     verifies:
       - diagnostic-diagnostic-only-retry
   - contract_id: contract.ci-failure-diagnostics.subject-declarations
     id: all-subject-diagnostics-defined
     partition: subject-contract-source-available
     input:
-      scenario: packaged-subject-contract-definitions
+      subject-contracts: sdd/dsl/specs/contract-core/subjects
   - contract_id: contract.ci-failure-diagnostics.workflow-evidence
     id: workflow-evidence-declared
     partition: ci-failure-diagnostics-workflow-source-available
     input:
-      scenario: managed-workflow-source
+      workflow-source: .github/workflows
   - contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     id: bootstrap-diagnostic-emitted
     partition: ci-failure-diagnostics-bootstrap-fails
     input:
-      scenario: invalid-bootstrap-invocation
+      prepared-runtime: unavailable

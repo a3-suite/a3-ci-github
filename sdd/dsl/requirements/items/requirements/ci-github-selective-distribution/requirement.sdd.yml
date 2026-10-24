@@ -4,11 +4,10 @@ requirements:
   - requirement_id: ci-github-selective-distribution
     type: functional
     summary: 提供元が1回のReleaseで実装と接続が揃うCI資材を公開し、利用projectが選択取得・適用・復旧できる
-    rationale:
-      why: >-
-        repository全体または旧Agent Skill同梱資産へ依存すると、不要資材の取得、配布authorityの重複、
-        consumerごとの更新差分と復旧状態の不明確化が発生するため。
-        実装修正版と接続更新版を別Releaseにすると、修正を採用したつもりでも旧実装を実行する状態が生じるため
+    rationale: >-
+      repository全体または旧Agent Skill同梱資産へ依存すると、不要資材の取得、配布authorityの重複、
+      consumerごとの更新差分と復旧状態の不明確化が発生するため。
+      実装修正版と接続更新版を別Releaseにすると、修正を採用したつもりでも旧実装を実行する状態が生じるため
     subject:
       namespace: ci
       key: selective-distribution

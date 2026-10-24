@@ -90,6 +90,7 @@ export type RegistryData = {
   qualityPlatformsReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
   packagePreparationReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
   releasePublicationReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
+  assetReleasePublicationReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
   packagePublicationReusableWorkflow?: RegistryData['qualityReusableWorkflow'];
 };
 
@@ -138,6 +139,7 @@ export const normalizeAsset = (value: string): string | undefined => {
 
 export const publicationBinding = (workflowId: string, registry: RegistryData): RegistryData['qualityReusableWorkflow'] =>
   workflowId === 'release-publication-caller' ? registry.releasePublicationReusableWorkflow
+    : workflowId === 'asset-release-publication-caller' ? registry.assetReleasePublicationReusableWorkflow
     : workflowId === 'package-publication-caller' ? registry.packagePublicationReusableWorkflow : undefined;
 
 

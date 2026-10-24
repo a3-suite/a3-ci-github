@@ -6,10 +6,18 @@ subject:
 contracts:
   - id: contract.ci-platform-matrix.outputs
     summary: Platform manifest and optional quality selection inputs to the platform matrix Action.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: manifest-path
+        meaning: "Received by the contract target: platform manifest path."
+      - name: selection-path
+        meaning: "Received by the contract target: platform selection file path."
+      - name: selection-document
+        meaning: "Received by the contract target: content of the platform selection file."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: matrix
             meaning: Compact JSON object containing the validated platform entries under include.
@@ -36,8 +44,7 @@ contracts:
           - selector: shared-checks-absence
             meaning: Occurrence state of shared_standard_checks keys when sharedStandardChecks was omitted from the selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

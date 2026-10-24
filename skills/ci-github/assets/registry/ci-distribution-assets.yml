@@ -76,6 +76,10 @@ assets:
       - .github/workflows/ci-release-publication.yml
       - skills/ci-github/references/release-publication-evidence.reference.yml
       - runtime/release-publication/evidence.schema.json
+  - id: runtime.asset-release-publication-workflow
+    application: local-reference
+    dependencies: [runtime.preset]
+    sourcePaths: [.github/workflows/ci-asset-release-publication.yml]
   - id: runtime.package-publication-workflow
     application: local-reference
     dependencies: [runtime.preset]
@@ -120,6 +124,7 @@ workflowDependencies:
   workflow.quality-gate-platforms: [runtime.quality-platforms-workflow]
   workflow.quality-gate-profiles: [runtime.quality-workflow]
   workflow.release-publication-caller: [runtime.release-publication-workflow]
+  workflow.asset-release-publication-caller: [runtime.asset-release-publication-workflow]
   workflow.package-publication-caller: [runtime.package-publication-workflow]
 presets:
   - id: quality-gate
@@ -129,6 +134,8 @@ presets:
   - id: release-request
     requiredAssets: [runtime.preset, lint.github-actions]
   - id: release-publication
+    requiredAssets: [runtime.preset, lint.github-actions]
+  - id: asset-release-publication
     requiredAssets: [runtime.preset, lint.github-actions]
   - id: package-publication
     requiredAssets: [runtime.preset, lint.github-actions]

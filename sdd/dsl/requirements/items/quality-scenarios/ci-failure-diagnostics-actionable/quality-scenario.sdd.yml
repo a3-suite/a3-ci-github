@@ -17,14 +17,9 @@ response_measure:
   - 証跡生成に失敗しても元の終了状態と主要な診断情報が保持される
   - Release remote観測の通信・応答・権限可視性・一覧完全性と、標準installerの既知の検証失敗を最終logで区別でき、取得できない相関情報は未取得と明示する
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-failure-diagnostics
+  - ci-failure-diagnostics
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-failure-diagnostics.actionable
-  - contract_ref:
-      contract_id: contract.ci-failure-diagnostics.subject-declarations
-  - contract_ref:
-      contract_id: contract.ci-failure-diagnostics.workflow-evidence
-  - contract_ref:
-      contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
+  - contract.ci-failure-diagnostics.actionable
+  - contract.ci-failure-diagnostics.subject-declarations
+  - contract.ci-failure-diagnostics.workflow-evidence
+  - contract.ci-failure-diagnostics.bootstrap-diagnostic

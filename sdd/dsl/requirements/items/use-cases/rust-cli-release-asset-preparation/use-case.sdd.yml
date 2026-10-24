@@ -17,12 +17,12 @@ preconditions:
   - 対象sourceが固定commitでcheckoutされている
 trigger: 検証済みrelease workflowがRust CLI assetの準備を要求する
 main_success_scenario:
-  - summary: release authorityのlanguage profileとsource SHAをchecked-out sourceへ照合する
-  - summary: authorityに拘束されたtoolchainとtargetでrelease binaryをbuildし、報告versionを検証する
-  - summary: archive、checksum、asset manifestを新しい出力先へ生成する
-  - summary: asset、source、version、platform identityおよびchecksumを相互に検証する
-  - summary: 標準installerが選択された場合は固定製品宣言から提供元の共通処理で組立・exact候補検証・証跡生成を行い、共通sourceやadapterを利用側へコピーしない
-  - summary: 検証済みassetとidentityを後続処理が再検証できるhandoffとして返す
+  - release authorityのlanguage profileとsource SHAをchecked-out sourceへ照合する
+  - authorityに拘束されたtoolchainとtargetでrelease binaryをbuildし、報告versionを検証する
+  - archive、checksum、asset manifestを新しい出力先へ生成する
+  - asset、source、version、platform identityおよびchecksumを相互に検証する
+  - 標準installerが選択された場合は固定製品宣言から提供元の共通処理で組立・exact候補検証・証跡生成を行い、共通sourceやadapterを利用側へコピーしない
+  - 検証済みassetとidentityを後続処理が再検証できるhandoffとして返す
 success_outcomes:
   - asset、version、source、toolchain、platformおよびchecksumが同じ検証結果で一致する
   - 後続のRelease workflowは未検証のassetを公開入力として受け取らない
@@ -30,20 +30,12 @@ failure_outcomes:
   - source、toolchain、platform、version、build、packageまたはchecksumの不一致時はasset handoffを成功状態にしない
   - 既存または競合して作成された出力先を上書きしない
 related_requirements:
-  - requirement_ref:
-      requirement_id: rust-release-asset-integrity
-  - requirement_ref:
-      requirement_id: ci-common-processing-action-reuse
+  - rust-release-asset-integrity
+  - ci-common-processing-action-reuse
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-rust-source-gate.processing
-  - contract_ref:
-      contract_id: contract.ci-rust-source-gate.outputs
-  - contract_ref:
-      contract_id: contract.ci-rust-release-build.processing
-  - contract_ref:
-      contract_id: contract.ci-rust-release-build.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-supplemental-asset.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-supplemental-asset.assembly
+  - contract.ci-rust-source-gate.processing
+  - contract.ci-rust-source-gate.outputs
+  - contract.ci-rust-release-build.processing
+  - contract.ci-rust-release-build.outputs
+  - contract.ci-release-supplemental-asset.outputs
+  - contract.ci-release-supplemental-asset.assembly

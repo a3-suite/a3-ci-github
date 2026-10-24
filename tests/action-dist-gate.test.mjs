@@ -43,7 +43,7 @@ describe("contract.repository-action-distribution.integrity", () => {
     // integration_id: repository-action-distribution-gates
     test('every Action has contract coverage for its public outputs', () => {
       const packageText = readFileSync(path.join(root, 'sdd/dsl/specs/contract-core/contract-package.sdd.yml'), 'utf8');
-      const subjectPaths = new Set([...packageText.matchAll(/^ +(?:- )?path: subjects\/([^/]+)\/$/gm)].map((match) => match[1]));
+      const subjectPaths = new Set([...packageText.matchAll(/^ +- subjects\/([^/]+)\/$/gm)].map((match) => match[1]));
 
       for (const action of collectActions(root)) {
         expect(subjectPaths.has(action.name), `missing contract subject for ${action.name}`).toBe(true);

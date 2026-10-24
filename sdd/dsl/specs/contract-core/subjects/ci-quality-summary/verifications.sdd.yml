@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-quality-summary.outputs
     id: successful-quality-result
     partition: summary-input-present

@@ -37,6 +37,7 @@ workflowのsource、配置先、必要assetはregistryのpreset entryから選�
 | `quality-gate-profiles` | `registry.presets[quality-gate-profiles]` | 複数のlanguage profileを持つrepositoryの変更・統合の品質検証 |
 | `release-request` | `registry.presets[release-request]` | tagから公開準備用request handoffを生成 |
 | `release-publication` | `registry.presets[release-publication]` | notes確認後の手動requestをdefault branchのcallerで検証し、Release資材を公開 |
+| `asset-release-publication` | `registry.presets[asset-release-publication]` | 製品のbuildを持たないprojectが、公開スキルと補助assetだけをRelease公開 |
 | `package-publication` | `registry.presets[package-publication]` | 検証済みpackageをregistryへ公開 |
 
 registryの`source`は配布元の固定資材を解決するときだけ使う。callerの生成・配置は `references/configure-ci-preset.guide.md` に従う。配置後は`.github/`、`.ci/`、projectの設定だけで実行できる状態にする。provider固有の処理順と権限境界は配置したworkflowを正本とする。
@@ -45,7 +46,7 @@ registryの`source`は配布元の固定資材を解決するときだけ使う�
 
 主言語以外の品質検査も必要なrepositoryは、`quality-gate`の代わりに`quality-gate-profiles`を導入する。一つのcallerがlanguage profileごとに共通品質workflowを呼び、固定名の集約 check `quality-gate-profiles / summary` がいずれかのprofileの失敗・未実施で失敗する。補助言語の検査内容は標準bundleを増やさず、project-owned descriptorで持つ。`quality-gate`と併置しない。
 
-Release は `tag-preparation + manual-publication` を標準選択とする。GitHub Actions 上の詳細な公開経路は `references/implement-release-asset-publication-workflow.guide.md` に委譲する。
+Release は `tag-preparation + manual-publication` を標準選択とする。製品のbuildを持たないprojectは`release-publication`の代わりに`asset-release-publication`を導入する。両者はcallerの配置先を共有するため併置しない。GitHub Actions 上の詳細な公開経路は `references/implement-release-asset-publication-workflow.guide.md` に委譲する。
 
 canonical の `release-request` は tag adapter のみを提供する（manual mode は提供しない）。`package-publication` の version plan は `strategy:exact` を固定し、`ciGenerated` の具体化は canonical に含めない。いずれかを必要とする project は、provider registry へ登録された extension としての採用可否を owner 判断で確定してから導入する。
 

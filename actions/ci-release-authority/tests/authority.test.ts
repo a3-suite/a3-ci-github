@@ -176,6 +176,38 @@ describe('ci-release-authority-runtime', () => {
   });
 
   // integration_id: ci-release-authority-runtime
+  test('authority records an asset release without language, toolchain or platform bindings', async () => {
+    // Arrange
+    const assetRelease = { CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_LANGUAGE_PROFILE: '__unset__', CI_TOOLCHAIN_VERSION: '__unset__', CI_PLATFORM_MANIFEST: '__unset__' };
+    const withSnapshot = (values: Record<string, string>) => {
+      const f = fixture();
+      const snapshotPath = path.join(f.root, 'snapshot.json');
+      const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+      fs.writeFileSync(snapshotPath, JSON.stringify(resolveConfigSnapshot({ workflow: { ...snapshot.values, ...values } })));
+      return f;
+    };
+    const f = withSnapshot(assetRelease);
+    try {
+      // Act
+      const result = await createAuthority(f.options, f.client);
+      // Assert
+      const authority = JSON.parse(fs.readFileSync(result.authorityPath, 'utf8'));
+      expect(authority).toMatchObject({ language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null, version: '1.2.3' });
+    } finally { fs.rmSync(f.root, { recursive: true }); }
+    for (const [setting, value] of [
+      ['CI_PLATFORM_MANIFEST', '.ci/platform-manifest.yml'],
+      ['CI_TOOLCHAIN_VERSION', '1.91.1'],
+      ['CI_LANGUAGE_PROFILE', 'rust'],
+    ]) {
+      const rejected = withSnapshot({ ...assetRelease, [setting]: value });
+      try {
+        await expect(createAuthority(rejected.options, rejected.client), `${setting}=${value}`).rejects.toThrow('owner-contract-inconsistent');
+        expect(fs.existsSync(path.join(rejected.options.outputDirectory, 'authority.json'))).toBe(false);
+      } finally { fs.rmSync(rejected.root, { recursive: true }); }
+    }
+  });
+
+  // integration_id: ci-release-authority-runtime
   test('authority accepts read-only repository metadata without claiming publish capability and rejects replay', async () => {
     const f = fixture();
     try {

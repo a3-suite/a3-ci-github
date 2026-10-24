@@ -10,8 +10,6 @@ response_measure:
   - checksum が一致する取得物だけを PATH へ追加する
   - 取得失敗、checksum 不一致、未対応 runner、配置失敗、PATH 更新失敗は jq-provision-failed で停止し、jq を PATH に追加しない
 related_requirements:
-  - requirement_ref:
-      requirement_id: jq-release-provisioning
+  - jq-release-provisioning
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-jq-provisioner.provision
+  - contract.ci-jq-provisioner.provision

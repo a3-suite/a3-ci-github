@@ -54,7 +54,7 @@ workflow は job・permissions・credential 注入・stage 順序を所有しま
 3. **最終候補を検証する。** Bと実際の参照先Aを使ってpublication契約を確認します。callee自身のSHAはmanifest生成で解決し、sourceへ将来の自己SHAを書き戻しません。third-party Actionの承認pinは従来どおり検証します。
 4. **1回だけ公開する。** Bと同じtreeを持つコミットからtagとReleaseを1回だけ作成します。手順は[Release手順](../release/README.md#このrepositoryの公開実行)に従います。consumerはそのReleaseからcallerを生成して環境を受け入れます。
 
-準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致や祖先関係は要求せず、Aがbranchまたはtagから到達可能であることと、実行範囲のtreeの同一性を確認します。consumerはAのSHAを取得するため、公開後もAを含むbranchを残します。rebaseなどでAが書き換わる、または実行資材が変わる場合は接続・検証を確定し直します。
+準備コミット数と公開回数は別です。ActionのSHAと最終tagのpeeled SHAの一致や祖先関係は要求せず、Aがbranchまたはtagから到達可能であることと、実行範囲のtreeの同一性を確認します。実行範囲は参照するActionのディレクトリと、Actionもcanonical workflowも実行しないprovider保守用を除く`runtime/`です。除外対象の正本は`runtime/repository/verify-implementation-binding.mjs`の`providerMaintenanceRuntime`です。consumerはAのSHAを取得するため、公開後もAを含むbranchを残します。rebaseなどでAが書き換わる、または実行資材が変わる場合は接続・検証を確定し直します。
 
 mainへの統合で確認する内容は[mainへの統合](../release/README.md#mainへの統合)を参照してください。
 
@@ -78,7 +78,7 @@ node runtime/repository/update-action-references.mjs --write --tag "$RELEASE_TAG
 node runtime/repository/check-provider-references.mjs --candidate --contracts
 ```
 
-`--check`は変更予定を出力し、差分があれば1、差分がなければ0、検査不能なら2で終了します。差分と接続検査の結果を確認してから`--write`を実行します。staged snapshotの最終候補は`--staged --candidate --contracts`で検査します。参照Actionのmetadataが宣言するNode entrypointとCompositeの固定scriptの存在を確認し、参照するActionディレクトリ全体と共有`runtime/`のGit treeでバイト列とmodeの一致を確認します。この範囲に変更があればAを確定し直します。
+`--check`は変更予定を出力し、差分があれば1、差分がなければ0、検査不能なら2で終了します。差分と接続検査の結果を確認してから`--write`を実行します。staged snapshotの最終候補は`--staged --candidate --contracts`で検査します。参照Actionのmetadataが宣言するNode entrypointとCompositeの固定scriptの存在を確認し、参照するActionディレクトリ全体と、実行範囲に含まれる`runtime/`の各entryのGit treeでバイト列とmodeの一致を確認します。この範囲に変更があればAを確定し直します。
 
 固定参照の実体・I/O・実dist動作を検証する既存ゲートは維持します。必要なGit objectの欠落や実行不能は判定不能とし、別checkoutの成功やSHA形式だけを接続先の動作保証に読み替えません。Hosted受入は別の証拠です。
 

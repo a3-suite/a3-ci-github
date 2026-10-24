@@ -76,6 +76,7 @@ beforeAll(() => {
     '.github/workflows/ci-quality-platforms.yml',
     '.github/workflows/ci-package-preparation.yml',
     '.github/workflows/ci-release-publication.yml',
+    '.github/workflows/ci-asset-release-publication.yml',
     '.github/workflows/ci-package-publication.yml',
     'skills/ci-github',
     'skills/ci-release-installer',

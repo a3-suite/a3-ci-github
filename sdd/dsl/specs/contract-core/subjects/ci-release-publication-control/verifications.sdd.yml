@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-release-publication-control.outputs
     id: request-trigger-accepted
     partition: runtime-context.request-trigger-verification-invoked

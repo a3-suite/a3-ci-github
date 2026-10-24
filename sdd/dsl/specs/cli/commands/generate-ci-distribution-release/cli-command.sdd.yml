@@ -22,5 +22,5 @@ command:
     - id: release-inputs
       title: Immutable Release preparation inputs
       options: [repository-root, output-directory, source-revision, release-tag]
-  help:
-    usage: tsx runtime/distribution/generate-distribution-release.ts --output-directory <PATH> --source-revision <SHA> --release-tag <TAG> [--repository-root <PATH>]
+  usage:
+    - tsx runtime/distribution/generate-distribution-release.ts --output-directory <PATH> --source-revision <SHA> --release-tag <TAG> [--repository-root <PATH>]

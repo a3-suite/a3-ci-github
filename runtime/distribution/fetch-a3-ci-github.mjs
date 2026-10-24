@@ -27,6 +27,15 @@ const distributionFailureEvidence = (error, operation) => {
   };
 };
 
+// The template runtime is loaded from the fetched distribution, so its DiagnosticError is not this bootstrap's class.
+// Only its own workflow-template codes become known reasons; anything else stays unknown.
+const templateRuntimeFailure = (error, stage) => {
+  const code = error?.name === 'DiagnosticError' && typeof error.message === 'string' ? error.message.split(':', 1)[0] : '';
+  return /^workflow-template-[a-z0-9-]+$/.test(code)
+    ? new DistributionError(error.message, { cause: error, diagnostics: { stage, input: 'workflow-template-settings' } })
+    : error;
+};
+
 const retainDistributionFailure = (error, details) => {
   const failure = error instanceof DistributionError ? error : new DistributionError('distribution-unknown-failure', { cause: error });
   failure.details = { ...failure.details, ...details };
@@ -575,24 +584,28 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
           const previousAsset = previousDistribution.manifest.assets.flatMap((asset) => asset.files)
             .find((entry) => entry.destination === file.destination);
           if (!previousAsset) throw new DistributionError(`distribution-template-prior-source-missing:${file.destination}`);
-          previous = templateRuntime.readWorkflowSettings({
-            yaml: yamlRuntime,
-            template: fs.readFileSync(inside(previousDistribution.root, previousAsset.sourcePath), 'utf8'),
-            current: fs.readFileSync(destination, 'utf8'),
-            triggerExtensions: previousDistribution.manifest.workflowTemplates?.[previousAsset.sourcePath]?.triggerExtensions ?? {},
-          });
+          try {
+            previous = templateRuntime.readWorkflowSettings({
+              yaml: yamlRuntime,
+              template: fs.readFileSync(inside(previousDistribution.root, previousAsset.sourcePath), 'utf8'),
+              current: fs.readFileSync(destination, 'utf8'),
+              triggerExtensions: previousDistribution.manifest.workflowTemplates?.[previousAsset.sourcePath]?.triggerExtensions ?? {},
+            });
+          } catch (error) { throw templateRuntimeFailure(error, 'template-settings-read'); }
           for (const extension of Object.keys(previous.extensions)) {
             if (!Object.hasOwn(template.triggerExtensions, extension)) throw new DistributionError(`distribution-template-trigger-no-longer-supported:${extension}`);
           }
         }
-        generatedContent = templateRuntime.renderWorkflowTemplate({
-          yaml: yamlRuntime, template: sourceText,
-          values: settings[asset.id] ?? {},
-          carriedValues: previous.values,
-          references: loaded.manifest.workflowReferences,
-          emptyAllowed: template.emptyAllowed,
-          extensions: previous.extensions,
-        });
+        try {
+          generatedContent = templateRuntime.renderWorkflowTemplate({
+            yaml: yamlRuntime, template: sourceText,
+            values: settings[asset.id] ?? {},
+            carriedValues: previous.values,
+            references: loaded.manifest.workflowReferences,
+            emptyAllowed: template.emptyAllowed,
+            extensions: previous.extensions,
+          });
+        } catch (error) { throw templateRuntimeFailure(error, 'template-render'); }
       }
       const generatedSha256 = generatedContent === undefined ? sourceSha256 : sha256(Buffer.from(generatedContent));
       let action = 'create';

@@ -14,14 +14,9 @@ response_measure:
   - コンポーネント間の結合が必要な検証は明示された契約境界に限定し、単一コンポーネントの検証と分離できる
   - 契約対象別実行定義の網羅性は検証対象のinventoryとして扱い、個々のbehavior保証や依存制御の代替としない
 related_requirements:
-  - requirement_ref:
-      requirement_id: managed-component-testability
+  - managed-component-testability
 related_contracts:
-  - contract_ref:
-      contract_id: contract.repository-managed-source-integrity.execution-mapping
-  - contract_ref:
-      contract_id: contract.ci-preset-assurance.verification
-  - contract_ref:
-      contract_id: contract.ci-preset-materialization.application
-  - contract_ref:
-      contract_id: contract.repository-action-distribution.integrity
+  - contract.repository-managed-source-integrity.execution-mapping
+  - contract.ci-preset-assurance.verification
+  - contract.ci-preset-materialization.application
+  - contract.repository-action-distribution.integrity

@@ -67,10 +67,11 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
   "$ci_github_local_runtime/node_modules/.bin/tsx" \
   "{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts" \
   --repo-root "{project-root}" \
-  --source-revision "{distribution-full-commit-sha}"
+  --source-revision "{distribution-full-commit-sha}" \
+  --release-tag "{distribution-release-tag}"
 ```
 
-`--source-revision`は配布元の40桁commit SHAとする。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
+`--source-revision`は配布元の40桁commit SHA、`--release-tag`は同じ配布物のexact Release tag（`vX.Y.Z`）とする。generatorは配布物のmanifestと両方が一致しない場合に停止する。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
 
 lock生成が必要な場合はその成功を確認してから、preflightを実行する。
 
@@ -182,5 +183,7 @@ a3-lint lint "{project-root}/.ci/README.md" \
 ```
 
 rule assetは導入元スキルから監査時に読み、コピー先workflowや`.ci/`から参照しない。warningは一般規則の診断として確認し、canonical構造からの逸脱を停止する責務はpreflightに置く。YAML規則はproviderの正式能力`fact:yaml_structure:v1`を必須とする。a3-lint 0.8.0以降を使う。共有helperは検証済み配布rootからlibとして参照し、rule収集から除外する。JS/TS用CLI規則とMarkdown規則をYAML実行へ混在させない。
+
+`asset-release-publication`はcallerの配置先を`release-publication`と共有する。配置済みcallerが呼ぶ公開calleeでどちらのプリセットかを判定し、両方を選択した場合は失敗にする。calleeは`assetReleasePublicationReusableWorkflow`と照合し、製品build jobを持たないこと、language profile指定時だけのquality、補助assetの空build rootを検査する。
 
 Package公開もconsumerにはrequestとcallerだけを配置し、publication calleeは `packagePublicationReusableWorkflow` の登録済み固定参照・公開状態・宣言入力・明示secret・権限と内部Actionを検査する。provider calleeはconsumerの実ファイルとして再読込しない。

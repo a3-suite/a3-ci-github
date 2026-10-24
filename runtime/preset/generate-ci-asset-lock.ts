@@ -5,21 +5,23 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { writeCiAssetLock } from './ci-asset-lock-plan.ts';
-import { FULL_SHA } from './ci-asset-lock.ts';
+import { FULL_SHA, RELEASE_TAG } from './ci-asset-lock.ts';
 import { parseFlagArguments } from './cli-args.ts';
 
 const parseArgs = (argv: string[]): {
   repoRoot: string;
   skillCollectionRoot?: string;
   sourceRevision: string;
+  releaseTag: string;
 } => {
-  const result: { repoRoot: string; skillCollectionRoot?: string; sourceRevision: string } = {
-    repoRoot: '.', sourceRevision: '',
+  const result: { repoRoot: string; skillCollectionRoot?: string; sourceRevision: string; releaseTag: string } = {
+    repoRoot: '.', sourceRevision: '', releaseTag: '',
   };
   parseFlagArguments(argv, {
     '--repo-root': (value) => { result.repoRoot = value; },
     '--skill-collection-root': (value) => { result.skillCollectionRoot = value; },
     '--source-revision': (value) => { result.sourceRevision = value; },
+    '--release-tag': (value) => { result.releaseTag = value; },
   });
   return result;
 };
@@ -29,7 +31,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const options = parseArgs(process.argv.slice(2));
     diagnostic.confirmed();
-    diagnostic.at('lock-generation', { input: 'workflows-registry-and-source-revision', sourceRevision: FULL_SHA.test(options.sourceRevision) ? options.sourceRevision : 'invalid-format' });
+    diagnostic.at('lock-generation', { input: 'workflows-registry-and-source-revision', sourceRevision: FULL_SHA.test(options.sourceRevision) ? options.sourceRevision : 'invalid-format', releaseTag: RELEASE_TAG.test(options.releaseTag) ? options.releaseTag : 'invalid-format' });
     diagnostic.writeState = 'lock-write-may-have-started';
     const lock = writeCiAssetLock(options);
     process.stdout.write(`${JSON.stringify(lock, null, 2)}\n`);

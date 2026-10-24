@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-change-scope.outputs
     id: valid-change-range
     partition: change-range-input-present

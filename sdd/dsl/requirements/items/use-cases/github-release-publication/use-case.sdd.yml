@@ -17,11 +17,11 @@ preconditions:
   - publication requestとcallerが適用プロジェクトのdefault branchに配置され、callerがproviderのreusable publication workflowを固定revisionで参照している
 trigger: Release管理者が承認済みnotesを指定してpublication requestを実行する
 main_success_scenario:
-  - summary: publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する
-  - summary: default branchのcallerがrequest artifactとworkflow identityを検証してreusable publicationを呼び出す
-  - summary: publication workflowがsource、authority、設定、toolchainおよびquality証跡を検証する
-  - summary: projectが選択した実装でassetを生成・assembleし、handoffと公開直前のapprovalを再検証する
-  - summary: 検証済みtag、notesおよびassetをGitHub Releaseへ公開し、公開結果をreadbackする
+  - publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する
+  - default branchのcallerがrequest artifactとworkflow identityを検証してreusable publicationを呼び出す
+  - publication workflowがsource、authority、設定、toolchainおよびquality証跡を検証する
+  - projectが選択した実装でassetを生成・assembleし、handoffと公開直前のapprovalを再検証する
+  - 検証済みtag、notesおよびassetをGitHub Releaseへ公開し、公開結果をreadbackする
 success_outcomes:
   - approval、notes、source、workflow revision、assetおよびGitHub Releaseが同じrelease identityで一致する
   - 公開済みassetとreadback結果を後続監査で追跡できる
@@ -29,24 +29,14 @@ failure_outcomes:
   - identity、provenance、approval、quality、assetまたはreadbackの不一致時は未実行の公開処理を停止する
   - 部分公開または状態不明では自動上書きや自動再公開を行わず、観測済み状態を保持する
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-release-workflow
-  - requirement_ref:
-      requirement_id: ci-common-processing-action-reuse
+  - github-release-workflow
+  - ci-common-processing-action-reuse
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-release-publication-workflow.publication
-  - contract_ref:
-      contract_id: contract.ci-release-publication-control.outputs
-  - contract_ref:
-      contract_id: contract.ci-handoff-integrity.outputs
-  - contract_ref:
-      contract_id: contract.ci-publish-version.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-authority.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-publisher.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-assembly.outputs
-  - contract_ref:
-      contract_id: contract.ci-release-publication-verifier.outputs
+  - contract.ci-release-publication-workflow.publication
+  - contract.ci-release-publication-control.outputs
+  - contract.ci-handoff-integrity.outputs
+  - contract.ci-publish-version.outputs
+  - contract.ci-release-authority.outputs
+  - contract.ci-release-publisher.outputs
+  - contract.ci-release-assembly.outputs
+  - contract.ci-release-publication-verifier.outputs

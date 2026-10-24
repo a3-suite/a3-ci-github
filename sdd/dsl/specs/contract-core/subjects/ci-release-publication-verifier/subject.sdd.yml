@@ -6,10 +6,42 @@ subject:
 contracts:
   - id: contract.ci-release-publication-verifier.outputs
     summary: Release publication observation and verification request.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: release-inventory
+        meaning: "Precondition prepared by the case: Release inventory returned by the provider."
+      - name: credential
+        meaning: "Precondition prepared by the case: credential route available to the step."
+      - name: permission-metadata
+        meaning: "Precondition prepared by the case: permission metadata returned by the provider."
+      - name: credential-evidence
+        meaning: "Precondition prepared by the case: credential evidence context."
+      - name: assets
+        meaning: "Precondition prepared by the case: asset inventory returned by the provider."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: handoff-root
+        meaning: "Received by the contract target: handoff root directory path."
+      - name: observation-path
+        meaning: "Received by the contract target: path of the pre-publication observation file."
+      - name: receipt-path
+        meaning: "Received by the contract target: path of the publish receipt file."
+      - name: readback-path
+        meaning: "Received by the contract target: path of the readback file."
+      - name: remote-release
+        meaning: "Precondition prepared by the case: state of the remote Release."
+      - name: remote-inventory
+        meaning: "Precondition prepared by the case: remote Release inventory observed over time."
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
+      - name: evidence
+        meaning: "Precondition prepared by the case: independent readback evidence available to the verifier."
+      - name: remote-response
+        meaning: "Precondition prepared by the case: form of the provider responses."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Success only after the selected read-only verification completes.
@@ -34,16 +66,14 @@ contracts:
           - selector: release-output-id-binding
             meaning: Equality of emitted release-remote-identity with emitted publish-receipt.release_id.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
           - selector: checksum-observation-conflation-state
             meaning: Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.release-provider-requests
+        boundary: boundary.release-provider-requests
         fields:
           - selector: non-get-request-state
             meaning: Occurrence state of provider requests using a method other than GET during one invocation.
@@ -52,8 +82,7 @@ contracts:
           - selector: asset-inventory-attempts
             meaning: Maximum number of asset inventory observations in one readback sequence, represented as a decimal integer string; zero when none begins.
       - summary: Requested delays at the runner clock boundary.
-        boundary:
-          ref: boundary.observation-clock
+        boundary: boundary.observation-clock
         fields:
           - selector: release-reobservation-delay
             meaning: Canonical comma-separated distinct millisecond durations requested between successive Release inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.

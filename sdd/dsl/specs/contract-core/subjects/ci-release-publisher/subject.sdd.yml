@@ -6,10 +6,34 @@ subject:
 contracts:
   - id: contract.ci-release-publisher.outputs
     summary: Release publication write request from a validated handoff.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: provider
+        meaning: "Precondition prepared by the case: behaviour of the Release provider."
+      - name: credential
+        meaning: "Precondition prepared by the case: credential route available to the step."
+      - name: permission-metadata
+        meaning: "Precondition prepared by the case: permission metadata returned by the provider."
+      - name: default-branch
+        meaning: "Precondition prepared by the case: state of the default branch at publication."
+      - name: workflow-tree
+        meaning: "Precondition prepared by the case: availability of the workflow tree."
+      - name: repository-response
+        meaning: "Precondition prepared by the case: repository identity response returned by the provider."
+      - name: handoff
+        meaning: "Precondition prepared by the case: state of the release handoff."
+      - name: asset-inventory
+        meaning: "Precondition prepared by the case: asset inventory returned by the provider."
+      - name: invocation
+        meaning: "Received by the contract target: form in which the publisher is invoked."
+      - name: approval
+        meaning: "Precondition prepared by the case: state of the release approval."
+      - name: remote
+        meaning: "Precondition prepared by the case: state of the remote Release or tag."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: receipt-path
             meaning: Path of the publication receipt written by the publisher.
@@ -20,14 +44,12 @@ contracts:
           - selector: successful-output-state
             meaning: Successful evidence outputs are absent on failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Provider request and response trace observed across the publication boundary.
-        boundary:
-          ref: boundary.release-provider-requests
+        boundary: boundary.release-provider-requests
         fields:
           - selector: publication-write-retry
             meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.

@@ -4,10 +4,9 @@ requirements:
   - requirement_id: github-ci-project-lifecycle
     type: functional
     summary: 利用projectがa3-ci-githubのpresetを選択、適用、更新、検証および監査できる
-    rationale:
-      why: >-
-        workflowの実行時振る舞いだけでは、利用projectへの安全な導入、配布元との同一性、設定差分、
-        更新後の整合性を保証できず、projectごとに独自の導入手順が増えるため
+    rationale: >-
+      workflowの実行時振る舞いだけでは、利用projectへの安全な導入、配布元との同一性、設定差分、
+      更新後の整合性を保証できず、projectごとに独自の導入手順が増えるため
     subject:
       namespace: ci
       key: project-lifecycle

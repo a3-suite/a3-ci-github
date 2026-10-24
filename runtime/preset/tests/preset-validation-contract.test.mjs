@@ -55,12 +55,12 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
         writeFileSync(path.join(root, model.pinPath), stringify(changed));
         const before = snapshotTree(root);
         expect(validateCiPreset({ repoRoot: root, presets: ['release-request'] }).status).toBe('failed');
-        expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40) }))
+        expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }))
           .toThrow(/approved pin companion/);
         expect(snapshotTree(root)).toStrictEqual(before);
       }
       writeFileSync(path.join(root, model.pinPath), JSON.stringify(Object.fromEntries(Object.entries(document).reverse())));
-      expect(writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40) }).assets.some(entry => entry.path === model.pinPath)).toBe(true);
+      expect(writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }).assets.some(entry => entry.path === model.pinPath)).toBe(true);
     }));
     // integration_id: preset-asset-lock-contract
     // contract_id: contract.ci-preset-assurance.asset-lock
@@ -73,10 +73,12 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
       const lock = writeCiAssetLock({
         repoRoot: root,
         sourceRevision,
+        releaseTag: 'v0.9.0',
         generatedAt: '2026-09-17T00:41:59Z',
       });
       // Assert
       expect(lock.sourceRevision).toBe(sourceRevision);
+      expect(lock.releaseTag).toBe('v0.9.0');
       expect(lock.generatedAt).toBe('2026-09-17T00:41Z');
       expect(lock.assets.map((asset) => asset.path).sort()).toStrictEqual([...releaseRequestAssets.map((asset) => asset.destination), model.pinPath].sort());
       const pins = lock.assets.find((asset) => asset.path === model.pinPath);
@@ -104,6 +106,7 @@ describe("contract.ci-preset-assurance.verification", () => {
       writeCiAssetLock({
         repoRoot: root,
         sourceRevision: 'c'.repeat(40),
+        releaseTag: 'v0.9.0',
         generatedAt: '2026-09-17T00:41:59Z',
       });
       const before = snapshotTree(root);
@@ -128,6 +131,7 @@ describe("preset-validation-contract", () => {
       writeCiAssetLock({
         repoRoot: root,
         sourceRevision: 'c'.repeat(40),
+        releaseTag: 'v0.9.0',
         generatedAt: '2026-09-17T00:41:59Z',
       });
       const workflowPath = path.join(root, '.github/workflows/release-request-tag.yml');
@@ -189,6 +193,7 @@ describe("preset-validation-contract", () => {
       writeCiAssetLock({
         repoRoot: root,
         sourceRevision: 'c'.repeat(40),
+        releaseTag: 'v0.9.0',
         generatedAt: '2026-09-17T00:41:59Z',
       });
       const lockPath = path.join(root, '.ci/ci-assets.lock.json');
@@ -210,6 +215,8 @@ describe("preset-validation-contract", () => {
         [(value) => { value.kind = 'unsupported'; }, 'kind is unsupported'],
         [(value) => { value.sourceRevision = 42; }, 'full commit SHA'],
         [(value) => { value.sourceRevision = 'not-a-sha'; }, 'full commit SHA'],
+        [(value) => { delete value.releaseTag; }, 'exact vX.Y.Z tag'],
+        [(value) => { value.releaseTag = '0.9.0'; }, 'exact vX.Y.Z tag'],
         [(value) => { value.generatedAt = '2026-99-99T00:00Z'; }, 'valid UTC timestamp'],
         [(value) => { value.generatedAt = 'invalid'; }, 'valid UTC timestamp'],
         [(value) => { delete value.assets; }, 'integrity assets are missing'],
@@ -249,7 +256,13 @@ describe("preset-validation-contract", () => {
   describe("preset-asset-lock-contract", () => {
     // integration_id: preset-asset-lock-contract
     test('asset lock generation rejects a noncanonical source revision', () => withFixture((root) => {
-      expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'not-a-full-sha' })).toThrow(/sourceRevision must be a full commit SHA/);
+      expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'not-a-full-sha', releaseTag: 'v0.9.0' })).toThrow(/sourceRevision must be a full commit SHA/);
+      expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
+    }));
+
+    // integration_id: preset-asset-lock-contract
+    test.each(['', '0.9.0', 'v0.9', 'latest'])('asset lock generation rejects the release tag %j', (releaseTag) => withFixture((root) => {
+      expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag })).toThrow(/releaseTag must be an exact vX\.Y\.Z tag/);
       expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
     }));
   });
@@ -267,7 +280,7 @@ describe("preset-validation-contract", () => {
       const coverage = registry.presets.map((preset) => {
         const assets = [...preset.workflowAssets, ...(preset.optionalWorkflowAssets ?? [])];
         const installed = new Set(assets.map((asset) => asset.id));
-        if (['release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
+        if (['release-publication', 'asset-release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
         if (installed.has('package-publication-caller')) installed.add('package-preparation');
         const declared = new Set(registry.actionTargets
           .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
@@ -276,6 +289,7 @@ describe("preset-validation-contract", () => {
         for (const asset of assets) {
           let workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
           if (asset.id === 'release-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.releasePublicationReusableWorkflow.source), 'utf8');
+          if (asset.id === 'asset-release-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.assetReleasePublicationReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePublicationReusableWorkflow.source), 'utf8');
           if (['quality-gate', 'quality-gate-profiles'].includes(asset.id)) workflow += readFileSync(path.join(repositoryRoot, registry.qualityReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePreparationReusableWorkflow.source), 'utf8');

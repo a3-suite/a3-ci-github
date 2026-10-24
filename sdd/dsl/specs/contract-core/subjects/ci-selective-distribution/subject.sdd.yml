@@ -6,18 +6,23 @@ subject:
 contracts:
   - id: contract.ci-selective-distribution.selection
     summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: assets
+        meaning: "Received by the contract target: asset identifiers selected by the request."
     observations:
       - summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: selectedAssets
             meaning: Stable asset identities in the validated selection closure.
           - selector: diagnostic
             meaning: Stable rejection reason for an unknown or incomplete selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -46,10 +51,20 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.delivery
     summary: Selected files are published locally only after immutable source identity and file integrity validation.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: file-sha256
+        meaning: "Precondition prepared by the case: digest of a delivered file compared with the manifest."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
     observations:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: sourceRevision
             meaning: Full immutable source commit SHA.
@@ -58,8 +73,7 @@ contracts:
           - selector: diagnostic
             meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -94,10 +108,36 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.publication
     summary: Exact-tag distribution Release publication request.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: implementation-revision
+        meaning: "Received by the contract target: implementation revision bound by the registry."
+      - name: integration
+        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
+      - name: dispatch-ref
+        meaning: "Received by the contract target: ref that dispatched the publication."
+      - name: readback
+        meaning: "Precondition prepared by the case: content returned by the Release readback."
+      - name: main-tip-tree
+        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
+      - name: branch
+        meaning: "Received by the contract target: release branch name."
+      - name: implementation-release
+        meaning: "Precondition prepared by the case: presence of the implementation Release."
+      - name: connection-candidate
+        meaning: "Precondition prepared by the case: state of the approved connection candidate."
+      - name: execution-input-change
+        meaning: "Precondition prepared by the case: execution input changed after approval."
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: releaseTag
             meaning: Exact validated SemVer tag that owns the published assets.
@@ -110,7 +150,7 @@ contracts:
           - selector: acceptedDispatchRef
             meaning: Workflow ref of the release dispatch accepted for publication; absent when the dispatch is rejected before publication.
           - selector: implementationBindingStatus
-            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity and fixed-reference connections, otherwise unverified.
+            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity of the referenced Action directories and every runtime entry except the provider maintenance runtime that neither Actions nor canonical workflows execute, and fixed-reference connections, otherwise unverified.
           - selector: implementationBindingEvidence
             meaning: Evidence record of the implementation binding check.
           - selector: aliasSourceIntegration
@@ -118,8 +158,7 @@ contracts:
           - selector: diagnostic
             meaning: Stable failure evidence of the rejected publication.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -176,10 +215,28 @@ contracts:
           present: true
   - id: contract.ci-selective-distribution.plan
     summary: Distribution application planning request.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: presets
+        meaning: "Received by the contract target: preset identifiers selected by the request."
+      - name: assets
+        meaning: "Received by the contract target: asset identifiers selected by the request."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: settings
+        meaning: "Received by the contract target: workflow template settings passed with --set."
+      - name: destination
+        meaning: "Precondition prepared by the case: state of the consumer destination path."
+      - name: ownership
+        meaning: "Precondition prepared by the case: ownership recorded for the consumer destination."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
     observations:
       - summary: Plan result or rejection diagnostic returned by the distribution CLI.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: planDigest
             meaning: Digest of the approved distribution plan.
@@ -190,14 +247,12 @@ contracts:
           - selector: diagnostic
             meaning: Diagnostic exposed for rejected planning input.
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -234,24 +289,46 @@ contracts:
             - matched
   - id: contract.ci-selective-distribution.application
     summary: Approved distribution plan application request.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: plan
+        meaning: "Precondition prepared by the case: state of the approved plan file."
+      - name: approval
+        meaning: "Received by the contract target: approval digest passed for the plan."
+      - name: destination
+        meaning: "Precondition prepared by the case: state of the consumer destination path."
+      - name: ownership
+        meaning: "Precondition prepared by the case: ownership recorded for the consumer destination."
+      - name: destination-change
+        meaning: "Precondition prepared by the case: change made to a consumer destination outside the invocation."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
+      - name: rollback-io
+        meaning: "Precondition prepared by the case: availability of rollback file operations."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: transaction-state
+        meaning: "Precondition prepared by the case: state of the recorded application transaction."
+      - name: secondary-io
+        meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: transactionId
             meaning: Identity of the exclusive application transaction and its before state.
           - selector: diagnostic
             meaning: Stable rejection reason of the refused application.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: partial-apply-files-binding
             meaning: Equality of paths written earlier by the interrupted apply with their recorded before-state bytes and existence; the later independently changed destination is excluded.
@@ -300,22 +377,36 @@ contracts:
             - matched
   - id: contract.ci-selective-distribution.rollback
     summary: Restore a recorded transaction under verified restoration preconditions while retaining independent consumer changes.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: transaction
+        meaning: "Precondition prepared by the case: state of the recorded transaction to restore."
+      - name: destination-change
+        meaning: "Precondition prepared by the case: change made to a consumer destination outside the invocation."
+      - name: independent-state
+        meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer repository root passed to the CLI."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: transaction-state
+        meaning: "Precondition prepared by the case: state of the recorded application transaction."
+      - name: secondary-io
+        meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: rollbackStatus
             meaning: Explicit evidence that transaction changes were restored.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Atomic boundary comparisons used by this contract.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: rollback-files-binding
             meaning: Equality of transaction-owned paths with their recorded before-state bytes and existence after explicit rollback; independently changed paths are not part of this comparison.

@@ -4,10 +4,9 @@ requirements:
   - requirement_id: github-package-publication-workflow
     type: functional
     summary: GitHub Actions上で検証済みpackageを承認されたversionと公開先へ安全に公開できる
-    rationale:
-      why: >-
-        package生成、公開要求、credentialを使う公開処理を直接接続すると、未検証packageや異なるversionを
-        registryへ公開する危険があるため
+    rationale: >-
+      package生成、公開要求、credentialを使う公開処理を直接接続すると、未検証packageや異なるversionを
+      registryへ公開する危険があるため
     subject:
       namespace: ci
       key: package-publication-workflow

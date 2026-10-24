@@ -12,8 +12,6 @@ response_measure:
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合はRelease公開を成功扱いにしない
   - GitHub Releaseの5 assetをremote readbackし、準備済みbyteとの不一致または重複時はaliasを更新しない
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.publication
+  - contract.ci-selective-distribution.publication

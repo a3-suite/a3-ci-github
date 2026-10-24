@@ -6,10 +6,28 @@ subject:
 contracts:
   - id: contract.ci-quality-adapter.outputs
     summary: Quality adapter invocation with a standard bundle or trusted descriptor.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: standard-bundle-id
+        meaning: "Received by the contract target: standard bundle identifier passed by the caller."
+      - name: execution-scope
+        meaning: "Received by the contract target: execution scope passed by the caller."
+      - name: toolchain-version
+        meaning: "Received by the contract target: toolchain version passed by the caller."
+      - name: bundle-path
+        meaning: "Received by the contract target: adapter bundle descriptor path."
+      - name: failed-command
+        meaning: "Precondition prepared by the case: adapter command that fails."
+      - name: command-exit
+        meaning: "Precondition prepared by the case: exit status of the failing command."
+      - name: cargo-deny-version
+        meaning: "Received by the contract target: cargo-deny version passed by the caller."
+      - name: cargo-deny-config-path
+        meaning: "Received by the contract target: cargo-deny configuration path passed by the caller."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Aggregate quality adapter status.
@@ -44,13 +62,11 @@ contracts:
           - selector: not-run-aggregate-effect
             meaning: Change of the aggregate status caused by results whose status is not-run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
-      - boundary:
-          ref: boundary.workspace-files
+      - boundary: boundary.workspace-files
         fields:
           - selector: accepted-source-binding
             meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.

@@ -2,38 +2,38 @@ version: 1
 name: contract-package
 package_id: a3-ci-github-contracts
 subject_scopes:
-  - path: subjects/ci-quality-toolchain/
-  - path: subjects/ci-release-authority/
-  - path: subjects/ci-release-publisher/
-  - path: subjects/repository-action-distribution/
-  - path: subjects/ci-github-toolchain-verifier/
-  - path: subjects/ci-jq-provisioner/
-  - path: subjects/ci-gh-provisioner/
-  - path: subjects/ci-rust-source-gate/
-  - path: subjects/ci-rust-release-build/
-  - path: subjects/ci-change-scope/
-  - path: subjects/ci-config-snapshot/
-  - path: subjects/ci-platform-matrix/
-  - path: subjects/ci-handoff-integrity/
-  - path: subjects/ci-release-supplemental-asset/
-  - path: subjects/ci-release-assembly/
-  - path: subjects/ci-release-publication-verifier/
-  - path: subjects/ci-quality-summary/
-  - path: subjects/ci-annotated-tag-resolver/
-  - path: subjects/ci-release-request-handoff/
-  - path: subjects/ci-release-publication-control/
-  - path: subjects/ci-package-publication-request/
-  - path: subjects/ci-quality-adapter/
-  - path: subjects/ci-publish-version/
-  - path: subjects/ci-quality-workflow/
-  - path: subjects/ci-release-request-workflow/
-  - path: subjects/ci-release-publication-workflow/
-  - path: subjects/ci-package-publication-workflow/
-  - path: subjects/ci-selective-distribution/
-  - path: subjects/ci-preset-materialization/
-  - path: subjects/ci-preset-assurance/
-  - path: subjects/repository-managed-source-integrity/
-  - path: subjects/ci-failure-diagnostics/
+  - subjects/ci-quality-toolchain/
+  - subjects/ci-release-authority/
+  - subjects/ci-release-publisher/
+  - subjects/repository-action-distribution/
+  - subjects/ci-github-toolchain-verifier/
+  - subjects/ci-jq-provisioner/
+  - subjects/ci-gh-provisioner/
+  - subjects/ci-rust-source-gate/
+  - subjects/ci-rust-release-build/
+  - subjects/ci-change-scope/
+  - subjects/ci-config-snapshot/
+  - subjects/ci-platform-matrix/
+  - subjects/ci-handoff-integrity/
+  - subjects/ci-release-supplemental-asset/
+  - subjects/ci-release-assembly/
+  - subjects/ci-release-publication-verifier/
+  - subjects/ci-quality-summary/
+  - subjects/ci-annotated-tag-resolver/
+  - subjects/ci-release-request-handoff/
+  - subjects/ci-release-publication-control/
+  - subjects/ci-package-publication-request/
+  - subjects/ci-quality-adapter/
+  - subjects/ci-publish-version/
+  - subjects/ci-quality-workflow/
+  - subjects/ci-release-request-workflow/
+  - subjects/ci-release-publication-workflow/
+  - subjects/ci-package-publication-workflow/
+  - subjects/ci-selective-distribution/
+  - subjects/ci-preset-materialization/
+  - subjects/ci-preset-assurance/
+  - subjects/repository-managed-source-integrity/
+  - subjects/ci-failure-diagnostics/
 environment_ref:
   environment_id: a3-ci-github-github-environment
   path: environments/github-actions.sdd.yml

@@ -1,0 +1,79 @@
+name: release-publication-caller
+
+on:
+  workflow_run:
+    workflows:
+      - release-publication-request
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  validate-request:
+    runs-on: <versioned-runner>
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      request_run_id: ${{ steps.request.outputs['request-run-id'] }}
+    steps:
+      - name: Validate triggering workflow run
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
+        with:
+          operation: verify-trigger
+      - uses: actions/download-artifact@<commit-sha>
+        with:
+          name: release-publication-request
+          path: release-publication-request
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - id: request
+        name: Validate publication request identity
+        uses: a3-suite/a3-ci-github/actions/ci-release-publication-control@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
+        with:
+          operation: verify-publication-request
+          request-workflow-run-id: ${{ github.event.workflow_run.id }}
+          request-head-sha: ${{ github.event.workflow_run.head_sha }}
+
+  publish:
+    needs: validate-request
+    permissions:
+      actions: read
+      contents: write
+    uses: a3-suite/a3-ci-github/.github/workflows/ci-asset-release-publication.yml@<asset-release-publication-workflow-sha>
+    with:
+      runner: <versioned-runner>
+      jq-version: <optional-jq-version>
+      language-profile: <optional-language-profile>
+      toolchain-version: <optional-toolchain-version>
+      uv-version: <uv-version>
+      cargo-audit-version: <cargo-audit-version>
+      cargo-manifest-path: <cargo-manifest-path>
+      cargo-lock-path: <cargo-lock-path>
+      cargo-deny-version: <optional-cargo-deny-version>
+      cargo-deny-config-path: <optional-cargo-deny-config-path>
+      standard-bundle-id: <standard-bundle-id>
+      adapter-descriptor: <adapter-descriptor>
+      request_run_id: ${{ needs.validate-request.outputs.request_run_id }}
+      publication_request_run_id: ${{ github.event.workflow_run.id }}
+      supplemental_release_asset_enabled: <supplemental-release-asset-enabled>
+      supplemental_release_asset_owner_contract: <supplemental-release-asset-owner-contract>
+      release_skills_config_path: <release-skills-config-path>
+
+  summary:
+    needs: [validate-request, publish]
+    if: always()
+    runs-on: <versioned-runner>
+    permissions:
+      contents: read
+    steps:
+      - name: Write workflow summary
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
+        with:
+          summary-json: >-
+            {"jobs":[{"unit":"validate-request","execution":"trusted publication request validation","rawResult":"${{ needs.validate-request.result }}","applicable":true,"reason":"validate-request result: ${{ needs.validate-request.result }}"},{"unit":"publish","execution":"trusted release publication","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish result: ${{ needs.publish.result }}"}]}

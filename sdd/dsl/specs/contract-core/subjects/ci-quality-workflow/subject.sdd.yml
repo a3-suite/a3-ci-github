@@ -6,10 +6,16 @@ subject:
 contracts:
   - id: contract.ci-quality-workflow.execution
     summary: Canonical quality caller and reusable workflow definitions.
+    inputs:
+      - name: workflow-source
+        meaning: "Received by the contract target: workflow definition file read by repository verification."
+      - name: caller-source
+        meaning: "Received by the contract target: caller workflow definition file read by repository verification."
+      - name: job-result
+        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
     observations:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-        boundary:
-          ref: boundary.workflow-definition
+        boundary: boundary.workflow-definition
         fields:
           - selector: reusable-binding
             meaning: Declared caller-to-callee binding.
@@ -54,8 +60,7 @@ contracts:
           - selector: quality-untrusted-cargo-cache-use
             meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

@@ -4,10 +4,9 @@ requirements:
   - requirement_id: github-release-workflow
     type: functional
     summary: GitHub Actions上でRelease要求の固定から承認済み資材の公開までを分離して安全に実行できる
-    rationale:
-      why: >-
-        tag検出、release notesの承認、資材生成、公開権限を単一の暗黙経路へまとめると、未承認入力や
-        異なるsourceを公開する危険があり、失敗時の状態も判別しにくくなるため
+    rationale: >-
+      tag検出、release notesの承認、資材生成、公開権限を単一の暗黙経路へまとめると、未承認入力や
+      異なるsourceを公開する危険があり、失敗時の状態も判別しにくくなるため
     subject:
       namespace: ci
       key: release-workflow
@@ -19,3 +18,4 @@ requirements:
       - build、assemble、publishの各責務は検証済みhandoffで接続し、write権限を持つ処理は未検証入力を使用しない
       - 公開後はrelease identityと公開結果をreadbackし、不一致または状態不明を成功扱いしない
       - request、承認、identity、source、assetまたは公開結果の不一致時は後続の公開を停止する
+      - 製品のbuildを持たないprojectも、同じ承認・source固定・readbackの経路で、公開宣言したスキルZIPとproject固有の補助assetの少なくとも一方を公開でき、公開するassetが無い選択は公開前に停止する

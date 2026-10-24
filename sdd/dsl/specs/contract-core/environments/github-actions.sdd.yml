@@ -4,40 +4,28 @@ environment_id: a3-ci-github-github-environment
 boundaries:
   - id: boundary.action-caller
     summary: Action metadata files that declare the inputs a caller can pass.
-    kind: file-tree
   - id: boundary.action-output
     summary: GitHub Actions outputs and step result exposed by an Action.
-    kind: operation-response
   - id: boundary.runner-path
     summary: Command search path inherited by later steps in the same job.
-    kind: data-store
   - id: boundary.workspace-files
     summary: Files read or written in the checked-out workspace.
-    kind: file-tree
   - id: boundary.script-result
     summary: Exit status and generated state exposed by a shared script to its caller.
-    kind: operation-response
   - id: boundary.repository-gate-result
     summary: Repository consistency result exposed by a maintenance gate.
-    kind: operation-response
   - id: boundary.workflow-definition
     summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-    kind: file-tree
   - id: boundary.project-ci-assets
     summary: Canonical and project-owned CI assets materialized into a consumer project.
-    kind: file-tree
   - id: boundary.cli-result
     summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-    kind: operation-response
   - id: boundary.diagnostic-result
     summary: Failure status, classified reason, correlation identity, and evidence reference exposed by CI processing.
-    kind: operation-response
   - id: boundary.release-provider-requests
     summary: GitHub Release provider requests and responses observed during publication or independent verification.
-    kind: external-system
   - id: boundary.observation-clock
     summary: Reobservation delays requested from the runner clock.
-    kind: external-system
 runtime_contexts:
   - id: runtime-context.failure-diagnostic-required
     summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
@@ -49,10 +37,18 @@ runtime_contexts:
     summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files.
   - id: runtime-context.supplemental-phase-valid
     summary: The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints. Selected native targets are Linux, macOS or Windows; Windows installer execution runs on Windows PowerShell 5.1 or later, and a shared wrapper targets Linux and macOS only.
+  - id: runtime-context.supplemental-asset-release-valid
+    summary: Authority and snapshot record an asset release; the owner adapter runs the assemble phase with empty standard and supplemental build roots, keeps them unchanged, exits zero and creates a new nonempty output directory.
+  - id: runtime-context.supplemental-asset-release-invalid
+    summary: An asset release supplies a nonempty build root, selects a platform phase or the standard installer, or mixes platform values between authority and snapshot.
   - id: runtime-context.supplemental-phase-invalid
     summary: Phase inputs, snapshot, owner selection, checkout or output destination are invalid, a standard-installer declaration violates installer owner public entry naming constraints, the owner fails or produces no nonempty output, or read-only inputs change. A selected native target or installer shell can also be unsupported.
   - id: runtime-context.release-assembly-valid
     summary: Authority, snapshot, platform selection, exact build asset/checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed. Selected public skills satisfy ci-github.release-skills-contract and bind to the same Release source and version.
+  - id: runtime-context.release-asset-only-assembly-valid
+    summary: Authority records an asset release without language profile, toolchain or platform manifest bindings; no build inventory is supplied; and the selected public skills, the selected supplemental asset evidence, or both bind to the same Release source and version with an unclaimed output destination.
+  - id: runtime-context.release-asset-only-assembly-empty
+    summary: Authority records an asset release without platform bindings, and neither public skills nor a supplemental asset is selected, so no Release asset exists to assemble.
   - id: runtime-context.release-assembly-invalid
     summary: Assembly input is unavailable, unsafe, inconsistent with authority or platform selection, has extra or mismatching assets/checksums or supplemental bindings, or the output destination already exists. Selected public skills can also violate fixed source, required inventory, safe paths or publication name constraints.
   - id: runtime-context.release-pre-observation-valid
@@ -161,6 +157,8 @@ runtime_contexts:
     summary: Inputs are missing or mismatched, approval is expired, source moves, inventory is unknown, a Release already exists, or create/upload/finalize/readback fails.
   - id: runtime-context.release-authority-valid
     summary: Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with the target repository identity.
+  - id: runtime-context.release-authority-asset-only-valid
+    summary: The same owner decision, request runs, approved notes, fixed tag/source and owner receiving workflow agree, and the trusted snapshot selects the asset release implementation without language profile, toolchain or platform manifest.
   - id: runtime-context.release-authority-invalid
     summary: Decision or provenance is missing, legacy-only, changed or expired; tag/source, owner receiving workflow, snapshot or provider state is inconsistent or unknown.
   - id: runtime-context.standard-installer-evidence-valid
