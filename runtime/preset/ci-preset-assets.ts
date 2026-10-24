@@ -225,10 +225,11 @@ export const selectPresets = (
   const sources = new Map<string, string>();
   for (const asset of selected.flatMap((preset) => preset.workflowAssets)) {
     const source = sources.get(asset.destination);
-    if (source !== undefined && source !== asset.source) add(report.mismatches, {
+    const canonical = canonicalSourcePath(asset.source);
+    if (source !== undefined && source !== canonical) add(report.mismatches, {
       path: asset.destination, message: 'selected presets install different workflows at the same destination',
     });
-    sources.set(asset.destination, asset.source);
+    sources.set(asset.destination, canonical);
   }
   if (selected.length === 0) add(report.missingSettings, {
     path: '.github/workflows',
