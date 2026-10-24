@@ -234,6 +234,30 @@ describe("contract.ci-selective-distribution.application", () => {
       });
     });
     // contract_id: contract.ci-selective-distribution.application
+    test('owned callers sharing a destination with an unfetched exclusive preset are planned from their own prior template', async () => {
+      await withFixture('distribution-shared-destination-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const destination = '.github/workflows/release-publication-caller.yml';
+        expect(release.manifest.assets.filter((asset) => asset.files.some((entry) => entry.destination === destination))
+          .map((asset) => asset.id)).toEqual(expect.arrayContaining(['workflow.asset-release-publication-caller', 'workflow.release-publication-caller']));
+        const selection = { requestedPresets: ['release-publication'], requestedAssets: [] };
+        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const options = { projectRoot, sourceRevision, ...selection };
+        const plan = planDistributionApplication(options);
+        applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        fs.writeFileSync(path.join(projectRoot, '.ci/ci-assets.lock.json'), JSON.stringify({
+          schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
+          assets: plan.actions.map((entry) => ({ path: entry.destination, appliedSha256: entry.generatedSha256 })) }));
+        const replanned = planDistributionApplication(options);
+        expect(replanned.actions.find((entry) => entry.destination === destination)).toMatchObject(
+          { assetId: 'workflow.release-publication-caller', action: 'reuse' });
+        expect(replanned.actions.every((entry) => entry.action === 'reuse')).toBe(true);
+      });
+    });
+    // contract_id: contract.ci-selective-distribution.application
     test('missing prior distributions are classified without treating old schemas as current', async () => {
       await withFixture('distribution-prior-migration-', async (root) => {
         const release = prepareRelease(root);
