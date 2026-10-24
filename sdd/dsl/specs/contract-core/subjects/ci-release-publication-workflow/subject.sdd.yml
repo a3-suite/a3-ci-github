@@ -33,6 +33,8 @@ contracts:
             meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
           - selector: release-control-head-verified
             meaning: Declared order of control checkout and immediate HEAD verification.
+          - selector: release-build-committed-line-endings
+            meaning: Declared order of disabling core.autocrlf and the platform build source checkout.
           - selector: release-handoff-before-publication
             meaning: Declared order of handoff validation and credential-bearing publication.
           - selector: release-publication-before-readback
@@ -127,6 +129,13 @@ contracts:
           field: release-control-head-verified
           in:
             - checkout-before-verification
+      - id: release-build-committed-line-endings
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-build-committed-line-endings
+          in:
+            - autocrlf-disabled-before-checkout
       - id: release-handoff-before-publication
         applies_to:
           - ci-release-publication-workflow-canonical-source-available

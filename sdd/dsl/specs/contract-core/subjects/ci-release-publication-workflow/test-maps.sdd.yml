@@ -21,6 +21,10 @@ test_maps:
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
         guarantees:
           - ci-release-publication-workflow-success-observed
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > platform builds check out the committed line endings on every runner
+        guarantees:
+          - release-build-committed-line-endings
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: .ci/platforms.yml"
         guarantees:

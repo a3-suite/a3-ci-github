@@ -92,8 +92,8 @@ actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.9.0
-    exactRef: "77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633"
+    releaseTag: v0.9.1
+    exactRef: "1a81798fae68780bb25d6208e0d2963d290cdbe8"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available

@@ -446,6 +446,21 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: release-publication-workflow-contract
+    test('platform builds check out the committed line endings on every runner', () => {
+      // Arrange
+      const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
+      const { steps } = jobs.build;
+      // Act
+      const disable = steps.findIndex(step => step.run?.trim() === 'git config --global core.autocrlf false');
+      const checkout = steps.findIndex(step => step.uses?.startsWith('actions/checkout@'));
+      // Assert
+      expect(jobs.build['runs-on']).toBe('${{ matrix.runner }}');
+      expect(disable).toBe(0);
+      expect(checkout).toBe(1);
+      expect(steps[checkout].with.ref).toBe('${{ needs.authority.outputs.source_sha }}');
+    });
+
+    // integration_id: release-publication-workflow-contract
     test('release publication runs after successful assembly even when supplemental-asset is skipped', () => {
       // Arrange
       const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
