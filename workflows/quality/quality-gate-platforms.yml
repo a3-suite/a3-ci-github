@@ -43,6 +43,6 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1a81798fae68780bb25d6208e0d2963d290cdbe8
         with:
           summary-json: '{"jobs":[{"unit":"platforms","execution":"fixed reusable platform quality workflow","rawResult":"${{ needs.platforms.result }}","applicable":true,"reason":"reusable platform workflow result: ${{ needs.platforms.result }}"}]}'
