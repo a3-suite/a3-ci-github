@@ -581,8 +581,12 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
         let previous = { values: {}, extensions: {} };
         if (destinationSha256 !== null && priorAssets.has(file.destination)) {
           const previousDistribution = loadFetchedDistribution(projectRoot, priorLock.sourceRevision);
-          const previousAsset = previousDistribution.manifest.assets.flatMap((asset) => asset.files)
-            .find((entry) => entry.destination === file.destination);
+          // Exclusive presets may share a destination, so only a fetched source of the same asset (or the sole fetched one) is the prior template.
+          const fetchedCandidates = previousDistribution.manifest.assets
+            .flatMap((candidate) => candidate.files.map((entry) => ({ assetId: candidate.id, entry })))
+            .filter(({ entry }) => entry.destination === file.destination && previousDistribution.receipt.files.includes(entry.sourcePath));
+          const previousAsset = (fetchedCandidates.find(({ assetId }) => assetId === asset.id)
+            ?? (fetchedCandidates.length === 1 ? fetchedCandidates[0] : undefined))?.entry;
           if (!previousAsset) throw new DistributionError(`distribution-template-prior-source-missing:${file.destination}`);
           try {
             previous = templateRuntime.readWorkflowSettings({
