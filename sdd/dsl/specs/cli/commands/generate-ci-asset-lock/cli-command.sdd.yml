@@ -16,6 +16,8 @@ command:
           presence: optional
         - option_id: source-revision
           presence: required
+        - option_id: release-tag
+          presence: required
   option_groups:
     - id: inputs
       title: Lock generation inputs
@@ -23,5 +25,6 @@ command:
         - repo-root
         - skill-collection-root
         - source-revision
+        - release-tag
   usage:
-    - tsx runtime/preset/generate-ci-asset-lock.ts [--repo-root <PATH>] [--skill-collection-root <PATH>] --source-revision <SHA>
+    - tsx runtime/preset/generate-ci-asset-lock.ts [--repo-root <PATH>] [--skill-collection-root <PATH>] --source-revision <SHA> --release-tag <TAG>

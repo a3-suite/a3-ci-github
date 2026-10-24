@@ -220,7 +220,7 @@ Release は `tag-preparation + manual-publication` を一つの標準 flow と�
 6. 生成済みcallerの設定と固定参照を読み返す。calleeのSHAはmanifestの固定参照から、外部Action pinはregistryから自動設定される。consumerが外部provider Actionを直接使う場合だけ、provider CLIのplanがregistryの完全な射影であるpin companionを生成し、許可された作業範囲で差分を確認後にapplyが配置する。companionもcallerと同じ所有権確認・rollbackの対象とし、独自編集しない。job・step・permissions・trust境界・summary経路は直接変更しない。
 7. workflow初期パラメータは手順2の`--set`で確定した生成結果を確認し、必要なVariables、Secrets、実行ごとのworkflow inputを上表の場所に設定する。quality-gate は base の `.ci/ci-assets.lock.json` を採用済み marker とし、workflow 側の flag 設定はない。
 8. 上記テンプレートに基づき `.ci/README.md` を作成または更新し、採用 preset / flow、差分または差分なし、差分がある場合は標準で成立しない理由、owner、正本への導線、検証導線、更新・撤去条件を記録する。
-9. 配布元 revision の full commit SHA を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。生成日時はUTCの分単位に正規化され、版識別には使わない。
+9. 配布元 revision の full commit SHA と Release tag を確認し、`{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts` で `.ci/ci-assets.lock.json` を生成する。導入した版は lock の `releaseTag` で確認でき、`.ci/README.md` には記載しない。生成日時はUTCの分単位に正規化され、版識別には使わない。
 10. CI向けa3-lintルールとactionlintで単一workflowの一般規則を検証する。actionlint 設定は `.github/actionlint.yaml`（project-owned、内容非固定）を registry の `provider.staticValidation` に従って扱う。
 11. `references/validate-ci-preset.guide.md` に従い、canonical workflowとの構造照合と配布同一性を含むpreflightを実行する。
 12. 選択した経路で必要な project-owned adapter と project の契約テストを作業 tree で先に成立させる。導入先では手順2で取得・検証した exact Release の full commit SHA を固定し、lock、preflight、契約テストを確認する。calleeの固定参照は検証済みmanifestから解決する。生成・配置の成功だけで導入先の環境受入を完了扱いにしない。hosted 証拠は前述の default branch 制約に従い、既存の非公開・非書込み検証経路または隔離 staging repository で取得できる範囲だけを記録する。

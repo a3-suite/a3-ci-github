@@ -67,10 +67,11 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
   "$ci_github_local_runtime/node_modules/.bin/tsx" \
   "{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts" \
   --repo-root "{project-root}" \
-  --source-revision "{distribution-full-commit-sha}"
+  --source-revision "{distribution-full-commit-sha}" \
+  --release-tag "{distribution-release-tag}"
 ```
 
-`--source-revision`は配布元の40桁commit SHAとする。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
+`--source-revision`は配布元の40桁commit SHA、`--release-tag`は同じ配布物のexact Release tag（`vX.Y.Z`）とする。generatorは配布物のmanifestと両方が一致しない場合に停止する。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
 
 lock生成が必要な場合はその成功を確認してから、preflightを実行する。
 

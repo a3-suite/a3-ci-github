@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { FULL_SHA, minuteTimestamp } from './ci-asset-lock.ts';
+import { FULL_SHA, minuteTimestamp, RELEASE_TAG } from './ci-asset-lock.ts';
 import { SKILL_ROOT, parseYaml } from './preset-registry.ts';
 import { add } from './validation-report.ts';
 import { canonicalSourcePath, inactiveConditionalEntrypoints, resolveQualityWorkflow, resolvePublicationWorkflow } from './ci-preset-assets.ts';
@@ -334,6 +334,13 @@ const validateAssetLock = (
     add(report.mismatches, {
       path: `${registry.assetLock.path}:sourceRevision`,
       message: 'sourceRevision must be a full commit SHA',
+      settingLocation: registry.assetLock.path,
+    });
+  }
+  if (typeof lock.releaseTag !== 'string' || !RELEASE_TAG.test(lock.releaseTag)) {
+    add(report.mismatches, {
+      path: `${registry.assetLock.path}:releaseTag`,
+      message: 'releaseTag must be the exact vX.Y.Z tag of the applied Release',
       settingLocation: registry.assetLock.path,
     });
   }

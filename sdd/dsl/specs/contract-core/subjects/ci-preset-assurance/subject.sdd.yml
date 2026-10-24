@@ -144,6 +144,10 @@ contracts:
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: source-revision
         meaning: "Received by the contract target: source revision identifier."
+      - name: release-tag
+        meaning: "Received by the contract target: Release tag of the distribution that generates the lock."
+      - name: distribution-release
+        meaning: "Precondition prepared by the case: Release tag named by the fetched distribution manifest beside the generator."
       - name: preset
         meaning: "Received by the contract target: preset identifier selected for validation."
       - name: consumer-assets
@@ -154,12 +158,16 @@ contracts:
         fields:
           - selector: sourceRevision
             meaning: Full immutable distribution commit SHA.
+          - selector: releaseTag
+            meaning: Exact vX.Y.Z Release tag of the distribution that generated the lock.
           - selector: generatedAt
             meaning: Minute-normalized observation timestamp that is not used as version identity.
           - selector: assets
             meaning: Canonical and applied SHA-256 identity for every managed asset.
           - selector: requested-source-comparison
             meaning: Comparison of lock sourceRevision with the requested full source revision.
+          - selector: requested-release-comparison
+            meaning: Comparison of lock releaseTag with the requested Release tag.
           - selector: canonical-digest-comparison
             meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
           - selector: applied-digest-comparison
@@ -186,6 +194,12 @@ contracts:
         claim:
           field: sourceRevision
           present: true
+      - id: ci-preset-assurance-lock-release-bound
+        applies_to:
+          - ci-preset-assurance-lock-input-valid
+        claim:
+          field: releaseTag
+          present: true
       - id: ci-preset-assurance-lock-assets-recorded
         applies_to:
           - ci-preset-assurance-lock-input-valid
@@ -209,6 +223,13 @@ contracts:
           - runtime-context.ci-preset-assurance-canonical-lock-input
         claim:
           field: requested-source-comparison
+          in:
+            - equal
+      - id: lock-release-equals-request
+        applies_to:
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        claim:
+          field: requested-release-comparison
           in:
             - equal
       - id: lock-canonical-digests-match

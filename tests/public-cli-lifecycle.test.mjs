@@ -77,6 +77,7 @@ const generateAssetLock = (consumerRoot, skillArguments) => execute(tsxPath, [
   '--repo-root', consumerRoot,
   ...skillArguments,
   '--source-revision', 'c'.repeat(40),
+  '--release-tag', 'v0.9.0',
 ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
 
 describe('contract.repository-action-distribution.integrity', () => {
@@ -332,7 +333,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         // Act
         const invalidRevision = execute(tsxPath, [
           path.join(repositoryRoot, 'runtime/preset/generate-ci-asset-lock.ts'),
-          '--repo-root', consumerRoot, ...skillArguments, '--source-revision', '/private/secret-revision',
+          '--repo-root', consumerRoot, ...skillArguments, '--source-revision', '/private/secret-revision', '--release-tag', 'v0.9.0',
         ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
         // Assert
         expect(invalidRevision.status).toBe(2);
@@ -361,6 +362,7 @@ describe("contract.ci-preset-assurance.verification", () => {
           '--repo-root', consumerRoot,
           '--skill-collection-root', skillCollectionRoot,
           '--source-revision', 'c'.repeat(40),
+          '--release-tag', 'v0.9.0',
         ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
         expect(lockResult.status, lockResult.stderr).toBe(0);
         prepareBootstrapRuntime(consumerRoot);
