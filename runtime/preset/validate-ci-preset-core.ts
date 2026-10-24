@@ -27,7 +27,7 @@ const validateCiPresetInternal = (options: {
   const actionByPath = new Map(registry.actionTargets.map((target) =>
     [`${registry.actionRepository}/${target.actionPath}`, target]));
   const requested = [...new Set(options.presets ?? [])];
-  const selected = selectPresets(root, definitions, requested, report);
+  const selected = selectPresets(root, definitions, requested, report, registry);
   report.inspectedPresets = selected.map((preset) => preset.id);
   report.excludedPresets = definitions.map((preset) => preset.id)
     .filter((id) => !report.inspectedPresets.includes(id));

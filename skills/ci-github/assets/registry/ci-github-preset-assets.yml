@@ -41,7 +41,7 @@ distribution:
 conformance:
   comparison: canonical-yaml-structure
   configurableValues: canonical-placeholders
-  emptyAllowedPlaceholders: [optional-jq-version, uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, optional-cargo-deny-version, optional-cargo-deny-config-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor]
+  emptyAllowedPlaceholders: [optional-jq-version, uv-version, cargo-audit-version, cargo-manifest-path, cargo-lock-path, optional-cargo-deny-version, optional-cargo-deny-config-path, release-binary-name, release-asset-prefix, standard-bundle-id, adapter-descriptor, optional-language-profile, optional-toolchain-version]
   listPlaceholderRule: placeholder だけで構成する list は一つ以上の非空 project 値へ置換できる。
   workflowTriggerExtensions:
     quality-gate:
@@ -68,6 +68,10 @@ releasePublicationReusableWorkflow:
   source: .github/workflows/ci-release-publication.yml
   referencePlaceholder: <release-publication-workflow-sha>
 
+assetReleasePublicationReusableWorkflow:
+  source: .github/workflows/ci-asset-release-publication.yml
+  referencePlaceholder: <asset-release-publication-workflow-sha>
+
 packagePublicationReusableWorkflow:
   source: .github/workflows/ci-package-publication.yml
   referencePlaceholder: <package-publication-workflow-sha>
@@ -88,8 +92,8 @@ actionization:
   implementationSource:
     contract: action.yml
     repository: a3-suite/a3-ci-github
-    releaseTag: v0.8.0
-    exactRef: "1c7f2d610441d952004b6d96c7c8aad2d2242920"
+    releaseTag: v0.9.0
+    exactRef: "03984aed00a3ba5e76285440d89196c092da4046"
     runtimeDependencyInCopiedProject: false
   availabilityGate:
     status: available
@@ -115,9 +119,9 @@ actionization:
     - id: ci-jq-provisioner
       status: available
       actionPath: actions/ci-jq-provisioner
-      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, asset-release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-jq-provisioning
     - id: ci-gh-provisioner
@@ -131,9 +135,9 @@ actionization:
     - id: ci-github-toolchain-verifier
       status: available
       actionPath: actions/ci-github-toolchain-verifier
-      workflows: [quality-gate, quality-gate-profiles, release-publication, package-publication]
+      workflows: [quality-gate, quality-gate-profiles, release-publication, asset-release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#commonContract
       providerMapping: exact-tool-version-verification
     - id: ci-rust-source-gate
@@ -155,7 +159,7 @@ actionization:
     - id: ci-quality-summary
       status: available
       actionPath: actions/ci-quality-summary
-      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-request-tag, release-publication-request, release-publication-caller, release-publication, asset-release-publication-caller, asset-release-publication, package-preparation, package-publication, package-publication-request, package-publication-caller]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts.output
@@ -163,7 +167,7 @@ actionization:
     - id: ci-config-snapshot
       status: available
       actionPath: actions/ci-config-snapshot
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#commonContract
@@ -179,9 +183,9 @@ actionization:
     - id: ci-handoff-integrity
       status: available
       actionPath: actions/ci-handoff-integrity
-      workflows: [release-publication, package-publication]
+      workflows: [release-publication, asset-release-publication, package-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish, package-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish, package-publication/publish]
       ciContract: ci.script-contracts#contracts.handoff-integrity-scripts
       providerMapping: artifact-handoff-verification
     - id: ci-publish-version
@@ -219,7 +223,7 @@ actionization:
     - id: ci-quality-toolchain
       status: available
       actionPath: actions/ci-quality-toolchain
-      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -227,7 +231,7 @@ actionization:
     - id: ci-quality-adapter
       status: available
       actionPath: actions/ci-quality-adapter
-      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication]
+      workflows: [quality-gate, quality-gate-profiles, quality-gate-platforms, release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.quality-scripts
@@ -235,15 +239,15 @@ actionization:
     - id: ci-release-publication-control
       status: available
       actionPath: actions/ci-release-publication-control
-      workflows: [release-publication-request, release-publication-caller, release-publication]
+      workflows: [release-publication-request, release-publication-caller, release-publication, asset-release-publication-caller, asset-release-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-publication-request-and-provenance-control
     - id: ci-release-supplemental-asset
       status: available
       actionPath: actions/ci-release-supplemental-asset
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.release-supplemental-asset-build-scripts
@@ -251,7 +255,7 @@ actionization:
     - id: ci-release-assembly
       status: available
       actionPath: actions/ci-release-assembly
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.release-assembly-scripts
@@ -259,15 +263,15 @@ actionization:
     - id: ci-release-publication-verifier
       status: available
       actionPath: actions/ci-release-publication-verifier
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: read-only
-      privilegedJobs: [release-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: release-observation-receipt-and-readback-verification
     - id: ci-release-authority
       status: available
       actionPath: actions/ci-release-authority
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: read-only
       privilegedJobs: []
       ciContract: ci.script-contracts#contracts.release-authority-scripts
@@ -275,9 +279,9 @@ actionization:
     - id: ci-release-publisher
       status: available
       actionPath: actions/ci-release-publisher
-      workflows: [release-publication]
+      workflows: [release-publication, asset-release-publication]
       trust: bounded-release-write
-      privilegedJobs: [release-publication/publish]
+      privilegedJobs: [release-publication/publish, asset-release-publication/publish]
       ciContract: ci.script-contracts#contracts.release-publication-scripts
       providerMapping: github-release-create-upload-finalize
     - id: ci-package-publication-request
@@ -406,6 +410,25 @@ registry:
         source: actionization.standardImplementations
         selectionEnv: CI_RELEASE_IMPLEMENTATION
         requiredBindings: [release-authority-control, release-source-gate-adapter, release-build-adapter, release-assembly-control, release-publication-adapter]
+      qualityAdapter:
+        source: ci.adapter-bundles
+        selection: standard-or-owner
+    # Same caller destination as release-publication: the authority admits only that caller path, so the two presets are exclusive.
+    - id: asset-release-publication
+      workflowAssets:
+        - id: release-publication-request
+          source: workflows/release/release-publication-request.yml
+          destination: .github/workflows/release-publication-request.yml
+        - id: asset-release-publication-caller
+          source: workflows/release/asset-release-publication-caller.yml
+          destination: .github/workflows/release-publication-caller.yml
+      assets:
+        copyable: []
+        requiredExtensions: []
+        conditionalExtensions:
+          - id: release-supplemental-asset-adapter
+            workflowAsset: asset-release-publication-caller
+            selectorPath: jobs.publish.with.supplemental_release_asset_enabled
       qualityAdapter:
         source: ci.adapter-bundles
         selection: standard-or-owner

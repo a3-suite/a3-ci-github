@@ -34,7 +34,7 @@ commonInput:
     requiredWhen: quality-gate
     meaning: quality-gate が実行する adapter bundle の識別子。
   - id: config-snapshot
-    requiredWhen: release-publication
+    requiredWhen: [release-publication, asset-release-publication]
     meaning: 解決済み設定、解決元、digest。
 commonOutput:
   - id: status
@@ -46,7 +46,7 @@ commonOutput:
   - id: identity-bindings
     meaning: source、request、artifact、remote resource の結合。
   - id: config-snapshot
-    providedWhen: [release-publication]
+    providedWhen: [release-publication, asset-release-publication]
     meaning: 入力と同じ解決済み設定の保存値。
 globalStopConditions:
   - 未設定、型不一致、許可されない値、未結合の identity は既定値で補完しない。
@@ -117,6 +117,33 @@ presets:
       - publish job が操作対象 source、source dependency、source 由来 script を実行する。
       - tag、source、version、platform、asset、checksum、本文、remote 状態が一致しない。
       - 補助 asset が未選択なのに handoff が渡される、または選択済みなのに adapter、handoff、owner 証跡が欠落・不一致となる。
+      - 既存 Release / asset の上書き、状態不明、承認期限切れが発生する。
+  - id: asset-release-publication
+    supplementalAssetContract: ci.release-asset-publication-contract#supplementalAsset
+    meaning: 製品の build を持たない project が、公開スキルと owner 選択の補助 asset だけを Release へ公開する。release-publication と同じ caller 配置先を使うため併用しない。
+    input:
+      - 検証済み request handoff
+      - trusted control の識別・版と config_snapshot
+      - 承認済み release body の handoff と digest
+      - Release target identity と非上書き policy
+      - 公開操作に用いる credential route
+      - 公開スキル宣言と補助 asset 選択の少なくとも一方
+    optionalInput:
+      - language_profile、toolchain、quality adapter descriptor（指定時だけ quality を実行する）
+      - 補助 asset の owner 契約 ID と owner adapter
+    internalStages: [authority-context, assemble]
+    optionalInternalStages: [quality, supplemental-asset-build]
+    output:
+      - authority context（source、version、承認、補助 asset 選択、owner 契約 ID、config の固定 snapshot。profile、platform、toolchain は持たない）
+      - draft と final Release の remote identity
+      - Release tag、source SHA、version、公開スキル、選択済み補助 asset、checksum の結合
+      - publish 前後の readback evidence と保存済み release body
+    stopConditions:
+      - 公開スキルと補助 asset のどちらも選択されていない。
+      - 製品 build の入力、platform、toolchain の値が渡される。
+      - authority context と source handoff を別入力として検証できない。
+      - publish job が操作対象 source、source dependency、source 由来 script を実行する。
+      - tag、source、version、asset、checksum、本文、remote 状態が一致しない。
       - 既存 Release / asset の上書き、状態不明、承認期限切れが発生する。
   - id: package-publication
     input:

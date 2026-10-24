@@ -267,7 +267,7 @@ describe("preset-validation-contract", () => {
       const coverage = registry.presets.map((preset) => {
         const assets = [...preset.workflowAssets, ...(preset.optionalWorkflowAssets ?? [])];
         const installed = new Set(assets.map((asset) => asset.id));
-        if (['release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
+        if (['release-publication', 'asset-release-publication', 'package-publication'].includes(preset.id)) installed.add(preset.id);
         if (installed.has('package-publication-caller')) installed.add('package-preparation');
         const declared = new Set(registry.actionTargets
           .filter((target) => target.workflows.some((workflow) => installed.has(workflow)))
@@ -276,6 +276,7 @@ describe("preset-validation-contract", () => {
         for (const asset of assets) {
           let workflow = readFileSync(path.join(repositoryRoot, asset.source), 'utf8');
           if (asset.id === 'release-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.releasePublicationReusableWorkflow.source), 'utf8');
+          if (asset.id === 'asset-release-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.assetReleasePublicationReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePublicationReusableWorkflow.source), 'utf8');
           if (['quality-gate', 'quality-gate-profiles'].includes(asset.id)) workflow += readFileSync(path.join(repositoryRoot, registry.qualityReusableWorkflow.source), 'utf8');
           if (asset.id === 'package-publication-caller') workflow += readFileSync(path.join(repositoryRoot, registry.packagePreparationReusableWorkflow.source), 'utf8');

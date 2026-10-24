@@ -87,15 +87,15 @@ jobs:
           CONTROL_SHA: ${{ github.workflow_sha }}
         run: test "$(git rev-parse HEAD)" = "$CONTROL_SHA"
       - name: Provision fixed jq
-        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-jq-provisioner@03984aed00a3ba5e76285440d89196c092da4046
         with:
           jq-version: ${{ env.CI_JQ_VERSION }}
       - name: Provision fixed gh
-        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-gh-provisioner@03984aed00a3ba5e76285440d89196c092da4046
         with:
           gh-version: ${{ env.CI_GH_VERSION }}
       - name: Verify fixed GitHub tools
-        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-github-toolchain-verifier@03984aed00a3ba5e76285440d89196c092da4046
         with:
           mode: gh-jq
           gh-version: ${{ env.CI_GH_VERSION }}
@@ -108,7 +108,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.package_handoff_run_id }}
       - name: Validate package handoff integrity
-        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-handoff-integrity@03984aed00a3ba5e76285440d89196c092da4046
         with:
           handoff-root: package-handoff
           descriptor: handoff.json
@@ -133,7 +133,7 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@03984aed00a3ba5e76285440d89196c092da4046
         with:
           summary-json: >-
             {"jobs":[{"unit":"publish","execution":"registry remote readback","rawResult":"${{ needs.publish.result }}","applicable":true,"reason":"publish job result: ${{ needs.publish.result }}"}]}

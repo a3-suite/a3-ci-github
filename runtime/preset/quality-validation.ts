@@ -35,6 +35,9 @@ const validateQualityPreset = (
         || map(workflow.env).CI_ADAPTER_DESCRIPTOR !== undefined
         || map(workflow.env).CI_STANDARD_BUNDLE_ID !== undefined;
       if (!declared && installed.path !== primary?.destination) continue;
+      // A callee that declares the profile optional runs no quality job until the owner selects one.
+      const profileInput = map(map(map(map(workflow.on).workflow_call).inputs)['language-profile']);
+      if (profileInput.required === false && (map(workflow.env).CI_LANGUAGE_PROFILE ?? '') === '') continue;
       validateQualityWorkflow(context, installed.path, workflow);
     }
   }

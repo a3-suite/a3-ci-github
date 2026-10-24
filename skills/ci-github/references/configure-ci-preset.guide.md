@@ -399,7 +399,7 @@ owner の build／publication adapter は維持する。`pending-release` の間
 
 ### 共通 Release・Package 公開 workflow の参照
 
-Release・Package 公開 callee は consumer へコピーせず、caller の `jobs.publish.uses` から provider を固定参照する。固定参照と公開状態は preset registry の `releasePublicationReusableWorkflow`／`packagePublicationReusableWorkflow`、設定入力は provider の `workflow_call.inputs` を正本とする。設定はplanの`--set`で静的なowner値を渡し、生成されたcallerの`jobs.publish.with`と照合する。Releaseのrequest run IDとPackageの検証済みhandoff identity以外の設定を実行時リクエストから取得しない。`pending-release` の間は導入しない。
+Release・Package 公開 callee は consumer へコピーせず、caller の `jobs.publish.uses` から provider を固定参照する。固定参照と公開状態は preset registry の `releasePublicationReusableWorkflow`／`assetReleasePublicationReusableWorkflow`／`packagePublicationReusableWorkflow`、設定入力は provider の `workflow_call.inputs` を正本とする。設定はplanの`--set`で静的なowner値を渡し、生成されたcallerの`jobs.publish.with`と照合する。Releaseのrequest run IDとPackageの検証済みhandoff identity以外の設定を実行時リクエストから取得しない。`pending-release` の間は導入しない。
 
 旧構成からは既存 callee の設定を caller 入力へ移し、許可された作業範囲で plan の差分確認を経て caller を切り替える。旧 callee の削除は所有と参照がないことを確認して別途承認する。提供元 SHA と consumer の `github.workflow_sha` は別の値であり、control checkout は後者と `github.repository` を使用する。
 

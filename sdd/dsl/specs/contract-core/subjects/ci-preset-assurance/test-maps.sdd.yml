@@ -201,3 +201,10 @@ test_maps:
           - lock-source-equals-request
           - lock-canonical-digests-match
           - lock-applied-digests-match
+  - contract_id: contract.ci-preset-assurance.verification
+    case_id: asset-release-preset-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: contract.ci-preset-assurance.verification > asset-release-publication-preset > asset release preset owns its caller, validates the asset callee and excludes the release preset
+        guarantees:
+          - ci-preset-assurance-drift-fails

@@ -1,0 +1,40 @@
+version: 1
+name: use-case
+use_case_id: github-asset-release-publication
+summary: 資材だけのprojectの保守者が承認済みnotesとrequestから公開宣言したスキルとproject固有の資材をGitHub Releaseへ公開する
+actors:
+  - actor_id: asset-maintainer
+    kind: human
+    role: primary
+    summary: 実行プログラムを持たずスキル・指示ファイルなどの資材を配布するprojectで、release notesと公開対象を承認する主体
+  - actor_id: github-release-service
+    kind: external-system
+    role: secondary
+    summary: 検証済みtag、notesおよびassetをReleaseとして保持しreadbackを提供するGitHub
+goal: 製品のbuildを持たないprojectでも、承認、source、workflow identity、資材および公開結果を同じrelease identityへ拘束して公開する
+preconditions:
+  - immutableなrelease request handoffと承認済みrelease notesが存在する
+  - projectがスキルの公開宣言とproject固有の補助assetの少なくとも一方を選択している
+  - publication requestとcallerが適用プロジェクトのdefault branchに配置され、callerがproviderの資材公開workflowを固定revisionで参照している
+trigger: 保守者が承認済みnotesを指定してpublication requestを実行する
+main_success_scenario:
+  - publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する
+  - default branchのcallerがrequest artifactとworkflow identityを検証して資材公開workflowを呼び出す
+  - 資材公開workflowがsourceとauthorityを検証し、platformを持たない選択としてauthorityへ記録する
+  - 固定sourceから公開宣言したスキルZIPとproject固有の補助assetを生成し、checksumと証跡を付けてassembleする
+  - 検証済みtag、notesおよびassetをGitHub Releaseへ公開し、公開結果をreadbackする
+success_outcomes:
+  - approval、notes、source、workflow revision、資材およびGitHub Releaseが同じrelease identityで一致する
+  - 利用者はReleaseのZIPとchecksumを取得し、照合してから導入できる
+failure_outcomes:
+  - スキルZIPも補助assetも選択されていない場合は公開処理を開始しない
+  - identity、provenance、approval、assetまたはreadbackの不一致時は未実行の公開処理を停止する
+  - 部分公開または状態不明では自動上書きや自動再公開を行わず、観測済み状態を保持する
+related_requirements:
+  - github-release-workflow
+related_contracts:
+  - contract.ci-release-publication-workflow.asset-publication
+  - contract.ci-release-authority.outputs
+  - contract.ci-release-assembly.outputs
+  - contract.ci-release-publisher.outputs
+  - contract.ci-release-publication-verifier.outputs

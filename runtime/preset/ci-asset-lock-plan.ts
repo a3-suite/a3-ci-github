@@ -27,7 +27,7 @@ const writeCiAssetLock = (options: {
       registry.skillCollectionRoot = options.skillCollectionRoot === undefined
         ? undefined
         : path.resolve(options.skillCollectionRoot);
-      const selected = selectPresets(root, registry.presets, [], registryReport);
+      const selected = selectPresets(root, registry.presets, [], registryReport, registry);
       return {
         schemaVersion: registry.assetLock.schemaVersion,
         kind: registry.assetLock.kind,

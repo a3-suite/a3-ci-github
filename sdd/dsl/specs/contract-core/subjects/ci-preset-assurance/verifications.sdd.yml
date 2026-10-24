@@ -119,3 +119,10 @@ cases:
       source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       preset: quality-gate
       consumer-assets: canonical-with-complete-pin-projection
+  - contract_id: contract.ci-preset-assurance.verification
+    id: asset-release-preset-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: asset-release-callee-or-shared-caller-preset
+    verifies:
+      - ci-preset-assurance-drift-fails

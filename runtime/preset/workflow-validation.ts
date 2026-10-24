@@ -207,7 +207,8 @@ const validatePublicationControl = (
   canonical: ValueMap | undefined,
   report: Report,
 ): void => {
-  const controlJobs = asset.id === 'release-publication'
+  const releaseExecution = asset.id === 'release-publication' || asset.id === 'asset-release-publication';
+  const controlJobs = releaseExecution
     ? ['authority', 'quality', 'assemble', 'publish']
     : asset.id === 'package-publication' ? ['publish'] : [];
   if (!canonical || controlJobs.length === 0) return;
@@ -216,7 +217,7 @@ const validatePublicationControl = (
     message: 'legacy trusted control SHA input is forbidden',
     settingLocation: asset.destination,
   });
-  const entryJob = asset.id === 'release-publication' ? 'authority' : 'publish';
+  const entryJob = releaseExecution ? 'authority' : 'publish';
   for (const jobName of controlJobs) {
     const job = map(map(workflow.jobs)[jobName]);
     const canonicalJob = map(map(canonical.jobs)[jobName]);
@@ -624,6 +625,8 @@ const TRIGGERS_BY_ASSET: Record<string, string[]> = {
   'release-publication-request': ['workflow_dispatch'],
   'release-publication-caller': ['workflow_run'],
   'release-publication': ['workflow_call'],
+  'asset-release-publication-caller': ['workflow_run'],
+  'asset-release-publication': ['workflow_call'],
   'package-publication-caller': ['workflow_run'],
   'package-publication-request': ['workflow_dispatch'],
 };
@@ -662,8 +665,8 @@ const validateTrigger = (
       settingLocation: displayPath,
     });
   }
-  if (assetId === 'release-publication-caller' || assetId === 'package-publication-caller') {
-    const publicationKind = assetId === 'release-publication-caller' ? 'release' : 'package';
+  if (['release-publication-caller', 'asset-release-publication-caller', 'package-publication-caller'].includes(assetId)) {
+    const publicationKind = assetId === 'package-publication-caller' ? 'package' : 'release';
     const forbiddenTriggers = ['workflow_dispatch', 'workflow_call', 'push', 'pull_request'];
     for (const forbidden of forbiddenTriggers) {
       if (hasTrigger(workflow, forbidden)) add(report.mismatches, {
@@ -673,7 +676,7 @@ const validateTrigger = (
       });
     }
   }
-  if (assetId === 'release-publication') {
+  if (assetId === 'release-publication' || assetId === 'asset-release-publication') {
     for (const forbidden of ['workflow_dispatch', 'workflow_run', 'push', 'pull_request']) {
       if (hasTrigger(workflow, forbidden)) add(report.mismatches, {
         path: `${displayPath}:on.${forbidden}`,
@@ -841,7 +844,7 @@ const inspectWorkflowAsset = (
     });
     if (execution !== workflow) {
       const definitions = map(map(map(execution.on).workflow_call).inputs);
-      const runtimeInputs = new Set(executionId === 'release-publication'
+      const runtimeInputs = new Set(executionId === 'release-publication' || executionId === 'asset-release-publication'
         ? ['request_run_id', 'publication_request_run_id']
         : ['package_handoff_run_id', 'source_sha', 'version', 'target_identity', 'package_artifact_id']);
       for (const [name, value] of Object.entries(map(call.with))) {

@@ -38,3 +38,18 @@ cases:
       - supplemental-hidden-files-selected
       - supplemental-download-root
       - supplemental-final-assembly-input
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    id: detailed-failure-asset-publication
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      job-result: failure
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    id: ci-asset-release-publication-workflow-success
+    partition: ci-asset-release-publication-workflow-canonical-source-available
+    input:
+      workflow-source: .github/workflows/ci-asset-release-publication.yml
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    id: ci-asset-release-publication-workflow-failure
+    partition: ci-asset-release-publication-workflow-failure-route-required
+    input:
+      job-result: failure

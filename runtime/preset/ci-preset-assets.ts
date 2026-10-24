@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { isMap, map, strings, valueAtPath, conditionalExtensionSelected, normalizeAsset, standardQualityBundles } from './preset-model.ts';
+import { isMap, map, strings, valueAtPath, conditionalExtensionSelected, normalizeAsset, standardQualityBundles, publicationBinding } from './preset-model.ts';
 import type { ValueMap, ResourceSource, AdapterBundle, AdapterBundleAsset, Preset, RegistryData, DiagnosticReport, StandardImplementation, ManagedAsset } from './preset-model.ts';
 import { SOURCE_ROOT, SKILL_ROOT, parseYaml } from './preset-registry.ts';
 import { add } from './validation-report.ts';
@@ -127,7 +127,7 @@ export const resolvePublicationWorkflow = (
   workflow: ValueMap, registry: RegistryData, report: DiagnosticReport = { missingSettings: [], mismatches: [] },
 ): ValueMap => {
   const call = map(map(workflow.jobs).publish);
-  const binding = [registry.releasePublicationReusableWorkflow, registry.packagePublicationReusableWorkflow]
+  const binding = [registry.releasePublicationReusableWorkflow, registry.assetReleasePublicationReusableWorkflow, registry.packagePublicationReusableWorkflow]
     .find((candidate) => candidate && typeof call.uses === 'string'
       && call.uses.startsWith(`${registry.actionRepository}/${candidate.source}@`));
   if (!binding || typeof call.uses !== 'string'
@@ -191,23 +191,45 @@ export const resolveQualityWorkflow = (
   return { ...callee, env };
 };
 
+// Release presets share the caller destination. An installed caller that calls another preset's reusable
+// workflow belongs to that preset; any other content stays attributed so that validation reports its drift.
+const installedCallerMatches = (root: string, asset: Preset['workflowAssets'][number], registry: RegistryData): boolean => {
+  const binding = publicationBinding(asset.id, registry);
+  const absolute = path.join(root, asset.destination);
+  if (!binding || !fs.existsSync(absolute)) return true;
+  const call = map(map(map(parseYaml(fs.readFileSync(absolute, 'utf8'), asset.destination)).jobs).publish);
+  const calls = (source: string): boolean => typeof call.uses === 'string' && call.uses.startsWith(`${registry.actionRepository}/${source}@`);
+  return calls(binding.source) || ![registry.releasePublicationReusableWorkflow, registry.assetReleasePublicationReusableWorkflow]
+    .some((other) => other && other.source !== binding.source && calls(other.source));
+};
+
 export const selectPresets = (
   root: string,
   definitions: Preset[],
   requested: string[],
   report: DiagnosticReport,
+  registry: RegistryData,
 ): Preset[] => {
   const known = new Set(definitions.map((preset) => preset.id));
   for (const id of requested) {
     if (!known.has(id)) add(report.mismatches, { path: id, message: 'unknown preset filter' });
   }
   const selected = definitions.filter((preset) => {
+    if (preset.workflowAssets.some((asset) => !installedCallerMatches(root, asset, registry))) return requested.includes(preset.id);
     const existing = preset.workflowAssets.filter((asset) => fs.existsSync(path.join(root, asset.destination)));
-    const detected = ['release-request', 'release-publication', 'package-publication'].includes(preset.id)
+    const detected = ['release-request', 'release-publication', 'asset-release-publication', 'package-publication'].includes(preset.id)
       ? existing.length > 0
       : existing.length === preset.workflowAssets.length;
     return requested.includes(preset.id) || (requested.length === 0 && detected);
   });
+  const sources = new Map<string, string>();
+  for (const asset of selected.flatMap((preset) => preset.workflowAssets)) {
+    const source = sources.get(asset.destination);
+    if (source !== undefined && source !== asset.source) add(report.mismatches, {
+      path: asset.destination, message: 'selected presets install different workflows at the same destination',
+    });
+    sources.set(asset.destination, asset.source);
+  }
   if (selected.length === 0) add(report.missingSettings, {
     path: '.github/workflows',
     message: 'no installed CI preset workflow was detected',

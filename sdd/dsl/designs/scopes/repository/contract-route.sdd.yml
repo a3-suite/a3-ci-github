@@ -137,6 +137,11 @@ routes:
     hops:
       - workflow-sources
       - contract-verification
+  - route_id: workflow-asset-release-publication
+    contract_id: contract.ci-release-publication-workflow.asset-publication
+    hops:
+      - workflow-sources
+      - contract-verification
   - route_id: workflow-package-publication
     contract_id: contract.ci-package-publication-workflow.publication
     hops:

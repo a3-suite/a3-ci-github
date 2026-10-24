@@ -26,6 +26,10 @@
 5. 同じ製品Releaseへ`<repository-name>-skills.zip`とその`.sha256`を公開する。生成はOS別matrixで繰り返さず、assembleで一度だけ行う。installerを同梱する場合も、各ownerの証跡を個別に保持して同じhandoffへ集約する。別のReleaseは作らない。
 6. 製品READMEのインストール節に、製品とセットで使うAgent Skillの必須導入案内を追加する。ci-release-installerスキルのREADMEインストール節の記載例を使い、ZIP名・固定Releaseを実際の提供内容へ置換する。案内の内容は`references/release-skills-contract.reference.yml`の`adoption.readme`に従う。
 
+## 製品のbuildを持たないproject
+
+スキルや指示ファイルなどの資材だけを公開するprojectは、`release-publication`の代わりに`asset-release-publication`プリセットを導入する（`references/preset-catalog.reference.md`）。公開スキルは上記セットアップの2〜4で宣言する。スキル以外の資材は補助assetとして選択し、owner-adapterの`assemble`で組み立てる。このとき両build rootは空で渡る（`references/ci-script-contracts.reference.yml`の`release-supplemental-asset-build-scripts`）。公開スキルと補助assetの少なくとも一方を選択する。言語の品質検査はlanguage profileを指定した場合だけ実行する。
+
 ## 取得・配備・削除の案内
 
 - 製品と同じ固定ReleaseのZIPとchecksumを取得し、ZIPのSHA-256を検証してから新しい作業ディレクトリへ展開する。branchやlatestの内容を同じ版として扱わない。
