@@ -408,6 +408,13 @@ describe("contract.ci-selective-distribution.application", () => {
         const yamlDestination = path.join(projectRoot, '.a3-skills/ci-github/runtime/node_modules/yaml');
         fs.mkdirSync(path.dirname(yamlDestination), { recursive: true });
         fs.cpSync(yamlSource, yamlDestination, { recursive: true });
+        const unsetPlan = spawnSync(process.execPath, [
+          cli, 'plan', '--source-revision', sourceRevision, '--preset', 'quality-gate', '--repo-root', projectRoot,
+        ], { encoding: 'utf8' });
+        expect(unsetPlan.status).toBe(2);
+        const unsetEvidence = JSON.parse(unsetPlan.stderr);
+        expect(unsetEvidence.diagnostic).toBe('workflow-template-setting-missing');
+        expect(unsetEvidence.failureEvidence.classification).toMatchObject({ operation: 'plan', stage: 'template-render', reason: 'workflow-template-setting-missing', cause: 'known' });
         const planResult = spawnSync(process.execPath, [
           cli, 'plan',
           '--source-revision', sourceRevision,

@@ -428,6 +428,13 @@ test_maps:
         guarantees:
           - diagnostic-failure-stage-application
   - contract_id: contract.ci-selective-distribution.plan
+    case_id: detailed-failure-plan-template-setting-missing
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.process.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution > standalone public CLI executes the local fetch plan and approved apply boundary
+        guarantees:
+          - diagnostic-failure-stage-application
+  - contract_id: contract.ci-selective-distribution.plan
     case_id: plan-independent-destination
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs

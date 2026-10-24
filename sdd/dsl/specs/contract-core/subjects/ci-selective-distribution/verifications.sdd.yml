@@ -148,6 +148,14 @@ cases:
       repo-root: consumer
       required-arguments: missing
   - contract_id: contract.ci-selective-distribution.plan
+    id: detailed-failure-plan-template-setting-missing
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: plan
+      presets:
+        - quality-gate
+      settings: {}
+  - contract_id: contract.ci-selective-distribution.plan
     id: plan-independent-destination
     partition: runtime-context.distribution-independent-destination-stable
     input:

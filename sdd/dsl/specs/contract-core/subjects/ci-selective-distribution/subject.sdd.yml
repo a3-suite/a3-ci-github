@@ -226,6 +226,8 @@ contracts:
         meaning: "Received by the contract target: consumer repository root passed to the CLI."
       - name: required-arguments
         meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: settings
+        meaning: "Received by the contract target: workflow template settings passed with --set."
       - name: destination
         meaning: "Precondition prepared by the case: state of the consumer destination path."
       - name: ownership
