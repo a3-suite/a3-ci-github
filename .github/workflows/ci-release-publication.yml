@@ -320,6 +320,11 @@ jobs:
       CI_PLATFORM_ID: ${{ matrix.id }}
       CI_PLATFORM_TARGET: ${{ matrix.target }}
     steps:
+      # Windows runners default to core.autocrlf=true. Platform outputs are compared across runners, so every build must
+      # see the committed bytes (or the owner's .gitattributes) rather than the runner's line-ending conversion.
+      - name: Keep committed line endings
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.authority.outputs.source_sha }}

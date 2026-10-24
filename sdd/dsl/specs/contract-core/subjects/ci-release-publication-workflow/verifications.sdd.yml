@@ -19,6 +19,7 @@ cases:
       - release-authority-before-publication
       - release-control-sha-bound
       - release-control-head-verified
+      - release-build-committed-line-endings
       - release-handoff-before-publication
       - release-publication-before-readback
       - release-tokens-explicit
