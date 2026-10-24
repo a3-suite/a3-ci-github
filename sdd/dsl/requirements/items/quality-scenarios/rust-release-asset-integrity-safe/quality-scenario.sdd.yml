@@ -13,14 +13,9 @@ response_measure:
   - 同一 platform ID の重複、可変 toolchain、改変済み manifest または asset を拒否する
   - 既存または競合する出力先を上書きせず、失敗時に未検証の最終出力を残さない
 related_requirements:
-  - requirement_ref:
-      requirement_id: rust-release-asset-integrity
+  - rust-release-asset-integrity
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-rust-source-gate.processing
-  - contract_ref:
-      contract_id: contract.ci-rust-source-gate.outputs
-  - contract_ref:
-      contract_id: contract.ci-rust-release-build.processing
-  - contract_ref:
-      contract_id: contract.ci-rust-release-build.outputs
+  - contract.ci-rust-source-gate.processing
+  - contract.ci-rust-source-gate.outputs
+  - contract.ci-rust-release-build.processing
+  - contract.ci-rust-release-build.outputs

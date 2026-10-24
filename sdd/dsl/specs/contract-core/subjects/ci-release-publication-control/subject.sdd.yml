@@ -6,10 +6,24 @@ subject:
 contracts:
   - id: contract.ci-release-publication-control.outputs
     summary: Release publication control operation request.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: workflow-run
+        meaning: "Precondition prepared by the case: triggering workflow run."
+      - name: approval-id
+        meaning: "Precondition prepared by the case: state of the approval identity."
+      - name: release-version
+        meaning: "Received by the contract target: release version passed to the Action."
+      - name: target-identity
+        meaning: "Received by the contract target: target identity bound to the handoff."
+      - name: schema
+        meaning: "Received by the contract target: schema of the publication request file."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Publication control operation status.
@@ -20,8 +34,7 @@ contracts:
           - selector: accepted-trigger-run
             meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

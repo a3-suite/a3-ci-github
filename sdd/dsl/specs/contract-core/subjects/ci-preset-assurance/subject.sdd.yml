@@ -6,10 +6,30 @@ subject:
 contracts:
   - id: contract.ci-preset-assurance.verification
     summary: Preset assurance verification request for an applied consumer project.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: audit-mode
+        meaning: "Received by the contract target: audit mode selected by the request."
+      - name: output
+        meaning: "Received by the contract target: output path requested by the caller."
+      - name: selected-pending-action
+        meaning: "Precondition prepared by the case: selected Action whose release is pending."
+      - name: preset
+        meaning: "Received by the contract target: preset identifier selected for validation."
+      - name: optional-workflow
+        meaning: "Precondition prepared by the case: optional workflow installed in the consumer project."
+      - name: applied-preset-drift
+        meaning: "Precondition prepared by the case: drift of the applied preset from the canonical assets."
+      - name: supplemental-phase-drift
+        meaning: "Precondition prepared by the case: drift of the supplemental phase wiring."
+      - name: retired-release-entrypoints-file-or-invocation
+        meaning: "Precondition prepared by the case: retired release entrypoint file or invocation present in the project."
+      - name: applied-preset
+        meaning: "Precondition prepared by the case: preset assets applied to the consumer project."
     observations:
       - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-        boundary:
-          ref: boundary.cli-result
+        boundary: boundary.cli-result
         fields:
           - selector: outcome
             meaning: Bootstrap outcome when assurance cannot start.
@@ -30,14 +50,12 @@ contracts:
           - selector: semanticReviewRequired
             meaning: Whether evidence outside provider preflight still requires semantic review.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
       - summary: Individually observed contract values and comparisons.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: valid-tree-comparison
             meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
@@ -121,32 +139,46 @@ contracts:
             - equal
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation request for applied canonical assets.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: release-tag
+        meaning: "Received by the contract target: Release tag of the distribution that generates the lock."
+      - name: distribution-release
+        meaning: "Precondition prepared by the case: Release tag named by the fetched distribution manifest beside the generator."
+      - name: preset
+        meaning: "Received by the contract target: preset identifier selected for validation."
+      - name: consumer-assets
+        meaning: "Precondition prepared by the case: CI assets present in the consumer project."
     observations:
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
-        boundary:
-          ref: boundary.project-ci-assets
+        boundary: boundary.project-ci-assets
         fields:
           - selector: sourceRevision
             meaning: Full immutable distribution commit SHA.
+          - selector: releaseTag
+            meaning: Exact vX.Y.Z Release tag of the distribution that generated the lock.
           - selector: generatedAt
             meaning: Minute-normalized observation timestamp that is not used as version identity.
           - selector: assets
             meaning: Canonical and applied SHA-256 identity for every managed asset.
           - selector: requested-source-comparison
             meaning: Comparison of lock sourceRevision with the requested full source revision.
+          - selector: requested-release-comparison
+            meaning: Comparison of lock releaseTag with the requested Release tag.
           - selector: canonical-digest-comparison
             meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
           - selector: applied-digest-comparison
             meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
       - summary: Rejection exposed when an asset lock cannot be generated safely.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: diagnostic
             meaning: Stable reason that prevents an invalid lock from being written.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -161,6 +193,12 @@ contracts:
           - ci-preset-assurance-lock-input-valid
         claim:
           field: sourceRevision
+          present: true
+      - id: ci-preset-assurance-lock-release-bound
+        applies_to:
+          - ci-preset-assurance-lock-input-valid
+        claim:
+          field: releaseTag
           present: true
       - id: ci-preset-assurance-lock-assets-recorded
         applies_to:
@@ -185,6 +223,13 @@ contracts:
           - runtime-context.ci-preset-assurance-canonical-lock-input
         claim:
           field: requested-source-comparison
+          in:
+            - equal
+      - id: lock-release-equals-request
+        applies_to:
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        claim:
+          field: requested-release-comparison
           in:
             - equal
       - id: lock-canonical-digests-match

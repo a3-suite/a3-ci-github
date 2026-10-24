@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-provision
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-gh-provisioner.provision
     id: supported-runner-assets
     partition: runtime-context.gh-release-asset-valid

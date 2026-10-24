@@ -168,6 +168,7 @@ test_maps:
         symbol: contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests
         guarantees:
           - ci-preset-assurance-lock-source-bound
+          - ci-preset-assurance-lock-release-bound
           - ci-preset-assurance-lock-assets-recorded
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: contract.ci-preset-assurance.asset-lock > consumer-preset-asset-lock-cli > public asset lock CLI records source revision and managed assets
@@ -179,6 +180,32 @@ test_maps:
     tests:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects a noncanonical source revision
+        guarantees:
+          - ci-preset-assurance-invalid-revision-rejected
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    case_id: case.ci-preset-assurance.asset-lock-invalid-release-tag-rejected
+    tests:
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects the release tag ""
+        guarantees:
+          - ci-preset-assurance-invalid-revision-rejected
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects the release tag "0.9.0"
+        guarantees:
+          - ci-preset-assurance-invalid-revision-rejected
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects the release tag "v0.9"
+        guarantees:
+          - ci-preset-assurance-invalid-revision-rejected
+      - path: runtime/preset/tests/preset-validation-contract.test.mjs
+        symbol: preset-validation-contract > preset-asset-lock-contract > asset lock generation rejects the release tag "latest"
+        guarantees:
+          - ci-preset-assurance-invalid-revision-rejected
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    case_id: case.ci-preset-assurance.asset-lock-distribution-release-mismatch-rejected
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.process.test.mjs
+        symbol: contract.ci-selective-distribution.application > provider-pin-companion > explicit create migration restores retired assets and the prior lock after a post-apply failure
         guarantees:
           - ci-preset-assurance-invalid-revision-rejected
   - contract_id: contract.ci-preset-assurance.asset-lock
@@ -199,5 +226,13 @@ test_maps:
         symbol: contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests
         guarantees:
           - lock-source-equals-request
+          - lock-release-equals-request
           - lock-canonical-digests-match
           - lock-applied-digests-match
+  - contract_id: contract.ci-preset-assurance.verification
+    case_id: asset-release-preset-drift
+    tests:
+      - path: runtime/preset/tests/publication-validation.test.mjs
+        symbol: contract.ci-preset-assurance.verification > asset-release-publication-preset > asset release preset owns its caller, validates the asset callee and excludes the release preset
+        guarantees:
+          - ci-preset-assurance-drift-fails

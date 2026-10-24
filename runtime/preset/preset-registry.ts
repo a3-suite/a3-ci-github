@@ -264,10 +264,10 @@ export const loadRegistry = (report: DiagnosticReport): RegistryData => {
   const providerActionPinFields = strings(pinCompanion.fields);
   const providerId = String(map(registry.provider).id ?? '');
   const conformance = map(registry.conformance);
-  const reusableBindings: Pick<RegistryData, 'qualityReusableWorkflow' | 'qualityPlatformsReusableWorkflow' | 'packagePreparationReusableWorkflow' | 'releasePublicationReusableWorkflow' | 'packagePublicationReusableWorkflow'> = {};
+  const reusableBindings: Pick<RegistryData, 'qualityReusableWorkflow' | 'qualityPlatformsReusableWorkflow' | 'packagePreparationReusableWorkflow' | 'releasePublicationReusableWorkflow' | 'assetReleasePublicationReusableWorkflow' | 'packagePublicationReusableWorkflow'> = {};
   const manifestPath = path.join(SOURCE_ROOT, 'manifest.json');
   const manifest = fs.existsSync(manifestPath) ? map(JSON.parse(fs.readFileSync(manifestPath, 'utf8'))) : {};
-  for (const key of ['qualityReusableWorkflow', 'qualityPlatformsReusableWorkflow', 'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow'] as const) {
+  for (const key of ['qualityReusableWorkflow', 'qualityPlatformsReusableWorkflow', 'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'assetReleasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow'] as const) {
     const reusable = map(registry[key]);
     if (typeof reusable.source !== 'string' || !/^\.github\/workflows\/[a-z0-9-]+\.ya?ml$/.test(reusable.source)
       || typeof reusable.referencePlaceholder !== 'string'

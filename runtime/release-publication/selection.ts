@@ -31,3 +31,13 @@ export const supplementalSelection = (values: Record<string, unknown>): Suppleme
   if (typeof configPath !== 'string' || !configPath || /[\0\r\n]/.test(configPath)) throw new DiagnosticError('installer-config-required');
   return { implementation, configPath };
 };
+
+const PLATFORM_FIELDS = ['language_profile', 'toolchain_version', 'platform_manifest', 'platform_manifest_sha256'];
+
+/** An asset release is recognised only when the snapshot and authority both record no platform; any mixture is rejected. */
+export const assetReleaseSelection = (values: Record<string, unknown>, authority: Record<string, unknown>): boolean => {
+  const assetRelease = values.CI_RELEASE_IMPLEMENTATION === 'asset-release';
+  if (assetRelease && (values.CI_PLATFORM_MANIFEST !== '__unset__' || PLATFORM_FIELDS.some((field) => authority[field] !== null))) throw new DiagnosticError('platform-mismatch');
+  if (!assetRelease && authority.platform_manifest === null) throw new DiagnosticError('platform-mismatch');
+  return assetRelease;
+};

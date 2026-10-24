@@ -6,10 +6,28 @@ subject:
 contracts:
   - id: contract.ci-rust-release-build.processing
     summary: Rust release build script invocation.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: language-profile
+        meaning: "Received by the contract target: language profile selected by the caller."
+      - name: platform-id
+        meaning: "Received by the contract target: platform identifier selected for the build."
+      - name: platform-target
+        meaning: "Received by the contract target: build target bound to the selected platform."
+      - name: output-directory
+        meaning: "Received by the contract target: output directory path passed by the caller."
+      - name: commands
+        meaning: "Precondition prepared by the case: outcome of the build commands."
+      - name: version
+        meaning: "Received by the contract target: version value passed to the contract target."
+      - name: version-output
+        meaning: "Precondition prepared by the case: version reported by the toolchain."
+      - name: platform-manifest
+        meaning: "Received by the contract target: content of the platform manifest file."
     observations:
       - summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: outcome
             meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
@@ -18,8 +36,7 @@ contracts:
           - selector: diagnostic-codes
             meaning: Stable diagnostic codes reported by the failed step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -75,18 +92,27 @@ contracts:
           present: true
   - id: contract.ci-rust-release-build.outputs
     summary: The Composite Action maps shared script success to completed output and propagates script failure.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: language-profile
+        meaning: "Received by the contract target: language profile selected by the caller."
+      - name: platform-id
+        meaning: "Received by the contract target: platform identifier selected for the build."
+      - name: platform-target
+        meaning: "Received by the contract target: build target bound to the selected platform."
+      - name: output-directory
+        meaning: "Received by the contract target: output directory path passed by the caller."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: completed
             meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
           - selector: outcome
             meaning: The success or failure outcome of the release build step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

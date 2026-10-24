@@ -46,6 +46,6 @@ jobs:
       contents: read
     steps:
       - name: Write workflow summary
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@1c7f2d610441d952004b6d96c7c8aad2d2242920
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@77b1afe50b994c4b8ac54bfe5ba3ea849ed4d633
         with:
           summary-json: '{"jobs":[{"unit":"quality","execution":"fixed reusable quality workflow per language profile","rawResult":"${{ needs.quality.result }}","applicable":true,"reason":"reusable quality workflow matrix result: ${{ needs.quality.result }}"}]}'

@@ -35,7 +35,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
     verifies:
       - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -225,14 +225,14 @@ cases:
     id: asset-readback-checksum
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: asset-readback-checksum-failure
+      failure: asset-checksum
     verifies:
       - diagnostic-checksum-observation-conflation
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: asset-readback-transport
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: asset-readback-transport-failure
+      failure: asset-transport
     verifies:
       - diagnostic-checksum-observation-conflation
   - contract_id: contract.ci-release-publication-verifier.outputs

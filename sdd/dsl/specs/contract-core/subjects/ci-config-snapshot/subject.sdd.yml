@@ -6,10 +6,18 @@ subject:
 contracts:
   - id: contract.ci-config-snapshot.outputs
     summary: Valid configuration sources produce a snapshot status output.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: sources-json
+        meaning: "Received by the contract target: configuration sources JSON."
+      - name: snapshot-path
+        meaning: "Received by the contract target: path to the configuration snapshot file."
+      - name: github-output
+        meaning: "Precondition prepared by the case: GitHub output file provided by the runner."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: status
             meaning: Whether configuration resolution and snapshot writing succeeded.
@@ -20,8 +28,7 @@ contracts:
           - selector: outcome
             meaning: Failure outcome of the rejected snapshot operation.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

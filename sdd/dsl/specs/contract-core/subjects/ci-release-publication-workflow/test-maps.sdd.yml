@@ -92,3 +92,27 @@ test_maps:
         symbol: workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job cancelled result
         guarantees:
           - diagnostic-failure-stage-publication
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    case_id: ci-asset-release-publication-workflow-success
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication runs no product build, checks the asset selection before authority and runs quality only for a selected profile
+        guarantees:
+          - asset-publication-success-observed
+          - asset-publication-no-build-job
+          - asset-publication-selection-before-authority
+          - asset-publication-quality-when-profile-selected
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    case_id: ci-asset-release-publication-workflow-failure
+    tests:
+      - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication blocks on every unsuccessful prerequisite and always summarizes
+        guarantees:
+          - asset-publication-failure-summary-always
+  - contract_id: contract.ci-release-publication-workflow.asset-publication
+    case_id: detailed-failure-asset-publication
+    tests:
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: workflow failure diagnostics > asset-release-publication aggregate retains failed job identity and run evidence
+        guarantees:
+          - diagnostic-failure-stage-asset-publication

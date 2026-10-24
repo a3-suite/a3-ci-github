@@ -6,18 +6,21 @@ subject:
 contracts:
   - id: contract.repository-managed-source-integrity.integrity
     summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
+    inputs:
+      - name: repository-tree
+        meaning: "Precondition prepared by the case: state of the repository tree read by the managed source gate."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary:
-          ref: boundary.repository-gate-result
+        boundary: boundary.repository-gate-result
         fields:
           - selector: canonical-assets
             meaning: Existence checks for every repository-owned canonical asset family and registered source.
           - selector: stale-locations
             meaning: Absence check results for registered legacy source locations.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -46,10 +49,14 @@ contracts:
           present: true
   - id: contract.repository-managed-source-integrity.execution-mapping
     summary: Repository contract execution definition.
+    inputs:
+      - name: contract-package
+        meaning: "Received by the contract target: contract package definition read by the execution mapping."
+      - name: execution-definition
+        meaning: "Received by the contract target: contract subject execution definition read by the check."
     observations:
       - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary:
-          ref: boundary.repository-gate-result
+        boundary: boundary.repository-gate-result
         fields:
           - selector: contract-execution
             meaning: Execution definition entries for the packaged contract subjects.
@@ -58,8 +65,7 @@ contracts:
           - selector: contract-execution-escaping-test-paths
             meaning: Execution test paths that resolve outside the repository; absent or present.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

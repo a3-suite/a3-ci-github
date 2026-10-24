@@ -119,6 +119,7 @@ contracts:
           subcommand: assemble
           arguments: [authority-context-path, config-snapshot-path, standard-platform-build-root, supplemental-platform-build-root, output-directory]
           result: supplemental-release-asset-handoff
+          assetRelease: 製品buildを持たないReleaseではこのphaseだけを実行し、両build rootは空ディレクトリとして渡す。
       compatibility:
         legacyThreeArgumentInvocation: unsupported
         adoption: adapter-contract-test-and-workflow-in-one-acceptance-unit
@@ -138,6 +139,7 @@ contracts:
     boundary: trusted control で実行し、Release remote へ書き込まない。
     assetSetPolicy:
       platform: platform-manifest と完全一致する。
+      assetRelease: 製品buildとplatform-manifestを持たず、公開スキルと補助assetの少なくとも一方だけで構成する。
     stopConditions: [asset-set-mismatch, platform-mismatch, version-mismatch, checksum-mismatch, source-identity-mismatch, unexpected-supplemental-asset, selected-supplemental-asset-missing, supplemental-asset-evidence-mismatch, supplemental-asset-owner-contract-mismatch, asset-name-collision]
   - id: release-publication-scripts
     input: [authority-context, release-handoff, target-identity, approved-release-body, non-overwrite-policy, credential-route, remote-observation-before]

@@ -8,7 +8,7 @@ import { sourceTextSha256 } from '../platform/source-text.mjs';
 import { LIMITS, canonicalJson, equal, fail, hashFile, hex, readBytes, readRecord, safePath, sha256, text, record, diagnosticFailure, installerFailureReasons, safeInstallerComparison, safeInstallerCleanup } from './io';
 import type { DiagnosticType } from './io';
 import { validateSnapshot } from './snapshot';
-import { supplementalSelection } from './selection';
+import { assetReleaseSelection, supplementalSelection } from './selection';
 
 export type SupplementalOptionsType = {
   operation: string; sourceRoot: string; authorityPath: string; snapshotPath: string;
@@ -40,7 +40,7 @@ const checkoutSha = (root: string): string => {
   try { return execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); }
   catch { return fail('source-identity-mismatch'); }
 };
-const treeDigest = (root: string): string => {
+const treeDigest = (root: string, allowEmpty = false): string => {
   let count = 0;
   let bytes = 0;
   const entries: unknown[] = [['.', fs.statSync(root).mode, fileIdentity(root)]];
@@ -60,7 +60,7 @@ const treeDigest = (root: string): string => {
     }
   };
   visit(root);
-  if (!count) fail('build-input-missing');
+  if (!count && !allowEmpty) fail('build-input-missing');
   return sha256(Buffer.from(canonicalJson(entries)));
 };
 
@@ -117,6 +117,9 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
     diagnostic.at('owner-selection', {"input": "supplemental-owner-contract"});
     const selection = supplementalSelection(config);
     const standardInstaller = selection.implementation === 'standard-installer';
+    // An asset release has no product build: only the owner adapter runs, and it receives empty build roots.
+    const assetRelease = assetReleaseSelection(config, authority);
+    if (assetRelease && (standardInstaller || !assemble)) fail('asset-release-phase-invalid');
     const adapterRelative = relativePath(text(standardInstaller ? selection.configPath : config.CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER, 'owner-adapter-missing'));
     const adapter = safePath(root, adapterRelative);
     if (!standardInstaller) fs.accessSync(adapter, fs.constants.X_OK);
@@ -150,6 +153,7 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
       .some((input) => input !== undefined && overlaps(fs.existsSync(input) ? fs.realpathSync(input) : input, output))) fail('path-overlap');
     if (supplemental && (ancestorIdentities(standard, root).includes(fileIdentity(supplemental))
       || ancestorIdentities(supplemental, root).includes(fileIdentity(standard)))) fail('path-overlap');
+    if (assetRelease && [standard, supplemental].some((directory) => directory && fs.readdirSync(directory).length)) fail('unexpected-build-input');
     diagnostic.confirmed();
     diagnostic.at('platform-binding', {"input": "authority-platform-manifest"});
     const platformPath = standardInstaller
@@ -173,8 +177,8 @@ export const runSupplemental = (options: SupplementalOptionsType): void => {
         platform: platformDigest(),
         source: checkoutSha(root), authority: hashFile(safePath(root, options.authorityPath), LIMITS.jsonBytes),
         snapshot: hashFile(safePath(root, options.snapshotPath), LIMITS.jsonBytes), adapter: hashFile(safePath(root, adapterRelative)),
-        standard: treeDigest(safePath(root, options.standardBuildRoot, true)),
-        supplemental: options.supplementalBuildRoot ? treeDigest(safePath(root, options.supplementalBuildRoot, true)) : undefined,
+        standard: treeDigest(safePath(root, options.standardBuildRoot, true), assetRelease),
+        supplemental: options.supplementalBuildRoot ? treeDigest(safePath(root, options.supplementalBuildRoot, true), assetRelease) : undefined,
       };
     };
     const manifestInputs: string[] = [];

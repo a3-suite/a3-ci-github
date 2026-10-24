@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-config-snapshot.outputs
     id: valid-config-sources
     partition: sources-input-present

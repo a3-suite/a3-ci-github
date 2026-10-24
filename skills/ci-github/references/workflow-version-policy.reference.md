@@ -102,7 +102,7 @@ platform manifestの新規作成、OS/CPU・runner・toolchainの追加・変更
 - placeholder の空許容は、その placeholder を消費する step が未使用時に skip される場合に限る。
 
 ## 更新と停止条件
-- CI配布資産の版識別には配布元のfull commit SHAとcontent digestを使う。`.ci/ci-assets.lock.json`の`generatedAt`はUTC分単位の観測時刻であり、同一性、新旧、版順序の判定に使わない。
+- CI配布資産の版識別には配布元のfull commit SHAとcontent digestを使う。`.ci/ci-assets.lock.json`の`generatedAt`はUTC分単位の観測時刻であり、同一性、新旧、版順序の判定に使わない。`releaseTag`は導入した版を人が確認するための記録で、同一性はfull commit SHAで判定する。
 - 版を更新する場合は、対象、旧版、新版、upstream の根拠、影響する runner/toolchain、検証結果を同じ変更で追跡できるようにする。
 - security fix で緊急更新する場合も、mutable alias へ戻さず、確認できる commit、version、digest のいずれかへ固定してから検証する。
 - version、commit、digest、runner image の identity が workflow または設定に未指定・不正・mutable の場合は、観測した対象契約違反を `references/ci-audit-contract.reference.yml` の `statusClassification` へ渡し、workflow の追加・更新・publish を進めない。

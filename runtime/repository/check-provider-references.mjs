@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseDocument } from 'yaml';
-import { assertImplementationReachable, verifyImplementationBinding } from './verify-implementation-binding.mjs';
+import { assertImplementationReachable, executionClosurePathspecs, inExecutionClosure, verifyImplementationBinding } from './verify-implementation-binding.mjs';
 
 export const registryPath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
 export const parseYaml = (text, relative) => {
@@ -90,7 +90,7 @@ export function checkRepository(root, staged = false, options = {}) {
   return { checkedTargets: snapshot.targets.length, diagnostics, interfaceDiagnostics: connection.interfaceDiagnostics, actionReferences: connection.references, implementationBinding: connection.implementationBinding, snapshot };
 }
 
-function actionEntrypointDiagnostics(root, actionPath, sha, action, closureRoots) {
+function actionEntrypointDiagnostics(root, actionPath, sha, action, actionPaths) {
   const runs = action.runs ?? {};
   let entries;
   if (/^node[0-9]+$/.test(runs.using)) entries = ['main', ...['pre', 'post'].filter((key) => Object.hasOwn(runs, key))].map((key) => runs[key]);
@@ -103,7 +103,7 @@ function actionEntrypointDiagnostics(root, actionPath, sha, action, closureRoots
   return entries.flatMap((entry) => {
     if (typeof entry !== 'string' || !entry || path.posix.isAbsolute(entry)) return [`${actionPath}@${sha}: invalid Action entrypoint`];
     const relative = path.posix.normalize(`${actionPath}/${entry}`);
-    if (!closureRoots.some((directory) => relative.startsWith(`${directory}/`))) return [`${actionPath}@${sha}: Action entrypoint outside execution closure: ${entry}`];
+    if (!inExecutionClosure(relative, actionPaths)) return [`${actionPath}@${sha}: Action entrypoint outside execution closure: ${entry}`];
     const object = execFileSync('git', ['ls-tree', '--format=%(objectmode) %(objecttype)', sha, '--', `:(literal)${relative}`], { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
     return /^(100644|100755) blob$/.test(object) ? [] : [`${actionPath}@${sha}: Action entrypoint is missing or not a regular file: ${entry}`];
   });
@@ -117,7 +117,6 @@ export function checkActionReferences(root, snapshot, options = {}) {
     .filter((reference) => typeof reference.uses === 'string' && reference.uses.startsWith(`${binding.repository}/actions/`))
     .map((reference) => ({ ...reference, relative })));
   const actionPaths = references.flatMap(({ uses }) => /^a3-suite\/a3-ci-github\/(actions\/[a-z0-9-]+)@[0-9a-f]{40}$/.exec(uses)?.[1] ?? []);
-  const closureRoots = [...new Set([...actionPaths, 'runtime'])];
   const metadata = new Map();
   for (const reference of references) {
     const match = /^a3-suite\/a3-ci-github\/(actions\/[a-z0-9-]+)@([0-9a-f]{40})$/.exec(reference.uses);
@@ -135,7 +134,7 @@ export function checkActionReferences(root, snapshot, options = {}) {
     if (!metadata.has(reference.uses)) {
       const text = execFileSync('git', ['show', `${sha}:${actionPath}/action.yml`], { cwd: root, encoding: 'utf8', stdio: 'pipe' });
       metadata.set(reference.uses, parseYaml(text, `${sha}:${actionPath}/action.yml`).toJS());
-      diagnostics.push(...actionEntrypointDiagnostics(root, actionPath, sha, metadata.get(reference.uses), closureRoots));
+      diagnostics.push(...actionEntrypointDiagnostics(root, actionPath, sha, metadata.get(reference.uses), actionPaths));
     }
     const action = metadata.get(reference.uses);
     const inputs = reference.step?.with ?? {};
@@ -165,7 +164,7 @@ export function checkActionReferences(root, snapshot, options = {}) {
     } else if (options.candidate) {
       sourceRevision = git('rev-parse', 'HEAD');
       sourceTree = snapshot.before ?? git('rev-parse', 'HEAD^{tree}');
-      if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...new Set([...actionPaths, 'runtime']))) throw new DiagnosticError('implementation-candidate-execution-assets-dirty', { diagnostics: { field: 'execution-assets', expected: 'committed-actions-and-runtime', observed: 'uncommitted-changes' } });
+      if (!snapshot.before && git('status', '--porcelain', '--untracked-files=all', '--', ...executionClosurePathspecs(actionPaths))) throw new DiagnosticError('implementation-candidate-execution-assets-dirty', { diagnostics: { field: 'execution-assets', expected: 'committed-actions-and-runtime', observed: 'uncommitted-changes' } });
       if (snapshot.read('VERSION').trim() !== git('show', `${sourceTree}:VERSION`)) throw new DiagnosticError('implementation-candidate-version-dirty', { diagnostics: { field: 'VERSION', expected: 'committed-version', observed: 'uncommitted-change' } });
       // A published tag cannot become a connection candidate; recreation removes the tag before validation.
       if (git('tag', '--list', binding.releaseTag)) throw new DiagnosticError('implementation-candidate-release-tag-exists', { diagnostics: { field: 'release-tag', expected: 'unpublished-release-tag', observed: 'existing-tag' } });
@@ -175,7 +174,7 @@ export function checkActionReferences(root, snapshot, options = {}) {
       if (git('cat-file', '-t', `refs/tags/${tag}`) !== 'tag') throw new DiagnosticError('implementation-binding-annotated-tag-required', { diagnostics: { field: 'release-tag', expected: 'annotated-tag', observed: 'missing-or-lightweight' } });
       sourceRevision = git('rev-parse', `refs/tags/${tag}^{commit}`);
       if (options.releaseTag && (snapshot.before || sourceRevision !== git('rev-parse', 'HEAD'))) throw new DiagnosticError('implementation-publication-source-mismatch', { diagnostics: { field: 'source-revision', expected: 'release-tag-commit-at-head', observed: 'differs' } });
-      if (options.releaseTag && git('status', '--porcelain', '--untracked-files=all', '--', 'VERSION', registryPath, ...snapshot.targets, ...new Set([...actionPaths, 'runtime']))) throw new DiagnosticError('implementation-publication-source-dirty', { diagnostics: { field: 'publication-source', expected: 'clean-tag-checkout', observed: 'uncommitted-changes' } });
+      if (options.releaseTag && git('status', '--porcelain', '--untracked-files=all', '--', 'VERSION', registryPath, ...snapshot.targets, ...executionClosurePathspecs(actionPaths))) throw new DiagnosticError('implementation-publication-source-dirty', { diagnostics: { field: 'publication-source', expected: 'clean-tag-checkout', observed: 'uncommitted-changes' } });
       sourceTree = sourceRevision;
     }
     implementationBinding = verifyImplementationBinding(root, binding, actionPaths, { sourceRevision, sourceTree });

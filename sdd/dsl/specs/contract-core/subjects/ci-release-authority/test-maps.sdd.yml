@@ -67,3 +67,12 @@ test_maps:
         symbol: ci-release-authority-runtime > authority rejection retains the failing verification stage and expected/observed identity
         guarantees:
           - diagnostic-failure-stage-outputs
+  - contract_id: contract.ci-release-authority.outputs
+    case_id: asset-release-selection
+    tests:
+      - path: actions/ci-release-authority/tests/authority.test.ts
+        symbol: ci-release-authority-runtime > authority records an asset release without language, toolchain or platform bindings
+        guarantees:
+          - authority-file
+          - authority-get-only-requests
+          - authority-asset-only-no-platform-binding

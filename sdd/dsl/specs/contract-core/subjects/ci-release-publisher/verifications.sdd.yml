@@ -42,12 +42,11 @@ cases:
     partition: runtime-context.release-publisher-valid
     input:
       asset-inventory: initially-valid-subset-then-complete
-      writes: once
   - contract_id: contract.ci-release-publisher.outputs
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-release-publisher.outputs
     id: bundle-publish
     partition: runtime-context.release-publisher-valid
@@ -64,7 +63,7 @@ cases:
     id: bundle-rejection
     partition: runtime-context.release-publisher-invalid
     input:
-      scenario: missing-credential
+      credential: absent
   - contract_id: contract.ci-release-publisher.outputs
     id: invalid-local-bindings
     partition: runtime-context.release-publisher-invalid

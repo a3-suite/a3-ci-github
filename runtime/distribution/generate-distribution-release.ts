@@ -198,7 +198,7 @@ export const prepareDistributionRelease = (options: {
   const workflowReferences: Record<string, string> = {};
   const reusableWorkflows: Record<string, unknown> = {};
   for (const bindingName of ['qualityReusableWorkflow', 'qualityPlatformsReusableWorkflow',
-    'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow']) {
+    'packagePreparationReusableWorkflow', 'releasePublicationReusableWorkflow', 'assetReleasePublicationReusableWorkflow', 'packagePublicationReusableWorkflow']) {
     const binding = map(presetRegistry[bindingName]);
     workflowReferences[String(binding.referencePlaceholder).slice(1, -1)] = options.sourceRevision;
     reusableWorkflows[String(binding.source)] = {

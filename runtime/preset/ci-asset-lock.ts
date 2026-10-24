@@ -11,6 +11,7 @@ export type AssetLock = {
   schemaVersion: string;
   kind: string;
   sourceRevision: string;
+  releaseTag: string;
   generatedAt: string;
   assets: AssetLockEntry[];
 };
@@ -39,6 +40,7 @@ export type AssetLockPlan = {
 
 export type WriteAssetLockOptions = {
   sourceRevision: string;
+  releaseTag: string;
   generatedAt?: string | Date;
   validate: () => AssetLockValidation;
   resolvePlan: () => AssetLockPlan;
@@ -47,6 +49,7 @@ export type WriteAssetLockOptions = {
 };
 
 export const FULL_SHA = /^[0-9a-f]{40}$/;
+export const RELEASE_TAG = /^v\d+\.\d+\.\d+$/;
 
 // Findings stay opaque to the writer; diagnostics keep only paths in repository-relative form.
 const relativePath = (value: unknown): string => typeof value === 'string' && /^(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/.test(value) && !value.split('/').includes('..') ? value : 'invalid-format';
@@ -65,6 +68,10 @@ export const writeAssetLock = (options: WriteAssetLockOptions): AssetLock => {
     throw new DiagnosticError('sourceRevision must be a full commit SHA', { diagnosticCode: 'sourcerevision-must-be-a-full-commit-sha',
       diagnostics: { stage: 'source-revision-validation', field: 'source-revision', expected: 'full-commit-sha', observed: 'invalid-format' } });
   }
+  if (!RELEASE_TAG.test(options.releaseTag)) {
+    throw new DiagnosticError('releaseTag must be an exact vX.Y.Z tag', { diagnosticCode: 'releasetag-must-be-an-exact-vx-y-z-tag',
+      diagnostics: { stage: 'release-tag-validation', field: 'release-tag', expected: 'exact-semver-tag', observed: 'invalid-format' } });
+  }
   const validation = options.validate();
   if (validation.status !== 'success') {
     throw new DiagnosticError(`cannot write asset lock for an invalid preset: ${JSON.stringify({
@@ -78,6 +85,7 @@ export const writeAssetLock = (options: WriteAssetLockOptions): AssetLock => {
     schemaVersion: plan.schemaVersion,
     kind: plan.kind,
     sourceRevision: options.sourceRevision,
+    releaseTag: options.releaseTag,
     generatedAt: minuteTimestamp(options.generatedAt ?? new Date()),
     assets: plan.assets.map((asset) => ({
       path: asset.path,

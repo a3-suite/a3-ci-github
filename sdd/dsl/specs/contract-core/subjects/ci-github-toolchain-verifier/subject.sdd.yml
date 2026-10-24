@@ -6,16 +6,23 @@ subject:
 contracts:
   - id: contract.ci-github-toolchain-verifier.processing
     summary: The shared script accepts only supported modes whose selected CLI versions exactly match the request.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: mode
+        meaning: "Received by the contract target: verification mode."
+      - name: unavailable-command
+        meaning: "Precondition prepared by the case: command missing from the runner."
+      - name: jq-version
+        meaning: "Precondition prepared by the case: jq version reported by the runner."
     observations:
       - summary: The shared script exposes whether exact toolchain verification succeeded or failed.
-        boundary:
-          ref: boundary.script-result
+        boundary: boundary.script-result
         fields:
           - selector: outcome
             meaning: Success only when every CLI selected by the mode exists and exactly matches the requested version; failure otherwise.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
@@ -46,18 +53,27 @@ contracts:
           present: true
   - id: contract.ci-github-toolchain-verifier.outputs
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    inputs:
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: mode
+        meaning: "Received by the contract target: verification mode."
+      - name: gh-version
+        meaning: "Precondition prepared by the case: GitHub CLI version reported by the runner."
+      - name: jq-version
+        meaning: "Precondition prepared by the case: jq version reported by the runner."
+      - name: sha256sum-version
+        meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: verified
             meaning: Whether every command selected by mode matched its exact expected version.
           - selector: outcome
             meaning: The success or failure outcome of the verification step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

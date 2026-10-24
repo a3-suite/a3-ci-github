@@ -8,11 +8,11 @@ import { identityFromAuthority, assetDigest, sortedAssets, validateEvidence } fr
 import type { AssemblyType } from './schema';
 import { validateSnapshot } from './snapshot';
 import { buildReleaseSkills } from './skill-package';
-import { releaseSkillsConfigPath } from './selection';
+import { assetReleaseSelection, releaseSkillsConfigPath } from './selection';
 
 export type AssemblyOptionsType = {
-  authorityPath: string; repository: string; snapshotPath: string; platformManifestPath: string;
-  platformMatrix: string; buildRoot: string; supplementalRoot?: string; skillsSourceRoot?: string; outputRoot: string;
+  authorityPath: string; repository: string; snapshotPath: string; platformManifestPath?: string;
+  platformMatrix?: string; buildRoot?: string; supplementalRoot?: string; skillsSourceRoot?: string; outputRoot: string;
 };
 export type ManifestDecoderType = (text: string) => unknown;
 type FileType = { name: string; sha256: string; size?: number } & ({ filename: string; bytes?: never } | { bytes: Buffer; filename?: never });
@@ -39,21 +39,42 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     if (supplementalEnabled !== Boolean(options.supplementalRoot)) fail(supplementalEnabled ? 'selected-supplemental-asset-missing' : 'unexpected-supplemental-asset');
     const skillsConfigPath = releaseSkillsConfigPath(config);
     if (Boolean(skillsConfigPath) !== Boolean(options.skillsSourceRoot)) fail('skills-source-selection-mismatch');
+    const assetRelease = assetReleaseSelection(config, authority);
     diagnostic.confirmed();
-    diagnostic.at('platform-validation', { input: 'platform-manifest-path' });
-    const platformBytes = readBytes(options.platformManifestPath, 65536);
-    if (sourceTextSha256(platformBytes) !== authority.platform_manifest_sha256 || config.CI_PLATFORM_MANIFEST !== authority.platform_manifest) fail('platform-mismatch');
-    const matrix: unknown = JSON.parse(options.platformMatrix);
-    exactKeys(matrix, ['include']);
-    const expectedMatrix = { include: validatePlatformManifestValue(decodeManifest(platformBytes.toString('utf8')), 'trusted') };
-    equal(matrix, expectedMatrix, 'platform-mismatch');
-    const platforms = expectedMatrix.include;
-    if (platforms.length > LIMITS.assets / 2) fail('platform-limit-exceeded');
-    const expectedDirectories = platforms.map((platform) => `release-build-${platform.id}`).sort();
-    diagnostic.confirmed();
-    diagnostic.at('build-inventory', { input: 'build-root', source: identity.source_sha, version: identity.version });
-    exactInventory(fs.readdirSync(options.buildRoot), expectedDirectories, 'build-directories', 'asset-set-mismatch');
-    diagnostic.confirmed();
+    const buildInputs = { 'platform-manifest-path': options.platformManifestPath, 'platform-matrix': options.platformMatrix, 'build-root': options.buildRoot };
+    let platforms: ReturnType<typeof validatePlatformManifestValue> = [];
+    let buildRoot = '';
+    if (assetRelease) {
+      for (const [name, value] of Object.entries(buildInputs)) {
+        diagnostic.at('asset-release-selection', { input: name });
+        if (value) fail(`input-unexpected:${name}`);
+        diagnostic.confirmed();
+      }
+      diagnostic.at('asset-release-selection', { input: 'release-asset-selection' });
+      if (!skillsConfigPath && !supplementalEnabled) fail('asset-set-empty');
+      diagnostic.confirmed();
+    } else {
+      for (const [name, value] of Object.entries(buildInputs)) {
+        diagnostic.at('platform-validation', { input: name });
+        if (!value) fail(`input-missing:${name}`);
+        diagnostic.confirmed();
+      }
+      diagnostic.at('platform-validation', { input: 'platform-manifest-path' });
+      buildRoot = String(options.buildRoot);
+      const platformBytes = readBytes(String(options.platformManifestPath), 65536);
+      if (sourceTextSha256(platformBytes) !== authority.platform_manifest_sha256 || config.CI_PLATFORM_MANIFEST !== authority.platform_manifest) fail('platform-mismatch');
+      const matrix: unknown = JSON.parse(String(options.platformMatrix));
+      exactKeys(matrix, ['include']);
+      const expectedMatrix = { include: validatePlatformManifestValue(decodeManifest(platformBytes.toString('utf8')), 'trusted') };
+      equal(matrix, expectedMatrix, 'platform-mismatch');
+      platforms = expectedMatrix.include;
+      if (platforms.length > LIMITS.assets / 2) fail('platform-limit-exceeded');
+      const expectedDirectories = platforms.map((platform) => `release-build-${platform.id}`).sort();
+      diagnostic.confirmed();
+      diagnostic.at('build-inventory', { input: 'build-root', source: identity.source_sha, version: identity.version });
+      exactInventory(fs.readdirSync(buildRoot), expectedDirectories, 'build-directories', 'asset-set-mismatch');
+      diagnostic.confirmed();
+    }
     const files: (FileType & { size: number })[] = [];
     const metadata: FileType[] = [];
     let totalBytes = 0;
@@ -80,7 +101,7 @@ export const assembleRelease = (options: AssemblyOptionsType, decodeManifest: Ma
     };
     for (const platform of platforms) {
       diagnostic.at('build-manifest', { platform: platform.id, target: platform.target, input: 'asset-manifest.json' });
-      const root = safePath(options.buildRoot, `release-build-${platform.id}`, true);
+      const root = safePath(buildRoot, `release-build-${platform.id}`, true);
       const manifest = readRecord(safePath(root, 'asset-manifest.json'));
       exactKeys(manifest, ['schema_version', 'kind', 'source_sha', 'version', 'platform_id', 'platform_target', 'assets']);
       if (manifest.schema_version !== '1' || manifest.kind !== 'ci-release-build-manifest') fail('manifest-shape-invalid');

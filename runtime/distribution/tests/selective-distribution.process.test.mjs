@@ -290,7 +290,7 @@ describe("contract.ci-selective-distribution.application", () => {
           fs.writeFileSync(scriptPath, `import assert from 'node:assert/strict';
 import { writeCiAssetLock } from ${moduleUrl('runtime/preset/ci-asset-lock-plan.ts')};
 import { validateCiPreset } from ${moduleUrl('runtime/preset/validate-ci-preset.ts')};
-const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });
+const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: ${JSON.stringify(releaseTag)} });
 assert.ok(lock.assets.some(entry => entry.path === '.ci/provider-action-pins.yml'));
 const report = validateCiPreset({ repoRoot: ${JSON.stringify(projectRoot)} });
 assert.equal(report.status, 'success', JSON.stringify(report));`);
@@ -342,8 +342,15 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
           fs.unlinkSync(path.join(projectRoot, relative));
         }
         const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const mismatchedPath = path.join(root, 'generate-mismatched-lock.mts');
+        fs.writeFileSync(mismatchedPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: 'v99.0.0' });`);
+        const mismatched = spawnSync(tsx, [mismatchedPath], { encoding: 'utf8', env: { ...process.env,
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
+        expect(mismatched.status).not.toBe(0);
+        expect(mismatched.stderr).toContain('asset lock source must match the fetched distribution Release');
+        expect(fs.existsSync(path.join(projectRoot, '.ci/ci-assets.lock.json'))).toBe(false);
         const scriptPath = path.join(root, 'generate-lock.mts');
-        fs.writeFileSync(scriptPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });`);
+        fs.writeFileSync(scriptPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: ${JSON.stringify(releaseTag)} });`);
         const generated = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: { ...process.env,
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
         expect(generated.status, generated.stderr).toBe(0);
@@ -401,6 +408,13 @@ describe("contract.ci-selective-distribution.application", () => {
         const yamlDestination = path.join(projectRoot, '.a3-skills/ci-github/runtime/node_modules/yaml');
         fs.mkdirSync(path.dirname(yamlDestination), { recursive: true });
         fs.cpSync(yamlSource, yamlDestination, { recursive: true });
+        const unsetPlan = spawnSync(process.execPath, [
+          cli, 'plan', '--source-revision', sourceRevision, '--preset', 'quality-gate', '--repo-root', projectRoot,
+        ], { encoding: 'utf8' });
+        expect(unsetPlan.status).toBe(2);
+        const unsetEvidence = JSON.parse(unsetPlan.stderr);
+        expect(unsetEvidence.diagnostic).toBe('workflow-template-setting-missing');
+        expect(unsetEvidence.failureEvidence.classification).toMatchObject({ operation: 'plan', stage: 'template-render', reason: 'workflow-template-setting-missing', cause: 'known' });
         const planResult = spawnSync(process.execPath, [
           cli, 'plan',
           '--source-revision', sourceRevision,
@@ -499,7 +513,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         run(`import assert from 'node:assert/strict';
       import { writeCiAssetLock } from ${moduleUrl(request.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')};
       import { validateCiPreset } from ${moduleUrl(request.distributionRoot, 'runtime/preset/validate-ci-preset.ts')};
-      const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)} });
+      const lock = writeCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: ${JSON.stringify(releaseTag)} });
       assert.equal(lock.assets.length, 2);
       assert.equal(validateCiPreset({ repoRoot: ${JSON.stringify(projectRoot)}, presets: ['release-request'] }).status, 'success');`);
         const quality = await fetchDistribution({ projectRoot, manifest: release.manifest,

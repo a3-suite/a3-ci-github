@@ -84,7 +84,7 @@ const validateCaller = (
   for (const [jobName, jobValue] of Object.entries(map(caller.jobs))) {
     const job = map(jobValue);
     if (typeof job.uses !== 'string') continue;
-    const remote = job.uses.match(/^a3-suite\/a3-ci-github\/\.github\/workflows\/ci-(release|package)-publication\.yml@/);
+    const remote = job.uses.match(/^a3-suite\/a3-ci-github\/\.github\/workflows\/ci-(release|asset-release|package)-publication\.yml@/);
     if (!remote && !job.uses.startsWith('./.github/workflows/')) continue;
     const targetPath = remote ? `.github/workflows/${remote[1]}-publication.yml` : job.uses.slice(2);
     const target = workflows.get(targetPath);
@@ -347,6 +347,17 @@ const expectedSupplementalAssetSnapshot: Record<string, string> = {
   CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '${{ inputs.supplemental_release_asset_config_path }}',
 };
 
+// An asset release always runs the owner adapter, so the callee fixes the implementation instead of taking it from the caller.
+const assetReleaseSupplementalSnapshot: Record<string, string> = {
+  ...expectedSupplementalAssetSnapshot,
+  CI_SUPPLEMENTAL_RELEASE_ASSET_IMPLEMENTATION: 'owner-adapter',
+  CI_SUPPLEMENTAL_RELEASE_ASSET_CONFIG_PATH: '__unset__',
+};
+
+const supplementalSnapshotFor = (snapshotSources: ValueMap | undefined): Record<string, string> =>
+  map(map(snapshotSources).runtime).CI_RELEASE_IMPLEMENTATION === 'asset-release'
+    ? assetReleaseSupplementalSnapshot : expectedSupplementalAssetSnapshot;
+
 const authoritySnapshotBinding = /^\$\{\{\s*(env|inputs)\.([A-Za-z][A-Za-z0-9_]*)\s*\}\}$/;
 
 const parseAuthoritySnapshotSources = (sourcesJson: unknown): ValueMap | undefined => {
@@ -500,7 +511,7 @@ const validatePublicationControlSurface = (
       message: 'selected release skills must be bound into the authority snapshot from the trusted caller',
       settingLocation: publicationPath,
     });
-  for (const [key, value] of Object.entries(expectedSupplementalAssetSnapshot)) {
+  for (const [key, value] of Object.entries(supplementalSnapshotFor(snapshotSources))) {
     if (workflowSnapshot[key] !== value) add(report.mismatches, {
       path: `${publicationPath}:jobs.authority.steps.config.with.sources-json.workflow.${key}`,
       message: `supplemental asset selection must be recorded in the authority snapshot: ${key}`,
@@ -532,10 +543,21 @@ const validateSupplementalBuildStep = (
   });
 };
 
+const ownerAdapterJobCondition = (condition: unknown): boolean =>
+  condition === "inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter'";
+
+// Folded YAML conditions differ only in whitespace; any other difference can change which prerequisite results admit the job.
+const normalizedCondition = (condition: unknown): string => typeof condition === 'string' ? condition.replace(/\s+/g, ' ').trim() : '';
+const assetReleaseQualityAdmitted = "(needs.quality.result == 'success' || (inputs.language-profile == '' && needs.quality.result == 'skipped'))";
+const assetReleaseSupplementalCondition = `\${{ !cancelled() && inputs.supplemental_release_asset_enabled && needs.authority.result == 'success' && ${assetReleaseQualityAdmitted} }}`;
+const assetReleaseAssembleCondition = `\${{ !cancelled() && needs.authority.result == 'success' && ${assetReleaseQualityAdmitted} && ((inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'success') || (!inputs.supplemental_release_asset_enabled && needs.supplemental-asset.result == 'skipped')) }}`;
+const assetReleaseJobCondition = (condition: unknown): boolean => normalizedCondition(condition) === assetReleaseSupplementalCondition;
+
 const validateSupplementalAssemblyStep = (
   publicationPath: string,
   supplementalAssetJob: ValueMap,
   report: Report,
+  jobCondition: (condition: unknown) => boolean = ownerAdapterJobCondition,
 ): void => {
   const supplementalAssetSteps = Array.isArray(supplementalAssetJob.steps)
     ? supplementalAssetJob.steps.map(map) : [];
@@ -549,7 +571,7 @@ const validateSupplementalAssemblyStep = (
     'supplemental-platform-build-root': 'supplemental-build',
     'output-directory': 'supplemental-asset',
   }, report);
-  if (supplementalAssetJob.if !== "inputs.supplemental_release_asset_enabled && inputs.supplemental_release_asset_implementation == 'owner-adapter'"
+  if (!jobCondition(supplementalAssetJob.if)
     || supplementalAssembly?.if !== undefined
     || !supplementalActionMatches(supplementalAssembly, supplementalAssemblyInputs)) add(report.mismatches, {
     path: `${publicationPath}:jobs.supplemental-asset.steps.Build and verify supplemental Release asset`,
@@ -567,12 +589,18 @@ export const supplementalOwnerAdapterEntrypoint = (publication: ValueMap): strin
     || !config.uses.startsWith('a3-suite/a3-ci-github/actions/ci-config-snapshot@')
     || config.if !== undefined || config.run !== undefined || config['continue-on-error'] !== undefined
     || map(config.with)['snapshot-path'] !== '${{ env.CI_CONFIG_SNAPSHOT_PATH }}') return undefined;
-  const snapshot = map(parseAuthoritySnapshotSources(map(config.with)['sources-json'])?.workflow);
-  if (Object.entries(expectedSupplementalAssetSnapshot).some(([key, value]) => snapshot[key] !== value)) return undefined;
+  const sources = parseAuthoritySnapshotSources(map(config.with)['sources-json']);
+  const snapshot = map(sources?.workflow);
+  const expected = supplementalSnapshotFor(sources);
+  if (Object.entries(expected).some(([key, value]) => snapshot[key] !== value)) return undefined;
   // Reachability follows the selected Action inputs, not incidental snapshot text.
   const report = createReport();
-  validateSupplementalBuildStep('publication', map(jobs.build), report);
-  validateSupplementalAssemblyStep('publication', map(jobs['supplemental-asset']), report);
+  if (expected === assetReleaseSupplementalSnapshot) {
+    validateSupplementalAssemblyStep('publication', map(jobs['supplemental-asset']), report, assetReleaseJobCondition);
+  } else {
+    validateSupplementalBuildStep('publication', map(jobs.build), report);
+    validateSupplementalAssemblyStep('publication', map(jobs['supplemental-asset']), report);
+  }
   if (report.mismatches.length || report.missingSettings.length) return undefined;
   return expectedSupplementalAssetSnapshot.CI_SUPPLEMENTAL_RELEASE_ASSET_ADAPTER;
 };
@@ -658,24 +686,70 @@ const validateReleaseJobGraph = (
   });
 };
 
+const validateAssetReleaseJobGraph = (
+  publicationPath: string,
+  publication: ValueMap,
+  report: Report,
+): void => {
+  const publicationJobs = map(publication.jobs);
+  const qualityJob = map(publicationJobs.quality);
+  const assembleJob = map(publicationJobs.assemble);
+  const summaryJob = map(publicationJobs.summary);
+  for (const productJob of ['source-gate', 'build']) {
+    if (productJob in publicationJobs) add(report.mismatches, {
+      path: `${publicationPath}:jobs.${productJob}`,
+      message: 'asset release publication must not run a product build job',
+      settingLocation: publicationPath,
+    });
+  }
+  if (qualityJob.if !== "inputs.language-profile != ''"
+    || !JSON.stringify(qualityJob).includes('/actions/ci-quality-adapter@')) add(report.mismatches, {
+    path: `${publicationPath}:jobs.quality`,
+    message: 'asset release quality must run the quality adapter only when a language profile is selected',
+    settingLocation: publicationPath,
+  });
+  validateSupplementalAssemblyStep(publicationPath, map(publicationJobs['supplemental-asset']), report, assetReleaseJobCondition);
+  if (normalizedCondition(assembleJob.if) !== assetReleaseAssembleCondition) add(report.mismatches, {
+    path: `${publicationPath}:jobs.assemble.if`,
+    message: 'asset release assembly must run only after authority, an admitted quality result and the selected supplemental asset result succeed',
+    settingLocation: publicationPath,
+  });
+  for (const prerequisite of ['authority', 'quality', 'supplemental-asset']) {
+    if (!strings(assembleJob.needs).includes(prerequisite)) add(report.mismatches, {
+      path: `${publicationPath}:jobs.assemble.needs`,
+      message: `asset release assembly must wait for the ${prerequisite} result`,
+      settingLocation: publicationPath,
+    });
+  }
+  if (!strings(summaryJob.needs).includes('quality')
+    || !strings(summaryJob.needs).includes('supplemental-asset')
+    || summaryJob.if !== 'always()') add(report.mismatches, {
+    path: `${publicationPath}:jobs.summary`,
+    message: 'asset release summary must always collect quality and supplemental asset results',
+    settingLocation: publicationPath,
+  });
+};
+
 const validateReleasePublicationFlow = (
   workflows: Map<string, ValueMap>,
   report: Report,
 ): void => {
   const requestPath = '.github/workflows/release-publication-request.yml';
   const callerPath = '.github/workflows/release-publication-caller.yml';
-  const publicationPath = '.github/workflows/release-publication.yml';
   const request = workflows.get(requestPath);
   const caller = workflows.get(callerPath);
-  const publication = workflows.get(publicationPath);
-  if (!request || !caller || !publication) return;
-
-  validateReleaseRequestWorkflow(requestPath, request, report);
-
-  const publishWith = validateReleaseCallerWorkflow(callerPath, caller, report);
-
-  validatePublicationControlSurface(publicationPath, publication, callerPath, publishWith, report);
-  validateReleaseJobGraph(publicationPath, publication, report);
+  // The caller resolves to exactly one virtual callee path, which selects the release or asset release graph.
+  for (const [publicationPath, validateJobGraph] of [
+    ['.github/workflows/release-publication.yml', validateReleaseJobGraph],
+    ['.github/workflows/asset-release-publication.yml', validateAssetReleaseJobGraph],
+  ] as const) {
+    const publication = workflows.get(publicationPath);
+    if (!request || !caller || !publication) continue;
+    validateReleaseRequestWorkflow(requestPath, request, report);
+    const publishWith = validateReleaseCallerWorkflow(callerPath, caller, report);
+    validatePublicationControlSurface(publicationPath, publication, callerPath, publishWith, report);
+    validateJobGraph(publicationPath, publication, report);
+  }
 };
 
 const validatePublicationRequest = (

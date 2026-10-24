@@ -170,3 +170,39 @@ test_maps:
         symbol: dist entrypoint > assembly bundle packages selected release skills
         guarantees:
           - assembly-rejected
+  - contract_id: contract.ci-release-assembly.outputs
+    case_id: asset-only-assembly-valid
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > asset-release-assembly > asset release assembles selected skills and supplemental assets without a build inventory
+        guarantees:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: source entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        guarantees:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: dist entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        guarantees:
+          - assembly-success
+          - bound-handoff
+          - bound-asset-digest
+  - contract_id: contract.ci-release-assembly.outputs
+    case_id: asset-only-assembly-empty
+    tests:
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > asset-release-assembly > asset release rejects an empty asset selection, build inputs and a platform-bound authority
+        guarantees:
+          - assembly-rejected
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: source entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        guarantees:
+          - assembly-rejected
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: dist entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        guarantees:
+          - assembly-rejected

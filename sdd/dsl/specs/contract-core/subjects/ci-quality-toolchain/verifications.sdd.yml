@@ -5,7 +5,8 @@ cases:
     id: detailed-failure-preparation
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      language-profile: rust
+      rust-setup-result: failure
   - contract_id: contract.ci-quality-toolchain.preparation
     id: selected-quality-toolchain
     partition: runtime-context.quality-toolchain-inputs-ready

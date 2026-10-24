@@ -2,285 +2,244 @@ version: 2
 name: contract-route
 routes:
   - route_id: action-contracts-release-authority
-    contract_ref:
-      contract_id: contract.ci-release-authority.outputs
+    contract_id: contract.ci-release-authority.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-release-publisher
-    contract_ref:
-      contract_id: contract.ci-release-publisher.outputs
+    contract_id: contract.ci-release-publisher.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: repository-action-distribution-integrity
-    contract_ref:
-      contract_id: contract.repository-action-distribution.integrity
+    contract_id: contract.repository-action-distribution.integrity
     hops:
-      - component_id: contract-verification
-      - component_id: hosted-delivery
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - contract-verification
+      - hosted-delivery
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-github-toolchain-verifier
-    contract_ref:
-      contract_id: contract.ci-github-toolchain-verifier.outputs
+    contract_id: contract.ci-github-toolchain-verifier.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-jq-provisioner
-    contract_ref:
-      contract_id: contract.ci-jq-provisioner.provision
+    contract_id: contract.ci-jq-provisioner.provision
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-gh-provisioner
-    contract_ref:
-      contract_id: contract.ci-gh-provisioner.provision
+    contract_id: contract.ci-gh-provisioner.provision
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: script-processing-github-toolchain-verifier
-    contract_ref:
-      contract_id: contract.ci-github-toolchain-verifier.processing
+    contract_id: contract.ci-github-toolchain-verifier.processing
     hops:
-      - component_id: runtime-implementations
-      - component_id: action-contracts
+      - runtime-implementations
+      - action-contracts
   - route_id: action-contracts-rust-source-gate
-    contract_ref:
-      contract_id: contract.ci-rust-source-gate.outputs
+    contract_id: contract.ci-rust-source-gate.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: script-processing-rust-source-gate
-    contract_ref:
-      contract_id: contract.ci-rust-source-gate.processing
+    contract_id: contract.ci-rust-source-gate.processing
     hops:
-      - component_id: runtime-implementations
-      - component_id: action-contracts
+      - runtime-implementations
+      - action-contracts
   - route_id: action-contracts-rust-release-build
-    contract_ref:
-      contract_id: contract.ci-rust-release-build.outputs
+    contract_id: contract.ci-rust-release-build.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: script-processing-rust-release-build
-    contract_ref:
-      contract_id: contract.ci-rust-release-build.processing
+    contract_id: contract.ci-rust-release-build.processing
     hops:
-      - component_id: runtime-implementations
-      - component_id: action-contracts
+      - runtime-implementations
+      - action-contracts
   - route_id: action-contracts-change-scope
-    contract_ref:
-      contract_id: contract.ci-change-scope.outputs
+    contract_id: contract.ci-change-scope.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-annotated-tag-resolver
-    contract_ref:
-      contract_id: contract.ci-annotated-tag-resolver.outputs
+    contract_id: contract.ci-annotated-tag-resolver.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-config-snapshot
-    contract_ref:
-      contract_id: contract.ci-config-snapshot.outputs
+    contract_id: contract.ci-config-snapshot.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-platform-matrix
-    contract_ref:
-      contract_id: contract.ci-platform-matrix.outputs
+    contract_id: contract.ci-platform-matrix.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-handoff-integrity
-    contract_ref:
-      contract_id: contract.ci-handoff-integrity.outputs
+    contract_id: contract.ci-handoff-integrity.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-release-supplemental-asset
-    contract_ref:
-      contract_id: contract.ci-release-supplemental-asset.outputs
+    contract_id: contract.ci-release-supplemental-asset.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-release-assembly
-    contract_ref:
-      contract_id: contract.ci-release-assembly.outputs
+    contract_id: contract.ci-release-assembly.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-release-publication-verifier
-    contract_ref:
-      contract_id: contract.ci-release-publication-verifier.outputs
+    contract_id: contract.ci-release-publication-verifier.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-publish-version
-    contract_ref:
-      contract_id: contract.ci-publish-version.outputs
+    contract_id: contract.ci-publish-version.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-quality-summary
-    contract_ref:
-      contract_id: contract.ci-quality-summary.outputs
+    contract_id: contract.ci-quality-summary.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-release-request-handoff
-    contract_ref:
-      contract_id: contract.ci-release-request-handoff.outputs
+    contract_id: contract.ci-release-request-handoff.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-release-publication-control
-    contract_ref:
-      contract_id: contract.ci-release-publication-control.outputs
+    contract_id: contract.ci-release-publication-control.outputs
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-package-publication-request
-    contract_ref:
-      contract_id: contract.ci-package-publication-request.outputs
+    contract_id: contract.ci-package-publication-request.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-quality-toolchain
-    contract_ref:
-      contract_id: contract.ci-quality-toolchain.preparation
+    contract_id: contract.ci-quality-toolchain.preparation
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: action-contracts-quality-adapter
-    contract_ref:
-      contract_id: contract.ci-quality-adapter.outputs
+    contract_id: contract.ci-quality-adapter.outputs
     hops:
-      - component_id: action-contracts
+      - action-contracts
   - route_id: workflow-quality-execution
-    contract_ref:
-      contract_id: contract.ci-quality-workflow.execution
+    contract_id: contract.ci-quality-workflow.execution
     hops:
-      - component_id: workflow-sources
-      - component_id: contract-verification
+      - workflow-sources
+      - contract-verification
   - route_id: workflow-release-request-handoff
-    contract_ref:
-      contract_id: contract.ci-release-request-workflow.handoff
+    contract_id: contract.ci-release-request-workflow.handoff
     hops:
-      - component_id: workflow-sources
-      - component_id: contract-verification
+      - workflow-sources
+      - contract-verification
   - route_id: workflow-release-publication
-    contract_ref:
-      contract_id: contract.ci-release-publication-workflow.publication
+    contract_id: contract.ci-release-publication-workflow.publication
     hops:
-      - component_id: workflow-sources
-      - component_id: contract-verification
+      - workflow-sources
+      - contract-verification
+  - route_id: workflow-asset-release-publication
+    contract_id: contract.ci-release-publication-workflow.asset-publication
+    hops:
+      - workflow-sources
+      - contract-verification
   - route_id: workflow-package-publication
-    contract_ref:
-      contract_id: contract.ci-package-publication-workflow.publication
+    contract_id: contract.ci-package-publication-workflow.publication
     hops:
-      - component_id: workflow-sources
-      - component_id: contract-verification
+      - workflow-sources
+      - contract-verification
   - route_id: selective-distribution-selection
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.selection
+    contract_id: contract.ci-selective-distribution.selection
     hops:
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - selective-distribution
+      - contract-verification
   - route_id: selective-distribution-delivery
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.delivery
+    contract_id: contract.ci-selective-distribution.delivery
     hops:
-      - component_id: hosted-delivery
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
   - route_id: selective-distribution-publication
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.publication
+    contract_id: contract.ci-selective-distribution.publication
     hops:
-      - component_id: hosted-delivery
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
   - route_id: selective-distribution-application
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.application
+    contract_id: contract.ci-selective-distribution.application
     hops:
-      - component_id: agent-guidance
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - agent-guidance
+      - selective-distribution
+      - contract-verification
   - route_id: runtime-preset-materialization
-    contract_ref:
-      contract_id: contract.ci-preset-materialization.application
+    contract_id: contract.ci-preset-materialization.application
     hops:
-      - component_id: agent-guidance
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - agent-guidance
+      - runtime-implementations
+      - contract-verification
   - route_id: runtime-preset-assurance
-    contract_ref:
-      contract_id: contract.ci-preset-assurance.verification
+    contract_id: contract.ci-preset-assurance.verification
     hops:
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - runtime-implementations
+      - contract-verification
   - route_id: runtime-preset-asset-lock
-    contract_ref:
-      contract_id: contract.ci-preset-assurance.asset-lock
+    contract_id: contract.ci-preset-assurance.asset-lock
     hops:
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - runtime-implementations
+      - contract-verification
   - route_id: repository-managed-source-integrity
-    contract_ref:
-      contract_id: contract.repository-managed-source-integrity.integrity
+    contract_id: contract.repository-managed-source-integrity.integrity
     hops:
-      - component_id: sdd-specifications
-      - component_id: workflow-sources
-      - component_id: runtime-implementations
-      - component_id: provider-static-validation
-      - component_id: agent-guidance
-      - component_id: repository-maintainer-guidance
-      - component_id: repository-documentation
-      - component_id: contract-verification
+      - sdd-specifications
+      - workflow-sources
+      - runtime-implementations
+      - provider-static-validation
+      - agent-guidance
+      - repository-maintainer-guidance
+      - repository-documentation
+      - contract-verification
   - route_id: repository-contract-execution-mapping
-    contract_ref:
-      contract_id: contract.repository-managed-source-integrity.execution-mapping
+    contract_id: contract.repository-managed-source-integrity.execution-mapping
     hops:
-      - component_id: sdd-specifications
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - sdd-specifications
+      - runtime-implementations
+      - contract-verification
   - route_id: ci-failure-diagnostics
-    contract_ref:
-      contract_id: contract.ci-failure-diagnostics.actionable
+    contract_id: contract.ci-failure-diagnostics.actionable
     hops:
-      - component_id: workflow-sources
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - workflow-sources
+      - runtime-implementations
+      - contract-verification
   - route_id: ci-failure-diagnostics-subject-declarations
-    contract_ref:
-      contract_id: contract.ci-failure-diagnostics.subject-declarations
+    contract_id: contract.ci-failure-diagnostics.subject-declarations
     hops:
-      - component_id: sdd-specifications
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - sdd-specifications
+      - runtime-implementations
+      - contract-verification
   - route_id: ci-failure-diagnostics-workflow-evidence
-    contract_ref:
-      contract_id: contract.ci-failure-diagnostics.workflow-evidence
+    contract_id: contract.ci-failure-diagnostics.workflow-evidence
     hops:
-      - component_id: workflow-sources
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - workflow-sources
+      - runtime-implementations
+      - contract-verification
   - route_id: ci-failure-diagnostics-bootstrap-diagnostic
-    contract_ref:
-      contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
+    contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     hops:
-      - component_id: runtime-implementations
-      - component_id: contract-verification
+      - runtime-implementations
+      - contract-verification
   - route_id: selective-distribution-application-plan
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.plan
+    contract_id: contract.ci-selective-distribution.plan
     hops:
-      - component_id: agent-guidance
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - agent-guidance
+      - selective-distribution
+      - contract-verification
   - route_id: selective-distribution-application-rollback
-    contract_ref:
-      contract_id: contract.ci-selective-distribution.rollback
+    contract_id: contract.ci-selective-distribution.rollback
     hops:
-      - component_id: agent-guidance
-      - component_id: selective-distribution
-      - component_id: contract-verification
+      - agent-guidance
+      - selective-distribution
+      - contract-verification
   - route_id: action-contracts-release-supplemental-asset-assembly
-    contract_ref:
-      contract_id: contract.ci-release-supplemental-asset.assembly
+    contract_id: contract.ci-release-supplemental-asset.assembly
     hops:
-      - component_id: action-contracts
-      - component_id: runtime-implementations
+      - action-contracts
+      - runtime-implementations

@@ -15,8 +15,8 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
       operation: build-platform
+      owner-exit: 23
   - contract_id: contract.ci-release-supplemental-asset.outputs
     id: platform-phase
     partition: runtime-context.supplemental-phase-valid
@@ -193,8 +193,8 @@ cases:
     id: primary-and-cleanup-failure
     partition: runtime-context.supplemental-phase-invalid
     input:
-      scenario: primary-failure-followed-by-cleanup-failure
       operation: build-platform
+      failure: primary-then-cleanup
     verifies:
       - diagnostic-cleanup-status-mismatch
       - diagnostic-cleanup-state-inference
@@ -204,8 +204,8 @@ cases:
     id: sole-cleanup-failure
     partition: runtime-context.supplemental-phase-invalid
     input:
-      scenario: cleanup-fails-after-successful-primary-operation
       operation: build-platform
+      failure: cleanup-after-successful-primary
     verifies:
       - diagnostic-cleanup-only-code-mismatch
       - diagnostic-cleanup-status-mismatch
@@ -216,8 +216,8 @@ cases:
     id: untrusted-installer-process-diagnostic
     partition: runtime-context.supplemental-phase-invalid
     input:
-      scenario: malformed-installer-process-diagnostic
       operation: build-platform
+      failure: malformed-installer-process-diagnostic
     verifies:
       - diagnostic-unvalidated-installer-reason
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -246,9 +246,9 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
       operation: assemble
       supplemental-build-root: supplemental-build
+      owner-exit: 23
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: assembly-phase
     partition: runtime-context.supplemental-phase-valid
@@ -381,9 +381,9 @@ cases:
     id: primary-and-cleanup-failure
     partition: runtime-context.supplemental-phase-invalid
     input:
-      scenario: primary-failure-followed-by-cleanup-failure
       operation: assemble
       supplemental-build-root: supplemental-build
+      failure: primary-then-cleanup
     verifies:
       - diagnostic-cleanup-status-mismatch
       - diagnostic-cleanup-state-inference
@@ -393,9 +393,9 @@ cases:
     id: sole-cleanup-failure
     partition: runtime-context.supplemental-phase-invalid
     input:
-      scenario: cleanup-fails-after-successful-primary-operation
       operation: assemble
       supplemental-build-root: supplemental-build
+      failure: cleanup-after-successful-primary
     verifies:
       - diagnostic-cleanup-only-code-mismatch
       - diagnostic-cleanup-status-mismatch
@@ -411,3 +411,20 @@ cases:
       owner-mutates: supplemental-input
     verifies:
       - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: supplemental-asset-release-valid
+    partition: runtime-context.supplemental-asset-release-valid
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      build-roots: empty
+    verifies:
+      - phase-success
+      - phase-output
+  - contract_id: contract.ci-release-supplemental-asset.assembly
+    id: supplemental-asset-release-invalid
+    partition: runtime-context.supplemental-asset-release-invalid
+    input:
+      operation: assemble
+      release-implementation: asset-release
+      build-roots: nonempty

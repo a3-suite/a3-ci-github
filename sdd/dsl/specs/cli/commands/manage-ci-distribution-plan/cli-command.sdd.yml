@@ -33,5 +33,5 @@ command:
       options:
         - repo-root
         - set
-  help:
-    usage: node runtime/distribution/fetch-a3-ci-github.mjs plan [options]
+  usage:
+    - node runtime/distribution/fetch-a3-ci-github.mjs plan [options]

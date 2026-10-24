@@ -22,12 +22,12 @@ preconditions:
   - release tag の source は必須 quality check を通過し、通常 release では protected main へ統合されている。hotfix では git-branch-strategy が許容する公開後の main 統合に従い、最新 stable の基点の main 統合証拠と承認済み hotfix source の同一性を確認できる
 trigger: Action の新規作成または公開契約・実装・依存の変更
 main_success_scenario:
-  - summary: action.yml に公開 input、output、runtime、entrypoint を定義する
-  - summary: 実装で入力制約、secret 取り扱い、成功 output、失敗終了状態を検証する
-  - summary: 共通化する定型処理は単独実行できる script として実装し、Composite Action は入出力写像だけを担当する
-  - summary: 実装方式に応じた配布物を再生成し、契約テスト、実装テスト、配布物検証を実行する
-  - summary: README.md の Action 一覧と用途を実在する Action に合わせ、不一致がないことを確認する
-  - summary: 実装と配布物を同じ immutable ref に含め、利用者が source build なしで実行できる状態を公開する
+  - action.yml に公開 input、output、runtime、entrypoint を定義する
+  - 実装で入力制約、secret 取り扱い、成功 output、失敗終了状態を検証する
+  - 共通化する定型処理は単独実行できる script として実装し、Composite Action は入出力写像だけを担当する
+  - 実装方式に応じた配布物を再生成し、契約テスト、実装テスト、配布物検証を実行する
+  - README.md の Action 一覧と用途を実在する Action に合わせ、不一致がないことを確認する
+  - 実装と配布物を同じ immutable ref に含め、利用者が source build なしで実行できる状態を公開する
 success_outcomes:
   - Action の公開契約、実装、配布物が同じ ref で一致する
   - 利用者は Action の input/output 契約だけを使って実行できる
@@ -35,8 +35,6 @@ failure_outcomes:
   - 必須契約、入力検証、secret 取り扱い、配布物、テストのいずれかが不一致なら公開を確定しない
   - workflow の権限、runner、trigger、job 境界は Action が決定せず provider 側へ委譲する
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-actions-action-contract-and-distribution
+  - github-actions-action-contract-and-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.integrity

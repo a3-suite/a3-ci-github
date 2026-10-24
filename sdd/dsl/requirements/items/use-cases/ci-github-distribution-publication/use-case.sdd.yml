@@ -13,10 +13,10 @@ preconditions:
   - 実装、生成物、固定参照の検証に必要なGit objectを取得できる
 trigger: 提供元が通常リリースまたはhotfixを公開する
 main_success_scenario:
-  - summary: 実装と配布物を確定し、実際に接続する固定参照で契約を検証する
-  - summary: 最終公開対象に実装が含まれ、workflow、installer、registryとmanifestの接続が整合することを確認する
-  - summary: 承認済みexact tagと本文を使い、配布bootstrapを1つのGitHub Releaseとして公開する
-  - summary: 配布資材のremote readbackと固定参照を確認し、公開後のaliasと統合を規定の順序で処理する
+  - 実装と配布物を確定し、実際に接続する固定参照で契約を検証する
+  - 最終公開対象に実装が含まれ、workflow、installer、registryとmanifestの接続が整合することを確認する
+  - 承認済みexact tagと本文を使い、配布bootstrapを1つのGitHub Releaseとして公開する
+  - 配布資材のremote readbackと固定参照を確認し、公開後のaliasと統合を規定の順序で処理する
 success_outcomes:
   - consumerはそのReleaseから通常の導入を行い、接続専用の別Releaseを待たず修正実装を利用できる
   - 公開資材の完全性、実行資材への接続、consumerの環境受入を別の結果として追跡できる
@@ -24,8 +24,6 @@ failure_outcomes:
   - 実装の包含、資材の同一性、固定参照または必要な契約を確認できなければ公開を成功扱いにしない
   - 同じ版の失敗したdraftは既存の公開契約に従って再検証し、exact tagや公開済み資材を上書きしない
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.publication
+  - contract.ci-selective-distribution.publication

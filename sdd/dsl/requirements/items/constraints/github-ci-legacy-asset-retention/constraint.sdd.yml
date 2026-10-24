@@ -7,9 +7,7 @@ scope:
   key: github-source-consolidation
 rule: >-
   a3-actions と a3-prompts の公開済み資産は、既存consumer向けに維持する。
-rationale:
-  why: 旧repositoryの固定参照を使う既存consumerが、移行の完了前に実行不能になることを防ぐため
+rationale: 旧repositoryの固定参照を使う既存consumerが、移行の完了前に実行不能になることを防ぐため
 violation_impact: 既存consumerのworkflowが参照先を失って停止する
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-ci-source-consolidation
+  - github-ci-source-consolidation

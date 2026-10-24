@@ -4,10 +4,9 @@ requirements:
   - requirement_id: ci-failure-diagnostics
     type: quality
     summary: 各契約対象でエラー発生時に詳細な原因診断が可能な証跡を残し、保守者が障害箇所と次の確認事項を特定できる
-    rationale:
-      why: >-
-        失敗終了だけでは原因箇所、入力、環境差異、再実行条件を特定できず、調査のための再実行や
-        一時的なデバッグ変更が増えて復旧が遅れるため
+    rationale: >-
+      失敗終了だけでは原因箇所、入力、環境差異、再実行条件を特定できず、調査のための再実行や
+      一時的なデバッグ変更が増えて復旧が遅れるため
     subject:
       namespace: ci
       key: failure-diagnostics

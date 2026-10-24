@@ -122,4 +122,31 @@ test('supplemental entrypoint preserves safe standard installer diagnostics', (t
   expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
 });
 
+// contract_id: contract.ci-release-supplemental-asset.assembly
+// flow_id: supplemental-phase-entrypoint
+test('supplemental entrypoint assembles an asset release from empty build roots and fails with build input', (t) => {
+  // Arrange
+  const assetRelease = (sub: Parameters<typeof fixture>[0]) => {
+    const f = fixture(sub);
+    f.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '__unset__' },
+      { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
+    for (const directory of ['standard build', 'supplemental build']) fs.rmSync(path.join(f.root, directory, 'input'));
+    return f;
+  };
+  const valid = assetRelease(t);
+  const withBuild = assetRelease(t);
+  fs.writeFileSync(path.join(withBuild.root, 'standard build/input'), 'product build');
+  const assemble = { INPUT_OPERATION: 'assemble', 'INPUT_SUPPLEMENTAL-BUILD-ROOT': 'supplemental build' };
+  // Act
+  const result = bundle(valid, assemble);
+  const rejected = bundle(withBuild, assemble);
+  // Assert
+  expect(result.status, String(result.stderr)).toBe(0);
+  expect(fs.readFileSync(valid.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
+  expect(rejected.status).toBe(1);
+  expect(String(rejected.stderr)).toMatch(/unexpected-build-input/);
+  expect(fs.readFileSync(withBuild.outputPath, 'utf8')).toBe('');
+  expect(fs.existsSync(path.join(withBuild.root, 'new output'))).toBe(false);
+});
+
 });

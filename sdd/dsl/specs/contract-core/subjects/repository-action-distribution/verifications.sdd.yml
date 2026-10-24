@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-integrity
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-metadata: missing-runtime
   - contract_id: contract.repository-action-distribution.integrity
     id: maintained-distribution-inputs
     partition: runtime-context.repository-action-distribution-inputs-available

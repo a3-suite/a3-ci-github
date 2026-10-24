@@ -11,10 +11,7 @@ response_measure:
   - unsupported mode、CLI 不在、version 不一致は失敗終了状態になる
   - 検証が成功した場合だけ verified 状態が公開される
 related_requirements:
-  - requirement_ref:
-      requirement_id: github-toolchain-exact-version-verification
+  - github-toolchain-exact-version-verification
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-github-toolchain-verifier.processing
-  - contract_ref:
-      contract_id: contract.ci-github-toolchain-verifier.outputs
+  - contract.ci-github-toolchain-verifier.processing
+  - contract.ci-github-toolchain-verifier.outputs

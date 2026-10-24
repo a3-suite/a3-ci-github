@@ -14,3 +14,5 @@ export function remoteClient(f: ReturnType<typeof fixture>, assembly: AssemblyTy
 
 export function releaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
 export function selectedReleaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
+export function toAssetRelease<F extends ReturnType<typeof fixture>>(f: F): F;
+export function putSupplementalAsset<F extends ReturnType<typeof fixture>>(f: F, ownerContract?: string): F;

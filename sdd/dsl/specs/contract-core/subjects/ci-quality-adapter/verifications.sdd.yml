@@ -5,7 +5,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      action-inputs: none
   - contract_id: contract.ci-quality-adapter.outputs
     id: standard-adapter-execution
     partition: quality-adapter-standard-bundle-present
@@ -24,7 +24,7 @@ cases:
     id: standard-selection-rejected
     partition: runtime-context.action-input-invalid
     input:
-      scenario: unknown-standard-selection
+      standard-bundle-id: unregistered-bundle
   - contract_id: contract.ci-quality-adapter.outputs
     id: standard-python-adapter-execution
     partition: quality-adapter-standard-bundle-present

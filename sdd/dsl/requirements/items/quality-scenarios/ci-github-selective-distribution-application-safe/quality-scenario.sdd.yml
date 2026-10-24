@@ -11,10 +11,7 @@ response_measure:
   - 同一projectで並行するapplyは成功扱いにならない
   - 管理外destinationを上書きせず、staleは自動削除しない
 related_requirements:
-  - requirement_ref:
-      requirement_id: ci-github-selective-distribution
+  - ci-github-selective-distribution
 related_contracts:
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.plan
-  - contract_ref:
-      contract_id: contract.ci-selective-distribution.application
+  - contract.ci-selective-distribution.plan
+  - contract.ci-selective-distribution.application

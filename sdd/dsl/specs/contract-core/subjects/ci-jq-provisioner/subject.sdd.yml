@@ -6,22 +6,40 @@ subject:
 contracts:
   - id: contract.ci-jq-provisioner.provision
     summary: A checked official jq Release asset enters the job PATH; failed provisioning exposes no executable.
+    inputs:
+      - name: action-inputs
+        meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
+      - name: runner-os-arch
+        meaning: "Precondition prepared by the case: runner operating system and architecture combination."
+      - name: jq-version
+        meaning: "Received by the contract target: jq version requested by the caller."
+      - name: runner-os
+        meaning: "Precondition prepared by the case: runner operating system."
+      - name: runner-arch
+        meaning: "Precondition prepared by the case: runner CPU architecture."
+      - name: checksum
+        meaning: "Precondition prepared by the case: checksum content available to the contract target."
+      - name: asset
+        meaning: "Precondition prepared by the case: availability of the release asset to download."
+      - name: checksum-entry
+        meaning: "Precondition prepared by the case: checksum list entry for the selected asset."
+      - name: installation
+        meaning: "Precondition prepared by the case: outcome of the installation step."
+      - name: path-update
+        meaning: "Precondition prepared by the case: outcome of updating the runner command path."
     observations:
       - summary: The provisioned jq command is visible to later steps.
-        boundary:
-          ref: boundary.runner-path
+        boundary: boundary.runner-path
         fields:
           - selector: jq
             meaning: Checked jq executable on the job command search path.
       - summary: Provisioning success or failure is visible to the caller.
-        boundary:
-          ref: boundary.action-output
+        boundary: boundary.action-output
         fields:
           - selector: outcome
             meaning: Success after checksum verification and PATH handoff, or failure before handoff.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary:
-          ref: boundary.diagnostic-result
+        boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。

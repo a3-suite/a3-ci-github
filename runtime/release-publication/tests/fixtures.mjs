@@ -128,3 +128,36 @@ export const remoteClient = (f, assembly, changes = {}) => {
   };
   return { client, calls };
 };
+
+// Converts a fixture into an asset release: authority and snapshot record no platform, and no build input is passed.
+export const toAssetRelease = (f) => {
+  f.snapshot.values.CI_RELEASE_IMPLEMENTATION = 'asset-release';
+  f.snapshot.values.CI_PLATFORM_MANIFEST = '__unset__';
+  f.snapshot.digest = sha256(Buffer.from(canonicalJson({ sources: f.snapshot.sources, values: f.snapshot.values })));
+  Object.assign(f.authority, { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null, config_snapshot_digest: f.snapshot.digest });
+  f.put('snapshot.json', f.snapshot);
+  f.put('authority.json', f.authority);
+  delete f.options.platformManifestPath;
+  delete f.options.platformMatrix;
+  delete f.options.buildRoot;
+  return f;
+};
+
+// Selects one owner-adapter supplemental asset with complete opaque evidence.
+export const putSupplementalAsset = (f, ownerContract = 'project.asset-evidence') => {
+  f.snapshot.values.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED = 'true';
+  f.snapshot.values.CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT = ownerContract;
+  f.snapshot.digest = sha256(Buffer.from(canonicalJson({ sources: f.snapshot.sources, values: f.snapshot.values })));
+  f.authority.config_snapshot_digest = f.snapshot.digest;
+  f.put('snapshot.json', f.snapshot);
+  f.put('authority.json', f.authority);
+  const asset = { path: 'instructions.zip', sha256: sha256(Buffer.from('instructions')), checksum_path: 'instructions.zip.sha256', owner_evidence_path: 'owner.json', owner_evidence_sha256: sha256(Buffer.from('opaque owner record')), provenance_path: 'provenance.json', verification_path: 'verification.json' };
+  f.put('supplemental/instructions.zip', 'instructions');
+  f.put('supplemental/instructions.zip.sha256', `${asset.sha256}  instructions.zip\n`);
+  f.put('supplemental/owner.json', 'opaque owner record');
+  f.put('supplemental/provenance.json', 'opaque provenance');
+  f.put('supplemental/verification.json', { status: 'success', owner_contract: ownerContract, source_sha: f.identity.source_sha, asset_sha256: asset.sha256, owner_evidence_sha256: asset.owner_evidence_sha256, provenance_sha256: sha256(Buffer.from('opaque provenance')) });
+  f.put('supplemental/supplemental-manifest.json', { schema_version: '1', kind: 'ci-github-supplemental-handoff', owner_contract: ownerContract, source_sha: f.identity.source_sha, version: f.identity.version, assets: [asset] });
+  f.options.supplementalRoot = path.join(f.root, 'supplemental');
+  return f;
+};

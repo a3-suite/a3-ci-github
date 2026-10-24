@@ -4,8 +4,7 @@ requirements:
   - requirement_id: gh-release-provisioning
     type: functional
     summary: GitHub CI が指定した exact version の GitHub CLI を runner の既定値に依存せず供給できる
-    rationale:
-      why: runner image の gh version が変動しても provider 処理の実行前検証を成立させるため
+    rationale: runner image の gh version が変動しても provider 処理の実行前検証を成立させるため
     subject:
       namespace: skills
       key: ci-github

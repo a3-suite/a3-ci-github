@@ -5,7 +5,9 @@ cases:
     id: detailed-failure-verification
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - --unknown
+        - value
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.explicit-roots-required
     partition: runtime-context.preset-assurance-roots-missing
@@ -97,21 +99,44 @@ cases:
     id: detailed-failure-asset-lock
     partition: runtime-context.failure-diagnostic-required
     input:
-      scenario: rejected-public-invocation
+      arguments:
+        - --unknown
+        - value
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: case.ci-preset-assurance.asset-lock-generated
     partition: ci-preset-assurance-lock-input-valid
     input:
       source-revision: full-source-revision
+      release-tag: v0.9.0
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
     partition: ci-preset-assurance-lock-input-invalid
     input:
       source-revision: noncanonical-source-revision
   - contract_id: contract.ci-preset-assurance.asset-lock
+    id: case.ci-preset-assurance.asset-lock-invalid-release-tag-rejected
+    partition: ci-preset-assurance-lock-input-invalid
+    input:
+      source-revision: cccccccccccccccccccccccccccccccccccccccc
+      release-tag: '0.9.0'
+  - contract_id: contract.ci-preset-assurance.asset-lock
+    id: case.ci-preset-assurance.asset-lock-distribution-release-mismatch-rejected
+    partition: ci-preset-assurance-lock-input-invalid
+    input:
+      release-tag: v99.0.0
+      distribution-release: v1.2.3
+  - contract_id: contract.ci-preset-assurance.asset-lock
     id: canonical-lock-bindings
     partition: runtime-context.ci-preset-assurance-canonical-lock-input
     input:
       source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      release-tag: v0.9.0
       preset: quality-gate
       consumer-assets: canonical-with-complete-pin-projection
+  - contract_id: contract.ci-preset-assurance.verification
+    id: asset-release-preset-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: asset-release-callee-or-shared-caller-preset
+    verifies:
+      - ci-preset-assurance-drift-fails
