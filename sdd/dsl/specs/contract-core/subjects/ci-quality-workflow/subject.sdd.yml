@@ -59,6 +59,10 @@ contracts:
             meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
           - selector: quality-untrusted-cargo-cache-use
             meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
+          - selector: quality-cargo-cache-save-condition
+            meaning: Declared run condition of the trusted Cargo cache save step.
+          - selector: quality-cargo-cache-save-after-adapter
+            meaning: Declared order of adapter execution and the trusted Cargo cache save step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -220,3 +224,17 @@ contracts:
           field: quality-untrusted-cargo-cache-use
           in:
             - absent
+      - id: quality-cargo-cache-save-default-branch-push-only
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-cargo-cache-save-condition
+          in:
+            - default-branch-push-only
+      - id: quality-cargo-cache-save-after-adapter
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-cargo-cache-save-after-adapter
+          in:
+            - adapter-before-save

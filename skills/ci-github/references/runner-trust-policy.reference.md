@@ -67,8 +67,8 @@
 
 ### build cache の境界
 - 本節の build cache は、compile 済みの成果物を含む cache（Cargo の target directory など）を指す。lockfile の integrity で内容を検証する package manager の download cache（`actions/setup-node` の `cache: npm` など）は対象外とする。
-- build cache は `trusted` の quality check だけで復元・保存する。cache の内容は、保存した run が checkout した source から作られる。GitHub は default branch の scope への保存を default branch 上の run に限るため、default branch の実行が復元する cache は default branch の source から作られる。PR の merge ref で保存した cache はその PR の実行だけが復元し、default branch 以外の branch で保存した cache は、その branch の実行と、その branch を head または base とする PR の実行が復元する。
-- `trusted` という job 名は、起動者の権限や PR 内容の信頼を表さない（same-repo の Dependabot PR も `trusted` で実行される）。build cache の信頼は上記の scope の制限だけに基づく。
+- build cache は `trusted` の quality check だけで復元する。保存は、default branch への push で quality check が成功した実行だけで行う。cache の内容は保存した run が checkout した source から作られるため、復元する cache は default branch の source から作られる。PR の merge ref や他の branch で保存した cache は共有範囲が限られたまま repository の cache 容量を消費し、default branch の cache を追い出すため、保存しない。
+- `trusted` という job 名は、起動者の権限や PR 内容の信頼を表さない（same-repo の Dependabot PR も `trusted` で実行される）。build cache の信頼は上記の保存条件だけに基づく。
 - `untrusted-pr` と、publish などの権限付き workflow の job（build を含む）では build cache を使わない。公開物は build cache を経由しない clean build から作る。
 - build cache は quality の実行時間を短縮する手段であり、検証対象や判定を置き換えない。key には runner の OS・architecture、toolchain の版、lockfile の内容を含める。
 
@@ -123,6 +123,7 @@
 - [ ] post-merge verification を merge gate required check として扱っていない
 - [ ] trusted PR check の入力境界を満たしている
 - [ ] build cache を `trusted` の quality check だけで使い、`untrusted-pr` と権限付き workflow の job では使っていない
+- [ ] build cache の保存を default branch への push の成功した quality check に限っている
 - [ ] trusted CI assets は標準で base SHA から取得している
 - [ ] base の採用済み marker として `.ci/ci-assets.lock.json` の存在を使用している
 - [ ] marker がある base で対象資産の欠落を fail closed にしている

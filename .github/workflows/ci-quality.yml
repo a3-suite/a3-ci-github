@@ -195,7 +195,8 @@ jobs:
           mode: jq
           jq-version: ${{ env.CI_JQ_VERSION }}
       # Only trusted Rust quality reuses Cargo builds; untrusted pull requests and Release builds always start clean.
-      # Only default-branch runs can save to the default-branch cache scope, and they build default-branch sources.
+      # Only default-branch pushes save, so restored builds come from default-branch sources and pull requests do not fill the
+      # repository cache quota with entries that only their own merge ref can restore.
       # Resolution failure only disables the cache, so the adapter still reports invalid Cargo settings with its own diagnostics.
       - name: Resolve Cargo cache paths
         id: cargo-cache-paths
@@ -207,10 +208,10 @@ jobs:
           target="$(cargo metadata --manifest-path "$CI_CARGO_MANIFEST_PATH" --no-deps --format-version 1 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).target_directory.replace(/\\/g,"/")))')"
           [[ -n "$target" && "$target" != *$'\n'* ]]
           echo "target=$target" >> "$GITHUB_OUTPUT"
-      - name: Cache Cargo dependencies and builds
+      - name: Restore Cargo dependencies and builds
         id: cargo-cache
         if: steps.cargo-cache-paths.outcome == 'success'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             ~/.cargo/registry/index
@@ -232,6 +233,17 @@ jobs:
           toolchain-version: ${{ steps.quality-toolchain.outputs.resolved-toolchain-version }}
           require-trusted-project-scripts: 'true'
           trusted-project-root: ${{ steps.trusted-assets.outputs.root }}
+      - name: Save Cargo dependencies and builds
+        if: steps.cargo-cache-paths.outcome == 'success' && steps.cargo-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ${{ steps.cargo-cache-paths.outputs.target }}
+            !${{ steps.cargo-cache-paths.outputs.target }}/*/incremental
+          key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
 
   untrusted-pr:
     name: quality-gate / untrusted-pr
