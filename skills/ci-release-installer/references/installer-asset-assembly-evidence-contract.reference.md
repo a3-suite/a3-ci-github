@@ -15,9 +15,9 @@
 - CI workflow の trigger、job 分割、runner trust、permissions、cache、release publish 手順、release gate の実行タイミングは ci スキルの責務として扱う。
 - 証跡は installer の実行成功を代替しない。証跡は、配布される asset が検証対象と同一であることを示す。
 - 組立証跡（candidate / verification / final evidence）は公開 asset と対応付けて保持する。保持先は CI artifact または Release 添付とし、具体手段は ci スキルの責務として扱う。
-- 証跡は project 内で実行できる builder / fixture と同じ入力契約から生成または検証できるようにする。
-- installer source と manifest は UTF-8 テキストとし、starter の builder（`build-installer.py`、`build-shared-wrapper.py`）は LF へ正規化してから snapshot、checksum、組立を行う。checkout の改行コードは入力同一性の差として扱わない。
-- 検証済み payload（shared wrapper に埋め込む platform installer など）は opaque な入力として扱い、正規化せず exact checksum だけを拘束する。どの入力を正規化するかのバイト規則は starter の builder 実装を正本とし、本契約では再定義しない。
+- 証跡は固定 provider runtimeと同じ入力契約から生成または検証できるようにする。
+- installer source と manifest は UTF-8 テキストとし、固定 provider runtimeの組立処理は LF へ正規化してから snapshot、checksum、組立を行う。checkout の改行コードは入力同一性の差として扱わない。
+- 検証済み payload（shared wrapper に埋め込む platform installer など）は opaque な入力として扱い、正規化せず exact checksum だけを拘束する。どの入力を正規化するかのバイト規則は採用した固定 provider 版の実装を正本とし、本契約では再定義しない。
 - 入力の正規化規則を変更した場合は builder identity の version を上げ、変更前の identity で作られた candidate を finalize しない。
 
 ## 証跡 record
@@ -53,7 +53,7 @@ checksum が対象とするバイトは次のとおりとする。
   - `installer-asset-evidence.json` と `.sha256`: finalize で確定する最終証跡
 - shared wrapper では platform installer を別出力で先に組み立て、wrapper 出力には wrapper と上記証跡を置く。
 - ライフサイクルは assemble → project 検証 → finalize の順とし、finalize は候補と検証証跡を照合して最終証跡を確定する。
-- 同梱の target-specific / shared wrapper builder では、project 検証の証跡ファイルを組立結果ディレクトリの外に生成し、`finalize --verification-evidence` へ渡す。出力側の検証証跡と最終証跡は finalize が作成するため、事前に配置しない。これらの証跡ファイルが既にある場合は上書きせず停止する。
+- 固定 provider runtimeの target-specific / shared wrapper 組立では、project 検証の証跡ファイルを組立結果ディレクトリの外に生成し、`finalize --verification-evidence` へ渡す。出力側の検証証跡と最終証跡は finalize が作成するため、事前に配置しない。これらの証跡ファイルが既にある場合は上書きせず停止する。
 
 ## 境界
 - asset 組立証跡は、release publish の可否、GitHub Release の作成、tag 作成、workflow の成否判定を定義しない。

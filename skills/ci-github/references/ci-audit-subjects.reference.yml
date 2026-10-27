@@ -356,7 +356,7 @@ subjects:
     appliesWhen: 配置済み workflow が、選択した preset 契約で順序、状態遷移、または停止条件を定義された stage を実行し、そのworkflowのplan結果がreuse以外、project所有、または詳細確認の対象である。
     phase: contract-evidence
     stageChecks:
-      configuration: contract-sequence-to-executable-check-mappingと実行可能な検査の配置・接続を確認し、test-gap/contract-gapを分類する。
+      configuration: contract-sequence-to-executable-check-mappingと実行可能な検査の配置・接続を確認し、implementation-gap/contract-gapを分類する。
       execution-evidence: executable-check-identity-and-latest-resultを対象identityへ結合して照合する。推論や対応付けだけで実行済みにしない。
     discovery:
       sources:
@@ -376,7 +376,7 @@ subjects:
     evidenceRequirements:
       - contract-sequence-to-executable-check-mapping
       - executable-check-identity-and-latest-result
-      - test-gap-or-contract-gap-classification
+      - implementation-gap-or-contract-gap-classification
     reviewRequirements:
       - map-every-contract-sequence-to-an-executable-check
       - execute-the-identified-checks-or-preserve-their-latest-result-identity

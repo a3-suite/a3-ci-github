@@ -18,7 +18,7 @@
 - project override がある場合も、共通 manifest はインストーラ契約 coverage matrix の core safety invariant を壊さない。
 
 ## 標準境界
-- checksum は必須とし、signature は任意とする。signature を使う場合も checksum と同じ検証段階で扱う。
+- checksum は必須とし、signature は任意とする。signature を使う場合も checksum と同じ検証段階で扱う。重要 artifact の改ざん耐性を上げる場合だけ、production artifact の signature 必須化を検討する。
 - 標準経路では、production installer は source archive から暗黙に build しない。build が必要な場合は CI など installer 外で artifact を生成する。
 - production で source archive を扱う場合は、archive 自体を検証済み配布物として扱い、本番 host での build や dependency resolve を伴わせない。
 - installer は同一 managed root の lock を必ず取得し、並行実行を拒否する。
@@ -44,6 +44,33 @@
 - rollback 不可の変更がある場合は、roll forward または manual recovery の条件を manifest に明示する。
 - required installer version を満たさない installer は manifest を拒否する。
 
+## 製品宣言と配置の標準
+### 製品宣言の標準配置
+製品リポジトリではassemblyを`.ci/installer/assembly.json`、対象別manifestを`.ci/installer/manifests/<native-platform-id>.json`へ置く。installerはCIで組み立てて公開する資材なので、ci-githubスキルのCI資材の配置基準に従い`.ci/installer/`へ集める。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
+
+この配置と次節のインストール先を標準との比較基準にする。既存のディレクトリ名だけを維持理由にせず、異なる配置が必要なら製品要件とownerの根拠をproject SSOTへ記録する。ディレクトリ名の違いだけで安全性違反とは扱わず、既存のproject override分類へ渡す。
+
+### 配置プロファイルと managed root
+- installer は配置プロファイルとして `per-user-cli`（既定）と `system-wide` を扱う。manifest の `placement.profile` を省略した場合は `per-user-cli` とする。
+- `per-user-cli` は root 権限を必要とせず、単一ユーザーの CLI 向けの既定とする。`system-wide` はサービス、複数ユーザー、共有 CLI の要求がある場合だけ project SSOT の証跡付きで選ぶ。
+- 標準配置は `<vendor>`、`<app>`、`<channel>`（既定 `standalone`）、`<binary>` で表し、プロファイルごとに次の base を使う。
+
+| profile | OS | launcher | managed root |
+| --- | --- | --- | --- |
+| per-user-cli | Linux | `~/.local/bin/<binary>` | `~/.local/share/<vendor>/<app>/<channel>` |
+| per-user-cli | macOS | `~/.local/bin/<binary>` | `~/Library/Application Support/<vendor>/<app>/<channel>` |
+| per-user-cli | Windows | `%LOCALAPPDATA%\Programs\<vendor>\<app>\bin\<binary>.exe` | `%LOCALAPPDATA%\<vendor>\<app>\<channel>` |
+| system-wide | Linux | `/usr/local/bin/<binary>` | `/opt/<vendor>/<app>/<channel>` |
+| system-wide | macOS | `/usr/local/bin/<binary>` | `/Library/Application Support/<vendor>/<app>/<channel>` |
+| system-wide | Windows | `%ProgramFiles%\<vendor>\<app>\bin\<binary>.exe` | `%ProgramData%\<vendor>\<app>\<channel>` |
+
+- managed root 配下は `releases/<version>`、`current`、`install.lock`、`state/install-state.json` を基本構造とする。
+- launcher は managed root 外に置いてよい。配置を許可する base は「launcher 安全不変条件」を正本とする。
+- PATH 登録は自動変更しない。実行後に PATH 上の所在を確認し、見つからない場合は利用者へ案内する。自動登録は project override とする。
+- managed root は `<base>/<app...>` の深さを持つアプリ固有ディレクトリに限定し、filesystem root、Windows drive root、ホームディレクトリそのもの（`/home/<user>`、`/Users/<user>` など）、OS 予約領域（`/etc`、`/usr`、`/var`、`/System`、`<drive>:\Windows` など）を拒否する。
+- Windows では drive root と UNC share root 自体を拒否し、`<drive>\<base>\<app...>` または `\\<server>\<share>\<app...>` の深さを要求する。
+- OS 予約領域配下の許可例外は `/usr/local/<app>`、`/var/lib/<app>`、`/var/opt/<app>`、`/Library/Application Support/<app>`、fixture / test で使う一時領域（`/tmp/<app>`、`/private/tmp/<app>`、`/var/tmp/<app>`、`/private/var/tmp/<app>`、`/var/folders/<...>`、`/private/var/folders/<...>`）に限定し、これらの base 自体は拒否する。
+
 ## launcher 安全不変条件
 - launcher は managed root 外に置き、配置プロファイル別の許可 base（per-user は `~/.local/bin` または `%LOCALAPPDATA%\Programs`、system-wide は `/usr/local/bin` または `%ProgramFiles%`）に限定する。
 - launcher path は空要素、`.`、`..` を含めない。installer は組立時と runtime の両方で同じ基準で拒否する。
@@ -55,11 +82,11 @@
     - Unix: 既存 launcher が symlink で、link 先が `current` 配下の対象 binary（`<current-pointer>/<relative-binary>`）と一致する。
     - Windows: 既存 launcher の内容 checksum が install state の `binaryChecksum` と一致する（copy モード）。
 - 管理外 launcher を検出した場合、installer は launcher を変更せず、release、handoff state、activation state、install state を作成・更新しない。preflight で作成した managed root 内の lock は cleanup で解放する。
-- starter 標準の launcher は Unix は symlink、Windows は copy とする。Windows の shim は starter 標準では扱わず、使う project は launcher 用 checksum を install state に追加する project override として共通 manifest の外側で扱う。
+- 標準の launcher は Unix は symlink（`current` 配下のバイナリを指す）、Windows は copy とする。Windows の shim は標準では扱わず、使う project は launcher 用 checksum を install state に追加する project override として共通 manifest の外側で扱う。
 
 ## validation policy
 - production manifest の未知 field は拒否する。拡張は schema version を上げて扱う。
-- managed root は filesystem root、Windows drive root、ホームディレクトリそのもの、OS 予約領域を拒否し、`<base>/<app...>` の深さと、インストーラ作成ガイドが定める許可例外の範囲で検証する。
+- managed root は filesystem root、Windows drive root、ホームディレクトリそのもの、OS 予約領域を拒否し、「配置プロファイルと managed root」の深さと許可例外の範囲で検証する。
 - production download URL は `https://` を基本とし、`file://` は fixture / test だけで許可する。
 - proxy は明示設定だけ許可し、production では TLS 検証無効化を禁止する。
 - archive 展開では absolute path、parent traversal、symlink entry を拒否する。
@@ -69,7 +96,7 @@
 - ログには version、artifact checksum、manifest checksum、配置先、状態遷移を出してよい。
 - token、secret、auth header、env value はログへ出さない。
 - token、secret、auth header は manifest、sample、install state、handoff state にも保存しない。
-- 失敗時は非ゼロ exit とする。原因別 exit code は必要になった場合だけ追加する。
+- 失敗時は非ゼロ exit とする。原因別 exit code は必要になった場合だけ追加し、runtime missing、verify failed、lock conflict など運用判断が変わる単位に限定する。
 - 同一 manifest checksum / artifact checksum の再実行は成功扱いにしてよい。異なる checksum は明示 option なしでは失敗する。
 - force option は用途別に分ける。checksum mismatch 無視は許可しない。
 

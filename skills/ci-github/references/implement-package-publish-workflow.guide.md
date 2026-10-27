@@ -31,8 +31,8 @@
    - 本ガイドの解決済み公開入力を明示的に受け取る。
    - branch、tag、manifest、言語、registry の既定値から不足値を補完しない。
 3. workflow の trust 境界を構成する。
-   - request、trusted CI control、操作対象 source の境界は選択した provider 固有スキルの trust policy profile に従う。
-   - Action、runner、runtime、toolchain、container、外部ツールの版指定は選択した provider 固有スキルの version policy profile に従う。
+   - request、trusted CI control、操作対象 source の境界は`references/runner-trust-policy.reference.md` に従う。
+   - Action、runner、runtime、toolchain、container、外部ツールの版指定は`references/workflow-version-policy.reference.md` に従う。
    - privileged workflow は安全に置換できない concurrency group で直列化する。
 4. plan / build / validate / publish を分離する。
    - plan: trusted CI control で入力の完全性とowner契約への参照を検証し、許可済み`version_plan`から`publish_version`を具体化する。

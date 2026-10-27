@@ -24,14 +24,14 @@
    - ブランチ運用、承認要件、版運用を CI 側で再定義していないか確認する。
    - branch category、merge direction、version policy、publish trigger は git-branch-strategy スキルの正本 DSL に従っているか確認する。
    - 選択した CIプリセット、language profile、provider 実装、project-local adapter の責務が追跡できるか確認する。
-   - SDD や DSL の存在を CI workflow の前提にしない。別の設計正本との適合を監査する場合は、その owner と対象範囲を明示して別途確認する。
+   - SDD や DSL の存在を CI workflow の実行前提にしない。SDD を採用している project では、CI の契約と実装の適合を SDD の owner と対象範囲を明示して確認する。
 3. CI workflow runtime の依存を確認する。
    - `references/ci-runtime-boundary.reference.md` の禁止事項に反していないか確認する。
    - `a3-lint` / `a3-suite` / その他 `a3-*` コマンドを workflow step や `.ci/scripts/` から呼んでいないか確認する。
    - consumerのGit管理対象、導入・保守時だけの取得、CI実行中の取得を区別する。配布・copy境界は `references/deploy-ci-assets.guide.md` を参照し、各checkout、tool取得、依存準備、handoff取得が選択した到達経路で実際に必要かを入力・利用先と照合する。委譲先で供給済みの資材や未選択経路だけが使う資材を重複取得せず、trust gateやhandoff検証に必要な取得は維持する。
 4. runner trust policy を確認する。
-   - 選択した provider の trust policy profile に従って runner と check 境界、および該当する control が選ばれているか確認する。
-   - runner/host の版指定と self-hosted image の identity を選択した provider の version policy profile に照らして確認する。
+   - `references/runner-trust-policy.reference.md` に従って runner と check 境界、および該当する control が選ばれているか確認する。
+   - runner/host の版指定と self-hosted image の identity を`references/workflow-version-policy.reference.md` に照らして確認する。
 5. trigger と paths を確認する。
    - 重複実行や高コスト工程の抑止が `references/ci-execution-efficiency-policy.reference.md` の品質不変条件を満たすか確認する。
    - 短命ブランチで不要な統合イベント実行が起きていないか確認する。
@@ -42,15 +42,15 @@
    - キャッシュはヒット率と削減効果が見込める場合だけ採用されているか確認する。
    - publish workflow がある場合だけ、非キャンセルと直列化を混同せず、同じrepositoryまたはtargetへのpublishが実行効率policyに従い、provider queue上限内の実行中・待機中runを置換せず順番に実行されるか確認する。
 7. workflow 実装の肥大化を確認する。
-   - workflow file 名、workflow `name:`、job id / job `name:` が選択した provider の authoring policy profile に従っているか確認する。
+   - workflow file 名、workflow `name:`、job id / job `name:` が`references/workflow-authoring-policy.reference.md` に従っているか確認する。
    - workflow がオーケストレーションに限定されているか確認する。
    - 長い処理や条件分岐が `.ci/scripts/` または provider の再利用単位に外部化されているか確認する。
-   - 各共通処理を script のファイル名ではなく `ci.script-use-cases` の処理単位へ分解し、選択した provider 固有スキルが所有する再利用単位の選択順位と移行候補を上位候補から照合する。provider の再利用単位、reusable asset、script、project-local adapter のいずれを選ぶかだけでなく、契約適合性、実行境界、固定参照、入出力、workflow mapping を候補ごとに判定する。
+   - 各共通処理を script のファイル名ではなく `ci.script-use-cases` の処理単位へ分解し、`assets/registry/ci-github-preset-assets.yml` が定める再利用単位の選択順位と移行候補を上位候補から照合する。provider の再利用単位、reusable asset、script、project-local adapter のいずれを選ぶかだけでなく、契約適合性、実行境界、固定参照、入出力、workflow mapping を候補ごとに判定する。
    - project-owned 実装は「許可されている」だけでは採用根拠にならない。契約適合する上位候補がないこと、および選択済み binding が充足しない登録済み extension であることを確認し、候補、非採用理由、owner、証拠 identity を監査結果へ記録する。適合候補がある処理や未登録の代替分岐を独自実装した場合は、不要な独自実装という対象契約違反として `statusClassification` へ渡す。
-   - provider workflow の全外部再利用単位を、選択した provider registry の固定参照設定と双方向に照合し、未登録単位、preset 宣言漏れ、余剰宣言を残さない。具体的な構文と SHA の検査方法は provider 固有スキルへ委譲する。
-   - 外部化先は選択した provider の authoring policy profile に沿っているか確認する。
-   - provider の再利用単位、runtime、toolchain、container、外部ツールに mutable な version selector や未解決 placeholder が残っていないか version policy profile に照らして確認する。
-   - workflow の静的検証は選択した provider の authoring policy profile に従って確認する。
+   - provider workflow の全外部再利用単位を、`assets/registry/ci-github-preset-assets.yml` の固定参照設定と双方向に照合し、未登録単位、preset 宣言漏れ、余剰宣言を残さない。SHA の指定方法は `references/workflow-version-policy.reference.md` に従う。
+   - 外部化先は `references/workflow-authoring-policy.reference.md` に沿っているか確認する。
+   - provider の再利用単位、runtime、toolchain、container、外部ツールに mutable な version selector や未解決 placeholder が残っていないか `references/workflow-version-policy.reference.md` に照らして確認する。
+   - workflow の静的検証は `references/workflow-authoring-policy.reference.md` に従って確認する。
 8. スクリプトと成果物を確認する。
    - script の実行前提は `references/ci-script-catalog.reference.md` の実行モードに従っているか確認する。
    - 配布スクリプトの用途は `references/ci-script-catalog.reference.md` と一致しているか確認する。
@@ -62,22 +62,22 @@
    - 公開要否、公開経路、publish範囲、registry、version、channel、credential route が対象プロジェクトの owner 契約で解決され、CIで再選択されていないか確認する。
    - 共通検証で確定した `installer-distribution` の結果を再利用し、この手順から ci-release-installer スキルへ再委譲しない。適用対象の場合は同 subject の `publicationPathCheck` を適用する。
    - package publication 経路の実装順は `references/implement-package-publish-workflow.guide.md` に照らして追跡する。
-   - 実行可能資材の Release assets 経路の実装順は選択した provider 固有スキルの Release assets workflow guide に照らして追跡する。
+   - 実行可能資材の Release assets 経路の実装順は `references/implement-release-asset-publication-workflow.guide.md` に照らして追跡する。
    - Release inventory、resource identity、成功状態は`references/release-asset-publication-contract.reference.yml`の機械可読契約と一致するか確認する。
-   - Release assets経路では、操作対象sourceを実行するbuild / validate jobに公開先への書込権限がなく、公開作成jobがrelease authority contextと操作対象source由来のhandoffを別入力として扱うか確認する。具体的な権限キーは選択したprovider profileで確認する。
+   - Release assets経路では、操作対象sourceを実行するbuild / validate jobに公開先への書込権限がなく、公開作成jobがrelease authority contextと操作対象source由来のhandoffを別入力として扱うか確認する。具体的な権限キーは`references/implement-release-asset-publication-workflow.guide.md`で確認する。
    - Release作成の直前にtagのcommitと検証済みsource SHAを再結合しているか確認する。
-   - タグ注釈とRelease本文を別々の入力として追跡し、許否・一致条件と禁止されるCLI経路は`git.release-flow`および`references/release-asset-publication-contract.reference.yml`を参照して確認する。承認済み本文がauthorityからhandoffされ、公開作成jobの明示入力・CLI引数・保存後本文で同一内容として確認できることを証跡化する。provider固有のRelease APIと権限キーは選択したprovider profileへ委譲する。
+   - タグ注釈とRelease本文を別々の入力として追跡し、許否・一致条件と禁止されるCLI経路は`git.release-flow`および`references/release-asset-publication-contract.reference.yml`を参照して確認する。承認済み本文がauthorityからhandoffされ、公開作成jobの明示入力・CLI引数・保存後本文で同一内容として確認できることを証跡化する。GitHub の Release API と権限キーは `references/implement-release-asset-publication-workflow.guide.md` に従う。
    - Release公開adapterのCLI境界が、引数個数と各引数の境界、query / projection、全ページ取得、終了状態、標準出力・標準エラー、出力cardinalityを一体で検証しているか、`references/ci-script-catalog.reference.md`と照合する。
    - package publication の解決済み公開入力、authority evidence、安全不変条件を `references/implement-package-publish-workflow.guide.md` に照らして確認する。
-   - Release assets publication の解決済み公開入力、authority evidence、安全不変条件を選択した provider 固有スキルの Release assets workflow guide に照らして確認する。
-   - request、trusted CI control、publish source の境界を選択した provider の trust policy profile に照らして確認する。
-   - package registry への書込権限を持つjobが操作対象sourceをcheckoutせず、source dependencyやsource由来scriptを実行せず、無書込権限jobから渡された検証済みhandoffだけを登録するか確認する。具体的な権限キーは選択したprovider profileで確認する。
+   - Release assets publication の解決済み公開入力、authority evidence、安全不変条件を `references/implement-release-asset-publication-workflow.guide.md` に照らして確認する。
+   - request、trusted CI control、publish source の境界を `references/runner-trust-policy.reference.md` に照らして確認する。
+   - package registry への書込権限を持つjobが操作対象sourceをcheckoutせず、source dependencyやsource由来scriptを実行せず、無書込権限jobから渡された検証済みhandoffだけを登録するか確認する。具体的な権限キーは`references/implement-package-publish-workflow.guide.md`と`assets/registry/ci-github-preset-assets.yml`で確認する。
    - version plan、channel alias、target identity がowner契約で解決され、CIが許可済みplanの具体化を越えてmanifestやartifact種別から生成規則を導出していないか確認する。
    - project-local adapter の build、validate、publish、observe 境界が `references/ci-script-catalog.reference.md` と一致するか確認する。
    - availability観測不能を不存在として扱わず、公開先ownerの非上書き契約に従ってfail closedするか確認する。
    - credential の分類、保存、注入、ログ秘匿を secret-management スキルと対象プロジェクトの契約に照らして確認する。
    - package publication の partial publish を扱う場合は`references/package-publish-recovery-state.reference.yml`のstateとfail-closed委譲境界を確認する。
-   - Release assets publication の partial publish を扱う場合は、選択した provider 固有スキルの recovery guide と公開先 owner の契約にある state と fail-closed 委譲境界を確認する。
+   - Release assets publication の partial publish を扱う場合は、`references/implement-release-asset-publication-workflow.guide.md` の部分公開の扱いと公開先 owner の契約にある state と fail-closed 委譲境界を確認する。
 10. 修正案を整理する。
    - テーマ別確認で対象契約違反、監査不能、証拠不足を観測した場合は、それぞれ共通契約の `statusClassification` へ戻し、意味監査または機械監査のstatusと監査全体を再集約する。findingの存在だけから監査statusを変更せず、共通分類と集約の結果に従う。
    - reviewスキルが、CI監査で得た finding、重大度、保証レベル、合否、推奨修正案、理想の根本解決案、具体的な修正計画、最終判断を保持する。

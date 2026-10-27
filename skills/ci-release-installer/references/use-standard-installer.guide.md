@@ -56,7 +56,7 @@ Windows PowerShell 5.1以降に対応する構成では、実行ファイルを`
 ## 手順
 
 1. 「標準構成からのセットアップ」と「固定providerの対応確認」に従い、利用可能なuse caseとplatformを選ぶ。既存の固有実装がある場合は、必要性と採用方針を利用者と確認する。入力の正本は `references/installer-standard-assembly-contract.reference.yml`。
-2. `assets/examples/standard-assembly.example.json` と `assets/examples/native-manifest.template.json` を製品宣言へ適合させる。宣言ファイルとインストール先は`references/define-installer.guide.md`の「製品宣言の標準配置」の標準配置から始め、templateのplacement・activation・lock・stateを同ガイドの配置プロファイルへ揃える。compatibilityは製品要求へ適合させ、標準から外れる配置には必要性の根拠を残す。manifestの対応するrelease identity・artifact・provenanceのmarkerは固定runtimeがauthorityとbuildから解決する。assemblyのURLも同じように自動解決されるとは扱わない。製品宣言とmanifestをソースの同一commitで固定する。
+2. `assets/examples/standard-assembly.example.json` と `assets/templates/native-manifest.template.json` を製品宣言へ適合させる。宣言ファイルとインストール先は`references/installer-manifest-contract.reference.md`の「製品宣言と配置の標準」から始め、templateのplacement・activation・lock・stateを同節の配置プロファイルへ揃える。compatibilityは製品要求へ適合させ、標準から外れる配置には必要性の根拠を残す。manifestの対応するrelease identity・artifact・provenanceのmarkerは固定runtimeがauthorityとbuildから解決する。assemblyのURLも同じように自動解決されるとは扱わない。製品宣言とmanifestをソースの同一commitで固定する。
 3. CIは固定版のrelease publication workflowで、`supplemental_release_asset_enabled: true`、`supplemental_release_asset_owner_contract: installer.asset-assembly-evidence-contract`、`supplemental_release_asset_implementation: standard-installer`、`supplemental_release_asset_config_path: .ci/installer/assembly.json` を指定する。platform宣言はbuild matrixの選択と一致させる。workflow接続と公開・認証は `ci-github` スキルへ委譲する。
 4. ローカルは同じprovider revisionの選択配布asset `runtime.installer` を `ci-github` の固定版取得手順でGit管理外に取得し、次のCLIを使う。Action内部runtimeや共通テストをprojectへコピーしない。
 
@@ -103,7 +103,7 @@ READMEは対象製品版の導入・利用手順として書く。対応OS・CPU
 
 1. 固定providerが対応する短い既定オンライン起動と、現在のREADMEコマンドをOSごとに比較する。Windowsは「Windowsの実行方式の選択」に従う。Unixの共通コマンドはLinux・macOSで一つにまとめる。サンプルの字句や行数ではなく、必要な導入操作で判断する。
 2. 公開名を標準組立契約の`publicEntryNames`へ直接照合してから、宣言・README・生成物との一致を確認する。Windowsの名前にCPU名を補わず、旧名で宣言とREADMEが一致していても標準適合にしない。起動shell、固定URL・asset名・対応OSも配布計画へ照合し、READMEのURLだけを未生成の入口へ変えない。
-3. 配置先をmanifestから取得し、`references/define-installer.guide.md`の「配置プロファイルと標準配置」との差分を確認する。配置先の説明は一箇所にまとめ、詳細な内部構造はREADMEへ展開しない。必要な導入操作だけで起動確認へ到達できるかをroot-docsの観点で再確認する。
+3. 配置先をmanifestから取得し、`references/installer-manifest-contract.reference.md`の「配置プロファイルと managed root」との差分を確認する。配置先の説明は一箇所にまとめ、詳細な内部構造はREADMEへ展開しない。必要な導入操作だけで起動確認へ到達できるかをroot-docsの観点で再確認する。
 4. アンインストール手順はサンプルの削除対象をmanifestへ照合し、製品専用のlauncher・managed rootだけを対象にする。共有ディレクトリ・共有PATHを削除対象にせず、製品の設定・データが削除されるか残るかを確認する。未提供のuninstallコマンドを案内しない。
 
 候補があれば同じ対象identityへ照合し、実行結果は監査記録へ分ける。未依頼の実行証跡不足だけで構成を不適合にしない。必要な値を確定できなければ推測せず、未確認項目と確認先を報告する。

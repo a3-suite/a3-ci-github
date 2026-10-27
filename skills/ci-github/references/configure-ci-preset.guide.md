@@ -53,7 +53,7 @@
 実行ごとに確定する値は workflow input を使う。toolchain と tool version は project のversion設定、
 またはplanの`--set`で渡すworkflow初期パラメータへ固定する。job の環境変数は値の受け渡しであり、
 版の正本にはしない。
-privileged reusable workflow は `runner-trust-policy.reference.md#privileged-workflow-の-trusted-ci-control` の
+privileged reusable workflow は [privileged workflow の trusted CI control](references/runner-trust-policy.reference.md#privileged-workflow-trusted-ci-control) の
 workflow identity 契約に従う。
 具体的なキー、既定値、接続先は、コピーした workflow の初期パラメータ、`vars`、`secrets`、`inputs` を正本とする。
 
@@ -69,13 +69,8 @@ GitHub Variables は、配置した workflow へ一括設定しない。選択�
 | 不要 | 固定値、workflow input、Secret、project asset から供給される、または選択した経路で参照されない | toolchain／tool version、`CI_LANGUAGE_PROFILE`、Release 単位の承認値、未選択 variant 専用の Variable |
 
 `CI_RELEASE_APPROVAL_ID` と `CI_RELEASE_APPROVAL_BODY_SHA256` は Repository Variable にしない。
-git スキルの release flow で release identity と本文をタグ作成前に承認する。tag request 成功後、認証済みの
-dispatcher が publication authorization の一意な approval ID、承認済み本文の digest、将来の期限を
-Release 単位の workflow input として発行し、同じ本文とともに渡す。publication request は入力の整合と
-GitHub workflow run provenance を検証可能な handoff へ固定する。approval ID は相関識別子であり、
-それ自体を人間承認の証明にしない。後段は
-検証済み handoff の approval identity と本文 digest を引き継ぎ、現在の Repository Variable を再参照しない。
-CI が検証するのは承認済み入力の同一性と搬送経路であり、人間による事前承認の有無を機械的に代替証明しない。
+承認値は Release 単位の workflow input として渡し、発行・搬送・後段での引き継ぎは
+`references/implement-release-asset-publication-workflow.guide.md` のフローに従う。
 
 判定は次の順で行う。
 
@@ -87,10 +82,8 @@ CI が検証するのは承認済み入力の同一性と搬送経路であり�
 `CI_TOOLCHAIN_VERSION`、`CI_GH_VERSION`、`CI_JQ_VERSION` などの版情報は
 workflow 初期パラメータまたは project の version 設定で固定し、Variable へ移さない。README に記録する場合も、
 値の複製ではなく、採用した経路・必要性の理由・owner・正本への導線だけを残す。
-jqを使用する経路では `CI_JQ_VERSION` に公式 Release の取得物と checksum がある exact 版を指定する。canonical workflow が
-固定 SHA の provider Action で jq を供給してから verifier で検証するため、project 固有の install 処理は不要である。
-`CI_GH_VERSION` も公式 Release に取得物と checksum がある exact 版を指定する。canonical workflow が jq の直後に
-固定 SHA の provider Action で gh を供給してから verifier で検証するため、project 固有の install 処理は不要である。
+`CI_JQ_VERSION` と `CI_GH_VERSION` の指定と供給は `references/workflow-version-policy.reference.md` に従い、
+project 固有の install 処理は置かない。
 release-publication は gh と sha256sum を使わないため、`CI_GH_VERSION` は package-publication だけが参照する。
 
 ### `.ci/README.md` の責務
@@ -162,10 +155,8 @@ trusted CI assets の初期解決は provider profile の canonical state であ
 
 ## privileged workflow identity
 
-privileged reusable workflow は entry job の最初の step で default branch の workflow_run caller を検証する。
-trusted control は consumer の `github.repository` と `github.workflow_sha` で checkout し、直後に HEAD を照合する。
-provider callee の固定参照 SHA と consumer の SHA が一致することは要求しない。
-このため導入者が trusted control SHA を事前計算する二段階 bootstrap は不要である。
+入口検証と trusted control の checkout は [privileged workflow の trusted CI control](references/runner-trust-policy.reference.md#privileged-workflow-trusted-ci-control) に従う。
+provider と consumer の SHA 一致を要求しないため、導入者が trusted control SHA を事前計算する二段階 bootstrap は不要である。
 
 導入時は caller、固定参照する provider workflow、必要な consumer control asset を単一の検証対象として確認する。main へ反映する前に
 git-branch-strategy の `mainIntegrationSafety` に従い、newly reachable commit 全件と最終 tree が releaseable であることを
@@ -176,19 +167,11 @@ main 反映前の hosted 証拠を必須にする場合は、同じ tree と SHA
 それ以外は feature branch の静的検証・契約テストと、default branch でのみ取得できる runtime 証拠を区別し、未取得の証拠を成功扱いしない。
 この制約を避けるために publication の workflow identity 検証を弱めない。
 
-この方式は workflow identity context を提供する GitHub.com 用である。GHES では同等の契約を確認できない限り導入しない。
 PR check の trusted CI assets bootstrap は別の入力境界であり、従来どおり runner trust policy に従う。
 
 ## 導入時に使うパス
 
-以下の例では、パスを次の意味で使う。
-
-| 表記 | 意味 |
-| --- | --- |
-| `{ci-github-source-root}` | `references/deploy-ci-assets.guide.md`により取得・検証した、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを含むproject-local distribution root |
-| `{skill-collection-root}` | 独自adapter bundle の `source.skill` を解決する場合の外部スキル集合 root |
-| `{ci-github-skill-root}` | `project-skill-deploy`で別途配備した、導線と参照文書だけを持つ`ci-github` Agent Skill root |
-| `{project-root}` | CI を導入する project の root |
+以下の例のプレースホルダは `references/ci-runtime-boundary.reference.md` の「導入時に使うプレースホルダ」に従う。
 
 `{skill-collection-root}` は、独自bundleの外部スキルを identity で解決する場合だけ使用する。標準bundleの生成・導入・実行には使用しない。
 repository-owned の workflow、runtime、lint rule は検証済み`{ci-github-source-root}`から解決し、
@@ -294,8 +277,6 @@ trusted PR check は標準で base SHA の trusted CI assets を使用する。b
 2. 初回導入 PR を merge すると base に workflow と lock が入り、以降の PR は base 固定で判定する。
 3. platform 別検証の既存 project への後続導入は、base に `.ci/platform-manifest.yml` と `.ci/quality-platforms.yml` を先に配置して lock を再生成し、その後 platform workflow を導入する。preflight は companion のみの配置を許容し、platform workflow の配置時には companion を要求する。
 4. lock が無い状態で対象資産だけが存在する base は不整合として停止する。lock を生成してから workflow を更新する。
-
-初期解決は use-case の例外経路ではなく canonical state であるため、`.ci/README.md` の例外経路へ記録しない。
 
 ## `quality-gate` に platform 別検証を追加する場合
 

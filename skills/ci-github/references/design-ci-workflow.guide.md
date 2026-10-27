@@ -36,9 +36,9 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
 3. CI workflow runtime の境界を確認する。
    - `references/ci-runtime-boundary.reference.md` に従い、CI runtime に a3 系 CLI を混入させない。
 4. runner trust policy を決める。
-   - 選択した provider の trust policy profile に従い、runner と check 境界、および該当する control を決める。
-   - provider profile の check 選択に従い、配置する merge gate check、安定した required check 名、対象外 job の skip 条件を先に決める。
-   - runner/host の versioned label または immutable image の指定は、選択した provider の version policy に従う。
+   - `references/runner-trust-policy.reference.md` に従い、runner と check 境界、および該当する control を決める。
+   - `references/runner-trust-policy.reference.md` の check 選択に従い、配置する merge gate check、安定した required check 名、対象外 job の skip 条件を先に決める。
+   - runner/host の versioned label または immutable image の指定は、`references/workflow-version-policy.reference.md` に従う。
 5. trigger と paths を決める。
    - 不要実行の抑止と品質不変条件は `references/ci-execution-efficiency-policy.reference.md` に従う。
    - PR 時の品質ゲートと、マージ後の統合後検証を分離する。
@@ -47,22 +47,22 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
    - 手動実行イベントは手動実行が必要な場合だけ追加する。
    - provider の path filter は workflow 自体の起動有無を制御する。
    - 差分検出スクリプトは workflow 実行後に重い工程をスキップする。
-   - required check の起動条件、対象外処理、merge queue 対応は選択した provider の trust policy profile に従う。
+   - required check の起動条件、対象外処理、merge queue 対応は `references/runner-trust-policy.reference.md` に従う。
 6. provider 実装へ写像する。
    - `references/configure-ci-preset.guide.md`に従い、選択したCIプリセットとlanguage profileをcallerへ接続する。入出力と停止条件は`references/ci-preset-contracts.reference.yml`、Actionと資材の対応は`assets/registry/ci-github-preset-assets.yml`を参照する。
    - provider 固有の構文や API を `ci` の概念契約へ逆流させない。
-   - provider の runtime、toolchain、runner、Action、container の版指定は選択した provider の version policy profile を参照する。
+   - provider の runtime、toolchain、runner、Action、container の版指定は `references/workflow-version-policy.reference.md` を参照する。
 7. workflow の実装境界を決める。
    - workflow はオーケストレーションに限定する。
-   - workflow file 名、workflow `name:`、job id / job `name:` は選択した provider の authoring policy profile に従う。
+   - workflow file 名、workflow `name:`、job id / job `name:` は `references/workflow-authoring-policy.reference.md` に従う。
    - 長い処理、条件分岐、再利用処理は `.ci/scripts/` または Action に外部化する。
-   - 外部化判断は選択した provider の authoring policy profile に従う。
-   - 選択した provider の CIプリセット asset から、必要な workflow 骨格を選ぶ。
+   - 外部化判断は `references/workflow-authoring-policy.reference.md` に従う。
+   - `references/preset-catalog.reference.md` の CIプリセット asset から、必要な workflow 骨格を選ぶ。
    - workflow asset の branch、runner、required check、docs-only pattern、パッケージマネージャの実行方法、Action SHA、runtime version は、provider と project の正本に合わせて確定する。
-   - workflow の静的検証は選択した provider の authoring policy profile に従う。
+   - workflow の静的検証は `references/workflow-authoring-policy.reference.md` に従う。
 8. スクリプトと成果物の扱いを決める。
    - 配布スクリプトの一覧は `references/ci-script-catalog.reference.md` を参照する。
-   - 実行環境とツールのバージョンを、選択した provider の version policy に従って workflow に明示する。
+   - 実行環境とツールのバージョンを、`references/workflow-version-policy.reference.md` に従って workflow に明示する。
    - 日時・timezone 系テストは test スキルの原則に従い、runner の暗黙 timezone に依存しないことを確認する。
    - 依存ロックの有無を前提に、インストール手順を固定する。
    - 実行するスクリプト名は定義と一致させ、存在確認のチェックを入れる。
@@ -72,7 +72,7 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
 9. artifactの公開が必要か判断する。
    - artifactの公開が不要な場合は公開経路の確認を省略し、手順10へ進む。
    - 公開要否、公開経路、publish範囲は対象プロジェクトの owner 契約で解決する。CIでは再判断しない。
-   - 解決済み経路がpackageの場合は`references/implement-package-publish-workflow.guide.md`、Release assetsの場合は選択した provider 固有スキルの Release assets workflow guide に進む。
+   - 解決済み経路がpackageの場合は`references/implement-package-publish-workflow.guide.md`、Release assetsの場合は`references/implement-release-asset-publication-workflow.guide.md`に進む。
    - 不要な経路のpublish権限やtokenをworkflowに入れない。
 10. 最後にレビューする。
    - `references/review-ci-workflow.guide.md` の順序で確認する。
@@ -80,7 +80,7 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
 
 ## プラットフォーム別品質検証
 
-platform 固有の runtime、artifact、installer、OS 依存処理の検証が必要な場合だけ適用する。provider の構文、runner、matrix、required check 名は provider 固有スキルへ委譲する。
+platform 固有の runtime、artifact、installer、OS 依存処理の検証が必要な場合だけ適用する。runner は `references/runner-trust-policy.reference.md` と `references/workflow-version-policy.reference.md`、matrix job と required check の名前は `references/workflow-authoring-policy.reference.md` に従う。
 
 1. 必要性を決める。platform 独立性が確認できる検証は単一 platform に集約し、platform 固有の挙動を検証する suite だけを platform 別の対象にする。
 2. 対象 platform を選ぶ。project が宣言した platform 集合の id を参照し、platform 定義や runner mapping を重複定義しない。選択と適用条件は project data とし、workflow 構造へ埋め込まない。
@@ -91,8 +91,8 @@ platform 固有の runtime、artifact、installer、OS 依存処理の検証が�
 
 ## 注意
 - CI を速く見せるためだけにジョブを分割しない。合計実行分数の削減を優先する。
-- runner 選定理由は、選択した provider の trust policy の判断軸で残す。
-- Action、runner/host、runtime、toolchain、container、外部ツールの版指定は、選択した provider の version policy の不変条件で確認する。
+- runner 選定理由は、`references/runner-trust-policy.reference.md` の判断軸で残す。
+- Action、runner/host、runtime、toolchain、container、外部ツールの版指定は、`references/workflow-version-policy.reference.md` の不変条件で確認する。
 - workflow asset はそのまま正本にせず、プロジェクトの runner、権限、trigger、script に合わせて設定する。
 - workflow YAML の静的検証は、runner trust policy や workflow 設計判断の代替にしない。
 

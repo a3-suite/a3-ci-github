@@ -8,44 +8,21 @@ description: CIで組み立ててReleaseへ公開するインストーラ（GitH
 ## 目的
 CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理のソース、Release asset、Packages、npm・Maven などの外部リポジトリから取得する資材を、検証済み入力として安全に対象環境へ収束させるための判断軸と導線を提供する。
 
-## 原則
-- installer を導入すべきかの推奨判断は repository-audit スキル、採否は project SSOT が所有する。本スキルはインストーラ成果物の設計、実装、レビューと、作成済み、導入判断が `required`、または project SSOT で採用済みの場合の適合監査を所有する。`required` 判定や採用済みという事実は、実装または修正の許可を意味しない。
-- インストーラは「取得」「検証」「配置」「切替」「起動確認」を混同せず、各段階の責務を分ける。
-- 取得元は GitHub、package registry、artifact repository などの外部境界として扱い、信頼は manifest、checksum、署名、固定 version で確立する。
-- 標準経路では、JRE、Node.js、package manager などの実行基盤は事前インストール済み前提とし、installer は存在確認と version 照合だけを行う。
-- 既存データ、既存設定、稼働中プロセスを壊さないことを最優先にする。
-- 検証した入力と実行に使う入力を一致させる。
-- 失敗時に残る状態を先に定義し、途中成功の副作用を最小化する。
-- 共通 installer への準拠を既定とする。
-
 ## ルール
-- manifest、checksum、署名などの検証済み入力を使う場合、インストール実行時に別入力を再取得してはならない。
-- production / release 用 installer の入力は manifest contract を正本とし、Java / Node などの runtime 別差分は manifest の overlay として扱う。
-- GitHub の branch、registry の `latest`、version range、SNAPSHOT などの可変参照は、明示的に許可された開発用途以外では installer 入力にしない。
-- GitHub Packages、npm、Maven などから取得する資材は、registry URL、package coordinate、version、checksum と任意の署名検証を入力契約に含める。
-- project override があっても core safety invariant は緩和しない。
-- 設計時は標準対象 platform の全候補を選択可能な前提で対象 platform を決める。
-- installer が巨大化する場合は、配布単位と保守単位を分け、保守単位は manifest、source、verify、staging、activation、state、audit、service などの契約境界で分割する。
-- CI で installer asset を組み立てる場合、installer 側は組立済み asset、manifest、checksum、provenance、テスト証跡の契約を扱い、workflow trigger、job、権限、cache、release publish 手順は ci スキルへ委譲する。
-- 標準GitHub Release native経路は、提供元の固定Actionまたは固定配布CLIを使う。利用projectがGit管理するのは製品宣言とmanifestの製品固有値だけとし、共通installer本体・builder・fixture・テスト・adapterをコピーまたは個別実装しない。CI中の取得資材とprojectの追跡sourceを分ける。
-- production installer は未知の manifest field、未許可 download URL、unsafe archive entry、checksum または署名の不一致を拒否し、包括的な強制オプションで迂回させない。
-- 標準経路で実行基盤が存在しない、または要求 version を満たさない場合は、installer が取得・導入せず失敗する。
-- production installer は本番ホストで source build を暗黙に実行しない。project override で source build を扱う場合も、入力、toolchain、依存解決、出力検証、失敗時状態を固定する。
-- 設定ファイルはデータとして解析し、privileged execution context では user-editable な設定を shell 実行しない。
-- 既存データ、secret、ユーザー編集済み設定は既定で上書きしない。
-- rollback は変更済み resource ごとの rollback plan として定義し、activation、service、process、shared asset、state、data restore を混同しない。
 - 共有 runtime asset は検証済み staging から最後に切り替える。
-- installer が runtime script を配置または生成する場合、その script の起動責務、手動操作、service manager handoff、PID、ログ、restart、health 境界は runtime-script スキルの契約に従う。
-- destructive な操作、所有権変更、権限変更は managed root 内に閉じる。root 外の launcher 操作は manifest 契約の「launcher 安全不変条件」に従い、service manager 登録は必要な最小操作だけに限定する。
+- 既存プロジェクトに installer の SSOT がある場合は、project 固有の実装詳細ではそれを優先する。
+
+## 責務境界
+- 所有: インストーラ成果物の設計、実装、レビューと、作成済み、導入判断が `required`、または project SSOT で採用済みの場合の適合監査。`required` 判定や採用済みという事実は、実装または修正の許可を意味しない
+- 非対象: installer を導入すべきかの推奨判断（repository-audit スキル）と採否（project SSOT）
+- 非対象: installer asset を組み立てる workflow の trigger、job、権限、cache、release publish 手順（ci スキル）
+- 非対象: installer が配置または生成する runtime script の起動・service manager・health 境界（runtime-script スキル）
+- 非対象: OS やパッケージマネージャ固有の詳細手順
+- 非対象: 個別アプリケーションのリリース仕様そのもの
 
 ## 関連スキル
 - 必須: post-artifact-review
 - 任意: root-docs, repository-audit, runtime-script, env, secret-management, review, test, ci, a3-lint, dependency-selection, module-boundary-design
-
-## 注意
-- 非対象: OS やパッケージマネージャ固有の詳細手順
-- 非対象: 個別アプリケーションのリリース仕様そのもの
-- 既存プロジェクトに installer の SSOT がある場合は、project 固有の実装詳細ではそれを優先する。
 
 ## トリガー＆アクション
 ### インストーラを作成・修正したい

@@ -62,7 +62,7 @@ READMEの標準コマンドと宣言・manifestは、OS別の実行ファイル�
 | `.ci/README.md` | — | 構造はa3-lintの`ci_github_ci_readme_contract`が検査する。採用preset / flow、差分の有無と理由、owner、正本への導線、検証証跡、更新・撤去条件が機械監査の結果と一致するかを確認する。decision、停止条件、共有契約が正本と異なる場合は、READMEの修正ではなく正本との不一致として扱う |
 | Release対象とversion | `release-target-coverage` | `release-request`・`release-publication` callerと公開宣言の接続、`versionConsistency`のversion受け渡し。公開スキルは`references/publish-project-skills.guide.md`の「同梱の選択」を確認し、選択未確認を未同梱へ読み替えない。同梱する場合は同ガイドの「監査」を選択段階に応じて適用する |
 
-project所有の部分がある場合は、局所分岐、再発防止、fixture／runtime互換性の補助検査（`supplemental-evidence`）の導線が必要かを判断し、必要な導線の欠落は`test-gap`とする。不要な場合とproject所有の部分がない場合は対象外理由を記録する。実行結果の照合は証跡監査で行う。
+project所有の部分がある場合は、局所分岐、再発防止、fixture／runtime互換性の補助検査（`supplemental-evidence`）の導線が必要かを判断し、必要な導線の欠落は`implementation-gap`とする。不要な場合とproject所有の部分がない場合は対象外理由を記録する。実行結果の照合は証跡監査で行う。
 
 `ci-failure-diagnostics`、`ci-workflow-sequence`、`installer-distribution`とユースケースシミュレーションは、subject catalogと監査契約の適用条件に該当する場合だけ`references/inspect-ci-audit-details.guide.md`で実施する。planが`reuse`の標準経路は、提供元の契約テストを証拠とする。
 
@@ -72,7 +72,7 @@ project所有の部分がある場合は、局所分岐、再発防止、fixture
 
 報告は`latest-standard-alignment`の`reportFormat`・`reportingOrder`に従い、比較基準、標準整合のstatus、差分と理由、移行案・未確認事項を先頭に示す。構成監査と証跡監査のstatusを分け、構成だけの成功を動作確認済みやリリース準備完了へ読み替えない。監査レポートの最後に同subjectの`finalReport`で「標準適合度・差分・正当性レビュー」を必ず付け、差分なし・未確認の場合も省略しない。installerのownerレビュー結果は保持して一つのレポートにまとめる。
 
-finding は review スキルへ渡し、正本との不一致は `contract-gap`、実装経路の欠落または迂回は `implementation-gap`、必要な検証経路の未接続は `test-gap`、正本や必要な実行証拠を確定できない場合は `undecidable-needs-confirmation` として区別する。
+finding は review スキルへ渡し、正本との不一致は `contract-gap`、実装経路または必要な検証経路の欠落・迂回・未接続は `implementation-gap`、正本や必要な実行証拠を確定できない場合は `undecidable-needs-confirmation` として区別する。
 
 ## 4. 最終結果の独立レビュー
 

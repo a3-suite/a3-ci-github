@@ -72,6 +72,7 @@
 - `untrusted-pr` と、publish などの権限付き workflow の job（build を含む）では build cache を使わない。公開物は build cache を経由しない clean build から作る。
 - build cache は quality の実行時間を短縮する手段であり、検証対象や判定を置き換えない。key には runner の OS・architecture、toolchain の版、lockfile の内容を含める。
 
+<a id="trusted-ci-assets-bootstrap"></a>
 ### trusted CI assets bootstrap
 - trusted CI assets は、workflow が呼び出す `.ci/scripts/**`、policy script、adapter descriptor、またはそれらに相当する project-local CI 実行資産とする。
 - base の採用済み marker は `.ci/ci-assets.lock.json` の存在とする。marker は配布同一性 lock の正本 path を使い、内容は runtime で解析しない。
@@ -82,6 +83,7 @@
 - bootstrap は provider profile の canonical state であり、use-case の例外経路へ登録しない。
 - fork PR では head fallback を許可せず、base の資産だけを使用する。
 
+<a id="privileged-workflow-trusted-ci-control"></a>
 ### privileged workflow の trusted CI control
 - 本契約は caller の `github.workflow_ref` / `github.workflow_sha` を提供する GitHub.com を対象とする。GHES では同等の context 契約を確認できない限り導入を停止する。
 - 標準 Release は `authority` job、標準 Package は `publish` job の最初の step で publication entry を検証する。event は `workflow_run`、caller ref は consumer repository の所定 caller path と default branch の組合せ、control SHA は40桁の小文字hexに fail closed で照合する。入口検証より前に他の Action、checkout、project-local code を実行しない。

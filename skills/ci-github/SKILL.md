@@ -7,34 +7,37 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ## 目的
 
-- GitHub Actions 上の quality、Release、package publication を、SDDで確定した契約と実装へ接続する。
+- GitHub Actions 上の quality、Release、package publication を、プロジェクトの契約と実装へ接続する。
 - Agent Skill を実装資産の保管場所にせず、設計・導入・検証・監査・復旧の入口に限定する。
 
 ## 原則
 
-- 要求、観測可能な契約、設計境界はプロジェクトの current SDD を正本とする。
+- SDD を採用しているプロジェクトでは、要求、観測可能な契約、設計境界は current SDD を正本とする。
 - canonical workflow は `workflows/`、Action は `actions/`、配置・検証処理は `runtime/` が所有する。
 - スキル内へ workflow、Action、runtime、lint rule を複製しない。
 - Action は利用可能性と公開契約を確認し、固定 commit SHA で接続する。
 - job境界、permissions、credential注入、runner trust、artifact handoff、publish判断はworkflow側に保持する。
 - 標準品質commandはこのproviderのbundleとして提供する。言語一般の規約・lintルールは言語owner、project固有のcommandはproject ownerが所有するadapter契約へ委譲する。
 
-## 関連スキル
+## 責務境界
 
-- 必須: git, git-branch-strategy, post-artifact-review
-- 任意: github-actions, a3-lint, dependency-selection
-
-## 注意
-
+- 所有: provider 非依存の CI 判断を GitHub Actions の workflow、固定 SHA Action、配布資材、監査へ写像すること
+- 非対象: provider 非依存の CI の目的・責務・信頼境界・実行効率の判断（ci スキル）
 - 非対象: GitHub Actions以外のCI provider
 - 非対象: language固有commandの定義
 - 非対象: branch、tag、version policyの再定義
+
+## 関連スキル
+
+- 必須: ci, git, git-branch-strategy, post-artifact-review
+- 任意: github-actions, a3-lint, dependency-selection, audit
 
 ## トリガー＆アクション
 
 ### GitHub Actions CIを設計したい
 
-- SDDで対象ユースケース、trust境界、停止条件、必要なActionとworkflow mappingを確認する。
+- 対象ユースケース、trust境界、停止条件、必要なActionとworkflow mappingを確認する。
+- 成果物: workflow mapping と、選択した preset・Action・trust 境界
 - 参照: references/design-ci-workflow.guide.md
 
 ### CIをセットアップ・更新したい、またはcanonical workflowを適用したい
@@ -46,15 +49,14 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ### 必要なCI資材だけを取得・更新・復旧したい
 
-- presetまたはassetを選択し、full commit SHA固定sourceから検証済みproject-local distributionへ取得する。
+- presetまたはassetを選択し、検証済みproject-local distributionへ取得する。
+- 成果物: 取得・検証した distribution と、その revision
 - 参照: references/deploy-ci-assets.guide.md
 
 ### 適用済みCIを監査したい
 
-- 通常は構成監査とし、証跡監査・両段階・リリース前の実行確認を指定された場合だけ、同じ対象について証跡監査へ進む。構成適合と実行証跡の結果を分けて報告する。
-- リリース前の確認では、採用可能な最新の公開済み安定版（`references/deploy-ci-assets.guide.md`の「対応条件」）の標準構成との整合を中心に監査する。
-- その標準への更新と、製品・installer・公開スキルを同じversionのReleaseで公開することを推奨対応として促す。採用済みの公開経路ではversionの整合も確認する。
-- 基本はスクリプト実行と毎回必須の確認で完結させ、検出があった場合や詳細確認を依頼された場合だけ専用ガイドへ進む。
+- 監査段階を選び、スクリプト実行と毎回必須の確認から始める。検出があった場合や詳細確認を依頼された場合だけ専用ガイドへ進む。
+- 成果物: 構成監査と証跡監査を分けた監査結果と、推奨対応
 - 参照: references/verify-applied-ci-preset.guide.md
 - 参照: references/resolve-ci-audit-findings.guide.md
 - 参照: references/inspect-ci-audit-details.guide.md
@@ -65,16 +67,19 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ### CI結果を解析したい
 
-- 解析はworkflowの外で行い、CI workflow runtimeへ解析用のcommandを持ち込まない。
+- workflow の外で解析する。
+- 成果物: 失敗と欠測を分けた解析結果
 - 参照: references/analyze-ci-result.guide.md
 
 ### Releaseまたはpackage公開を実装・復旧したい
 
-- authority、固定source、handoff、非上書き、公開後readbackを確認し、状態不明や部分公開では自動上書きしない。
+- 公開経路の安全不変条件を確認して実装する。状態不明や部分公開では自動上書きしない。
+- 成果物: 実装した公開経路、または復旧の判断と委譲先
 - 参照: references/implement-release-asset-publication-workflow.guide.md
 - 参照: references/implement-package-publish-workflow.guide.md
 
 ### 製品と対応スキルを同じReleaseで提供したい
 
-- 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。同梱する場合は、installerと独立したOS共通ZIPを同じReleaseへ含める。
+- 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。
+- 成果物: 同梱の選択と、同梱する場合の公開宣言
 - 参照: references/publish-project-skills.guide.md

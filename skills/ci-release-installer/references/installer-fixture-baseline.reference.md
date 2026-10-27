@@ -43,7 +43,7 @@
 - 残存状態: core safety invariant を満たす証跡が残る。
 
 ### common installer conformance
-- 入力: 共通契約と選択した starter の構成・共通動作を維持し、製品固有値と許可 adapter だけを適合させた installer。非準拠差分はなく、例外用の requiredEvidence は持たない。
+- 入力: 共通契約と選択した固定 provider runtimeの構成・共通動作を維持し、製品固有値と許可 adapter だけを適合させた installer。非準拠差分はなく、例外用の requiredEvidence は持たない。
 - 期待: 比較元と対象状態を特定して準拠を確認し、accepted project detail として finding なしとする。非準拠差分がないため project-specific exception に分類せず、例外の正当化証跡を要求しない。
 - 残存状態: 対象成果物は変更されず、共通動作と製品固有適合の検証証跡が残る。
 
@@ -589,7 +589,7 @@
 - 入力: launcher の位置に installer 管理外のエントリが存在する（Unix は任意 target への symlink、Windows は内容不一致の copy、または通常ファイル）。
 - 期待: 上書きせず失敗し、既存エントリを保持する。
 - 残存状態: 既存エントリは変更されず、install state は作成されない（preflight の managed root と lock は cleanup で解放する）。
-- 補足: starter 標準は Unix symlink / Windows copy を対象とし、Windows shim は project override として標準 fixture の対象外とする。
+- 補足: 標準は Unix symlink / Windows copy を対象とし、Windows shim は project override として標準 fixture の対象外とする。
 
 ### launcher parent traversal reject
 - 入力: launcher path に空要素、`.`、`..` を含む（例: `~/.local/bin/../../../<binary>`）。
