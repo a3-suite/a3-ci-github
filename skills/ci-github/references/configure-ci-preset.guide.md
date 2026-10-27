@@ -14,7 +14,7 @@
 
 用途と言語profileに対応する標準preset・Action・標準bundleを最初の導入案とする。製品固有の設定値やregistryが要求する`requiredExtensions`は、共通処理の固有再実装と区別する。
 
-宣言・手順の変更前に、`references/verify-applied-ci-preset.guide.md`の「機械検証の選択」と`references/resolve-ci-audit-findings.guide.md`の「プロジェクト固有規則との競合確認」を実施する。固有実装がなくても、契約・文書・ローカルスキルの規則が標準導入を妨げていないか確認し、競合があれば解決案とownerを採用方針へ含める。
+宣言・手順の変更前に、`references/verify-applied-ci-preset.guide.md`の「機械検証の選択」と`references/triage-ci-audit-findings.guide.md`の「プロジェクト固有規則との競合確認」を実施する。固有実装がなくても、契約・文書・ローカルスキルの規則が標準導入を妨げていないか確認し、競合があれば解決案とownerを採用方針へ含める。
 
 既存の固有workflow・script・adapterがある場合は、変更前に標準構成との差分を整理し、利用者と次を確認する。
 

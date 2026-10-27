@@ -58,7 +58,7 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 - 監査段階を選び、スクリプト実行と毎回必須の確認から始める。検出があった場合や詳細確認を依頼された場合だけ専用ガイドへ進む。
 - 成果物: 構成監査と証跡監査を分けた監査結果と、推奨対応
 - 参照: references/verify-applied-ci-preset.guide.md
-- 参照: references/resolve-ci-audit-findings.guide.md
+- 参照: references/triage-ci-audit-findings.guide.md
 - 参照: references/inspect-ci-audit-details.guide.md
 
 ### 既存のCIワークフローをレビューしたい

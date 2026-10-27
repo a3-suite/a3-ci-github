@@ -9,7 +9,7 @@
 | 状況 | 読むもの |
 | --- | --- |
 | すべての監査 | 本ガイド |
-| 機械監査が不一致・候補・差分を検出した | `references/resolve-ci-audit-findings.guide.md` の該当節 |
+| 機械監査が不一致・候補・差分を検出した | `references/triage-ci-audit-findings.guide.md` の該当節 |
 | 経路の机上実行・失敗診断、証跡監査、installer監査が必要 | `references/inspect-ci-audit-details.guide.md` の該当節 |
 
 ## 正本
@@ -47,7 +47,7 @@ READMEの標準コマンドと宣言・manifestは、OS別の実行ファイル�
 2. **静的検証**（`static-validation`）: 同ガイドのa3-lint（workflowと`.ci/README.md`）と`actionlint`を実行する。actionlintのproject固有設定は`.github/actionlint.yaml`（registryの`provider.staticValidation`がownerを宣言するproject-owned content）とする。
 3. **最新標準との差分**: `references/deploy-ci-assets.guide.md`の「対応条件」で比較基準Releaseを確定し、同ガイドの「取得」で導入済みと同じpreset・assetを取得する。同じ選択で`plan`を`--set`なしで実行する。製品設定は、配置済みcallerのdigestが既存lockと一致し、導入済みrevisionのdistributionを読み取れる場合だけ引き継がれる。比較基準と導入済みrevisionが同じ場合もplanを省略せず、全対象が`reuse`になることを確認する。
 
-不一致、`semanticCandidates`、planの`reuse`以外の結果、または構造差による停止があれば、`references/resolve-ci-audit-findings.guide.md`で該当する検出だけを判断する。機械監査のstatusは`reporting.statuses.machine-audit`から導出し、preflightの`status`を監査全体のstatusへ読み替えない。
+不一致、`semanticCandidates`、planの`reuse`以外の結果、または構造差による停止があれば、`references/triage-ci-audit-findings.guide.md`で該当する検出だけを判断する。機械監査のstatusは`reporting.statuses.machine-audit`から導出し、preflightの`status`を監査全体のstatusへ読み替えない。
 
 ## 2. 毎回必須の意味監査
 
