@@ -3,7 +3,7 @@
 ## 目的
 
 選択したCIプリセットのcallerを製品設定付きで生成・配置し、project固有の実装だけを接続する。
-プリセットの意味、コピー元、コピー先は `assets/registry/ci-github-preset-assets.yml`、共通処理契約は
+プリセットの意味は `references/ci-preset-contracts.reference.yml`、コピー元、コピー先は `assets/registry/ci-github-preset-assets.yml`、共通処理契約は
 `references/ci-script-contracts.reference.yml` を正本とする。
 
 ## 導入前提

@@ -53,7 +53,7 @@ mkdir -p "$ci_github_local_runtime"
 cp "{ci-github-source-root}/runtime/preset/package.json" \
   "{ci-github-source-root}/runtime/preset/package-lock.json" \
   "$ci_github_local_runtime/"
-npm_config_cache="{project-root}/.a3-skills/ci-github/npm-cache" \
+npm_config_cache="{project-root}/.a3-skills/ci-github/cache/npm" \
   npm ci --prefix "$ci_github_local_runtime" --no-audit --no-fund
 ```
 

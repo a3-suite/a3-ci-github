@@ -29,8 +29,8 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ## 関連スキル
 
-- 必須: ci, git, git-branch-strategy, post-artifact-review
-- 任意: github-actions, a3-lint, dependency-selection, audit
+- 必須: ci, git, git-branch-strategy, post-artifact-review, audit
+- 任意: github-actions, a3-lint, dependency-selection, ci-release-installer, repository-audit, review, test, secret-management, change-proposal, a3-suite
 
 ## トリガー＆アクション
 
@@ -42,7 +42,8 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 ### CIをセットアップ・更新したい、またはcanonical workflowを適用したい
 
-- 導入完了条件まで実施し、実施結果・未確認事項・ブロッカーを報告する。ガイドの紹介や構成提案だけで終了しない。
+- 導入完了条件まで実施する。ガイドの紹介や構成提案だけで終了しない。
+- 成果物: 導入したCIと、実施結果・未確認事項・ブロッカーの報告
 - 参照: references/deploy-ci-assets.guide.md
 - 参照: references/configure-ci-preset.guide.md
 - 参照: references/validate-ci-preset.guide.md

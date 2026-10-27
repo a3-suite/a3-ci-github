@@ -1,7 +1,7 @@
 coverageScope:
   contractCatalogId: installer.contract-catalog
   fixtureCatalogId: installer.fixture-catalog
-  fixtureBaselineCoverage: complete
+  fixtureCatalogCoverage: complete
   coverageClassValues:
     - installer-invariant
     - audit-evidence-boundary
@@ -11,8 +11,8 @@ coverageScope:
     audit-evidence-boundary: installer 成果物そのものではなく、監査時に必要な fixture 完走性と残存状態証跡の境界。
     asset-assembly-evidence-boundary: 組立済み installer asset を公開候補として扱う前に必要な identity、checksum、provenance、検証結果の証跡境界。
   fixtureReferencePolicy:
-    allFixtureBaselineEntriesMustAppearInCoverage: true
-    fixtureNamesUseBaselineHeadings: true
+    allFixtureCatalogIdsMustAppearInCoverage: true
+    fixtureReferencesUseCatalogIds: true
     duplicateFixtureReferencesAllowed: true
     duplicateFixturePrimaryInvariantMustBeDefinedInFixtureCatalog: true
   confirmingFixtureMeaning: "invariant が満たされることを確認する fixture。fixture 自体の expected outcome は fixture catalog で定義する。"
