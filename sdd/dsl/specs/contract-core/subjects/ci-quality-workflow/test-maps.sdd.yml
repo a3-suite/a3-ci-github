@@ -44,6 +44,8 @@ test_maps:
           - quality-cargo-cache-before-adapter
           - quality-cargo-cache-failure-isolated
           - quality-untrusted-cargo-cache-absent
+          - quality-cargo-cache-save-default-branch-push-only
+          - quality-cargo-cache-save-after-adapter
   - contract_id: contract.ci-quality-workflow.execution
     case_id: ci-quality-workflow-failure
     tests:

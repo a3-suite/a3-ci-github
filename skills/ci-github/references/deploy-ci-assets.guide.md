@@ -6,7 +6,7 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 
 ## 対応条件
 
-導入時に、提供元の公開済み安定版Releaseのうち、dependency-selectionスキルの版選定（公開待機期間と例外を含む）で採用候補になる最新版を確認する。本スキルと監査で「採用可能な最新の公開済み安定版」と呼ぶ版はこれを指す。導入済みの配布元revisionと比較して採用するexact Releaseを確定する。fetch CLI、manifest、`SHA256SUMS`はその同じReleaseから取得する。特定のリリース番号を本スキルの導入条件として保持しない。
+導入時に、`references/ci-audit-contract.reference.yml`の`comparisonBaseline`が定める採用可能な最新の公開済み安定版を確認し、導入済みの配布元revisionと比較して採用するexact Releaseを確定する。fetch CLI、manifest、`SHA256SUMS`はその同じReleaseから取得する。
 
 採用するReleaseの公開契約と配布資材から、選択presetの利用可能性、caller生成、必要なpin companionの自動生成・lock管理・完全検証、旧distributionがない場合の分類診断に対応することを確認する。manifestのschemaだけで機能対応を推測しない。必要機能が未提供または確認不能なら導入を停止する。
 
@@ -15,25 +15,25 @@ GitHub Releaseの配布manifestを起点に、必要なpresetまたはassetだ�
 - 配布assetと依存閉包の正本は`assets/registry/ci-distribution-assets.yml`と`assets/registry/ci-github-preset-assets.yml`とする。
 - Releaseはmanifest、単独実行できるfetch CLI、`SHA256SUMS`と、提供元の公開スキルZIPとその`.sha256`だけを公開する。
 - checksumは取得byteの完全性を検証する。発行者の真正性はGitHub repositoryのRelease公開権限、protected source、exact tag、TLSを信頼境界とする。
-- workflow以外のruntime、lint rule、registryは`{project-root}/.a3-skills/ci-github/distributions/{sourceRevision}/`から導入・保守・検証時だけ参照する。
+- workflow以外のruntime、lint rule、registryは`{project-root}/.a3-skills/ci-github/distributions/{distribution-full-commit-sha}/`から導入・保守・検証時だけ参照する。
 - Actionはdownloadせず、registryの40桁commit SHAをworkflowへ設定する。
 - external skill asset、project-owned extension、Secret、project設定は取得・copyしない。
 
 ## 取得
 
-採用するexact Releaseから`fetch-a3-ci-github.mjs`、`a3-ci-github-distribution-manifest.json`、`SHA256SUMS`を取得し、CLIとmanifestのchecksumを確認する。fetchには確認したmanifestを`--manifest`で渡し、CLIに別のmanifestを再取得させない。
+採用するexact Releaseから`fetch-a3-ci-github.mjs`、`a3-ci-github-distribution-manifest.json`、`SHA256SUMS`を取得し、CLIとmanifestのchecksumを確認する。fetchには確認したmanifestを`--manifest`で渡し、CLIに別のmanifestを再取得させない。プレースホルダは`references/ci-runtime-boundary.reference.md`の「導入時に使うプレースホルダ」に従う。
 
 ```bash
-gh release download "{exact-tag}" --repo a3-suite/a3-ci-github \
+gh release download "{exact-tag}" --repo a3-suite/a3-ci-github --dir "{download-dir}" \
   --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
-sha256sum --check SHA256SUMS
+(cd "{download-dir}" && sha256sum --check SHA256SUMS)
 ```
 
 presetの全必須閉包を取得する。
 
 ```bash
-node fetch-a3-ci-github.mjs fetch \
-  --manifest "{verified-manifest-path}" \
+node "{download-dir}/fetch-a3-ci-github.mjs" fetch \
+  --manifest "{download-dir}/a3-ci-github-distribution-manifest.json" \
   --preset quality-gate \
   --repo-root "{project-root}"
 ```
@@ -41,8 +41,8 @@ node fetch-a3-ci-github.mjs fetch \
 assetだけを取得する場合は`--asset`を繰り返す。直接asset選択では依存を暗黙追加しないため、必要な依存assetも明示する。workflow assetの直接選択は取得までに限定し、copyのplanには対応presetを必ず指定する。
 
 ```bash
-node fetch-a3-ci-github.mjs fetch \
-  --manifest "{verified-manifest-path}" \
+node "{download-dir}/fetch-a3-ci-github.mjs" fetch \
+  --manifest "{download-dir}/a3-ci-github-distribution-manifest.json" \
   --asset runtime.preset \
   --asset registry.ci-github \
   --repo-root "{project-root}"
@@ -51,8 +51,8 @@ node fetch-a3-ci-github.mjs fetch \
 標準presetにはmaterializerを含めない。設定検査・binding確認または独自adapter配置で必要になった場合だけ、同じexact manifestで選択presetに追加する。同一revisionの取得済み資材は検証後に併合され、既存ファイルを保持する。
 
 ```bash
-node fetch-a3-ci-github.mjs fetch \
-  --manifest "{verified-manifest-path}" \
+node "{download-dir}/fetch-a3-ci-github.mjs" fetch \
+  --manifest "{download-dir}/a3-ci-github-distribution-manifest.json" \
   --preset quality-gate \
   --asset runtime.adapter-materializer \
   --repo-root "{project-root}"
@@ -61,8 +61,8 @@ node fetch-a3-ci-github.mjs fetch \
 optional platform品質はcallerと検証用calleeソースを明示選択する。fetchとplanの両方に同じ選択を渡す。
 
 ```bash
-node fetch-a3-ci-github.mjs fetch \
-  --manifest "{verified-manifest-path}" \
+node "{download-dir}/fetch-a3-ci-github.mjs" fetch \
+  --manifest "{download-dir}/a3-ci-github-distribution-manifest.json" \
   --preset quality-gate \
   --asset workflow.quality-gate-platforms \
   --asset runtime.quality-platforms-workflow \
@@ -76,7 +76,7 @@ repository保守またはoffline再構成では、同じsnapshotのsource root�
 取得済みdistributionを別の操作で利用する前に、receiptに記録された全fileを再検証できる。
 
 ```bash
-node fetch-a3-ci-github.mjs verify \
+node "{download-dir}/fetch-a3-ci-github.mjs" verify \
   --source-revision "{distribution-full-commit-sha}" \
   --repo-root "{project-root}"
 ```
@@ -90,7 +90,7 @@ node fetch-a3-ci-github.mjs verify \
 `--set 'workflow.{asset名}:{placeholder名}={JSON値}'`を繰り返して製品設定を渡す。設定名は選択したtemplateを正本とし、文字列、真偽値、branch配列をJSONで指定する。未知・未指定の必須設定、型不一致は停止する。Action pinとcalleeのSHAはmanifestから自動解決し、利用者は指定しない。
 
 ```bash
-node fetch-a3-ci-github.mjs plan \
+node "{download-dir}/fetch-a3-ci-github.mjs" plan \
   --source-revision "{distribution-full-commit-sha}" \
   --preset quality-gate \
   --set 'workflow.quality-gate:protected-branch=["main"]' \
@@ -104,7 +104,7 @@ node fetch-a3-ci-github.mjs plan \
 `quality-gate-profiles` プリセットでは、profile ごとの入力を `quality-profiles` にmapの配列として渡す。各mapのkeyと必須入力は`references/configure-ci-preset.guide.md`の複数 language profile の節に従う。
 
 ```bash
-node fetch-a3-ci-github.mjs plan \
+node "{download-dir}/fetch-a3-ci-github.mjs" plan \
   --source-revision "{distribution-full-commit-sha}" \
   --preset quality-gate-profiles \
   --set 'workflow.quality-gate-profiles:protected-branch=["main"]' \
@@ -133,7 +133,7 @@ planはsourceと生成後fileのdigestを別々に保持し、生成byteもplan 
 `conflict`がないplanの内容とdigestを確認し、同じdigestを明示して適用する。標準セットアップ・更新が依頼で許可された範囲なら、digestについて追加のユーザ承認は求めない。`--approve`は確認したplanと適用するplanを照合する引数であり、人の承認証跡ではない。範囲の拡張、固有実装の置換、破壊的変更など未許可の変更は、具体的な差分について事前確認する。
 
 ```bash
-node fetch-a3-ci-github.mjs apply \
+node "{download-dir}/fetch-a3-ci-github.mjs" apply \
   --plan "{plan-path}" \
   --approve "{plan-digest}" \
   --repo-root "{project-root}"
@@ -160,7 +160,7 @@ applyはproject単位の排他を取得し、manifest、source、destination、a
 apply成功後に配置を戻す場合は、apply結果のtransaction IDを指定する。
 
 ```bash
-node fetch-a3-ci-github.mjs rollback \
+node "{download-dir}/fetch-a3-ci-github.mjs" rollback \
   --transaction "{transaction-id}" \
   --repo-root "{project-root}"
 ```
@@ -169,6 +169,6 @@ rollbackはそのtransactionが変更したcallerとcompanionを変更前状態�
 
 ## 更新と削除
 
-新revisionは別の`distributions/{sourceRevision}`へ取得し、planから再適用する。新revisionのlock、lint、preflight、consumer契約テストが成功するまで旧revisionを保持する。
+新revisionは別の`distributions/{distribution-full-commit-sha}`へ取得し、planから再適用する。新revisionのlock、lint、preflight、consumer契約テストが成功するまで旧revisionを保持する。
 
 旧distributionは、現行lock、rollback対象、実行中transactionから未参照であることを確認した後、別の明示pruneとして扱う。判断不能なら削除しない。Agent Skillは`project-skill-deploy`のdry-runと明示pruneへ委譲する。

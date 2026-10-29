@@ -9,7 +9,7 @@
 
 ## 命名
 - workflow file は `.github/workflows/` 配下の `lower-kebab-case.yml` とする。
-- file名は`<workflow-stem>[-<trust-boundary>].yml`とする。用途別 preset の stem と trigger adapter の命名は、選択した実装スキルのカタログに従う。
+- file名は`<workflow-stem>[-<trust-boundary>].yml`とする。用途別 preset の stem と trigger adapter の命名は、`references/preset-catalog.reference.md` に従う。
 - file stem と workflow `name:` を一致させる。
 - branch category、trigger detail、package kind、実装言語を名前の主軸にしない。trust boundaryを表すevent detailだけはsuffixとしてよい。
 - runner trust boundary を分ける場合だけ、`references/runner-trust-policy.reference.md` の境界名を suffix に使う。
@@ -20,7 +20,7 @@
 - platform 結果の集約 job 名は `<workflow-name> / summary` に固定し、platform 結果を判定する唯一の check とする。
 - check 名は workflow rename と独立して安定させる。
 
-用途別の workflow asset は `references/preset-catalog.reference.md` を正本とする。本policyでは provider 固有の workflow file 名を標準例として再定義しない。権限を持つ publish / deploy は通常 CI から分離する。
+用途別の workflow asset は `assets/registry/ci-github-preset-assets.yml` を正本とし、選択の入口は `references/preset-catalog.reference.md` とする。本policyでは provider 固有の workflow file 名を標準例として再定義しない。権限を持つ publish / deploy は通常 CI から分離する。
 
 ## 実装境界
 - workflow は順序、条件、権限、入出力のオーケストレーションに限定する。

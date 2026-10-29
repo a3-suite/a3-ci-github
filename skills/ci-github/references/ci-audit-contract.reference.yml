@@ -1,7 +1,8 @@
 id: ci.audit-contract
 auditContract:
   purpose:
-    objective: リリース前に、採用可能な最新の公開済み安定版（references/deploy-ci-assets.guide.mdの対応条件）の標準への適合、差分の正当性、公開準備を確認する。
+    objective: リリース前に、採用可能な最新の公開済み安定版（comparisonBaseline）の標準への適合、差分の正当性、公開準備を確認する。
+    comparisonBaseline: 採用可能な最新の公開済み安定版は、提供元の公開済み安定版Releaseのうち、dependency-selectionスキルの版選定（公開待機期間と例外を含む）で採用候補になる最新版を指す。特定のリリース番号を固定しない。
     successMeaning: 選択した監査段階の確認に適合している。構成監査だけの成功は実動作やリリース準備完了を証明せず、両段階の成功も実公開の成功を証明しない。
     scopeRules:
       - 比較基準となる提供元Releaseは確認するが、監査対象製品の実Release作成・公開成功・公開後readbackは必須証拠にしない。

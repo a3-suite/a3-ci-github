@@ -25,6 +25,7 @@
     "requiredVersion": "17"
   },
   "placement": {
+    "profile": "system-wide",
     "managedRoot": "/Library/Application Support/ExampleApp",
     "releasePath": "/Library/Application Support/ExampleApp/releases/1.4.2",
     "currentLink": "/Library/Application Support/ExampleApp/current"

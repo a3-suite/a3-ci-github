@@ -132,7 +132,7 @@ jobs:
           fi
       - name: Resolve change scope
         id: change-scope
-        uses: a3-suite/a3-ci-github/actions/ci-change-scope@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-change-scope@65060fd3d6826fe280167658b747678273bf4342
         with:
           base-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -188,7 +188,7 @@ jobs:
           echo "trusted CI assets root: $root (source: $source)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
       - name: Resolve platform matrix
         id: resolve
-        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-platform-matrix@65060fd3d6826fe280167658b747678273bf4342
         with:
           manifest-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_PLATFORM_MANIFEST }}
           selection-path: ${{ steps.trusted-assets.outputs.root }}/${{ env.CI_QUALITY_PLATFORM_SELECTION }}
@@ -196,7 +196,7 @@ jobs:
       - name: Resolve selected toolchain once
         id: toolchain-resolution
         if: steps.change-scope.outputs['run-ci'] != 'false' && steps.configuration.outputs['resolve-toolchain'] == 'true'
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@65060fd3d6826fe280167658b747678273bf4342
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -252,7 +252,7 @@ jobs:
           fi
           printf 'scope=%s\n' "$scope" >> "$GITHUB_OUTPUT"
       - name: Set up quality toolchain
-        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-quality-toolchain@65060fd3d6826fe280167658b747678273bf4342
         with:
           language-profile: ${{ env.CI_LANGUAGE_PROFILE }}
           toolchain-version: ${{ env.CI_TOOLCHAIN_VERSION }}
@@ -263,7 +263,7 @@ jobs:
           auxiliary-tools: ${{ steps.execution-scope.outputs.scope == 'native' && 'skip' || 'install' }}
       - name: Run project quality adapter
         id: quality-adapter
-        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@65060fd3d6826fe280167658b747678273bf4342
         with:
           standard-bundle-id: ${{ env.CI_STANDARD_BUNDLE_ID }}
           execution-scope: ${{ steps.execution-scope.outputs.scope }}
@@ -355,6 +355,6 @@ jobs:
           echo "summary=$summary" >> "$GITHUB_OUTPUT"
       - name: Write workflow summary
         if: always()
-        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@d4e22467eca55e45a0ab5547076554733f112449
+        uses: a3-suite/a3-ci-github/actions/ci-quality-summary@65060fd3d6826fe280167658b747678273bf4342
         with:
           summary-json: ${{ steps.platform-summary.outputs.summary }}

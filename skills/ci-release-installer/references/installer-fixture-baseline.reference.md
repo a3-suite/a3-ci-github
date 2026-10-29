@@ -43,7 +43,7 @@
 - 残存状態: core safety invariant を満たす証跡が残る。
 
 ### common installer conformance
-- 入力: 共通契約と選択した starter の構成・共通動作を維持し、製品固有値と許可 adapter だけを適合させた installer。非準拠差分はなく、例外用の requiredEvidence は持たない。
+- 入力: 共通契約と選択した固定 provider runtimeの構成・共通動作を維持し、製品固有値と許可 adapter だけを適合させた installer。非準拠差分はなく、例外用の requiredEvidence は持たない。
 - 期待: 比較元と対象状態を特定して準拠を確認し、accepted project detail として finding なしとする。非準拠差分がないため project-specific exception に分類せず、例外の正当化証跡を要求しない。
 - 残存状態: 対象成果物は変更されず、共通動作と製品固有適合の検証証跡が残る。
 
@@ -401,9 +401,9 @@
 - 残存状態: 現在状態は install state、外部切替待ちは handoff state から判定される。
 
 ### required audit log write failure
-- 入力: audit log policy が `required` で、commit 前の `install.begin` 追記に失敗する。
+- 入力: audit log policy が `required` で、audit event 契約の `eventTypes.install.begin` に従う preflight 準備の後、`install.begin` 追記に失敗する。初回導入と既存 managed root の両方を確認する。
 - 期待: install を失敗させる。
-- 残存状態: handoff state、activation state、install state を変更しない。
+- 残存状態: 同契約に従って準備資材と通常の一時ファイルを後始末し、既存の導入資材、handoff state、activation state、service、install state を保持する。cleanup 失敗時は残存状態を報告する。
 
 ### best-effort audit log warning
 - 入力: audit log policy が `best-effort` で `install.begin` または `install.result` 追記に失敗する。
@@ -441,8 +441,8 @@
 - 残存状態: service manager に重複定義を残さない。
 
 ### runtime script handoff
-- 入力: service manager 生成前に、環境変数、PID、ログ、restart の正本を runtime script へ集約する。
-- 期待: service manager は runtime script を呼ぶ薄い管理層だけを持つ。
+- 入力: service manager 生成前に、環境変数、PID、ログ、restart の責務を runtime-script スキルの境界に従って service manager と runtime script へ分担する。
+- 期待: 各責務が runtime-script スキルの境界どおりの側にだけ定義される。
 - 残存状態: service manager と runtime script の間に同じ責務を重複定義しない。
 
 ### runtime script audit pass
@@ -589,7 +589,7 @@
 - 入力: launcher の位置に installer 管理外のエントリが存在する（Unix は任意 target への symlink、Windows は内容不一致の copy、または通常ファイル）。
 - 期待: 上書きせず失敗し、既存エントリを保持する。
 - 残存状態: 既存エントリは変更されず、install state は作成されない（preflight の managed root と lock は cleanup で解放する）。
-- 補足: starter 標準は Unix symlink / Windows copy を対象とし、Windows shim は project override として標準 fixture の対象外とする。
+- 補足: 標準は Unix symlink / Windows copy を対象とし、Windows shim は project override として標準 fixture の対象外とする。
 
 ### launcher parent traversal reject
 - 入力: launcher path に空要素、`.`、`..` を含む（例: `~/.local/bin/../../../<binary>`）。

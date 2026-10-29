@@ -1,7 +1,7 @@
 {
   "manifest": {
     "path": "/var/tmp/example-agent/manifest.json",
-    "checksum": "sha256:02e5aacde112ff756c264c28c0f4822f024e003542d376a8687bba26a78a395a"
+    "checksum": "sha256:07e94db1a2dff4c00537e8569b854a2a315bc745e7ac2d707ba157fd2c374021"
   },
   "execution": {
     "operationMode": "install",

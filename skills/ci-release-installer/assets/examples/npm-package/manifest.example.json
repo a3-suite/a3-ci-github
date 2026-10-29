@@ -26,6 +26,7 @@
     "packageManagerVersion": "10.8.0"
   },
   "placement": {
+    "profile": "system-wide",
     "managedRoot": "C:\\ProgramData\\ExampleWeb",
     "targetPath": "C:\\ProgramData\\ExampleWeb\\app"
   },

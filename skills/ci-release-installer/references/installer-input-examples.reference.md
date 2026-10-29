@@ -16,6 +16,7 @@
 ## use case 別 sample bundle
 - use case と sample path の対応、選択可能な全 platform、use case ごとの追加必須入力は `references/installer-use-case-contract.reference.yml` を正本とする。
 - sample はコピーして project 固有値へ適合させる入力例であり、実行可能な installer 本体ではない。manifest を変更した場合は execution request の manifest checksum も再計算する。
+- sample bundle は `system-wide` 配置を採用する場合の入力構造例であり、利用 project の採用根拠にはならない。実 project の profile と配置先は `references/installer-manifest-contract.reference.md` の「配置プロファイルと managed root」と project SSOT に照らして選び直す。
 
 ## 製品READMEのサンプル
 

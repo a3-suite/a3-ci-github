@@ -3,13 +3,12 @@
 ## 目的
 
 コピー済みの GitHub Actions workflow と project-local asset を直接検査する。
-導入・更新・監査時だけ使う skill script であり、コピー先の runtime asset には含めない。
+導入・更新・監査時だけ project-local distribution から使う runtime であり、コピー先の runtime asset には含めない。
 
 ## 入力
 
 - 監査モード
-- `{ci-github-source-root}`: `references/deploy-ci-assets.guide.md`に従い、選択presetの`workflows/`、`runtime/`、`lint-rules/`、registryを取得・検証したproject-local distribution root
-- 任意の `{skill-collection-root}`: 外部 language skill の資材を参照する adapter bundle を使う場合に指定するスキル集合 root。標準bundleと外部資材を参照しない構成では省略する。
+- `{ci-github-source-root}` と、外部 language skill の資材を参照する adapter bundle を使う場合だけ `{skill-collection-root}`。意味は `references/ci-runtime-boundary.reference.md` の「導入時に使うプレースホルダ」に従う。
 - 導入先 project root
 - `{project-root}/.a3-skills/ci-github/` のスキル専用ローカル状態 root
 - read-only 監査で使う、スキル専用ローカル状態 root 内に準備済みの validator runtime
@@ -54,7 +53,7 @@ mkdir -p "$ci_github_local_runtime"
 cp "{ci-github-source-root}/runtime/preset/package.json" \
   "{ci-github-source-root}/runtime/preset/package-lock.json" \
   "$ci_github_local_runtime/"
-npm_config_cache="{project-root}/.a3-skills/ci-github/npm-cache" \
+npm_config_cache="{project-root}/.a3-skills/ci-github/cache/npm" \
   npm ci --prefix "$ci_github_local_runtime" --no-audit --no-fund
 ```
 
@@ -68,7 +67,7 @@ CI_GITHUB_PREFLIGHT_RUNTIME_ROOT="$ci_github_local_runtime" \
   "{ci-github-source-root}/runtime/preset/generate-ci-asset-lock.ts" \
   --repo-root "{project-root}" \
   --source-revision "{distribution-full-commit-sha}" \
-  --release-tag "{distribution-release-tag}"
+  --release-tag "{exact-tag}"
 ```
 
 `--source-revision`は配布元の40桁commit SHA、`--release-tag`は同じ配布物のexact Release tag（`vX.Y.Z`）とする。generatorは配布物のmanifestと両方が一致しない場合に停止する。generatorは導入済み全presetの現在のcanonical assetと配置済みassetが一致しない場合に停止し、単一lockへ記録する。`generatedAt`はUTCの分単位で記録する。
@@ -105,7 +104,7 @@ OS・版と共通検査の採否は[選定と廃止判断](references/workflow-v
 - write 権限を持つ job で a3 Action を使う場合は、対象 Action の `privilegedJobs` に `workflow-id/job-id` が完全一致で登録されていることを確認する。`trust: read-only` または workflow 単位の登録だけで許可を補完しない。
 - 標準実装を選択した場合は、必要な extension と Action binding、language profile、project設定、依存閉包を照合する。未登録の実装識別子は、同名のローカル entrypoint が存在しても不一致とする。
 - registryから導出したworkflowとcopyable assetについて、lockのcanonical／配置済みSHA-256を現在の内容と照合する。copyable assetはcanonicalと配置済み内容の完全一致も要求する。配置対象の独自descriptorとoptional workflowも同じ照合対象に含める。固定Action参照の標準bundleは配置assetに含めない。
-- qualityの選択・配置・固定参照は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は `references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap` を参照し、配布同一性lockとcanonical構造を照合する。
+- qualityの選択・配置・固定参照は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` と `copyContract` を正本とする。各導入済みworkflowの静的選択、profile、provider、owner設定、Action入力binding、生成元identityを検証する。trusted CI assetsのbase/head解決は [trusted CI assets bootstrap](references/runner-trust-policy.reference.md#trusted-ci-assets-bootstrap) を参照し、配布同一性lockとcanonical構造を照合する。
 - 標準IDはprofileに対応した登録済みAction bundleに限定する。選択・配置の可否は `references/ci-adapter-bundles.reference.yml` の `profilePolicy.standardDelivery` に従い、標準IDのdescriptor配置経路は拒否する。project-owned descriptorの意味はCI意味監査の `project-owned-ci-adapter` subjectで確認する。
 - project-owned extension は、canonical workflow から entrypoint への直接接続、参照する直接・間接 asset の存在、project root 内での解決を確認する。project-owned asset 内部の構造と処理契約の意味は preflight の保証対象外とし、CI 意味監査の `project-owned-ci-adapter` subject で project の契約テスト証拠を確認する。実行環境での成立は必要な hosted 証拠で確認する。
 - release publication は consumer の request と `workflow_run` caller の2 workflow、および登録済み固定 SHA の provider `workflow_call` publication を必須とし、request artifact と notes handoff の生成、caller の default branch provenance、run ID の受渡し、publication の再検証を確認する。

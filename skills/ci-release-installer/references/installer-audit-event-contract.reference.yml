@@ -7,7 +7,13 @@ identityFields:
   - releaseVersion
 eventTypes:
   install.begin:
-    timing: "managed root、handoff state、activation state、service、install state を変更する前"
+    timing: "staging directory の作成・展開、資材配置、handoff state、activation state、service、install state の変更前"
+    preflightException: >-
+      install / upgrade / repair の preflight では、検証済み lock path の排他 lock 取得と、
+      その取得に必要な空ディレクトリの一時作成だけを先行してよい。
+      失敗時は本実行が所有する lock と、本実行が作成した空の準備ディレクトリだけを後始末し、既存資材を保持する。
+      取得済み資材など tool-owned 一時領域の通常 cleanup は維持し、cleanup 失敗と残存状態は報告する。
+      dry-run はこの例外の対象外とする。
     requiredFields:
       - eventType
       - operationMode
@@ -67,7 +73,7 @@ consistencyRules:
     rule: "install.result は対応する install.begin なしに成功証跡として扱わない。"
     violationFixture: audit result without begin reject
   - id: required-begin-before-commit
-    rule: "required audit log で install.begin を commit phase 前に追記できない場合、install は失敗する。"
+    rule: "required audit log で eventTypes.install.begin.timing に従って install.begin を追記できない場合、install は失敗する。"
     violationFixture: required audit log write failure
   - id: post-commit-result-failure
     rule: "commit phase 後の install.result 追記失敗は verified install / handoff を巻き戻さず audit log failure として報告する。"
