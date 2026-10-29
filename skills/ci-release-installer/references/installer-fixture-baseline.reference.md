@@ -401,9 +401,9 @@
 - 残存状態: 現在状態は install state、外部切替待ちは handoff state から判定される。
 
 ### required audit log write failure
-- 入力: audit log policy が `required` で、commit 前の `install.begin` 追記に失敗する。
+- 入力: audit log policy が `required` で、audit event 契約の `eventTypes.install.begin` に従う preflight 準備の後、`install.begin` 追記に失敗する。初回導入と既存 managed root の両方を確認する。
 - 期待: install を失敗させる。
-- 残存状態: handoff state、activation state、install state を変更しない。
+- 残存状態: 同契約に従って準備資材と通常の一時ファイルを後始末し、既存の導入資材、handoff state、activation state、service、install state を保持する。cleanup 失敗時は残存状態を報告する。
 
 ### best-effort audit log warning
 - 入力: audit log policy が `best-effort` で `install.begin` または `install.result` 追記に失敗する。
@@ -441,8 +441,8 @@
 - 残存状態: service manager に重複定義を残さない。
 
 ### runtime script handoff
-- 入力: service manager 生成前に、環境変数、PID、ログ、restart の正本を runtime script へ集約する。
-- 期待: service manager は runtime script を呼ぶ薄い管理層だけを持つ。
+- 入力: service manager 生成前に、環境変数、PID、ログ、restart の責務を runtime-script スキルの境界に従って service manager と runtime script へ分担する。
+- 期待: 各責務が runtime-script スキルの境界どおりの側にだけ定義される。
 - 残存状態: service manager と runtime script の間に同じ責務を重複定義しない。
 
 ### runtime script audit pass

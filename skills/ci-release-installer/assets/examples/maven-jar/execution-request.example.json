@@ -1,7 +1,7 @@
 {
   "manifest": {
     "path": "/private/tmp/example-app/manifest.json",
-    "checksum": "sha256:1aeffa32a733b66f51351079cd87cd9fc872ada291c1400a9988cd11782256ff"
+    "checksum": "sha256:c336f6a71f8a9befd83778774646e81cc7d55992ea086dacac35b35697a14033"
   },
   "execution": {
     "operationMode": "upgrade",

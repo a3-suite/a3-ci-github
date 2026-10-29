@@ -1,7 +1,7 @@
 {
   "manifest": {
     "path": "C:\\ProgramData\\ExampleWeb\\input\\manifest.json",
-    "checksum": "sha256:844ce3a3473cc00ee4468c06019ecbed7d68dc75c8ad9b965a96042c28b7d610"
+    "checksum": "sha256:eef7527bc40f8f0edaa7c1d1e09290f35adfeaa8366c759ef93022ae779aba77"
   },
   "execution": {
     "operationMode": "upgrade",

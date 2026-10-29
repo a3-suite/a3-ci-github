@@ -91,7 +91,7 @@
    - command substitution、`export`、複数行、`source` は設定ファイル文法として扱わない。
    - shell source を許す場合は、入力が信頼済みであること、実行権限、実行される内容、失敗時状態を明示する。
    - token や secret は installer 実行時に注入し、runtime env やサンプルファイルへ保存しない。
-9. service manager を薄く保つ。
+9. service manager との責務分担を確認する。
    - systemd などは runtime script を呼ぶ管理層に限定し、環境変数、PID、ログ、restart の意味を重複定義しない。
    - runtime script 側を正本にする場合、service manager には `EnvironmentFile` や独自 reload を増やさない。
    - installer が runtime script を配置または生成する場合、起動責務、手動操作、service manager handoff、PID、ログ、restart、health 境界は runtime-script スキルの契約に従う。
@@ -184,7 +184,6 @@
   - 検証済み Jar を activation strategy に応じた placement target へ配置または反映する。
   - application config、secret、DB、log、dictionary などの runtime data は release directory の外に置く。
 - runtime:
-  - Jar 実行の場合は `java -jar` の薄い runtime script に寄せ、service manager はそれを呼ぶだけにする。
   - Jar 用 runtime script を配置または生成する場合は、runtime-script スキルの Java / Spring Boot Jar 向け導線に従う。
 - 検証観点:
   - Jar checksum 不一致、Java version 不足、`SNAPSHOT` 拒否、既存 DB 保持、installer が担当する restart / health check 失敗時 rollback または external handoff を fixture で確認する。

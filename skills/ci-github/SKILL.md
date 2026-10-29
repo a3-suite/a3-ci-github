@@ -38,12 +38,14 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 対象ユースケース、trust境界、停止条件、必要なActionとworkflow mappingを確認する。
 - 成果物: workflow mapping と、選択した preset・Action・trust 境界
+- 完了条件: CI設計ガイドのチェックリストで設計結果を確認できる。
 - 参照: references/design-ci-workflow.guide.md
 
 ### CIをセットアップ・更新したい、またはcanonical workflowを適用したい
 
 - 導入完了条件まで実施する。ガイドの紹介や構成提案だけで終了しない。
 - 成果物: 導入したCIと、実施結果・未確認事項・ブロッカーの報告
+- 完了条件: CI資材デプロイガイドの「適用後」を満たす。未実施・失敗は導入完了と分けて報告する。
 - 参照: references/deploy-ci-assets.guide.md
 - 参照: references/configure-ci-preset.guide.md
 - 参照: references/validate-ci-preset.guide.md
@@ -52,12 +54,14 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - presetまたはassetを選択し、検証済みproject-local distributionへ取得する。
 - 成果物: 取得・検証した distribution と、その revision
+- 完了条件: CI資材デプロイガイドの「取得」で配布物の完全性とrevisionを確認できる。
 - 参照: references/deploy-ci-assets.guide.md
 
 ### 適用済みCIを監査したい
 
 - 監査段階を選び、スクリプト実行と毎回必須の確認から始める。検出があった場合や詳細確認を依頼された場合だけ専用ガイドへ進む。
 - 成果物: 構成監査と証跡監査を分けた監査結果と、推奨対応
+- 完了条件: 適用済みCI監査ガイドの「判定と報告」「最終結果の独立レビュー」を満たす。
 - 参照: references/verify-applied-ci-preset.guide.md
 - 参照: references/triage-ci-audit-findings.guide.md
 - 参照: references/inspect-ci-audit-details.guide.md
@@ -70,12 +74,14 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - workflow の外で解析する。
 - 成果物: 失敗と欠測を分けた解析結果
+- 完了条件: CI結果解析ガイドの分類を適用し、解析結果と未確認範囲を報告できる。
 - 参照: references/analyze-ci-result.guide.md
 
 ### Releaseまたはpackage公開を実装・復旧したい
 
 - 公開経路の安全不変条件を確認して実装する。状態不明や部分公開では自動上書きしない。
 - 成果物: 実装した公開経路、または復旧の判断と委譲先
+- 完了条件: 対応する公開実装ガイドの安全条件に照らした実装・復旧結果と、停止・委譲が必要な事項を確認できる。
 - 参照: references/implement-release-asset-publication-workflow.guide.md
 - 参照: references/implement-package-publish-workflow.guide.md
 
@@ -83,4 +89,5 @@ description: GitHub Actions向けCIの設計、セットアップ・更新、can
 
 - 公開スキルの有無と製品ownerの同梱・未同梱の選択を確認する。
 - 成果物: 同梱の選択と、同梱する場合の公開宣言
+- 完了条件: 同時Releaseガイドの「同梱の選択」と、同梱する場合の「監査」で宣言・CI・READMEの整合を確認できる。
 - 参照: references/publish-project-skills.guide.md
