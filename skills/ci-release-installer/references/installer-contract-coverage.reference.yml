@@ -1,7 +1,7 @@
 coverageScope:
   contractCatalogId: installer.contract-catalog
   fixtureCatalogId: installer.fixture-catalog
-  fixtureBaselineCoverage: complete
+  fixtureCatalogCoverage: complete
   coverageClassValues:
     - installer-invariant
     - audit-evidence-boundary
@@ -11,8 +11,8 @@ coverageScope:
     audit-evidence-boundary: installer 成果物そのものではなく、監査時に必要な fixture 完走性と残存状態証跡の境界。
     asset-assembly-evidence-boundary: 組立済み installer asset を公開候補として扱う前に必要な identity、checksum、provenance、検証結果の証跡境界。
   fixtureReferencePolicy:
-    allFixtureBaselineEntriesMustAppearInCoverage: true
-    fixtureNamesUseBaselineHeadings: true
+    allFixtureCatalogIdsMustAppearInCoverage: true
+    fixtureReferencesUseCatalogIds: true
     duplicateFixtureReferencesAllowed: true
     duplicateFixturePrimaryInvariantMustBeDefinedInFixtureCatalog: true
   confirmingFixtureMeaning: "invariant が満たされることを確認する fixture。fixture 自体の expected outcome は fixture catalog で定義する。"
@@ -32,7 +32,7 @@ coreSafetyInvariant:
 projectOverrideClassification:
   id: project-override-classification
   definition: >-
-    共通契約と適用可能な starter の構成・共通動作への準拠を既定とする。
+    共通契約と選択した固定 provider runtimeの構成・共通動作への準拠を既定とする。
     製品固有値や契約で許可された adapter の適合で準拠できる場合は共通実装を使い、
     独自方式を例外として許容しない。標準経路では満たせない必須制約とその根拠を
     検証できた範囲だけ project override を許容する。
@@ -46,7 +46,7 @@ projectOverrideClassification:
     - 責任者
   classes:
     - class: accepted project detail
-      condition: 共通契約と適用可能な starter の構成・共通動作を変えず、許可された配置値、命名、adapter、release 方針などを適合させた project 固有の詳細である
+      condition: 共通契約と選択した固定 provider runtimeの構成・共通動作を変えず、許可された配置値、命名、adapter、release 方針などを適合させた project 固有の詳細である
       severity: none
       reportingDisposition: finding なし。境界説明や証跡粒度に改善余地がある場合だけ minor finding とする
     - class: bounded override
@@ -54,7 +54,7 @@ projectOverrideClassification:
       severity: none
       reportingDisposition: 標準経路との差分を warning audit note として表示する。境界説明や証跡粒度に改善余地がある場合だけ minor finding とする
     - class: project-specific exception
-      condition: 共通契約または適用可能な starter の構成・共通動作への非準拠差分があり、準拠可能・必須制約の必要性や非準拠の根拠が不成立・requiredEvidence 不足のいずれかに該当し、core safety invariant への到達可能な違反は確認できない
+      condition: 共通契約または選択した固定 provider runtimeの構成・共通動作への非準拠差分があり、準拠可能・必須制約の必要性や非準拠の根拠が不成立・requiredEvidence 不足のいずれかに該当し、core safety invariant への到達可能な違反は確認できない
       severity: major
     - class: invariant violation
       condition: core safety invariant への到達可能な違反がある

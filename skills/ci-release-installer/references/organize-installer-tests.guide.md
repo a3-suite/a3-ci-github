@@ -24,14 +24,14 @@
 8. 失敗診断の正本と検査導線は`references/audit-installer-compliance.guide.md`の「契約 surface へ対応付ける」から解決する。失敗終了だけで診断保証を満たしたとせず、最終ログ・必要な既存証跡と元の終了/残存状態を照合する。共通回帰はproviderの固定実装に結合した結果を使い、子処理・診断/保持故障の検証範囲と未確認条件を記録する。
 
 ## platform runtime テストの受け入れ条件
-- 組立済み candidate（`build-installer.py` の `assemble` 出力の manifest と archive）を対象 platform の native 環境で起動する runtime テストを最低 1 つ実行する。
+- 組立済み candidate（固定 provider runtimeの `assemble` 出力の manifest と archive）を対象 platform の native 環境で起動する runtime テストを最低 1 つ実行する。
 - 成功系は非ゼロ終了せず、違反系は非ゼロ終了することを確認する。
 - managed root、launcher、install state の残存状態を確認する。
 - native 実行できない platform の結果を、他 platform（Linux コンテナなど）の実行で代替しない。
 - Windows CIを使う場合も、対象契約が選択したPowerShell実行器の結果を確認する。job配置だけを実行成功とせず、非nativeのskipと未実行の実行器を分ける。
 
 ### 確認手段
-- starter 付属テストの runtime テストファイルを、対象 platform の native runner（Windows は Windows runner）で実行する。
+- 固定 provider runtimeの検証 profile（`references/installer-standard-assembly-contract.reference.yml` の `profiles`）を、対象 platform の native runner（Windows は Windows runner）で実行する。
 - 組立済み asset を実 manifest / archive で起動していることをテストソースで確認する。
 - installer の配置検証のみを目的とする distribution-layout validator は launcher / runtime の証跡として使わない。
 

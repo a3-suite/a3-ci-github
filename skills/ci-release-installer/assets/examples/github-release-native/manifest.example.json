@@ -14,6 +14,7 @@
     "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
   "placement": {
+    "profile": "system-wide",
     "managedRoot": "/opt/example-agent",
     "releasePath": "/opt/example-agent/releases/1.4.2",
     "currentLink": "/opt/example-agent/current"

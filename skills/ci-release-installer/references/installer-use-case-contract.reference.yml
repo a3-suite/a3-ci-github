@@ -65,7 +65,7 @@ useCases:
       usage: fixed-provider-runtime
       executableInstaller: true
       assemblyContractPath: references/installer-standard-assembly-contract.reference.yml
-      manifestTemplatePath: assets/examples/native-manifest.template.json
+      manifestTemplatePath: assets/templates/native-manifest.template.json
     confirmingFixture: fixed github release native asset
   - id: maven-jar
     sourceKind: maven
@@ -140,7 +140,7 @@ useCases:
       usage: fixed-provider-runtime
       executableInstaller: true
       assemblyContractPath: references/installer-standard-assembly-contract.reference.yml
-      manifestTemplatePath: assets/examples/native-manifest.template.json
+      manifestTemplatePath: assets/templates/native-manifest.template.json
     confirmingFixture: fixed shared wrapper asset
 violationFixtures:
   - target platform missing

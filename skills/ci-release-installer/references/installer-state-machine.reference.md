@@ -21,15 +21,15 @@
 | 状態 | 目的 | 許可される主な操作 | 失敗時に残してよい状態 |
 | --- | --- | --- | --- |
 | request-accepted | execution request を受け取り、manifest checksum、operation mode、source mode を固定する | request parse、manifest checksum 照合、source mode / local artifact path 検証 | 何も変更しない |
-| preflight | runtime、権限、lock、managed root、service user を確認する | lock 取得、読み取り検査、runtime version 照合 | lock の解放記録だけ |
+| preflight | runtime、権限、lock、managed root、service user を確認する | audit event 契約の preflightException に従う lock 準備・取得、読み取り検査、runtime version 照合 | 同契約に従う後始末・失敗記録だけ |
 | fetch | 固定入力に基づき artifact や verified placement asset を取得または読み出す | 許可済み host / registry から VCS 対象外の一時領域へ download、または offline source mode の local artifact 読み取り | 一時ファイルまたは読み取り失敗記録だけ |
 | verify | checksum、signature、schema、archive entry を検証する | manifest validation、checksum / signature 検証、archive listing | 検証失敗した一時ファイルだけ |
-| stage | 検証済み資材を release staging へ展開する | staging directory 作成、permission 正規化、expected files 確認 | staging directory だけ |
-| pre-commit | activation strategy に応じた commit 前の最終確認を行う | audit log required の `install.begin` 追記、service stop 判断 | staging directory と audit log 試行結果 |
+| stage | 検証済み資材を release staging へ展開する | audit log required の `install.begin` 追記（staging directory 作成前）、staging directory 作成、permission 正規化、expected files 確認 | audit log 試行結果、または staging directory だけ |
+| pre-commit | activation strategy に応じた commit 前の最終確認を行う | service stop 判断 | staging directory だけ |
 | switch | activation strategy に応じて検証済み release を反映または引き渡す | active release pointer switch、in-place reflect、external handoff state 記録 | 前 activation state、handoff state、または rollback 対象を識別できる状態 |
 | health | 起動確認を行う | health command / URL check、retry | failed release staging と rollback 記録 |
 | record | activation strategy に応じて現在 install state と audit log result を記録する | `active-pointer` / `in-place` の install state 書き込み、audit log `install.result` 追記 | 成功した handoff state、activation state、install state、または audit log warning |
-| cleanup | terminal result 前の共通後処理を行う | lock 解放、VCS 対象外の不要一時ファイル cleanup、失敗理由出力 | 契約で許可された一時状態だけ |
+| cleanup | terminal result 前の共通後処理を行う | audit event 契約に従う lock・準備ディレクトリの後始末、VCS 対象外の不要一時ファイル cleanup、失敗理由出力 | 契約で許可された一時状態だけ |
 | complete | 成功状態を確定する | 結果返却 | 成功 state |
 | failed | 非ゼロ失敗を返す | 結果返却 | cleanup 後に残してよい状態だけ |
 
@@ -39,7 +39,7 @@
 - `fetch` は fixed URL、registry、package coordinate、version、または fixed local artifact path だけを使い、fallback 先へ暗黙に切り替えない。
 - `verify` を通過するまで、placement target、handoff state、activation state、install state、service state を変更しない。
 - `stage` は managed root 内の staging area に限定し、managed root 外の所有権や権限を変更しない。
-- `pre-commit` で required audit log の `install.begin` 追記に失敗した場合は `cleanup` を通って `failed` へ進み、handoff state、activation state、install state を変更しない。
+- `stage` で required audit log の `install.begin` 追記に失敗した場合は `cleanup` を通って `failed` へ進む。記録時点と preflight 準備の例外・後始末は `references/installer-audit-event-contract.reference.yml` の `eventTypes.install.begin` に従い、導入資材、handoff state、activation state、service、install state を変更しない。
 - installer が health を担当する strategy で `switch` 後に `health` が失敗した場合は、activation strategy の rollback 方針に従う。前 release があれば戻し、初回導入なら failed activation state を残さない。
 - rollback が失敗した場合は activation state の状態不明または復元失敗を明示し、install state を成功扱いにせず operator 判断へ渡す。
 - `switch` の handoff state 書き込み、または `record` の install state 書き込みに失敗した場合は成功扱いにしない。
@@ -105,7 +105,6 @@
 - `repair` でも activation strategy 別の switch 境界を越えない。`external-orchestrated` の未反映 release を修復する場合は handoff state だけを対象にし、現在 install state の成功状態へ昇格させない。
 
 ## service operation 境界
-- service manager は runtime script を呼ぶ薄い管理層として扱う。
 - installer が runtime script を配置または生成する場合、その script は runtime-script スキルの起動責務と service manager handoff 境界に従う。
 - service operation では環境変数、PID、ログ、restart の意味を runtime script と重複定義しない。
 - service operation は state machine の switch / health に必要な最小操作へ限定する。

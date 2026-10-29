@@ -15,7 +15,7 @@
 - rerunでは`run_attempt`だけを根拠に状態を再利用せず、request、source、handoff、remote identityを再確認する。
 - `vars.`の参照を実行経路ごとに必須・条件付き・不要へ分類し、workflow input、固定値、Secret、project assetで供給できる値の参照は設定不一致とする。branch protection、ruleset、required checkなどのGitHub設定の読み取りは必須にせず、`references/workflow-authoring-policy.reference.md`の事前確認に従う。
 
-対象workflowの入口、分岐、write job、owner handoffに対応するシナリオまたは対象外の根拠があることを逆向きにも確認する。契約が順序、状態遷移、停止条件を定義するstageは`ci-workflow-sequence`の`stageChecks`を適用し、未接続は`test-gap`、契約不足は`contract-gap`とする。式を静的に確定できない場合は推測せず、証拠不足として`statusClassification`へ渡す。机上シミュレーションはhosted runner、secret、権限、外部サービスの実動作を証明しない。
+対象workflowの入口、分岐、write job、owner handoffに対応するシナリオまたは対象外の根拠があることを逆向きにも確認する。契約が順序、状態遷移、停止条件を定義するstageは`ci-workflow-sequence`の`stageChecks`を適用し、未接続は`implementation-gap`、契約不足は`contract-gap`とする。式を静的に確定できない場合は推測せず、証拠不足として`statusClassification`へ渡す。机上シミュレーションはhosted runner、secret、権限、外部サービスの実動作を証明しない。
 
 ## 失敗診断
 
@@ -47,7 +47,7 @@
 
 ## 配置と責務
 
-- `.ci/` には workflow runtime、adapter、設定だけを置く。preflight runtimeや導入元スキルのpathを実行時資産に含めない。
+- `.ci/` の配置は `references/ci-runtime-boundary.reference.md` の「project が管理する CI 資材の配置」に従う。preflight runtimeや導入元スキルのpathを実行時資産に含めない。
 - 契約テストと補助テストは project の既存 `tests/` 規約へ置き、必要な場合だけ `tests/ci/` を使用する。
 - language skill は format、lint、test、build の具体的な検証を、project owner は adapter、project 固有設定、契約テスト、補助テストを所有する。
 - SDD を利用する project は、`quality-gate`（required checkやmerge判定に使う場合）、`release-request`、`release-publication`、`package-publication` の外部観測可能な境界を project の契約対象として宣言し、`.ci` 内部の分岐や helper はその実装または補助証拠として扱う。

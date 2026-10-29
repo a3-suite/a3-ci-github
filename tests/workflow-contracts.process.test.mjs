@@ -160,6 +160,7 @@ describe("workflow-contracts", () => {
       const paths = steps.find(step => step.id === 'cargo-cache-paths');
       const cache = steps.find(step => step.id === 'cargo-cache');
       const adapter = steps.find(step => step.id === 'quality-adapter');
+      const save = steps.find(step => /^actions\/cache\/save@/.test(step.uses ?? ''));
       const output = path.join(mkdtempSync(path.join(root, 'tmp/cargo-cache-paths-')), 'output');
       onTestFinished(() => rmSync(path.dirname(output), { recursive: true, force: true }));
       const failedOutput = `${output}-failed`;
@@ -178,14 +179,20 @@ describe("workflow-contracts", () => {
       expect(adapter.if).toBe("steps.change-scope.outputs['run-ci'] != 'false'");
       expect(paths.if).toBe("steps.change-scope.outputs['run-ci'] != 'false' && env.CI_LANGUAGE_PROFILE == 'rust'");
       expect(cache.if).toBe("steps.cargo-cache-paths.outcome == 'success'");
-      expect(cache.uses).toBe(`actions/cache@${cachePin}`);
+      expect(cache.uses).toBe(`actions/cache/restore@${cachePin}`);
       expect(cache.with.path.split('\n').filter(Boolean)).toStrictEqual([
         '~/.cargo/registry/index', '~/.cargo/registry/cache', '~/.cargo/git/db',
         '${{ steps.cargo-cache-paths.outputs.target }}', '!${{ steps.cargo-cache-paths.outputs.target }}/*/incremental',
       ]);
+      expect(save.uses).toBe(`actions/cache/save@${cachePin}`);
+      expect(save.if).toBe("steps.cargo-cache-paths.outcome == 'success' && steps.cargo-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)");
+      expect(save.with.path).toBe(cache.with.path);
+      expect(save.with.key).toBe('${{ steps.cargo-cache.outputs.cache-primary-key }}');
+      expect(steps.filter(step => /^actions\/cache(?:\/[a-z-]+)?@/.test(step.uses ?? ''))).toStrictEqual([cache, save]);
       for (const part of ['runner.os', 'runner.arch', 'steps.quality-toolchain.outputs.resolved-toolchain-version', 'hashFiles(env.CI_CARGO_LOCK_PATH)']) expect(cache.with.key).toContain(part);
       expect(cache.with.key.startsWith(cache.with['restore-keys'])).toBe(true);
       expect(steps.indexOf(cache)).toBeLessThan(steps.indexOf(adapter));
+      expect(steps.indexOf(adapter)).toBeLessThan(steps.indexOf(save));
       expect(usesCache(quality['untrusted-pr'])).toBe(false);
       for (const [id, job] of Object.entries(release)) expect(usesCache(job), id).toBe(false);
     });
@@ -664,6 +671,10 @@ describe("workflow-contracts", () => {
         expect(checkProviderReferences(workflow(reference), '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
       }
       expect(checkProviderReferences(workflow(`actions/checkout@${sha}`), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
+      const cacheSha = approved.get('actions/cache');
+      expect(checkProviderReferences(workflow(`actions/cache/restore@${cacheSha}`), '.github/workflows/ci-quality.yml', approved)).toEqual([]);
+      expect(checkProviderReferences(workflow(`actions/cache/save@${sha}`), '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
+      expect(checkProviderReferences(workflow(`actions/unapproved/restore@${cacheSha}`), '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
       expect(checkProviderReferences('jobs: {call: {uses: owner/repo/.github/workflows/check.yml@main}}', '.github/workflows/ci-quality.yml', approved)).toHaveLength(1);
       expect(checkProviderReferences('runs: {using: composite, steps: [{uses: actions/checkout@main}]}', 'actions/example/action.yml', approved)).toHaveLength(1);
       expect(checkProviderReferences(workflow('./actions/example'), '.github/workflows/ci-quality.yml', approved)).toEqual([]);

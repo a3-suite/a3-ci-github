@@ -29,31 +29,8 @@
   - Unix: `curl -fsSL --proto '=https' --proto-redir '=https' <wrapper-url> | sh`
 - 共有 Unix wrapper は、プラットフォームを実行時に検出し、検証済み platform installer を選んで実行する。wrapper と platform installer は別 asset として公開し、組立証跡で対応付ける。
 
-## 製品宣言の標準配置
-
-製品リポジトリではassemblyを`.ci/installer/assembly.json`、対象別manifestを`.ci/installer/manifests/<native-platform-id>.json`へ置く。installerはCIで組み立てて公開する資材なので、ci-githubスキルのCI資材の配置基準に従い`.ci/installer/`へ集める。native platform IDは組立契約のIDを使い、assemblyのmanifest参照とCIのconfig pathを一致させる。
-
-この配置と次節のインストール先を標準との比較基準にする。既存のディレクトリ名だけを維持理由にせず、異なる配置が必要なら製品要件とownerの根拠をproject SSOTへ記録する。ディレクトリ名の違いだけで安全性違反とは扱わず、既存のproject override分類へ渡す。
-
-## 配置プロファイルと標準配置
-- installer は配置プロファイルとして `per-user-cli`（既定）と `system-wide` を扱う。manifest の `placement.profile` を省略した場合は `per-user-cli` とする。
-- `per-user-cli` は root 権限を必要とせず、単一ユーザーの CLI 向けの既定とする。`system-wide` はサービス、複数ユーザー、共有 CLI の要求がある場合だけ project SSOT の証跡付きで選ぶ。
-- 標準配置は `<vendor>`、`<app>`、`<channel>`（既定 `standalone`）、`<binary>` で表し、プロファイルごとに次の base を使う。
-
-| profile | OS | launcher | managed root |
-| --- | --- | --- | --- |
-| per-user-cli | Linux | `~/.local/bin/<binary>` | `~/.local/share/<vendor>/<app>/<channel>` |
-| per-user-cli | macOS | `~/.local/bin/<binary>` | `~/Library/Application Support/<vendor>/<app>/<channel>` |
-| per-user-cli | Windows | `%LOCALAPPDATA%\Programs\<vendor>\<app>\bin\<binary>.exe` | `%LOCALAPPDATA%\<vendor>\<app>\<channel>` |
-| system-wide | Linux | `/usr/local/bin/<binary>` | `/opt/<vendor>/<app>/<channel>` |
-| system-wide | macOS | `/usr/local/bin/<binary>` | `/Library/Application Support/<vendor>/<app>/<channel>` |
-| system-wide | Windows | `%ProgramFiles%\<vendor>\<app>\bin\<binary>.exe` | `%ProgramData%\<vendor>\<app>\<channel>` |
-
-- per-user のパスはホームに依存するため、manifest では Unix は `~/...`、Windows は `%LOCALAPPDATA%\...` / `%USERPROFILE%\...` を使い、installer が実行時に展開する。system-wide は絶対パスを使う。
-- managed root 配下は `releases/<version>`、`current`、`install.lock`、`state/install-state.json` を基本構造とする。
-- launcher は managed root 外に置いてよい。配置を許可する base はインストーラ manifest 契約の「launcher 安全不変条件」を正本とする。
-- launcher は Unix は symlink（`current` 配下のバイナリを指す）、Windows は copy とする。Windows の shim は starter 標準では扱わない。既存の管理外 launcher の判定と衝突時の扱いはインストーラ manifest 契約の「launcher 安全不変条件」を正本とし、上書きせず失敗して rollback で旧 launcher を復元する。
-- PATH 登録は自動変更しない。実行後に PATH 上の所在を確認し、見つからない場合は利用者へ案内する。自動登録は project override とする。
+## 製品宣言と配置
+- 製品宣言の配置、配置プロファイル、managed root の標準配置は、インストーラ manifest 契約の「製品宣言と配置の標準」に従う。
 
 ## 用途と標準runtimeの選択
 - use case契約の `distributionAsset` を確認し、標準組立ガイドを使う。標準GitHub Release nativeは固定Actionまたは配布CLIに委譲し、project側に共通実装・共通テスト・builder・adapterを持たせない。
@@ -61,7 +38,7 @@
 - 共有wrapperの標準提供範囲はUnixの2platform。Windows共有wrapperは標準対象外で、必要性が確認された場合のみ共通拡張または明示owner extensionを検討する。
 - Maven/npmは入力契約と例を提供するが、標準実行engineは提供しない。個別実装が本当に必要かはpackage managerの既存機能と製品要求から判断する。
 - providerの共通回帰と、製品の実manifest・archiveを使うcandidate検証を分ける。profile成功だけでinstall/upgrade/rollback等の全受入を保証しない。
-- starter の installer は、Unixのアーカイブ展開にOS提供の`tar`を存在確認して使い、無い場合は展開の前に失敗する。WindowsのZIP展開には.NETのAPIを使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
+- 固定 provider runtime の installer は、Unixのアーカイブ展開にOS提供の`tar`を存在確認して使い、無い場合は展開の前に失敗する。WindowsのZIP展開には.NETのAPIを使う。取得は Unix が `curl`、Windows が PowerShell の HTTPS 取得を使う。
 - 参照: references/use-standard-installer.guide.md
 
 ## フロー
@@ -92,9 +69,7 @@
 4. managed root を狭く定義する。
    - managed root は1つに限定する。root 外の launcher と必要な親ディレクトリ作成はインストーラ manifest 契約の「launcher 安全不変条件」に従う。
    - 親 traversal、symlink component を拒否する。
-   - managed root は `<base>/<app...>` の深さを持つアプリ固有ディレクトリに限定し、filesystem root、Windows drive root、ホームディレクトリそのもの（`/home/<user>`、`/Users/<user>` など）、OS 予約領域（`/etc`、`/usr`、`/var`、`/System`、`<drive>:\Windows` など）を拒否する。
-   - Windows では drive root と UNC share root 自体を拒否し、`<drive>\<base>\<app...>` または `\\<server>\<share>\<app...>` の深さを要求する。
-   - OS 予約領域配下の許可例外は `/usr/local/<app>`、`/var/lib/<app>`、`/var/opt/<app>`、`/Library/Application Support/<app>`、fixture / test で使う一時領域（`/tmp/<app>`、`/private/tmp/<app>`、`/var/tmp/<app>`、`/private/var/tmp/<app>`、`/var/folders/<...>`、`/private/var/folders/<...>`）に限定し、これらの base 自体は拒否する。
+   - managed root の深さ、拒否対象、OS 予約領域配下の許可例外は、インストーラ manifest 契約の「配置プロファイルと managed root」に従う。
    - 標準経路で扱えないシステム配置は project override として証跡を残す。
    - 所有権変更や権限変更は managed root 内に閉じる。
 5. 事前検証を先に終える。
@@ -116,9 +91,8 @@
    - command substitution、`export`、複数行、`source` は設定ファイル文法として扱わない。
    - shell source を許す場合は、入力が信頼済みであること、実行権限、実行される内容、失敗時状態を明示する。
    - token や secret は installer 実行時に注入し、runtime env やサンプルファイルへ保存しない。
-9. service manager を薄く保つ。
-   - systemd などは runtime script を呼ぶ管理層に限定し、環境変数、PID、ログ、restart の意味を重複定義しない。
-   - runtime script 側を正本にする場合、service manager には `EnvironmentFile` や独自 reload を増やさない。
+9. service manager との責務分担を確認する。
+   - systemd などと runtime script の間の環境変数、PID、ログ、restart の責務分担は runtime-script スキルに従い、同じ責務を重複定義しない。
    - installer が runtime script を配置または生成する場合、起動責務、手動操作、service manager handoff、PID、ログ、restart、health 境界は runtime-script スキルの契約に従う。
 10. 失敗時状態を定義する。
    - 状態遷移と失敗時の残存状態は、インストーラ状態遷移契約を基準に整理する。
@@ -137,19 +111,6 @@
    - 「installer が行うこと」と「運用者が別途行うこと」を同じ文章で混ぜない。
 
 ## 基本で決めること
-- manifest 形式:
-  - 既存プロジェクトの SSOT がない場合は JSON を推奨する。
-  - 同一プロジェクト内では manifest 形式を1つに固定する。
-- 署名の扱い:
-  - checksum は必須、signature は任意にする。
-  - 重要 artifact で改ざん耐性を上げる場合だけ、production artifact の signature 必須化を検討する。
-- production で許す資材種別:
-  - GitHub Release asset、GitHub Packages、Maven、npm などの固定 version artifact を基本にする。
-  - GitHub source archive からの本番 build は production installer の標準導線にしない。
-- project override:
-  - 標準経路から外れる判断は、project 固有の制約、利用者環境、運用責任、検証証跡が明確な場合だけ扱う。
-  - runtime bootstrap、source build、対話式 setup、data restore、自動 migration は、それぞれ別の override として責務、入力、失敗時状態を分ける。
-  - override は core safety invariant を緩める理由ではなく、標準推奨から外れる責務を project 側で明示的に引き受ける記録として扱う。
 - 対応 OS / service manager:
   - 標準候補は、利用者要求や project SSOT による事前指定がなくても、設計時にいずれも選択できるようにする。
   - 選択した platform ごとに、Linux + systemd、macOS + launchd または手動 runtime script、Windows + Windows service または手動 runtime script など、service manager 境界を明示的に固定する。
@@ -167,7 +128,7 @@
 - installer 実装分割:
   - 巨大化した installer は、配布単位と保守単位を分ける。
   - GitHub Release asset として配布する導線では、利用者が取得・実行する配布単位を単一 wrapper、または wrapper と固定済み payload archive に固定してよい。選択した platform 間で wrapper、archive、実行形式が異なる場合は platform 別配布を検討する。
-  - shell installer を GitHub Release asset として直接公開する場合、Linux / macOS 共通の asset 名は `install.sh`、Windows の asset 名は `install.ps1` を推奨する。platform ごとに内容の異なる同名 asset が必要なら、名前で区別する。GitHub Release native starter は組立済みの単体スクリプトを公開する。
+  - shell installer を GitHub Release asset として直接公開する場合、Linux / macOS 共通の asset 名は `install.sh`、Windows の asset 名は `install.ps1` を推奨する。platform ごとに内容の異なる同名 asset が必要なら、名前で区別する。標準 GitHub Release native runtime は組立済みの単体スクリプトを公開する。
   - 共有 wrapper を固定 URL 配信する場合は、共有 `install.sh`（POSIX sh bootstrap）とプラットフォーム別 platform installer（検証済み payload）を別 asset として公開する。wrapper は platform を実行時に検出し、選んだ payload を checksum 検証してから実行し、検証前に破壊的副作用を起こさない。
   - 利用先の installer source は project owner の正本として扱い、製品宣言と同じ `.ci/installer/` 配下へ置く。スキル専用の隠し領域へは置かない。
   - CI など installer 外で wrapper と payload archive を組み立てる場合、asset の組立と検証証跡はインストーラ asset 組立証跡契約に従う。workflow trigger、job 分割、runner trust、permissions、cache、release publish 手順は ci スキルの責務として扱う。
@@ -180,86 +141,34 @@
   - state と audit は別 module / fragment に分け、install state / handoff state を現在状態、audit log を実行履歴として扱う。audit log を現在状態の判定に使わない。
   - service manager 連携は runtime script 境界に委譲し、systemd unit 生成、reload / enable、restart / health、rollback を activation や state と混ぜない。
   - 構造退行検査では、fragment 順序、生成 contract の差し込み位置、禁止 fragment 名への退行、unsafe fragment inventory、入口が service / rollback 分岐を正しく dispatch することを確認する。
-- 権限モデル:
-  - artifact 配置は service user を基本にする。
-  - root 権限は system service 登録、owner 正規化など必要な最小操作に限定する。
-  - 広い directory への再帰的な所有権変更は避ける。
 - migration の責務:
   - DB migration は既定で自動実行しない。
   - installer から実行する場合は明示 option とし、artifact rollback と data restore を分離する。
 - cache / offline install:
-  - cache は checksum / signature 再検証を通る場合だけ使用する。
   - offline install は通常 download とは別 source mode として定義し、operation mode とは混ぜず、同じ検証契約を通す。
 - operation mode:
-  - `install`、`upgrade`、`repair`、`dry-run` は明示 mode として分ける。
-  - operation mode は release manifest へ含めず、installer 実行時の execution request として扱う。
   - 既存状態から暗黙に mode を推測する場合も、実行前に選択された mode をログへ出す。
-- activation strategy:
-  - `active-pointer`、`in-place`、`external-orchestrated` のどれで検証済み release を稼働対象へ反映または外部切替へ引き渡すかを manifest で固定する。
-  - active release pointer は `active-pointer` strategy を採用する場合の具体方式として扱う。
-- health check の成功条件:
-  - installer が health / rollback を担当する strategy では、URL、command、timeout、retry、失敗時 rollback の扱いを固定する。
-  - `external-orchestrated` では、installer 側の health / rollback ではなく外部 orchestration への handoff 条件を固定する。
-  - process 起動だけを成功扱いにせず、installer が判断する到達条件を明示する。
-- service 停止と切替タイミング:
-  - artifact と manifest に指定されたすべての verified placement asset の検証が完了するまで service を停止しない。
-  - activation strategy に応じた switch と restart は停止時間が最小になる順序へ寄せる。
 - 設定ファイルの所有者:
   - installer 管理設定とユーザー管理設定を分ける。
   - ユーザー編集済み設定は merge せず、既定では上書きしない。
 - secret / token の注入元:
   - 環境変数、secret manager、CI runtime injection など、許可する注入元を限定する。
-  - manifest、sample、install state、handoff state、log には secret 値を残さない。
-- schema version 互換性:
-  - installer が対応する manifest schema version の範囲を明示する。
-  - unknown field reject と schema evolution を両立させる。
 - signature key / checksum の管理元:
-  - checksum は manifest に持つ。
   - signature を使う場合は、署名鍵の信頼元と key rotation の扱いを manifest 外で固定する。
-- proxy / TLS / network policy:
-  - proxy は明示設定だけ許可する。
-  - TLS 検証無効化や insecure download は production installer で禁止する。
 - 複数 instance:
   - 初期は single instance を基本にする。
   - 複数 instance を扱う場合は managed root、service name、port、lock path、install state、handoff state を instance id で分離する。
-- exit code 粒度:
-  - 初期は非ゼロ失敗を必須にし、原因別 exit code は運用上必要になってから追加する。
-  - 原因別に分ける場合は runtime missing、verify failed、lock conflict など、運用判断が変わる単位に限定する。
-- uninstall / cleanup:
-  - 標準 installer に混ぜず、別 command または別運用として扱う。
-  - install / upgrade / repair / cleanup を暗黙 mode で兼用しない。
 - 保持世代数:
   - release artifact は直近2から3世代を推奨する。
   - data backup の保持数と復旧手順は installer 外の backup / restore 契約で決める。
-- install state:
-  - production installer では install state を現在状態の正本として必須にする。
-  - 既存プロジェクトの SSOT がない場合は JSON を推奨する。
-  - manifest checksum、artifact checksum、previous release、installed at、installer version を記録する。
-  - `external-orchestrated` の未反映 release は install state へ成功状態として記録せず、handoff state に分離する。
 
 ## 必要になったら決めること
 - artifact provenance:
   - artifact が作られた source commit、tag、CI run id を manifest、install state、handoff state のいずれかに記録する。
   - provenance 署名や attestation の検証は release gate 側を基本にし、installer は合格済み artifact を扱う。
-- SBOM / vulnerability scan:
-  - installer は SBOM や脆弱性判定を生成しない。
-  - 配布物に添付済み SBOM がある場合だけ、manifest で固定した checksum に従って配置・記録する。
-- audit log:
-  - install state は現在状態、handoff state は外部切替待ち release、audit log は実行記録として分ける。
-  - audit log を扱う場合、manifest は audit log path と audit log policy を持ち、実行主体、実行時刻、理由は execution request から受け取る。
-  - audit log には operation mode と source mode を残し、install state / handoff state の現在状態判定に使わない。
-  - audit log の書き込み失敗を `required` / `best-effort` のどちらで扱うかを決める。
-  - audit log を扱う場合も token、secret、auth header、env value は記録しない。
-- 設定 schema の互換性:
-  - installer はユーザー設定を自動 merge しない。
-  - manifest は config schema reference と config schema version だけを持ち、schema 定義本体は project SSOT とする。
-  - installer は project adapter が解決した schema で required key、deprecated key の検証だけを行う。
 - roll forward 方針:
   - rollback 不可の変更、特に DB migration 後は roll forward 条件を明示する。
   - rollback、roll forward、manual recovery のどれに委ねるかを installer 実行前に判断できる形へ分ける。
-- installer version compatibility:
-  - manifest が要求する minimum installer version を持てるようにする。
-  - 古い installer が新しい manifest を安全に拒否できるようにする。
 - 監査対象外:
   - OS patch、runtime install、DB restore、secret 発行など installer が扱わない範囲を明示する。
   - install、release、operation、recovery の責務を同じ installer に混ぜない。
@@ -269,15 +178,11 @@
 - 入力契約:
   - 共通 manifest contract に Java / Maven overlay を追加する。
   - Maven repository URL、`groupId`、`artifactId`、`version`、artifact file name、artifact checksum と任意の署名を固定する。
-  - 本番導線では `SNAPSHOT`、version range、moving repository metadata を拒否する。
   - GitHub Packages など認証付き Maven repository を使う場合、read token は installer 実行時だけ注入する。
 - 配置単位:
   - 検証済み Jar を activation strategy に応じた placement target へ配置または反映する。
   - application config、secret、DB、log、dictionary などの runtime data は release directory の外に置く。
 - runtime:
-  - Java major version を manifest の要求値と照合し、JRE が存在しない、または要求 version を満たさない場合は install を失敗させる。
-  - 標準経路では、installer は JRE を暗黙に取得・導入・更新しない。
-  - Jar 実行の場合は `java -jar` の薄い runtime script に寄せ、service manager はそれを呼ぶだけにする。
   - Jar 用 runtime script を配置または生成する場合は、runtime-script スキルの Java / Spring Boot Jar 向け導線に従う。
 - 検証観点:
   - Jar checksum 不一致、Java version 不足、`SNAPSHOT` 拒否、既存 DB 保持、installer が担当する restart / health check 失敗時 rollback または external handoff を fixture で確認する。
@@ -286,15 +191,12 @@
 - 入力契約:
   - 共通 manifest contract に Node / npm overlay を追加する。
   - npm registry URL、package name、version、tarball URL または lockfile、integrity / checksum を固定する。
-  - 本番導線では `latest`、tag、version range、moving branch を拒否する。
   - private registry や GitHub Packages を使う場合、read token は installer 実行時だけ注入し、`.npmrc` や runtime env へ保存しない。
 - 配置単位:
   - npm package tarball を取得する場合は、tarball を staging へ展開し、integrity / checksum と expected files を検証してから activation strategy に応じた placement target へ配置または反映する。
   - lockfile から依存を解決する場合は、`npm ci` や同等の frozen install を staging で実行する方式を候補にし、lockfile と package manager version を固定する。
   - 本番ホストで build するか、CI 生成済み artifact を配置するかを先に決め、暗黙に build step を増やさない。
 - runtime:
-  - Node.js major version と package manager version を manifest の要求値と照合し、存在しない、または要求 version を満たさない場合は install を失敗させる。
-  - 標準経路では、installer は Node.js や package manager を暗黙に取得・導入・更新しない。
   - Node.js 用 runtime script を配置または生成する場合は、runtime-script スキルの Node 向け導線に従う。
   - `postinstall` など lifecycle script は既定で信用せず、必要な場合だけ共通 lifecycle hook policy で許可理由と検証範囲を明示する。
 - 検証観点:
@@ -342,12 +244,8 @@
 
 ## 注意
 - installer は便利な運用スクリプトではなく、対象環境の状態を変更する境界面として扱う。
-- `--force` は安全性を下げる名前にしない。何を強制し、何を強制しないかをオプション名と説明で分ける。
-- ログには URL、version、checksum、状態遷移を出してよいが、token、secret、認証ヘッダは出さない。
 - dry-run を作る場合は、実行と同じ検証を使い、状態遷移契約の副作用可否に従って永続変更だけを抑止する。
 - 外部リポジトリからの取得は network 成功を信頼根拠にしない。成功後に固定入力との一致を必ず検証する。
-- installer の失敗は非ゼロ exit とし、原因別 exit code 分類は必要になってから追加する。
-- uninstall / cleanup は標準 installer に含めず、別運用または別 command として扱う。
 
 ## アンチパターン
 - 検証条件（固定 HTTPS、実行前の payload 検証、検証前の副作用なし、POSIX sh / iex 互換）を満たさない `curl | bash` を標準導線にする。
@@ -355,16 +253,7 @@
 - アプリケーション runtime と同じだからという理由だけで、preflight、version 固定、依存解決方針、事前テスト証跡なしに installer 実装言語を選ぶ。
 - shell fragment を処理順だけで分け、fragment inventory、生成 contract、構造退行検査を持たない。
 - `main` fragment に manifest 検証、download、checksum、staging、activation、state、audit、service rollback を集約し続ける。
-- rollback を activation、service、process、shared asset、state、data restore に分けず、巨大な catch-all cleanup にする。
-- GitHub branch、`latest`、version range、SNAPSHOT を本番 installer の既定入力にする。
-- JRE、Node.js、package manager を、project override と検証契約なしに installer が暗黙に取得・更新する。
-- production installer が source archive から暗黙に build する。
-- checksum mismatch を force option で無視する。
-- uninstall / cleanup を install / upgrade と同じ暗黙モードに混ぜる。
-- GitHub、npm、Maven などの取得先を URL 文字列だけで受け取り、owner / namespace / registry を検証しない。
-- install と upgrade と repair を1つの暗黙モードで処理する。
 - root で広いディレクトリに `chown -R` する。
-- 起動確認に失敗しても activation state を failed release のまま残す。
 - fixture なしで本番に近いパスや実サービスだけを使って installer テストを行う。
 
 ## 完了確認

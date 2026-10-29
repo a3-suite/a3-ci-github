@@ -26,13 +26,14 @@ export function workflowReferences(text, relative) {
 export function checkProviderReferences(text, relative, approved, firstParty) {
   const references = workflowReferences(text, relative);
   const diagnostics = [];
+  // Pins approve a provider repository commit, so subpath Actions such as actions/cache/restore share its pin.
   for (const { location, uses } of references) {
     if (typeof uses === 'string' && (uses.startsWith('./') || uses.startsWith('docker://'))) continue;
     const match = typeof uses === 'string' && uses.match(/^([^@\s]+)@([0-9a-f]{40})$/);
     if (!match) diagnostics.push(`${relative}:${location}: external uses must have a full lowercase commit SHA`);
     else if (firstParty && match[1].startsWith(`${firstParty.repository}/actions/`)) {
       if (match[2] !== firstParty.exactRef) diagnostics.push(`${relative}:${location}: first-party uses does not match the registry Action binding`);
-    } else if (!match[1].startsWith('a3-suite/a3-ci-github/') && approved.get(match[1]) !== match[2]) {
+    } else if (!match[1].startsWith('a3-suite/a3-ci-github/') && approved.get(match[1].split('/').slice(0, 2).join('/')) !== match[2]) {
       diagnostics.push(`${relative}:${location}: external uses is not a registry-approved provider pin`);
     }
   }
