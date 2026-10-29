@@ -98,7 +98,7 @@ CIで組み立ててReleaseへ公開するインストーラが、GitHub 管理�
 - 参照: references/installer-standard-assembly-contract.reference.yml
 
 ### 固定URL配信で共有インストーラを公開したい
-- 共有 Unix wrapper（POSIX sh bootstrap）と platform 別 installer（検証済み payload）を分け、delivery 契約に従って固定 HTTPS URL から pipe 実行できるようにする。
+- use case 契約の delivery に従い、共有 wrapper から platform 別 installer を実行する配信構成を作る。
 - 成果物: 共有 wrapper と platform 別 installer を分けた固定 URL 配信構成
 - 完了条件: use case契約のdeliveryとインストーラ作成ガイドの固定URL配信に関する完了確認を満たす。
 - 参照: references/installer-use-case-contract.reference.yml

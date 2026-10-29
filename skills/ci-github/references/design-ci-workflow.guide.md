@@ -55,7 +55,6 @@ CIプリセットの内部段階（`references/ci-preset-contracts.reference.yml
 7. workflow の実装境界を決める。
    - workflow はオーケストレーションに限定する。
    - workflow file 名、workflow `name:`、job id / job `name:` は `references/workflow-authoring-policy.reference.md` に従う。
-   - 長い処理、条件分岐、再利用処理は `.ci/scripts/` または Action に外部化する。
    - 外部化判断は `references/workflow-authoring-policy.reference.md` に従う。
    - `references/preset-catalog.reference.md` の CIプリセット asset から、必要な workflow 骨格を選ぶ。
    - workflow asset の branch、runner、required check、docs-only pattern、パッケージマネージャの実行方法、Action SHA、runtime version は、provider と project の正本に合わせて確定する。
@@ -108,6 +107,6 @@ platform 固有の runtime、artifact、installer、OS 依存処理の検証が�
 - [ ] 集約結果は固定名で、欠落・空選択・未実施・runner 異常・workflow 未起動を成功にしない
 - [ ] platform 非対応コマンドの省略を adapter / owner 契約へ委譲した
 - [ ] workflow file 名、workflow name、job name が workflow naming policy に整合している
-- [ ] workflow はオーケストレーションに限定し、実装ロジックを外部化した
+- [ ] workflow はオーケストレーションに限定し、inline 維持と外部化を workflow authoring policy の実装境界で判断した
 - [ ] 実ファイル化した workflow YAML を workflow authoring policy に従って検証した
 - [ ] ログ、レポート、アーティファクトを追跡対象と混在させていない

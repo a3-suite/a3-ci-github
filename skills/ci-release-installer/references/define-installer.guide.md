@@ -92,8 +92,7 @@
    - shell source を許す場合は、入力が信頼済みであること、実行権限、実行される内容、失敗時状態を明示する。
    - token や secret は installer 実行時に注入し、runtime env やサンプルファイルへ保存しない。
 9. service manager との責務分担を確認する。
-   - systemd などは runtime script を呼ぶ管理層に限定し、環境変数、PID、ログ、restart の意味を重複定義しない。
-   - runtime script 側を正本にする場合、service manager には `EnvironmentFile` や独自 reload を増やさない。
+   - systemd などと runtime script の間の環境変数、PID、ログ、restart の責務分担は runtime-script スキルに従い、同じ責務を重複定義しない。
    - installer が runtime script を配置または生成する場合、起動責務、手動操作、service manager handoff、PID、ログ、restart、health 境界は runtime-script スキルの契約に従う。
 10. 失敗時状態を定義する。
    - 状態遷移と失敗時の残存状態は、インストーラ状態遷移契約を基準に整理する。

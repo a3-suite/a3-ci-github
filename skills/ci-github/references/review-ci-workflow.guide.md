@@ -44,7 +44,7 @@
 7. workflow 実装の肥大化を確認する。
    - workflow file 名、workflow `name:`、job id / job `name:` が`references/workflow-authoring-policy.reference.md` に従っているか確認する。
    - workflow がオーケストレーションに限定されているか確認する。
-   - 長い処理や条件分岐が `.ci/scripts/` または provider の再利用単位に外部化されているか確認する。
+   - inline 処理を残すか外部化するかの判断が `references/workflow-authoring-policy.reference.md` の「実装境界」の比較に従っているか確認する。
    - 各共通処理を script のファイル名ではなく `ci.script-use-cases` の処理単位へ分解し、`assets/registry/ci-github-preset-assets.yml` が定める再利用単位の選択順位と移行候補を上位候補から照合する。provider の再利用単位、reusable asset、script、project-local adapter のいずれを選ぶかだけでなく、契約適合性、実行境界、固定参照、入出力、workflow mapping を候補ごとに判定する。
    - project-owned 実装は「許可されている」だけでは採用根拠にならない。契約適合する上位候補がないこと、および選択済み binding が充足しない登録済み extension であることを確認し、候補、非採用理由、owner、証拠 identity を監査結果へ記録する。適合候補がある処理や未登録の代替分岐を独自実装した場合は、不要な独自実装という対象契約違反として `statusClassification` へ渡す。
    - provider workflow の全外部再利用単位を、`assets/registry/ci-github-preset-assets.yml` の固定参照設定と双方向に照合し、未登録単位、preset 宣言漏れ、余剰宣言を残さない。SHA の指定方法は `references/workflow-version-policy.reference.md` に従う。

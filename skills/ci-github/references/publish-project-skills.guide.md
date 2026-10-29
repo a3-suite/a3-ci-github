@@ -42,4 +42,4 @@
 
 構成監査ではまず「同梱の選択」を確認し、CI設定とREADMEへの一致を検査する。同梱する場合は選択rootとSKILL.mdのname、宣言、requiredFiles、収録規則、固定provider対応を確認し、READMEの案内を`adoption.readme`に照合する。installerなし・スキルなしの配布選択は別々に判断し、対応スキルを提供しない製品へ案内を要求しない。
 
-証跡監査では、収録一覧・ファイルのsizeとSHA-256、declaration/source/version、ZIP checksum、各ownerの証跡、転送後のhandoffと公開後readbackを確認する。必要file欠落、改変、公開名衝突、版やSHAの不一致は公開停止対象とする。ローカル成功だけでHostedや公開後readbackを確認済みにしない。
+証跡監査では、収録一覧・ファイルのsizeとSHA-256、declaration/source/version、ZIP checksum、各ownerの証跡、転送後のhandoffを確認する。公開後readbackは公開後確認として別記する。必要file欠落、改変、公開名衝突、版やSHAの不一致は公開停止対象とする。ローカル成功だけでHostedや公開後readbackを確認済みにしない。
