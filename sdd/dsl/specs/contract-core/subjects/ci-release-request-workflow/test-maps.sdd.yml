@@ -25,7 +25,3 @@ test_maps:
         symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result
         guarantees:
           - diagnostic-failure-stage-handoff
-      - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result
-        guarantees:
-          - diagnostic-failure-stage-handoff

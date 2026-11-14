@@ -17,10 +17,6 @@ test_maps:
           - package-handoff-before-publication
           - package-credential-scope
           - package-owner-publisher-invoked
-      - path: runtime/preset/tests/reusable-quality-workflow.test.mjs
-        symbol: contract.ci-package-publication-workflow.publication > package-preparation-reusable-preflight > package preparation fixed source preflight rejects drift and retains owner adapters without callee copies
-        guarantees:
-          - ci-package-publication-workflow-success-observed
   - contract_id: contract.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-failure
     tests:
@@ -39,9 +35,5 @@ test_maps:
           - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job failure result
-        guarantees:
-          - diagnostic-failure-stage-publication
-      - path: tests/workflow-failure-diagnostics.test.mjs
-        symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job cancelled result
         guarantees:
           - diagnostic-failure-stage-publication

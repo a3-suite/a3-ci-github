@@ -17,6 +17,8 @@ contracts:
         meaning: "Received by the contract target: path to the Action catalog file."
       - name: contract-package
         meaning: "Received by the contract target: contract package definition path."
+      - name: untracked-distribution-path
+        meaning: "Precondition prepared by the case: distribution file or Composite Action referenced script that exists in the working tree but is not tracked by Git."
       - name: prepared-by
         meaning: "Precondition prepared by the case: process that prepared the distribution input."
       - name: tag

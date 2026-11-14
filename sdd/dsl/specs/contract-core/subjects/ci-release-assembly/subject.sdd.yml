@@ -42,7 +42,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: status
-            meaning: Success only after complete validation and handoff creation.
+            meaning: Status output of the assembly invocation; success.
           - selector: release-handoff
             meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
           - selector: asset-digest

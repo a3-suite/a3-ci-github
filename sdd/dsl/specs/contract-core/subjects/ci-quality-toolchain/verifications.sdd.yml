@@ -31,8 +31,8 @@ cases:
     id: invalid-quality-toolchain
     partition: runtime-context.quality-toolchain-inputs-unusable
     input:
-      language-profile: unsupported
-      toolchain-version: latest
+      language-profile: unknown
+      toolchain-version: 24.0.0
   - contract_id: contract.ci-quality-toolchain.preparation
     id: failed-quality-toolchain-setup
     partition: runtime-context.quality-toolchain-inputs-unusable
@@ -58,6 +58,9 @@ cases:
       toolchain-version: 1.90.0
       version-policy: exact
       cargo-audit-version: 0.21.0
+    verifies:
+      - selected-profile-dependencies-only
+      - resolved-version-satisfies-selector
   - contract_id: contract.ci-quality-toolchain.preparation
     id: valid-request-mismatching-resolution
     partition: runtime-context.quality-toolchain-request-valid
@@ -126,7 +129,7 @@ cases:
       cargo-audit-version: 0.22.2
       cargo-deny-version: ""
     verifies:
-      - selected-profile-dependencies-only
+      - optional-tool-setup-only-when-requested
   - contract_id: contract.ci-quality-toolchain.preparation
     id: skipped-auxiliary-tools
     partition: runtime-context.quality-toolchain-request-valid
@@ -138,4 +141,4 @@ cases:
       cargo-deny-version: 0.20.2
       auxiliary-tools: skip
     verifies:
-      - selected-profile-dependencies-only
+      - auxiliary-tool-setup-skipped-on-request

@@ -54,8 +54,6 @@ contracts:
   - id: contract.ci-github-toolchain-verifier.outputs
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
     inputs:
-      - name: arguments
-        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: mode
         meaning: "Received by the contract target: verification mode."
       - name: gh-version

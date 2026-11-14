@@ -124,6 +124,8 @@ describe("contract.ci-rust-release-build.processing", () => {
     test('release build binds exact toolchain and a unique manifest platform before building', () => withFixture((fixture) => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);
+      // ci-release-build.sh binds the platform target to the host OS, so the platform values follow the host.
+      // The contract cases declare the Linux values; their evidence is the Linux CI run.
       const isLinux = process.platform === 'linux';
       const platformId = isLinux ? 'linux-x64' : 'macos-x64';
       const platformTarget = isLinux ? 'x86_64-unknown-linux-gnu' : 'x86_64-apple-darwin';
@@ -204,9 +206,27 @@ describe("contract.ci-rust-release-build.processing", () => {
       ), { env: environment });
       // Assert
       expect(accepted.status, accepted.stderr).toBe(0);
+      const acceptedManifest = JSON.parse(readFileSync(path.join(fixture, 'accepted-output', 'asset-manifest.json'), 'utf8'));
+      expect([acceptedManifest.platform_id, acceptedManifest.platform_target]).toStrictEqual([platformId, platformTarget]);
+      expect(acceptedManifest.assets.length).toBe(1);
+      expect(existsSync(path.join(fixture, 'accepted-output', acceptedManifest.assets[0].path))).toBe(true);
       expect(readFileSync(environment.FAKE_RUSTUP_LOG, 'utf8').trim().split('\n')).toEqual([
         `toolchain install 1.90.0 --profile minimal --target ${platformTarget}`,
       ]);
+
+      // Arrange
+      const acceptedOutput = path.join(fixture, 'accepted-output');
+      const outputTree = () => readdirSync(acceptedOutput, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => [path.relative(acceptedOutput, path.join(entry.parentPath, entry.name)), readFileSync(path.join(entry.parentPath, entry.name))])
+        .sort(([left], [right]) => left.localeCompare(right));
+      const acceptedTree = outputTree();
+      // Act
+      const existingOutput = runBuild(args('1.90.0', platformTarget, acceptedOutput), { env: environment });
+      // Assert
+      expect(existingOutput.status).not.toBe(0);
+      expect(failureEvidence(existingOutput.stderr).classification.stage).toBe('input-validation');
+      expect(outputTree()).toStrictEqual(acceptedTree);
 
       const failedSetup = runBuild(args(
         '1.90.0', platformTarget, path.join(fixture, 'setup-failed'),
@@ -286,6 +306,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       ), { env: environment });
       // Assert
       expect(targetMismatch.status).not.toBe(0);
+      expect(existsSync(path.join(fixture, 'mismatch-output'))).toBe(false);
 
       // Arrange
       writeAuthority('stable');
@@ -313,8 +334,8 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(duplicate.status).not.toBe(0);
     }));
 
-    // contract_id: contract.ci-rust-release-build.processing
-    // flow_id: rust-release-build-script
+    // evidence_role: supplemental
+    // Calls the package and verify scripts directly; the processing contract target is ci-release-build.sh.
     test('Unix package and verification bind archive, checksum, manifest, and source without overwrite', () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli');
@@ -328,8 +349,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'example-cli',
         'example-cli',
         '1.2.3',
-        'test-x64',
-        'x86_64-test-platform',
+        'linux-x64',
+        'x86_64-unknown-linux-gnu',
         sourceSha,
         `${output}${path.sep}`,
       ];
@@ -337,8 +358,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'example-cli',
         'example-cli',
         '1.2.3',
-        'test-x64',
-        'x86_64-test-platform',
+        'linux-x64',
+        'x86_64-unknown-linux-gnu',
         sourceSha,
         output,
       ];
@@ -383,11 +404,17 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Arrange
       const archive = path.join(output, manifest.assets[0].path);
       const originalArchive = readFileSync(archive);
+      const outputTree = () => readdirSync(output, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => [path.relative(output, path.join(entry.parentPath, entry.name)), readFileSync(path.join(entry.parentPath, entry.name))])
+        .sort(([left], [right]) => left.localeCompare(right));
+      const originalTree = outputTree();
       // Act
       const repeated = run(path.join(scriptRoot, 'package-release-unix.sh'), packageArgs);
       // Assert
       expect(repeated.status).not.toBe(0);
       expect(readFileSync(archive)).toStrictEqual(originalArchive);
+      expect(outputTree()).toStrictEqual(originalTree);
 
       // Arrange
       manifest.source_sha = 'b'.repeat(40);
@@ -398,8 +425,8 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(tampered.status).not.toBe(0);
     }));
 
-    // contract_id: contract.ci-rust-release-build.processing
-    // flow_id: rust-release-build-script
+    // evidence_role: supplemental
+    // Calls the package and verify scripts directly; the processing contract target is ci-release-build.sh.
     test('Unix package failure leaves no final or temporary output directory', () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli');
@@ -418,8 +445,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'example-cli',
         'example-cli',
         '1.2.3',
-        'test-x64',
-        'x86_64-test-platform',
+        'linux-x64',
+        'x86_64-unknown-linux-gnu',
         'a'.repeat(40),
         `${output}${path.sep}`,
       ], { env: { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}` } });
@@ -430,8 +457,8 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(readdirSync(fixture).filter((name) => name.startsWith('release-output.tmp.'))).toStrictEqual([]);
     }));
 
-    // contract_id: contract.ci-rust-release-build.processing
-    // flow_id: rust-release-build-script
+    // evidence_role: supplemental
+    // Calls the package and verify scripts directly; the processing contract target is ci-release-build.sh.
     test('Unix package preserves an output directory created immediately before publication', () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli');
@@ -460,8 +487,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'example-cli',
         'example-cli',
         '1.2.3',
-        'test-x64',
-        'x86_64-test-platform',
+        'linux-x64',
+        'x86_64-unknown-linux-gnu',
         'a'.repeat(40),
         output,
       ], {
@@ -478,8 +505,8 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(readdirSync(fixture).filter((name) => name.startsWith('release-output.tmp.'))).toStrictEqual([]);
     }));
 
-    // contract_id: contract.ci-rust-release-build.processing
-    // flow_id: rust-release-build-script
+    // evidence_role: supplemental
+    // Calls the package and verify scripts directly; the processing contract target is ci-release-build.sh.
     test('Unix package removes its claimed output when publication fails', () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli');
@@ -509,8 +536,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'example-cli',
         'example-cli',
         '1.2.3',
-        'test-x64',
-        'x86_64-test-platform',
+        'linux-x64',
+        'x86_64-unknown-linux-gnu',
         'a'.repeat(40),
         output,
       ], {

@@ -39,7 +39,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: outcome
-            meaning: Success after checksum verification, extraction, and PATH handoff, or failure before handoff.
+            meaning: Step outcome of the provisioning invocation; success or failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:

@@ -22,6 +22,7 @@ test_maps:
           - execution-outcome-retained
           - last-confirmed-stage-recorded
           - next-check-rule-recorded
+          - diagnostic-protected-input-disclosure
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
         guarantees: *a1
@@ -46,13 +47,18 @@ test_maps:
         symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
         guarantees:
           - diagnostic-unsubstantiated-context
+          - diagnostic-whole-payload-disclosure
+      - path: runtime/release-publication/tests/observation.test.mjs
+        symbol: safe release diagnostics > assetDigest > asset readback diagnoses unsafe redirects without disclosing signed locations
+        guarantees:
+          - diagnostic-signed-url-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: child-process-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
-          - diagnostic-unsafe-diagnostic-disclosure
+          - diagnostic-unchecked-output-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     case_id: evidence-generation-failure
     tests:
@@ -113,21 +119,5 @@ test_maps:
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project
-        guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap confines dependency files and accepts internal symlink cycles
-        guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports unavailable npm and cleans up state after dependency command failures
-        guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports validator startup and completion failures without consumer changes
-        guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots
         guarantees:
           - ci-failure-diagnostics-bootstrap-envelope-emitted

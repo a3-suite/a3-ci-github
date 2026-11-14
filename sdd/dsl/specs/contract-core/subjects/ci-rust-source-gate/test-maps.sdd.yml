@@ -22,10 +22,6 @@ test_maps:
         symbol: runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context
         guarantees:
           - diagnostic-failure-stage-processing
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
-        guarantees:
-          - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-source-gate.outputs
     case_id: matching-rust-source-authority
     tests:
@@ -42,12 +38,6 @@ test_maps:
           - source-verification-failure-propagated
   - contract_id: contract.ci-rust-source-gate.outputs
     case_id: detailed-failure-outputs
-    tests:
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
-        guarantees:
-          - diagnostic-failure-stage-outputs
+    pending:
+      - guarantees: [diagnostic-failure-stage-outputs]
+        reason: Composite Action に不正な language-profile を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。

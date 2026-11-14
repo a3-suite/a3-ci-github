@@ -19,6 +19,7 @@ cases:
       - last-confirmed-stage-recorded
       - next-check-rule-recorded
       - diagnostic-known-cause-omission
+      - diagnostic-protected-input-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: unknown-failure
     partition: runtime-context.failure-diagnostic-required
@@ -40,13 +41,15 @@ cases:
       failure: external-request
     verifies:
       - diagnostic-unsubstantiated-context
+      - diagnostic-signed-url-disclosure
+      - diagnostic-whole-payload-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: child-process-failure
     partition: runtime-context.failure-diagnostic-required
     input:
       failure: child-process
     verifies:
-      - diagnostic-unsafe-diagnostic-disclosure
+      - diagnostic-unchecked-output-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: evidence-generation-failure
     partition: runtime-context.failure-diagnostic-required

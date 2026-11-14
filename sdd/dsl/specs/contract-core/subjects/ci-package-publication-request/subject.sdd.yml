@@ -15,6 +15,8 @@ contracts:
         meaning: "Precondition prepared by the case: triggering workflow run."
       - name: source-sha
         meaning: "Received by the contract target: source commit SHA passed by the caller."
+      - name: expected-source-sha
+        meaning: "Received by the contract target: source commit SHA that the verify operation expects the saved request to carry."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

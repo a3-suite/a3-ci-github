@@ -10,7 +10,7 @@ cases:
     id: tag-request-handoff
     partition: runtime-context.release-request-handoff-valid
     input:
-      output-directory: release-request
+      output-directory: handoff
       tag-source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       tag-object-sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
       github-ref: refs/tags/v1.2.3

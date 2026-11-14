@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { mkdirSync, readFileSync, readdirSync, readlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, readlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
@@ -72,3 +72,27 @@ export const snapshotTree = (root, relative = '') => Object.fromEntries(
     return [[child, sha256(readFileSync(path.join(root, child)))]];
   }),
 );
+
+// The public preflight accepts only a runtime copied inside the consumer tool state, so a fixture copies the locked
+// packages instead of linking the provider runtime.
+export const prepareBootstrapRuntime = ({ repositoryRoot, runtimeRoot, consumerRoot }) => {
+  const target = path.join(consumerRoot, '.a3-skills/ci-github/runtime');
+  mkdirSync(target, { recursive: true });
+  for (const filename of ['package.json', 'package-lock.json']) {
+    cpSync(path.join(repositoryRoot, 'runtime/preset', filename), path.join(target, filename));
+  }
+  const lock = JSON.parse(readFileSync(path.join(target, 'package-lock.json'), 'utf8'));
+  for (const relative of Object.keys(lock.packages).filter((entry) => entry.startsWith('node_modules/'))) {
+    const source = path.join(runtimeRoot, relative);
+    if (!existsSync(source)) continue;
+    const destination = path.join(target, relative);
+    mkdirSync(path.dirname(destination), { recursive: true });
+    cpSync(source, destination, { recursive: true });
+  }
+  mkdirSync(path.join(target, 'node_modules/.bin'), { recursive: true });
+  cpSync(
+    path.join(runtimeRoot, 'node_modules/.bin/tsx'),
+    path.join(target, 'node_modules/.bin/tsx'),
+    { verbatimSymlinks: true },
+  );
+};

@@ -4,10 +4,6 @@ test_maps:
   - contract_id: contract.ci-release-assembly.outputs
     case_id: bundled-assembly
     tests:
-      - path: actions/ci-release-assembly/tests/action-contract.test.ts
-        symbol: release-assembly-action-contract > assembly Action owns its Node runtime and exposes bounded assembly inputs
-        guarantees:
-          - assembly-no-credential-input
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:
@@ -20,6 +16,9 @@ test_maps:
           - assembly-success
           - bound-handoff
           - bound-asset-digest
+    pending:
+      - guarantees: [assembly-no-credential-input]
+        reason: case の入力で Action を実行し、認証情報を受け取らずに組み立てることを確かめるテストが無い。既存のテストは action.yml の input の宣言を静的に読むだけ。
   - contract_id: contract.ci-release-assembly.outputs
     case_id: output-line-injection
     tests:
@@ -92,17 +91,7 @@ test_maps:
     case_id: platform-checkout-eol
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
-        guarantees:
-          - bound-handoff
-          - bound-asset-digest
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - bound-handoff
-          - bound-asset-digest
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
         guarantees:
           - bound-handoff
           - bound-asset-digest
@@ -111,10 +100,6 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-assembly failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
         guarantees:
           - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-assembly.outputs
@@ -160,14 +145,6 @@ test_maps:
           - assembly-rejected
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > same-release-skills > skills preserve fixed source bytes and reject incomplete or unsafe packages
-        guarantees:
-          - assembly-rejected
-      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: source entrypoint > assembly bundle packages selected release skills
-        guarantees:
-          - assembly-rejected
-      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: dist entrypoint > assembly bundle packages selected release skills
         guarantees:
           - assembly-rejected
   - contract_id: contract.ci-release-assembly.outputs

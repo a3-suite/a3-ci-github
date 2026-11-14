@@ -20,6 +20,14 @@ cases:
     input:
       actions-root: actions
       runtime-root: runtime
+      untracked-distribution-path: runtime/installer/dist/extra.js
+  - contract_id: contract.repository-action-distribution.integrity
+    id: untracked-composite-reference
+    partition: runtime-context.repository-action-distribution-inconsistent
+    input:
+      actions-root: actions
+      runtime-root: runtime
+      untracked-distribution-path: scripts/example/run.sh
   - contract_id: contract.repository-action-distribution.integrity
     id: maintained-action-catalog
     partition: runtime-context.repository-action-catalog-inputs-available

@@ -36,4 +36,5 @@ cases:
     partition: runtime-context.action-input-invalid
     input:
       operation: verify
-      source-sha: mismatched-source
+      source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      expected-source-sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

@@ -8,7 +8,10 @@ cases:
       operation: assemble
       repository: owner/project
       public-skills:
-        - ci-github
+        - child-tool
+        - nested-tool
+        - root-tool
+        - sdd
       installer: false
     verifies:
       - bound-handoff

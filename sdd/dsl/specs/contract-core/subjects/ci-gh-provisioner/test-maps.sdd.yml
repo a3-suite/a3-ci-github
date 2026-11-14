@@ -3,11 +3,9 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: supported-runner-assets
-    tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > selects the supported runner assets
-        guarantees:
-          - checked-gh-available
+    pending:
+      - guarantees: [checked-gh-available]
+        reason: Linux/ARM64 の runner で取得した GitHub CLI が job の PATH に入ることを確かめるテストが無い。既存のテストは asset 名の選択だけを確かめる。
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: checked-release-asset
     tests:
@@ -80,13 +78,5 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-gh-provisioner failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-provision
-      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
-        symbol: source entrypoint > Action rejects an invalid version as provisioning failure
-        guarantees:
-          - diagnostic-failure-stage-provision
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects a checksum mismatch without exposing a binary
         guarantees:
           - diagnostic-failure-stage-provision

@@ -18,7 +18,7 @@ cases:
     partition: runtime-context.preset-assurance-read-only-output-requested
     input:
       audit-mode: read-only
-      output: remediation-output.json
+      output: report.json
   - contract_id: contract.ci-preset-assurance.verification
     id: pending-publication-actions
     partition: selected-action-unavailable
@@ -39,41 +39,69 @@ cases:
       selected-pending-action: ci-release-publisher
       preset: release-publication
   - contract_id: contract.ci-preset-assurance.verification
-    id: standard-publisher-drift
-    partition: ci-preset-assurance-applied-preset-drifted
-    input:
-      applied-preset-drift: standard-publisher-condition
-    verifies:
-      - ci-preset-assurance-drift-fails
-  - contract_id: contract.ci-preset-assurance.verification
     id: standard-authority-drift
     partition: ci-preset-assurance-applied-preset-drifted
     input:
-      applied-preset-drift: standard-authority-condition
+      applied-preset-drift: release-request-owner-version-input-removed
     verifies:
       - ci-preset-assurance-drift-fails
   - contract_id: contract.ci-preset-assurance.verification
     id: supplemental-phase-drift
     partition: supplemental-phase-drift
     input:
-      supplemental-phase-drift: bypass
+      supplemental-phase-drift: owner-adapter-with-installer-config-path
   - contract_id: contract.ci-preset-assurance.verification
     id: retired-release-entrypoints
     partition: retired-release-entrypoints-present
     input:
-      retired-release-entrypoints-file-or-invocation: any-registered-retired-release-entrypoint
+      retired-release-entrypoints-file-or-invocation: .ci/trusted/ci-release-publish.sh
       preset: release-publication
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.valid-preset-succeeds
     partition: ci-preset-assurance-applied-preset-valid
     input:
       audit-mode: read-only
-      preset: configured-preset
+      preset: release-request
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.drift-fails
     partition: ci-preset-assurance-applied-preset-drifted
     input:
-      applied-preset-drift: true
+      applied-preset-drift: canonical-workflow-contents-permission-write
+  - contract_id: contract.ci-preset-assurance.verification
+    id: unused-approved-pin-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: unused-approved-pin-runtime-edit
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: standard-quality-descriptor-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: quality-adapter-descriptor-not-regular-file
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: asset-lock-digest-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: asset-lock-canonical-sha256-mismatch
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: owner-descriptor-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: malformed-owner-descriptor-settings
+    verifies:
+      - ci-preset-assurance-drift-fails
+  - contract_id: contract.ci-preset-assurance.verification
+    id: quality-trigger-extension-drift
+    partition: ci-preset-assurance-applied-preset-drifted
+    input:
+      applied-preset-drift: quality-schedule-trigger-scalar
+    verifies:
+      - ci-preset-assurance-drift-fails
   - contract_id: contract.ci-preset-assurance.verification
     id: conditional-owner-extension
     partition: ci-preset-assurance-applied-preset-valid
@@ -82,6 +110,7 @@ cases:
       applied-preset: canonical-remote-caller-with-selected-executable-owner-adapter
     verifies:
       - ci-preset-assurance-valid-preset-succeeds
+      - valid-consumer-unchanged
   - contract_id: contract.ci-preset-assurance.verification
     id: supplemental-static-selections
     partition: ci-preset-assurance-applied-preset-valid
@@ -90,11 +119,6 @@ cases:
       applied-preset: disabled
     verifies:
       - ci-preset-assurance-valid-preset-succeeds
-  - contract_id: contract.ci-preset-assurance.verification
-    id: supplemental-snapshot-reachability-drift
-    partition: supplemental-phase-drift
-    input:
-      supplemental-phase-drift: missing-snapshot-binding
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: detailed-failure-asset-lock
     partition: runtime-context.failure-diagnostic-required
@@ -106,13 +130,13 @@ cases:
     id: case.ci-preset-assurance.asset-lock-generated
     partition: ci-preset-assurance-lock-input-valid
     input:
-      source-revision: full-source-revision
+      source-revision: cccccccccccccccccccccccccccccccccccccccc
       release-tag: v0.9.0
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
     partition: ci-preset-assurance-lock-input-invalid
     input:
-      source-revision: noncanonical-source-revision
+      source-revision: not-a-full-sha
   - contract_id: contract.ci-preset-assurance.asset-lock
     id: case.ci-preset-assurance.asset-lock-invalid-release-tag-rejected
     partition: ci-preset-assurance-lock-input-invalid
@@ -129,7 +153,7 @@ cases:
     id: canonical-lock-bindings
     partition: runtime-context.ci-preset-assurance-canonical-lock-input
     input:
-      source-revision: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      source-revision: cccccccccccccccccccccccccccccccccccccccc
       release-tag: v0.9.0
       preset: quality-gate
       consumer-assets: canonical-with-complete-pin-projection
@@ -137,6 +161,6 @@ cases:
     id: asset-release-preset-drift
     partition: ci-preset-assurance-applied-preset-drifted
     input:
-      applied-preset-drift: asset-release-callee-or-shared-caller-preset
+      applied-preset-drift: release-and-asset-release-presets-sharing-caller-destination
     verifies:
       - ci-preset-assurance-drift-fails

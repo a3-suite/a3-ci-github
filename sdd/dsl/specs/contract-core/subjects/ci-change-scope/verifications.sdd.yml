@@ -10,12 +10,12 @@ cases:
     id: valid-change-range
     partition: change-range-input-present
     input:
-      base-sha: "0000000000000000000000000000000000000001"
-      head-sha: "0000000000000000000000000000000000000002"
+      base-sha: SHA of a commit in the checked-out repository
+      head-sha: SHA of the same commit or a descendant of base-sha
       docs-only-patterns: docs/**,README.md,**/*.md
   - contract_id: contract.ci-change-scope.outputs
     id: invalid-sha-unresolved
     partition: runtime-context.action-input-insufficient
     input:
-      base-sha: short
-      head-sha: short
+      base-sha: --relative=src
+      head-sha: SHA of a commit in the checked-out repository

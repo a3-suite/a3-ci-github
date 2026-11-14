@@ -10,7 +10,7 @@ cases:
     id: ci-quality-workflow-reusable-binding
     partition: ci-quality-workflow-caller-selected
     input:
-      caller-source: main-quality-caller
+      caller-source: workflows/quality/quality-gate.yml
   - contract_id: contract.ci-quality-workflow.execution
     id: ci-quality-workflow-success
     partition: ci-quality-workflow-canonical-source-available

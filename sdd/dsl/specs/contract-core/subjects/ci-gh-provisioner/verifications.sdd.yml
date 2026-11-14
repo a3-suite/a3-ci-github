@@ -10,7 +10,7 @@ cases:
     id: supported-runner-assets
     partition: runtime-context.gh-release-asset-valid
     input:
-      runner-os-arch: supported-matrix
+      runner-os-arch: Linux/ARM64
   - contract_id: contract.ci-gh-provisioner.provision
     id: checked-release-asset
     partition: runtime-context.gh-release-asset-valid

@@ -25,14 +25,16 @@ contracts:
         meaning: "Precondition prepared by the case: version reported by the toolchain."
       - name: platform-manifest
         meaning: "Received by the contract target: content of the platform manifest file."
+      - name: output-destination-state
+        meaning: "Precondition prepared by the case: state of the output destination before the invocation."
     observations:
       - summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
         boundary: boundary.script-result
         fields:
           - selector: outcome
-            meaning: Success only after build, package, checksum, manifest, and artifact verification; failure otherwise.
+            meaning: Step outcome of the release build invocation; success or failure.
           - selector: final-output
-            meaning: A verified asset is published on success; failure leaves no agent-owned final asset and preserves a destination owned by another process.
+            meaning: "State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged."
           - selector: diagnostic-codes
             meaning: Stable diagnostic codes reported by the failed step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -54,6 +56,13 @@ contracts:
           field: outcome
           in:
             - success
+      - id: rust-release-final-output-verified-on-success
+        applies_to:
+          - runtime-context.rust-release-build-commands-succeed
+        claim:
+          field: final-output
+          in:
+            - verified
       - id: rust-release-final-output-safe
         applies_to:
           - runtime-context.rust-release-build-inputs-match-authority
@@ -93,8 +102,6 @@ contracts:
   - id: contract.ci-rust-release-build.outputs
     summary: The Composite Action maps shared script success to completed output and propagates script failure.
     inputs:
-      - name: arguments
-        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: language-profile
         meaning: "Received by the contract target: language profile selected by the caller."
       - name: platform-id
@@ -108,7 +115,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: completed
-            meaning: Whether build, package, checksum, manifest, and artifact verification all succeeded.
+            meaning: Whether the release build script reported its run as completed.
           - selector: outcome
             meaning: The success or failure outcome of the release build step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.

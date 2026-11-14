@@ -92,7 +92,7 @@ cases:
     partition: runtime-context.supplemental-phase-invalid
     input:
       implementation: standard-installer
-      config: committed-product-declaration
+      config: product declaration changed from the committed source
       operation: build-platform
     verifies:
       - phase-rejected
@@ -227,7 +227,7 @@ cases:
       implementation: standard-installer
       declaration: standard-public-entry-name
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - standard-installer-publication-assets-produced
       - standard-installer-source-snapshots-excluded
@@ -238,7 +238,7 @@ cases:
       implementation: standard-installer
       declaration: nonstandard-windows-shared-entry-name
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
       - phase-diagnostic
@@ -247,21 +247,21 @@ cases:
     partition: runtime-context.failure-diagnostic-required
     input:
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
       owner-exit: 23
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: assembly-phase
     partition: runtime-context.supplemental-phase-valid
     input:
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: owner-failure
     partition: runtime-context.supplemental-phase-invalid
     input:
       owner-exit: 23
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -271,7 +271,7 @@ cases:
       implementation: standard-installer
       config: committed-product-declaration
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory whose platform candidate was modified and re-hashed in platform-record.json
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -281,7 +281,7 @@ cases:
       implementation: standard-installer
       release-targets: selected-and-unselected
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: standard-platform-binding
     partition: runtime-context.supplemental-phase-invalid
@@ -289,7 +289,7 @@ cases:
       implementation: standard-installer
       platform-binding: mismatched-id
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -299,7 +299,7 @@ cases:
       implementation: standard-installer
       checksum: noncanonical-bytes
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -309,7 +309,7 @@ cases:
       implementation: standard-installer
       checkout: CRLF
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: standard-source-content
     partition: runtime-context.supplemental-phase-invalid
@@ -317,7 +317,7 @@ cases:
       implementation: standard-installer
       source-change: beyond-CRLF-to-LF
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -327,7 +327,7 @@ cases:
       implementation: standard-installer
       provider-mutates: newline-only
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -337,7 +337,7 @@ cases:
       implementation: standard-installer
       transferred-evidence: preserved
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: standard-evidence-missing
     partition: runtime-context.supplemental-phase-invalid
@@ -345,7 +345,7 @@ cases:
       implementation: standard-installer
       transferred-evidence: missing
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -355,7 +355,7 @@ cases:
       implementation: standard-installer
       transferred-evidence: modified
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -365,7 +365,7 @@ cases:
       implementation: standard-installer
       transferred-evidence: extra
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -374,7 +374,7 @@ cases:
     input:
       failure: owner-process-diagnostic
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
@@ -382,7 +382,7 @@ cases:
     partition: runtime-context.supplemental-phase-invalid
     input:
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
       failure: primary-then-cleanup
     verifies:
       - diagnostic-cleanup-status-mismatch
@@ -394,7 +394,7 @@ cases:
     partition: runtime-context.supplemental-phase-invalid
     input:
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
       failure: cleanup-after-successful-primary
     verifies:
       - diagnostic-cleanup-only-code-mismatch
@@ -407,7 +407,7 @@ cases:
     partition: runtime-context.supplemental-phase-invalid
     input:
       operation: assemble
-      supplemental-build-root: supplemental-build
+      supplemental-build-root: relative directory holding the supplemental build-platform output
       owner-mutates: supplemental-input
     verifies:
       - phase-rejected

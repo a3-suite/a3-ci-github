@@ -56,7 +56,7 @@ test('entrypoint resolves an annotated tag to its commit', async () => {
     GITHUB_OUTPUT: output,
     INPUT_REPOSITORY: 'owner/repo',
     INPUT_TAG: 'v1.2.3',
-    'INPUT_GITHUB-TOKEN': 'token',
+    'INPUT_GITHUB-TOKEN': 'test-token',
     GITHUB_API_URL: `http://127.0.0.1:${(address as AddressInfo).port}`,
   } as Record<string, string>;
   // Act

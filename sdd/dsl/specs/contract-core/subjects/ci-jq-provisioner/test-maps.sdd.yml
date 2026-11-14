@@ -3,11 +3,9 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: supported-runner-assets
-    tests:
-      - path: actions/ci-jq-provisioner/tests/provision.test.ts
-        symbol: jq provisioning > selects the supported runner assets
-        guarantees:
-          - checked-jq-available
+    pending:
+      - guarantees: [checked-jq-available]
+        reason: macOS/ARM64 の runner で取得した jq が job の PATH に入ることを確かめるテストが無い。既存のテストは asset 名の選択だけを確かめる。
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: checked-release-asset
     tests:
@@ -73,13 +71,5 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-jq-provisioner failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-provision
-      - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
-        symbol: source entrypoint > Action rejects an invalid version as provisioning failure
-        guarantees:
-          - diagnostic-failure-stage-provision
-      - path: actions/ci-jq-provisioner/tests/provision.test.ts
-        symbol: jq provisioning > rejects a checksum mismatch without exposing a binary
         guarantees:
           - diagnostic-failure-stage-provision

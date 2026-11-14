@@ -20,7 +20,7 @@ contracts:
         boundary: boundary.script-result
         fields:
           - selector: outcome
-            meaning: Success when the Rust profile and source SHA match the authority; failure otherwise.
+            meaning: Step outcome of the source gate invocation; success or failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -54,8 +54,6 @@ contracts:
   - id: contract.ci-rust-source-gate.outputs
     summary: The Composite Action maps shared script success to verified output and propagates script failure.
     inputs:
-      - name: arguments
-        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: language-profile
         meaning: "Received by the contract target: language profile selected by the caller."
       - name: authority-path
@@ -65,7 +63,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: verified
-            meaning: Whether the authority language profile and source SHA match the checked-out Rust source.
+            meaning: Whether the source gate script reported the checked-out source as bound to the release authority.
           - selector: outcome
             meaning: The success or failure outcome of the source verification step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.

@@ -36,10 +36,6 @@ test_maps:
         symbol: runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context
         guarantees:
           - diagnostic-failure-stage-processing
-      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command
-        guarantees:
-          - diagnostic-failure-stage-processing
   - contract_id: contract.ci-github-toolchain-verifier.outputs
     case_id: matching-selected-tool-versions
     tests:
@@ -56,12 +52,6 @@ test_maps:
           - verification-failure-propagated
   - contract_id: contract.ci-github-toolchain-verifier.outputs
     case_id: detailed-failure-outputs
-    tests:
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
-        symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command
-        guarantees:
-          - diagnostic-failure-stage-outputs
+    pending:
+      - guarantees: [diagnostic-failure-stage-outputs]
+        reason: Composite Action に無効な mode を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。

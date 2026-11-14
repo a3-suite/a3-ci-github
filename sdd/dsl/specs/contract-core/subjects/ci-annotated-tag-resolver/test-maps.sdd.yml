@@ -30,7 +30,3 @@ test_maps:
         symbol: ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-annotated-tag-resolver/tests/tag.test.ts
-        symbol: resolveAnnotatedTag(string,string,string,string,fetch) > retains safe provider correlation without the response body or token
-        guarantees:
-          - diagnostic-failure-stage-outputs

@@ -10,80 +10,88 @@ cases:
     id: valid-platform-manifest
     partition: runtime-context.platform-manifest-valid
     input:
-      manifest-path: .ci/release/platforms.yml
+      manifest-path: platforms.yml in a new temporary directory
+      manifest-document:
+        platforms:
+          - id: linux-x64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
     verifies:
       - platform-matrix-produced
+      - manifest-matrix-binding
   - contract_id: contract.ci-platform-matrix.outputs
     id: invalid-platform-manifest
     partition: runtime-context.platform-manifest-invalid
     input:
-      manifest-path: .ci/release/invalid-platforms.yml
+      manifest-path: platforms.yml in a new temporary directory
+      manifest-document:
+        platforms:
+          - id: linux-x64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
   - contract_id: contract.ci-platform-matrix.outputs
     id: valid-quality-selection
     partition: runtime-context.quality-selection-shared-checks-omitted
     input:
-      manifest-path: .ci/platform-manifest.yml
-      selection-path: .ci/quality-platforms.yml
+      manifest-path: platforms.yml in a new temporary directory
+      manifest-document:
+        platforms:
+          - id: linux-x64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - id: macos-arm64
+            runner: macos-14
+            target: aarch64-apple-darwin
+      selection-path: selection.yml in the same temporary directory
       selection-document:
         platforms:
+          - id: macos-arm64
           - id: linux-x64
     verifies:
       - platform-matrix-produced
       - ordered-quality-matrix-produced
       - ordered-expected-platforms-produced
-  - contract_id: contract.ci-platform-matrix.outputs
-    id: invalid-quality-selection
-    partition: runtime-context.quality-platform-selection-invalid
-    input:
-      manifest-path: .ci/platform-manifest.yml
-      selection-path: .ci/invalid-quality-platforms.yml
-  - contract_id: contract.ci-platform-matrix.outputs
-    id: manifest-identity
-    partition: runtime-context.platform-manifest-valid
-    input:
-      manifest-path: .ci/platform-manifest.yml
-    verifies:
-      - manifest-matrix-binding
-  - contract_id: contract.ci-platform-matrix.outputs
-    id: selection-identity
-    partition: runtime-context.quality-selection-shared-checks-omitted
-    input:
-      selection-document:
-        platforms:
-          - id: windows-x64
-          - id: linux-x64
-    verifies:
       - manifest-matrix-binding
       - quality-id-order
       - quality-runner-binding
       - expected-id-order
       - shared-checks-absence
   - contract_id: contract.ci-platform-matrix.outputs
-    id: shared-checks-identity
-    partition: runtime-context.quality-selection-shared-checks-supplied
+    id: invalid-quality-selection
+    partition: runtime-context.quality-platform-selection-invalid
     input:
+      manifest-path: platforms.yml in a new temporary directory
+      manifest-document:
+        platforms:
+          - id: linux-x64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+      selection-path: selection.yml in the same temporary directory
       selection-document:
         platforms:
-          - id: windows-x64
-          - id: linux-x64
-        sharedStandardChecks: true
-    verifies:
-      - manifest-matrix-binding
-      - quality-id-order
-      - quality-runner-binding
-      - expected-id-order
-      - shared-checks-value
+          - id: unknown
   - contract_id: contract.ci-platform-matrix.outputs
     id: valid-quality-selection-with-shared-checks
     partition: runtime-context.quality-selection-shared-checks-supplied
     input:
-      manifest-path: .ci/platform-manifest.yml
-      selection-path: .ci/quality-platforms.yml
+      manifest-path: platforms.yml in a new temporary directory
+      manifest-document:
+        platforms:
+          - id: macos-arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+      runner-policy: trusted
+      selection-path: selection.yml in the same temporary directory
       selection-document:
         platforms:
-          - id: linux-x64
+          - id: macos-arm64
         sharedStandardChecks: true
     verifies:
       - platform-matrix-produced
       - ordered-quality-matrix-produced
       - ordered-expected-platforms-produced
+      - manifest-matrix-binding
+      - quality-id-order
+      - quality-runner-binding
+      - expected-id-order
+      - shared-checks-value

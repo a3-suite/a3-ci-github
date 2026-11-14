@@ -10,7 +10,7 @@ cases:
     id: valid-handoff
     partition: handoff-input-present
     input:
-      handoff-root: .ci/handoff
+      handoff-root: new temporary directory holding handoff.json, manifest.json, and artifact.bin
       descriptor: handoff.json
       source-sha: "0000000000000000000000000000000000000001"
       version: 1.0.0
@@ -19,7 +19,7 @@ cases:
     id: source-identity-mismatch-rejected
     partition: runtime-context.action-input-invalid
     input:
-      handoff-root: .ci/handoff
+      handoff-root: new temporary directory holding handoff.json, manifest.json, and artifact.bin
       descriptor: handoff.json
       source-sha: mismatched-source
       version: 1.0.0

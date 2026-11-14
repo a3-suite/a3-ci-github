@@ -25,8 +25,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      arguments:
-        - invalid
+      language-profile: unsupported
   - contract_id: contract.ci-rust-source-gate.outputs
     id: matching-rust-source-authority
     partition: runtime-context.rust-source-script-succeeded

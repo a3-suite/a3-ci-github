@@ -11,6 +11,10 @@ contracts:
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
       - name: manifest-path
         meaning: "Received by the contract target: platform manifest path."
+      - name: manifest-document
+        meaning: "Received by the contract target: content of the platform manifest file."
+      - name: runner-policy
+        meaning: "Received by the contract target: runner policy that selects the permitted runner labels."
       - name: selection-path
         meaning: "Received by the contract target: platform selection file path."
       - name: selection-document

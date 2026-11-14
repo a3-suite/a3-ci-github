@@ -20,20 +20,7 @@ test_maps:
     case_id: invalid-bindings
     tests:
       - path: actions/ci-release-authority/tests/authority.test.ts
-        symbol: ci-release-authority-decision > accepts explicit owner version and rejects tag-derived or changed decision
-        guarantees:
-          - rejected
-      - path: actions/ci-release-authority/tests/authority.test.ts
         symbol: ci-release-authority-runtime > authority rejects untrusted runs, moved tags, owner drift, snapshot drift and expired approval without authority output
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: actions/ci-release-authority/tests/authority.test.ts
-        symbol: ci-release-authority-runtime > authority accepts read-only repository metadata without claiming publish capability and rejects replay
-        guarantees:
-          - rejected
-      - path: actions/ci-release-authority/tests/authority.test.ts
-        symbol: ci-release-authority-runtime > authority rejects unsupported implementation, profile and owner with a valid snapshot digest
         guarantees:
           - rejected
           - no-success-outputs
@@ -61,10 +48,6 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-authority failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-authority/tests/authority.test.ts
-        symbol: ci-release-authority-runtime > authority rejection retains the failing verification stage and expected/observed identity
         guarantees:
           - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-authority.outputs

@@ -10,23 +10,23 @@ cases:
     id: successful-quality-result
     partition: summary-input-present
     input:
-      summary-json: '{"tests":[{"unit":"contract","execution":"node","result":"success","evidence":"tests","collection":"完了"}]}'
+      summary-json: '{"jobs":[{"unit":"unit","execution":"test","result":"success","evidence":"evidence.log","collection":"完了"}]}'
   - contract_id: contract.ci-quality-summary.outputs
     id: raw-job-results-normalized
     partition: summary-input-present
     input:
-      summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true,"evidence":"run"},{"unit":"optional","execution":"optional","rawResult":"skipped","applicable":false,"evidence":"owner-policy","reason":"disabled by owner policy"}]}'
+      summary-json: '{"jobs":[{"unit":"build","execution":"build","rawResult":"failure","applicable":true,"evidence":"run"}]}'
   - contract_id: contract.ci-quality-summary.outputs
     id: missing-summary-path-rejected
     partition: runtime-context.action-input-invalid
     input:
-      summary-json: valid
+      summary-json: '{"jobs":[{"unit":"unit","execution":"test","result":"success","evidence":"evidence.log","collection":"完了"}]}'
       github-step-summary: unset
   - contract_id: contract.ci-quality-summary.outputs
     id: unresolved-quality-evidence-rejected
     partition: runtime-context.action-input-invalid
     input:
-      summary-json: '{"tests":[{"unit":"unresolved","execution":"missing evidence","result":"判定不能","evidence":"missing","collection":"取得不可","reason":"missing evidence"}]}'
+      summary-json: '{"jobs":[{"unit":"unit","execution":"test","result":"判定不能","evidence":"evidence.log","collection":"取得不可","reason":"unknown"}]}'
   - contract_id: contract.ci-quality-summary.outputs
     id: excluded-rows-ignored-in-aggregation
     partition: summary-input-present
@@ -73,4 +73,4 @@ cases:
       row-evidence: null
       server-url: https://github.com
       repository: owner/project
-      run-id: "123"
+      run-id: "42"

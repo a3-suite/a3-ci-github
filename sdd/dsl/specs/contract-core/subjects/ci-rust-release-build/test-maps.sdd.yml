@@ -8,22 +8,6 @@ test_maps:
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
         guarantees:
           - rust-release-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite
-        guarantees:
-          - rust-release-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package failure leaves no final or temporary output directory
-        guarantees:
-          - rust-release-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package preserves an output directory created immediately before publication
-        guarantees:
-          - rust-release-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package removes its claimed output when publication fails
-        guarantees:
-          - rust-release-final-output-safe
   - contract_id: contract.ci-rust-release-build.processing
     case_id: completed-rust-release-processing
     tests:
@@ -31,10 +15,7 @@ test_maps:
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
         guarantees:
           - rust-release-processing-succeeds
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite
-        guarantees:
-          - rust-release-processing-succeeds
+          - rust-release-final-output-verified-on-success
   - contract_id: contract.ci-rust-release-build.processing
     case_id: rejected-rust-release-processing
     tests:
@@ -42,8 +23,12 @@ test_maps:
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
         guarantees:
           - rust-release-processing-fails
+          - rust-release-rejected-final-output-safe
+  - contract_id: contract.ci-rust-release-build.processing
+    case_id: existing-output-rejected
+    tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Unix package and verification bind archive, checksum, manifest, and source without overwrite
+        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
         guarantees:
           - rust-release-processing-fails
           - rust-release-rejected-final-output-safe
@@ -62,20 +47,11 @@ test_maps:
         guarantees:
           - rust-release-processing-fails
           - rust-release-rejected-final-output-safe
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-scripts-regression > Windows build stops when native toolchain setup fails
-        guarantees:
-          - rust-release-processing-fails
-          - rust-release-rejected-final-output-safe
   - contract_id: contract.ci-rust-release-build.processing
     case_id: detailed-failure-processing
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context
-        guarantees:
-          - diagnostic-failure-stage-processing
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-release-build.outputs
@@ -94,12 +70,6 @@ test_maps:
           - release-build-failure-propagated
   - contract_id: contract.ci-rust-release-build.outputs
     case_id: detailed-failure-outputs
-    tests:
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
-        guarantees:
-          - diagnostic-failure-stage-outputs
+    pending:
+      - guarantees: [diagnostic-failure-stage-outputs]
+        reason: Composite Action に不正な language-profile を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。

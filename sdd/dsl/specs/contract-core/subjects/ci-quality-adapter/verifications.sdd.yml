@@ -24,7 +24,7 @@ cases:
     id: standard-selection-rejected
     partition: runtime-context.action-input-invalid
     input:
-      standard-bundle-id: unregistered-bundle
+      standard-bundle-id: ../unknown
   - contract_id: contract.ci-quality-adapter.outputs
     id: standard-python-adapter-execution
     partition: quality-adapter-standard-bundle-present
@@ -41,7 +41,7 @@ cases:
     id: writable-adapter-rejected
     partition: runtime-context.action-input-invalid
     input:
-      bundle-path: writable-adapter.yml
+      bundle-path: adapter.yml declaring the trusted-control execution boundary
   - contract_id: contract.ci-quality-adapter.outputs
     id: toolchain-version-report-rejected
     partition: runtime-context.quality-adapter-toolchain-version-report-rejected

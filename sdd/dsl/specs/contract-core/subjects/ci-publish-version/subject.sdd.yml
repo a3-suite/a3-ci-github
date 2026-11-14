@@ -17,6 +17,8 @@ contracts:
         meaning: "Received by the contract target: version template in the plan."
       - name: components
         meaning: "Received by the contract target: version components in the plan."
+      - name: publish-version
+        meaning: "Received by the contract target: exact publish version in the plan."
     observations:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output

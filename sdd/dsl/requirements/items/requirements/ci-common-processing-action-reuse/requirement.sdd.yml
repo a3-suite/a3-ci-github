@@ -6,7 +6,10 @@ requirements:
     summary: 再利用可能な共通 CI 処理を、project-local な複製ではなく固定 SHA の GitHub Action として提供する
     rationale: >-
       共通処理の実装正本を Action 提供側へ集約し、利用 project ごとの実装複製と runtime 依存の重複を避けながら、
-      workflow と owner が持つ信頼、権限、policy の境界を維持するため
+      workflow と owner が持つ信頼、権限、policy の境界を維持するため。
+      標準 installer の公開入口の構成（Windows 公開入口と Unix 共有入口、Unix の対象別導入方式の維持）と、
+      標準 Rust 品質 bundle が利用者指定の版と設定ファイルだけを正本として依存ポリシー検査を実行する方式は、
+      利用者が指定したため要求として固定する
     subject:
       namespace: ci
       key: common-processing-action-reuse
@@ -20,7 +23,7 @@ requirements:
       - validated read-only quality descriptor を固定 source checkout に対して実行し、実行状態を取得できる
       - Action へ移した旧実装を project-local fallback として残さない
       - 標準installerを選択した場合、providerはinstaller ownerの命名契約に従うWindows公開入口とUnix共有入口を生成・検証し、製品宣言との自己整合だけで標準適合としない。Unixの対象別導入方式は維持する
-      - 公開スキルを選択した場合、製品と同じ固定source・versionに拘束した必要なスキルだけを同じ1回のReleaseで提供し、開発・一時・コンパイル残骸を除外する。installerとの併用でも各owner証跡を保持し、READMEの導入・削除案内を同梱構成へ整合させる
+      - 公開スキルを選択した場合、製品と同じ固定source・versionに拘束した必要なスキルだけを同じ1回のReleaseで提供し、開発・一時・コンパイル残骸を除外する。installerとの併用でも各owner証跡を保持し、利用者向けの導入・削除案内を同梱構成と一致させる
       - quality descriptor が要求する toolchain version と実際の version の一致を確認でき、不一致を成功扱いにしない
       - 標準 Rust 品質 bundle は、利用者が版と設定ファイルを指定した場合だけ、その設定ファイルを正本とする依存ポリシー検査を実行する。指定しない場合は未実行として結果に記録し、成功として扱わない。設定ファイルを確認できない場合は既定の規則で代替せず停止する
     depends_on:

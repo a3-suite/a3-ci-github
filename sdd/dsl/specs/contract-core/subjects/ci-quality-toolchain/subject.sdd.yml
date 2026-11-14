@@ -47,14 +47,18 @@ contracts:
             meaning: Preparation step outcome.
           - selector: resolved-toolchain-version
             meaning: Published resolved toolchain version.
-          - selector: unselected-setup-state
-            meaning: Occurrence of dependency setup for an unselected language profile, for an optional tool whose version input is empty, or for an auxiliary tool when auxiliary-tools is skip.
+          - selector: unselected-profile-setup-state
+            meaning: Occurrence state (present or absent) of dependency setup for a language profile other than the selected one.
+          - selector: unrequested-optional-tool-setup-state
+            meaning: Occurrence state (present or absent) of setup for an optional tool whose version input is empty.
+          - selector: skipped-auxiliary-tool-setup-state
+            meaning: Occurrence state (present or absent) of setup for an auxiliary tool when auxiliary-tools is skip.
           - selector: resolved-selector-comparison
             meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
           - selector: source-fallback-state
-            meaning: Occurrence of source installation after registered binary acquisition fails.
+            meaning: Occurrence state (present or absent) of source installation after registered binary acquisition fails.
           - selector: failed-path-export-state
-            meaning: Occurrence of a PATH export after registered binary acquisition fails.
+            meaning: Occurrence state (present or absent) of a PATH export after registered binary acquisition fails.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -106,7 +110,21 @@ contracts:
         applies_to:
           - runtime-context.quality-toolchain-request-valid
         claim:
-          field: unselected-setup-state
+          field: unselected-profile-setup-state
+          in:
+            - absent
+      - id: optional-tool-setup-only-when-requested
+        applies_to:
+          - runtime-context.quality-toolchain-request-valid
+        claim:
+          field: unrequested-optional-tool-setup-state
+          in:
+            - absent
+      - id: auxiliary-tool-setup-skipped-on-request
+        applies_to:
+          - runtime-context.quality-toolchain-request-valid
+        claim:
+          field: skipped-auxiliary-tool-setup-state
           in:
             - absent
       - id: resolved-version-satisfies-selector

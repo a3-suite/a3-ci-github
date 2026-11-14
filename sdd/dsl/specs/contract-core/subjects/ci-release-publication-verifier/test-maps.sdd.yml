@@ -17,27 +17,7 @@ test_maps:
           - observation-status
           - observation-file
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-empty"
-        guarantees:
-          - observation-status
-          - observation-file
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-bound"
-        guarantees:
-          - observation-status
-          - observation-file
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent"
-        guarantees:
-          - observation-status
-          - observation-file
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-empty"
-        guarantees:
-          - observation-status
-          - observation-file
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-bound"
         guarantees:
           - observation-status
           - observation-file
@@ -85,10 +65,6 @@ test_maps:
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-malformed"
-        guarantees:
-          - verification-rejected
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
         guarantees:
           - verification-rejected
@@ -126,10 +102,6 @@ test_maps:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
-        guarantees:
-          - verification-rejected
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-malformed"
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -399,10 +371,6 @@ test_maps:
     tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-verifier failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
         guarantees:
           - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-publication-verifier.outputs

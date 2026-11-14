@@ -30,10 +30,6 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
-        guarantees:
-          - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: platform-phase
     tests:
@@ -183,17 +179,7 @@ test_maps:
     case_id: standard-checkout-eol
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
         guarantees:
           - phase-success
           - phase-output
@@ -376,17 +362,7 @@ test_maps:
     case_id: standard-checkout-eol
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
         guarantees:
           - phase-success
           - phase-output
@@ -457,40 +433,14 @@ test_maps:
           - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: primary-and-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
+    pending:
+      - guarantees: [diagnostic-cleanup-status-mismatch, diagnostic-cleanup-state-inference, diagnostic-cleanup-residual-claim, diagnostic-cleanup-extra-field]
+        reason: 写像していた e2e テストは build-platform で cleanup 失敗を起こし、assemble の cleanup 失敗を与えるテストが無い
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: sole-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
+    pending:
+      - guarantees: [diagnostic-cleanup-only-code-mismatch, diagnostic-cleanup-status-mismatch, diagnostic-cleanup-state-inference, diagnostic-cleanup-residual-claim, diagnostic-cleanup-extra-field]
+        reason: 写像していた e2e テストは build-platform で cleanup 失敗を起こし、assemble の cleanup 失敗を与えるテストが無い
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: input-mutation
     tests:

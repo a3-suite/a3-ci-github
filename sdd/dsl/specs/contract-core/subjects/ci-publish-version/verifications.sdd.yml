@@ -10,7 +10,8 @@ cases:
     id: valid-version-plan
     partition: runtime-context.publish-version-plan-valid
     input:
-      version-plan-json: .ci/version-plan.json
+      strategy: exact
+      publish-version: 1.2.3
   - contract_id: contract.ci-publish-version.outputs
     id: invalid-plan-rejected
     partition: runtime-context.action-input-invalid

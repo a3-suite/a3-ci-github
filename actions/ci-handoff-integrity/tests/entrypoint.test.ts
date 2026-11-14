@@ -11,24 +11,25 @@ import { actionEntrypointArguments } from '../../../tests/support/action-entrypo
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
+const sourceSha = '0000000000000000000000000000000000000001';
 const createHandoff = () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-handoff-integrity-'));
   const body = 'payload';
   fs.writeFileSync(path.join(tempRoot, 'artifact.bin'), body);
   const digest = crypto.createHash('sha256').update(body).digest('hex');
   fs.writeFileSync(path.join(tempRoot, 'manifest.json'), JSON.stringify([{ path: 'artifact.bin', sha256: digest }]));
-  fs.writeFileSync(path.join(tempRoot, 'handoff.json'), JSON.stringify({ schema: 'ci.handoff.v1', source_sha: 'source', version: '1.0.0', target_identity: 'linux', manifest: 'manifest.json' }));
+  fs.writeFileSync(path.join(tempRoot, 'handoff.json'), JSON.stringify({ schema: 'ci.handoff.v1', source_sha: sourceSha, version: '1.0.0', target_identity: 'linux-x64', manifest: 'manifest.json' }));
   return tempRoot;
 };
-const runBundled = (handoffRoot: string, sourceSha: string) => {
+const runBundled = (handoffRoot: string, inputSourceSha: string) => {
   const output = path.join(handoffRoot, 'outputs');
   fs.writeFileSync(output, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output } as Record<string, string>;
   env['INPUT_HANDOFF-ROOT'] = handoffRoot;
   env['INPUT_DESCRIPTOR'] = 'handoff.json';
-  env['INPUT_SOURCE-SHA'] = sourceSha;
+  env['INPUT_SOURCE-SHA'] = inputSourceSha;
   env['INPUT_VERSION'] = '1.0.0';
-  env['INPUT_TARGET-IDENTITY'] = 'linux';
+  env['INPUT_TARGET-IDENTITY'] = 'linux-x64';
   return { output, result: spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' }) };
 };
 
@@ -39,7 +40,7 @@ test('entrypoint validates a handoff', () => {
   const handoffRoot = createHandoff();
   const manifestDigest = crypto.createHash('sha256').update(fs.readFileSync(path.join(handoffRoot, 'manifest.json'))).digest('hex');
   // Act
-  const run = runBundled(handoffRoot, 'source');
+  const run = runBundled(handoffRoot, sourceSha);
   // Assert
   expect(run.result.status).toBe(0);
   const outputs = fs.readFileSync(run.output, 'utf8');
@@ -54,7 +55,7 @@ test('entrypoint fails an identity mismatch', () => {
   // Arrange
   const handoffRoot = createHandoff();
   // Act
-  const run = runBundled(handoffRoot, 'other');
+  const run = runBundled(handoffRoot, 'mismatched-source');
   // Assert
   expect(run.result.status).not.toBe(0);
   const outputs = fs.readFileSync(run.output, 'utf8');
@@ -71,13 +72,13 @@ test('entrypoint retains the failed artifact path and digest comparison', (t) =>
   const expected = crypto.createHash('sha256').update('payload').digest('hex');
   fs.writeFileSync(path.join(handoffRoot, 'artifact.bin'), 'changed');
   const before = fs.readFileSync(path.join(handoffRoot, 'manifest.json'));
-  const run = runBundled(handoffRoot, 'source');
+  const run = runBundled(handoffRoot, sourceSha);
   const diagnosticLine = run.result.stderr.split('\n').find(line => line.startsWith('ci-failure-diagnostic:'));
   const evidence = JSON.parse(diagnosticLine?.slice('ci-failure-diagnostic:'.length) ?? '{}');
   expect(run.result.status).toBe(1);
   expect(evidence.classification).toMatchObject({ stage: 'artifact-digest-comparison', reason: 'handoff-manifest-checksum-mismatch' });
   expect(evidence.comparison).toEqual({ field: 'artifact-sha256', path: 'artifact.bin', expected, observed: crypto.createHash('sha256').update('changed').digest('hex'), observedSize: 7, expectedSize: 'not-declared' });
-  expect(evidence.context.inputs).toMatchObject({ source: 'source', version: '1.0.0', target: 'linux' });
+  expect(evidence.context.inputs).toMatchObject({ source: sourceSha, version: '1.0.0', target: 'linux-x64' });
   expect(fs.readFileSync(path.join(handoffRoot, 'manifest.json'))).toEqual(before);
   expect(fs.readFileSync(path.join(handoffRoot, 'artifact.bin'), 'utf8')).toBe('changed');
   expect(fs.readFileSync(run.output, 'utf8')).not.toMatch(/^(descriptor|manifest|manifest-digest|entries)<</m);

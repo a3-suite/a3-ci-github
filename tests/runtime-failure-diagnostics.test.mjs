@@ -66,6 +66,7 @@ describe('runtime failure diagnostics', () => {
     expect(evidence.classification.subject).toBe(subject);
     expect(evidence['execution-state'].exit).toBe(result.status);
     expect(evidence['execution-state'].write).toBe('not-started');
+    expect(evidence.classification.stage).toBeTruthy();
     expect(evidence['next-check'].rule).toBe(evidence.classification.stage);
   });
   // contract_id: contract.ci-failure-diagnostics.actionable

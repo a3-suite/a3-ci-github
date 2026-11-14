@@ -41,8 +41,14 @@ contracts:
             meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
           - selector: unsubstantiated-context-state
             meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
-          - selector: unsafe-diagnostic-disclosure-state
-            meaning: Occurrence state (present or absent) of protected inputs, unchecked child/provider output, signed URLs, or whole input/response/argv/environment payloads exposed in diagnostics.
+          - selector: protected-input-disclosure-state
+            meaning: Occurrence state (present or absent) of protected input values exposed in diagnostics.
+          - selector: unchecked-output-disclosure-state
+            meaning: Occurrence state (present or absent) of unchecked child process or provider output exposed in diagnostics.
+          - selector: signed-url-disclosure-state
+            meaning: Occurrence state (present or absent) of signed URLs exposed in diagnostics.
+          - selector: whole-payload-disclosure-state
+            meaning: Occurrence state (present or absent) of whole input, response, argv, or environment payloads exposed in diagnostics.
           - selector: original-diagnostic-loss-state
             meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
           - selector: invalid-evidence-reference-state
@@ -141,11 +147,32 @@ contracts:
           field: unsubstantiated-context-state
           in:
             - absent
-      - id: diagnostic-unsafe-diagnostic-disclosure
+      - id: diagnostic-protected-input-disclosure
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
-          field: unsafe-diagnostic-disclosure-state
+          field: protected-input-disclosure-state
+          in:
+            - absent
+      - id: diagnostic-unchecked-output-disclosure
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: unchecked-output-disclosure-state
+          in:
+            - absent
+      - id: diagnostic-signed-url-disclosure
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: signed-url-disclosure-state
+          in:
+            - absent
+      - id: diagnostic-whole-payload-disclosure
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: whole-payload-disclosure-state
           in:
             - absent
       - id: diagnostic-original-diagnostic-loss

@@ -8,16 +8,8 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         guarantees:
           - resolved-quality-toolchain-produced
-      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution
-        guarantees:
-          - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
-        guarantees:
-          - selected-quality-toolchain-ready
-      - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > verified archive is extracted executed and exported without cargo compilation
         guarantees:
           - selected-quality-toolchain-ready
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
@@ -28,26 +20,17 @@ test_maps:
     case_id: compatible-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > compatible policy accepts bounded Node and Python selectors while exact policy stays strict
-        guarantees:
-          - selected-quality-toolchain-ready
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         guarantees:
           - resolved-quality-toolchain-produced
+    pending:
+      - guarantees: [selected-quality-toolchain-ready]
+        reason: compatible の selector `24` で setup した Node が使える状態になることを確かめるテストが無い。既存の compatible policy のテストは `24.x` などの別の selector を与える。
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: invalid-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        guarantees:
-          - invalid-or-failed-quality-toolchain-stops
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup
-        guarantees:
-          - invalid-or-failed-quality-toolchain-stops
-      - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > invalid cargo-audit version stops before download or source install
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
   - contract_id: contract.ci-quality-toolchain.preparation
@@ -55,10 +38,6 @@ test_maps:
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
-        guarantees:
-          - invalid-or-failed-quality-toolchain-stops
-      - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop without source fallback or PATH output
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
   - contract_id: contract.ci-quality-toolchain.preparation
@@ -84,10 +63,9 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         guarantees:
           - resolved-version-satisfies-selector
-      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > quality toolchain contract selects only fixed profile dependencies without project execution
-        guarantees:
-          - selected-profile-dependencies-only
+    pending:
+      - guarantees: [selected-profile-dependencies-only]
+        reason: 選んだ profile の依存だけを setup することを、Composite Action の実行で確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: valid-request-mismatching-resolution
     tests:
@@ -133,15 +111,11 @@ test_maps:
           - registered-failure-no-path-output
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: unrequested-cargo-deny
-    tests:
-      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > cargo-deny setup runs only when its version is requested
-        guarantees:
-          - selected-profile-dependencies-only
+    pending:
+      - guarantees: [optional-tool-setup-only-when-requested]
+        reason: cargo-deny-version を空にして Composite Action を実行し、cargo-deny の setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: skipped-auxiliary-tools
-    tests:
-      - path: actions/ci-quality-toolchain/tests/action-contract.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > auxiliary tools are installed by default and skipped only on request
-        guarantees:
-          - selected-profile-dependencies-only
+    pending:
+      - guarantees: [auxiliary-tool-setup-skipped-on-request]
+        reason: auxiliary-tools に skip を与えて Composite Action を実行し、補助ツールの setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。

@@ -23,27 +23,11 @@ test_maps:
         symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejects invalid custom bundle inputs before copying consumer assets
         guarantees:
           - ci-preset-materialization-failure-observed
-      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer validates delegated project scripts without copying shared implementations
-        guarantees:
-          - ci-preset-materialization-failure-observed
-      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned assets from external skill resources
-        guarantees:
-          - ci-preset-materialization-failure-observed
-      - path: tests/public-cli-lifecycle.test.mjs
-        symbol: contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files
-        guarantees:
-          - ci-preset-materialization-failure-observed
   - contract_id: contract.ci-preset-materialization.application
     case_id: detailed-failure-application
     tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > materialization preserves its outcome and safe diagnostic context
-        guarantees:
-          - diagnostic-failure-stage-application
-      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
-        symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejection retains the failing stage, paths and conflicting digests
         guarantees:
           - diagnostic-failure-stage-application
   - contract_id: contract.ci-preset-materialization.application
@@ -79,6 +63,10 @@ test_maps:
     tests:
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
         symbol: materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned assets from external skill resources
+        guarantees:
+          - conflicting-destination-change
+      - path: tests/public-cli-lifecycle.test.mjs
+        symbol: contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files
         guarantees:
           - conflicting-destination-change
   - contract_id: contract.ci-preset-materialization.application

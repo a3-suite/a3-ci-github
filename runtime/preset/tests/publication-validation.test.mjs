@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { describe, expect, test, vi } from 'vitest';
 import { parse } from 'yaml';
@@ -13,6 +14,7 @@ import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { validateConditionalExtensions, validateQualityPreset } from '../quality-validation.ts';
 import { findWorkflowAssetReferences } from '../workflow-assets.ts';
 import { collectSemanticCandidates } from '../semantic-candidates.ts';
+import { prepareBootstrapRuntime } from './support/release-request-fixture.mjs';
 
 const model = () => {
   const workflows = new Map(['release-publication-request', 'release-publication-caller'].map((id) => [
@@ -38,8 +40,8 @@ const inspect = (workflows) => {
 
 describe("contract.ci-preset-assurance.verification", () => {
   describe("standard-release-publisher-footprint", () => {
-    // contract_id: contract.ci-preset-assurance.verification
-    // integration_id: standard-release-publisher-footprint
+    // evidence_role: supplemental
+    // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
     test('standard Release workflow requires no local publisher and preflight rejects write binding drift', (t) => {
       const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
       const parent = path.join(repository, 'tmp');
@@ -86,16 +88,16 @@ describe("contract.ci-preset-assurance.verification", () => {
 
 describe("contract.ci-preset-assurance.verification", () => {
   describe("supplemental-phase-workflow-assurance", () => {
-    // contract_id: contract.ci-preset-assurance.verification
-    // integration_id: supplemental-phase-workflow-assurance
+    // evidence_role: supplemental
+    // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
     test('preflight accepts the authority-bound supplemental Action phase mappings', () => {
       const report = inspect(model());
       expect(report.mismatches).toStrictEqual([]);
       expect(report.missingSettings).toStrictEqual([]);
     });
 
-    // contract_id: contract.ci-preset-assurance.verification
-    // integration_id: supplemental-phase-workflow-assurance
+    // evidence_role: supplemental
+    // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
     test('preflight rejects builds that omit an authority or source gate prerequisite', () => {
       // Arrange
       for (const id of ['authority', 'source-gate']) {
@@ -109,8 +111,8 @@ describe("contract.ci-preset-assurance.verification", () => {
       }
     });
 
-    // contract_id: contract.ci-preset-assurance.verification
-    // integration_id: supplemental-phase-workflow-assurance
+    // evidence_role: supplemental
+    // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
     test('preflight rejects assembly that omits a quality or source gate success prerequisite', () => {
       // Arrange
       for (const id of ['quality', 'source-gate']) {
@@ -130,8 +132,8 @@ describe("contract.ci-preset-assurance.verification", () => {
 });
 
 describe("contract.ci-preset-assurance.verification", () => {
-  // contract_id: contract.ci-preset-assurance.verification
-  // integration_id: authority-snapshot-preflight
+  // evidence_role: supplemental
+  // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
   describe('authority snapshot preflight', () => {
     test('preserves static bindings and JSON string values', () => {
       const workflows = model();
@@ -203,8 +205,8 @@ describe("publication-validation", () => {
 
 describe("contract.ci-preset-assurance.verification", () => {
   describe("standard-release-authority-footprint", () => {
-    // contract_id: contract.ci-preset-assurance.verification
-    // integration_id: standard-release-authority-footprint
+    // evidence_role: supplemental
+    // The resolved callee is fixed by the provider, so these drifts are not consumer contract cases.
     test('standard Release authority requires no consumer script and rejects input binding drift', () => {
       const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
       const registry = loadRegistry(createReport());
@@ -234,6 +236,76 @@ describe("contract.ci-preset-assurance.verification", () => {
         delete changed.get('.github/workflows/release-publication-request.yml').on.workflow_dispatch.inputs[field];
         expect(inspect(changed).mismatches.some(item => item.message.includes('explicit owner version and target'))).toBeTruthy();
       }
+    });
+  });
+});
+
+// The release-publication callee is resolved from the fixed provider source, so only the consumer caller and request
+// can drift. The baseline also fails while the reusable workflow is pending-release; each drift is therefore asserted
+// by the finding it adds over that baseline.
+const consumerReleasePreflight = (t) => {
+  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+  fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
+  const root = fs.mkdtempSync(path.join(repository, 'tmp', 'consumer-release-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  prepareBootstrapRuntime({ repositoryRoot: repository, runtimeRoot: path.join(repository, 'runtime/preset'), consumerRoot: root });
+  const preset = loadRegistry(createReport()).presets.find(item => item.id === 'release-publication');
+  const callerAsset = preset.workflowAssets.find(item => item.id === 'release-publication-caller');
+  const requestAsset = preset.workflowAssets.find(item => item.id === 'release-publication-request');
+  fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+  return (mutate = () => {}) => {
+    const caller = parse(fs.readFileSync(path.join(repository, callerAsset.source), 'utf8'));
+    Object.assign(caller.jobs.publish.with, {
+      runner: 'ubuntu-24.04', 'language-profile': 'rust', 'release-implementation': 'rust-cli-release',
+      'standard-bundle-id': 'rust-cargo-quality', 'adapter-descriptor': '', 'platform-manifest': '.ci/platform-manifest.yml',
+      supplemental_release_asset_enabled: false, supplemental_release_asset_owner_contract: '__unset__',
+      supplemental_release_asset_implementation: 'owner-adapter', supplemental_release_asset_config_path: '__unset__', release_skills_config_path: '__unset__',
+    });
+    const request = parse(fs.readFileSync(path.join(repository, requestAsset.source), 'utf8'));
+    mutate({ caller, request });
+    fs.writeFileSync(path.join(root, callerAsset.destination), stringify(caller));
+    fs.writeFileSync(path.join(root, requestAsset.destination), stringify(request));
+    const result = spawnSync(process.execPath, [
+      path.join(repository, 'runtime/preset/run-validate-ci-preset.mjs'),
+      '--audit-mode', 'read-only', '--repo-root', root, '--preset', 'release-publication',
+    ], { encoding: 'utf8' });
+    expect(result.status, result.stderr).toBe(1);
+    return JSON.parse(result.stdout);
+  };
+};
+
+describe("contract.ci-preset-assurance.verification", () => {
+  describe("consumer-release-publication-drift", () => {
+    // contract_id: contract.ci-preset-assurance.verification
+    // integration_id: consumer-release-publication-drift
+    test('public preflight fails when the consumer request omits the owner version or target input', (t) => {
+      const finding = 'standard Release request must bind explicit owner version and target';
+      // Arrange
+      const preflight = consumerReleasePreflight(t);
+      const baseline = preflight();
+      for (const field of ['release_version', 'target_identity']) {
+        // Act
+        const report = preflight(({ request }) => { delete request.on.workflow_dispatch.inputs[field]; });
+        // Assert
+        expect(report.status).toBe('failed');
+        expect(report.mismatches.some(item => item.message === finding && item.path.endsWith(`inputs.${field}`)), field).toBe(true);
+      }
+      expect(baseline.mismatches.some(item => item.message === finding)).toBe(false);
+    });
+
+    // contract_id: contract.ci-preset-assurance.verification
+    // integration_id: consumer-release-publication-drift
+    test('public preflight reports an owner-adapter supplemental selection that names an installer declaration', (t) => {
+      const finding = 'supplemental implementation, enabled selection, owner contract and declaration path must agree';
+      // Arrange
+      const preflight = consumerReleasePreflight(t);
+      const baseline = preflight();
+      // Act
+      const report = preflight(({ caller }) => { caller.jobs.publish.with.supplemental_release_asset_config_path = '.ci/installer/assembly.json'; });
+      // Assert
+      expect(report.status).toBe('failed');
+      expect(report.mismatches.some(item => item.message === finding)).toBe(true);
+      expect(baseline.mismatches.some(item => item.message === finding)).toBe(false);
     });
   });
 });
@@ -723,7 +795,9 @@ describe("contract.ci-preset-assurance.verification", () => {
       expect(detected.inspectedPresets).not.toContain('release-publication');
       expect([...detected.mismatches, ...detected.missingSettings].filter(item => /asset-release-publication\.yml:|canonical drift|conditional extension/.test(`${item.path} ${item.message}`))).toStrictEqual([]);
       expect(detected.missingSettings.some(item => item.message.includes('publication reusable workflow is pending-release'))).toBe(true);
+      expect(both.status).toBe('failed');
       expect(both.mismatches.some(item => item.path === callerAsset.destination && item.message === 'selected presets install different workflows at the same destination')).toBe(true);
+      expect(detected.mismatches.some(item => item.message === 'selected presets install different workflows at the same destination')).toBe(false);
       expect(supplementalOwnerAdapterEntrypoint(execution)).toBe('.ci/scripts/ci-release-supplemental-asset.sh');
       expect(flow(execution)).toStrictEqual([]);
       for (const mutate of [

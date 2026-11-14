@@ -14,7 +14,7 @@ cases:
       language-profile: rust
       platform-id: linux-x64
       platform-target: x86_64-unknown-linux-gnu
-      output-directory: build/linux-x64
+      output-directory: accepted-output
   - contract_id: contract.ci-rust-release-build.processing
     id: completed-rust-release-processing
     partition: runtime-context.rust-release-build-commands-succeed
@@ -22,16 +22,25 @@ cases:
       language-profile: rust
       platform-id: linux-x64
       platform-target: x86_64-unknown-linux-gnu
-      output-directory: build/linux-x64
+      output-directory: accepted-output
       commands: succeed
   - contract_id: contract.ci-rust-release-build.processing
     id: rejected-rust-release-processing
     partition: runtime-context.rust-release-build-rejected
     input:
       language-profile: rust
-      platform-id: macos-arm64
+      platform-id: linux-x64
+      platform-target: aarch64-unknown-linux-gnu
+      output-directory: mismatch-output
+  - contract_id: contract.ci-rust-release-build.processing
+    id: existing-output-rejected
+    partition: runtime-context.rust-release-build-rejected
+    input:
+      language-profile: rust
+      platform-id: linux-x64
       platform-target: x86_64-unknown-linux-gnu
-      output-directory: build/macos-arm64
+      output-directory: accepted-output
+      output-destination-state: existing-release-asset
   - contract_id: contract.ci-rust-release-build.processing
     id: version-report-rejected
     partition: runtime-context.rust-release-version-report-rejected
@@ -47,8 +56,7 @@ cases:
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required
     input:
-      arguments:
-        - invalid
+      language-profile: unsupported
   - contract_id: contract.ci-rust-release-build.outputs
     id: matching-authority-bound-build-inputs
     partition: runtime-context.rust-release-build-script-succeeded
@@ -64,4 +72,4 @@ cases:
       language-profile: rust
       platform-id: macos-arm64
       platform-target: x86_64-unknown-linux-gnu
-      output-directory: build/macos-arm64
+      output-directory: build/linux-x64

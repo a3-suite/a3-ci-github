@@ -145,42 +145,7 @@ test_maps:
     case_id: partial-failure
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
         symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-expiry"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-notes"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-expiry"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-notes"
         guarantees:
           - rejected
           - no-success-outputs
@@ -195,40 +160,11 @@ test_maps:
         symbol: ci-release-publisher failure boundary > source retains actionable input failure without private input values
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        guarantees:
-          - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-publisher.outputs
     case_id: publication-write-failure-boundary
     tests:
       - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
         symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
         guarantees:
           - publication-write-retry
           - publication-recovery-write

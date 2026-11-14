@@ -10,11 +10,11 @@ cases:
     id: valid-config-sources
     partition: sources-input-present
     input:
-      sources-json: '{"preset":{"MODE":"release"},"workflow":{"MODE":"candidate"},"runtime":{"MODE":"dry-run"}}'
-      snapshot-path: .ci/config-snapshot.json
+      sources-json: '{"preset":{"MODE":"release"},"runtime":{"MODE":"dry-run"}}'
+      snapshot-path: snapshot.json in a new temporary directory
   - contract_id: contract.ci-config-snapshot.outputs
     id: command-file-collision-rejected
     partition: runtime-context.action-input-invalid
     input:
-      snapshot-path: github-output.txt
-      github-output: github-output.txt
+      snapshot-path: snapshot.json in a new temporary directory
+      github-output: the same path as snapshot-path
