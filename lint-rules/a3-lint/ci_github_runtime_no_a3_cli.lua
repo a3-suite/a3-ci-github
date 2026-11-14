@@ -15,34 +15,31 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "fact:call_expressions:v1",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      required_runtime_capability = "fact:call_expressions:v1",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
+    required_capability_gaps = { "fact:call_expressions:v1" },
     dsl_gap_evidence = "required_runtime_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
-    local function normalize_path(path)
-      return (path or ""):gsub("\\", "/")
-    end
+    local process_calls = {
+      exec = true, execFile = true, execFileSync = true, execSync = true, spawn = true, spawnSync = true,
+    }
+    local project = ctx ~= nil and ctx.project or nil
+    local target = type(project) == "table" and project.current_target or nil
 
     local function target_path()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
-      if type(target) == "table" and type(target.path) == "string" then
-        return normalize_path(target.path)
-      end
-      return normalize_path(ctx ~= nil and (ctx.path or ctx.file) or "")
+      local value = type(target) == "table" and type(target.path) == "string" and target.path
+        or (ctx ~= nil and (ctx.path or ctx.file)) or ""
+      return (value:gsub("\\", "/"))
     end
 
     local function source_text()
-      local project = ctx ~= nil and ctx.project or nil
-      local target = type(project) == "table" and project.current_target or nil
       if type(target) == "table" and type(target.text) == "string" then
         return target.text
       end
@@ -62,141 +59,52 @@ return {
         and (path:match("%.[jt]s$") ~= nil or path:match("%.mjs$") ~= nil)
     end
 
-    local function diagnostic(line, message)
-      local text = ""
-      local index = 0
-      for raw_line in (source_text() .. "\n"):gmatch("([^\n]*)\n") do
-        index = index + 1
-        if index == line then
-          text = raw_line
-          break
-        end
+    -- The command may carry arguments in the same string, as exec does, but a longer name such as a3-lint-x is another CLI.
+    local function is_a3_cli(command)
+      local name, rest = command:match("^a3%-([%w%-]+)(.*)$")
+      return (name == "lint" or name == "suite") and (rest == "" or rest:match("^[%s,;|&)]") ~= nil)
+    end
+
+    if not is_script(target_path()) then
+      return {}
+    end
+    local facts = ctx.facts
+    -- An unavailable or failed observation must not read as a script without calls.
+    assert(type(facts) == "table" and facts.call_expressions_status == "ready", "call expression observation must be ready")
+
+    local first_offset = nil
+    for _, call in ipairs(facts.call_expressions) do
+      local command = call.first_argument_literal
+      if process_calls[call.callee_name] and type(command) == "string" and is_a3_cli(command)
+        and (first_offset == nil or call.callee_name_start_offset < first_offset) then
+        first_offset = call.callee_name_start_offset
       end
-      return {
-        message = message,
+    end
+    if first_offset == nil then
+      return {}
+    end
+
+    local source = source_text()
+    local _, preceding_lines = source:sub(1, first_offset):gsub("\n", "\n")
+    local line = preceding_lines + 1
+    local text = ""
+    local index = 0
+    for raw_line in (source .. "\n"):gmatch("([^\n]*)\n") do
+      index = index + 1
+      if index == line then
+        text = raw_line
+        break
+      end
+    end
+    return {
+      {
+        message = "CI script must not invoke a3-* CLI",
         code = "ci_github_runtime_a3_cli_forbidden",
         start_line = line,
         start_col = 1,
         end_line = line,
         end_col = #text + 1,
-      }
-    end
-
-    local function mask_javascript_non_code(source)
-      local masked = {}
-      local state = "code"
-      local index = 1
-      while index <= #source do
-        local current = source:sub(index, index)
-        local next_char = source:sub(index + 1, index + 1)
-        if state == "code" then
-          if current == "/" and next_char == "/" then
-            table.insert(masked, "  ")
-            index = index + 2
-            state = "line_comment"
-          elseif current == "/" and next_char == "*" then
-            table.insert(masked, "  ")
-            index = index + 2
-            state = "block_comment"
-          elseif current == "\"" or current == "'" or current == "`" then
-            table.insert(masked, current)
-            index = index + 1
-            state = current
-          else
-            table.insert(masked, current)
-            index = index + 1
-          end
-        elseif state == "line_comment" then
-          if current == "\n" then
-            table.insert(masked, "\n")
-            state = "code"
-          else
-            table.insert(masked, " ")
-          end
-          index = index + 1
-        elseif state == "block_comment" then
-          if current == "*" and next_char == "/" then
-            table.insert(masked, "  ")
-            index = index + 2
-            state = "code"
-          else
-            table.insert(masked, current == "\n" and "\n" or " ")
-            index = index + 1
-          end
-        else
-          if current == "\\" then
-            table.insert(masked, "  ")
-            index = index + 2
-          elseif current == state then
-            table.insert(masked, current)
-            index = index + 1
-            state = "code"
-          else
-            table.insert(masked, current == "\n" and "\n" or " ")
-            index = index + 1
-          end
-        end
-      end
-      return table.concat(masked)
-    end
-
-    local function has_a3_cli_call(source, masked, function_name)
-      local function is_identifier_byte(value)
-        if value == "" then
-          return false
-        end
-        local byte = value:byte()
-        return byte >= 128 or value:match("^[%w_$]$") ~= nil
-      end
-
-      local offset = 1
-      while true do
-        local call_pattern = function_name .. "%s*%(%s*"
-        local start_pos, end_pos = masked:find(call_pattern, offset)
-        if start_pos == nil then
-          return nil
-        end
-        local before = masked:sub(start_pos - 1, start_pos - 1)
-        local after = masked:sub(start_pos + #function_name, start_pos + #function_name)
-        if not is_identifier_byte(before) and not is_identifier_byte(after) then
-          local argument, suffix = source:sub(end_pos + 1):match("^%s*[\"']a3%-([%w%-]+)(.*)")
-          local suffix_start = suffix ~= nil and suffix:sub(1, 1) or ""
-          local terminated = suffix_start == ""
-            or suffix_start == "\""
-            or suffix_start == "'"
-            or suffix_start:match("[%s,;|&)]") ~= nil
-          if terminated and (argument == "lint" or argument == "suite") then
-            return start_pos
-          end
-        end
-        offset = end_pos + 1
-      end
-    end
-
-    local path = target_path()
-    local script = is_script(path)
-    if not script then
-      return {}
-    end
-
-    local diagnostics = {}
-    if script then
-      local source = source_text()
-      local masked = mask_javascript_non_code(source)
-      local call_pos = nil
-      for _, function_name in ipairs({ "exec", "execFile", "execFileSync", "execSync", "spawn", "spawnSync" }) do
-        call_pos = has_a3_cli_call(source, masked, function_name)
-        if call_pos ~= nil then
-          break
-        end
-      end
-      if call_pos ~= nil then
-        local _, preceding_lines = source:sub(1, call_pos):gsub("\n", "\n")
-        table.insert(diagnostics, diagnostic(preceding_lines + 1, "CI script must not invoke a3-* CLI"))
-      end
-      return diagnostics
-    end
-
-    return diagnostics
+      },
+    }
   end,
 }

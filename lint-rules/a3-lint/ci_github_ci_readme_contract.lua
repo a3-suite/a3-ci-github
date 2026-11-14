@@ -15,15 +15,15 @@ return {
   implementation = {
     type = "lua",
     entrypoint = "check",
-    lua_reason = "view:raw:v1",
+    lua_reason = "typed_binding_gap",
     lua_evidence = {
-      required_runtime_capability = "view:raw:v1",
+      missing_binding_capability = "structured_projection_gap",
     },
   },
   governance = {
     rule_family = "structural-pattern",
-    required_capability_gaps = { "view:raw:v1" },
-    dsl_gap_evidence = "required_runtime_capability",
+    required_capability_gaps = { "typed_binding_gap" },
+    dsl_gap_evidence = "missing_binding_capability",
     migration_candidate = "revisit_after_capability_extension",
   },
   check = function(ctx)
