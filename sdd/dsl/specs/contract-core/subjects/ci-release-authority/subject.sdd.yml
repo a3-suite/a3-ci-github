@@ -45,8 +45,12 @@ contracts:
             meaning: Occurrence state of successful outputs.
           - selector: platform-manifest-source-text-comparison
             meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
-          - selector: authority-platform-binding-state
-            meaning: Occurrence state (present or absent) of language profile, toolchain and platform manifest bindings in the authority handoff.
+          - selector: authority-language-profile-binding-state
+            meaning: Occurrence state (present or absent) of a non-null language_profile binding in the authority handoff.
+          - selector: authority-toolchain-binding-state
+            meaning: Occurrence state (present or absent) of a non-null toolchain_version binding in the authority handoff.
+          - selector: authority-platform-manifest-binding-state
+            meaning: Occurrence state (present or absent) of a non-null platform_manifest or platform_manifest_sha256 value in the authority handoff.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -105,10 +109,24 @@ contracts:
           field: non-get-request-state
           in:
             - absent
-      - id: authority-asset-only-no-platform-binding
+      - id: authority-asset-only-no-language-profile
         applies_to:
           - runtime-context.release-authority-asset-only-valid
         claim:
-          field: authority-platform-binding-state
+          field: authority-language-profile-binding-state
+          in:
+            - absent
+      - id: authority-asset-only-no-toolchain
+        applies_to:
+          - runtime-context.release-authority-asset-only-valid
+        claim:
+          field: authority-toolchain-binding-state
+          in:
+            - absent
+      - id: authority-asset-only-no-platform-manifest
+        applies_to:
+          - runtime-context.release-authority-asset-only-valid
+        claim:
+          field: authority-platform-manifest-binding-state
           in:
             - absent

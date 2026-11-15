@@ -60,13 +60,15 @@ test_maps:
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
-          - invalid-selection-has-no-quality-outputs
+          - invalid-selection-has-no-quality-matrix
+          - invalid-selection-has-no-expected-platforms
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails without any outputs for invalid selection
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
-          - invalid-selection-has-no-quality-outputs
+          - invalid-selection-has-no-quality-matrix
+          - invalid-selection-has-no-expected-platforms
   - contract_id: contract.ci-platform-matrix.outputs
     case_id: detailed-failure-outputs
     tests:

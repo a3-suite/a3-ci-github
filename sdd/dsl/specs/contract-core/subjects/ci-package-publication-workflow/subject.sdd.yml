@@ -15,8 +15,6 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary: boundary.workflow-definition
         fields:
-          - selector: publication-boundary
-            meaning: Declared owner publication call and its dependency graph.
           - selector: failure-summary
             meaning: Declared package aggregate route.
           - selector: package-fixed-provider-reference
@@ -27,6 +25,8 @@ contracts:
             meaning: Declared dependency order of request validation and preparation.
           - selector: package-preparation-before-publication
             meaning: Declared dependency order of preparation and privileged publication.
+          - selector: package-preparation-secret-bindings
+            meaning: Occurrence of secrets that the caller passes to, or the provider declares for, the package preparation workflow.
           - selector: package-control-sha-bound
             meaning: Comparison of trusted control checkout revision with github.workflow_sha.
           - selector: package-control-head-verified
@@ -51,12 +51,6 @@ contracts:
       - input: ci-package-publication-workflow-canonical-source-available
       - input: ci-package-publication-workflow-failure-route-required
     guarantees:
-      - id: ci-package-publication-workflow-success-observed
-        applies_to:
-          - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: publication-boundary
-          present: true
       - id: ci-package-publication-workflow-failure-observed
         applies_to:
           - ci-package-publication-workflow-failure-route-required
@@ -97,6 +91,13 @@ contracts:
           field: package-preparation-before-publication
           in:
             - preparation-before-publication
+      - id: package-preparation-secrets-absent
+        applies_to:
+          - ci-package-publication-workflow-canonical-source-available
+        claim:
+          field: package-preparation-secret-bindings
+          in:
+            - absent
       - id: package-control-sha-bound
         applies_to:
           - ci-package-publication-workflow-canonical-source-available

@@ -21,6 +21,8 @@ contracts:
         meaning: "Precondition prepared by the case: adapter command that fails."
       - name: command-exit
         meaning: "Precondition prepared by the case: exit status of the failing command."
+      - name: dependency-policy-output
+        meaning: "Precondition prepared by the case: cargo-deny JSON lines that the failing dependency-policy command writes."
       - name: cargo-deny-version
         meaning: "Received by the contract target: cargo-deny version passed by the caller."
       - name: cargo-deny-config-path
@@ -56,7 +58,13 @@ contracts:
           - selector: dependency-policy-config-argument
             meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
           - selector: dependency-policy-diagnostics
-            meaning: Presence of structured diagnostics on a failed dependency-policy entry, limited to per-check error and warning counts and error findings with a validated diagnostic code and crate name and version.
+            meaning: Structured diagnostics object of a failed dependency-policy entry.
+          - selector: dependency-policy-check-counts
+            meaning: Comparison of the per-check counts in the diagnostics object with the error and warning counts of the known cargo-deny checks in the cargo-deny summary; equal or different.
+          - selector: dependency-policy-error-findings
+            meaning: Comparison of the findings in the diagnostics object with the cargo-deny error findings whose diagnostic code passes validation, up to the finding limit and each reduced to the crates whose name and version pass validation; equal or different.
+          - selector: dependency-policy-omitted-findings
+            meaning: Comparison of the omitted finding count in the diagnostics object with the number of validated error findings beyond the finding limit; equal or different.
           - selector: dependency-policy-unchecked-output-state
             meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
           - selector: not-run-aggregate-effect
@@ -230,6 +238,27 @@ contracts:
         claim:
           field: dependency-policy-diagnostics
           present: true
+      - id: dependency-policy-check-counts-bound
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-check-counts
+          in:
+            - equal
+      - id: dependency-policy-diagnostics-restricted
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-error-findings
+          in:
+            - equal
+      - id: dependency-policy-omitted-findings-counted
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        claim:
+          field: dependency-policy-omitted-findings
+          in:
+            - equal
       - id: dependency-policy-diagnostics-validated
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-violation

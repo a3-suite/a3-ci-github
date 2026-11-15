@@ -133,16 +133,16 @@ test_maps:
         symbol: source entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
         guarantees:
           - observation-status
-          - immutable-release-id
+          - release-id-emitted
           - bound-receipt
-          - independent-readback
+          - readback-evidence-emitted
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
         guarantees:
           - observation-status
-          - immutable-release-id
+          - release-id-emitted
           - bound-receipt
-          - independent-readback
+          - readback-evidence-emitted
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: output-line-injection
     tests:
@@ -171,8 +171,8 @@ test_maps:
       - path: runtime/release-publication/tests/observation.test.mjs
         symbol: contract.ci-release-publication-verifier.outputs > release-publication-evidence > publication evidence matches independent immutable ID readback
         guarantees:
-          - immutable-release-id
-          - independent-readback
+          - release-id-emitted
+          - readback-evidence-emitted
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: existing-release
     tests:

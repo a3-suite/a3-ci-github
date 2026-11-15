@@ -45,7 +45,6 @@ cases:
       actions-root: actions
       contract-package: sdd/dsl/specs/contract-core/contract-package.sdd.yml
     verifies:
-      - action-contract-coverage-confirmed
       - action-contract-subject-covered
       - action-contract-output-covered
   - contract_id: contract.repository-action-distribution.integrity

@@ -109,8 +109,8 @@ test_maps:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > failure-diagnostics-contract > managed workflows expose correlated secret-safe failure evidence without hiding source results
         guarantees:
-          - ci-failure-diagnostics-workflow-evidence-declared
-          - ci-failure-diagnostics-workflow-correlation-declared
+          - ci-failure-diagnostics-workflow-reason-bound
+          - ci-failure-diagnostics-workflow-raw-result-bound
           - ci-failure-diagnostics-workflow-summary-secret-safe
           - ci-failure-diagnostics-workflow-diagnostic-order
           - ci-failure-diagnostics-workflow-source-result-retained

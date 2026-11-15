@@ -37,8 +37,6 @@ contracts:
             meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
           - selector: catalog-usage-text
             meaning: Comparison of curated usage text before and after projection; equal or changed.
-          - selector: contract-coverage
-            meaning: Contract coverage report for the discovered Actions.
           - selector: contract-subject-coverage
             meaning: Comparison of discovered Actions with Actions that have a packaged contract subject; matched or missing.
           - selector: contract-output-coverage
@@ -52,7 +50,7 @@ contracts:
           - selector: source-verification-rebuild
             meaning: Dependency installation or distribution build steps inside the source verification plan; absent or present.
           - selector: release-version
-            meaning: Repository VERSION confirmed for an annotated exact release tag, or failure.
+            meaning: Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -85,12 +83,6 @@ contracts:
         claim:
           field: catalog
           present: true
-      - id: action-contract-coverage-confirmed
-        applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: contract-coverage
-          present: true
       - id: action-source-verification-plan-produced
         applies_to:
           - runtime-context.repository-action-distribution-inputs-available
@@ -102,7 +94,8 @@ contracts:
           - runtime-context.repository-exact-release-tag-available
         claim:
           field: release-version
-          present: true
+          in:
+            - equal
       - id: invalid-or-mismatched-release-version-rejected
         applies_to:
           - runtime-context.repository-release-version-invalid-or-mismatched

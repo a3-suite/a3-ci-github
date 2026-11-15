@@ -15,12 +15,8 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary: boundary.workflow-definition
         fields:
-          - selector: publication-boundary
-            meaning: Declared publication call and dependency graph.
           - selector: failure-summary
             meaning: Declared publication aggregate route.
-          - selector: evidence-transfer
-            meaning: Declared supplemental artifact transfer routes.
           - selector: release-fixed-provider-reference
             meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
           - selector: release-explicit-owner-inputs
@@ -49,10 +45,32 @@ contracts:
             meaning: Declared supplemental artifact download root.
           - selector: supplemental-final-assembly-input
             meaning: Declared supplemental build root passed to final assemble.
+          - selector: release-publish-needs
+            meaning: Comma-separated job IDs in the publish job needs, which are the only job results its run condition can read.
+          - selector: release-assembly-source-path-filter
+            meaning: Path filtering (sparse checkout or partial clone filter) declared on the fixed assembly source checkout.
+          - selector: release-assembly-source-credentials-persisted
+            meaning: Declared persist-credentials setting of the fixed assembly source checkout.
           - selector: release-failure-summary-always
             meaning: Declared publication aggregate condition.
           - selector: release-failed-prerequisite-blocks
             meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
+      - summary: Working tree paths and Git object store that the release control checkouts produce.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: release-assemble-control-checkout-paths
+            meaning: "Working tree paths that the assemble job control checkout materializes for a declared manifest path that a sparse pattern can express exactly. declared-manifest-only: only that manifest, when it exists in the control revision."
+          - selector: release-publish-control-checkout-paths
+            meaning: Working tree paths that the publish job control checkout materializes.
+          - selector: release-control-checkout-object-volume
+            meaning: "Git object bytes that a narrowed control checkout stores, relative to a full checkout of the same revision. below-one-percent: less than 1/100 of the full checkout."
+      - summary: Sparse-checkout scope that the release control checkout scope step produces from the declared manifest path.
+        boundary: boundary.script-result
+        fields:
+          - selector: release-control-checkout-unsupported-manifest-scope
+            meaning: Sparse-checkout scope produced for a manifest path that a sparse pattern cannot express exactly (empty, absolute, backslash-separated, or with trailing whitespace).
+          - selector: release-control-checkout-multiline-manifest
+            meaning: Outcome of control checkout scope resolution for a manifest path that contains a line break.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -63,23 +81,11 @@ contracts:
       - input: ci-release-publication-workflow-canonical-source-available
       - input: ci-release-publication-workflow-failure-route-required
     guarantees:
-      - id: ci-release-publication-workflow-success-observed
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: publication-boundary
-          present: true
       - id: ci-release-publication-workflow-failure-observed
         applies_to:
           - ci-release-publication-workflow-failure-route-required
         claim:
           field: failure-summary
-          present: true
-      - id: ci-release-publication-workflow-evidence-transfer-declared
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: evidence-transfer
           present: true
       - id: diagnostic-failure-stage-publication
         applies_to:
@@ -185,6 +191,62 @@ contracts:
           field: supplemental-final-assembly-input
           in:
             - supplemental-build
+      - id: release-publication-needs-authority-and-assembly
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publish-needs
+          in:
+            - authority,assemble
+      - id: release-assemble-control-checkout-manifest-only
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-assemble-control-checkout-paths
+          in:
+            - declared-manifest-only
+      - id: release-publish-control-checkout-empty
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publish-control-checkout-paths
+          in:
+            - none
+      - id: release-control-checkout-narrowed-objects
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-control-checkout-object-volume
+          in:
+            - below-one-percent
+      - id: release-control-checkout-unsupported-manifest-full
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-control-checkout-unsupported-manifest-scope
+          in:
+            - full-checkout
+      - id: release-control-checkout-multiline-manifest-rejected
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-control-checkout-multiline-manifest
+          in:
+            - rejected
+      - id: release-assembly-source-unfiltered
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-assembly-source-path-filter
+          in:
+            - none
+      - id: release-assembly-source-credentials-removed
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-assembly-source-credentials-persisted
+          in:
+            - "false"
       - id: release-failure-summary-always
         applies_to:
           - ci-release-publication-workflow-failure-route-required
@@ -210,8 +272,6 @@ contracts:
       - summary: Canonical asset publication workflow triggers, jobs, orchestration, and summaries exposed for repository verification.
         boundary: boundary.workflow-definition
         fields:
-          - selector: asset-publication-boundary
-            meaning: Declared asset publication call and dependency graph.
           - selector: asset-publication-build-job-state
             meaning: Occurrence state (present or absent) of a product build job in the asset publication workflow.
           - selector: asset-publication-selection-before-authority
@@ -230,12 +290,6 @@ contracts:
       - input: ci-asset-release-publication-workflow-canonical-source-available
       - input: ci-asset-release-publication-workflow-failure-route-required
     guarantees:
-      - id: asset-publication-success-observed
-        applies_to:
-          - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-boundary
-          present: true
       - id: asset-publication-no-build-job
         applies_to:
           - ci-asset-release-publication-workflow-canonical-source-available

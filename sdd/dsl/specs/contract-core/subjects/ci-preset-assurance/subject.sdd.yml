@@ -163,7 +163,9 @@ contracts:
           - selector: generatedAt
             meaning: Minute-normalized observation timestamp of the generated lock.
           - selector: assets
-            meaning: Canonical and applied SHA-256 identity for every managed asset.
+            meaning: Lock entries that record the canonical and applied SHA-256 identity of each asset path.
+          - selector: asset-path-coverage
+            meaning: Comparison of the set of lock asset paths with the managed asset destinations and the pin companion path.
           - selector: requested-source-comparison
             meaning: Comparison of lock sourceRevision with the requested full source revision.
           - selector: requested-release-comparison
@@ -206,6 +208,13 @@ contracts:
         claim:
           field: assets
           present: true
+      - id: ci-preset-assurance-lock-assets-cover-managed-paths
+        applies_to:
+          - ci-preset-assurance-lock-input-valid
+        claim:
+          field: asset-path-coverage
+          in:
+            - equal
       - id: ci-preset-assurance-invalid-revision-rejected
         applies_to:
           - ci-preset-assurance-lock-input-invalid

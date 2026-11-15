@@ -46,7 +46,7 @@ cases:
     id: toolchain-version-report-rejected
     partition: runtime-context.quality-adapter-toolchain-version-report-rejected
     input:
-      bundle-path: adapter.yml
+      bundle-path: adapter.yml whose toolchain verify command prints 19.9.9
       toolchain-version: 9.9.9
   - contract_id: contract.ci-quality-adapter.outputs
     id: native-rust-rules
@@ -102,6 +102,9 @@ cases:
       toolchain-version: 1.80.0
       cargo-deny-version: 0.20.2
       cargo-deny-config-path: runtime/deny.toml
+      failed-command: dependency-policy
+      command-exit: 2
+      dependency-policy-output: error diagnostics, a per-check summary, and message, label and span text
   - contract_id: contract.ci-quality-adapter.outputs
     id: missing-dependency-policy-config
     partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable

@@ -49,6 +49,8 @@ test_maps:
         guarantees:
           - bound-handoff
           - bound-asset-digest
+          - handoff-source-bound
+          - handoff-asset-digest-bound
       - path: runtime/release-publication/tests/assembly.test.mjs
         symbol: contract.ci-release-assembly.outputs > release-assembly-contract > asset digest preserves producer bytes and ignores JSON key order
         guarantees:

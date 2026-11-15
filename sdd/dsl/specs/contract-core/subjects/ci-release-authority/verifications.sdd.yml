@@ -50,4 +50,6 @@ cases:
     verifies:
       - authority-file
       - authority-get-only-requests
-      - authority-asset-only-no-platform-binding
+      - authority-asset-only-no-language-profile
+      - authority-asset-only-no-toolchain
+      - authority-asset-only-no-platform-manifest

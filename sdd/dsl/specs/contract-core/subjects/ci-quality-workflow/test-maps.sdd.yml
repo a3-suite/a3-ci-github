@@ -20,15 +20,20 @@ test_maps:
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality diff preparation fetches only the comparison commit and preserves fail-open scope
         guarantees:
-          - ci-quality-workflow-success-observed
+          - quality-comparison-commit-only
+          - quality-comparison-unavailable-fail-open
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality toolchain callers bind five inputs and preserve execution gates
         guarantees:
-          - ci-quality-workflow-success-observed
+          - quality-toolchain-language-profile-bound
+          - quality-toolchain-toolchain-version-bound
+          - quality-toolchain-uv-version-bound
+          - quality-toolchain-cargo-audit-version-bound
+          - quality-toolchain-cargo-deny-version-bound
+          - quality-toolchain-continue-on-error-absent
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality workflow declares trusted execution and aggregate summary
         guarantees:
-          - ci-quality-workflow-success-observed
           - quality-source-before-adapter
           - quality-results-before-summary
       - path: tests/workflow-contracts.process.test.mjs
@@ -59,19 +64,20 @@ test_maps:
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality diff preparation fetches only the comparison commit and preserves fail-open scope
         guarantees:
-          - ci-quality-workflow-platform-chain-observed
+          - quality-comparison-commit-only
+          - quality-comparison-unavailable-fail-open
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform caller passes explicit inputs and retains the summary identity
         guarantees:
-          - ci-quality-workflow-platform-chain-observed
+          - platform-explicit-input-binding
+          - platform-summary-identity
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform summary scripts preserve docs-only failed cancelled and missing outcomes
         guarantees:
-          - ci-quality-workflow-platform-chain-observed
+          - platform-unresolved-results-rejected
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > optional platform quality workflow preserves trusted assets matrix execution and summary
         guarantees:
-          - ci-quality-workflow-platform-chain-observed
           - platform-resolution-before-execution
           - platform-execution-before-summary
   - contract_id: contract.ci-quality-workflow.execution
@@ -80,11 +86,12 @@ test_maps:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > profiles caller runs the quality callee once per language profile and retains one summary identity
         guarantees:
-          - ci-quality-workflow-profiles-chain-observed
+          - profiles-callee-once-per-profile
+          - profiles-summary-identity
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
         guarantees:
-          - ci-quality-workflow-profiles-chain-observed
+          - profiles-unsuccessful-result-rejected
   - contract_id: contract.ci-quality-workflow.execution
     case_id: detailed-failure-execution
     tests:

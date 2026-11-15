@@ -50,11 +50,11 @@ contracts:
           - selector: observation-digest
             meaning: SHA-256 of the exact pre-create observation file bytes.
           - selector: release-remote-identity
-            meaning: Immutable create-result Release object ID independently verified by verify-after.
+            meaning: Release object ID that verify-after emits.
           - selector: publish-receipt
             meaning: Publication receipt exposed by the verifier.
           - selector: readback-evidence
-            meaning: Readback evidence independently observed from the published Release.
+            meaning: Readback evidence that verify-after emits for the published Release.
           - selector: outcome
             meaning: Failed step outcome when remote observation or evidence verification is rejected.
           - selector: diagnostic
@@ -115,7 +115,7 @@ contracts:
         claim:
           field: observation-digest
           present: true
-      - id: immutable-release-id
+      - id: release-id-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
         claim:
@@ -127,7 +127,7 @@ contracts:
         claim:
           field: publish-receipt
           present: true
-      - id: independent-readback
+      - id: readback-evidence-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
         claim:

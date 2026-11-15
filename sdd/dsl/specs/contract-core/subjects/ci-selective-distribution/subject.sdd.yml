@@ -165,8 +165,8 @@ contracts:
             meaning: Readback status that the publisher reports for the remote Release assets.
           - selector: implementationSourceRevision
             meaning: Full first-party implementation SHA verified against the final tagged source.
-          - selector: acceptedDispatchRef
-            meaning: Workflow ref of the release dispatch accepted for publication; absent when the dispatch is rejected before publication.
+          - selector: accepted-dispatch-ref-comparison
+            meaning: Comparison of the workflow ref of the release dispatch accepted for publication with refs/tags/ followed by releaseTag.
           - selector: implementationBindingStatus
             meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity of the referenced Action directories and every runtime entry except the provider maintenance runtime that neither Actions nor canonical workflows execute, and fixed-reference connections, otherwise unverified.
           - selector: implementationBindingEvidence
@@ -208,9 +208,9 @@ contracts:
         applies_to:
           - runtime-context.selective-distribution-publication-valid
         claim:
-          field: acceptedDispatchRef
+          field: accepted-dispatch-ref-comparison
           in:
-            - tag-ref-of-requested-release-tag
+            - equal
       - id: selective-distribution-implementation-binding-evidence-exposed
         applies_to:
           - runtime-context.selective-distribution-publication-valid

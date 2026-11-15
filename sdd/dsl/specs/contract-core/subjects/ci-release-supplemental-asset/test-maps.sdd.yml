@@ -72,10 +72,12 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
+          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
+          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental-phase-source > supplemental source preserves owner shebang failure semantics
         guarantees:
@@ -219,17 +221,6 @@ test_maps:
         guarantees:
           - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: diagnostic-owner-process-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: primary-and-cleanup-failure
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
@@ -325,10 +316,12 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
+          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
+          - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-candidate-mutation
     tests:
@@ -420,17 +413,6 @@ test_maps:
         symbol: standard installer > assembly > rejects extra transferred platform evidence
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: diagnostic-owner-process-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: primary-and-cleanup-failure
     pending:

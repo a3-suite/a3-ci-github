@@ -19,14 +19,8 @@ contracts:
         fields:
           - selector: reusable-binding
             meaning: Declared caller-to-callee binding.
-          - selector: execution-chain
-            meaning: Declared quality execution dependency graph.
           - selector: failure-summary
             meaning: Declared aggregate failure route.
-          - selector: optional-platform-chain
-            meaning: Declared platform quality dependency graph.
-          - selector: profiles-chain
-            meaning: Declared per-language-profile quality dependency graph and its single aggregate decision.
           - selector: quality-fixed-reference
             meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
           - selector: quality-explicit-input-binding
@@ -63,6 +57,40 @@ contracts:
             meaning: Declared run condition of the trusted Cargo cache save step.
           - selector: quality-cargo-cache-save-after-adapter
             meaning: Declared order of adapter execution and the trusted Cargo cache save step.
+          - selector: quality-toolchain-language-profile-binding
+            meaning: Comparison of the language-profile binding of each quality toolchain step with the matching job environment declaration; equal or different.
+          - selector: quality-toolchain-toolchain-version-binding
+            meaning: Comparison of the toolchain-version binding of each quality toolchain step with the matching job environment declaration; equal or different.
+          - selector: quality-toolchain-uv-version-binding
+            meaning: Comparison of the uv-version binding of each quality toolchain step with the matching job environment declaration; equal or different.
+          - selector: quality-toolchain-cargo-audit-version-binding
+            meaning: Comparison of the cargo-audit-version binding of each quality toolchain step with the matching job environment declaration; equal or different.
+          - selector: quality-toolchain-cargo-deny-version-binding
+            meaning: Comparison of the cargo-deny-version binding of each quality toolchain step with the matching job environment declaration; equal or different.
+          - selector: quality-toolchain-continue-on-error
+            meaning: Declared continue-on-error setting of the quality toolchain step.
+          - selector: platform-explicit-input-binding
+            meaning: Comparison of platform caller input names with the platform callee interface.
+          - selector: platform-summary-identity
+            meaning: Declared platform caller aggregate job name.
+          - selector: profiles-callee-runs-per-profile
+            meaning: Number of quality callee runs for each configured language profile, as declared by the profiles caller matrix.
+          - selector: profiles-summary-identity
+            meaning: Declared profiles caller aggregate job name.
+      - summary: Commits that the quality and platform resolution checkouts hold after comparison preparation.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: quality-comparison-fetch-scope
+            meaning: Commits that comparison preparation adds to the shallow head checkout.
+      - summary: Exit status of the comparison preparation step and acceptance by the platform and profiles aggregate steps.
+        boundary: boundary.script-result
+        fields:
+          - selector: quality-comparison-unavailable-preparation
+            meaning: Outcome of comparison preparation when the comparison commit is empty, all zeros, or not fetchable.
+          - selector: platform-unresolved-results-accepted
+            meaning: Occurrence of platform aggregate acceptance when platform resolution or a required platform result is failed, cancelled, skipped, or missing.
+          - selector: profiles-unsuccessful-result-accepted
+            meaning: Occurrence of profiles aggregate acceptance when the quality job result is not success.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -82,29 +110,11 @@ contracts:
         claim:
           field: reusable-binding
           present: true
-      - id: ci-quality-workflow-success-observed
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: execution-chain
-          present: true
       - id: ci-quality-workflow-failure-observed
         applies_to:
           - ci-quality-workflow-failure-route-required
         claim:
           field: failure-summary
-          present: true
-      - id: ci-quality-workflow-platform-chain-observed
-        applies_to:
-          - ci-quality-workflow-platform-source-selected
-        claim:
-          field: optional-platform-chain
-          present: true
-      - id: ci-quality-workflow-profiles-chain-observed
-        applies_to:
-          - ci-quality-workflow-profiles-source-selected
-        claim:
-          field: profiles-chain
           present: true
       - id: diagnostic-failure-stage-execution
         applies_to:
@@ -238,3 +248,103 @@ contracts:
           field: quality-cargo-cache-save-after-adapter
           in:
             - adapter-before-save
+      - id: quality-comparison-commit-only
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+          - ci-quality-workflow-platform-source-selected
+        claim:
+          field: quality-comparison-fetch-scope
+          in:
+            - comparison-commit-only
+      - id: quality-comparison-unavailable-fail-open
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+          - ci-quality-workflow-platform-source-selected
+        claim:
+          field: quality-comparison-unavailable-preparation
+          in:
+            - succeeded
+      - id: quality-toolchain-language-profile-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-language-profile-binding
+          in:
+            - equal
+      - id: quality-toolchain-toolchain-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-toolchain-version-binding
+          in:
+            - equal
+      - id: quality-toolchain-uv-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-uv-version-binding
+          in:
+            - equal
+      - id: quality-toolchain-cargo-audit-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-cargo-audit-version-binding
+          in:
+            - equal
+      - id: quality-toolchain-cargo-deny-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-cargo-deny-version-binding
+          in:
+            - equal
+      - id: quality-toolchain-continue-on-error-absent
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-toolchain-continue-on-error
+          in:
+            - absent
+      - id: platform-explicit-input-binding
+        applies_to:
+          - ci-quality-workflow-platform-source-selected
+        claim:
+          field: platform-explicit-input-binding
+          in:
+            - equal
+      - id: platform-summary-identity
+        applies_to:
+          - ci-quality-workflow-platform-source-selected
+        claim:
+          field: platform-summary-identity
+          in:
+            - quality-gate-platforms / summary
+      - id: platform-unresolved-results-rejected
+        applies_to:
+          - ci-quality-workflow-platform-source-selected
+        claim:
+          field: platform-unresolved-results-accepted
+          in:
+            - absent
+      - id: profiles-callee-once-per-profile
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        claim:
+          field: profiles-callee-runs-per-profile
+          in:
+            - "1"
+      - id: profiles-summary-identity
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        claim:
+          field: profiles-summary-identity
+          in:
+            - quality-gate-profiles / summary
+      - id: profiles-unsuccessful-result-rejected
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        claim:
+          field: profiles-unsuccessful-result-accepted
+          in:
+            - absent

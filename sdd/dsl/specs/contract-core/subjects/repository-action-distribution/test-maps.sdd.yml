@@ -63,7 +63,6 @@ test_maps:
       - path: tests/action-dist-gate.test.mjs
         symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > every Action has contract coverage for its public outputs
         guarantees:
-          - action-contract-coverage-confirmed
           - action-contract-subject-covered
           - action-contract-output-covered
   - contract_id: contract.repository-action-distribution.integrity

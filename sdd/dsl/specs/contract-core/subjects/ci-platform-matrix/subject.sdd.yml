@@ -24,7 +24,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: matrix
-            meaning: Compact JSON object containing the validated platform entries under include.
+            meaning: Compact JSON object that holds the platform matrix entries under include.
           - selector: quality-matrix
             meaning: Compact JSON include matrix of the selected platforms.
           - selector: expected-platforms
@@ -33,8 +33,10 @@ contracts:
             meaning: Success for a valid bounded manifest and failure otherwise.
           - selector: matrix-output-state
             meaning: Present when a matrix output was emitted and absent otherwise.
-          - selector: quality-output-state
-            meaning: Present when quality-matrix and expected-platforms were emitted and absent when neither was emitted.
+          - selector: quality-matrix-output-state
+            meaning: Present when a quality-matrix output was emitted and absent otherwise.
+          - selector: expected-platforms-output-state
+            meaning: Present when an expected-platforms output was emitted and absent otherwise.
           - selector: full-matrix-binding
             meaning: Equality of the complete matrix include array, including order and all entry values, with the validated manifest.
           - selector: quality-id-order
@@ -98,11 +100,18 @@ contracts:
         claim:
           field: expected-platforms
           present: true
-      - id: invalid-selection-has-no-quality-outputs
+      - id: invalid-selection-has-no-quality-matrix
         applies_to:
           - runtime-context.quality-platform-selection-invalid
         claim:
-          field: quality-output-state
+          field: quality-matrix-output-state
+          in:
+            - absent
+      - id: invalid-selection-has-no-expected-platforms
+        applies_to:
+          - runtime-context.quality-platform-selection-invalid
+        claim:
+          field: expected-platforms-output-state
           in:
             - absent
       - id: diagnostic-failure-stage-outputs

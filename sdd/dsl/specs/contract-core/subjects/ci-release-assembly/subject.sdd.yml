@@ -44,9 +44,11 @@ contracts:
           - selector: status
             meaning: Status output of the assembly invocation; success.
           - selector: release-handoff
-            meaning: New ci.handoff.v1 directory containing authority-bound assets and opaque owner evidence.
+            meaning: Path of the ci.handoff.v1 directory that a successful assembly writes.
           - selector: asset-digest
             meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
+          - selector: handoff-source-identity
+            meaning: Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.
           - selector: outcome
             meaning: Failed step outcome when assembly is rejected.
           - selector: asset-digest-serialization
@@ -63,6 +65,11 @@ contracts:
             meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
           - selector: accepted-checksum-line-ending
             meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
+      - summary: Release handoff directory written by the assembly.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: handoff-asset-digest-reload
+            meaning: Comparison of the asset digest that loading the written handoff yields with the asset-digest output.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -102,6 +109,20 @@ contracts:
         claim:
           field: asset-digest
           present: true
+      - id: handoff-source-bound
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: handoff-source-identity
+          in:
+            - equal
+      - id: handoff-asset-digest-bound
+        applies_to:
+          - runtime-context.release-assembly-valid
+        claim:
+          field: handoff-asset-digest-reload
+          in:
+            - equal
       - id: assembly-no-credential-input
         applies_to:
           - runtime-context.release-assembly-valid

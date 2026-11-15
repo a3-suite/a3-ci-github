@@ -54,9 +54,9 @@ cases:
       readback-path: readback.json
     verifies:
       - observation-status
-      - immutable-release-id
+      - release-id-emitted
       - bound-receipt
-      - independent-readback
+      - readback-evidence-emitted
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: output-line-injection
     partition: runtime-context.release-observation-invalid
@@ -81,8 +81,8 @@ cases:
     input:
       operation: verify-after
     verifies:
-      - immutable-release-id
-      - independent-readback
+      - release-id-emitted
+      - readback-evidence-emitted
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: existing-release
     partition: runtime-context.release-observation-invalid

@@ -63,6 +63,8 @@ cases:
     verifies:
       - bound-handoff
       - bound-asset-digest
+      - handoff-source-bound
+      - handoff-asset-digest-bound
       - asset-digest-serialization
       - asset-digest-asset-order
       - asset-digest-field-order

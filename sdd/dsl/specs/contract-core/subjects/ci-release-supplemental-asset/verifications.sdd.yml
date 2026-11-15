@@ -48,6 +48,7 @@ cases:
       operation: build-platform
     verifies:
       - phase-rejected
+      - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.outputs
     id: input-mutation
     partition: runtime-context.supplemental-phase-invalid
@@ -177,15 +178,8 @@ cases:
     id: diagnostic-standard-installer-diagnostic
     partition: runtime-context.supplemental-phase-invalid
     input:
-      failure: standard-installer-diagnostic
-      operation: build-platform
-    verifies:
-      - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    id: diagnostic-owner-process-diagnostic
-    partition: runtime-context.supplemental-phase-invalid
-    input:
-      failure: owner-process-diagnostic
+      implementation: standard-installer
+      checksum: non-SHA-256 text in the archive checksum sidecar
       operation: build-platform
     verifies:
       - phase-diagnostic
@@ -264,6 +258,7 @@ cases:
       supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
+      - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: standard-candidate-mutation
     partition: runtime-context.supplemental-phase-invalid
@@ -368,15 +363,6 @@ cases:
       supplemental-build-root: relative directory holding the supplemental build-platform output
     verifies:
       - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    id: diagnostic-owner-process-diagnostic
-    partition: runtime-context.supplemental-phase-invalid
-    input:
-      failure: owner-process-diagnostic
-      operation: assemble
-      supplemental-build-root: relative directory holding the supplemental build-platform output
-    verifies:
-      - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: primary-and-cleanup-failure
     partition: runtime-context.supplemental-phase-invalid

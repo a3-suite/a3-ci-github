@@ -249,10 +249,10 @@ contracts:
       - summary: Failure summary routes declared in managed workflow definitions.
         boundary: boundary.workflow-definition
         fields:
-          - selector: workflow-evidence
-            meaning: Declared workflow summary route preserving evidence and reason fields.
-          - selector: workflow-classification-correlation
-            meaning: Failure correlation fields declared in each managed summary route.
+          - selector: workflow-reasonless-source-rows
+            meaning: Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without a reason that names the result of that source job.
+          - selector: workflow-raw-resultless-source-rows
+            meaning: Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without the raw result of that source job.
           - selector: workflow-secret-safe-summary
             meaning: Secret context references in managed diagnostic summary definitions; absent or present.
           - selector: workflow-diagnostic-order
@@ -262,35 +262,27 @@ contracts:
     conditions:
       - input: ci-failure-diagnostics-workflow-source-available
     guarantees:
-      - id: ci-failure-diagnostics-workflow-evidence-declared
-        applies_to:
-          - ci-failure-diagnostics-workflow-source-available
+      - id: ci-failure-diagnostics-workflow-reason-bound
         claim:
-          field: workflow-evidence
-          present: true
-      - id: ci-failure-diagnostics-workflow-correlation-declared
-        applies_to:
-          - ci-failure-diagnostics-workflow-source-available
+          field: workflow-reasonless-source-rows
+          in:
+            - absent
+      - id: ci-failure-diagnostics-workflow-raw-result-bound
         claim:
-          field: workflow-classification-correlation
-          present: true
+          field: workflow-raw-resultless-source-rows
+          in:
+            - absent
       - id: ci-failure-diagnostics-workflow-summary-secret-safe
-        applies_to:
-          - ci-failure-diagnostics-workflow-source-available
         claim:
           field: workflow-secret-safe-summary
           in:
             - absent
       - id: ci-failure-diagnostics-workflow-diagnostic-order
-        applies_to:
-          - ci-failure-diagnostics-workflow-source-available
         claim:
           field: workflow-diagnostic-order
           in:
             - after-source-jobs
       - id: ci-failure-diagnostics-workflow-source-result-retained
-        applies_to:
-          - ci-failure-diagnostics-workflow-source-available
         claim:
           field: workflow-source-result-replacement
           in:

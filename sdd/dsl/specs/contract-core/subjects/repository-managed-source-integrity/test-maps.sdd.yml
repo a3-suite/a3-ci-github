@@ -7,14 +7,15 @@ test_maps:
       - path: tests/repository-managed-source-integrity.test.mjs
         symbol: repository-managed-source-integrity > managed source inventory resolves every canonical repository asset
         guarantees:
-          - repository-managed-source-integrity-success-observed
+          - canonical-asset-roots-present
+          - registered-sources-present
   - contract_id: contract.repository-managed-source-integrity.integrity
     case_id: repository-managed-source-integrity-failure
     tests:
       - path: tests/repository-managed-source-integrity.test.mjs
         symbol: repository-managed-source-integrity > managed source inventory rejects stale legacy locations
         guarantees:
-          - repository-managed-source-integrity-failure-observed
+          - legacy-source-locations-absent
   - contract_id: contract.repository-managed-source-integrity.integrity
     case_id: detailed-failure-integrity
     tests:
