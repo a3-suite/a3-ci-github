@@ -5,7 +5,7 @@ subject:
   summary: Create and verify immutable package publication request handoffs.
 contracts:
   - id: contract.ci-package-publication-request.outputs
-    summary: A package publication request operation exposes its completion status and verified source identity.
+    summary: Create and verify operation inputs to the package publication request Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."

@@ -5,7 +5,7 @@ subject:
   summary: Verifying Rust release authority against the checked-out source.
 contracts:
   - id: contract.ci-rust-source-gate.processing
-    summary: The shared script accepts only checked-out Rust source bound to the release authority.
+    summary: Language profile and release authority inputs to the Rust source gate shared script.
     inputs:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
@@ -52,7 +52,7 @@ contracts:
           field: failure-stage
           present: true
   - id: contract.ci-rust-source-gate.outputs
-    summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    summary: Language profile and release authority inputs to the Rust source gate Composite Action.
     inputs:
       - name: language-profile
         meaning: "Received by the contract target: language profile selected by the caller."

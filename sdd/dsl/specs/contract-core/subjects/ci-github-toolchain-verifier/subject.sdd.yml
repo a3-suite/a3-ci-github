@@ -52,7 +52,7 @@ contracts:
           field: failure-stage
           present: true
   - id: contract.ci-github-toolchain-verifier.outputs
-    summary: The Composite Action maps shared script success to verified output and propagates script failure.
+    summary: Verification mode and toolchain version inputs to the GitHub toolchain verifier Composite Action.
     inputs:
       - name: mode
         meaning: "Received by the contract target: verification mode."

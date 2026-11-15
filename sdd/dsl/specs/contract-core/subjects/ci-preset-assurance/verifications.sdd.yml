@@ -116,7 +116,7 @@ cases:
     partition: ci-preset-assurance-applied-preset-valid
     input:
       preset: release-publication
-      applied-preset: disabled
+      applied-preset: canonical release-publication assets with the supplemental release asset disabled
     verifies:
       - ci-preset-assurance-valid-preset-succeeds
   - contract_id: contract.ci-preset-assurance.asset-lock

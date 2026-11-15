@@ -5,7 +5,7 @@ subject:
   summary: Provisioning an exact GitHub CLI Release asset for later GitHub CI steps.
 contracts:
   - id: contract.ci-gh-provisioner.provision
-    summary: A checked official GitHub CLI Release asset enters the job PATH; failed provisioning exposes no executable.
+    summary: GitHub CLI version and runner platform inputs to the gh provisioner Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -34,7 +34,7 @@ contracts:
         boundary: boundary.runner-path
         fields:
           - selector: gh
-            meaning: Checked GitHub CLI executable on the job command search path.
+            meaning: GitHub CLI executable resolved from the job command search path.
       - summary: Provisioning success or failure is visible to the caller.
         boundary: boundary.action-output
         fields:

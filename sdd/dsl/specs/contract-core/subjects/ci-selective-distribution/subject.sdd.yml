@@ -62,6 +62,20 @@ contracts:
         meaning: "Precondition prepared by the case: digest of a delivered file compared with the manifest."
       - name: required-arguments
         meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: cached-distribution
+        meaning: "Precondition prepared by the case: state of the distribution files cached by an earlier fetch."
+      - name: fetch-lock
+        meaning: "Precondition prepared by the case: state of the fetch lock of the cached distribution."
+      - name: secondary-io
+        meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
+      - name: manifest
+        meaning: "Received by the contract target: distribution manifest document."
+      - name: manifest-url
+        meaning: "Received by the contract target: URL of the distribution manifest."
+      - name: state-path
+        meaning: "Precondition prepared by the case: kind of the project-local state path."
+      - name: download-response
+        meaning: "Precondition prepared by the case: response returned by the transport for a requested file."
     observations:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
         boundary: boundary.cli-result
@@ -135,6 +149,10 @@ contracts:
         meaning: "Precondition prepared by the case: state of the approved connection candidate."
       - name: execution-input-change
         meaning: "Precondition prepared by the case: execution input changed after approval."
+      - name: branch-tip
+        meaning: "Precondition prepared by the case: tip of the release branch compared with the release tag."
+      - name: version-file
+        meaning: "Precondition prepared by the case: version recorded in the VERSION file of the release source."
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
         boundary: boundary.script-result
@@ -144,7 +162,7 @@ contracts:
           - selector: assetNames
             meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
           - selector: readbackStatus
-            meaning: Evidence that every remote Release asset is byte-identical to the prepared handoff.
+            meaning: Readback status that the publisher reports for the remote Release assets.
           - selector: implementationSourceRevision
             meaning: Full first-party implementation SHA verified against the final tagged source.
           - selector: acceptedDispatchRef
@@ -314,6 +332,12 @@ contracts:
         meaning: "Precondition prepared by the case: state of the recorded application transaction."
       - name: secondary-io
         meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
+      - name: prior-distribution
+        meaning: "Precondition prepared by the case: state of the distribution applied earlier."
+      - name: caller-settings
+        meaning: "Received by the contract target: caller settings of the generated workflow."
+      - name: mutation-lock
+        meaning: "Precondition prepared by the case: state of the lock that serializes mutations of the consumer."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary: boundary.cli-result

@@ -100,7 +100,7 @@ contracts:
           field: failure-stage
           present: true
   - id: contract.ci-rust-release-build.outputs
-    summary: The Composite Action maps shared script success to completed output and propagates script failure.
+    summary: Language profile, platform, and output directory inputs to the Rust release build Composite Action.
     inputs:
       - name: language-profile
         meaning: "Received by the contract target: language profile selected by the caller."

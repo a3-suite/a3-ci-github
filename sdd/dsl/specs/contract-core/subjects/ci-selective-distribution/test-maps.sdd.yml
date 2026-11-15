@@ -89,47 +89,76 @@ test_maps:
     case_id: selective-distribution-delivery-selective-distribution-source-invalid
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch rejects invalid cached state and concurrent fetch locks before transport
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch preserves prior state and releases its lock after an extension fails
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > explicit source root remains validated when a verified distribution already exists
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > fetch removes staging even when closing or removing its owned lock fails
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.process.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution > release generator rejects invalid version source and output boundaries
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution > manifest validation rejects malformed authority identity files and dependency references
-        guarantees:
-          - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution > remote manifest loading confines the Release URL and release tag mapping
         guarantees:
           - selective-distribution-invalid-source-rejected
       - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.delivery > selective-distribution > fetch rejects source bytes that do not match the release manifest
         guarantees:
           - selective-distribution-invalid-source-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution > fetch rejects a project-local state path redirected through a symlink
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-cached-file-tampered
+    tests:
+      - &id001
+        path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch rejects invalid cached state and concurrent fetch locks before transport
         guarantees:
           - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-verified-file-tampered
+    tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.delivery > selective-distribution > local verification rejects distribution bytes changed after fetch
         guarantees:
           - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-fetch-locked
+    tests:
+      - *id001
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch preserves prior state and releases its lock after an extension fails
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-lock-cleanup-fails
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > fetch removes staging even when closing or removing its owned lock fails
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-manifest-malformed
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution > manifest validation rejects malformed authority identity files and dependency references
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-manifest-url-untrusted
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution > remote manifest loading confines the Release URL and release tag mapping
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-state-path-symlink
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution > fetch rejects a project-local state path redirected through a symlink
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-download-redirect-untrusted
+    tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch rejects invalid redirect and transport responses without publishing consumer assets
+        guarantees:
+          - selective-distribution-invalid-source-rejected
+  - contract_id: contract.ci-selective-distribution.delivery
+    case_id: source-invalid-release-source-revision
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.process.test.mjs
+        symbol: contract.ci-selective-distribution.delivery > selective-distribution > release generator rejects invalid version source and output boundaries
         guarantees:
           - selective-distribution-invalid-source-rejected
   - contract_id: contract.ci-selective-distribution.publication
@@ -172,10 +201,16 @@ test_maps:
         symbol: contract.ci-selective-distribution.publication > repository-selective-distribution-release > distribution Release publication is idempotent and readback rejects changed remote bytes
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: publication-invalid-hotfix-tip-advanced
+    tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: publication-invalid-development-version
+    tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release tags reject development VERSION even when integrated into main
         guarantees:
@@ -202,6 +237,9 @@ test_maps:
         symbol: repository-release-alias-update > ordinary release accepts only the current main tip tree and refuses historical squash trees
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: release-integration-invalid-same-version-different-tree
+    tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different content
         guarantees:
@@ -210,10 +248,16 @@ test_maps:
         symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different mode
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: release-integration-invalid-unrelated-hotfix-source
+    tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > tree-equivalent main does not authorize an unrelated next hotfix source
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: release-integration-invalid-evidence-unavailable
+    tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at main
         guarantees:
@@ -278,14 +322,6 @@ test_maps:
   - contract_id: contract.ci-selective-distribution.publication
     case_id: selective-distribution-single-release-binding-selective-distribution-publication-invalid
     tests:
-      - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > repository-quality-delivery-regression > candidate gate rejects a release tag that is already published
-        guarantees:
-          - selective-distribution-publication-failure-exposed
-      - path: tests/workflow-contracts.test.mjs
-        symbol: contract.ci-selective-distribution.publication > repository-provider-binding > repository CI validates untagged connection candidates and preserves implementation preparation
-        guarantees:
-          - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > one Release connects an untagged implementation on release/0.2.11
         guarantees:
@@ -295,23 +331,11 @@ test_maps:
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
-        symbol: contract.ci-selective-distribution.publication > candidate updates reject missing and unrelated implementation commits and preserve approval inputs
-        guarantees:
-          - selective-distribution-publication-failure-exposed
-      - path: runtime/repository/tests/single-release-binding.test.mjs
-        symbol: contract.ci-selective-distribution.publication > candidate application rejects closure changes and symlink destinations without writing references
-        guarantees:
-          - selective-distribution-publication-failure-exposed
-      - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input VERSION
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input runtime/payload.mjs
-        guarantees:
-          - selective-distribution-publication-failure-exposed
-      - path: runtime/repository/tests/single-release-binding.test.mjs
-        symbol: contract.ci-selective-distribution.publication > single Release rejects a runtime entry added outside provider maintenance
         guarantees:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
@@ -338,14 +362,51 @@ test_maps:
         symbol: contract.ci-selective-distribution.publication > implementation preparation validates existing references without a final tag or new binding
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-tag-published
+    tests:
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > repository-quality-delivery-regression > candidate gate rejects a release tag that is already published
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-implementation-unreachable
+    tests:
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > candidate updates reject missing and unrelated implementation commits and preserve approval inputs
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-closure-changed-before-apply
+    tests:
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > candidate application rejects closure changes and symlink destinations without writing references
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-runtime-entry-outside-maintenance
+    tests:
+      - path: runtime/repository/tests/single-release-binding.test.mjs
+        symbol: contract.ci-selective-distribution.publication > single Release rejects a runtime entry added outside provider maintenance
+        guarantees:
+          - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-stale-binding
+    tests:
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects stale workflow and installer bindings and invalid interfaces
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-unexecutable-bundle
+    tests:
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release cannot validate an unexecutable fixed bundle or bypass execution checks
         guarantees:
           - selective-distribution-publication-failure-exposed
+  - contract_id: contract.ci-selective-distribution.publication
+    case_id: single-release-binding-invalid-absent-entrypoint
+    tests:
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared main entrypoint
         guarantees:
@@ -372,10 +433,6 @@ test_maps:
           - selective-distribution-publication-failure-exposed
       - path: runtime/repository/tests/single-release-binding.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-unresolved entrypoint
-        guarantees:
-          - selective-distribution-publication-failure-exposed
-      - path: runtime/repository/tests/manage-distribution-release.test.mjs
-        symbol: contract.ci-selective-distribution.publication > repository-selective-distribution-release > distribution Release publication is idempotent and readback rejects changed remote bytes
         guarantees:
           - selective-distribution-publication-failure-exposed
   - contract_id: contract.ci-selective-distribution.plan
@@ -480,19 +537,7 @@ test_maps:
     case_id: selective-distribution-application-selective-distribution-application-conflict
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > provider-pin-companion > planned provider pin companions are owned and restored with generated callers
-        guarantees:
-          - selective-distribution-conflict-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > provider-pin-companion > missing prior distributions are classified without treating old schemas as current
-        guarantees:
-          - selective-distribution-conflict-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.application > workflow-template-generation > normal generation and application need no Hosted evidence and preserve ownership checks
-        guarantees:
-          - selective-distribution-conflict-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > workflow-template-generation > workflow generation safely resolves values and preserves only declared caller settings
         guarantees:
           - selective-distribution-conflict-rejected
       - path: runtime/distribution/tests/selective-distribution.test.mjs
@@ -500,17 +545,42 @@ test_maps:
         guarantees:
           - selective-distribution-conflict-rejected
       - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > selective-distribution-application > plan rejects malformed prior ownership locks before changing consumer state
-        guarantees:
-          - selective-distribution-conflict-rejected
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.application > selective-distribution > plan rejects unmanaged destination drift and apply rejects changed plan inputs
         guarantees:
           - selective-distribution-conflict-rejected
+  - contract_id: contract.ci-selective-distribution.application
+    case_id: application-conflict-prior-distribution-missing
+    tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > provider-pin-companion > missing prior distributions are classified without treating old schemas as current
+        guarantees:
+          - selective-distribution-conflict-rejected
+  - contract_id: contract.ci-selective-distribution.application
+    case_id: application-conflict-caller-settings-unknown
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > workflow-template-generation > workflow generation safely resolves values and preserves only declared caller settings
+        guarantees:
+          - selective-distribution-conflict-rejected
+  - contract_id: contract.ci-selective-distribution.application
+    case_id: application-conflict-prior-lock-malformed
+    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution-application > plan rejects malformed prior ownership locks before changing consumer state
+        guarantees:
+          - selective-distribution-conflict-rejected
+  - contract_id: contract.ci-selective-distribution.application
+    case_id: application-conflict-approval-invalid
+    tests:
+      - &id002
+        path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.application > selective-distribution > application rejects invalid ownership approval and concurrent mutation locks
         guarantees:
           - selective-distribution-conflict-rejected
+  - contract_id: contract.ci-selective-distribution.application
+    case_id: application-conflict-mutation-locked
+    tests:
+      - *id002
   - contract_id: contract.ci-selective-distribution.application
     case_id: selective-distribution-application-selective-distribution-plan-changed
     tests:

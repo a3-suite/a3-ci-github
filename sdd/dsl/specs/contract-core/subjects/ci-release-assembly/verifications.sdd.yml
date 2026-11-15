@@ -77,7 +77,7 @@ cases:
     id: unsafe-build-inputs
     partition: runtime-context.release-assembly-invalid
     input:
-      build-root: invalid-build
+      build-root: build output whose asset manifest names another source SHA
   - contract_id: contract.ci-release-assembly.outputs
     id: canonical-checksum-sidecar
     partition: runtime-context.release-assembly-valid

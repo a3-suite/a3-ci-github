@@ -52,7 +52,7 @@ contracts:
           - selector: release-remote-identity
             meaning: Immutable create-result Release object ID independently verified by verify-after.
           - selector: publish-receipt
-            meaning: Schema-validated publication receipt exposed by the verifier.
+            meaning: Publication receipt exposed by the verifier.
           - selector: readback-evidence
             meaning: Readback evidence independently observed from the published Release.
           - selector: outcome

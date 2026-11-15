@@ -5,7 +5,7 @@ subject:
   summary: Materializing an owner-approved version plan into a publish version.
 contracts:
   - id: contract.ci-publish-version.outputs
-    summary: An owner-approved version plan produces a publish-version output.
+    summary: Owner-approved version plan inputs to the publish version Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
