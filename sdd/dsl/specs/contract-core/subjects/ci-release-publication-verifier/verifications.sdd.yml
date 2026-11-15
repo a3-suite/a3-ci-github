@@ -52,11 +52,16 @@ cases:
       operation: verify-after
       receipt-path: receipt.json
       readback-path: readback.json
+      evidence: matching-independent-readback
     verifies:
       - observation-status
       - release-id-emitted
       - bound-receipt
       - readback-evidence-emitted
+      - post-verification-reads-asset-bodies
+      - receipt-remote-id-binding
+      - receipt-readback-id-binding
+      - release-output-id-binding
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: output-line-injection
     partition: runtime-context.release-observation-invalid
@@ -246,16 +251,6 @@ cases:
     input:
       operation: verify-after
       remote-inventory: persistently-absent
-  - contract_id: contract.ci-release-publication-verifier.outputs
-    id: immutable-id-binding
-    partition: runtime-context.release-post-verification-valid
-    input:
-      operation: verify-after
-      evidence: matching-independent-readback
-    verifies:
-      - receipt-remote-id-binding
-      - receipt-readback-id-binding
-      - release-output-id-binding
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: provider-transport-methods
     partition: runtime-context.release-verification-invocation

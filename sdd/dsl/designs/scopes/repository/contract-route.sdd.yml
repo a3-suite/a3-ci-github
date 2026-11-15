@@ -179,8 +179,50 @@ routes:
       - hosted-delivery
       - selective-distribution
       - contract-verification
+  - route_id: selective-distribution-verification
+    contract_id: contract.ci-selective-distribution.verification
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-release-generation
+    contract_id: contract.ci-selective-distribution.release-generation
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
   - route_id: selective-distribution-publication
     contract_id: contract.ci-selective-distribution.publication
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-release-readback
+    contract_id: contract.ci-selective-distribution.release-readback
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-alias-update
+    contract_id: contract.ci-selective-distribution.alias-update
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-reference-update
+    contract_id: contract.ci-selective-distribution.reference-update
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-provider-reference-check
+    contract_id: contract.ci-selective-distribution.provider-reference-check
+    hops:
+      - hosted-delivery
+      - selective-distribution
+      - contract-verification
+  - route_id: selective-distribution-release-dispatch
+    contract_id: contract.ci-selective-distribution.release-dispatch
     hops:
       - hosted-delivery
       - selective-distribution

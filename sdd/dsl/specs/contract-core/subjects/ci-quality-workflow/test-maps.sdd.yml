@@ -73,6 +73,7 @@ test_maps:
         guarantees:
           - platform-explicit-input-binding
           - platform-summary-identity
+          - quality-fixed-reference
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform summary scripts preserve docs-only failed cancelled and missing outcomes
         guarantees:
@@ -82,6 +83,7 @@ test_maps:
         guarantees:
           - platform-resolution-before-execution
           - platform-execution-before-summary
+          - quality-pull-request-trusted-assets-from-base
   - contract_id: contract.ci-quality-workflow.execution
     case_id: ci-quality-workflow-profiles
     tests:

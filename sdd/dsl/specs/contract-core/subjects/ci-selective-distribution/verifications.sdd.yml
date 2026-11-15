@@ -30,13 +30,28 @@ cases:
       operation: fetch
       required-arguments: missing
   - contract_id: contract.ci-selective-distribution.delivery
+    id: fetch-cleanup-failure-diagnostic
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: fetch
+      download-response: corrupt file body
+      secondary-io: owned lock and staging cleanup both fail
+  - contract_id: contract.ci-selective-distribution.delivery
     id: selective-distribution-delivery-selective-distribution-source-valid
     partition: runtime-context.selective-distribution-source-valid
     input:
       operation: fetch
       presets:
         - quality-gate
-      source-revision: full commit SHA of the release source
+      manifest: release manifest generated from the committed source
+  - contract_id: contract.ci-selective-distribution.delivery
+    id: detailed-failure-delivery-unbound-option
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: fetch
+      required-arguments: present
+      arguments:
+        - option not bound to the operation
   - contract_id: contract.ci-selective-distribution.delivery
     id: selective-distribution-delivery-selective-distribution-source-invalid
     partition: runtime-context.selective-distribution-source-invalid
@@ -48,12 +63,6 @@ cases:
     partition: runtime-context.selective-distribution-source-invalid
     input:
       operation: fetch
-      cached-distribution: file changed after the earlier fetch
-  - contract_id: contract.ci-selective-distribution.delivery
-    id: source-invalid-verified-file-tampered
-    partition: runtime-context.selective-distribution-source-invalid
-    input:
-      operation: verify
       cached-distribution: file changed after the earlier fetch
   - contract_id: contract.ci-selective-distribution.delivery
     id: source-invalid-fetch-locked
@@ -71,11 +80,13 @@ cases:
     id: source-invalid-manifest-malformed
     partition: runtime-context.selective-distribution-source-invalid
     input:
+      operation: fetch
       manifest: unsupported schemaVersion
   - contract_id: contract.ci-selective-distribution.delivery
     id: source-invalid-manifest-url-untrusted
     partition: runtime-context.selective-distribution-source-invalid
     input:
+      operation: fetch
       manifest-url: host outside the GitHub Release download
   - contract_id: contract.ci-selective-distribution.delivery
     id: source-invalid-state-path-symlink
@@ -89,11 +100,35 @@ cases:
     input:
       operation: fetch
       download-response: redirect to an untrusted host
-  - contract_id: contract.ci-selective-distribution.delivery
-    id: source-invalid-release-source-revision
+  - contract_id: contract.ci-selective-distribution.verification
+    id: source-invalid-verified-file-tampered
     partition: runtime-context.selective-distribution-source-invalid
     input:
+      operation: verify
+      cached-distribution: file changed after the earlier fetch
+  - contract_id: contract.ci-selective-distribution.verification
+    id: detailed-failure-verification-unbound-option
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: verify
+      required-arguments: present
+      arguments:
+        - option not bound to the operation
+  - contract_id: contract.ci-selective-distribution.release-generation
+    id: release-generation-valid
+    partition: runtime-context.selective-distribution-release-generation-valid
+    input:
+      source-revision: full commit SHA of the committed release source
+  - contract_id: contract.ci-selective-distribution.release-generation
+    id: release-generation-invalid-source-revision
+    partition: runtime-context.selective-distribution-release-generation-invalid
+    input:
       source-revision: not a full commit SHA
+  - contract_id: contract.ci-selective-distribution.release-generation
+    id: detailed-failure-release-generation
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      required-arguments: missing
   - contract_id: contract.ci-selective-distribution.publication
     id: detailed-failure-publication
     partition: runtime-context.failure-diagnostic-required
@@ -101,142 +136,217 @@ cases:
       arguments:
         - invalid
   - contract_id: contract.ci-selective-distribution.publication
+    id: publication-failure-diagnostic-provider-failure
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: publish
+      provider-response: asset upload request fails
+  - contract_id: contract.ci-selective-distribution.publication
     id: selective-distribution-publication-selective-distribution-publication-valid
     partition: runtime-context.selective-distribution-publication-valid
     input:
       operation: publish
       tag: v1.2.3
-      source-revision: full commit SHA of the release source
-      implementation-revision: full commit SHA of the implementation bound by the registry
-      integration: ancestor-of-main
-      dispatch-ref: refs/tags/v1.2.3
     verifies:
       - selective-distribution-publication-exposed
-      - selective-distribution-dispatch-ref-bound
   - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-dispatch-ref-selective-distribution-publication-invalid
+    id: publication-invalid-provider-observation-fails
     partition: runtime-context.selective-distribution-publication-invalid
     input:
       operation: publish
-      tag: v1.2.3
-      dispatch-ref: refs/heads/main
-  - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-publication-selective-distribution-publication-invalid
-    partition: runtime-context.selective-distribution-publication-invalid
+      provider-response: tag ref observation fails
+  - contract_id: contract.ci-selective-distribution.release-readback
+    id: readback-valid
+    partition: runtime-context.selective-distribution-readback-valid
     input:
-      operation: publish
+      operation: readback
+      readback: matching the prepared assets
+  - contract_id: contract.ci-selective-distribution.release-readback
+    id: readback-invalid-asset-bytes-mismatch
+    partition: runtime-context.selective-distribution-readback-invalid
+    input:
+      operation: readback
       readback: asset-bytes-mismatch
-  - contract_id: contract.ci-selective-distribution.publication
-    id: publication-invalid-hotfix-tip-advanced
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.release-readback
+    id: detailed-failure-readback
+    partition: runtime-context.failure-diagnostic-required
     input:
-      operation: publish
+      operation: readback
+      readback: asset-bytes-mismatch
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-hotfix-tip-advanced
+    partition: runtime-context.selective-distribution-alias-update-invalid
+    input:
+      validation-mode: validate-only
       branch-tip: advanced after the release tag
-  - contract_id: contract.ci-selective-distribution.publication
-    id: publication-invalid-development-version
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-development-version
+    partition: runtime-context.selective-distribution-alias-update-invalid
     input:
-      operation: publish
       version-file: development prerelease version
-  - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-release-integration-selective-distribution-publication-valid
-    partition: runtime-context.selective-distribution-publication-valid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-valid-published-hotfix-squash
+    partition: runtime-context.selective-distribution-alias-update-valid
     input:
-      operation: publish
-      tag: v1.2.3
-      source-revision: full commit SHA of the release source
-      main-tip-tree: same-as-approved-source-tree
-      integration: published-hotfix-squash
+      tag: v1.2.4
+      validation-mode: validate-only
+      integration: next patch of a release whose hotfix was squash-integrated into main
     verifies:
       - selective-distribution-alias-source-integrated
-  - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-release-integration-selective-distribution-publication-invalid
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-valid-main-tip-tree
+    partition: runtime-context.selective-distribution-alias-update-valid
     input:
-      operation: publish
+      tag: v2.0.0
+      validation-mode: validate-only
+      main-tip-tree: same-as-approved-source-tree
+    verifies:
+      - selective-distribution-alias-source-integrated
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-valid-canonical-hotfix-tip
+    partition: runtime-context.selective-distribution-alias-update-valid
+    input:
+      tag: v1.2.3
+      validation-mode: validate-only
+      branch-tip: canonical next-patch hotfix tip not yet integrated into main
+    verifies:
+      - selective-distribution-alias-source-integrated
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-historical-squash
+    partition: runtime-context.selective-distribution-alias-update-invalid
+    input:
       main-tip-tree: different-from-approved-source-tree
       integration: historical-squash-only
-  - contract_id: contract.ci-selective-distribution.publication
-    id: release-integration-invalid-same-version-different-tree
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-same-version-different-tree
+    partition: runtime-context.selective-distribution-alias-update-invalid
     input:
-      operation: publish
       main-tip-tree: same version with a different tree
-  - contract_id: contract.ci-selective-distribution.publication
-    id: release-integration-invalid-unrelated-hotfix-source
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-unrelated-hotfix-source
+    partition: runtime-context.selective-distribution-alias-update-invalid
     input:
-      operation: publish
       integration: unrelated source with a tree-equivalent main
-  - contract_id: contract.ci-selective-distribution.publication
-    id: release-integration-invalid-evidence-unavailable
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: alias-update-invalid-evidence-unavailable
+    partition: runtime-context.selective-distribution-alias-update-invalid
     input:
-      operation: publish
       integration: integration evidence cannot be acquired
-  - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-single-release-binding-selective-distribution-publication-valid
-    partition: runtime-context.selective-distribution-publication-valid
+  - contract_id: contract.ci-selective-distribution.alias-update
+    id: detailed-failure-alias-update
+    partition: runtime-context.failure-diagnostic-required
     input:
-      operation: publish
-      branch: release/0.2.11
+      tag: v1.2.3
+      remote-alias-push: rejected by the remote
+  - contract_id: contract.ci-selective-distribution.reference-update
+    id: reference-update-invalid-implementation-unreachable
+    partition: runtime-context.selective-distribution-reference-update-invalid
+    input:
       tag: v0.2.11
-      source-revision: full commit SHA of the release source
+      implementation-revision: commit unreachable from every branch and tag
+  - contract_id: contract.ci-selective-distribution.reference-update
+    id: reference-update-invalid-execution-assets-dirty
+    partition: runtime-context.selective-distribution-reference-update-invalid
+    input:
+      tag: v0.2.11
+      connection-candidate: execution asset changed in the working tree before the invocation
+  - contract_id: contract.ci-selective-distribution.reference-update
+    id: detailed-failure-reference-update
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      tag: v0.2.11
+      implementation-revision: commit unreachable from every branch and tag
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-valid-release-tag
+    partition: runtime-context.selective-distribution-provider-reference-check-valid
+    input:
+      check-target: release tag
+      tag: v0.2.11
       implementation-revision: full commit SHA of the implementation bound by the registry
       implementation-release: absent
       connection-candidate: approved-unchanged
     verifies:
-      - selective-distribution-publication-exposed
       - selective-distribution-implementation-binding-verified
       - selective-distribution-implementation-binding-evidence-exposed
-  - contract_id: contract.ci-selective-distribution.publication
-    id: selective-distribution-single-release-binding-selective-distribution-publication-invalid
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-valid-candidate
+    partition: runtime-context.selective-distribution-provider-reference-check-valid
     input:
-      operation: publish
+      check-target: staged candidate
+      branch: release or hotfix maintenance branch of the tag version
+      tag: v0.2.11
+      implementation-revision: full commit SHA of the implementation bound by the registry
+      implementation-release: absent
+      connection-candidate: approved-unchanged
+    verifies:
+      - selective-distribution-implementation-binding-verified
+      - selective-distribution-implementation-binding-evidence-exposed
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-execution-input-changed
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
+    input:
+      check-target: release tag
       execution-input-change: approved execution file changed after the connection
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-tag-published
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-candidate-closure-changed
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
-      tag: release tag that is already published
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-implementation-unreachable
-    partition: runtime-context.selective-distribution-publication-invalid
+      check-target: staged candidate
+      execution-input-change: runtime file changed after the existing connection
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-release-tag-exists
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
-      implementation-revision: commit unreachable from every branch and tag
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-closure-changed-before-apply
-    partition: runtime-context.selective-distribution-publication-invalid
+      check-target: staged candidate
+      release-tag-state: annotated local tag named after the release tag exists
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-runtime-entry-outside-maintenance
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
-      connection-candidate: execution closure changed after planning
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-runtime-entry-outside-maintenance
-    partition: runtime-context.selective-distribution-publication-invalid
-    input:
-      operation: publish
+      check-target: release tag
       execution-input-change: runtime entry added outside provider maintenance
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-stale-binding
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-stale-binding
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
+      check-target: release tag
       connection-candidate: workflow reference bound to another implementation
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-unexecutable-bundle
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-unexecutable-bundle
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
+      check-target: release tag
       implementation-revision: commit whose Action bundle cannot execute
-  - contract_id: contract.ci-selective-distribution.publication
-    id: single-release-binding-invalid-absent-entrypoint
-    partition: runtime-context.selective-distribution-publication-invalid
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: provider-reference-check-invalid-absent-entrypoint
+    partition: runtime-context.selective-distribution-provider-reference-check-invalid
     input:
-      operation: publish
+      check-target: release tag
       implementation-revision: commit whose Action declares an absent entrypoint
+  - contract_id: contract.ci-selective-distribution.provider-reference-check
+    id: detailed-failure-provider-reference-check
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      check-target: staged candidate
+      release-tag-state: annotated local tag named after the release tag exists
+  - contract_id: contract.ci-selective-distribution.release-dispatch
+    id: release-dispatch-valid
+    partition: runtime-context.selective-distribution-release-dispatch-valid
+    input:
+      tag: v1.2.3
+      dispatch-ref: refs/tags/v1.2.3
+  - contract_id: contract.ci-selective-distribution.release-dispatch
+    id: release-dispatch-invalid-branch-ref
+    partition: runtime-context.selective-distribution-release-dispatch-invalid
+    input:
+      tag: v1.2.3
+      dispatch-ref: refs/heads/main
+  - contract_id: contract.ci-selective-distribution.release-dispatch
+    id: detailed-failure-release-dispatch
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      tag: v1.2.3
+      dispatch-ref: refs/heads/main
   - contract_id: contract.ci-selective-distribution.plan
     id: selective-distribution-application-selective-distribution-application-incomplete
     partition: runtime-context.selective-distribution-application-incomplete
@@ -269,6 +379,14 @@ cases:
         - quality-gate
       settings: {}
   - contract_id: contract.ci-selective-distribution.plan
+    id: detailed-failure-plan-unbound-option
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: plan
+      required-arguments: present
+      arguments:
+        - option not bound to the operation
+  - contract_id: contract.ci-selective-distribution.plan
     id: plan-independent-destination
     partition: runtime-context.distribution-independent-destination-stable
     input:
@@ -276,6 +394,24 @@ cases:
       destination: .github/workflows/quality-gate.yml
       ownership: unmanaged
       independent-state: stable-through-invocation-completion
+  - contract_id: contract.ci-selective-distribution.plan
+    id: plan-input-invalid-prior-distribution-missing
+    partition: runtime-context.selective-distribution-plan-input-invalid
+    input:
+      operation: plan
+      prior-distribution: local manifest removed after apply
+  - contract_id: contract.ci-selective-distribution.plan
+    id: plan-input-invalid-caller-settings-unknown
+    partition: runtime-context.selective-distribution-plan-input-invalid
+    input:
+      operation: plan
+      caller-settings: undeclared setting
+  - contract_id: contract.ci-selective-distribution.plan
+    id: plan-input-invalid-prior-lock-malformed
+    partition: runtime-context.selective-distribution-plan-input-invalid
+    input:
+      operation: plan
+      ownership: malformed prior asset lock
   - contract_id: contract.ci-selective-distribution.application
     id: selective-distribution-application-selective-distribution-application-valid
     partition: runtime-context.selective-distribution-application-valid
@@ -290,24 +426,6 @@ cases:
       operation: apply
       destination: .github/workflows/quality-gate.yml
       ownership: unmanaged-conflict
-  - contract_id: contract.ci-selective-distribution.application
-    id: application-conflict-prior-distribution-missing
-    partition: runtime-context.selective-distribution-application-conflict
-    input:
-      operation: plan
-      prior-distribution: local manifest removed after apply
-  - contract_id: contract.ci-selective-distribution.application
-    id: application-conflict-caller-settings-unknown
-    partition: runtime-context.selective-distribution-application-conflict
-    input:
-      operation: plan
-      caller-settings: undeclared setting
-  - contract_id: contract.ci-selective-distribution.application
-    id: application-conflict-prior-lock-malformed
-    partition: runtime-context.selective-distribution-application-conflict
-    input:
-      operation: plan
-      ownership: malformed prior asset lock
   - contract_id: contract.ci-selective-distribution.application
     id: application-conflict-approval-invalid
     partition: runtime-context.selective-distribution-application-conflict
@@ -350,6 +468,14 @@ cases:
       repo-root: consumer
       required-arguments: missing
   - contract_id: contract.ci-selective-distribution.application
+    id: detailed-failure-application-unbound-option
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: apply
+      required-arguments: present
+      arguments:
+        - option not bound to the operation
+  - contract_id: contract.ci-selective-distribution.application
     id: apply-recovery-diagnostic-1
     partition: runtime-context.failure-diagnostic-required
     input:
@@ -369,6 +495,22 @@ cases:
       operation: rollback
       destination-change: consumer-edit-after-apply
       independent-state: stable-through-invocation-completion
+  - contract_id: contract.ci-selective-distribution.rollback
+    id: rollback-interrupted-apply-protected-destination
+    partition: runtime-context.distribution-independent-destination-stable
+    input:
+      operation: rollback
+      transaction-state: rollback-required after an interrupted apply
+      destination-change: later destination changed after planning
+      independent-state: stable-through-invocation-completion
+  - contract_id: contract.ci-selective-distribution.rollback
+    id: detailed-failure-rollback-unbound-option
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: rollback
+      required-arguments: present
+      arguments:
+        - option not bound to the operation
   - contract_id: contract.ci-selective-distribution.rollback
     id: detailed-failure-rollback
     partition: runtime-context.failure-diagnostic-required
@@ -397,3 +539,9 @@ cases:
       operation: rollback
       transaction-state: restoration-rejected
       secondary-io: recovery-state-recording-fails
+  - contract_id: contract.ci-selective-distribution.rollback
+    id: rollback-recovery-diagnostic-4
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      operation: rollback
+      transaction-state: rolled-back

@@ -167,10 +167,10 @@ describe('contract.repository-action-distribution.integrity', () => {
 
 describe('contract.ci-selective-distribution.delivery', () => {
   describe('distribution-bootstrap-cli', () => {
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // Runs an unknown distribution command; it gives no fetch input.
     // test_level: e2e
     // flow_id: distribution-bootstrap-cli
-    // contract_id: contract.ci-selective-distribution.delivery
     test('distribution CLI retains exit 2 when its diagnostic sink fails', () => {
       withFixture('distribution-diagnostic-sink-', (consumerRoot) => {
         writeFileSync(path.join(consumerRoot, 'existing-state'), 'preserved\n');

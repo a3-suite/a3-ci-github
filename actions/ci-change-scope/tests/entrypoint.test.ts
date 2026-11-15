@@ -81,7 +81,8 @@ test('entrypoint fails open for an invalid SHA', () => {
     expect(run.result.status).toBe(0);
     const output = fs.readFileSync(run.output, 'utf8');
     expect(output).toMatch(/unresolved/);
-    expect(output).toMatch(/run-ci/);
+    const value = (name: string): string | undefined => output.match(new RegExp(`^${name}<<([^\\n]+)\\n([\\s\\S]*?)\\n\\1$`, 'm'))?.[2];
+    expect(value('run-ci')).toBe('true');
     expect(diagnosticOf(run.result.stderr)).toMatchObject({
       classification: { subject: 'ci-change-scope', stage: 'git-diff', reason: 'change-range-unavailable' },
       context: { inputs: { base: 'unavailable', head: run.head, runCi: true } },

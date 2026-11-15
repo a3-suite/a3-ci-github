@@ -964,7 +964,7 @@ describe('repository installer CI result gate', () => {
 
 describe("contract.ci-selective-distribution.publication", () => {
   describe("repository-selective-distribution-release", () => {
-    // contract_id: contract.ci-selective-distribution.publication
+    // contract_id: contract.ci-selective-distribution.release-dispatch
     // integration_id: repository-selective-distribution-release
     test('repository release accepts only a dispatch from the requested release tag', () => {
       // Arrange

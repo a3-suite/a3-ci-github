@@ -90,13 +90,15 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
 test('assembly bundle rejects output path line injection before assembly', (t) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
+  const injected = `${f.options.outputRoot}\nstatus=success`;
   const result = spawnSync(process.execPath, [...bundle], {
-    env: { ...environment(f.options, output), 'INPUT_OUTPUT-DIRECTORY': `${f.options.outputRoot}\nstatus=success` },
+    env: { ...environment(f.options, output), 'INPUT_OUTPUT-DIRECTORY': injected },
     encoding: 'utf8', cwd: f.root,
   });
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(f.options.outputRoot)).toBe(false);
+  expect(fs.existsSync(injected)).toBe(false);
   expect(result.stderr).toMatch(/input-invalid:output-directory/);
 });
 

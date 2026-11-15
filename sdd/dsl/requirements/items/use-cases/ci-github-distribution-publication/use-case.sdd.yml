@@ -27,3 +27,9 @@ related_requirements:
   - ci-github-selective-distribution
 related_contracts:
   - contract.ci-selective-distribution.publication
+  - contract.ci-selective-distribution.release-generation
+  - contract.ci-selective-distribution.release-readback
+  - contract.ci-selective-distribution.alias-update
+  - contract.ci-selective-distribution.reference-update
+  - contract.ci-selective-distribution.provider-reference-check
+  - contract.ci-selective-distribution.release-dispatch

@@ -21,10 +21,12 @@ test_maps:
         symbol: source entrypoint > entrypoint rejects a changed approval ID
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects a changed approval ID
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: owner-decision-required
     tests:
@@ -32,10 +34,12 @@ test_maps:
         symbol: source entrypoint > entrypoint rejects missing owner decision before creating artifacts
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects missing owner decision before creating artifacts
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: unsupported-publication-request-rejected
     tests:
@@ -43,10 +47,12 @@ test_maps:
         symbol: source entrypoint > entrypoint rejects a v1 publication request on verification
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects a v1 publication request on verification
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: detailed-failure-outputs
     tests:
@@ -85,7 +91,9 @@ test_maps:
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
           - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff

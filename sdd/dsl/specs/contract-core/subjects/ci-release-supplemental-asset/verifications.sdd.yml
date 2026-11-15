@@ -225,6 +225,8 @@ cases:
     verifies:
       - standard-installer-publication-assets-produced
       - standard-installer-source-snapshots-excluded
+      - standard-installer-checksum-sidecar-format
+      - standard-installer-declaration-directory-unchanged
   - contract_id: contract.ci-release-supplemental-asset.assembly
     id: standard-entry-name-rejection
     partition: runtime-context.supplemental-phase-invalid

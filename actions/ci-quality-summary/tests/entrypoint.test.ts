@@ -113,6 +113,7 @@ test('entrypoint uses the workflow run URL for rows without evidence', () => {
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
     expect(evidence.split(runUrl).length - 1).toBe(2);
     expect(evidence).toContain('explicit.log');
+    expect(evidence).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
     const line = run.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
     expect(JSON.parse(line.slice('ci-failure-diagnostic:'.length)).context.inputs.jobs).toEqual([{ unit: 'build', rawResult: 'failure', evidence: runUrl }]);
     const enterprise = runBundled({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true }] }, true, 'distinct', { ...runEnv, GITHUB_SERVER_URL: 'https://git.example.com' });
@@ -153,6 +154,7 @@ test('entrypoint normalizes a raw GitHub job result', () => {
     expect(run.result.status).not.toBe(0);
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/job result: failure/);
+    expect(fs.readFileSync(run.evidencePath, 'utf8')).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }
@@ -173,6 +175,7 @@ test('entrypoint ignores intentionally excluded test rows in the aggregate statu
     expect(run.result.status, run.result.stderr).toBe(0);
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/⏭ 対象外/);
+    expect(fs.readFileSync(run.evidencePath, 'utf8')).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }

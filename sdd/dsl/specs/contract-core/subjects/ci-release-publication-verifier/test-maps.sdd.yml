@@ -144,6 +144,10 @@ test_maps:
           - release-id-emitted
           - bound-receipt
           - readback-evidence-emitted
+          - post-verification-reads-asset-bodies
+          - receipt-remote-id-binding
+          - receipt-readback-id-binding
+          - release-output-id-binding
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
         guarantees:
@@ -151,6 +155,10 @@ test_maps:
           - release-id-emitted
           - bound-receipt
           - readback-evidence-emitted
+          - post-verification-reads-asset-bodies
+          - receipt-remote-id-binding
+          - receipt-readback-id-binding
+          - release-output-id-binding
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: output-line-injection
     tests:
@@ -468,21 +476,6 @@ test_maps:
           - get-only-requests
           - release-inventory-attempts
           - release-reobservation-delay
-  - contract_id: contract.ci-release-publication-verifier.outputs
-    case_id: immutable-id-binding
-    tests:
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
-        guarantees:
-          - receipt-remote-id-binding
-          - receipt-readback-id-binding
-          - release-output-id-binding
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
-        guarantees:
-          - receipt-remote-id-binding
-          - receipt-readback-id-binding
-          - release-output-id-binding
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: provider-transport-methods
     tests:

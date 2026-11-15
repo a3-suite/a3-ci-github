@@ -19,10 +19,12 @@ test_maps:
         symbol: source entrypoint > entrypoint fails open for an invalid SHA
         guarantees:
           - change-scope-unresolved-status-produced
+          - change-scope-unresolved-runs-ci
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails open for an invalid SHA
         guarantees:
           - change-scope-unresolved-status-produced
+          - change-scope-unresolved-runs-ci
   - contract_id: contract.ci-change-scope.outputs
     case_id: detailed-failure-outputs
     tests:

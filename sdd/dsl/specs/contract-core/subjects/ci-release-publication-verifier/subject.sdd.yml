@@ -77,6 +77,8 @@ contracts:
         fields:
           - selector: non-get-request-state
             meaning: Occurrence state of provider requests using a method other than GET during one invocation.
+          - selector: asset-body-request-state
+            meaning: Occurrence state of provider requests to the Release asset download endpoint (/releases/assets/) during one invocation.
           - selector: release-inventory-attempts
             meaning: Maximum number of attempted Release inventory observations, including failed or incomplete attempts, in one pre-create or post-create observation sequence, represented as a decimal integer string; zero when no such observation begins.
           - selector: asset-inventory-attempts
@@ -202,6 +204,13 @@ contracts:
           in:
             - "1000"
             - not-applicable
+      - id: post-verification-reads-asset-bodies
+        applies_to:
+          - runtime-context.release-post-verification-valid
+        claim:
+          field: asset-body-request-state
+          in:
+            - present
       - id: receipt-remote-id-binding
         applies_to:
           - runtime-context.release-post-verification-valid

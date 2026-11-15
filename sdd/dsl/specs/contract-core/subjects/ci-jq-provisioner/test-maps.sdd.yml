@@ -30,10 +30,14 @@ test_maps:
         symbol: source entrypoint > Action rejects a checksum mismatch without exposing a binary
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects a checksum mismatch without exposing a binary
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: invalid-version
     tests:
@@ -41,10 +45,14 @@ test_maps:
         symbol: source entrypoint > Action rejects an invalid version as provisioning failure
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an invalid version as provisioning failure
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: unsupported-runner
     tests:
@@ -52,10 +60,14 @@ test_maps:
         symbol: source entrypoint > Action rejects an unsupported runner before download or PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an unsupported runner before download or PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: unavailable-release-asset
     tests:
@@ -63,10 +75,14 @@ test_maps:
         symbol: source entrypoint > Action reports an unavailable release asset before PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action reports an unavailable release asset before PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: invalid-checksum-manifest
     tests:
@@ -74,10 +90,14 @@ test_maps:
         symbol: source entrypoint > Action rejects a checksum manifest without the asset entry
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects a checksum manifest without the asset entry
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: installation-failure
     tests:
@@ -85,10 +105,14 @@ test_maps:
         symbol: source entrypoint > Action rejects an installation failure before PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an installation failure before PATH handoff
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: path-update-failure
     tests:
@@ -96,10 +120,14 @@ test_maps:
         symbol: source entrypoint > Action removes the installed binary when PATH update fails
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action removes the installed binary when PATH update fails
         guarantees:
           - failed-provisioning-stops
+          - failed-provisioning-no-path-handoff
+          - failed-provisioning-leaves-no-artifacts
   - contract_id: contract.ci-jq-provisioner.provision
     case_id: detailed-failure-provision
     tests:

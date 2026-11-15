@@ -38,6 +38,11 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Request and release notes handoff directories in the root directory.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: request-handoff-directories-created-count
+            meaning: Number of the directories release-publication-request and release-notes-handoff in the root directory that did not exist before the invocation and exist after it, as a decimal integer string.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-publication-request-verified
@@ -64,6 +69,13 @@ contracts:
           field: outcome
           in:
             - failure
+      - id: rejected-publication-control-no-request-handoff
+        applies_to:
+          - runtime-context.action-input-invalid
+        claim:
+          field: request-handoff-directories-created-count
+          in:
+            - "0"
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required

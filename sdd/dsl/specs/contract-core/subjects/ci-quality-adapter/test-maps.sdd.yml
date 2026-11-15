@@ -196,10 +196,14 @@ test_maps:
         symbol: source entrypoint > dependency policy rejects an unusable configuration before commands
         guarantees:
           - quality-adapter-failure-propagated
+          - rejected-scope-no-commands
+          - rejected-dependency-policy-config-no-result
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects an unusable configuration before commands
         guarantees:
           - quality-adapter-failure-propagated
+          - rejected-scope-no-commands
+          - rejected-dependency-policy-config-no-result
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: incomplete-dependency-policy-inputs
     tests:
@@ -207,7 +211,11 @@ test_maps:
         symbol: source entrypoint > dependency policy rejects incomplete inputs before commands
         guarantees:
           - quality-adapter-failure-propagated
+          - rejected-scope-no-commands
+          - rejected-dependency-policy-config-no-result
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects incomplete inputs before commands
         guarantees:
           - quality-adapter-failure-propagated
+          - rejected-scope-no-commands
+          - rejected-dependency-policy-config-no-result

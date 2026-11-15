@@ -239,7 +239,7 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(replanned.actions.every((entry) => entry.action === 'reuse')).toBe(true);
       });
     });
-    // contract_id: contract.ci-selective-distribution.application
+    // contract_id: contract.ci-selective-distribution.plan
     test('missing prior distributions are classified without treating old schemas as current', async () => {
       await withFixture('distribution-prior-migration-', async (root) => {
         const release = prepareRelease(root);
@@ -318,7 +318,7 @@ describe("contract.ci-selective-distribution.application", () => {
       expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/structure-conflict/);
       expect(renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] })).toBe(rendered);
     });
-    // contract_id: contract.ci-selective-distribution.application
+    // contract_id: contract.ci-selective-distribution.plan
     test('plan rejects unknown and mistyped caller settings and an owned caller with drifted structure', async () => {
       await withFixture('distribution-caller-settings-', async (root) => {
         const release = prepareRelease(root);
@@ -529,7 +529,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
       });
     });
 
-    // contract_id: contract.ci-selective-distribution.delivery
+    // contract_id: contract.ci-selective-distribution.verification
     test('local verification rejects distribution bytes changed after fetch', async () => {
       await withFixture('a3-ci-github-distribution-local-integrity-', async (root) => {
         const release = prepareRelease(root);
@@ -1059,7 +1059,7 @@ describe("contract.ci-selective-distribution.application", () => {
   describe("selective-distribution-application", () => {
     // evidence_role: contract
     // test_level: integration
-    // contract_id: contract.ci-selective-distribution.application
+    // contract_id: contract.ci-selective-distribution.plan
     // integration_id: selective-distribution-application
     test('plan rejects malformed prior ownership locks before changing consumer state', async () => {
       // Arrange

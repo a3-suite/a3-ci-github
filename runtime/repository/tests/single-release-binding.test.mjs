@@ -221,6 +221,8 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(rejected).toMatch(/"reason":"implementation-execution-closure-mismatch"/); expect(rejected).toMatch(/"path":"runtime\/added"/);
   });
 
+  // evidence_role: supplemental
+  // Scans repository files statically; it does not invoke a provider reference command.
   test('pinned Actions and canonical workflows never reach provider maintenance runtime', () => {
     // Arrange
     // The generator runs at build time only; Actions execute its committed output.

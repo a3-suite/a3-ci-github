@@ -54,6 +54,13 @@ contracts:
           field: status
           in:
             - unresolved
+      - id: change-scope-unresolved-runs-ci
+        applies_to:
+          - runtime-context.action-input-insufficient
+        claim:
+          field: run-ci
+          in:
+            - "true"
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required

@@ -2,7 +2,7 @@ version: 1
 name: contract-subject
 subject:
   id: subject.ci.selective-distribution
-  summary: Select, fetch, plan, apply, and recover immutable CI distribution assets without overwriting unmanaged consumer state.
+  summary: Select, fetch, verify, plan, apply, and recover immutable CI distribution assets without overwriting unmanaged consumer state, and generate, publish, read back, alias, and connect the distribution Release on the provider side.
 contracts:
   - id: contract.ci-selective-distribution.selection
     summary: Preset and asset selection request for distribution selection.
@@ -26,6 +26,11 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Consumer file tree compared before and after a selection request.
+        boundary: boundary.project-ci-assets
+        fields:
+          - selector: consumer-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after the invocation, excluding the fetch lock and staging entries owned by the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-selection-valid
@@ -49,15 +54,20 @@ contracts:
         claim:
           field: failure-stage
           present: true
+      - id: selective-distribution-incomplete-selection-preserves-tree
+        applies_to:
+          - runtime-context.selective-distribution-selection-incomplete
+        claim:
+          field: consumer-tree-comparison
+          in:
+            - equal
   - id: contract.ci-selective-distribution.delivery
-    summary: Selected files are published locally only after immutable source identity and file integrity validation.
+    summary: Distribution fetch request for selected presets and assets.
     inputs:
       - name: operation
         meaning: "Received by the contract target: operation selected by the invocation."
       - name: presets
         meaning: "Received by the contract target: preset identifiers selected by the request."
-      - name: source-revision
-        meaning: "Received by the contract target: source revision identifier."
       - name: file-sha256
         meaning: "Precondition prepared by the case: digest of a delivered file compared with the manifest."
       - name: required-arguments
@@ -76,6 +86,8 @@ contracts:
         meaning: "Precondition prepared by the case: kind of the project-local state path."
       - name: download-response
         meaning: "Precondition prepared by the case: response returned by the transport for a requested file."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
       - summary: Revision-bound local distribution receipt or fetch diagnostic.
         boundary: boundary.cli-result
@@ -91,6 +103,11 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Files of the local distribution of the requested revision.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: unselected-file-count
+            meaning: Number of files in the local distribution of the requested revision, other than its manifest and receipt, that belong to no asset of the closure of the selections fetched for the revision.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-source-valid
@@ -120,8 +137,96 @@ contracts:
         claim:
           field: failure-stage
           present: true
+      - id: selective-distribution-unselected-files-not-delivered
+        applies_to:
+          - runtime-context.selective-distribution-source-valid
+        claim:
+          field: unselected-file-count
+          in:
+            - "0"
+  - id: contract.ci-selective-distribution.verification
+    summary: Local distribution verification request for files fetched earlier.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: cached-distribution
+        meaning: "Precondition prepared by the case: state of the distribution files cached by an earlier fetch."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+    observations:
+      - summary: Verification result or rejection diagnostic of the local distribution.
+        boundary: boundary.cli-result
+        fields:
+          - selector: diagnostic
+            meaning: Stable rejection reason for a local distribution file whose size or SHA-256 differs from its manifest.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-source-invalid
+    guarantees:
+      - id: selective-distribution-invalid-source-rejected
+        applies_to:
+          - runtime-context.selective-distribution-source-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-verification
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-selective-distribution.release-generation
+    summary: Distribution release generation request for a committed repository source.
+    inputs:
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: required-arguments
+        meaning: "Received by the contract target: presence of the arguments required by the operation."
+    observations:
+      - summary: Generated distribution manifest or generation diagnostic.
+        boundary: boundary.script-result
+        fields:
+          - selector: sourceRevision
+            meaning: Full immutable source commit SHA recorded in the generated distribution manifest.
+          - selector: diagnostic
+            meaning: Stable rejection reason for an invalid source revision, release tag, version, source head, source path, or output destination.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-release-generation-valid
+      - environment: runtime-context.selective-distribution-release-generation-invalid
+    guarantees:
+      - id: distribution-release-source-revision-exposed
+        applies_to:
+          - runtime-context.selective-distribution-release-generation-valid
+        claim:
+          field: sourceRevision
+          present: true
+      - id: distribution-release-generation-rejected
+        applies_to:
+          - runtime-context.selective-distribution-release-generation-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-release-generation
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
   - id: contract.ci-selective-distribution.publication
-    summary: Exact-tag distribution Release publication request.
+    summary: Exact-tag distribution Release publish request.
     inputs:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
@@ -129,30 +234,8 @@ contracts:
         meaning: "Received by the contract target: operation selected by the invocation."
       - name: tag
         meaning: "Received by the contract target: release tag name."
-      - name: source-revision
-        meaning: "Received by the contract target: source revision identifier."
-      - name: implementation-revision
-        meaning: "Received by the contract target: implementation revision bound by the registry."
-      - name: integration
-        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
-      - name: dispatch-ref
-        meaning: "Received by the contract target: ref that dispatched the publication."
-      - name: readback
-        meaning: "Precondition prepared by the case: content returned by the Release readback."
-      - name: main-tip-tree
-        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
-      - name: branch
-        meaning: "Received by the contract target: release branch name."
-      - name: implementation-release
-        meaning: "Precondition prepared by the case: presence of the implementation Release."
-      - name: connection-candidate
-        meaning: "Precondition prepared by the case: state of the approved connection candidate."
-      - name: execution-input-change
-        meaning: "Precondition prepared by the case: execution input changed after approval."
-      - name: branch-tip
-        meaning: "Precondition prepared by the case: tip of the release branch compared with the release tag."
-      - name: version-file
-        meaning: "Precondition prepared by the case: version recorded in the VERSION file of the release source."
+      - name: provider-response
+        meaning: "Precondition prepared by the case: response returned by the release provider for an observation, upload, readback, or finalize request."
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
         boundary: boundary.script-result
@@ -163,16 +246,6 @@ contracts:
             meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
           - selector: readbackStatus
             meaning: Readback status that the publisher reports for the remote Release assets.
-          - selector: implementationSourceRevision
-            meaning: Full first-party implementation SHA verified against the final tagged source.
-          - selector: accepted-dispatch-ref-comparison
-            meaning: Comparison of the workflow ref of the release dispatch accepted for publication with refs/tags/ followed by releaseTag.
-          - selector: implementationBindingStatus
-            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified, unverified or rejected.
-          - selector: implementationBindingEvidence
-            meaning: Evidence record of the implementation binding check.
-          - selector: aliasSourceIntegration
-            meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
           - selector: diagnostic
             meaning: Stable failure evidence of the rejected publication.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -197,35 +270,251 @@ contracts:
         claim:
           field: diagnostic
           present: true
-      - id: selective-distribution-implementation-binding-verified
+      - id: diagnostic-failure-stage-publication
         applies_to:
-          - runtime-context.selective-distribution-publication-valid
+          - runtime-context.failure-diagnostic-required
         claim:
-          field: implementationBindingStatus
-          in:
-            - verified
-      - id: selective-distribution-dispatch-ref-bound
-        applies_to:
-          - runtime-context.selective-distribution-publication-valid
-        claim:
-          field: accepted-dispatch-ref-comparison
-          in:
-            - equal
-      - id: selective-distribution-implementation-binding-evidence-exposed
-        applies_to:
-          - runtime-context.selective-distribution-publication-valid
-        claim:
-          field: implementationBindingEvidence
+          field: failure-stage
           present: true
+  - id: contract.ci-selective-distribution.release-readback
+    summary: Readback request for a published distribution Release.
+    inputs:
+      - name: operation
+        meaning: "Received by the contract target: operation selected by the invocation."
+      - name: readback
+        meaning: "Precondition prepared by the case: content returned by the Release readback."
+    observations:
+      - summary: Hosted workflow script result for the readback of a published distribution Release.
+        boundary: boundary.script-result
+        fields:
+          - selector: readbackStatus
+            meaning: Readback status that the readback reports for the remote Release assets.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected readback.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-readback-valid
+      - environment: runtime-context.selective-distribution-readback-invalid
+    guarantees:
+      - id: selective-distribution-readback-exposed
+        applies_to:
+          - runtime-context.selective-distribution-readback-valid
+        claim:
+          field: readbackStatus
+          present: true
+      - id: selective-distribution-readback-failure-exposed
+        applies_to:
+          - runtime-context.selective-distribution-readback-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-readback
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-selective-distribution.alias-update
+    summary: Release alias update request for an exact release tag.
+    inputs:
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: validation-mode
+        meaning: "Received by the contract target: whether the invocation only validates the release source or also updates the aliases."
+      - name: integration
+        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
+      - name: main-tip-tree
+        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
+      - name: branch-tip
+        meaning: "Precondition prepared by the case: tip of the release branch compared with the release tag."
+      - name: version-file
+        meaning: "Precondition prepared by the case: version recorded in the VERSION file of the release source."
+      - name: remote-alias-push
+        meaning: "Precondition prepared by the case: response of the remote to the alias push."
+    observations:
+      - summary: Release alias update script result.
+        boundary: boundary.script-result
+        fields:
+          - selector: aliasSourceIntegration
+            meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected alias update.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-alias-update-valid
+      - environment: runtime-context.selective-distribution-alias-update-invalid
+    guarantees:
       - id: selective-distribution-alias-source-integrated
         applies_to:
-          - runtime-context.selective-distribution-publication-valid
+          - runtime-context.selective-distribution-alias-update-valid
         claim:
           field: aliasSourceIntegration
           in:
             - integrated
             - canonical-hotfix-tip
-      - id: diagnostic-failure-stage-publication
+      - id: selective-distribution-alias-update-rejected
+        applies_to:
+          - runtime-context.selective-distribution-alias-update-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-alias-update
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-selective-distribution.reference-update
+    summary: Implementation reference update request for a release tag and implementation commit.
+    inputs:
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: implementation-revision
+        meaning: "Received by the contract target: implementation revision bound by the registry."
+      - name: connection-candidate
+        meaning: "Precondition prepared by the case: state of the approved connection candidate."
+    observations:
+      - summary: Implementation reference update script result.
+        boundary: boundary.script-result
+        fields:
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected reference update.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-reference-update-invalid
+    guarantees:
+      - id: selective-distribution-reference-update-rejected
+        applies_to:
+          - runtime-context.selective-distribution-reference-update-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-reference-update
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-selective-distribution.provider-reference-check
+    summary: Provider reference check request for a connection candidate or a release tag.
+    inputs:
+      - name: check-target
+        meaning: "Received by the contract target: whether the invocation checks a staged connection candidate or a release tag."
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: branch
+        meaning: "Precondition prepared by the case: release branch on which the connection is prepared."
+      - name: implementation-revision
+        meaning: "Received by the contract target: implementation revision bound by the registry."
+      - name: implementation-release
+        meaning: "Precondition prepared by the case: presence of the implementation Release."
+      - name: connection-candidate
+        meaning: "Precondition prepared by the case: state of the approved connection candidate."
+      - name: execution-input-change
+        meaning: "Precondition prepared by the case: execution input changed after approval."
+      - name: release-tag-state
+        meaning: "Precondition prepared by the case: state of a local tag named after the release tag."
+    observations:
+      - summary: Provider reference check result.
+        boundary: boundary.script-result
+        fields:
+          - selector: implementationBindingStatus
+            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified, unverified or rejected.
+          - selector: implementationBindingEvidence
+            meaning: Evidence record of the implementation binding check.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected provider reference check.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-provider-reference-check-valid
+      - environment: runtime-context.selective-distribution-provider-reference-check-invalid
+    guarantees:
+      - id: selective-distribution-implementation-binding-verified
+        applies_to:
+          - runtime-context.selective-distribution-provider-reference-check-valid
+        claim:
+          field: implementationBindingStatus
+          in:
+            - verified
+      - id: selective-distribution-implementation-binding-evidence-exposed
+        applies_to:
+          - runtime-context.selective-distribution-provider-reference-check-valid
+        claim:
+          field: implementationBindingEvidence
+          present: true
+      - id: selective-distribution-provider-reference-check-rejected
+        applies_to:
+          - runtime-context.selective-distribution-provider-reference-check-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-provider-reference-check
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.ci-selective-distribution.release-dispatch
+    summary: Release workflow dispatch for a requested release tag.
+    inputs:
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: dispatch-ref
+        meaning: "Received by the contract target: ref that dispatched the publication."
+    observations:
+      - summary: Result of the dispatch guard of the release workflow.
+        boundary: boundary.script-result
+        fields:
+          - selector: accepted-dispatch-ref-comparison
+            meaning: Comparison of the workflow ref of the release dispatch accepted for publication with refs/tags/ followed by the requested release tag.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected dispatch.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-release-dispatch-valid
+      - environment: runtime-context.selective-distribution-release-dispatch-invalid
+    guarantees:
+      - id: selective-distribution-dispatch-ref-bound
+        applies_to:
+          - runtime-context.selective-distribution-release-dispatch-valid
+        claim:
+          field: accepted-dispatch-ref-comparison
+          in:
+            - equal
+      - id: selective-distribution-dispatch-rejected
+        applies_to:
+          - runtime-context.selective-distribution-release-dispatch-invalid
+        claim:
+          field: diagnostic
+          present: true
+      - id: diagnostic-failure-stage-release-dispatch
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
@@ -252,6 +541,12 @@ contracts:
         meaning: "Precondition prepared by the case: ownership recorded for the consumer destination."
       - name: independent-state
         meaning: "Precondition prepared by the case: consumer state that stays unchanged during the invocation."
+      - name: prior-distribution
+        meaning: "Precondition prepared by the case: state of the distribution applied earlier."
+      - name: caller-settings
+        meaning: "Received by the contract target: caller settings of the generated workflow."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
       - summary: Plan result or rejection diagnostic returned by the distribution CLI.
         boundary: boundary.cli-result
@@ -278,6 +573,7 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-application-incomplete
       - environment: runtime-context.selective-distribution-plan-input-valid
+      - environment: runtime-context.selective-distribution-plan-input-invalid
       - environment: runtime-context.distribution-independent-destination-stable
     guarantees:
       - id: selective-distribution-plan-exposed
@@ -286,9 +582,10 @@ contracts:
         claim:
           field: planDigest
           present: true
-      - id: selective-distribution-incomplete-application-rejected
+      - id: selective-distribution-plan-request-rejected
         applies_to:
           - runtime-context.selective-distribution-application-incomplete
+          - runtime-context.selective-distribution-plan-input-invalid
         claim:
           field: diagnostic
           present: true
@@ -332,12 +629,10 @@ contracts:
         meaning: "Precondition prepared by the case: state of the recorded application transaction."
       - name: secondary-io
         meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
-      - name: prior-distribution
-        meaning: "Precondition prepared by the case: state of the distribution applied earlier."
-      - name: caller-settings
-        meaning: "Received by the contract target: caller settings of the generated workflow."
       - name: mutation-lock
         meaning: "Precondition prepared by the case: state of the lock that serializes mutations of the consumer."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary: boundary.cli-result
@@ -356,6 +651,10 @@ contracts:
         fields:
           - selector: partial-apply-files-binding
             meaning: Equality of paths written earlier by the interrupted apply with their recorded before-state bytes and existence; the later independently changed destination is excluded.
+          - selector: applied-destination-binding
+            meaning: Equality of the final bytes of each destination of the approved plan with the generated content of its plan action after the apply; reuse actions compare the existing bytes.
+          - selector: unplanned-consumer-files-comparison
+            meaning: Comparison of bytes and existence of consumer files that are neither a destination of the approved plan nor under the distribution state directory, before and after the apply; equal or changed.
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
     conditions:
@@ -392,6 +691,20 @@ contracts:
           field: partial-apply-files-binding
           in:
             - matched
+      - id: approved-plan-content-applied
+        applies_to:
+          - runtime-context.selective-distribution-application-valid
+        claim:
+          field: applied-destination-binding
+          in:
+            - matched
+      - id: unplanned-consumer-files-preserved
+        applies_to:
+          - runtime-context.selective-distribution-application-valid
+        claim:
+          field: unplanned-consumer-files-comparison
+          in:
+            - equal
       - id: independent-destination-binding
         applies_to:
           - runtime-context.distribution-independent-destination-stable
@@ -418,6 +731,8 @@ contracts:
         meaning: "Precondition prepared by the case: state of the recorded application transaction."
       - name: secondary-io
         meaning: "Precondition prepared by the case: outcome of secondary file operations such as lock cleanup."
+      - name: arguments
+        meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
       - summary: Approved application transaction, rollback result, or stable rejection diagnostic.
         boundary: boundary.cli-result
@@ -434,6 +749,8 @@ contracts:
         fields:
           - selector: rollback-files-binding
             meaning: Equality of transaction-owned paths with their recorded before-state bytes and existence after explicit rollback; independently changed paths are not part of this comparison.
+          - selector: non-transaction-files-comparison
+            meaning: Comparison of bytes and existence of consumer files that are not destinations of the recorded transaction and not part of its transaction record, before and after the rollback; equal or changed.
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
     conditions:
@@ -461,6 +778,13 @@ contracts:
           field: rollback-files-binding
           in:
             - matched
+      - id: non-transaction-files-preserved
+        applies_to:
+          - runtime-context.distribution-rollback-restorable
+        claim:
+          field: non-transaction-files-comparison
+          in:
+            - equal
       - id: independent-destination-binding
         applies_to:
           - runtime-context.distribution-independent-destination-stable

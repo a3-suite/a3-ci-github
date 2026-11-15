@@ -149,12 +149,17 @@ describe('standard installer', () => {
       expect(Object.keys(record.files)).toContain('.installer-source.zip');
       expect(fs.readdirSync(candidate).sort()).toEqual(Object.keys(record.files).sort());
       for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
+      const declarationFiles = fs.readdirSync(path.join(root, '.ci/installer')).sort();
       runSupplementalAction({ operation: 'assemble', sourceRoot: root, authorityPath: 'authority.json', snapshotPath: 'snapshot.json', standardBuildRoot: 'standard-download', supplementalBuildRoot: 'supplemental-download', outputDirectory: 'transport-handoff', installerRoot: path.join(repository, 'runtime/installer'), providerRevision: 'a'.repeat(40) });
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'transport-handoff/supplemental-manifest.json'), 'utf8'));
       const declaration = JSON.parse(fs.readFileSync(path.join(root, '.ci/installer/assembly.json'), 'utf8'));
       const declaredAssets = Object.entries(declaration.platforms).flatMap(([platformId, entry]) => [(entry as { assetName: string }).assetName, `manifest-${platformId}.json`]);
       expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual(declaredAssets.sort());
       expect(fs.readdirSync(path.join(root, 'transport-handoff')).some((name) => name.includes('installer-source'))).toBe(false);
+      for (const asset of manifest.assets) {
+        expect(fs.readFileSync(path.join(root, 'transport-handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
+      }
+      expect(fs.readdirSync(path.join(root, '.ci/installer')).sort()).toEqual(declarationFiles);
     });
     for (const mutation of ['missing', 'modified', 'extra']) test(`rejects ${mutation} transferred platform evidence`, (t) => {
       const f = fixture(t);
@@ -245,7 +250,7 @@ describe('standard installer', () => {
       const attempt = (): void => runSupplementalAction(f.options, installerRoot);
       // Assert
       expect(attempt).toThrow('platform-mismatch');
-      expect(fs.existsSync(path.join(f.root, 'platform-output/supplemental-manifest.json'))).toBe(false);
+      expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
     });
     test('rejects changed product declaration before generating output', (t) => {
       // Arrange

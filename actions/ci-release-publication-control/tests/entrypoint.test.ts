@@ -71,12 +71,15 @@ test('entrypoint rejects a v1 publication request on verification', (t) => {
   fs.writeFileSync(path.join(requestDirectory, 'request.json'), content);
   fs.writeFileSync(path.join(requestDirectory, 'request.json.sha256'), `${crypto.createHash('sha256').update(content).digest('hex')}  request.json\n`);
   fs.writeFileSync(output, '');
+  const requestDirectories = () => ['release-publication-request', 'release-notes-handoff'].map((name) => fs.existsSync(path.join(root, name)));
+  const before = requestDirectories();
   // Act
   const result = spawnSync(process.execPath, entrypointArgs, { env: { ...env, INPUT_OPERATION: 'verify-publication-request', 'INPUT_RELEASE-VERSION': '', 'INPUT_TARGET-IDENTITY': '' }, encoding: 'utf8' });
   // Assert
   expect(result.status).not.toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
   expect(fs.readFileSync(output, 'utf8')).not.toMatch(/request-run-id<</);
+  expect(requestDirectories()).toStrictEqual(before);
 });
 
 // contract_id: contract.ci-release-publication-control.outputs
@@ -118,6 +121,8 @@ test('entrypoint rejects a changed approval ID', () => {
   // Assert
   expect(result.status).not.toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
+  expect(fs.existsSync(path.join(root, 'release-publication-request'))).toBe(false);
+  expect(fs.existsSync(path.join(root, 'release-notes-handoff'))).toBe(false);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -195,6 +200,8 @@ test('entrypoint verifies the triggering request workflow run before artifact do
     classification: { subject: 'ci-release-publication-control', reason: 'request-trigger-mismatch' },
     comparison: { field: 'head-branch', expected: 'default-branch', observed: 'other' },
   });
+  expect(fs.existsSync(path.join(root, 'release-publication-request'))).toBe(false);
+  expect(fs.existsSync(path.join(root, 'release-notes-handoff'))).toBe(false);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

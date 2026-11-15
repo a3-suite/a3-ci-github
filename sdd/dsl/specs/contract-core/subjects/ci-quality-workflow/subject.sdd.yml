@@ -38,7 +38,7 @@ contracts:
           - selector: quality-fork-pull-request-job
             meaning: Declared job whose run condition selects a pull request whose head repository differs from the base repository.
           - selector: quality-pull-request-trusted-assets-commit
-            meaning: Commit that the trusted CI asset checkout reads for a pull request, in both trusted and untrusted pull request jobs.
+            meaning: Commit that the trusted CI asset checkout reads for a pull request, in the trusted and untrusted pull request jobs and the platform resolve job.
           - selector: quality-results-before-summary
             meaning: Declared dependency order of applicable execution jobs and aggregate decision.
           - selector: quality-failure-summary-always
@@ -129,6 +129,7 @@ contracts:
       - id: quality-fixed-reference
         applies_to:
           - ci-quality-workflow-caller-selected
+          - ci-quality-workflow-platform-source-selected
         claim:
           field: quality-fixed-reference
           in:
@@ -185,6 +186,7 @@ contracts:
       - id: quality-pull-request-trusted-assets-from-base
         applies_to:
           - ci-quality-workflow-canonical-source-available
+          - ci-quality-workflow-platform-source-selected
         claim:
           field: quality-pull-request-trusted-assets-commit
           in:

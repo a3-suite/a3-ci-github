@@ -136,9 +136,31 @@ runtime_contexts:
   - id: runtime-context.selective-distribution-source-invalid
     summary: The manifest, redirect, path, source file, size, or SHA-256 does not satisfy the selective distribution contract.
   - id: runtime-context.selective-distribution-publication-valid
-    summary: The exact tag, approved source and implementation revisions, integration evidence and fixed workflow and installer connections pass provider checks, and the prepared Release assets can be read back byte-identically.
+    summary: A publish request has owner-approved notes, untampered prepared distribution assets and an exact release tag whose remote tag object stays unchanged, and the provider accepts the observation, draft creation, upload, readback and finalize requests.
   - id: runtime-context.selective-distribution-publication-invalid
-    summary: The approved source, implementation binding, integration evidence or execution inputs fail provider checks, or a Release asset read back differs from its prepared bytes.
+    summary: A publish request lacks approved notes, has tampered prepared assets or a changed remote tag object, receives a failing provider observation, upload, readback or finalize response, or finds a Release body that differs from the approved notes.
+  - id: runtime-context.selective-distribution-readback-valid
+    summary: A readback request finds the published Release with the approved body and exactly the prepared assets, whose remote bytes and identities match the prepared bytes throughout the readback.
+  - id: runtime-context.selective-distribution-readback-invalid
+    summary: A readback request finds a body that differs from the approved notes, an unmanaged asset, an asset identity that changes during the readback, or remote bytes that differ from the prepared bytes.
+  - id: runtime-context.selective-distribution-release-generation-valid
+    summary: The release generator receives the full commit SHA of the committed repository source, a release tag and version that match its VERSION, a source head equal to that commit, regular source files and an unclaimed output destination.
+  - id: runtime-context.selective-distribution-release-generation-invalid
+    summary: The release generator receives an invalid source commit SHA or release tag, a version or source head that does not match the source, a source path redirected through a symlink, or an existing output destination.
+  - id: runtime-context.selective-distribution-alias-update-valid
+    summary: An alias update request names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip.
+  - id: runtime-context.selective-distribution-alias-update-invalid
+    summary: An alias update request names a release tag whose source is not integrated into main, whose hotfix branch or base is stale, whose VERSION is a development version, or whose integration evidence cannot be acquired.
+  - id: runtime-context.selective-distribution-reference-update-invalid
+    summary: An implementation reference update names a missing or unrelated implementation commit, finds an execution asset changed in the working tree before the invocation, or finds a reference destination redirected through a symlink.
+  - id: runtime-context.selective-distribution-provider-reference-check-valid
+    summary: A provider reference check finds the implementation bound by the registry reachable, its execution closure unchanged except for provider maintenance runtime, the fixed workflow and installer references bound to it, and no published tag for a candidate.
+  - id: runtime-context.selective-distribution-provider-reference-check-invalid
+    summary: A provider reference check finds a changed execution input or file mode, a runtime entry outside provider maintenance, a stale binding, an unexecutable bundle or absent entrypoint, an unreachable implementation, or an already published tag for a candidate.
+  - id: runtime-context.selective-distribution-release-dispatch-valid
+    summary: The release workflow is dispatched from refs/tags/ followed by the requested release tag.
+  - id: runtime-context.selective-distribution-release-dispatch-invalid
+    summary: The release workflow is dispatched from a ref other than refs/tags/ followed by the requested release tag.
   - id: runtime-context.selective-distribution-application-valid
     summary: The approved plan, selected local distribution, and observed consumer destinations remain unchanged under an exclusive apply lock.
   - id: runtime-context.selective-distribution-application-conflict
@@ -183,6 +205,8 @@ runtime_contexts:
     summary: During a plan, apply or rollback invocation, one or more canonical consumer destinations differ from the current identity expected by the plan or recorded transaction. Every such destination remains unchanged by other actors from its independent modification through invocation completion.
   - id: runtime-context.selective-distribution-plan-input-valid
     summary: A plan request selects a verified local distribution and complete preset closure, readable consumer destinations, valid settings and interpretable prior ownership. Conflicts may be reported by the resulting plan; no apply approval is required to plan.
+  - id: runtime-context.selective-distribution-plan-input-invalid
+    summary: A plan request finds the local manifest of a prior distribution missing, receives undeclared or mistyped caller settings, or finds a malformed prior ownership lock.
   - id: runtime-context.ci-quality-adapter-native-rust-valid
     summary: A valid embedded rust-cargo-quality invocation selects execution-scope native, valid fixed source paths and a matching toolchain.
   - id: runtime-context.ci-quality-adapter-native-scope-rejected

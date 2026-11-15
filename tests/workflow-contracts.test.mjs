@@ -59,6 +59,8 @@ describe('installer public naming references', () => {
 
 describe('contract.ci-selective-distribution.publication', () => {
   describe('repository-provider-binding', () => {
+  // evidence_role: supplemental
+  // Runs the quality-gate provider-binding step with mocked commands; it does not invoke check-provider-references.mjs.
   test('repository CI validates untagged connection candidates and preserves implementation preparation', () => {
     const step = yaml.parse(read('.github/workflows/quality-gate.yml')).jobs['contract-linux'].steps.find((entry) => entry.id === 'provider-binding');
     const script = /<<'NODE'\n([\s\S]*?)\nNODE/.exec(step.run)?.[1];
@@ -316,7 +318,8 @@ describe("workflow-contracts", () => {
 
 describe("contract.ci-selective-distribution.publication", () => {
   describe("repository-selective-distribution-release", () => {
-    // contract_id: contract.ci-selective-distribution.publication
+    // evidence_role: supplemental
+    // Reads the release workflow definition only; it neither publishes nor dispatches a release.
     // integration_id: repository-selective-distribution-release
     test('repository release publishes and reads back the exact selective distribution asset set before aliases', () => {
       const workflow = read('.github/workflows/release.yml');

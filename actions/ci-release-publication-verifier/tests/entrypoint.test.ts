@@ -27,6 +27,7 @@ const assembly = JSON.parse(fs.readFileSync(path.join(process.env.MOCK_HANDOFF, 
 globalThis.fetch = async (url, init) => {
   if (init.method !== 'GET') throw new Error('write-forbidden');
   const endpoint = new URL(String(url)).pathname;
+  fs.appendFileSync(process.env.MOCK_REQUEST_LOG, endpoint + '\\n');
   let data;
   if (endpoint.includes('/git/ref/tags/')) data = { object: { type: 'tag', sha: assembly.identity.tag_object_sha } };
   else if (endpoint.includes('/git/tags/')) data = { sha: assembly.identity.tag_object_sha, object: { type: 'commit', sha: assembly.identity.source_sha } };
@@ -39,8 +40,9 @@ globalThis.fetch = async (url, init) => {
 };
 `);
   const beforePath = path.join(f.root, 'before.json');
+  const requestLog = path.join(f.root, 'requests.log');
   const output = f.put('github-output', '');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before', MOCK_REQUEST_LOG: requestLog };
   const beforeResult = await runActionEntrypoint(['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
   expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
@@ -56,8 +58,10 @@ globalThis.fetch = async (url, init) => {
   const receiptPath = f.put('receipt.json', receipt);
   const readbackPath = f.put('readback.json', readback);
   fs.writeFileSync(output, '');
+  fs.writeFileSync(requestLog, '');
   const afterResult = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
   expect(afterResult.status, afterResult.stderr).toBe(0);
+  expect(fs.readFileSync(requestLog, 'utf8').split('\n').some((endpoint) => endpoint.includes('/releases/assets/'))).toBe(true);
   const outputs = fs.readFileSync(output, 'utf8');
   expect(outputs).toMatch(/^status=success\n/);
   expect(outputs.includes('observation-path=')).toBe(false);
@@ -125,17 +129,19 @@ test('publication entrypoint rejects output path line injection before remote ob
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
+  const injected = `${path.join(f.root, 'before.json')}\nstatus=success`;
   const result = await runActionEntrypoint([...bundle], {
     env: {
       ...process.env, GH_TOKEN: 'synthetic-secret', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot,
-      'INPUT_OBSERVATION-PATH': `${path.join(f.root, 'before.json')}\nstatus=success`,
+      'INPUT_OBSERVATION-PATH': injected,
     }, encoding: 'utf8', cwd: f.root,
   });
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
+  expect(fs.existsSync(injected)).toBe(false);
   expect(result.stderr).toMatch(/input-invalid:observation-path/);
 });
 

@@ -223,6 +223,10 @@ contracts:
             meaning: Comparison of the set of asset paths in the final supplemental handoff manifest with the declared installer and manifest asset paths.
           - selector: publication-source-snapshots
             meaning: Verification-only installer source snapshots in the final supplemental handoff; absent or present.
+          - selector: publication-asset-checksum-sidecars
+            meaning: Comparison of the checksum file bytes of each asset in the final supplemental handoff with the sha256 declared for the asset in supplemental-manifest.json, two spaces, the asset path and one LF; equal or different.
+          - selector: declaration-directory-file-name-difference-count
+            meaning: Number of file names in the installer declaration directory (.ci/installer) that the invocation added or removed, compared before and after the invocation, as a decimal integer string.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -280,6 +284,20 @@ contracts:
           field: publication-source-snapshots
           in:
             - absent
+      - id: standard-installer-checksum-sidecar-format
+        applies_to:
+          - runtime-context.standard-installer-evidence-valid
+        claim:
+          field: publication-asset-checksum-sidecars
+          in:
+            - equal
+      - id: standard-installer-declaration-directory-unchanged
+        applies_to:
+          - runtime-context.standard-installer-evidence-valid
+        claim:
+          field: declaration-directory-file-name-difference-count
+          in:
+            - "0"
       - id: phase-diagnostic
         applies_to:
           - runtime-context.supplemental-phase-invalid

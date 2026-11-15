@@ -60,7 +60,9 @@ contracts:
           - selector: consumer-descriptor-read-state
             meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
           - selector: rejected-command-state
-            meaning: Occurrence of project command execution after scope rejection.
+            meaning: Occurrence of project command execution after the invocation is rejected.
+          - selector: result-file-state
+            meaning: Occurrence of the result JSON file at the result path after the invocation.
           - selector: native-terminal-prerequisite-status
             meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
           - selector: native-failed-prerequisite-followup-state
@@ -155,8 +157,16 @@ contracts:
       - id: rejected-scope-no-commands
         applies_to:
           - runtime-context.ci-quality-adapter-native-scope-rejected
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         claim:
           field: rejected-command-state
+          in:
+            - absent
+      - id: rejected-dependency-policy-config-no-result
+        applies_to:
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+        claim:
+          field: result-file-state
           in:
             - absent
       - id: standard-source-path-validated

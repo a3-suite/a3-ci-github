@@ -35,6 +35,7 @@ related_requirements:
 related_contracts:
   - contract.ci-selective-distribution.selection
   - contract.ci-selective-distribution.delivery
+  - contract.ci-selective-distribution.verification
   - contract.ci-selective-distribution.publication
   - contract.ci-selective-distribution.application
   - contract.ci-preset-materialization.application

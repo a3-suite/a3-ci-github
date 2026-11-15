@@ -2,7 +2,7 @@
 // test_level: e2e
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, describe, test, expect } from 'vitest';
 
@@ -50,7 +50,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   };
 
   test('Action rejects an invalid version as provisioning failure', () => {
-    const actionRoot = path.resolve(__dirname, '..');
+    const paths = workspace();
     const result = spawnSync(process.execPath, [...entrypointArgs], {
       encoding: 'utf8',
       env: {
@@ -58,8 +58,8 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
         'INPUT_JQ-VERSION': 'not-exact',
         RUNNER_OS: 'Linux',
         RUNNER_ARCH: 'X64',
-        RUNNER_TEMP: path.join(actionRoot, 'tests/tmp'),
-        GITHUB_PATH: path.join(actionRoot, 'tests/tmp/unused-github-path'),
+        RUNNER_TEMP: paths.runnerTemp,
+        GITHUB_PATH: paths.githubPath,
         GITHUB_ACTIONS: 'true',
       },
     });
@@ -70,6 +70,8 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       'execution-state': { write: 'not-started' },
       comparison: { field: 'version', expected: 'exact-numeric-version' },
     });
+    expect(readGithubPath(paths.githubPath)).toBeUndefined();
+    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   for (const [runnerOs, arch, asset] of [['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']] as const) {
@@ -107,6 +109,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     // Assert
     expectStopped(outcome, paths, 'download-verify-install');
     expect(outcome.requested).toStrictEqual([]);
+    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action reports an unavailable release asset before PATH handoff', () => {
@@ -136,6 +139,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, { RUNNER_TEMP: path.join(paths.root, 'missing') }, releaseRoutes('jq-linux-amd64'));
     // Assert
     expectStopped(outcome, paths, 'install-directory');
+    expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
   });
 
   test('Action removes the installed binary when PATH update fails', () => {

@@ -8,10 +8,12 @@ test_maps:
         symbol: source entrypoint > entrypoint writes matching evidence and outputs
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint writes matching evidence and outputs
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
   - contract_id: contract.ci-quality-summary.outputs
     case_id: raw-job-results-normalized
     tests:
@@ -19,10 +21,12 @@ test_maps:
         symbol: source entrypoint > entrypoint normalizes a raw GitHub job result
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint normalizes a raw GitHub job result
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
   - contract_id: contract.ci-quality-summary.outputs
     case_id: missing-summary-path-rejected
     tests:
@@ -52,10 +56,12 @@ test_maps:
         symbol: source entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
   - contract_id: contract.ci-quality-summary.outputs
     case_id: all-excluded-rows-rejected
     tests:
@@ -81,10 +87,12 @@ test_maps:
         symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
   - contract_id: contract.ci-quality-summary.outputs
     case_id: omitted-evidence-without-run-context-rejected
     tests:
@@ -92,10 +100,12 @@ test_maps:
         symbol: source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
         guarantees:
           - quality-summary-failure-propagated
+          - rejected-run-context-no-evidence
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
         guarantees:
           - quality-summary-failure-propagated
+          - rejected-run-context-no-evidence
   - contract_id: contract.ci-quality-summary.outputs
     case_id: mixed-applicability
     tests:
