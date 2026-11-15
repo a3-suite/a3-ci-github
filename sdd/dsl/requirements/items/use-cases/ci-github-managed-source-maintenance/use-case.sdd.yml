@@ -28,3 +28,6 @@ related_requirements:
 related_contracts:
   - contract.repository-managed-source-integrity.integrity
   - contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.catalog
+  - contract.repository-action-distribution.source-verification
+  - contract.repository-action-distribution.release-version

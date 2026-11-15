@@ -64,19 +64,6 @@ test_maps:
         symbol: contract.ci-selective-distribution.delivery > selective-distribution > selected distribution runs preflight and lock without materializer and supports its later acquisition
         guarantees:
           - selective-distribution-assets-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution > same revision merges separately fetched verified asset groups without replacing prior files
-        guarantees:
-          - selective-distribution-assets-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch reuses verified files for repeat and extended preset selections
-        guarantees:
-          - selective-distribution-assets-exposed
-          - selective-distribution-receipt-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.delivery > selective-distribution-delivery > remote fetch preserves prior state and releases its lock after an extension fails
-        guarantees:
-          - selective-distribution-assets-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: contract.ci-selective-distribution.delivery > selective-distribution > release generator binds every published byte to the exact source commit
         guarantees:
@@ -445,36 +432,12 @@ test_maps:
   - contract_id: contract.ci-selective-distribution.plan
     case_id: selective-distribution-application-selective-distribution-application-valid-plan
     tests:
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > provider-pin-companion > planned provider pin companions are owned and restored with generated callers
-        guarantees:
-          - selective-distribution-plan-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > provider-pin-companion > owned callers sharing a destination with an unfetched exclusive preset are planned from their own prior template
-        guarantees:
-          - selective-distribution-plan-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: contract.ci-selective-distribution.application > provider-pin-companion > Release and Package generated companions support lock and preflight without fixture pin injection
         guarantees:
           - selective-distribution-plan-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: contract.ci-selective-distribution.application > provider-pin-companion > explicit create migration restores retired assets and the prior lock after a post-apply failure
-        guarantees:
-          - selective-distribution-plan-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > workflow-template-generation > normal generation and application need no Hosted evidence and preserve ownership checks
-        guarantees:
-          - selective-distribution-plan-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > workflow-template-generation > workflow generation safely resolves values and preserves only declared caller settings
-        guarantees:
-          - selective-distribution-plan-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > selective-distribution > fetch, plan, apply and rollback preserve explicit consumer state transitions
-        guarantees:
-          - selective-distribution-plan-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > selective-distribution-application > approved plans reuse identical workflows update owned bytes and reject unmanaged changes
         guarantees:
           - selective-distribution-plan-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
@@ -505,28 +468,12 @@ test_maps:
   - contract_id: contract.ci-selective-distribution.application
     case_id: selective-distribution-application-selective-distribution-application-valid
     tests:
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > provider-pin-companion > planned provider pin companions are owned and restored with generated callers
-        guarantees:
-          - selective-distribution-transaction-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: contract.ci-selective-distribution.application > provider-pin-companion > Release and Package generated companions support lock and preflight without fixture pin injection
         guarantees:
           - selective-distribution-transaction-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
         symbol: contract.ci-selective-distribution.application > provider-pin-companion > explicit create migration restores retired assets and the prior lock after a post-apply failure
-        guarantees:
-          - selective-distribution-transaction-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > workflow-template-generation > normal generation and application need no Hosted evidence and preserve ownership checks
-        guarantees:
-          - selective-distribution-transaction-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > selective-distribution > fetch, plan, apply and rollback preserve explicit consumer state transitions
-        guarantees:
-          - selective-distribution-transaction-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > selective-distribution-application > approved plans reuse identical workflows update owned bytes and reject unmanaged changes
         guarantees:
           - selective-distribution-transaction-exposed
       - path: runtime/distribution/tests/selective-distribution.process.test.mjs
@@ -559,7 +506,7 @@ test_maps:
     case_id: application-conflict-caller-settings-unknown
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.application > workflow-template-generation > workflow generation safely resolves values and preserves only declared caller settings
+        symbol: contract.ci-selective-distribution.application > workflow-template-generation > plan rejects unknown and mistyped caller settings and an owned caller with drifted structure
         guarantees:
           - selective-distribution-conflict-rejected
   - contract_id: contract.ci-selective-distribution.application

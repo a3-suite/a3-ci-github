@@ -48,8 +48,8 @@ test_maps:
         guarantees:
           - diagnostic-unsubstantiated-context
           - diagnostic-whole-payload-disclosure
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: safe release diagnostics > assetDigest > asset readback diagnoses unsafe redirects without disclosing signed locations
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint diagnoses unsafe asset readback redirects without disclosing signed locations
         guarantees:
           - diagnostic-signed-url-disclosure
   - contract_id: contract.ci-failure-diagnostics.actionable
@@ -95,14 +95,6 @@ test_maps:
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
         guarantees:
           - diagnostic-diagnostic-only-retry
-  - contract_id: contract.ci-failure-diagnostics.subject-declarations
-    case_id: all-subject-diagnostics-defined
-    tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > failure-diagnostics-contract > every packaged contract defines subject-specific diagnostics under the shared minimum
-        guarantees:
-          - subject-diagnostic-details-defined
-          - subject-diagnostic-minimum-referenced
   - contract_id: contract.ci-failure-diagnostics.workflow-evidence
     case_id: workflow-evidence-declared
     tests:
@@ -121,3 +113,19 @@ test_maps:
         symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project
         guarantees:
           - ci-failure-diagnostics-bootstrap-envelope-emitted
+  - contract_id: contract.ci-failure-diagnostics.existing-state
+    case_id: input-rejection-preserves-existing-files
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
+        guarantees:
+          - failure-runner-temp-preserved
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
+        guarantees:
+          - failure-runner-temp-preserved
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution delivery rejection preserves state and diagnostic context
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended

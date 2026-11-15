@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { fixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from '../../../runtime/release-publication/tests/fixtures.mjs';
+import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from '../../../runtime/release-publication/tests/fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
@@ -81,7 +81,8 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets).toStrictEqual(assets);
   expect(assembly.asset_digest).toBe(digest);
-  expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(true);
+  expect(assembly.identity.source_sha).toBe(f.identity.source_sha);
+  expect(JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'handoff.json'), 'utf8')).source_sha).toBe(f.identity.source_sha);
 });
 
 // contract_id: contract.ci-release-assembly.outputs
@@ -133,6 +134,87 @@ test('assembly bundle assembles an asset release without build inputs and fails 
   expect(rejected.stderr).toContain('asset-set-empty');
   expect(fs.readFileSync(emptyOutput, 'utf8')).toBe('');
   expect(fs.existsSync(empty.options.outputRoot)).toBe(false);
+});
+
+const runAssembly = (f: ReturnType<typeof fixture>) => {
+  const output = f.put('github-output', '');
+  const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
+  return { result, outputs: fs.readFileSync(output, 'utf8') };
+};
+const expectAssemblyRejected = (f: ReturnType<typeof fixture>, run: ReturnType<typeof runAssembly>, reason: RegExp) => {
+  expect(run.result.status).toBe(1);
+  expect(run.outputs).toBe('');
+  expect(run.result.stderr).toMatch(reason);
+  expect(fs.existsSync(f.options.outputRoot)).toBe(false);
+};
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint
+test('assembly bundle binds supplemental owner evidence into the handoff', (t) => {
+  // Arrange
+  const f = putSupplementalAsset(fixture(t));
+  // Act
+  const run = runAssembly(f);
+  // Assert
+  expect(run.result.status, run.result.stderr).toBe(0);
+  expect(run.outputs).toContain('status=success\n');
+  const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
+  expect(assembly.assets.map((asset: { name: string }) => asset.name)).toEqual(expect.arrayContaining([f.name, 'instructions.zip']));
+  const evidence = fs.readdirSync(path.join(f.options.outputRoot, 'evidence'));
+  expect(evidence).toHaveLength(3);
+  expect(evidence.map((name) => fs.readFileSync(path.join(f.options.outputRoot, 'evidence', name), 'utf8'))).toContain('opaque owner record');
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint-rejection
+test('assembly bundle rejects a build manifest that names another source', (t) => {
+  // Arrange
+  const f = fixture(t);
+  f.put('build/release-build-linux/asset-manifest.json', { ...f.buildManifest, source_sha: 'c'.repeat(40) });
+  // Act
+  const run = runAssembly(f);
+  // Assert
+  expectAssemblyRejected(f, run, /source-identity-mismatch/);
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint-rejection
+test('assembly bundle rejects a checksum sidecar with a single-space separator', (t) => {
+  // Arrange
+  const f = fixture(t);
+  f.put(`build/release-build-linux/${f.name}.sha256`, `${crypto.createHash('sha256').update(f.payload).digest('hex')} ${f.name}\n`);
+  // Act
+  const run = runAssembly(f);
+  // Assert
+  expectAssemblyRejected(f, run, /checksum-mismatch/);
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint
+test('assembly bundle binds the LF platform manifest identity for a CRLF checkout', (t) => {
+  // Arrange
+  const f = fixture(t);
+  const lf = fs.readFileSync(f.options.platformManifestPath, 'utf8');
+  fs.writeFileSync(f.options.platformManifestPath, lf.replaceAll('\n', '\r\n'));
+  // Act
+  const run = runAssembly(f);
+  // Assert
+  expect(run.result.status, run.result.stderr).toBe(0);
+  expect(run.outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
+  const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
+  expect(assembly.identity).toStrictEqual(f.identity);
+  expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(true);
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint-rejection
+test('assembly bundle rejects a selected skill without its required SKILL.md', (t) => {
+  // Arrange
+  const f = releaseSkillsFixture(t, (_configuration: unknown, root: string) => { fs.unlinkSync(path.join(root, 'skills/example-tool/SKILL.md')); });
+  // Act
+  const run = runAssembly(f);
+  // Assert
+  expectAssemblyRejected(f, run, /skills-required-file-missing/);
 });
 
 });

@@ -89,3 +89,22 @@ export const runDistributedAction = (f: ReturnType<typeof fixture>, options = f.
   const result = spawnSync(process.execPath, entrypointArgs, { cwd: f.root, encoding: 'utf8', env });
   return { result, output };
 };
+
+// Runs one phase through the distributed Action and surfaces a failed run as an error carrying its stderr.
+// An injected installer replaces only the provider script inside a copy of the distribution, so the Action boundary
+// still performs every input and output check around a provider that misbehaves.
+export const runSupplementalAction = (options: SupplementalOptionsType, injectedInstaller?: string): void => {
+  let entrypoint = path.join(repository, 'actions/ci-release-supplemental-asset/dist/index.js');
+  if (injectedInstaller !== undefined) {
+    const provider = path.join(options.sourceRoot, 'injected-action');
+    fs.rmSync(provider, { recursive: true, force: true });
+    fs.cpSync(path.join(repository, 'actions/ci-release-supplemental-asset/dist'), path.join(provider, 'dist'), { recursive: true });
+    fs.copyFileSync(path.join(injectedInstaller, 'src/assembly.py'), path.join(provider, 'dist/installer/src/assembly.py'));
+    entrypoint = path.join(provider, 'dist/index.js');
+  }
+  const output = path.join(options.sourceRoot, 'runner-output');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, A3_INSTALLER_PROVIDER_REVISION: 'a'.repeat(40), INPUT_OPERATION: options.operation, 'INPUT_SOURCE-ROOT': options.sourceRoot, 'INPUT_AUTHORITY-PATH': options.authorityPath, 'INPUT_SNAPSHOT-PATH': options.snapshotPath, 'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot, 'INPUT_OUTPUT-DIRECTORY': options.outputDirectory, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '' };
+  const result = spawnSync(process.execPath, [entrypoint], { cwd: options.sourceRoot, encoding: 'utf8', env });
+  if (result.status !== 0) throw new Error(result.stderr || `supplemental-action-exit-${String(result.status)}`);
+};

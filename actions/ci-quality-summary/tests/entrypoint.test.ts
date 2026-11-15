@@ -160,6 +160,64 @@ test('entrypoint normalizes a raw GitHub job result', () => {
 
 // contract_id: contract.ci-quality-summary.outputs
 // flow_id: ci-quality-summary-contract-entrypoint
+test('entrypoint ignores intentionally excluded test rows in the aggregate status', () => {
+  // Arrange
+  const input = { tests: [
+    { unit: 'considered', execution: 'node', result: 'success', evidence: 'tests', collection: '完了' },
+    { unit: 'intentionally-excluded', execution: 'node', result: '対象外', evidence: 'owner-policy', collection: '完了', reason: 'excluded by owner policy' },
+  ] };
+  // Act
+  const run = runBundled(input);
+  try {
+    // Assert
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
+    expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/⏭ 対象外/);
+  } finally {
+    fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
+test('entrypoint keeps the applicable job status when an uncollected job row is excluded', () => {
+  // Arrange
+  const input = { jobs: [
+    { unit: 'unit', execution: 'test command', result: 'success', evidence: 'evidence.log', collection: '完了' },
+    { unit: 'unit', execution: 'test command', result: '対象外', evidence: 'evidence.log', collection: '取得不可', reason: 'disabled by owner contract' },
+  ] };
+  // Act
+  const run = runBundled(input);
+  try {
+    // Assert
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
+  } finally {
+    fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
+test('entrypoint fails an input where every row is excluded', () => {
+  // Arrange
+  const input = { tests: [
+    { unit: 'intentionally-excluded', execution: 'node', result: '対象外', evidence: 'owner-policy', collection: '完了', reason: 'excluded by owner policy' },
+  ] };
+  // Act
+  const run = runBundled(input);
+  try {
+    // Assert
+    expect(run.result.status).not.toBe(0);
+    expect(run.result.stderr).toMatch(/ci-summary-all-excluded/);
+    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
+  } finally {
+    fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint rejects a missing summary path', () => {
   // Arrange
   // Act

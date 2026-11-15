@@ -39,6 +39,18 @@ contracts:
             meaning: Failure outcome of the rejected quality adapter step.
           - selector: diagnostic-codes
             meaning: Stable diagnostic codes reported by the failed step.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+      - summary: Adapter result JSON, command logs and embedded records in the workspace.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: accepted-source-binding
+            meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
+          - selector: accepted-content-digest
+            meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
           - selector: format-command-state
             meaning: Occurrence of format commands in the native execution trace.
           - selector: security-command-state
@@ -69,17 +81,6 @@ contracts:
             meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
           - selector: not-run-aggregate-effect
             meaning: Change of the aggregate status caused by results whose status is not-run.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - boundary: boundary.workspace-files
-        fields:
-          - selector: accepted-source-binding
-            meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
-          - selector: accepted-content-digest
-            meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: quality-adapter-bundle-present

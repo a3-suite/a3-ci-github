@@ -78,11 +78,6 @@ cases:
       failure: partial-write
     verifies:
       - diagnostic-diagnostic-only-retry
-  - contract_id: contract.ci-failure-diagnostics.subject-declarations
-    id: all-subject-diagnostics-defined
-    partition: subject-contract-source-available
-    input:
-      subject-contracts: sdd/dsl/specs/contract-core/subjects
   - contract_id: contract.ci-failure-diagnostics.workflow-evidence
     id: workflow-evidence-declared
     partition: ci-failure-diagnostics-workflow-source-available
@@ -93,3 +88,13 @@ cases:
     partition: ci-failure-diagnostics-bootstrap-fails
     input:
       prepared-runtime: unavailable
+  - contract_id: contract.ci-failure-diagnostics.existing-state
+    id: input-rejection-preserves-existing-files
+    partition: ci-failure-diagnostics-rejected-before-write
+    input:
+      failure: required inputs absent
+      existing-file: pre-existing sentinel file that the contract target does not manage
+    verifies:
+      - failure-runner-temp-preserved
+      - failure-target-root-preserved
+      - failure-target-root-unextended

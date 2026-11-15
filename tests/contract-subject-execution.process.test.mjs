@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -36,6 +36,19 @@ describe("repository-contract-subject-execution", () => {
 
 
 describe("repository-contract-subject-execution", () => {
+
+  // flow_id: repository-contract-subject-execution
+  test('definition check accepts the repository execution definition with tests inside the repository', () => {
+    // Arrange
+    const contractCore = path.resolve('sdd/dsl/specs/contract-core');
+    const packageSubjects = [...readFileSync(path.join(contractCore, 'contract-package.sdd.yml'), 'utf8').matchAll(/^\s*- (subjects\/\S+\/)\s*$/gm)];
+    // Act
+    const result = spawnSync(process.execPath, ['tests/coverage-tools/contract-subject-coverage.mjs', '--check'], { encoding: 'utf8' });
+    // Assert
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe(`Execution definition is valid (${packageSubjects.length} contract subjects).`);
+    expect(result.stderr).not.toContain('ci-failure-diagnostic:');
+  });
 
   // flow_id: repository-contract-subject-execution
   test('definition check retains the rejected mapping as failure details without private parser text', () => {

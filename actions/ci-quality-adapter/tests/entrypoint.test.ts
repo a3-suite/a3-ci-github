@@ -118,6 +118,35 @@ test('entrypoint rejects an unknown standard ID without a descriptor fallback', 
 
 // contract_id: contract.ci-quality-adapter.outputs
 // flow_id: ci-quality-adapter-standard-selection
+test('entrypoint executes the embedded Python standard and emits its status', (t) => {
+  // Arrange
+  fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-python-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const bin = path.join(root, 'bin');
+  fs.mkdirSync(bin);
+  const commands = path.join(root, 'commands.jsonl');
+  fs.writeFileSync(path.join(bin, 'python'), `#!${process.execPath}\nconsole.log('Python 3.12.1');\n`, { mode: 0o700 });
+  fs.writeFileSync(path.join(bin, 'uv'), `#!${process.execPath}\nprocess.getBuiltinModule('node:fs').appendFileSync(${JSON.stringify(commands)}, JSON.stringify(process.argv.slice(2)) + '\\n');\n`, { mode: 0o700 });
+  fs.writeFileSync(path.join(root, 'pyproject.toml'), '[project]\nname = "fixture"\n');
+  fs.writeFileSync(path.join(root, 'uv.lock'), '');
+  // Act
+  const run = runAction(root, 'invalid project descriptor', {
+    'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'python-uv-quality', 'INPUT_LANGUAGE-PROFILE': 'python',
+    'INPUT_TOOLCHAIN-VERSION': '3.12.1', 'INPUT_REQUIRE-TRUSTED-PROJECT-SCRIPTS': 'true', 'INPUT_TRUSTED-PROJECT-ROOT': root,
+    PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+  });
+  // Assert
+  expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
+  const result = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
+  expect(result).toMatchObject({ adapter: 'python-uv-quality', status: 'success' });
+  expect(result.results.map((entry: { id: string }) => entry.id)).toStrictEqual(['toolchain-verify', 'dependency-restore', 'format', 'lint', 'test', 'security', 'structure']);
+  expect(fs.readFileSync(commands, 'utf8').trim().split('\n').map((line) => JSON.parse(line)[0])).toStrictEqual(['sync', 'run', 'run', 'run', 'run', 'run']);
+  expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*success/s);
+});
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-standard-selection
 test('entrypoint executes the embedded standard without reading a project descriptor', () => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-standard-'));
   try {

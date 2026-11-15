@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, test, expect } from 'vitest';
-import { runSupplemental } from '../../../runtime/release-publication/supplemental';
 import { hashFile } from '../../../runtime/release-publication/io';
-import { fixture } from './fixtures';
+import { fixture, runAction } from './fixtures';
 
 describe('supplemental-phase-source', () => {
   // contract_id: contract.ci-release-supplemental-asset.outputs
@@ -14,7 +13,7 @@ describe('supplemental-phase-source', () => {
       f.configure({ CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT: 'owner.installer-contract#selected-meaning' });
       f.options.operation = operation;
       if (operation === 'assemble') f.options.supplementalBuildRoot = 'supplemental build';
-      runSupplemental(f.options);
+      runAction(f, f.options);
       expect(fs.readFileSync(path.join(f.root, 'new output/arguments'), 'utf8')).toBe([operation, 'authority.json', 'snapshot.json', 'standard build', ...(operation === 'assemble' ? ['supplemental build'] : []), 'new output', ''].join('\n'));
     });
   }
@@ -40,7 +39,7 @@ describe('supplemental source rejects unsafe paths, invalid phases and existing 
       sub.skip('filesystem does not alias path casing');
       return;
     }
-    expect(() => runSupplemental({ ...f.options, ...changes })).toThrow();
+    expect(() => runAction(f, { ...f.options, ...changes })).toThrow();
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
     if (changes.outputDirectory === 'STANDARD BUILD/overlap') expect(fs.existsSync(path.join(f.root, changes.outputDirectory))).toBe(false);
   });
@@ -58,7 +57,7 @@ describe('supplemental source rejects snapshot, source and owner selection misma
       const filename = path.join(f.root, '.ci/scripts/ci-release-supplemental-asset.sh');
       fs.writeFileSync(filename, fs.readFileSync(filename, 'utf8').replaceAll('\n', '\r\n'));
     }
-    expect(() => runSupplemental(f.options)).toThrow();
+    expect(() => runAction(f, f.options)).toThrow();
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
   });
 });
@@ -74,7 +73,7 @@ describe('supplemental source rejects mutated authority, snapshot, adapter and s
     const f = fixture(sub, 'mkdir -p -- "${!#}"\nprintf data > "${!#}/asset"\n' + change);
     f.options.operation = 'assemble';
     f.options.supplementalBuildRoot = 'supplemental build';
-    expect(() => runSupplemental(f.options)).toThrow();
+    expect(() => runAction(f, f.options)).toThrow();
     expect(fs.existsSync(path.join(f.root, 'new output/asset'))).toBe(true);
   });
 });
@@ -87,8 +86,8 @@ describe('supplemental source accepts empty markers and rejects their mutation',
     fs.writeFileSync(path.join(f.root, 'standard build/marker'), '');
     fs.writeFileSync(path.join(f.root, 'supplemental build/marker'), '');
     expect(() => hashFile(path.join(f.root, 'standard build/marker'))).toThrow(/asset-size-or-kind-invalid/);
-    if (mutate) expect(() => runSupplemental(f.options)).toThrow(/build-input-mutated/);
-    else expect(() => runSupplemental(f.options)).not.toThrow();
+    if (mutate) expect(() => runAction(f, f.options)).toThrow(/build-input-mutated/);
+    else expect(() => runAction(f, f.options)).not.toThrow();
     expect(fs.existsSync(path.join(f.root, 'new output/asset'))).toBe(true);
   });
 });
@@ -96,7 +95,7 @@ describe('supplemental source accepts empty markers and rejects their mutation',
 describe('supplemental-phase-source', () => {
   test('supplemental source preserves owner shebang failure semantics', (t) => {
     const f = fixture(t, 'false\nmkdir -p -- "$5"\nprintf data > "$5/asset"', '#!/bin/bash -e\n');
-    expect(() => runSupplemental(f.options)).toThrow(/owner-adapter-failed/);
+    expect(() => runAction(f, f.options)).toThrow(/owner-adapter-failed/);
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
   });
 });
@@ -104,7 +103,7 @@ describe('supplemental-phase-source', () => {
 describe('supplemental source rejects missing and empty owner output', () => {
   for (const body of ['true', 'mkdir -p -- "${!#}"']) test(body, (sub) => {
     const f = fixture(sub, body);
-    expect(() => runSupplemental(f.options)).toThrow();
+    expect(() => runAction(f, f.options)).toThrow();
   });
 });
 
@@ -141,14 +140,14 @@ describe('supplemental-asset-release-source', () => {
     mixed.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '.ci/platform-manifest.yml' },
       { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
     // Act
-    runSupplemental(valid.options);
+    runAction(valid, valid.options);
     // Assert
     expect(fs.readFileSync(path.join(valid.root, 'new output/arguments'), 'utf8')).toBe(['assemble', 'authority.json', 'snapshot.json', 'standard build', 'supplemental build', 'new output', ''].join('\n'));
-    expect(() => runSupplemental(withBuild.options)).toThrow(/unexpected-build-input/);
-    expect(() => runSupplemental(platformPhase.options)).toThrow(/asset-release-phase-invalid/);
-    expect(() => runSupplemental(installer.options)).toThrow(/asset-release-phase-invalid/);
-    for (const f of platformEmpty) expect(() => runSupplemental(f.options)).toThrow(/build-input-missing/);
-    expect(() => runSupplemental(mixed.options)).toThrow(/platform-mismatch/);
+    expect(() => runAction(withBuild, withBuild.options)).toThrow(/unexpected-build-input/);
+    expect(() => runAction(platformPhase, platformPhase.options)).toThrow(/asset-release-phase-invalid/);
+    expect(() => runAction(installer, installer.options)).toThrow(/asset-release-phase-invalid/);
+    for (const f of platformEmpty) expect(() => runAction(f, f.options)).toThrow(/build-input-missing/);
+    expect(() => runAction(mixed, mixed.options)).toThrow(/platform-mismatch/);
     for (const f of [withBuild, platformPhase, installer, ...platformEmpty, mixed]) expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
   });
 });

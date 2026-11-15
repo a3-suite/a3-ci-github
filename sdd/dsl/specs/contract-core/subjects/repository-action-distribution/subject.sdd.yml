@@ -13,44 +13,14 @@ contracts:
         meaning: "Received by the contract target: Actions root directory."
       - name: runtime-root
         meaning: "Received by the contract target: shared runtime root directory."
-      - name: catalog-path
-        meaning: "Received by the contract target: path to the Action catalog file."
-      - name: contract-package
-        meaning: "Received by the contract target: contract package definition path."
       - name: untracked-distribution-path
         meaning: "Precondition prepared by the case: distribution file or Composite Action referenced script that exists in the working tree but is not tracked by Git."
-      - name: prepared-by
-        meaning: "Precondition prepared by the case: process that prepared the distribution input."
-      - name: tag
-        meaning: "Received by the contract target: release tag name."
-      - name: repository-version
-        meaning: "Received by the contract target: content of the repository VERSION file."
     observations:
-      - summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
+      - summary: Distribution consistency result exposed by the repository distribution gate.
         boundary: boundary.repository-gate-result
         fields:
           - selector: distribution
             meaning: Distribution gate result.
-          - selector: catalog
-            meaning: Maintained Action catalog projection written by the gate.
-          - selector: catalog-action-set
-            meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
-          - selector: catalog-usage-text
-            meaning: Comparison of curated usage text before and after projection; equal or changed.
-          - selector: contract-subject-coverage
-            meaning: Comparison of discovered Actions with Actions that have a packaged contract subject; matched or missing.
-          - selector: contract-output-coverage
-            meaning: Comparison of each Action public output with the observation selectors of its contract subject; matched or missing.
-          - selector: source-verification
-            meaning: Source verification plan of typecheck and test steps.
-          - selector: source-verification-action-coverage
-            meaning: Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.
-          - selector: source-verification-runtime-tests
-            meaning: Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.
-          - selector: source-verification-rebuild
-            meaning: Dependency installation or distribution build steps inside the source verification plan; absent or present.
-          - selector: release-version
-            meaning: Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -60,9 +30,6 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.repository-action-distribution-inputs-available
       - environment: runtime-context.repository-action-distribution-inconsistent
-      - environment: runtime-context.repository-action-catalog-inputs-available
-      - environment: runtime-context.repository-exact-release-tag-available
-      - environment: runtime-context.repository-release-version-invalid-or-mismatched
     guarantees:
       - id: distribution-plan-produced
         applies_to:
@@ -77,32 +44,44 @@ contracts:
           field: distribution
           in:
             - failure
+      - id: diagnostic-failure-stage-integrity
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.repository-action-distribution.catalog
+    summary: Repository Action catalog projection invocation.
+    inputs:
+      - name: actions-root
+        meaning: "Received by the contract target: Actions root directory."
+      - name: catalog-path
+        meaning: "Received by the contract target: path to the Action catalog file."
+    observations:
+      - summary: Catalog projection result exposed by the repository catalog gate.
+        boundary: boundary.repository-gate-result
+        fields:
+          - selector: catalog
+            meaning: Maintained Action catalog projection written by the gate.
+          - selector: catalog-action-set
+            meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
+          - selector: catalog-usage-text
+            meaning: Comparison of curated usage text before and after projection; equal or changed.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.repository-action-catalog-inputs-available
+    guarantees:
       - id: action-catalog-projected
         applies_to:
           - runtime-context.repository-action-catalog-inputs-available
         claim:
           field: catalog
           present: true
-      - id: action-source-verification-plan-produced
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification
-          present: true
-      - id: release-version-confirmed
-        applies_to:
-          - runtime-context.repository-exact-release-tag-available
-        claim:
-          field: release-version
-          in:
-            - equal
-      - id: invalid-or-mismatched-release-version-rejected
-        applies_to:
-          - runtime-context.repository-release-version-invalid-or-mismatched
-        claim:
-          field: release-version
-          in:
-            - failure
       - id: catalog-action-set-matched
         applies_to:
           - runtime-context.repository-action-catalog-inputs-available
@@ -117,20 +96,46 @@ contracts:
           field: catalog-usage-text
           in:
             - equal
-      - id: action-contract-subject-covered
+      - id: diagnostic-failure-stage-catalog
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
+          - runtime-context.failure-diagnostic-required
         claim:
-          field: contract-subject-coverage
-          in:
-            - matched
-      - id: action-contract-output-covered
+          field: failure-stage
+          present: true
+  - id: contract.repository-action-distribution.source-verification
+    summary: Repository Action source verification planning invocation.
+    inputs:
+      - name: actions-root
+        meaning: "Received by the contract target: Actions root directory."
+      - name: prepared-by
+        meaning: "Precondition prepared by the case: process that prepared the distribution input."
+    observations:
+      - summary: Source verification plan exposed by the repository source verification gate.
+        boundary: boundary.repository-gate-result
+        fields:
+          - selector: source-verification
+            meaning: Source verification plan of typecheck and test steps.
+          - selector: source-verification-action-coverage
+            meaning: Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.
+          - selector: source-verification-runtime-tests
+            meaning: Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.
+          - selector: source-verification-rebuild
+            meaning: Dependency installation or distribution build steps inside the source verification plan; absent or present.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.repository-action-distribution-inputs-available
+    guarantees:
+      - id: action-source-verification-plan-produced
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
+          - runtime-context.repository-action-distribution-inputs-available
         claim:
-          field: contract-output-coverage
-          in:
-            - matched
+          field: source-verification
+          present: true
       - id: source-verification-actions-covered
         applies_to:
           - runtime-context.repository-action-distribution-inputs-available
@@ -152,7 +157,50 @@ contracts:
           field: source-verification-rebuild
           in:
             - absent
-      - id: diagnostic-failure-stage-integrity
+      - id: diagnostic-failure-stage-source-verification
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: failure-stage
+          present: true
+  - id: contract.repository-action-distribution.release-version
+    summary: Release tag alias update request against the repository VERSION.
+    inputs:
+      - name: tag
+        meaning: "Received by the contract target: release tag name."
+      - name: repository-version
+        meaning: "Received by the contract target: content of the repository VERSION file."
+    observations:
+      - summary: Release version comparison exposed by the release alias updater.
+        boundary: boundary.repository-gate-result
+        fields:
+          - selector: release-version
+            meaning: Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+    conditions:
+      - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.repository-exact-release-tag-available
+      - environment: runtime-context.repository-release-version-invalid-or-mismatched
+    guarantees:
+      - id: release-version-confirmed
+        applies_to:
+          - runtime-context.repository-exact-release-tag-available
+        claim:
+          field: release-version
+          in:
+            - equal
+      - id: invalid-or-mismatched-release-version-rejected
+        applies_to:
+          - runtime-context.repository-release-version-invalid-or-mismatched
+        claim:
+          field: release-version
+          in:
+            - failure
+      - id: diagnostic-failure-stage-release-version
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:

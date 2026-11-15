@@ -55,3 +55,19 @@ export const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, st
       'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory, ...changes,
     },
   });
+
+// Runs one phase through the distributed Action with the given options and surfaces a failed run as an error
+// carrying its stderr, so that phase expectations are judged at the Action boundary.
+export const runAction = (f: ReturnType<typeof fixture>, options: SupplementalOptionsType = f.options): void => {
+  const result = spawnSync(process.execPath, [path.resolve(__dirname, '../dist/index.js')], {
+    cwd: f.root, encoding: 'utf8', env: {
+      ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: f.outputPath,
+      'INPUT_OPERATION': options.operation, 'INPUT_SOURCE-ROOT': options.sourceRoot,
+      'INPUT_AUTHORITY-PATH': options.authorityPath, 'INPUT_SNAPSHOT-PATH': options.snapshotPath,
+      'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot,
+      'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '',
+      'INPUT_OUTPUT-DIRECTORY': options.outputDirectory,
+    },
+  });
+  if (result.status !== 0) throw new Error(result.stderr || `supplemental-action-exit-${String(result.status)}`);
+};

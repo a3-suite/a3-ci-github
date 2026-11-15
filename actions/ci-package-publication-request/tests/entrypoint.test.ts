@@ -37,8 +37,20 @@ test('entrypoint creates and verifies a request', () => {
   expect(verified.status).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nsuccess\n/);
   expect(fs.readFileSync(output, 'utf8')).toMatch(new RegExp(`source-sha<<[^\\n]+\\n${'a'.repeat(40)}\\n`));
+  fs.rmSync(root, { recursive: true, force: true });
+});
 
+// flow_id: ci-package-publication-request-contract-entrypoint
+test('entrypoint rejects a create replay without rewriting the request', () => {
   // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-package-entry-replay-'));
+  const output = path.join(root, 'output');
+  const request = path.join(root, 'request.json');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, INPUT_OPERATION: 'create', 'INPUT_REQUEST-PATH': request, 'INPUT_SOURCE-SHA': 'a'.repeat(40), INPUT_VERSION: '1.2.3', 'INPUT_TARGET-IDENTITY': 'npm:pkg', 'INPUT_LANGUAGE-PROFILE': 'node', INPUT_TOOLCHAIN: '22' } as Record<string, string>;
+  const entrypoint = entrypointArgs;
+  const created = spawnSync(process.execPath, [...entrypoint], { env, encoding: 'utf8' });
+  if (created.status !== 0) throw new Error('package request test setup failed');
   const saved = fs.readFileSync(request, 'utf8');
   fs.writeFileSync(output, '');
   // Act

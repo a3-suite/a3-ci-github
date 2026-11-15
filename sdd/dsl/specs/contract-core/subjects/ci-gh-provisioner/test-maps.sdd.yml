@@ -3,21 +3,35 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: supported-runner-assets
-    pending:
-      - guarantees: [checked-gh-available]
-        reason: Linux/ARM64 の runner で取得した GitHub CLI が job の PATH に入ることを確かめるテストが無い。既存のテストは asset 名の選択だけを確かめる。
+    tests:
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action installs the checksummed Linux/ARM64 asset and exports its directory
+        guarantees:
+          - checked-gh-available
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action installs the checksummed Linux/ARM64 asset and exports its directory
+        guarantees:
+          - checked-gh-available
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: checked-release-asset
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > installs the checksummed asset and exports its directory
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action installs the checksummed Linux/X64 asset and exports its directory
+        guarantees:
+          - checked-gh-available
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action installs the checksummed Linux/X64 asset and exports its directory
         guarantees:
           - checked-gh-available
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: mismatched-release-asset
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects a checksum mismatch without exposing a binary
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects a checksum mismatch without exposing a binary
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects a checksum mismatch without exposing a binary
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
@@ -34,43 +48,67 @@ test_maps:
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: unsupported-runner
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects an unsupported runner before download or PATH handoff
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects an unsupported runner before download or PATH handoff
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects an unsupported runner before download or PATH handoff
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: unavailable-release-asset
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > reports a download failure separately from version verification
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action reports an unavailable release asset before PATH handoff
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action reports an unavailable release asset before PATH handoff
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: invalid-checksum-manifest
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects missing or duplicate checksum entries
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects a checksum manifest without the asset entry
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects a checksum manifest without the asset entry
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: extraction-failure
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects an extraction failure before PATH handoff
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects an extraction failure before PATH handoff
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects an extraction failure before PATH handoff
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: installation-failure
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > rejects an installation failure before PATH handoff
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects an installation failure before PATH handoff
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects an installation failure before PATH handoff
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision
     case_id: path-update-failure
     tests:
-      - path: actions/ci-gh-provisioner/tests/provision.test.ts
-        symbol: GitHub CLI provisioning > removes the installed binary when PATH update fails
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action removes the installed binary when PATH update fails
+        guarantees:
+          - failed-provisioning-stops
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action removes the installed binary when PATH update fails
         guarantees:
           - failed-provisioning-stops
   - contract_id: contract.ci-gh-provisioner.provision

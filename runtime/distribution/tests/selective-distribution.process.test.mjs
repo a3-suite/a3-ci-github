@@ -435,25 +435,21 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(applyResult.status, applyResult.stderr).toBe(0);
         const applied = JSON.parse(applyResult.stdout);
         expect(applied.status).toBe('applied');
-        const requireFromPreset = createRequire(path.join(repositoryRoot, 'runtime/preset/package.json'));
-        const { parse } = requireFromPreset('yaml');
-        const commands = ['fetch', 'verify', 'plan', 'apply', 'rollback'].map((operation) => parse(fs.readFileSync(path.join(repositoryRoot, `sdd/dsl/specs/cli/commands/manage-ci-distribution-${operation}/cli-command.sdd.yml`), 'utf8')).command);
-        const vocabulary = parse(fs.readFileSync(path.join(repositoryRoot, 'sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml'), 'utf8'));
-        const flags = new Map(vocabulary.options.map((option) => [option.id, option.long]));
         // The operations share one parser, so every option published by any operation must be rejected where it is not bound.
-        const publicOptions = [...new Set(commands.flatMap((command) => command.option_groups.flatMap((group) => group.options)))];
+        const unboundOptions = [
+          { operation: 'fetch', required: [], rejected: ['--source-revision', '--set', '--plan', '--approve', '--transaction'] },
+          { operation: 'verify', required: ['--source-revision'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--set', '--plan', '--approve', '--transaction'] },
+          { operation: 'plan', required: ['--source-revision'], rejected: ['--manifest', '--manifest-url', '--source-root', '--plan', '--approve', '--transaction'] },
+          { operation: 'apply', required: ['--plan', '--approve'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--source-revision', '--set', '--transaction'] },
+          { operation: 'rollback', required: ['--transaction'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--source-revision', '--set', '--plan', '--approve'] },
+        ];
         const beforeRejection = snapshotTree(projectRoot);
-        for (const target of commands.flatMap((command) => command.usage_targets)) {
-          const allowed = new Set(target.option_bindings.map((binding) => binding.option_id));
-          const required = target.option_bindings
-            .filter((binding) => binding.presence === 'required')
-            .flatMap((binding) => [flags.get(binding.option_id), 'unused']);
-          for (const option of publicOptions.filter((id) => !allowed.has(id))) {
-            const flag = flags.get(option);
+        for (const { operation, required, rejected: rejectedFlags } of unboundOptions) {
+          for (const flag of rejectedFlags) {
             const rejected = spawnSync(process.execPath, [
-              cli, target.id, '--repo-root', projectRoot, ...required, flag, 'unused',
+              cli, operation, '--repo-root', projectRoot, ...required.flatMap((option) => [option, 'unused']), flag, 'unused',
             ], { encoding: 'utf8' });
-            expect(rejected.status, `${target.id} ${flag}: ${rejected.stderr}`).toBe(2);
+            expect(rejected.status, `${operation} ${flag}: ${rejected.stderr}`).toBe(2);
             expect(rejected.stdout).toBe('');
             expect(JSON.parse(rejected.stderr).diagnostic).toBe(`distribution-cli-argument-invalid:${flag}`);
             expect(snapshotTree(projectRoot)).toStrictEqual(beforeRejection);

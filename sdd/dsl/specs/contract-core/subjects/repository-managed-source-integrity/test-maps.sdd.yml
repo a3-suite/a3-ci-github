@@ -11,11 +11,9 @@ test_maps:
           - registered-sources-present
   - contract_id: contract.repository-managed-source-integrity.integrity
     case_id: repository-managed-source-integrity-failure
-    tests:
-      - path: tests/repository-managed-source-integrity.test.mjs
-        symbol: repository-managed-source-integrity > managed source inventory rejects stale legacy locations
-        guarantees:
-          - legacy-source-locations-absent
+    pending:
+      - guarantees: [legacy-source-locations-absent]
+        reason: case は旧 location を持つ tree を入力とするが、契約対象の maintenance gate（runtime/repository/lint-repository.sh）は旧 location を検査せず、写像していたテストは実 repository に旧 location が無いことを確かめるだけである。
   - contract_id: contract.repository-managed-source-integrity.integrity
     case_id: detailed-failure-integrity
     tests:
@@ -26,14 +24,15 @@ test_maps:
   - contract_id: contract.repository-managed-source-integrity.execution-mapping
     case_id: repository-contract-execution-mapped
     tests:
+      - path: tests/contract-subject-execution.process.test.mjs
+        symbol: repository-contract-subject-execution > definition check accepts the repository execution definition with tests inside the repository
+        guarantees:
+          - repository-contract-execution-mapped
+          - repository-contract-execution-paths-contained
       - path: tests/contract-subject-execution.test.mjs
         symbol: repository-contract-subject-execution > execution definition covers every contract-package subject scope
         guarantees:
-          - repository-contract-execution-mapped
           - repository-contract-execution-subjects-covered
-    pending:
-      - guarantees: [repository-contract-execution-paths-contained]
-        reason: 写像していたテストは repository 外へ出る test path を持つ定義を与えて拒否を確かめるもので、case の contract-package を与えて escaping path が無いことを確かめるテストが無い
   - contract_id: contract.repository-managed-source-integrity.execution-mapping
     case_id: detailed-failure-execution-mapping
     tests:

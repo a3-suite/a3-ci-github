@@ -4,20 +4,8 @@ test_maps:
   - contract_id: contract.repository-action-distribution.integrity
     case_id: maintained-distribution-inputs
     tests:
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > build plan installs, rebuilds, and compares every Action dist
-        guarantees:
-          - distribution-plan-produced
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > collects and rebuilds the Rust release script bundle
-        guarantees:
-          - distribution-plan-produced
       - path: tests/action-dist-gate.process.test.mjs
         symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > diagnostic runtime regenerates native JavaScript and declarations from strict source
-        guarantees:
-          - distribution-plan-produced
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > CI rebuild skips duplicate ncc typechecking while standard build remains unchanged
         guarantees:
           - distribution-plan-produced
       - path: tests/action-dist-gate.process.test.mjs
@@ -27,82 +15,47 @@ test_maps:
   - contract_id: contract.repository-action-distribution.integrity
     case_id: inconsistent-distribution-state
     tests:
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > fails when a build leaves an untracked dist file
+      - path: tests/action-dist-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > gate CLI rejects a build that leaves an untracked dist file
         guarantees:
           - inconsistent-distribution-rejected
   - contract_id: contract.repository-action-distribution.integrity
     case_id: untracked-composite-reference
     tests:
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > fails when a Composite Action references an untracked script
+      - path: tests/action-dist-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > gate CLI rejects a Composite Action that references an untracked script
         guarantees:
           - inconsistent-distribution-rejected
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.catalog
     case_id: maintained-action-catalog
     tests:
       - path: tests/action-index-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
         guarantees:
           - action-catalog-projected
           - catalog-action-set-matched
           - catalog-usage-text-preserved
       - path: tests/action-index-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > removes rows for deleted actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > removes rows for deleted actions
         guarantees:
           - action-catalog-projected
           - catalog-action-set-matched
       - path: tests/action-index-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > catalog projection preserves section boundaries and is idempotent with generated markers
+        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > catalog projection preserves section boundaries and is idempotent with generated markers
         guarantees:
           - action-catalog-projected
           - catalog-usage-text-preserved
-  - contract_id: contract.repository-action-distribution.integrity
-    case_id: maintained-action-contract-coverage
-    tests:
-      - path: tests/action-dist-gate.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > every Action has contract coverage for its public outputs
-        guarantees:
-          - action-contract-subject-covered
-          - action-contract-output-covered
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.source-verification
     case_id: maintained-action-source-verification
     tests:
-      - path: tests/action-package-verification.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-source-verification > batches every Action and shared test once while retaining all typechecks
+      - path: tests/action-package-verification.process.test.mjs
+        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI typechecks and tests every bundled Action and shared runtime test without install or build
         guarantees:
           - action-source-verification-plan-produced
           - source-verification-actions-covered
           - source-verification-runtime-tests-covered
-      - path: tests/action-package-verification.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-source-verification > rejects missing files, empty, entirely skipped and unknown test results despite a zero child exit
-        guarantees:
-          - action-source-verification-plan-produced
-      - path: tests/action-package-verification.process.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-source-verification > batched typechecks keep project globals isolated and reject errors after a previous successful build
-        guarantees:
-          - action-source-verification-plan-produced
-      - path: tests/action-package-verification.process.test.mjs
-        symbol: repository-cli-source-verification > cliTypecheckPlan > the CLI verification plan accepts valid sources and rejects type errors in every CLI source family
-        guarantees:
-          - action-source-verification-plan-produced
-      - path: tests/action-package-verification.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-source-verification > derives typecheck and no-rebuild test steps for every bundled Action
-        guarantees:
-          - action-source-verification-plan-produced
-          - source-verification-actions-covered
           - source-verification-without-rebuild
-      - path: tests/action-package-verification.process.test.mjs
-        symbol: contract.repository-action-distribution.integrity > repository-action-source-verification > the formal Action source gate rejects type errors independently of bundling
-        guarantees:
-          - action-source-verification-plan-produced
-      - path: tests/action-package-verification.test.mjs
-        symbol: action-package-verification > action-package-verification > connects shared provisioner, publication and installer tests without another install or build
-        guarantees:
-          - action-source-verification-plan-produced
-          - source-verification-runtime-tests-covered
-          - source-verification-without-rebuild
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     case_id: matching-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
@@ -113,21 +66,21 @@ test_maps:
         symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
         guarantees:
           - release-version-confirmed
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     case_id: missing-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
         guarantees:
           - invalid-or-mismatched-release-version-rejected
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     case_id: noncanonical-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
         guarantees:
           - invalid-or-mismatched-release-version-rejected
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     case_id: mismatched-release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
@@ -141,3 +94,20 @@ test_maps:
         symbol: runtime failure diagnostics > repository distribution retains the failing metadata gate before build
         guarantees:
           - diagnostic-failure-stage-integrity
+  - contract_id: contract.repository-action-distribution.catalog
+    case_id: detailed-failure-catalog
+    pending:
+      - guarantees: [diagnostic-failure-stage-catalog]
+        reason: case の入力で catalog gate を実行し、失敗の段階が診断に残ることを確かめるテストが無い。
+  - contract_id: contract.repository-action-distribution.source-verification
+    case_id: detailed-failure-source-verification
+    pending:
+      - guarantees: [diagnostic-failure-stage-source-verification]
+        reason: case の入力で source verification gate を実行し、失敗の段階が診断に残ることを確かめるテストが無い。
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: detailed-failure-release-version
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
+        guarantees:
+          - diagnostic-failure-stage-release-version

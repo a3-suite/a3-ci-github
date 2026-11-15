@@ -15,6 +15,7 @@ import { validateConditionalExtensions, validateQualityPreset } from '../quality
 import { findWorkflowAssetReferences } from '../workflow-assets.ts';
 import { collectSemanticCandidates } from '../semantic-candidates.ts';
 import { prepareBootstrapRuntime } from './support/release-request-fixture.mjs';
+import { validateCiPresetCli } from './support/preset-cli.mjs';
 
 const model = () => {
   const workflows = new Map(['release-publication-request', 'release-publication-caller'].map((id) => [
@@ -788,8 +789,8 @@ describe("contract.ci-preset-assurance.verification", () => {
         return report.mismatches;
       };
       // Act
-      const detected = validateCiPresetInternal({ repoRoot: root }, false);
-      const both = validateCiPresetInternal({ repoRoot: root, presets: ['release-publication', 'asset-release-publication'] }, false);
+      const detected = validateCiPresetCli({ repoRoot: root });
+      const both = validateCiPresetCli({ repoRoot: root, presets: ['release-publication', 'asset-release-publication'] });
       // Assert
       expect(detected.inspectedPresets).toContain('asset-release-publication');
       expect(detected.inspectedPresets).not.toContain('release-publication');
@@ -815,12 +816,12 @@ describe("contract.ci-preset-assurance.verification", () => {
       expect(qualityFindings(detected)).toStrictEqual([]);
       caller.jobs.publish.with['language-profile'] = 'python';
       fs.writeFileSync(path.join(root, callerAsset.destination), stringify(caller));
-      const profiled = validateCiPresetInternal({ repoRoot: root }, false);
+      const profiled = validateCiPresetCli({ repoRoot: root });
       expect(profiled.missingSettings.some(item => item.message === 'CI_UV_VERSION is required for the selected language profile')).toBe(true);
       expect(profiled.missingSettings.some(item => item.message === 'quality adapter descriptor is missing')).toBe(true);
       const release = parse(fs.readFileSync(path.join(repository, 'workflows/release/release-publication-caller.yml'), 'utf8'));
       fs.writeFileSync(path.join(root, callerAsset.destination), stringify(release));
-      const switched = validateCiPresetInternal({ repoRoot: root }, false);
+      const switched = validateCiPresetCli({ repoRoot: root });
       expect(switched.inspectedPresets).toContain('release-publication');
       expect(switched.inspectedPresets).not.toContain('asset-release-publication');
     });

@@ -39,8 +39,12 @@ test_maps:
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: unsupported-publication-request-rejected
     tests:
-      - path: actions/ci-release-publication-control/tests/control.test.ts
-        symbol: ci-release-publication-control-source > rejects publication requests without a v2 owner decision
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects a v1 publication request on verification
+        guarantees:
+          - publication-control-failure-propagated
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects a v1 publication request on verification
         guarantees:
           - publication-control-failure-propagated
   - contract_id: contract.ci-release-publication-control.outputs

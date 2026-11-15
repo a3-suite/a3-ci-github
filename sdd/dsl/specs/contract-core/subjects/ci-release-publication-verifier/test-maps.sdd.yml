@@ -4,20 +4,24 @@ test_maps:
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: inventory-propagation-before-create
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-rejection > pre-create reobserves absence and rejects a newly visible draft using GET only
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint reobserves absence and rejects a newly visible draft using GET only
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint reobserves absence and rejects a newly visible draft using GET only
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: standard-workflow-credential
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent'
         guarantees:
           - observation-status
           - observation-file
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent'
         guarantees:
           - observation-status
           - observation-file
@@ -25,90 +29,94 @@ test_maps:
     case_id: credential-evidence-boundary
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read'
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch'
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: asset-inventory-boundary
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: safe release diagnostics > GithubReadOnlyClient > asset inventory reobservation remains bounded and refuses invalid subsets immediately
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint bounds asset inventory reobservation and refuses an invalid subset at once
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint bounds asset inventory reobservation and refuses an invalid subset at once
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -166,39 +174,47 @@ test_maps:
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
-    case_id: independent-readback
-    tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-evidence > publication evidence matches independent immutable ID readback
-        guarantees:
-          - release-id-emitted
-          - readback-evidence-emitted
-  - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: existing-release
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-rejection > pre-create refuses existing releases including drafts
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint rejects an existing draft before create
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint rejects an existing draft before create
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: incomplete-pagination
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-transport > read-only transport refuses an inventory that never completes within the page limit
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: missing-after-reobservation
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-rejection > publication verification refuses an inventory still absent after bounded reobservation
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: mismatching-bindings
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-receipt-binding > receipt and readback missing or mismatching bindings are rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint rejects receipt and readback evidence with mismatching bindings
+        guarantees:
+          - verification-rejected
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint rejects receipt and readback evidence with mismatching bindings
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -376,50 +392,82 @@ test_maps:
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: asset-readback-checksum
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-rejection > asset readback drains started downloads before rejecting checksum failure
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint reports an asset readback checksum failure as its own diagnostic
+        guarantees:
+          - diagnostic-checksum-observation-conflation
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint reports an asset readback checksum failure as its own diagnostic
         guarantees:
           - diagnostic-checksum-observation-conflation
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: asset-readback-transport
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-rejection > asset readback drains started downloads before rejecting transport failure
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint reports an asset readback transport failure as its own diagnostic
+        guarantees:
+          - diagnostic-checksum-observation-conflation
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint reports an asset readback transport failure as its own diagnostic
         guarantees:
           - diagnostic-checksum-observation-conflation
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: absence-observation-policy
     tests:
-      - path: runtime/release-publication/tests/observation-policy.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > read-only-observation-policy > absence observation uses three GET-only inventories one second apart
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint observes absence with three GET-only inventories one second apart
         guarantees:
+          - asset-inventory-attempts
+          - asset-reobservation-delay
           - get-only-requests
           - release-inventory-attempts
-          - asset-inventory-attempts
           - release-reobservation-delay
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint observes absence with three GET-only inventories one second apart
+        guarantees:
+          - asset-inventory-attempts
           - asset-reobservation-delay
+          - get-only-requests
+          - release-inventory-attempts
+          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: post-observation-policy
     tests:
-      - path: runtime/release-publication/tests/observation-policy.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > read-only-observation-policy > post verification bounds Release and asset reobservation with GET-only requests
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
         guarantees:
+          - asset-inventory-attempts
+          - asset-reobservation-delay
           - get-only-requests
           - release-inventory-attempts
-          - asset-inventory-attempts
           - release-reobservation-delay
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        guarantees:
+          - asset-inventory-attempts
           - asset-reobservation-delay
+          - get-only-requests
+          - release-inventory-attempts
+          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: rejected-observation-policy
     tests:
-      - path: runtime/release-publication/tests/observation-policy.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > read-only-observation-policy > missing Release rejects after three GET-only inventories
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
         guarantees:
+          - asset-inventory-attempts
+          - asset-reobservation-delay
           - get-only-requests
           - release-inventory-attempts
-          - asset-inventory-attempts
           - release-reobservation-delay
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        guarantees:
+          - asset-inventory-attempts
           - asset-reobservation-delay
+          - get-only-requests
+          - release-inventory-attempts
+          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: immutable-id-binding
     tests:
@@ -438,7 +486,19 @@ test_maps:
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: provider-transport-methods
     tests:
-      - path: runtime/release-publication/tests/observation.test.mjs
-        symbol: contract.ci-release-publication-verifier.outputs > release-publication-transport > read-only transport completes pagination and rejects unknown remote state
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: source entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        guarantees:
+          - get-only-requests
+      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
+        symbol: dist entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        guarantees:
+          - get-only-requests
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
+        guarantees:
+          - get-only-requests
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
         guarantees:
           - get-only-requests

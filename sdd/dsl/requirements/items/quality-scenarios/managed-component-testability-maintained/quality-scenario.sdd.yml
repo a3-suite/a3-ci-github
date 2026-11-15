@@ -20,3 +20,6 @@ related_contracts:
   - contract.ci-preset-assurance.verification
   - contract.ci-preset-materialization.application
   - contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.catalog
+  - contract.repository-action-distribution.source-verification
+  - contract.repository-action-distribution.release-version

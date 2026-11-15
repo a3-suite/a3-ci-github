@@ -135,7 +135,6 @@ describe("workflow-contracts", () => {
     // integration_id: quality-workflow-contract
     test('quality workflow declares trusted execution and aggregate summary', () => {
       const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
-      includesAll(workflow, [/workflow_call:/, /permissions:\n  contents: read/]);
       const trusted = jobBlock(workflow, 'trusted');
       expect(trusted).toMatch(/^    if: \$\{\{ github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.head\.repo\.full_name == github\.repository \}\}$/m);
       includesAll(stepBlock(trusted, '- uses: actions/checkout@<commit-sha>'), [
@@ -147,11 +146,6 @@ describe("workflow-contracts", () => {
         /^          ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.sha \|\| github\.sha \}\}$/m,
         /^          path: \.ci-base$/m,
       ]);
-      includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
-        /^        id: quality-adapter$/m,
-        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
-        /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
-      ]);
       const untrusted = jobBlock(workflow, 'untrusted-pr');
       expect(untrusted).toMatch(/^    if: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.repo\.full_name != github\.repository \}\}$/m);
       includesAll(stepBlock(untrusted, '- uses: actions/checkout@<commit-sha>'), [
@@ -161,10 +155,6 @@ describe("workflow-contracts", () => {
         /^          ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}$/m,
         /^          path: \.ci-base$/m,
       ]);
-      includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
-        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
-        /^          standard-bundle-id: \$\{\{ env\.CI_STANDARD_BUNDLE_ID \}\}$/m,
-      ]);
       const summary = jobBlock(workflow, 'summary');
       assertNeeds(summary, ['trusted', 'untrusted-pr']);
       includesAll(summary, [/if: always\(\)/, /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-summary@/]);
@@ -173,6 +163,23 @@ describe("workflow-contracts", () => {
       const adapterIndex = ordered.findIndex((step) => step.id === 'quality-adapter');
       expect(adapterIndex).toBeGreaterThan(ordered.findIndex((step) => step.name === 'Checkout trusted CI assets'));
       expect(adapterIndex).toBeGreaterThan(ordered.findIndex((step) => step.id === 'trusted-assets'));
+    });
+    // integration_id: quality-workflow-contract
+    test('quality workflow keeps adapter wiring, permissions and per-bundle trusted asset selection', () => {
+      const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
+      const trusted = jobBlock(workflow, 'trusted');
+      const untrusted = jobBlock(workflow, 'untrusted-pr');
+      const main = yaml.parse(workflow).jobs;
+      includesAll(workflow, [/workflow_call:/, /permissions:\n  contents: read/]);
+      includesAll(stepBlock(trusted, '- name: Run project quality adapter'), [
+        /^        id: quality-adapter$/m,
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
+        /^          trusted-project-root: \$\{\{ steps\.trusted-assets\.outputs\.root \}\}$/m,
+      ]);
+      includesAll(stepBlock(untrusted, '- name: Run project quality adapter'), [
+        new RegExp(`^        uses: a3-suite/a3-ci-github/actions/ci-quality-adapter@${actionRef}$`, 'm'),
+        /^          standard-bundle-id: \$\{\{ env\.CI_STANDARD_BUNDLE_ID \}\}$/m,
+      ]);
       const platforms = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs;
       const baseCheckout = (job) => job.steps.find((step) => step.name === 'Checkout trusted CI assets');
       const resolver = main.trusted.steps.find((step) => step.id === 'trusted-assets');
@@ -210,18 +217,23 @@ describe("workflow-contracts", () => {
     test('platform caller passes explicit inputs and retains the summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
       const callee = yaml.parse(read('.github/workflows/ci-quality-platforms.yml'));
+      expect(caller.jobs.platforms.uses).toBe('a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@<quality-platforms-workflow-sha>');
+      expect(Object.keys(caller.jobs.platforms.with).sort()).toStrictEqual(Object.keys(callee.on.workflow_call.inputs).sort());
+      expect(caller.jobs['platform-summary'].name).toBe('quality-gate-platforms / summary');
+      expect(callee.jobs['platform-summary'].name).not.toBe(caller.jobs['platform-summary'].name);
+    });
+    // integration_id: quality-workflow-contract
+    test('platform caller keeps its job layout, permissions and callee trigger configuration', () => {
+      const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
+      const callee = yaml.parse(read('.github/workflows/ci-quality-platforms.yml'));
       expect(Object.keys(caller.jobs)).toStrictEqual(['platforms', 'platform-summary']);
       expect(caller.env).toBe(undefined);
       expect(caller.jobs.platforms.steps).toBe(undefined);
       expect(caller.jobs.platforms.secrets).toBe(undefined);
       expect(caller.jobs.platforms.permissions).toStrictEqual({ contents: 'read' });
-      expect(caller.jobs.platforms.uses).toBe('a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@<quality-platforms-workflow-sha>');
-      expect(Object.keys(caller.jobs.platforms.with).sort()).toStrictEqual(Object.keys(callee.on.workflow_call.inputs).sort());
       expect(Object.keys(callee.on)).toStrictEqual(['workflow_call']);
       expect(callee.on.workflow_call.secrets).toBe(undefined);
       expect(callee.concurrency).toBe(undefined);
-      expect(caller.jobs['platform-summary'].name).toBe('quality-gate-platforms / summary');
-      expect(callee.jobs['platform-summary'].name).not.toBe(caller.jobs['platform-summary'].name);
       expect(caller.jobs['platform-summary'].needs).toBe('platforms');
       expect(caller.jobs['platform-summary'].if).toBe('always()');
       expect(Object.keys(callee.jobs)).toStrictEqual(['resolve-platforms', 'platform', 'platform-summary']);
@@ -232,20 +244,25 @@ describe("workflow-contracts", () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
       const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
       const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
-      expect(Object.keys(caller.jobs)).toStrictEqual(['quality', 'profiles-summary']);
-      expect(caller.env).toBe(undefined);
-      expect(caller.jobs.quality.steps).toBe(undefined);
-      expect(caller.jobs.quality.secrets).toBe(undefined);
-      expect(caller.jobs.quality.permissions).toStrictEqual({ contents: 'read' });
       expect(caller.jobs.quality.uses).toBe(single.jobs.quality.uses);
       expect(caller.jobs.quality.strategy).toStrictEqual({ 'fail-fast': false, matrix: { include: '<quality-profiles>' } });
       expect(Object.keys(caller.jobs.quality.with).sort()).toStrictEqual(Object.keys(callee.on.workflow_call.inputs).sort());
       for (const [name, value] of Object.entries(caller.jobs.quality.with)) {
         expect(value, name).toBe(['runner', 'docs-only-patterns'].includes(name) ? single.jobs.quality.with[name] : `\${{ matrix.${name} }}`);
       }
+      expect(caller.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
+    });
+    // integration_id: quality-workflow-contract
+    test('profiles caller keeps its job layout, permissions, trigger and concurrency configuration', () => {
+      const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
+      const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
+      expect(Object.keys(caller.jobs)).toStrictEqual(['quality', 'profiles-summary']);
+      expect(caller.env).toBe(undefined);
+      expect(caller.jobs.quality.steps).toBe(undefined);
+      expect(caller.jobs.quality.secrets).toBe(undefined);
+      expect(caller.jobs.quality.permissions).toStrictEqual({ contents: 'read' });
       expect(caller.on).toStrictEqual(single.on);
       expect(caller.concurrency).toStrictEqual(single.concurrency);
-      expect(caller.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
       expect(caller.jobs['profiles-summary'].needs).toBe('quality');
       expect(caller.jobs['profiles-summary'].if).toBe('always()');
     });
@@ -509,11 +526,6 @@ describe("workflow-contracts", () => {
       // Arrange
       const authoritySteps = jobs.authority.steps;
       const selection = authoritySteps.find(step => step.name === 'Verify asset selection');
-      const selects = (skills, enabled) => spawnSync('bash', ['-c', selection.run], { env: { ...process.env, SKILLS_CONFIG_PATH: skills, SUPPLEMENTAL_ENABLED: enabled } }).status === 0;
-      const snapshot = authoritySteps.find(step => step.id === 'config');
-      const runtime = JSON.parse(snapshot.with['sources-json'].replace(/"?\$\{\{[^}]*\}\}"?/g, '"bound"')).runtime;
-      const supplemental = jobs['supplemental-asset'].steps.find(step => step.uses?.includes('/actions/ci-release-supplemental-asset@'));
-      const handoff = jobs.assemble.steps.find(step => step.name === 'Assemble release handoff');
       const assemble = (results, inputs) => evaluate(jobs.assemble.if, results, inputs);
       const unprofiled = { 'language-profile': '', supplemental_release_asset_enabled: false };
       const profiled = { 'language-profile': 'node', supplemental_release_asset_enabled: true };
@@ -521,17 +533,32 @@ describe("workflow-contracts", () => {
       const withoutQuality = assemble({ authority: 'success', quality: 'skipped', 'supplemental-asset': 'skipped' }, unprofiled);
       const withQuality = assemble({ authority: 'success', quality: 'success', 'supplemental-asset': 'success' }, profiled);
       // Assert
-      expect(Object.keys(jobs)).toStrictEqual(['authority', 'quality', 'supplemental-asset', 'assemble', 'publish', 'summary']);
+      expect(Object.keys(jobs)).not.toContain('build');
+      expect(Object.keys(jobs)).not.toContain('source-gate');
       expect(authoritySteps.indexOf(selection)).toBeLessThan(authoritySteps.findIndex(step => step.id === 'authority'));
-      expect([selects('.ci/release-skills.yml', 'false'), selects('__unset__', 'true'), selects('__unset__', 'false'), selects('', 'true')]).toStrictEqual([true, true, false, false]);
-      expect(runtime).toMatchObject({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_LANGUAGE_PROFILE: '__unset__', CI_TOOLCHAIN_VERSION: '__unset__', CI_PLATFORM_MANIFEST: '__unset__' });
       expect(jobs.quality.if).toBe("inputs.language-profile != ''");
-      expect(supplemental.with).toMatchObject({ operation: 'assemble', 'standard-build-root': 'build', 'supplemental-build-root': 'supplemental-build' });
-      expect(jobs['supplemental-asset'].steps.find(step => step.name === 'Create empty build roots').run).toBe('mkdir build supplemental-build');
-      for (const input of ['build-root', 'platform-manifest-path', 'platform-matrix']) expect(handoff.with).not.toHaveProperty(input);
       expect(withoutQuality).toBe(true);
       expect(withQuality).toBe(true);
       expect(assemble({ authority: 'success', quality: 'skipped', 'supplemental-asset': 'success' }, profiled)).toBe(false);
+    });
+
+    // integration_id: asset-release-publication-workflow-contract
+    test('asset release publication keeps its job layout, selection rule, snapshot and supplemental configuration', () => {
+      // Arrange
+      const authoritySteps = jobs.authority.steps;
+      const selection = authoritySteps.find(step => step.name === 'Verify asset selection');
+      const selects = (skills, enabled) => spawnSync('bash', ['-c', selection.run], { env: { ...process.env, SKILLS_CONFIG_PATH: skills, SUPPLEMENTAL_ENABLED: enabled } }).status === 0;
+      const snapshot = authoritySteps.find(step => step.id === 'config');
+      const runtime = JSON.parse(snapshot.with['sources-json'].replace(/"?\$\{\{[^}]*\}\}"?/g, '"bound"')).runtime;
+      const supplemental = jobs['supplemental-asset'].steps.find(step => step.uses?.includes('/actions/ci-release-supplemental-asset@'));
+      const handoff = jobs.assemble.steps.find(step => step.name === 'Assemble release handoff');
+      // Assert
+      expect(Object.keys(jobs)).toStrictEqual(['authority', 'quality', 'supplemental-asset', 'assemble', 'publish', 'summary']);
+      expect([selects('.ci/release-skills.yml', 'false'), selects('__unset__', 'true'), selects('__unset__', 'false'), selects('', 'true')]).toStrictEqual([true, true, false, false]);
+      expect(runtime).toMatchObject({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_LANGUAGE_PROFILE: '__unset__', CI_TOOLCHAIN_VERSION: '__unset__', CI_PLATFORM_MANIFEST: '__unset__' });
+      expect(supplemental.with).toMatchObject({ operation: 'assemble', 'standard-build-root': 'build', 'supplemental-build-root': 'supplemental-build' });
+      expect(jobs['supplemental-asset'].steps.find(step => step.name === 'Create empty build roots').run).toBe('mkdir build supplemental-build');
+      for (const input of ['build-root', 'platform-manifest-path', 'platform-matrix']) expect(handoff.with).not.toHaveProperty(input);
     });
 
     // integration_id: asset-release-publication-workflow-contract
@@ -931,7 +958,6 @@ describe("workflow-contracts", () => {
 
 describe("workflow-contracts", () => {
   describe("failure-diagnostics-contract", () => {
-    // contract_id: contract.ci-failure-diagnostics.subject-declarations
     // integration_id: failure-diagnostics-contract
     // evidence_role: contract
     // test_level: integration

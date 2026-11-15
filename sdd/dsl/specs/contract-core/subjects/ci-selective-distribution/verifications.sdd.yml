@@ -206,7 +206,7 @@ cases:
     partition: runtime-context.selective-distribution-publication-invalid
     input:
       operation: publish
-      implementation-revision: commit unreachable from the release source
+      implementation-revision: commit unreachable from every branch and tag
   - contract_id: contract.ci-selective-distribution.publication
     id: single-release-binding-invalid-closure-changed-before-apply
     partition: runtime-context.selective-distribution-publication-invalid

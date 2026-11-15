@@ -10,6 +10,8 @@ boundaries:
     summary: Command search path inherited by later steps in the same job.
   - id: boundary.workspace-files
     summary: Files read or written in the checked-out workspace.
+  - id: boundary.runner-files
+    summary: Files in the runner temporary directory shared by the steps of a job.
   - id: boundary.script-result
     summary: Exit status and generated state exposed by a shared script to its caller.
   - id: boundary.repository-gate-result
@@ -167,8 +169,6 @@ runtime_contexts:
     summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a registered standard Action bundle and needs no external source-root.
   - id: runtime-context.preset-custom-materialization-valid
     summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a copyable custom bundle with an explicit source-root.
-  - id: runtime-context.release-publisher-invocation
-    summary: The declared publisher boundary is invoked with its normal input and provider interfaces, including incomplete or invalid inputs and any provider response or transport fault.
   - id: runtime-context.quality-selection-shared-checks-supplied
     summary: A valid quality selection explicitly declares boolean sharedStandardChecks.
   - id: runtime-context.quality-selection-shared-checks-omitted

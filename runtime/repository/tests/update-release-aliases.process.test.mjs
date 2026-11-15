@@ -6,7 +6,7 @@ import { scriptPath, execute, git, createRepository, appendCommit, pushReleaseTa
 describe("repository-release-alias-update", () => {
   // evidence_role: contract
   // test_level: e2e
-  // contract_id: contract.repository-action-distribution.integrity
+  // contract_id: contract.repository-action-distribution.release-version
   // flow_id: repository-release-alias-update
   test('alias push failure retains native exit and uncertain remote state without moving exact tags', () => {
     const { origin, work } = createRepository();

@@ -20,6 +20,7 @@ test_maps:
           - supplemental-hidden-files-selected
           - supplemental-download-root
           - supplemental-final-assembly-input
+          - release-publication-serialized
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
         guarantees:

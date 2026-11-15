@@ -17,6 +17,8 @@ test_maps:
           - package-handoff-before-publication
           - package-credential-scope
           - package-owner-publisher-invoked
+          - package-publication-serialized
+          - package-preparation-least-privilege
   - contract_id: contract.ci-package-publication-workflow.publication
     case_id: ci-package-publication-workflow-failure
     tests:

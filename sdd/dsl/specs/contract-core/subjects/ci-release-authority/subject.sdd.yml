@@ -43,6 +43,14 @@ contracts:
             meaning: Authority validation step outcome.
           - selector: successful-output-state
             meaning: Occurrence state of successful outputs.
+      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
+        boundary: boundary.diagnostic-result
+        fields:
+          - selector: failure-stage
+            meaning: 失敗した段階の識別子。
+      - summary: Authority handoff file written in the workspace.
+        boundary: boundary.workspace-files
+        fields:
           - selector: platform-manifest-source-text-comparison
             meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
           - selector: authority-language-profile-binding-state
@@ -51,11 +59,6 @@ contracts:
             meaning: Occurrence state (present or absent) of a non-null toolchain_version binding in the authority handoff.
           - selector: authority-platform-manifest-binding-state
             meaning: Occurrence state (present or absent) of a non-null platform_manifest or platform_manifest_sha256 value in the authority handoff.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
       - summary: Provider requests issued during one authority invocation.
         boundary: boundary.release-provider-requests
         fields:

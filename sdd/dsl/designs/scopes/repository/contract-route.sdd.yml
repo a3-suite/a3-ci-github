@@ -18,6 +18,27 @@ routes:
       - hosted-delivery
       - action-contracts
       - runtime-implementations
+  - route_id: repository-action-distribution-catalog
+    contract_id: contract.repository-action-distribution.catalog
+    hops:
+      - contract-verification
+      - hosted-delivery
+      - action-contracts
+      - runtime-implementations
+  - route_id: repository-action-distribution-source-verification
+    contract_id: contract.repository-action-distribution.source-verification
+    hops:
+      - contract-verification
+      - hosted-delivery
+      - action-contracts
+      - runtime-implementations
+  - route_id: repository-action-distribution-release-version
+    contract_id: contract.repository-action-distribution.release-version
+    hops:
+      - contract-verification
+      - hosted-delivery
+      - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-github-toolchain-verifier
     contract_id: contract.ci-github-toolchain-verifier.outputs
     hops:
@@ -209,10 +230,10 @@ routes:
       - workflow-sources
       - runtime-implementations
       - contract-verification
-  - route_id: ci-failure-diagnostics-subject-declarations
-    contract_id: contract.ci-failure-diagnostics.subject-declarations
+  - route_id: ci-failure-diagnostics-existing-state
+    contract_id: contract.ci-failure-diagnostics.existing-state
     hops:
-      - sdd-specifications
+      - workflow-sources
       - runtime-implementations
       - contract-verification
   - route_id: ci-failure-diagnostics-workflow-evidence

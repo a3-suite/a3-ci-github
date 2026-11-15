@@ -35,6 +35,8 @@ test_maps:
         symbol: workflow-contracts > quality-workflow-contract > quality workflow declares trusted execution and aggregate summary
         guarantees:
           - quality-source-before-adapter
+          - quality-fork-pull-request-untrusted
+          - quality-pull-request-trusted-assets-from-base
           - quality-results-before-summary
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > only trusted Rust quality reuses the Cargo cache while untrusted and Release builds start clean

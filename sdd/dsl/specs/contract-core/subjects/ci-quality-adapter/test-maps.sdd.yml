@@ -25,10 +25,6 @@ test_maps:
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         guarantees:
           - quality-adapter-status-produced
-      - path: tests/shared-quality-checks.test.mjs
-        symbol: shared standard quality checks > only trusted declared standard Rust secondary platforms select native
-        guarantees:
-          - quality-adapter-status-produced
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-selection-rejected
     tests:
@@ -64,11 +60,10 @@ test_maps:
           - quality-adapter-failure-propagated
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: toolchain-version-report-rejected
-    tests:
-      - path: actions/ci-quality-adapter/tests/adapter.test.ts
-        symbol: ci-quality-adapter-source > rejects a missing or mismatched toolchain version token with the stable diagnostic
-        guarantees:
+    pending:
+      - guarantees:
           - quality-adapter-toolchain-version-diagnostic-present
+        reason: entrypoint は command の stdout と stderr を公開結果とログで protected-child-output に置き換えるため、quality-adapter-toolchain-version-mismatch の診断コードを Action の出力・結果ファイル・失敗診断から観測できない。
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: detailed-failure-outputs
     tests:
@@ -79,52 +74,12 @@ test_maps:
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-python-adapter-execution
     tests:
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: .venv"
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint executes the embedded Python standard and emits its status
         guarantees:
           - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: .tools/env space+[x]"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > preserves product layouts and prunes only the selected environment: ../external-environment"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: module.py"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: src/product/main.py"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: tests/test_main.py"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: packages/one/main.py"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: "ci-quality-adapter Python standard > managed environment scope > retains syntax failure for product and test code: .venv-product/code.py"
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: ci-quality-adapter Python standard > managed environment scope > retains the full syntax scan when a managed virtualenv cannot be confirmed
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: ci-quality-adapter Python standard > prepared environment reuse > skips format and lint sync while keeping preparation and post-test security sync
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: ci-quality-adapter Python standard > prepared environment reuse > does not execute no-sync commands when initial preparation fails
-        guarantees:
-          - quality-adapter-status-produced
-      - path: actions/ci-quality-adapter/tests/python-standard-bundle.test.ts
-        symbol: ci-quality-adapter Python standard > managed environment scope > propagates traversal failures instead of silently omitting product directories
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint executes the embedded Python standard and emits its status
         guarantees:
           - quality-adapter-status-produced
   - contract_id: contract.ci-quality-adapter.outputs
@@ -161,12 +116,11 @@ test_maps:
           - rejected-scope-no-commands
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: embedded-bundle-integrity
-    tests:
-      - path: actions/ci-quality-adapter/tests/standard-bundles.test.ts
-        symbol: ci-quality-adapter-standard-selection > fixed standard bundles preserve repository owner metadata and require no copied assets
-        guarantees:
+    pending:
+      - guarantees:
           - standard-source-path-validated
           - standard-content-digest-checked
+        reason: 組み込みの standard bundle は Action の外部入力から差し替えられず、entrypoint の結果にも照合した source path と内容 digest が出ないため、受け入れた binding を契約対象で観測できない。
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: native-preparation-failure
     tests:

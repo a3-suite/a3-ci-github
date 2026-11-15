@@ -76,14 +76,6 @@ cases:
     verifies:
       - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
-    id: independent-readback
-    partition: runtime-context.release-post-verification-valid
-    input:
-      operation: verify-after
-    verifies:
-      - release-id-emitted
-      - readback-evidence-emitted
-  - contract_id: contract.ci-release-publication-verifier.outputs
     id: existing-release
     partition: runtime-context.release-observation-invalid
     input:

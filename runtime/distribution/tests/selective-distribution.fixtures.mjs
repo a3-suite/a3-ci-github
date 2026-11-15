@@ -42,7 +42,7 @@ const fixtureSettings = {
       'jq-version': '', 'standard-bundle-id': '', 'adapter-descriptor': '.ci/adapters/python-quality.yml' },
   ],
 };
-const planDistributionApplication = (options) => {
+const fixturePlanSettings = (options) => {
   const distributionRoot = path.join(options.projectRoot, '.a3-skills/ci-github/distributions', options.sourceRevision);
   const manifest = JSON.parse(fs.readFileSync(path.join(distributionRoot, 'manifest.json')));
   const settings = {};
@@ -52,8 +52,62 @@ const planDistributionApplication = (options) => {
     settings[asset.id] = Object.fromEntries([...new Set([...template.matchAll(/<([a-zA-Z][a-zA-Z0-9._-]*)>/g)].map((match) => match[1]))]
       .filter((key) => Object.hasOwn(values, key)).map((key) => [key, values[key]]));
   }
-  return createDistributionPlan({ yaml, settings, ...options });
+  return settings;
 };
+const planDistributionApplication = (options) => createDistributionPlan({ yaml, settings: fixturePlanSettings(options), ...options });
+
+// The public CLI is the contract surface; these wrappers keep the call shape of the module functions
+// so contract tests observe stdout results and the stderr diagnostic instead of in-process values.
+const distributionCli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+const faultPreload = pathToFileURL(path.join(testRoot, 'support/distribution-cli-faults.mjs')).href;
+const yamlPackageRoot = path.dirname(createRequire(path.join(repositoryRoot, 'runtime/preset/package.json')).resolve('yaml/package.json'));
+class DistributionCliFailure extends Error {
+  constructor(diagnostic) {
+    super(diagnostic.diagnostic);
+    this.evidence = diagnostic.failureEvidence;
+  }
+}
+const cliArgv = (args, faults) => [...(faults ? ['--import', faultPreload] : []), distributionCli, ...args];
+const runDistributionCli = (args, faults) => {
+  const result = spawnSync(process.execPath, cliArgv(args, faults), {
+    encoding: 'utf8',
+    env: faults ? { ...process.env, A3_DISTRIBUTION_CLI_FAULTS: JSON.stringify(faults) } : process.env,
+  });
+  if (result.status === 0) return JSON.parse(result.stdout);
+  expect(result.status, result.stderr).toBe(2);
+  expect(result.stdout).toBe('');
+  throw new DistributionCliFailure(JSON.parse(result.stderr));
+};
+// Planning loads the template runtime's YAML package from the consumer state, as an installed consumer would.
+const createConsumer = (root, name = 'consumer') => {
+  const projectRoot = path.join(root, name);
+  fs.cpSync(yamlPackageRoot, path.join(projectRoot, '.a3-skills/ci-github/runtime/node_modules/yaml'), { recursive: true });
+  return projectRoot;
+};
+const writeManifest = (root, manifest, name = 'manifest.json') => {
+  const manifestPath = path.join(root, name);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return manifestPath;
+};
+const selectionArgs = (requestedPresets = [], requestedAssets = []) => [
+  ...requestedPresets.flatMap((preset) => ['--preset', preset]), ...requestedAssets.flatMap((asset) => ['--asset', asset]),
+];
+const fetchArgs = ({ projectRoot, manifestPath, manifestUrl, requestedPresets, requestedAssets, sourceRoot }) => [
+  'fetch', ...(manifestPath ? ['--manifest', manifestPath] : []), ...(manifestUrl ? ['--manifest-url', manifestUrl] : []),
+  ...(sourceRoot ? ['--source-root', sourceRoot] : []), ...selectionArgs(requestedPresets, requestedAssets), '--repo-root', projectRoot,
+];
+const cliFetch = ({ faults, ...options }) => runDistributionCli(fetchArgs(options), faults);
+// A concurrent peer fetch is described as the Node argv and fault configuration the preload uses to start it.
+const cliFetchPeer = ({ faults, ...options }) => ({ argv: cliArgv(fetchArgs(options), faults), faults });
+const cliVerify = ({ projectRoot, sourceRevision: revision }) => runDistributionCli(['verify', '--source-revision', revision, '--repo-root', projectRoot]);
+const cliPlan = ({ settings, faults, ...options }) => runDistributionCli([
+  'plan', '--source-revision', options.sourceRevision, ...selectionArgs(options.requestedPresets, options.requestedAssets),
+  ...Object.entries(settings ?? fixturePlanSettings(options)).flatMap(([assetId, values]) => Object.entries(values)
+    .flatMap(([key, value]) => ['--set', `${assetId}:${key}=${JSON.stringify(value)}`])),
+  '--repo-root', options.projectRoot,
+], faults);
+const cliApply = ({ projectRoot, planPath, approvalDigest, faults }) => runDistributionCli(['apply', '--plan', planPath, '--approve', approvalDigest, '--repo-root', projectRoot], faults);
+const cliRollback = ({ projectRoot, transactionId, faults }) => runDistributionCli(['rollback', '--transaction', transactionId, '--repo-root', projectRoot], faults);
 const fixtureVersion = '1.2.3';
 const releaseTag = `v${fixtureVersion}`;
 const temporaryRoot = path.join(repositoryRoot, 'tmp');
@@ -157,4 +211,4 @@ const prepareRelease = (root) => {
   return readRelease(output);
 };
 
-export { testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, generateRelease, baseline, prepareRelease };
+export { fixturePlanSettings, cliFetch, cliFetchPeer, cliVerify, cliPlan, cliApply, cliRollback, createConsumer, writeManifest, testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, generateRelease, baseline, prepareRelease };

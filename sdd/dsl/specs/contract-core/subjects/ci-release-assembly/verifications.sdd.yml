@@ -42,6 +42,11 @@ cases:
       - assembly-success
       - bound-handoff
       - bound-asset-digest
+      - handoff-source-bound
+      - handoff-asset-digest-bound
+      - asset-digest-serialization
+      - asset-digest-asset-order
+      - asset-digest-field-order
       - assembly-no-credential-input
   - contract_id: contract.ci-release-assembly.outputs
     id: output-line-injection
@@ -55,19 +60,6 @@ cases:
     partition: runtime-context.release-assembly-invalid
     input:
       repository: other/repository
-  - contract_id: contract.ci-release-assembly.outputs
-    id: build-validation
-    partition: runtime-context.release-assembly-valid
-    input:
-      build-root: build
-    verifies:
-      - bound-handoff
-      - bound-asset-digest
-      - handoff-source-bound
-      - handoff-asset-digest-bound
-      - asset-digest-serialization
-      - asset-digest-asset-order
-      - asset-digest-field-order
   - contract_id: contract.ci-release-assembly.outputs
     id: supplemental-binding
     partition: runtime-context.release-assembly-valid

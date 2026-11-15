@@ -37,6 +37,8 @@ contracts:
             meaning: Declared order of the publish step and independent verify-publication step.
           - selector: release-tokens-explicit
             meaning: Comparison of credential-bearing step token bindings with github.token.
+          - selector: release-publication-concurrency
+            meaning: "Declared concurrency of the release publication provider workflow: one group per workflow and repository, with in-progress runs kept and pending runs queued; serialized or other."
           - selector: supplemental-upload-selected-root
             meaning: Declared supplemental build upload path.
           - selector: supplemental-hidden-files-selected
@@ -163,6 +165,13 @@ contracts:
           field: release-tokens-explicit
           in:
             - equal
+      - id: release-publication-serialized
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publication-concurrency
+          in:
+            - serialized
       - id: supplemental-upload-selected-root
         applies_to:
           - ci-release-publication-workflow-canonical-source-available

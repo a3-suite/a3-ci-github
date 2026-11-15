@@ -168,7 +168,7 @@ contracts:
           - selector: accepted-dispatch-ref-comparison
             meaning: Comparison of the workflow ref of the release dispatch accepted for publication with refs/tags/ followed by releaseTag.
           - selector: implementationBindingStatus
-            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified means the check confirmed implementation reachability from a branch or tag, VERSION, execution closure identity of the referenced Action directories and every runtime entry except the provider maintenance runtime that neither Actions nor canonical workflows execute, and fixed-reference connections, otherwise unverified.
+            meaning: Binding status of the first-party implementation to the final tagged source reported by the publication check; verified, unverified or rejected.
           - selector: implementationBindingEvidence
             meaning: Evidence record of the implementation binding check.
           - selector: aliasSourceIntegration

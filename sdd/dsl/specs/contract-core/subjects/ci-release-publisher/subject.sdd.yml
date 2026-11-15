@@ -65,7 +65,6 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-publisher-valid
       - environment: runtime-context.release-publisher-invalid
-      - environment: runtime-context.release-publisher-invocation
     guarantees:
       - id: receipt-file
         applies_to:
@@ -100,36 +99,26 @@ contracts:
           field: failure-stage
           present: true
       - id: publication-write-retry
-        applies_to:
-          - runtime-context.release-publisher-invocation
         claim:
           field: publication-write-retry
           in:
             - absent
       - id: publication-recovery-write
-        applies_to:
-          - runtime-context.release-publisher-invocation
         claim:
           field: publication-recovery-write
           in:
             - absent
       - id: publication-delete
-        applies_to:
-          - runtime-context.release-publisher-invocation
         claim:
           field: publication-delete
           in:
             - absent
       - id: publication-existing-release-write
-        applies_to:
-          - runtime-context.release-publisher-invocation
         claim:
           field: publication-existing-release-write
           in:
             - absent
       - id: publication-created-id-binding
-        applies_to:
-          - runtime-context.release-publisher-invocation
         claim:
           field: publication-created-id-binding
           in:

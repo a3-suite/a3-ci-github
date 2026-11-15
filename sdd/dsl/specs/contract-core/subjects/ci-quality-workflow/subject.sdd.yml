@@ -35,6 +35,10 @@ contracts:
             meaning: Declared caller aggregate condition.
           - selector: quality-source-before-adapter
             meaning: Declared order of trusted checkout/asset resolution and adapter execution.
+          - selector: quality-fork-pull-request-job
+            meaning: Declared job whose run condition selects a pull request whose head repository differs from the base repository.
+          - selector: quality-pull-request-trusted-assets-commit
+            meaning: Commit that the trusted CI asset checkout reads for a pull request, in both trusted and untrusted pull request jobs.
           - selector: quality-results-before-summary
             meaning: Declared dependency order of applicable execution jobs and aggregate decision.
           - selector: quality-failure-summary-always
@@ -171,6 +175,20 @@ contracts:
           field: quality-source-before-adapter
           in:
             - source-before-adapter
+      - id: quality-fork-pull-request-untrusted
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-fork-pull-request-job
+          in:
+            - untrusted-pr
+      - id: quality-pull-request-trusted-assets-from-base
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        claim:
+          field: quality-pull-request-trusted-assets-commit
+          in:
+            - base-commit
       - id: quality-results-before-summary
         applies_to:
           - ci-quality-workflow-canonical-source-available

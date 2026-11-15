@@ -48,15 +48,23 @@ test_maps:
   - contract_id: contract.ci-quality-summary.outputs
     case_id: excluded-rows-ignored-in-aggregation
     tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
+        guarantees:
+          - quality-summary-status-produced
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
         guarantees:
           - quality-summary-status-produced
   - contract_id: contract.ci-quality-summary.outputs
     case_id: all-excluded-rows-rejected
     tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > rejects an input where every row is excluded
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails an input where every row is excluded
+        guarantees:
+          - quality-summary-failure-propagated
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails an input where every row is excluded
         guarantees:
           - quality-summary-failure-propagated
   - contract_id: contract.ci-quality-summary.outputs
@@ -91,8 +99,12 @@ test_maps:
   - contract_id: contract.ci-quality-summary.outputs
     case_id: mixed-applicability
     tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint keeps the applicable job status when an uncollected job row is excluded
+        guarantees:
+          - excluded-rows-not-aggregated
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint keeps the applicable job status when an uncollected job row is excluded
         guarantees:
           - excluded-rows-not-aggregated
   - contract_id: contract.ci-quality-summary.outputs

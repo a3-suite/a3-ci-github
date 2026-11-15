@@ -22,6 +22,7 @@ cases:
       - release-handoff-before-publication
       - release-publication-before-readback
       - release-tokens-explicit
+      - release-publication-serialized
       - supplemental-upload-selected-root
       - supplemental-hidden-files-selected
       - supplemental-download-root

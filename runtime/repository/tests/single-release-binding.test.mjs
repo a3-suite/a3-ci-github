@@ -4,7 +4,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, wr
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
-import { checkRepository, repositorySnapshot, registryPath } from '../check-provider-references.mjs';
+import { repositorySnapshot, registryPath } from '../check-provider-references.mjs';
 import { planActionReferenceUpdate, applyActionReferenceUpdate } from '../update-action-references.mjs';
 import { providerMaintenanceRuntime } from '../verify-implementation-binding.mjs';
 // Synchronous child processes block the worker, so Vitest's testTimeout cannot interrupt them; bound each call.
@@ -58,11 +58,22 @@ const fixture = () => {
   return { ...access(directory), implementation };
 };
 
+// The reference update CLI and the provider reference check CLI are the publication surfaces these cases observe.
+const runScript = (script, directory, args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository', script), ...args], { cwd: directory, encoding: 'utf8', timeout: spawnTimeoutMs });
+const scriptReport = (result) => {
+  expect(result.error).toBeUndefined();
+  if (result.status === 0 || result.status === 1) return JSON.parse(result.stdout);
+  throw new Error(result.stderr);
+};
+const updateReferences = (directory, sha, mode = '--write') => scriptReport(runScript('update-action-references.mjs', directory, [mode, '--tag', 'v0.2.11', '--implementation-sha', sha]));
+const checkReferences = (directory, ...args) => scriptReport(runScript('check-provider-references.mjs', directory, ['--contracts', ...args]));
+const checkRelease = (directory) => checkReferences(directory, '--release-tag', 'v0.2.11');
+
 // flow_id: single-release-binding
 describe('contract.ci-selective-distribution.publication', () => {
   test('implementation preparation validates existing references without a final tag or new binding', () => {
     const f = fixture();
-    applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    updateReferences(f.directory, f.implementation);
     f.git('add', '.'); f.git('commit', '-m', 'existing connection');
     f.write('runtime/payload.mjs', 'export const payload = 2;\n');
     f.git('add', '.');
@@ -99,32 +110,32 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Arrange
     const f = fixture(); f.git('switch', '-c', branch);
     // Act
-    const plan = planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation);
+    const plan = updateReferences(f.directory, f.implementation, '--check');
     // Assert
     expect(f.git('tag', '--list')).toBe(''); expect(plan.connection.diagnostics).toEqual([]);
     // Act
-    applyActionReferenceUpdate(f.directory, plan);
-    const repeated = planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation);
+    updateReferences(f.directory, f.implementation);
+    const repeated = runScript('update-action-references.mjs', f.directory, ['--check', '--tag', 'v0.2.11', '--implementation-sha', f.implementation]);
     // Assert
-    expect(repeated.changedPaths).toEqual([]);
+    expect(repeated.status, repeated.stderr).toBe(0); expect(JSON.parse(repeated.stdout).changedPaths).toEqual([]);
     // Arrange
     f.git('add', '.');
     // Act
-    const candidate = checkRepository(f.directory, true, { candidate: true });
+    const candidate = checkReferences(f.directory, '--staged', '--candidate');
     // Assert
-    expect(candidate.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(candidate.implementationBindingStatus).toBe('verified');
     // Arrange
     f.git('add', '.'); f.git('commit', '-m', 'connect implementation'); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
     // Act
-    const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
-    const executed = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
-    const metadataOnly = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs')], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
+    const executed = runScript('check-provider-references.mjs', f.directory, ['--contracts', '--release-tag', 'v0.2.11']);
+    const metadataOnly = runScript('check-provider-references.mjs', f.directory, []);
     // Assert
-    expect(checked.diagnostics).toEqual([]); expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(executed.status, executed.stderr).toBe(0);
+    const checked = JSON.parse(executed.stdout);
+    expect(checked.diagnostics).toEqual([]); expect(checked.connection.diagnostics).toEqual([]);
+    expect(checked.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding.sourceRevision).not.toBe(f.implementation);
     expect(f.git('tag', '--list')).toBe('v0.2.11');
-    expect(executed.status, executed.stderr).toBe(0); expect(JSON.parse(executed.stdout).connection.diagnostics).toEqual([]);
-    expect(JSON.parse(executed.stdout).implementationBindingStatus).toBe('verified');
     expect(metadataOnly.status).toBe(0); expect(JSON.parse(metadataOnly.stdout).implementationBindingStatus).toBe('unverified');
     // Arrange
     const workflow = yaml.parse(readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8'));
@@ -150,15 +161,15 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Arrange
     const f = fixture(); const base = f.git('rev-parse', `${f.implementation}^`);
     f.git('switch', '-c', 'release/0.2.11');
-    applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    updateReferences(f.directory, f.implementation);
     f.git('add', '.'); f.git('commit', '-m', 'connect implementation');
     const squashed = f.git('commit-tree', f.git('rev-parse', 'HEAD^{tree}'), '-p', base, '-m', 'squash release');
     f.git('switch', 'main'); f.git('reset', '--hard', squashed); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
     // Act
-    const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
+    const checked = checkRelease(f.directory);
     // Assert
     expect(spawnSync('git', ['merge-base', '--is-ancestor', f.implementation, 'HEAD'], { cwd: f.directory, timeout: spawnTimeoutMs }).status).toBe(1);
-    expect(checked.diagnostics).toEqual([]); expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(checked.diagnostics).toEqual([]); expect(checked.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding).toMatchObject({ implementationSourceRevision: f.implementation, sourceRevision: squashed });
     expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).toContain('runtime/payload.mjs');
     for (const entry of checked.implementationBinding.checkedObjects) {
@@ -166,48 +177,48 @@ describe('contract.ci-selective-distribution.publication', () => {
       expect(entry.sourceObject).toBe(f.git('rev-parse', `${squashed}:${entry.path}`));
     }
     // A hotfix branches from this tag, so preparation must accept the reachable implementation outside its ancestry.
-    expect(checkRepository(f.directory, false, { preparation: true }).implementationBinding.implementationSourceRevision).toBe(f.implementation);
+    expect(checkReferences(f.directory, '--preparation').implementationSourceRevision).toBe(f.implementation);
     // Arrange
     const released = f.git('rev-parse', 'release/0.2.11');
     f.git('branch', '-D', 'release/0.2.11'); f.git('update-ref', 'refs/remotes/pull/1/merge', released);
     // Act
-    const unreachable = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    const unreachable = failure(() => checkRelease(f.directory));
     // Assert
     expect(unreachable).toMatch(/implementation-source-unreachable/);
   });
 
   test.each(['VERSION', 'runtime/payload.mjs', 'actions/ci-quality-adapter/action.yml', 'actions/ci-quality-adapter/dist/index.js', 'actions/ci-quality-adapter/scripts/composite.sh'])('single Release rejects changed execution input %s', (relative) => {
     // Arrange
-    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    const f = fixture(); updateReferences(f.directory, f.implementation);
     f.write(relative, relative === 'VERSION' ? '0.2.12\n' : `${readFileSync(path.join(f.directory, relative), 'utf8')}\n`);
     f.git('add', '.'); f.git('commit', '-m', 'invalid final source'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid source');
     // Act
-    const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    const rejected = failure(() => checkRelease(f.directory));
     // Assert
     expect(rejected).toMatch(/version-mismatch|closure-mismatch/);
   });
 
   test.each(['runtime/preset/payload.mjs', 'runtime/distribution/payload.mjs', 'runtime/repository/payload.mjs', 'runtime/vitest/payload.mjs'])('single Release accepts changed provider maintenance runtime %s', (relative) => {
     // Arrange
-    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    const f = fixture(); updateReferences(f.directory, f.implementation);
     f.write(relative, 'export const payload = 2;\n');
     f.git('add', '.'); f.git('commit', '-m', 'provider maintenance change'); f.git('tag', '-a', 'v0.2.11', '-m', 'maintenance source');
     // Act
-    const checked = checkRepository(f.directory, false, { releaseTag: 'v0.2.11' });
+    const checked = checkRelease(f.directory);
     // Assert
-    expect(checked.implementationBinding.implementationBindingStatus).toBe('verified');
+    expect(checked.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding.checkedObjects.map((entry) => entry.path)).not.toContain(path.posix.dirname(relative));
   });
 
   test('single Release rejects a runtime entry added outside provider maintenance', () => {
     // Arrange
-    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    const f = fixture(); updateReferences(f.directory, f.implementation);
     f.write('runtime/added/payload.mjs', 'export const payload = 1;\n');
     f.git('add', '.'); f.git('commit', '-m', 'added runtime'); f.git('tag', '-a', 'v0.2.11', '-m', 'added runtime');
     // Act
-    const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    const rejected = failure(() => checkRelease(f.directory));
     // Assert
-    expect(rejected).toMatch(/closure-mismatch: runtime\/added/);
+    expect(rejected).toMatch(/"reason":"implementation-execution-closure-mismatch"/); expect(rejected).toMatch(/"path":"runtime\/added"/);
   });
 
   test('pinned Actions and canonical workflows never reach provider maintenance runtime', () => {
@@ -231,12 +242,20 @@ describe('contract.ci-selective-distribution.publication', () => {
     const tree = f.git('rev-parse', 'HEAD^{tree}');
     const unrelated = f.git('commit-tree', tree, '-m', 'unrelated implementation');
     // Act
-    const missingArgument = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11'));
-    const missingObject = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', 'f'.repeat(40)));
-    const unrelatedObject = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', unrelated));
+    const registryBefore = readFileSync(path.join(f.directory, registryPath), 'utf8');
+    const missingArgument = failure(() => updateReferences(f.directory, ''));
+    const missingObject = failure(() => updateReferences(f.directory, 'f'.repeat(40)));
+    const unrelatedObject = failure(() => updateReferences(f.directory, unrelated));
     // Assert
-    expect(missingArgument).toMatch(/full implementation/); expect(missingObject).toBeDefined(); expect(unrelatedObject).toMatch(/unreachable/);
+    expect(missingArgument).toMatch(/"reason":"action-reference-sha-invalid"/); expect(missingObject).toBeDefined(); expect(unrelatedObject).toMatch(/unreachable/);
+    expect(readFileSync(path.join(f.directory, registryPath), 'utf8')).toBe(registryBefore);
+  });
+
+  // evidence_role: supplemental
+  // A change between planning and writing cannot be produced through one CLI run, so the module boundary is exercised directly.
+  test('reference application rejects a registry changed after planning and preserves approval inputs', () => {
     // Arrange
+    const f = fixture();
     const plan = planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation);
     f.write(registryPath, `${plan.before.get(registryPath)}\n# changed after plan\n`);
     // Act
@@ -248,32 +267,32 @@ describe('contract.ci-selective-distribution.publication', () => {
 
   test('candidate application rejects closure changes and symlink destinations without writing references', () => {
     // Arrange
-    const f = fixture(); const plan = planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation);
+    const f = fixture(); const registryBefore = readFileSync(path.join(f.directory, registryPath), 'utf8');
     f.write('runtime/payload.mjs', 'export const payload = 2;\n');
     // Act
-    const changedClosure = failure(() => applyActionReferenceUpdate(f.directory, plan));
+    const changedClosure = failure(() => updateReferences(f.directory, f.implementation));
     // Assert
     expect(changedClosure).toMatch(/execution-assets-dirty/);
-    expect(readFileSync(path.join(f.directory, registryPath), 'utf8')).toBe(plan.before.get(registryPath));
+    expect(readFileSync(path.join(f.directory, registryPath), 'utf8')).toBe(registryBefore);
     // Arrange
     f.git('restore', 'runtime/payload.mjs');
-    f.write('registry-copy.yml', plan.before.get(registryPath)); unlinkSync(path.join(f.directory, registryPath));
+    f.write('registry-copy.yml', registryBefore); unlinkSync(path.join(f.directory, registryPath));
     symlinkSync(path.join(f.directory, 'registry-copy.yml'), path.join(f.directory, registryPath));
     // Act
-    const redirected = failure(() => applyActionReferenceUpdate(f.directory, plan));
+    const redirected = failure(() => updateReferences(f.directory, f.implementation));
     // Assert
-    expect(redirected).toMatch(/symlink update/);
-    expect(readFileSync(path.join(f.directory, 'registry-copy.yml'), 'utf8')).toBe(plan.before.get(registryPath));
+    expect(redirected).toMatch(/"reason":"action-reference-symlink-rejected"/);
+    expect(readFileSync(path.join(f.directory, 'registry-copy.yml'), 'utf8')).toBe(registryBefore);
   });
 
   // runtime/payload.mjs is a top-level runtime blob, whose id alone does not record the mode.
   test.each(['actions/ci-quality-adapter/scripts/composite.sh', 'runtime/payload.mjs'])('single Release rejects a changed execution file mode of %s', (relative) => {
     // Arrange
-    const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+    const f = fixture(); updateReferences(f.directory, f.implementation);
     chmodSync(path.join(f.directory, relative), 0o755);
     f.git('add', '.'); f.git('commit', '-m', 'change execution mode'); f.git('tag', '-a', 'v0.2.11', '-m', 'invalid closure');
     // Act
-    const rejected = failure(() => checkRepository(f.directory, false, { releaseTag: 'v0.2.11' }));
+    const rejected = failure(() => checkRelease(f.directory));
     // Assert
     expect(rejected).toMatch(/closure-mismatch/);
   });
@@ -281,7 +300,7 @@ describe('contract.ci-selective-distribution.publication', () => {
   test('single Release rejects stale workflow and installer bindings and invalid interfaces', () => {
     for (const mismatch of ['workflow', 'installer', 'interface']) {
       // Arrange
-      const f = fixture(); applyActionReferenceUpdate(f.directory, planActionReferenceUpdate(f.directory, 'v0.2.11', f.implementation));
+      const f = fixture(); updateReferences(f.directory, f.implementation);
       const relative = '.github/workflows/ci-quality.yml'; const value = yaml.parse(readFileSync(path.join(f.directory, relative), 'utf8'));
       const step = value.jobs.checked.steps[0];
       if (mismatch === 'workflow') step.uses = step.uses.replace(f.implementation, 'f'.repeat(40));
@@ -300,7 +319,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     const f = fixture(); f.write('actions/ci-quality-adapter/dist/index.js', 'const = ;'); f.git('add', '.'); f.git('commit', '-m', 'broken implementation');
     const sha = f.git('rev-parse', 'HEAD');
     // Act
-    const rejectedCandidate = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', sha));
+    const rejectedCandidate = failure(() => updateReferences(f.directory, sha, '--check'));
     // Assert
     expect(rejectedCandidate).toMatch(/action-contract-execution-unavailable/);
     // Arrange
@@ -332,9 +351,9 @@ describe('contract.ci-selective-distribution.publication', () => {
     f.write(relative, yaml.stringify(action)); f.git('add', '.'); f.git('commit', '-m', 'missing declared entrypoint');
     const sha = f.git('rev-parse', 'HEAD');
     // Act
-    const rejectedCandidate = failure(() => planActionReferenceUpdate(f.directory, 'v0.2.11', sha));
+    const rejectedCandidate = failure(() => updateReferences(f.directory, sha, '--check'));
     // Assert
-    expect(rejectedCandidate).toMatch(/entrypoint/);
+    expect(rejectedCandidate).toMatch(/"reason":"action-reference-contract-rejected"/);
     // Arrange
     for (const target of [registryPath, ...repositorySnapshot(f.directory).targets]) {
       f.write(target, readFileSync(path.join(f.directory, target), 'utf8').replaceAll('0'.repeat(40), sha).replace('releaseTag: v0.2.10', 'releaseTag: v0.2.11'));

@@ -210,36 +210,6 @@ contracts:
           field: unsubstantiated-remediation-state
           in:
             - absent
-  - id: contract.ci-failure-diagnostics.subject-declarations
-    summary: Packaged contract definitions of failure diagnostics.
-    inputs:
-      - name: subject-contracts
-        meaning: "Received by the contract target: packaged subject contract definitions read by the check."
-    observations:
-      - summary: Packaged contract definition files read from the checked-out workspace.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: subject-diagnostic-details
-            meaning: Comparison of packaged contracts with contracts that guarantee a failure-stage diagnostic; matched or missing.
-          - selector: subject-diagnostic-minimum-reference
-            meaning: Comparison of packaged contracts with contracts whose subject-specific failure evidence observation refers to contract.ci-failure-diagnostics.actionable; matched or missing.
-    conditions:
-      - input: subject-contract-source-available
-    guarantees:
-      - id: subject-diagnostic-details-defined
-        applies_to:
-          - subject-contract-source-available
-        claim:
-          field: subject-diagnostic-details
-          in:
-            - matched
-      - id: subject-diagnostic-minimum-referenced
-        applies_to:
-          - subject-contract-source-available
-        claim:
-          field: subject-diagnostic-minimum-reference
-          in:
-            - matched
   - id: contract.ci-failure-diagnostics.workflow-evidence
     summary: Managed workflow failure summary definitions.
     inputs:
@@ -307,3 +277,41 @@ contracts:
         claim:
           field: bootstrap-diagnostic
           present: true
+  - id: contract.ci-failure-diagnostics.existing-state
+    summary: Invocation of a selected contract boundary, read against pre-existing files that the boundary does not own.
+    inputs:
+      - name: failure
+        meaning: "Precondition prepared by the case: failure that the contract target detects before it starts writing state."
+      - name: existing-file
+        meaning: "Precondition prepared by the case: file that exists before the invocation and that the contract target does not own or manage."
+    observations:
+      - summary: Files in the runner temporary directory before and after a rejected invocation.
+        boundary: boundary.runner-files
+        fields:
+          - selector: runner-temp-existing-file-content
+            meaning: Comparison of the content of a pre-existing file in the runner temporary directory that the contract target does not own, before and after the rejected invocation; equal or changed.
+      - summary: Files in the target repository root before and after a rejected invocation.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: target-root-unmanaged-file-content
+            meaning: Comparison of the content of a pre-existing file in the target repository root that the contract target does not manage, before and after the rejected invocation; equal or changed.
+          - selector: target-root-file-names
+            meaning: Comparison of the file names in the target repository root before and after the rejected invocation; equal or changed.
+    conditions:
+      - input: ci-failure-diagnostics-rejected-before-write
+    guarantees:
+      - id: failure-runner-temp-preserved
+        claim:
+          field: runner-temp-existing-file-content
+          in:
+            - equal
+      - id: failure-target-root-preserved
+        claim:
+          field: target-root-unmanaged-file-content
+          in:
+            - equal
+      - id: failure-target-root-unextended
+        claim:
+          field: target-root-file-names
+          in:
+            - equal

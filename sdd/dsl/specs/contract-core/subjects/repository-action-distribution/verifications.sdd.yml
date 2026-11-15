@@ -28,7 +28,7 @@ cases:
       actions-root: actions
       runtime-root: runtime
       untracked-distribution-path: scripts/example/run.sh
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.catalog
     id: maintained-action-catalog
     partition: runtime-context.repository-action-catalog-inputs-available
     input:
@@ -38,16 +38,7 @@ cases:
       - action-catalog-projected
       - catalog-action-set-matched
       - catalog-usage-text-preserved
-  - contract_id: contract.repository-action-distribution.integrity
-    id: maintained-action-contract-coverage
-    partition: runtime-context.repository-action-catalog-inputs-available
-    input:
-      actions-root: actions
-      contract-package: sdd/dsl/specs/contract-core/contract-package.sdd.yml
-    verifies:
-      - action-contract-subject-covered
-      - action-contract-output-covered
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.source-verification
     id: maintained-action-source-verification
     partition: runtime-context.repository-action-distribution-inputs-available
     input:
@@ -58,27 +49,45 @@ cases:
       - source-verification-actions-covered
       - source-verification-runtime-tests-covered
       - source-verification-without-rebuild
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     id: matching-release-version
     partition: runtime-context.repository-exact-release-tag-available
     input:
       tag: v1.2.3
       repository-version: 1.2.3
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     id: missing-release-version
     partition: runtime-context.repository-release-version-invalid-or-mismatched
     input:
       tag: v1.2.3
       repository-version: missing
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     id: noncanonical-release-version
     partition: runtime-context.repository-release-version-invalid-or-mismatched
     input:
       tag: v1.2.3
       repository-version: 01.2.3
-  - contract_id: contract.repository-action-distribution.integrity
+  - contract_id: contract.repository-action-distribution.release-version
     id: mismatched-release-version
     partition: runtime-context.repository-release-version-invalid-or-mismatched
     input:
       tag: v1.2.3
       repository-version: 1.2.4
+  - contract_id: contract.repository-action-distribution.catalog
+    id: detailed-failure-catalog
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      actions-root: actions
+      catalog-path: README.md without the Action catalog section
+  - contract_id: contract.repository-action-distribution.source-verification
+    id: detailed-failure-source-verification
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      actions-root: actions containing an Action without TypeScript tests
+      prepared-by: distribution-plan
+  - contract_id: contract.repository-action-distribution.release-version
+    id: detailed-failure-release-version
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      tag: v1.2.3
+      repository-version: 01.2.3

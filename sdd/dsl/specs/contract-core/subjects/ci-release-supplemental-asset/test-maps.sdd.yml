@@ -4,11 +4,6 @@ test_maps:
   - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: standard-entry-name-rejection
     tests:
-      - path: runtime/installer/tests/common-regression.test.mjs
-        symbol: contract.ci-release-supplemental-asset.outputs > standard entry names > rejects nonstandard public names before generating output
-        guarantees:
-          - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
@@ -180,11 +175,6 @@ test_maps:
   - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: standard-checkout-eol
     tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
         guarantees:
@@ -274,11 +264,6 @@ test_maps:
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-entry-name-rejection
     tests:
-      - path: runtime/installer/tests/common-regression.test.mjs
-        symbol: contract.ci-release-supplemental-asset.outputs > standard entry names > rejects nonstandard public names before generating output
-        guarantees:
-          - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
@@ -354,11 +339,6 @@ test_maps:
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-checkout-eol
     tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
         guarantees:
@@ -447,10 +427,6 @@ test_maps:
         guarantees:
           - phase-success
           - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
-        guarantees:
-          - phase-output
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: supplemental-asset-release-invalid
     tests:
@@ -460,9 +436,5 @@ test_maps:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
-        guarantees:
-          - phase-rejected
-      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
         guarantees:
           - phase-rejected
