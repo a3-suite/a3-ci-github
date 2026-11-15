@@ -147,10 +147,10 @@ runtime_contexts:
     summary: The release generator receives the full commit SHA of the committed repository source, a release tag and version that match its VERSION, a source head equal to that commit, regular source files and an unclaimed output destination.
   - id: runtime-context.selective-distribution-release-generation-invalid
     summary: The release generator receives an invalid source commit SHA or release tag, a version or source head that does not match the source, a source path redirected through a symlink, or an existing output destination.
-  - id: runtime-context.selective-distribution-alias-update-valid
+  - id: runtime-context.repository-release-alias-update-valid
     summary: An alias update request names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip.
-  - id: runtime-context.selective-distribution-alias-update-invalid
-    summary: An alias update request names a release tag whose source is not integrated into main, whose hotfix branch or base is stale, whose VERSION is a development version, or whose integration evidence cannot be acquired.
+  - id: runtime-context.repository-release-alias-update-invalid
+    summary: An alias update request names a release tag whose source is not integrated into main, whose hotfix branch or base is stale, or whose integration evidence cannot be acquired.
   - id: runtime-context.selective-distribution-reference-update-invalid
     summary: An implementation reference update names a missing or unrelated implementation commit, finds an execution asset changed in the working tree before the invocation, or finds a reference destination redirected through a symlink.
   - id: runtime-context.selective-distribution-provider-reference-check-valid

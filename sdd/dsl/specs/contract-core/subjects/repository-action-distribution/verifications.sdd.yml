@@ -91,3 +91,69 @@ cases:
     input:
       tag: v1.2.3
       repository-version: 01.2.3
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-invalid-hotfix-tip-advanced
+    partition: runtime-context.repository-release-alias-update-invalid
+    input:
+      validation-mode: validate-only
+      branch-tip: advanced after the release tag
+  - contract_id: contract.repository-action-distribution.release-version
+    id: development-release-version
+    partition: runtime-context.repository-release-version-invalid-or-mismatched
+    input:
+      tag: v1.2.3
+      repository-version: 1.2.3-dev.0
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-valid-published-hotfix-squash
+    partition: runtime-context.repository-release-alias-update-valid
+    input:
+      tag: v1.2.4
+      validation-mode: validate-only
+      integration: next patch of a release whose hotfix was squash-integrated into main
+    verifies:
+      - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-valid-main-tip-tree
+    partition: runtime-context.repository-release-alias-update-valid
+    input:
+      tag: v2.0.0
+      validation-mode: validate-only
+      main-tip-tree: same-as-approved-source-tree
+    verifies:
+      - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-valid-canonical-hotfix-tip
+    partition: runtime-context.repository-release-alias-update-valid
+    input:
+      tag: v1.2.3
+      validation-mode: validate-only
+      branch-tip: canonical next-patch hotfix tip not yet integrated into main
+    verifies:
+      - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-invalid-historical-squash
+    partition: runtime-context.repository-release-alias-update-invalid
+    input:
+      main-tip-tree: different-from-approved-source-tree
+      integration: historical-squash-only
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-invalid-same-version-different-tree
+    partition: runtime-context.repository-release-alias-update-invalid
+    input:
+      main-tip-tree: same version with a different tree
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-invalid-unrelated-hotfix-source
+    partition: runtime-context.repository-release-alias-update-invalid
+    input:
+      integration: unrelated source with a tree-equivalent main
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-invalid-evidence-unavailable
+    partition: runtime-context.repository-release-alias-update-invalid
+    input:
+      integration: integration evidence cannot be acquired
+  - contract_id: contract.repository-action-distribution.release-version
+    id: detailed-failure-alias-update
+    partition: runtime-context.failure-diagnostic-required
+    input:
+      tag: v1.2.3
+      remote-alias-push: rejected by the remote

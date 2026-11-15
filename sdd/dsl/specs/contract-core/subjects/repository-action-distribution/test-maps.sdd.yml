@@ -62,10 +62,6 @@ test_maps:
         symbol: repository-release-alias-update > release alias updater creates annotated major and minor aliases idempotently
         guarantees:
           - release-version-confirmed
-      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
-        symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
-        guarantees:
-          - release-version-confirmed
   - contract_id: contract.repository-action-distribution.release-version
     case_id: missing-release-version
     tests:
@@ -109,5 +105,87 @@ test_maps:
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
+        guarantees:
+          - diagnostic-failure-stage-release-version
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-invalid-hotfix-tip-advanced
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
+        guarantees:
+          - alias-update-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: development-release-version
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > release tags reject development VERSION even when integrated into main
+        guarantees:
+          - invalid-or-mismatched-release-version-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-valid-published-hotfix-squash
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > published hotfix squash integration permits the next patch and preserves immutable tags and newer aliases
+        guarantees:
+          - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-valid-main-tip-tree
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > ordinary release accepts only the current main tip tree and refuses historical squash trees
+        guarantees:
+          - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-valid-canonical-hotfix-tip
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
+        guarantees:
+          - alias-source-integrated
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-invalid-historical-squash
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > ordinary release accepts only the current main tip tree and refuses historical squash trees
+        guarantees:
+          - alias-update-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-invalid-same-version-different-tree
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different content
+        guarantees:
+          - alias-update-rejected
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different mode
+        guarantees:
+          - alias-update-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-invalid-unrelated-hotfix-source
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > tree-equivalent main does not authorize an unrelated next hotfix source
+        guarantees:
+          - alias-update-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: alias-update-invalid-evidence-unavailable
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at main
+        guarantees:
+          - alias-update-rejected
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at tree
+        guarantees:
+          - alias-update-rejected
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at ancestry
+        guarantees:
+          - alias-update-rejected
+  - contract_id: contract.repository-action-distribution.release-version
+    case_id: detailed-failure-alias-update
+    tests:
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > alias push failure retains native exit and uncertain remote state without moving exact tags
         guarantees:
           - diagnostic-failure-stage-release-version

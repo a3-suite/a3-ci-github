@@ -203,12 +203,6 @@ routes:
       - hosted-delivery
       - selective-distribution
       - contract-verification
-  - route_id: selective-distribution-alias-update
-    contract_id: contract.ci-selective-distribution.alias-update
-    hops:
-      - hosted-delivery
-      - selective-distribution
-      - contract-verification
   - route_id: selective-distribution-reference-update
     contract_id: contract.ci-selective-distribution.reference-update
     hops:

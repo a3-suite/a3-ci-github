@@ -17,5 +17,5 @@ related_contracts:
   - contract.ci-selective-distribution.publication
   - contract.ci-selective-distribution.release-generation
   - contract.ci-selective-distribution.release-readback
-  - contract.ci-selective-distribution.alias-update
+  - contract.repository-action-distribution.release-version
   - contract.ci-selective-distribution.provider-reference-check

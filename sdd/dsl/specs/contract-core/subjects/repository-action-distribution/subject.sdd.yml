@@ -164,18 +164,34 @@ contracts:
           field: failure-stage
           present: true
   - id: contract.repository-action-distribution.release-version
-    summary: Release tag alias update request against the repository VERSION.
+    summary: Release tag alias update request against the repository VERSION and the integrated release source.
     inputs:
       - name: tag
         meaning: "Received by the contract target: release tag name."
       - name: repository-version
         meaning: "Received by the contract target: content of the repository VERSION file."
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: validation-mode
+        meaning: "Received by the contract target: whether the invocation only validates the release source or also updates the aliases."
+      - name: integration
+        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
+      - name: main-tip-tree
+        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
+      - name: branch-tip
+        meaning: "Precondition prepared by the case: tip of the release branch compared with the release tag."
+      - name: remote-alias-push
+        meaning: "Precondition prepared by the case: response of the remote to the alias push."
     observations:
-      - summary: Release version comparison exposed by the release alias updater.
+      - summary: Release version comparison and release source integration exposed by the release alias updater.
         boundary: boundary.repository-gate-result
         fields:
           - selector: release-version
             meaning: Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.
+          - selector: aliasSourceIntegration
+            meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
+          - selector: diagnostic
+            meaning: Stable failure evidence of the rejected alias update.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -185,6 +201,8 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.repository-exact-release-tag-available
       - environment: runtime-context.repository-release-version-invalid-or-mismatched
+      - environment: runtime-context.repository-release-alias-update-valid
+      - environment: runtime-context.repository-release-alias-update-invalid
     guarantees:
       - id: release-version-confirmed
         applies_to:
@@ -200,6 +218,20 @@ contracts:
           field: release-version
           in:
             - failure
+      - id: alias-source-integrated
+        applies_to:
+          - runtime-context.repository-release-alias-update-valid
+        claim:
+          field: aliasSourceIntegration
+          in:
+            - integrated
+            - canonical-hotfix-tip
+      - id: alias-update-rejected
+        applies_to:
+          - runtime-context.repository-release-alias-update-invalid
+        claim:
+          field: diagnostic
+          present: true
       - id: diagnostic-failure-stage-release-version
         applies_to:
           - runtime-context.failure-diagnostic-required
