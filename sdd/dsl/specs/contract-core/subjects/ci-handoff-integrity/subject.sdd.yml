@@ -5,7 +5,7 @@ subject:
   summary: Validating release handoff identity, manifest, and artifact digests.
 contracts:
   - id: contract.ci-handoff-integrity.outputs
-    summary: A matching handoff descriptor and manifest produce a handoff status output.
+    summary: Handoff root, descriptor and source identity inputs to the handoff integrity Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."

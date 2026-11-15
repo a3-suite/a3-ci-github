@@ -12,7 +12,9 @@ cases:
     id: case.ci-preset-assurance.explicit-roots-required
     partition: runtime-context.preset-assurance-roots-missing
     input:
-      audit-mode: read-only
+      arguments:
+        - --audit-mode
+        - read-only
   - contract_id: contract.ci-preset-assurance.verification
     id: case.ci-preset-assurance.read-only-output-rejected
     partition: runtime-context.preset-assurance-read-only-output-requested
@@ -23,7 +25,9 @@ cases:
     id: pending-publication-actions
     partition: selected-action-unavailable
     input:
-      selected-pending-action: ci-release-assembly
+      selected-pending-action:
+        - ci-release-assembly
+        - ci-release-publisher
       preset: release-publication
   - contract_id: contract.ci-preset-assurance.verification
     id: pending-quality-platform-action
@@ -32,12 +36,6 @@ cases:
       selected-pending-action: ci-platform-matrix
       preset: quality-gate
       optional-workflow: quality-gate-platforms
-  - contract_id: contract.ci-preset-assurance.verification
-    id: pending-release-publisher
-    partition: selected-action-unavailable
-    input:
-      selected-pending-action: ci-release-publisher
-      preset: release-publication
   - contract_id: contract.ci-preset-assurance.verification
     id: standard-authority-drift
     partition: ci-preset-assurance-applied-preset-drifted

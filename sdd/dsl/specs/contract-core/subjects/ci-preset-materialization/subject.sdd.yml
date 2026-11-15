@@ -58,7 +58,7 @@ contracts:
             meaning: 失敗した段階の識別子。
           - selector: changed-range-evidence
             meaning: Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.
-      - summary: Consumer file state before and after materialization, including a failed invocation.
+      - summary: Consumer file state before and after the materializer invocation.
         boundary: boundary.project-ci-assets
         fields:
           - selector: standard-copy-state

@@ -5,7 +5,7 @@ subject:
   summary: Select, fetch, plan, apply, and recover immutable CI distribution assets without overwriting unmanaged consumer state.
 contracts:
   - id: contract.ci-selective-distribution.selection
-    summary: Preset selection resolves its registered dependency closure while direct asset selection exposes missing dependencies.
+    summary: Preset and asset selection request for distribution selection.
     inputs:
       - name: operation
         meaning: "Received by the contract target: operation selected by the invocation."
@@ -261,7 +261,7 @@ contracts:
           - selector: actions
             meaning: Create, reuse, update, or conflict classification for canonical workflow destinations.
           - selector: stale
-            meaning: Previously managed paths excluded from the current selection without automatic deletion.
+            meaning: Previously managed paths that the current selection excludes.
           - selector: diagnostic
             meaning: Diagnostic exposed for rejected planning input.
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
@@ -400,7 +400,7 @@ contracts:
           in:
             - matched
   - id: contract.ci-selective-distribution.rollback
-    summary: Restore a recorded transaction under verified restoration preconditions while retaining independent consumer changes.
+    summary: Rollback request for a recorded consumer application transaction.
     inputs:
       - name: operation
         meaning: "Received by the contract target: operation selected by the invocation."

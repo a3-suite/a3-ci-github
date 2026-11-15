@@ -5,7 +5,7 @@ subject:
   summary: Resolve an annotated Git tag to its tag object and source commit.
 contracts:
   - id: contract.ci-annotated-tag-resolver.outputs
-    summary: A valid annotated tag produces tag object and source commit outputs.
+    summary: Repository and release tag inputs to the annotated tag resolver Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."

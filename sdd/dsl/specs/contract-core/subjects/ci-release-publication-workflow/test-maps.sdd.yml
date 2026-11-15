@@ -17,6 +17,11 @@ test_maps:
           - release-handoff-before-publication
           - release-publication-before-readback
           - release-tokens-explicit
+          - ci-release-publication-workflow-evidence-transfer-declared
+          - supplemental-upload-selected-root
+          - supplemental-hidden-files-selected
+          - supplemental-download-root
+          - supplemental-final-assembly-input
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
         guarantees:
@@ -70,17 +75,6 @@ test_maps:
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
         guarantees:
           - release-failed-prerequisite-blocks
-  - contract_id: contract.ci-release-publication-workflow.publication
-    case_id: ci-release-publication-workflow-evidence-transfer
-    tests:
-      - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication
-        guarantees:
-          - ci-release-publication-workflow-evidence-transfer-declared
-          - supplemental-upload-selected-root
-          - supplemental-hidden-files-selected
-          - supplemental-download-root
-          - supplemental-final-assembly-input
   - contract_id: contract.ci-release-publication-workflow.publication
     case_id: detailed-failure-publication
     tests:

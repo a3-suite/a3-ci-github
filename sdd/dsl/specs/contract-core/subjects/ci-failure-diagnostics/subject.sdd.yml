@@ -296,7 +296,7 @@ contracts:
           in:
             - absent
   - id: contract.ci-failure-diagnostics.bootstrap-diagnostic
-    summary: A failing public runtime bootstrap emits a stable machine-readable failure envelope.
+    summary: Prepared runtime state for the public runtime bootstrap.
     inputs:
       - name: prepared-runtime
         meaning: "Precondition prepared by the case: state of the prepared runtime that the bootstrap starts."

@@ -42,7 +42,7 @@ contracts:
           - selector: outcome
             meaning: Failed step on rejection or uncertain write result.
           - selector: successful-output-state
-            meaning: Successful evidence outputs are absent on failure.
+            meaning: Occurrence state (present or absent) of the successful evidence outputs.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:

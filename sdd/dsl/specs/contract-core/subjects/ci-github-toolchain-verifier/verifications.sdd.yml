@@ -12,6 +12,13 @@ cases:
     partition: runtime-context.github-toolchain-matches-request
     input:
       mode: gh-jq-sha256
+      requested-versions:
+        gh: 2.80.0
+        jq: "1.7"
+        sha256sum: "9.5"
+      gh-version: 2.80.0
+      jq-version: 1.7
+      sha256sum-version: 9.5
   - contract_id: contract.ci-github-toolchain-verifier.processing
     id: mismatching-exact-toolchain-processing
     partition: runtime-context.github-toolchain-does-not-match-request
@@ -28,7 +35,10 @@ cases:
     partition: runtime-context.github-toolchain-does-not-match-request
     input:
       mode: jq-sha256
-      jq-version: "1.6"
+      requested-versions:
+        jq: "1.6"
+        sha256sum: "9.5"
+      jq-version: "1.7"
   - contract_id: contract.ci-github-toolchain-verifier.outputs
     id: detailed-failure-outputs
     partition: runtime-context.failure-diagnostic-required

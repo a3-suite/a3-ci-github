@@ -46,7 +46,7 @@ cases:
     partition: runtime-context.rust-release-version-report-rejected
     input:
       version: 0.3.0
-      version-output: rejected-set
+      version-output: 10.3.0
   - contract_id: contract.ci-rust-release-build.processing
     id: source-text-boundary
     partition: runtime-context.rust-release-build-rejected

@@ -46,9 +46,9 @@ contracts:
           - selector: status
             meaning: Success only after the selected read-only verification completes.
           - selector: observation-path
-            meaning: New pre-create observation file, produced only by observe-before.
+            meaning: Pre-create observation file written by observe-before.
           - selector: observation-digest
-            meaning: SHA-256 of exact pre-create observation bytes, produced only by observe-before.
+            meaning: SHA-256 of the exact pre-create observation file bytes.
           - selector: release-remote-identity
             meaning: Immutable create-result Release object ID independently verified by verify-after.
           - selector: publish-receipt

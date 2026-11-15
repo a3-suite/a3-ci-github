@@ -42,7 +42,7 @@ contracts:
           - selector: security-command-state
             meaning: Occurrence of security commands in the native execution trace.
           - selector: native-task-order
-            meaning: Ordered IDs in the observed native result trace.
+            meaning: Comma-separated task IDs of the observed native result trace in execution order.
           - selector: consumer-descriptor-read-state
             meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
           - selector: rejected-command-state

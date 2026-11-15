@@ -5,7 +5,7 @@ subject:
   summary: Maintain canonical workflows, runtime, rules, guidance, SDD, and verification assets as one resolvable repository source.
 contracts:
   - id: contract.repository-managed-source-integrity.integrity
-    summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
+    summary: Repository tree and argument inputs to the managed source maintenance gate.
     inputs:
       - name: repository-tree
         meaning: "Precondition prepared by the case: state of the repository tree read by the managed source gate."
@@ -55,7 +55,7 @@ contracts:
       - name: execution-definition
         meaning: "Received by the contract target: contract subject execution definition read by the check."
     observations:
-      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
+      - summary: Contract execution mapping results exposed by the repository contract execution check.
         boundary: boundary.repository-gate-result
         fields:
           - selector: contract-execution

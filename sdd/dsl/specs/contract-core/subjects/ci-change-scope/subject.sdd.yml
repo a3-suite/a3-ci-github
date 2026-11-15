@@ -5,7 +5,7 @@ subject:
   summary: Classifying a checked-out change range into CI and documentation scope.
 contracts:
   - id: contract.ci-change-scope.outputs
-    summary: A resolvable change range produces a change-scope status output.
+    summary: Base commit, head commit and documentation pattern inputs to the change scope Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -16,7 +16,7 @@ contracts:
       - name: docs-only-patterns
         meaning: "Received by the contract target: documentation-only path patterns."
     observations:
-      - summary: The Action exposes deterministic change-scope outputs to the caller.
+      - summary: Change-scope outputs exposed by the Action to the caller.
         boundary: boundary.action-output
         fields:
           - selector: status

@@ -12,7 +12,7 @@ cases:
     id: ci-preset-materialization-success
     partition: runtime-context.preset-custom-materialization-valid
     input:
-      selection: custom-bundle
+      selection: custom bundle test-bundle
       source-root: explicit
     verifies:
       - ci-preset-materialization-success-observed
@@ -20,14 +20,14 @@ cases:
     id: ci-preset-materialization-failure
     partition: runtime-context.preset-materialization-rejected
     input:
-      selection: invalid-custom-bundle
+      selection: custom bundle test-bundle whose descriptor declares schemaVersion 2
     verifies:
       - ci-preset-materialization-failure-observed
   - contract_id: contract.ci-preset-materialization.application
     id: standard-binding-footprint
     partition: runtime-context.preset-standard-materialization-valid
     input:
-      selection: registered-standard-bundle
+      selection: registered standard bundle for the typescript profile
       source-root: omitted
     verifies:
       - standard-selected-bundle-match
@@ -44,8 +44,21 @@ cases:
     id: custom-copy-report
     partition: runtime-context.preset-custom-materialization-valid
     input:
-      selection: custom-bundle
-      destination: initially-absent-then-identical
+      selection: custom bundle test-bundle
+      destination: absent
+    verifies:
+      - standard-selected-bundle-match
+      - copy-report-sources
+      - copy-report-destinations
+      - copy-report-actions
+      - consumer-settings-change
+      - consumer-dependency-change
+  - contract_id: contract.ci-preset-materialization.application
+    id: custom-reuse-report
+    partition: runtime-context.preset-custom-materialization-valid
+    input:
+      selection: custom bundle test-bundle
+      destination: content-identical to the bundle source
     verifies:
       - standard-selected-bundle-match
       - copy-report-sources
@@ -64,7 +77,7 @@ cases:
     id: late-copy-failure-retention
     partition: runtime-context.preset-materialization-rejected
     input:
-      selection: custom-bundle
+      selection: custom bundle test-bundle
       copy-failure: after-one-completed-copy
     verifies:
       - consumer-settings-change

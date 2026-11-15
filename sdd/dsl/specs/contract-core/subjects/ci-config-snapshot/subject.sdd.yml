@@ -5,7 +5,7 @@ subject:
   summary: Resolving CI configuration precedence and writing a deterministic snapshot.
 contracts:
   - id: contract.ci-config-snapshot.outputs
-    summary: Valid configuration sources produce a snapshot status output.
+    summary: Configuration source and snapshot path inputs to the config snapshot Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."

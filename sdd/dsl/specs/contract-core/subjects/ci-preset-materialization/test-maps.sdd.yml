@@ -59,6 +59,18 @@ test_maps:
           - consumer-settings-change
           - consumer-dependency-change
   - contract_id: contract.ci-preset-materialization.application
+    case_id: custom-reuse-report
+    tests:
+      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+        symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer reports copied and reused custom assets without changing consumer settings
+        guarantees:
+          - standard-selected-bundle-match
+          - copy-report-sources
+          - copy-report-destinations
+          - copy-report-actions
+          - consumer-settings-change
+          - consumer-dependency-change
+  - contract_id: contract.ci-preset-materialization.application
     case_id: conflicting-destination-protection
     tests:
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs

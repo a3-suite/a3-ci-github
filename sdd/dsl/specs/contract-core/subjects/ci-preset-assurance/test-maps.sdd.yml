@@ -38,13 +38,6 @@ test_maps:
         guarantees:
           - unavailable-action-reported
   - contract_id: contract.ci-preset-assurance.verification
-    case_id: pending-release-publisher
-    tests:
-      - path: runtime/preset/tests/action-availability.test.mjs
-        symbol: preset-action-availability-contract > selected pending publication Actions block deployment without disturbing released presets
-        guarantees:
-          - unavailable-action-reported
-  - contract_id: contract.ci-preset-assurance.verification
     case_id: standard-authority-drift
     tests:
       - path: runtime/preset/tests/publication-validation.test.mjs

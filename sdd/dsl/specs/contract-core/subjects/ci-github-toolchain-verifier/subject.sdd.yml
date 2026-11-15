@@ -5,7 +5,7 @@ subject:
   summary: Verifying exact GitHub CI tool versions through a shared script.
 contracts:
   - id: contract.ci-github-toolchain-verifier.processing
-    summary: The shared script accepts only supported modes whose selected CLI versions exactly match the request.
+    summary: Verification mode, requested version and runner toolchain inputs to the GitHub toolchain verifier shared script.
     inputs:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
@@ -13,14 +13,20 @@ contracts:
         meaning: "Received by the contract target: verification mode."
       - name: unavailable-command
         meaning: "Precondition prepared by the case: command missing from the runner."
+      - name: requested-versions
+        meaning: "Received by the contract target: CLI versions requested through the job environment."
+      - name: gh-version
+        meaning: "Precondition prepared by the case: GitHub CLI version reported by the runner."
       - name: jq-version
         meaning: "Precondition prepared by the case: jq version reported by the runner."
+      - name: sha256sum-version
+        meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
     observations:
       - summary: The shared script exposes whether exact toolchain verification succeeded or failed.
         boundary: boundary.script-result
         fields:
           - selector: outcome
-            meaning: Success only when every CLI selected by the mode exists and exactly matches the requested version; failure otherwise.
+            meaning: Outcome of the exact toolchain verification, either success or failure.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:

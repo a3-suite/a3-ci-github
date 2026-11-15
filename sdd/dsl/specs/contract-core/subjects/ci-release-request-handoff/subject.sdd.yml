@@ -5,7 +5,7 @@ subject:
   summary: Write an immutable annotated-tag release request handoff.
 contracts:
   - id: contract.ci-release-request-handoff.outputs
-    summary: Valid request inputs produce a request handoff and digest path.
+    summary: Release tag, triggering ref and output directory inputs to the release request handoff Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
