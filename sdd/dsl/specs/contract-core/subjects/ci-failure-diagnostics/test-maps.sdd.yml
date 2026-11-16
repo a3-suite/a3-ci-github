@@ -125,7 +125,22 @@ test_maps:
         guarantees:
           - failure-runner-temp-preserved
       - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution selection rejection preserves state and diagnostic context
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > distribution delivery rejection preserves state and diagnostic context
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution application rejection preserves state and diagnostic context
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution rollback rejection preserves state and diagnostic context
         guarantees:
           - failure-target-root-preserved
           - failure-target-root-unextended

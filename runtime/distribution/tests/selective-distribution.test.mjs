@@ -10,6 +10,235 @@ const failureOf = (run) => {
   try { run(); } catch (error) { return error; }
   throw new Error('expected the distribution CLI to fail');
 };
+// The consumer-tree observation leaves out the fetch lock and staging entries that the invocation owns.
+const consumerTree = (projectRoot) => Object.fromEntries(Object.entries(snapshotTree(projectRoot))
+  .filter(([entry]) => !/(^|[\\/])\.fetch\.lock$/.test(entry) && !/(^|[\\/])\.staging-[^\\/]+([\\/]|$)/.test(entry)));
+
+// Fetches again over a cached distribution that is tampered or locked, with a transport that fails when called.
+const rejectCachedState = (root, release, problem) => {
+  const projectRoot = createConsumer(root, problem);
+  const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
+  const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
+  let diagnostic;
+  if (problem === 'bytes') {
+    fs.appendFileSync(path.join(fetched.distributionRoot, fetched.files[0]), 'tampered');
+    diagnostic = 'distribution-local-file-integrity-mismatch';
+  } else if (problem === 'receipt') {
+    const receiptPath = path.join(fetched.distributionRoot, 'receipt.json');
+    const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    receipt.manifestSha256 = '0'.repeat(64);
+    fs.writeFileSync(receiptPath, JSON.stringify(receipt));
+    diagnostic = 'distribution-local-receipt-invalid';
+  } else if (problem === 'manifest') {
+    options.manifestPath = path.join(root, 'changed-manifest.json');
+    fs.writeFileSync(options.manifestPath, Buffer.concat([release.manifestBytes, Buffer.from('\n')]));
+    diagnostic = 'distribution-existing-root-conflict';
+  } else {
+    fs.writeFileSync(path.join(fetched.distributionRoot, '.fetch.lock'), 'another fetch owns this lock');
+    diagnostic = 'distribution-fetch-locked';
+  }
+  const before = snapshotTree(projectRoot);
+  const log = path.join(root, `${problem}-transport.log`);
+  const thrown = failureOf(() => cliFetch({ ...options, faults: { transport: { log, failure: 'transport must not be called' } } }));
+  return { projectRoot, diagnostic, thrown, before, log };
+};
+
+// Extends a verified distribution while the transport fails from the second download on, and starts a peer fetch while the lock is held.
+const failExtensionFetch = (root) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'],
+    sourceRoot: committedSourceRoot });
+  const before = snapshotTree(projectRoot);
+  const transport = { sourceRoot: committedSourceRoot, sourceRevision };
+  const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'] };
+  const lockPath = path.join(fetched.distributionRoot, '.fetch.lock');
+  const report = path.join(root, 'probe.jsonl');
+  const peerLog = path.join(root, 'peer-transport.log');
+  const peer = { call: 1, ...cliFetchPeer({ ...options, faults: { transport: { log: peerLog, failure: 'peer transport must not be called' } } }) };
+  const requestLog = path.join(root, 'extension-transport.log');
+  const failure = failureOf(() => cliFetch({ ...options, faults: { transport: { ...transport, log: requestLog, failFromCall: 2, probe: { lockPath, report, peer } } } }));
+  const probes = fs.readFileSync(report, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  const requests = fs.readFileSync(requestLog, 'utf8').trim().split('\n');
+  return { release, projectRoot, options, transport, before, lockPath, peerLog, failure, probes, requests };
+};
+
+// Fetches again over a cached distribution with a transport that must not be called, while closing or removing the owned lock fails.
+const failLockCleanup = (root, release, operation) => {
+  const projectRoot = createConsumer(root, operation);
+  const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
+  const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
+  const lockPath = path.join(fetched.distributionRoot, '.fetch.lock');
+  const log = path.join(root, `${operation}-transport.log`);
+  const before = consumerTree(projectRoot);
+  const faults = { transport: { log, failure: 'transport must not be called' },
+    ...(operation === 'close' ? { failClose: [{ path: lockPath }] } : { failRemove: [{ path: lockPath }] }) };
+  const failure = failureOf(() => cliFetch({ ...options, faults }));
+  return { projectRoot, failure, log, before };
+};
+
+// Fetches again with an explicit source root whose bytes differ from the manifest, over a verified distribution.
+const rejectInvalidSourceRoot = (root) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
+  const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
+  const sourceRoot = path.join(root, 'invalid-source');
+  const invalidFile = path.join(sourceRoot, fetched.files[0]);
+  fs.mkdirSync(path.dirname(invalidFile), { recursive: true });
+  fs.writeFileSync(invalidFile, 'invalid explicit source bytes');
+  const before = snapshotTree(projectRoot);
+  const log = path.join(root, 'transport.log');
+  const thrown = failureOf(() => cliFetch({ ...options, sourceRoot, faults: { transport: { log, failure: 'transport must not be called' } } }));
+  return { projectRoot, thrown, before, log };
+};
+
+// Fetches with each kind of invalid redirect or transport response over a consumer holding a project-owned file.
+const failDownloads = (root) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  fs.writeFileSync(path.join(projectRoot, 'README.md'), 'project-owned content');
+  const before = snapshotTree(projectRoot);
+  const cases = [
+    ['missing Location', { status: 302 }, 'distribution-download-redirect-location-missing'],
+    ['untrusted redirect', { status: 302, location: 'https://example.invalid/asset' }, 'distribution-download-redirect-untrusted'],
+    ['insecure redirect', { status: 302, location: 'http://raw.githubusercontent.com/asset' }, 'distribution-download-redirect-untrusted'],
+    ['HTTP failure', { status: 404 }, 'http-404'],
+    ['opaque transport failure', { failure: 'transport unavailable' }, 'network-result-unknown'],
+  ];
+  const results = cases.map(([label, response, observed], index) => {
+    const log = path.join(root, `transport-${index}.log`);
+    const failure = failureOf(() => cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'],
+      faults: { transport: { log, ...response } } }));
+    return { label, failure, observed, requests: fs.readFileSync(log, 'utf8').trim().split('\n'), after: snapshotTree(projectRoot) };
+  });
+  return { release, projectRoot, before, results };
+};
+
+// Applies the quality gate, then returns helpers that rewrite the ownership lock for its workflow.
+const prepareOwnedWorkflow = (root) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  const projectDocument = path.join(projectRoot, 'README.md');
+  fs.writeFileSync(projectDocument, 'project-owned content');
+  cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
+  const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
+  const initial = cliPlan(options);
+  cliApply({ projectRoot, planPath: initial.planPath, approvalDigest: initial.planDigest });
+  const workflowPath = '.github/workflows/quality-gate.yml';
+  const workflow = path.join(projectRoot, workflowPath);
+  const canonical = fs.readFileSync(workflow);
+  const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+  fs.mkdirSync(path.dirname(lockPath));
+  const writeOwnership = (bytes) => fs.writeFileSync(lockPath, JSON.stringify({
+    schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
+    generatedAt: '2026-01-01T00:00:00Z',
+    assets: [{ path: workflowPath, canonicalSha256: sha256(canonical), appliedSha256: sha256(bytes) }],
+  }));
+  writeOwnership(canonical);
+  return { projectRoot, projectDocument, options, workflowPath, workflow, canonical, lockPath, writeOwnership };
+};
+
+// Rolls back, with the lock removal failing, an apply or rollback of the release-request preset over a fresh consumer.
+const failCompletedCleanup = (root, release, operation) => {
+  const projectRoot = createConsumer(root, operation);
+  cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+  const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
+  const lock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+  const faults = { failRemove: [{ path: lock }] };
+  const apply = (options) => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest, ...options });
+  const applied = operation === 'rollback' ? apply() : undefined;
+  const failure = failureOf(() => (operation === 'apply' ? apply({ faults })
+    : cliRollback({ projectRoot, transactionId: applied.transactionId, faults })));
+  return { projectRoot, plan, lock, failure };
+};
+
+// Rolls back an applied release-request while restoring the last file and recording the transaction both fail.
+const failRollbackRecord = (root, release, lockCleanupFails) => {
+  const projectRoot = createConsumer(root, String(lockCleanupFails));
+  cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+  const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
+  const applied = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+  const transactionPath = path.join(projectRoot, '.a3-skills/ci-github/transactions', applied.transactionId, 'transaction.json');
+  const target = path.join(projectRoot, plan.actions.at(-1).destination);
+  const before = fs.readFileSync(target);
+  const lockPath = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+  const failure = failureOf(() => cliRollback({ projectRoot, transactionId: applied.transactionId, faults: {
+    failRemove: [{ path: target }, ...(lockCleanupFails ? [{ path: lockPath }] : [])],
+    failRenameAfterRemoveFailure: [{ path: transactionPath }],
+  } }));
+  return { applied, transactionPath, target, before, lockPath, failure };
+};
+
+// Rolls back a transaction that never existed, with the lock removal failing.
+const failRollbackCleanup = (projectRoot) => {
+  const stateRoot = path.join(projectRoot, '.a3-skills/ci-github');
+  fs.mkdirSync(stateRoot, { recursive: true });
+  const existing = path.join(projectRoot, 'existing-state');
+  fs.writeFileSync(existing, 'preserved\n');
+  const transactionId = '1-123456789abc';
+  expect(() => cliRollback({ projectRoot, transactionId })).toThrow(/^distribution-transaction-missing$/);
+  const lock = path.join(stateRoot, 'apply.lock');
+  const failure = failureOf(() => cliRollback({ projectRoot, transactionId, faults: { failRemove: [{ path: lock }] } }));
+  return { failure, transactionId, lock, existing };
+};
+
+const prepareQualityPlan = (root) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
+  const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
+  return { projectRoot, options, plan: cliPlan(options) };
+};
+
+// Applies a multi-destination plan whose later destination is changed independently after the first destination was written.
+const failPartialApply = async (root, { retainLock }) => {
+  const release = prepareRelease(root);
+  const projectRoot = createConsumer(root);
+  cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-publication'], sourceRoot: repositoryRoot });
+  const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-publication'], requestedAssets: [] });
+  expect(plan.actions.length > 1).toBeTruthy();
+  const changedPath = path.join(projectRoot, plan.actions[1].destination);
+  const retainedLock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
+  const failure = failureOf(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest, faults: {
+    ...(retainLock ? { failRemove: [{ path: retainedLock }] } : {}),
+    transactionHooks: [{ status: 'applying', index: 1, write: { path: changedPath, content: 'changed-after-plan\n' } }],
+  } }));
+  return { projectRoot, plan, changedPath, retainedLock, failure };
+};
+
+// Rolls back a recorded transaction whose workflow, workflow directory or backup changes after rollback has recorded that it is restoring.
+const interruptRollback = (scenario, inspect) => withFixture(`distribution-rollback-${scenario}-`, (root) => {
+  const projectRoot = path.join(root, 'consumer');
+  const transactionId = `1-${'a'.repeat(12)}`;
+  const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', transactionId);
+  const destination = '.github/workflows/quality-gate.yml';
+  const workflow = path.join(projectRoot, destination);
+  const backup = path.join(transactionRoot, 'before', destination);
+  const transactionPath = path.join(transactionRoot, 'transaction.json');
+  const externalRoot = path.join(root, 'external-workflows');
+  fs.mkdirSync(path.dirname(workflow), { recursive: true });
+  fs.mkdirSync(path.dirname(backup), { recursive: true });
+  fs.mkdirSync(externalRoot);
+  fs.writeFileSync(workflow, 'applied\n');
+  fs.writeFileSync(backup, 'before\n');
+  fs.writeFileSync(path.join(externalRoot, 'quality-gate.yml'), 'applied\n');
+  fs.writeFileSync(transactionPath, JSON.stringify({
+    schemaVersion: '1', kind: 'a3-ci-github-distribution-transaction', transactionId,
+    status: 'applied', actions: [{ destination, beforeSha256: sha256('before\n'),
+      afterSha256: sha256('applied\n'), state: 'applied' }],
+  }));
+  // The change lands after rollback has validated its inputs and recorded that it is restoring.
+  const change = scenario === 'consumer-edit' ? { write: { path: workflow, content: 'consumer edit\n' } }
+    : scenario === 'backup-tamper' ? { write: { path: backup, content: 'tampered backup\n' } }
+      : { replaceDirectoryWithSymlink: { directory: path.dirname(workflow), target: externalRoot } };
+  const diagnostic = scenario === 'consumer-edit' ? 'distribution-rollback-destination-changed'
+    : scenario === 'backup-tamper' ? 'distribution-backup-integrity-mismatch'
+      : 'distribution-destination-outside-root';
+  const outsideBefore = snapshotTree(externalRoot);
+  const thrown = failureOf(() => cliRollback({ projectRoot, transactionId, faults: { transactionHooks: [{ status: 'rolling-back', ...change }] } }));
+  inspect({ thrown, diagnostic, workflow, backup, transactionPath, externalRoot, outsideBefore });
+});
 
 describe('distribution test fixtures', () => {
   describe('prepareRelease', () => {
@@ -104,9 +333,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ];
         for (const [index, [candidate, diagnostic]] of cases.entries()) {
           const projectRoot = createConsumer(root, `consumer-${index}`);
+          const before = snapshotTree(projectRoot);
           expect(() => cliFetch({ projectRoot, manifestPath: writeManifest(root, candidate, `manifest-${index}.json`),
             requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot }), diagnostic).toThrow(new RegExp(`^${diagnostic}$`));
-          expect(fs.existsSync(path.join(projectRoot, '.a3-skills/ci-github/distributions')), diagnostic).toBe(false);
+          expect(snapshotTree(projectRoot), diagnostic).toStrictEqual(before);
         }
       });
     });
@@ -117,13 +347,19 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const release = prepareRelease(root);
         const faults = { transport: { manifestPath: release.manifestPath, sourceRoot: committedSourceRoot, sourceRevision } };
         const fetchRemote = (name, options) => cliFetch({ projectRoot: createConsumer(root, name), requestedPresets: ['release-request'], faults, ...options });
+        const rejectRemote = (name, options, diagnostic) => {
+          const projectRoot = createConsumer(root, name);
+          const before = snapshotTree(projectRoot);
+          expect(() => cliFetch({ projectRoot, requestedPresets: ['release-request'], faults, ...options }), name).toThrow(diagnostic);
+          expect(snapshotTree(projectRoot), name).toStrictEqual(before);
+        };
         const validUrl = `https://github.com/a3-suite/a3-ci-github/releases/download/${releaseTag}/a3-ci-github-distribution-manifest.json`;
         expect(fetchRemote('valid', { manifestUrl: validUrl }).sourceRevision).toBe(sourceRevision);
-        expect(() => fetchRemote('tag-mismatch', {
+        rejectRemote('tag-mismatch', {
           manifestUrl: 'https://github.com/a3-suite/a3-ci-github/releases/download/v9.9.9/a3-ci-github-distribution-manifest.json',
-        })).toThrow(/^distribution-manifest-release-url-mismatch$/);
-        expect(() => fetchRemote('untrusted', { manifestUrl: 'https://example.invalid/manifest.json' })).toThrow(/^distribution-manifest-url-untrusted$/);
-        expect(() => fetchRemote('exclusive', { manifestPath: release.manifestPath, manifestUrl: validUrl })).toThrow(/^distribution-manifest-source-exclusive$/);
+        }, /^distribution-manifest-release-url-mismatch$/);
+        rejectRemote('untrusted', { manifestUrl: 'https://example.invalid/manifest.json' }, /^distribution-manifest-url-untrusted$/);
+        rejectRemote('exclusive', { manifestPath: release.manifestPath, manifestUrl: validUrl }, /^distribution-manifest-source-exclusive$/);
       });
     });
   });
@@ -254,12 +490,16 @@ describe("contract.ci-selective-distribution.application", () => {
         fs.mkdirSync(path.dirname(lockPath), { recursive: true });
         fs.writeFileSync(lockPath, JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision: priorRevision,
           assets: plan.actions.map((entry) => ({ path: entry.destination, appliedSha256: entry.generatedSha256 })) }));
+        const missingBefore = snapshotTree(projectRoot);
         expect(() => cliPlan(options)).toThrow(/^distribution-local-manifest-missing$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(missingBefore);
         const priorRoot = path.join(projectRoot, '.a3-skills/ci-github/distributions', priorRevision);
         fs.mkdirSync(priorRoot);
         fs.writeFileSync(path.join(priorRoot, 'manifest.json'), JSON.stringify({ schemaVersion: '1', kind: release.manifest.kind }));
         fs.writeFileSync(path.join(priorRoot, 'receipt.json'), '{}');
+        const unsupportedBefore = snapshotTree(projectRoot);
         expect(() => cliPlan(options)).toThrow(/^distribution-manifest-contract-unsupported$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(unsupportedBefore);
       });
     });
   });
@@ -283,13 +523,18 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(fs.readFileSync(workflowPath, 'utf8')).toContain('<quality-workflow-sha>');
         fs.rmSync(workflowPath);
         const plan = cliPlan(options);
-        expect(plan.actions.every((entry) => entry.generatedSha256 !== entry.sourceSha256)).toBe(true);
-        expect(plan.actions[0].generatedContent).toContain(`ci-quality.yml@${sourceRevision}`);
-        expect(plan.actions[0].generatedContent).not.toMatch(/<[a-zA-Z][a-zA-Z0-9._-]*>/);
+        expect(plan.actions.map((entry) => entry.action)).toStrictEqual(['create']);
+        // Consumer files that are neither plan destinations nor distribution state.
+        const plannedPaths = plan.actions.map((entry) => entry.destination);
+        const unplannedTree = () => Object.fromEntries(Object.entries(snapshotTree(projectRoot)).filter(([entry]) => {
+          const key = entry.split(path.sep).join('/').replace(/\/$/, '');
+          return !key.startsWith('.a3-skills') && !plannedPaths.some((destination) => destination === key || destination.startsWith(`${key}/`));
+        }));
+        const unplannedBefore = unplannedTree();
         const applied = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
         expect(applied.nextSteps).toEqual(['generate-asset-lock', 'lint', 'preflight', 'consumer-contract-tests']);
         expect(fs.readFileSync(workflowPath, 'utf8')).toBe(plan.actions[0].generatedContent);
-        expect(fs.existsSync(path.join(projectRoot, '.ci/ci-assets.lock.json'))).toBe(false);
+        expect(unplannedTree()).toStrictEqual(unplannedBefore);
       });
     });
     // contract_id: contract.ci-selective-distribution.application
@@ -347,6 +592,44 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(snapshotTree(projectRoot)).toStrictEqual(ownedBefore);
       });
     });
+    // evidence_role: supplemental
+    // The text of a generated workflow (resolved placeholders, the fetched revision, no consumer-local runtime path and the expanded profile matrix) is the content of a plan action, not an observation of a plan, apply or rollback guarantee.
+    // contract_id: contract.ci-selective-distribution.application
+    test('generated workflows resolve the fetched revision and carry no consumer-local runtime path', async () => {
+      await withFixture('distribution-generated-workflows-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        fs.mkdirSync(path.join(projectRoot, '.ci'), { recursive: true });
+        fs.writeFileSync(path.join(projectRoot, '.ci/platform-manifest.yml'), 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]\n');
+        fs.writeFileSync(path.join(projectRoot, '.ci/quality-platforms.yml'), 'platforms: [{id: linux-x64}]\n');
+        const generated = (selection) => {
+          const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, sourceRoot: repositoryRoot, ...selection });
+          const plan = cliPlan({ projectRoot, sourceRevision, ...selection });
+          return { fetched, plan, content: Object.fromEntries(plan.actions.map((entry) => [entry.destination, entry.generatedContent])) };
+        };
+        const quality = generated({ requestedPresets: ['quality-gate'], requestedAssets: [] });
+        expect(fs.existsSync(path.join(quality.fetched.distributionRoot, 'runtime/preset/run-validate-ci-preset.mjs'))).toBeTruthy();
+        expect(quality.plan.actions.every((entry) => entry.generatedSha256 !== entry.sourceSha256)).toBe(true);
+        const qualityWorkflow = quality.content['.github/workflows/quality-gate.yml'];
+        expect(qualityWorkflow).toContain(`ci-quality.yml@${sourceRevision}`);
+        expect(qualityWorkflow).not.toMatch(/<[a-zA-Z][a-zA-Z0-9._-]*>/);
+        expect(qualityWorkflow).not.toMatch(/\.a3-skills\//);
+        const optional = generated({ requestedPresets: ['quality-gate'],
+          requestedAssets: ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'] }).content['.github/workflows/quality-gate-platforms.yml'];
+        expect(optional).toContain(`uses: a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@${sourceRevision}`);
+        expect(optional).not.toMatch(/ci-platform-matrix@|id: trusted-assets/);
+        expect(optional).not.toMatch(/CoreLoader|pyyaml|\.a3-skills\//);
+        const profiles = yaml.parse(generated({ requestedPresets: ['quality-gate-profiles'], requestedAssets: [] }).content['.github/workflows/quality-gate-profiles.yml']);
+        expect(profiles.jobs.quality.uses).toBe(`a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@${sourceRevision}`);
+        expect(profiles.jobs.quality.strategy.matrix.include.map((entry) => entry['language-profile'])).toStrictEqual(['rust', 'python']);
+        expect(profiles.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
+        const publication = generated({ requestedPresets: ['release-request', 'release-publication'], requestedAssets: [] }).content['.github/workflows/release-publication-caller.yml'];
+        expect(publication).toContain(`ci-release-publication.yml@${sourceRevision}`);
+        expect(publication).not.toMatch(/\.a3-skills\//);
+        const packageCaller = generated({ requestedPresets: ['package-publication'], requestedAssets: [] }).content['.github/workflows/package-publication-caller.yml'];
+        expect(packageCaller).toContain(`ci-package-publication.yml@${sourceRevision}`);
+      });
+    });
     // contract_id: contract.ci-selective-distribution.application
     test('workflow generation expands only a matrix include into profile maps and reads them back', () => {
       const template = 'jobs:\n  quality:\n    strategy:\n      matrix:\n        include: <quality-profiles>\n    with:\n      runner: <versioned-runner>\n      language-profile: ${{ matrix.language-profile }}\n';
@@ -380,7 +663,6 @@ describe("contract.ci-selective-distribution.application", () => {
           fs.writeFileSync(existingFile, 'consumer-owned documentation\n');
           const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
           expect(fetched.action).toBe('fetched');
-          expect(fs.existsSync(path.join(fetched.distributionRoot, 'runtime/preset/run-validate-ci-preset.mjs'))).toBeTruthy();
           expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
           const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] });
           expect(plan.actions.map((entry) => entry.action)).toStrictEqual(['create']);
@@ -397,7 +679,6 @@ describe("contract.ci-selective-distribution.application", () => {
               : [path.relative(projectRoot, path.join(directory, entry.name)).split(path.sep).join('/')]);
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.github/workflows/quality-gate.yml', 'README.md']);
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
-          expect(fs.readFileSync(workflow, 'utf8')).not.toMatch(/\.a3-skills\//);
           const rolledBack = cliRollback({ projectRoot, transactionId: applied.transactionId });
           expect(rolledBack.status).toBe('rolled-back');
           expect(rolledBack.rollbackStatus).toBe('restored');
@@ -423,10 +704,6 @@ describe("contract.ci-selective-distribution.application", () => {
             '.ci/platform-manifest.yml', '.ci/quality-platforms.yml',
             '.github/workflows/quality-gate-platforms.yml', '.github/workflows/quality-gate.yml', 'README.md',
           ]);
-          const optionalWorkflow = fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-platforms.yml'), 'utf8');
-          expect(optionalWorkflow).toContain(`uses: a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@${sourceRevision}`);
-          expect(optionalWorkflow).not.toMatch(/ci-platform-matrix@|id: trusted-assets/);
-          expect(optionalWorkflow).not.toMatch(/CoreLoader|pyyaml|\.a3-skills\//);
           for (const [relative, text] of Object.entries(configurations)) {
             expect(fs.readFileSync(path.join(projectRoot, relative), 'utf8')).toBe(text);
           }
@@ -437,10 +714,6 @@ describe("contract.ci-selective-distribution.application", () => {
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual([
             '.ci/platform-manifest.yml', '.ci/quality-platforms.yml', '.github/workflows/quality-gate-profiles.yml', 'README.md',
           ]);
-          const profilesWorkflow = yaml.parse(fs.readFileSync(path.join(projectRoot, '.github/workflows/quality-gate-profiles.yml'), 'utf8'));
-          expect(profilesWorkflow.jobs.quality.uses).toBe(`a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@${sourceRevision}`);
-          expect(profilesWorkflow.jobs.quality.strategy.matrix.include.map((entry) => entry['language-profile'])).toStrictEqual(['rust', 'python']);
-          expect(profilesWorkflow.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
           expect(cliRollback({ projectRoot, transactionId: profilesApplied.transactionId }).status).toBe('rolled-back');
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
           const releaseApplied = applySelection({ requestedPresets: ['release-request', 'release-publication'], requestedAssets: [] });
@@ -450,9 +723,6 @@ describe("contract.ci-selective-distribution.application", () => {
             '.github/workflows/release-request-tag.yml', 'README.md',
           ]);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/release-publication.yml'))).toBe(false);
-          const publication = fs.readFileSync(path.join(projectRoot, '.github/workflows/release-publication-caller.yml'), 'utf8');
-          expect(publication).toContain(`ci-release-publication.yml@${sourceRevision}`);
-          expect(publication).not.toMatch(/\.a3-skills\//);
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
           expect(cliRollback({ projectRoot, transactionId: releaseApplied.transactionId }).status).toBe('rolled-back');
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
@@ -463,8 +733,6 @@ describe("contract.ci-selective-distribution.application", () => {
           ]);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/package-publication.yml'))).toBe(false);
           expect(fs.existsSync(path.join(projectRoot, '.github/workflows/package-preparation.yml'))).toBe(false);
-          const packageCaller = fs.readFileSync(path.join(projectRoot, '.github/workflows/package-publication-caller.yml'), 'utf8');
-          expect(packageCaller).toContain(`ci-package-publication.yml@${sourceRevision}`);
           expect(fs.readFileSync(existingFile, 'utf8')).toBe('consumer-owned documentation\n');
           expect(cliRollback({ projectRoot, transactionId: packageApplied.transactionId }).status).toBe('rolled-back');
           expect(ordinaryFiles(projectRoot).sort()).toStrictEqual(['.ci/platform-manifest.yml', '.ci/quality-platforms.yml', 'README.md']);
@@ -501,6 +769,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
       await withFixture('a3-ci-github-distribution-integrity-', async (root) => {
         const release = prepareRelease(root);
         const projectRoot = createConsumer(root);
+        const before = snapshotTree(projectRoot);
         const manifest = structuredClone(release.manifest);
         manifest.files['workflows/quality/quality-gate.yml'].sha256 = '0'.repeat(64);
         const failure = failureOf(() => cliFetch({
@@ -511,7 +780,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         }));
         expect(failure.message).toBe('distribution-file-integrity-mismatch');
         expect(failure.evidence.comparison.field).toBe('workflows/quality/quality-gate.yml');
-        expect(fs.existsSync(path.join(projectRoot, '.a3-skills/ci-github/distributions', sourceRevision))).toBe(false);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
       });
     });
 
@@ -523,9 +792,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const externalRoot = path.join(root, 'external');
         fs.mkdirSync(externalRoot);
         fs.symlinkSync(externalRoot, path.join(projectRoot, '.a3-skills/ci-github/distributions'));
+        const outsideBefore = snapshotTree(externalRoot);
         expect(() => cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot }))
           .toThrow(/^distribution-local-root-outside-project$/);
-        expect(fs.readdirSync(externalRoot)).toStrictEqual([]);
+        expect(snapshotTree(externalRoot)).toStrictEqual(outsideBefore);
       });
     });
 
@@ -542,7 +812,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
         });
         expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
         fs.writeFileSync(path.join(fetched.distributionRoot, 'workflows/quality/quality-gate.yml'), 'tampered\n');
+        const before = snapshotTree(projectRoot);
         expect(() => cliVerify({ projectRoot, sourceRevision })).toThrow(/^distribution-local-file-integrity-mismatch$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
       });
     });
   });
@@ -561,11 +833,15 @@ describe("contract.ci-selective-distribution.application", () => {
         const fetchSelection = (requestedPresets, requestedAssets) => cliFetch({ projectRoot, manifestPath: release.manifestPath,
           requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
         fetchSelection([], directAssets);
+        const incompleteBefore = snapshotTree(projectRoot);
         expect(() => cliPlan({ projectRoot, sourceRevision, requestedPresets: [], requestedAssets: directAssets }))
           .toThrow(/^distribution-copy-requires-matching-preset$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(incompleteBefore);
         fetchSelection(['release-request'], []);
+        const mismatchedBefore = snapshotTree(projectRoot);
         expect(() => cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: directAssets }))
           .toThrow(/^distribution-copy-requires-matching-preset$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(mismatchedBefore);
         const optionalAssets = ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'];
         fetchSelection(['quality-gate'], optionalAssets);
         const optionalPlan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: optionalAssets });
@@ -582,41 +858,26 @@ describe("contract.ci-selective-distribution.application", () => {
         fs.mkdirSync(externalRoot);
         cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
         const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] });
+        const outsideBefore = snapshotTree(externalRoot);
         expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest, faults: { transactionHooks: [{
           status: 'applying', index: 0, replaceDirectoryWithSymlink: { directory: path.join(projectRoot, '.github'), target: externalRoot } }] } }))
           .toThrow(/^distribution-destination-outside-root$/);
-        expect(fs.readdirSync(externalRoot)).toStrictEqual([]);
+        expect(snapshotTree(externalRoot)).toStrictEqual(outsideBefore);
       });
     });
 
     // contract_id: contract.ci-selective-distribution.application
     test('partial apply failure restores files changed earlier in the transaction', async () => {
       await withFixture('a3-ci-github-distribution-partial-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-publication'], sourceRoot: repositoryRoot });
-        const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-publication'], requestedAssets: [] });
-        expect(plan.actions.length > 1).toBeTruthy();
-        const changedPath = path.join(projectRoot, plan.actions[1].destination);
-        const retainedLock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
-        const failure = failureOf(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest, faults: {
-          failRemove: [{ path: retainedLock }],
-          transactionHooks: [{ status: 'applying', index: 1, write: { path: changedPath, content: 'changed-after-plan\n' } }],
-        } }));
+        const { projectRoot, plan, changedPath, failure } = await failPartialApply(root, { retainLock: false });
         expect(failure.message).toBe('distribution-plan-input-changed');
-        expect(failure.evidence['execution-state']).toMatchObject({ cleanup: 'lock-cleanup-failed', rollback: 'restored' });
-        expect(fs.existsSync(retainedLock)).toBe(true);
-        fs.rmSync(retainedLock, { force: true });
+        expect(failure.evidence['execution-state']).toMatchObject({ rollback: 'restored' });
         expect(fs.existsSync(path.join(projectRoot, plan.actions[0].destination))).toBe(false);
         expect(fs.readFileSync(changedPath, 'utf8')).toBe('changed-after-plan\n');
         const transactionsRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions');
-        const transactionDirectories = fs.readdirSync(transactionsRoot);
-        expect(transactionDirectories.length).toBe(1);
-        const transactionPath = path.join(transactionsRoot, transactionDirectories[0], 'transaction.json');
+        const transactionPath = path.join(transactionsRoot, fs.readdirSync(transactionsRoot)[0], 'transaction.json');
         const transaction = JSON.parse(fs.readFileSync(transactionPath, 'utf8'));
-        expect(transaction.status).toBe('rolled-back');
-        expect(transaction.actions[0].state).toBe('restored');
-        expect(transaction.actions[1].state).toBe('not-applied');
+        // Reopens the apply as interrupted, so that its rollback has to leave the independent edit alone.
         transaction.status = 'rollback-required';
         fs.writeFileSync(transactionPath, `${JSON.stringify(transaction, null, 2)}\n`);
         expect(cliRollback({ projectRoot, transactionId: transaction.transactionId }).status).toBe('rolled-back');
@@ -624,41 +885,92 @@ describe("contract.ci-selective-distribution.application", () => {
       });
     });
 
+    // evidence_role: supplemental
+    // The retained lock and the transaction record are implementation records of the interrupted apply, not observations of a guarantee.
+    test('partial apply failure retains its lock and records which actions were restored', async () => {
+      await withFixture('a3-ci-github-distribution-partial-record-', async (root) => {
+        const { projectRoot, retainedLock, failure } = await failPartialApply(root, { retainLock: true });
+        expect(failure.evidence['execution-state']).toMatchObject({ cleanup: 'lock-cleanup-failed', rollback: 'restored' });
+        expect(fs.existsSync(retainedLock)).toBe(true);
+        const transactionsRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions');
+        const transactionDirectories = fs.readdirSync(transactionsRoot);
+        expect(transactionDirectories.length).toBe(1);
+        const transaction = JSON.parse(fs.readFileSync(path.join(transactionsRoot, transactionDirectories[0], 'transaction.json'), 'utf8'));
+        expect(transaction.status).toBe('rolled-back');
+        expect(transaction.actions[0].state).toBe('restored');
+        expect(transaction.actions[1].state).toBe('not-applied');
+      });
+    });
+
     // contract_id: contract.ci-selective-distribution.application
-    test('application rejects invalid ownership approval and concurrent mutation locks', async () => {
-      await withFixture('a3-ci-github-distribution-application-guards-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
-        const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
+    test('application rejects an approval digest that does not match the plan', async () => {
+      await withFixture('a3-ci-github-distribution-approval-', async (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        const before = snapshotTree(projectRoot);
+        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: '0'.repeat(64) })).toThrow(/^distribution-plan-approval-invalid$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('application rejects a plan while another mutation holds the mutation lock', async () => {
+      await withFixture('a3-ci-github-distribution-mutation-lock-', async (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        fs.writeFileSync(path.join(projectRoot, '.a3-skills/ci-github/apply.lock'), 'occupied\n');
+        const before = snapshotTree(projectRoot);
+        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-apply-locked$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('application rejects an ownership lock changed after planning', async () => {
+      await withFixture('a3-ci-github-distribution-ownership-', async (root) => {
+        const { projectRoot, options } = prepareQualityPlan(root);
         const assetLockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
         fs.mkdirSync(path.dirname(assetLockPath), { recursive: true });
         fs.writeFileSync(assetLockPath, '{"schemaVersion":"1","kind":"invalid","assets":[]}\n');
         expect(() => cliPlan(options)).toThrow(/^distribution-prior-asset-lock-invalid$/);
         fs.rmSync(assetLockPath);
         const plan = cliPlan(options);
-        const apply = () => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
-        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: '0'.repeat(64) })).toThrow(/^distribution-plan-approval-invalid$/);
-        fs.mkdirSync(path.dirname(assetLockPath), { recursive: true });
         fs.writeFileSync(assetLockPath, '{}\n');
-        expect(apply).toThrow(/^distribution-plan-ownership-changed$/);
-        fs.rmSync(assetLockPath);
+        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-plan-ownership-changed$/);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('apply rejects a transaction root redirected through a symlink', async () => {
+      await withFixture('a3-ci-github-distribution-transaction-root-', async (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        const transactionsPath = path.join(projectRoot, '.a3-skills/ci-github/transactions');
+        const externalTransactions = path.join(root, 'external-transactions');
+        fs.rmSync(transactionsPath, { recursive: true, force: true });
+        fs.mkdirSync(externalTransactions);
+        fs.symlinkSync(externalTransactions, transactionsPath);
+        const outsideBefore = snapshotTree(externalTransactions);
+        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest }))
+          .toThrow(/^distribution-transaction-root-outside-project$/);
+        expect(snapshotTree(externalTransactions)).toStrictEqual(outsideBefore);
+      });
+    });
+
+    // evidence_role: supplemental
+    // The mutation lock is a implementation record: a rejected apply leaves none, and a rollback refuses to start while another mutation holds it.
+    test('apply leaves no mutation lock after a redirected transaction root and rollback refuses a held lock', async () => {
+      await withFixture('a3-ci-github-distribution-lock-records-', async (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
         const mutationLock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
         const transactionsPath = path.join(projectRoot, '.a3-skills/ci-github/transactions');
         const externalTransactions = path.join(root, 'external-transactions');
         fs.rmSync(transactionsPath, { recursive: true, force: true });
         fs.mkdirSync(externalTransactions);
         fs.symlinkSync(externalTransactions, transactionsPath);
-        expect(apply).toThrow(/^distribution-transaction-root-outside-project$/);
+        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-transaction-root-outside-project$/);
         expect(fs.existsSync(mutationLock)).toBe(false);
         fs.rmSync(transactionsPath);
-        fs.writeFileSync(mutationLock, 'occupied\n');
-        expect(apply).toThrow(/^distribution-apply-locked$/);
-        fs.rmSync(mutationLock);
-        const applied = apply();
+        const applied = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
         fs.writeFileSync(mutationLock, 'occupied\n');
         expect(() => cliRollback({ projectRoot, transactionId: applied.transactionId })).toThrow(/^distribution-apply-locked$/);
-        fs.rmSync(mutationLock);
       });
     });
 
@@ -720,40 +1032,31 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(() => cliRollback({ projectRoot, transactionId: applied.transactionId })).toThrow(/^distribution-rollback-destination-changed$/);
         expect(fs.readFileSync(workflow, 'utf8')).toBe('name: edited-after-apply\n');
       });
+      await interruptRollback('consumer-edit', ({ thrown, diagnostic, workflow }) => {
+        expect(thrown.message).toBe(diagnostic);
+        expect(fs.readFileSync(workflow, 'utf8')).toBe('consumer edit\n');
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('rollback does not write through a destination ancestor redirected by a symlink', async () => {
+      await interruptRollback('destination-symlink', ({ thrown, diagnostic, workflow, externalRoot, outsideBefore }) => {
+        expect(thrown.message).toBe(diagnostic);
+        expect(fs.lstatSync(path.dirname(workflow)).isSymbolicLink()).toBe(true);
+        expect(snapshotTree(externalRoot)).toStrictEqual(outsideBefore);
+      });
+    });
+
+    // evidence_role: supplemental
+    // The tampered backup, the untouched workflow and the rollback-required status of the transaction record are implementation records, not observations of a guarantee.
+    test('interrupted rollback keeps a tampered backup and records that rollback is required', async () => {
       for (const scenario of ['consumer-edit', 'destination-symlink', 'backup-tamper']) {
-        await withFixture(`distribution-rollback-${scenario}-`, (root) => {
-          const projectRoot = path.join(root, 'consumer');
-          const transactionId = `1-${'a'.repeat(12)}`;
-          const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', transactionId);
-          const destination = '.github/workflows/quality-gate.yml';
-          const workflow = path.join(projectRoot, destination);
-          const backup = path.join(transactionRoot, 'before', destination);
-          const transactionPath = path.join(transactionRoot, 'transaction.json');
-          const externalRoot = path.join(root, 'external-workflows');
-          fs.mkdirSync(path.dirname(workflow), { recursive: true });
-          fs.mkdirSync(path.dirname(backup), { recursive: true });
-          fs.mkdirSync(externalRoot);
-          fs.writeFileSync(workflow, 'applied\n');
-          fs.writeFileSync(backup, 'before\n');
-          fs.writeFileSync(path.join(externalRoot, 'quality-gate.yml'), 'applied\n');
-          fs.writeFileSync(transactionPath, JSON.stringify({
-            schemaVersion: '1', kind: 'a3-ci-github-distribution-transaction', transactionId,
-            status: 'applied', actions: [{ destination, beforeSha256: sha256('before\n'),
-              afterSha256: sha256('applied\n'), state: 'applied' }],
-          }));
-          // The change lands after rollback has validated its inputs and recorded that it is restoring.
-          const change = scenario === 'consumer-edit' ? { write: { path: workflow, content: 'consumer edit\n' } }
-            : scenario === 'backup-tamper' ? { write: { path: backup, content: 'tampered backup\n' } }
-              : { replaceDirectoryWithSymlink: { directory: path.dirname(workflow), target: externalRoot } };
-          const diagnostic = scenario === 'consumer-edit' ? /^distribution-rollback-destination-changed$/
-            : scenario === 'backup-tamper' ? /^distribution-backup-integrity-mismatch$/
-              : /^distribution-destination-outside-root$/;
-          expect(() => cliRollback({ projectRoot, transactionId, faults: { transactionHooks: [{ status: 'rolling-back', ...change }] } }), scenario)
-            .toThrow(diagnostic);
-          if (scenario === 'destination-symlink') expect(fs.lstatSync(path.dirname(workflow)).isSymbolicLink()).toBe(true);
-          if (scenario === 'backup-tamper') expect(fs.readFileSync(backup, 'utf8')).toBe('tampered backup\n');
-          expect(fs.readFileSync(workflow, 'utf8'), scenario).toBe(scenario === 'consumer-edit' ? 'consumer edit\n' : 'applied\n');
-          expect(fs.readFileSync(path.join(externalRoot, 'quality-gate.yml'), 'utf8'), scenario).toBe('applied\n');
+        await interruptRollback(scenario, ({ thrown, diagnostic, workflow, backup, transactionPath }) => {
+          expect(thrown.message, scenario).toBe(diagnostic);
+          if (scenario === 'backup-tamper') {
+            expect(fs.readFileSync(backup, 'utf8')).toBe('tampered backup\n');
+            expect(fs.readFileSync(workflow, 'utf8')).toBe('applied\n');
+          }
           expect(JSON.parse(fs.readFileSync(transactionPath, 'utf8')).status, scenario).toBe('rollback-required');
         });
       }
@@ -851,40 +1154,50 @@ describe("contract.ci-selective-distribution.delivery", () => {
     // test_level: integration
     // contract_id: contract.ci-selective-distribution.delivery
     // integration_id: selective-distribution-delivery
+    test('remote fetch sends every download request to the origin that the manifest trusts', async () => {
+      // Arrange
+      await withFixture('distribution-remote-origin-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        const log = path.join(root, 'transport.log');
+
+        // Act
+        const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'],
+          faults: { transport: { sourceRoot: committedSourceRoot, sourceRevision, log } } });
+
+        // Assert
+        expect(fetched.sourceRevision).toBe(sourceRevision);
+        const requests = fs.readFileSync(log, 'utf8').trim().split('\n');
+        expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`))).toBeTruthy();
+      });
+    });
+
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.delivery
+    // integration_id: selective-distribution-delivery
     test('remote fetch rejects invalid cached state and concurrent fetch locks before transport', async () => {
       // Arrange
       await withFixture('distribution-remote-cache-rejection-', async (root) => {
         const release = prepareRelease(root);
         for (const problem of ['bytes', 'receipt', 'manifest', 'lock']) {
-          const projectRoot = createConsumer(root, problem);
-          const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
-          const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
-          let diagnostic;
-          if (problem === 'bytes') {
-            fs.appendFileSync(path.join(fetched.distributionRoot, fetched.files[0]), 'tampered');
-            diagnostic = 'distribution-local-file-integrity-mismatch';
-          } else if (problem === 'receipt') {
-            const receiptPath = path.join(fetched.distributionRoot, 'receipt.json');
-            const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
-            receipt.manifestSha256 = '0'.repeat(64);
-            fs.writeFileSync(receiptPath, JSON.stringify(receipt));
-            diagnostic = 'distribution-local-receipt-invalid';
-          } else if (problem === 'manifest') {
-            options.manifestPath = path.join(root, 'changed-manifest.json');
-            fs.writeFileSync(options.manifestPath, Buffer.concat([release.manifestBytes, Buffer.from('\n')]));
-            diagnostic = 'distribution-existing-root-conflict';
-          } else {
-            fs.writeFileSync(path.join(fetched.distributionRoot, '.fetch.lock'), 'another fetch owns this lock');
-            diagnostic = 'distribution-fetch-locked';
-          }
-          const before = snapshotTree(projectRoot);
-          const log = path.join(root, `${problem}-transport.log`);
+          // Act
+          const { projectRoot, diagnostic, thrown, before } = rejectCachedState(root, release, problem);
 
-          // Act / Assert
-          expect(() => cliFetch({ ...options, faults: { transport: { log, failure: 'transport must not be called' } } }), problem)
-            .toThrow(new RegExp(`^${diagnostic}$`));
-          expect(fs.existsSync(log), problem).toBe(false);
+          // Assert
+          expect(thrown.message, problem).toBe(diagnostic);
           expect(snapshotTree(projectRoot), problem).toEqual(before);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    test('remote fetch rejects invalid cached state without calling the transport', async () => {
+      await withFixture('distribution-remote-cache-transport-', async (root) => {
+        const release = prepareRelease(root);
+        for (const problem of ['bytes', 'receipt', 'manifest', 'lock']) {
+          expect(fs.existsSync(rejectCachedState(root, release, problem).log), problem).toBe(false);
         }
       });
     });
@@ -896,36 +1209,33 @@ describe("contract.ci-selective-distribution.delivery", () => {
     test('remote fetch preserves prior state and releases its lock after an extension fails', async () => {
       // Arrange
       await withFixture('distribution-remote-extension-failure-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'],
-          sourceRoot: committedSourceRoot });
-        const before = snapshotTree(projectRoot);
-        const transport = { sourceRoot: committedSourceRoot, sourceRevision };
-        const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'] };
+        // Act
+        const { release, projectRoot, before, failure, requests } = failExtensionFetch(root);
 
-        const lockPath = path.join(fetched.distributionRoot, '.fetch.lock');
-        const report = path.join(root, 'probe.jsonl');
-        const peerLog = path.join(root, 'peer-transport.log');
-        const peer = { call: 1, ...cliFetchPeer({ ...options, faults: { transport: { log: peerLog, failure: 'peer transport must not be called' } } }) };
-
-        // Act / Assert
-        const failure = failureOf(() => cliFetch({ ...options, faults: { transport: { ...transport, failFromCall: 2, probe: { lockPath, report, peer } } } }));
+        // Assert
         expect(failure.message).toBe('distribution-download-failed');
-        const probes = fs.readFileSync(report, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+        expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`))).toBeTruthy();
+        expect(snapshotTree(projectRoot)).toEqual(before);
+      });
+    });
+
+    // evidence_role: supplemental
+    // The fetch lock, the rejected peer fetch, the peer transport and the recovery are implementation mechanisms of a failed extension, not observations of a guarantee.
+    test('failed extension fetch keeps the peer off the transport, releases its lock and recovers on retry', async () => {
+      await withFixture('distribution-remote-extension-record-', async (root) => {
+        const { projectRoot, options, transport, lockPath, peerLog, probes } = failExtensionFetch(root);
         // The failing extension download is retried by the CLI, so every attempt after the first call must still hold the lock.
         expect(probes.length).toBeGreaterThan(1);
         expect(probes.every(({ lockPresent }) => lockPresent)).toBe(true);
         expect(probes[0].peer.status).toBe(2);
         expect(JSON.parse(probes[0].peer.stderr).diagnostic).toBe('distribution-fetch-locked');
         expect(fs.existsSync(peerLog)).toBe(false);
-        expect(snapshotTree(projectRoot)).toEqual(before);
-        expect(fs.existsSync(path.join(fetched.distributionRoot, '.fetch.lock'))).toBe(false);
+        expect(fs.existsSync(lockPath)).toBe(false);
         expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
         const recovered = cliFetch({ ...options, faults: { transport } });
         expect(recovered.action).toBe('merged');
         expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
-        expect(fs.existsSync(path.join(fetched.distributionRoot, '.fetch.lock'))).toBe(false);
+        expect(fs.existsSync(lockPath)).toBe(false);
       });
     });
 
@@ -933,26 +1243,31 @@ describe("contract.ci-selective-distribution.delivery", () => {
     // test_level: integration
     // contract_id: contract.ci-selective-distribution.delivery
     // integration_id: selective-distribution-delivery
-    test('fetch removes staging even when closing or removing its owned lock fails', async () => {
+    test('fetch rejects with the owned lock cleanup failure when closing or removing its lock fails', async () => {
       // Arrange
       await withFixture('distribution-lock-cleanup-failure-', async (root) => {
         const release = prepareRelease(root);
         for (const operation of ['close', 'remove']) {
-          const projectRoot = createConsumer(root, operation);
-          const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
-          const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
-          const lockPath = path.join(fetched.distributionRoot, '.fetch.lock');
-          const stateRoot = path.join(projectRoot, '.a3-skills/ci-github');
-          const log = path.join(root, `${operation}-transport.log`);
-          const faults = { transport: { log, failure: 'transport must not be called' },
-            ...(operation === 'close' ? { failClose: [{ path: lockPath }] } : { failRemove: [{ path: lockPath }] }) };
+          // Act
+          const { projectRoot, failure, before } = failLockCleanup(root, release, operation);
 
-          // Act / Assert
-          const failure = failureOf(() => cliFetch({ ...options, faults }));
+          // Assert
           expect(failure.message, operation).toBe('distribution-lock-cleanup-failed');
           expect(failure.evidence['execution-state'].cleanupFailures, operation).toEqual([operation === 'close' ? 'lock-close' : 'lock-remove']);
+          expect(consumerTree(projectRoot), operation).toEqual(before);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // Calling the transport and leaving a staging directory are implementation mechanisms of the fetch, not observations of a guarantee.
+    test('fetch removes staging and skips the transport even when closing or removing its owned lock fails', async () => {
+      await withFixture('distribution-lock-cleanup-record-', async (root) => {
+        const release = prepareRelease(root);
+        for (const operation of ['close', 'remove']) {
+          const { projectRoot, log } = failLockCleanup(root, release, operation);
           expect(fs.existsSync(log), operation).toBe(false);
-          expect(fs.readdirSync(stateRoot).filter((name) => name.startsWith('.staging-')), operation).toEqual([]);
+          expect(fs.readdirSync(path.join(projectRoot, '.a3-skills/ci-github')).filter((name) => name.startsWith('.staging-')), operation).toEqual([]);
         }
       });
     });
@@ -968,7 +1283,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           const projectRoot = createConsumer(root, operation);
           const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
           const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
-          const before = snapshotTree(fetched.distributionRoot);
+          const before = consumerTree(projectRoot);
           const failRemove = [
             ...(operation !== 'staging' ? [{ path: path.join(fetched.distributionRoot, '.fetch.lock') }] : []),
             ...(operation !== 'lock' ? [{ pattern: '[\\\\/]\\.staging-[^\\\\/]+$' }] : []),
@@ -979,9 +1294,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
           expect(failure.evidence['execution-state'].write, operation).toBe('not-started');
           expect(failure.evidence['execution-state'].cleanupFailures, operation).toEqual(operation === 'lock' ? ['lock-remove']
             : operation === 'staging' ? ['staging-remove'] : ['lock-remove', 'staging-remove']);
-          const after = snapshotTree(fetched.distributionRoot);
-          delete after['.fetch.lock'];
-          expect(after, operation).toEqual(before);
+          expect(consumerTree(projectRoot), operation).toEqual(before);
           expect(cliVerify({ projectRoot, sourceRevision }).status, operation).toBe('verified');
         }
       });
@@ -994,22 +1307,20 @@ describe("contract.ci-selective-distribution.delivery", () => {
     test('explicit source root remains validated when a verified distribution already exists', async () => {
       // Arrange
       await withFixture('distribution-repeat-source-validation-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        const options = { projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'] };
-        const fetched = cliFetch({ ...options, sourceRoot: committedSourceRoot });
-        const sourceRoot = path.join(root, 'invalid-source');
-        const invalidFile = path.join(sourceRoot, fetched.files[0]);
-        fs.mkdirSync(path.dirname(invalidFile), { recursive: true });
-        fs.writeFileSync(invalidFile, 'invalid explicit source bytes');
-        const before = snapshotTree(projectRoot);
-        const log = path.join(root, 'transport.log');
+        // Act
+        const { projectRoot, thrown, before } = rejectInvalidSourceRoot(root);
 
-        // Act / Assert
-        expect(() => cliFetch({ ...options, sourceRoot, faults: { transport: { log, failure: 'transport must not be called' } } }))
-          .toThrow(/^distribution-file-integrity-mismatch$/);
-        expect(fs.existsSync(log)).toBe(false);
+        // Assert
+        expect(thrown.message).toBe('distribution-file-integrity-mismatch');
         expect(snapshotTree(projectRoot)).toEqual(before);
+      });
+    });
+
+    // evidence_role: supplemental
+    // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    test('explicit source root rejection does not call the transport', async () => {
+      await withFixture('distribution-repeat-source-transport-', async (root) => {
+        expect(fs.existsSync(rejectInvalidSourceRoot(root).log)).toBe(false);
       });
     });
   });
@@ -1026,29 +1337,23 @@ describe("contract.ci-selective-distribution.delivery", () => {
     test('remote fetch rejects invalid redirect and transport responses without publishing consumer assets', async () => {
       // Arrange
       await withFixture('distribution-remote-rejection-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        fs.writeFileSync(path.join(projectRoot, 'README.md'), 'project-owned content');
-        const before = snapshotTree(projectRoot);
-        const cases = [
-          ['missing Location', { status: 302 }, 'distribution-download-redirect-location-missing'],
-          ['untrusted redirect', { status: 302, location: 'https://example.invalid/asset' }, 'distribution-download-redirect-untrusted'],
-          ['insecure redirect', { status: 302, location: 'http://raw.githubusercontent.com/asset' }, 'distribution-download-redirect-untrusted'],
-          ['HTTP failure', { status: 404 }, 'http-404'],
-          ['opaque transport failure', { failure: 'transport unavailable' }, 'network-result-unknown'],
-        ];
-        for (const [index, [label, response, observed]] of cases.entries()) {
-          const log = path.join(root, `transport-${index}.log`);
-          // Act / Assert
-          const failure = failureOf(() => cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'],
-            faults: { transport: { log, ...response } } }));
+        // Act
+        const { release, projectRoot, before, results } = failDownloads(root);
+        for (const { label, failure, observed, requests, after } of results) {
+          // Assert
           expect(failure.message, label).toBe('distribution-download-failed');
           expect(failure.evidence.comparison.observed, label).toBe(observed);
-          const requests = fs.readFileSync(log, 'utf8').trim().split('\n');
-          expect(requests.length > 0, label).toBeTruthy();
           expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`)), label).toBeTruthy();
-          expect(snapshotTree(projectRoot), label).toStrictEqual(before);
+          expect(after, label).toStrictEqual(before);
         }
+      });
+    });
+
+    // evidence_role: supplemental
+    // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    test('remote fetch calls the transport before a failed download is rejected', async () => {
+      await withFixture('distribution-remote-rejection-requests-', async (root) => {
+        for (const { label, requests } of failDownloads(root).results) expect(requests.length > 0, label).toBeTruthy();
       });
     });
   });
@@ -1103,33 +1408,13 @@ describe("contract.ci-selective-distribution.application", () => {
     test('approved plans reuse identical workflows update owned bytes and reject unmanaged changes', async () => {
       // Arrange
       await withFixture('distribution-owned-update-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        const projectDocument = path.join(projectRoot, 'README.md');
-        fs.writeFileSync(projectDocument, 'project-owned content');
-        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
-        const options = { projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] };
-        const initial = cliPlan(options);
-        cliApply({ projectRoot, planPath: initial.planPath, approvalDigest: initial.planDigest });
-        const workflowPath = '.github/workflows/quality-gate.yml';
-        const workflow = path.join(projectRoot, workflowPath);
-        const canonical = fs.readFileSync(workflow);
-        const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
-        fs.mkdirSync(path.dirname(lockPath));
-        const writeOwnership = (bytes) => fs.writeFileSync(lockPath, JSON.stringify({
-          schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
-          generatedAt: '2026-01-01T00:00:00Z',
-          assets: [{ path: workflowPath, canonicalSha256: sha256(canonical), appliedSha256: sha256(bytes) }],
-        }));
-        writeOwnership(canonical);
+        const { projectRoot, projectDocument, options, workflow, canonical, lockPath, writeOwnership } = prepareOwnedWorkflow(root);
         const reuse = cliPlan(options);
         // Act
         const reused = cliApply({ projectRoot, planPath: reuse.planPath, approvalDigest: reuse.planDigest });
         // Assert
         expect(reuse.actions.map((entry) => entry.action)).toStrictEqual(['reuse']);
         expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
-        const reusedTransaction = path.join(projectRoot, '.a3-skills/ci-github/transactions', reused.transactionId);
-        expect(JSON.parse(fs.readFileSync(path.join(reusedTransaction, 'transaction.json'), 'utf8')).actions).toStrictEqual([]);
         cliRollback({ projectRoot, transactionId: reused.transactionId });
         expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
         // Arrange
@@ -1146,8 +1431,6 @@ describe("contract.ci-selective-distribution.application", () => {
         // Assert
         expect(update.actions.map((entry) => entry.action)).toStrictEqual(['update']);
         expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
-        const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', updated.transactionId);
-        expect(fs.readFileSync(path.join(transactionRoot, 'before', workflowPath))).toStrictEqual(oldManagedBytes);
         expect(fs.readFileSync(lockPath)).toStrictEqual(ownershipBefore);
         // Act
         const rolledBack = cliRollback({ projectRoot, transactionId: updated.transactionId });
@@ -1167,6 +1450,26 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(snapshotTree(projectRoot)).toStrictEqual(before);
       });
     });
+
+    // evidence_role: supplemental
+    // The transaction record layout is an implementation mechanism of apply and rollback, not an observation of a guarantee.
+    test('reuse records no transaction action and update backs up the owned bytes', async () => {
+      await withFixture('distribution-owned-transaction-', async (root) => {
+        const { projectRoot, options, workflowPath, workflow, canonical, writeOwnership } = prepareOwnedWorkflow(root);
+        const reuse = cliPlan(options);
+        const reused = cliApply({ projectRoot, planPath: reuse.planPath, approvalDigest: reuse.planDigest });
+        const reusedTransaction = path.join(projectRoot, '.a3-skills/ci-github/transactions', reused.transactionId);
+        expect(JSON.parse(fs.readFileSync(path.join(reusedTransaction, 'transaction.json'), 'utf8')).actions).toStrictEqual([]);
+        cliRollback({ projectRoot, transactionId: reused.transactionId });
+        const oldManagedBytes = Buffer.from(canonical.toString('utf8').replaceAll('ubuntu-24.04', 'ubuntu-22.04'));
+        fs.writeFileSync(workflow, oldManagedBytes);
+        writeOwnership(oldManagedBytes);
+        const update = cliPlan(options);
+        const updated = cliApply({ projectRoot, planPath: update.planPath, approvalDigest: update.planDigest });
+        const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', updated.transactionId);
+        expect(fs.readFileSync(path.join(transactionRoot, 'before', workflowPath))).toStrictEqual(oldManagedBytes);
+      });
+    });
   });
 });
 
@@ -1180,18 +1483,19 @@ describe('contract.ci-selective-distribution.application', () => {
     // integration_id: selective-distribution-recovery
     test('rollback retains its original rejection when owned lock cleanup fails', async () => {
       await withFixture('distribution-rollback-cleanup-', async (projectRoot) => {
-        const stateRoot = path.join(projectRoot, '.a3-skills/ci-github');
-        fs.mkdirSync(stateRoot, { recursive: true });
-        const existing = path.join(projectRoot, 'existing-state');
-        fs.writeFileSync(existing, 'preserved\n');
-        const transactionId = '1-123456789abc';
-        expect(() => cliRollback({ projectRoot, transactionId })).toThrow(/^distribution-transaction-missing$/);
-        const lock = path.join(stateRoot, 'apply.lock');
-        const failure = failureOf(() => cliRollback({ projectRoot, transactionId, faults: { failRemove: [{ path: lock }] } }));
+        const { failure, transactionId } = failRollbackCleanup(projectRoot);
         expect(failure.message).toBe('distribution-transaction-missing');
         expect(failure.evidence['evidence-location'].transaction).toBe(transactionId);
         expect(failure.evidence['execution-state']).toMatchObject({ write: 'not-started', rollback: 'unavailable',
           cleanup: 'lock-cleanup-failed', cleanupFailures: ['lock-remove'] });
+      });
+    });
+
+    // evidence_role: supplemental
+    // The retained lock and the preserved state file are side effects of the failed cleanup, not observations of a guarantee.
+    test('rollback of a missing transaction keeps its lock and the existing state file when lock cleanup fails', async () => {
+      await withFixture('distribution-rollback-cleanup-record-', async (projectRoot) => {
+        const { lock, existing } = failRollbackCleanup(projectRoot);
         expect(fs.existsSync(lock)).toBe(true);
         expect(fs.readFileSync(existing, 'utf8')).toBe('preserved\n');
       });
@@ -1205,22 +1509,24 @@ describe('contract.ci-selective-distribution.application', () => {
       await withFixture('distribution-completed-cleanup-', async (root) => {
         const release = prepareRelease(root);
         for (const operation of ['apply', 'rollback']) {
-          const projectRoot = createConsumer(root, operation);
-          cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
-          const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
-          const lock = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
-          const faults = { failRemove: [{ path: lock }] };
-          const apply = (options) => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest, ...options });
-          const applied = operation === 'rollback' ? apply() : undefined;
-          const failure = failureOf(() => (operation === 'apply' ? apply({ faults })
-            : cliRollback({ projectRoot, transactionId: applied.transactionId, faults })));
+          const { failure } = failCompletedCleanup(root, release, operation);
           expect(failure.message, operation).toBe('distribution-lock-cleanup-failed');
           expect(failure.evidence['execution-state'].write, operation).toBe(operation === 'apply' ? 'applied' : 'rolled-back');
           expect(failure.evidence['execution-state'].rollback, operation).toBe(operation === 'apply' ? 'not-required' : 'restored');
-          const transactionId = failure.evidence['evidence-location'].transaction;
-          expect(transactionId, operation).toMatch(/^[0-9]+-[0-9a-f]{12}$/);
-          const transaction = JSON.parse(fs.readFileSync(path.join(projectRoot,
-            '.a3-skills/ci-github/transactions', transactionId, 'transaction.json'), 'utf8'));
+          expect(failure.evidence['evidence-location'].transaction, operation).toMatch(/^[0-9]+-[0-9a-f]{12}$/);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // The transaction status, the consumer files and the retained lock are side effects of the failed cleanup, not observations of a guarantee.
+    test('completed apply and rollback keep their transaction status, consumer files and lock when lock cleanup fails', async () => {
+      await withFixture('distribution-completed-cleanup-record-', async (root) => {
+        const release = prepareRelease(root);
+        for (const operation of ['apply', 'rollback']) {
+          const { projectRoot, plan, lock, failure } = failCompletedCleanup(root, release, operation);
+          const transaction = JSON.parse(fs.readFileSync(path.join(projectRoot, '.a3-skills/ci-github/transactions',
+            failure.evidence['evidence-location'].transaction, 'transaction.json'), 'utf8'));
           expect(transaction.status, operation).toBe(operation === 'apply' ? 'applied' : 'rolled-back');
           for (const entry of plan.actions) {
             const target = path.join(projectRoot, entry.destination);
@@ -1239,24 +1545,24 @@ describe('contract.ci-selective-distribution.application', () => {
     test('rollback retains the restoration error when recording recovery state also fails', async () => {
       await withFixture('distribution-rollback-record-', async (root) => {
         const release = prepareRelease(root);
-        const projectRoot = createConsumer(root);
-        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
-        const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['release-request'], requestedAssets: [] });
-        const applied = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
-        const transactionPath = path.join(projectRoot, '.a3-skills/ci-github/transactions', applied.transactionId, 'transaction.json');
-        const target = path.join(projectRoot, plan.actions.at(-1).destination);
-        const before = fs.readFileSync(target);
-        const lockPath = path.join(projectRoot, '.a3-skills/ci-github/apply.lock');
         for (const lockCleanupFails of [false, true]) {
-          const failure = failureOf(() => cliRollback({ projectRoot, transactionId: applied.transactionId, faults: {
-            failRemove: [{ path: target }, ...(lockCleanupFails ? [{ path: lockPath }] : [])],
-            failRenameAfterRemoveFailure: [{ path: transactionPath }],
-          } }));
+          const { applied, failure } = failRollbackRecord(root, release, lockCleanupFails);
           expect(failure.message).toBe('distribution-unknown-failure');
           expect(failure.evidence['evidence-location'].transaction).toBe(applied.transactionId);
           expect(failure.evidence['execution-state']).toMatchObject({ write: 'partial-output', rollback: 'failed',
             cleanup: lockCleanupFails ? 'lock-cleanup-failed' : 'transaction-record-write-failed' });
           if (lockCleanupFails) expect(failure.evidence['execution-state'].cleanupFailures).toEqual(['lock-remove']);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // The target bytes, the transaction record status and the retained lock are side effects of the failed recovery recording, not observations of a guarantee.
+    test('failed rollback recording keeps the target bytes, the rolling-back record and the lock as they were', async () => {
+      await withFixture('distribution-rollback-record-state-', async (root) => {
+        const release = prepareRelease(root);
+        for (const lockCleanupFails of [false, true]) {
+          const { transactionPath, target, before, lockPath } = failRollbackRecord(root, release, lockCleanupFails);
           expect(fs.readFileSync(target)).toEqual(before);
           expect(JSON.parse(fs.readFileSync(transactionPath, 'utf8')).status).toBe('rolling-back');
           expect(fs.existsSync(lockPath)).toBe(lockCleanupFails);

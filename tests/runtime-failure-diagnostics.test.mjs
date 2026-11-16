@@ -87,6 +87,22 @@ describe('runtime failure diagnostics', () => {
     expect(evidence.classification).toMatchObject({ subject: 'repository-action-distribution', stage: 'action-metadata', reason: 'action-runtime-missing' });
     expect(evidence.comparison).toEqual({ field: 'runs.using', expected: 'declared-runtime', observed: 'missing' });
     expect(evidence['execution-state'].write).toBe('not-started');
+  });
+
+  // evidence_role: supplemental
+  // The absent dist directory is a side effect of the failed gate, not an observation of the diagnostic guarantee.
+  // contract_id: contract.ci-failure-diagnostics.actionable
+  test('repository distribution metadata gate failure creates no dist directory', () => {
+    fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
+    const directory = fs.mkdtempSync(path.resolve('tests/tmp/dist-absence-'));
+    onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(directory, 'actions/broken'), { recursive: true });
+    fs.writeFileSync(path.join(directory, 'actions/broken/action.yml'), 'name: broken\n');
+    for (const file of ['runtime/repository/check-action-dist.mjs', 'runtime/diagnostics/failure.mjs']) {
+      fs.mkdirSync(path.dirname(path.join(directory, file)), { recursive: true });
+      fs.copyFileSync(path.join(root, file), path.join(directory, file));
+    }
+    spawnSync(process.execPath, [path.join(directory, 'runtime/repository/check-action-dist.mjs')], { cwd: directory, encoding: 'utf8' });
     expect(fs.existsSync(path.join(directory, 'actions/broken/dist'))).toBe(false);
   });
 

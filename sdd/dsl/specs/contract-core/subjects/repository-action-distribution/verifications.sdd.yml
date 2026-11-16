@@ -91,6 +91,8 @@ cases:
     input:
       tag: v1.2.3
       repository-version: 01.2.3
+    verifies:
+      - diagnostic-failure-stage-release-version
   - contract_id: contract.repository-action-distribution.release-version
     id: alias-update-invalid-hotfix-tip-advanced
     partition: runtime-context.repository-release-alias-update-invalid
@@ -112,6 +114,7 @@ cases:
       integration: next patch of a release whose hotfix was squash-integrated into main
     verifies:
       - alias-source-integrated
+      - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     id: alias-update-valid-main-tip-tree
     partition: runtime-context.repository-release-alias-update-valid
@@ -121,6 +124,7 @@ cases:
       main-tip-tree: same-as-approved-source-tree
     verifies:
       - alias-source-integrated
+      - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     id: alias-update-valid-canonical-hotfix-tip
     partition: runtime-context.repository-release-alias-update-valid
@@ -130,6 +134,7 @@ cases:
       branch-tip: canonical next-patch hotfix tip not yet integrated into main
     verifies:
       - alias-source-integrated
+      - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     id: alias-update-invalid-historical-squash
     partition: runtime-context.repository-release-alias-update-invalid
@@ -157,3 +162,29 @@ cases:
     input:
       tag: v1.2.3
       remote-alias-push: rejected by the remote
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-applied-new-aliases
+    partition: runtime-context.repository-release-alias-update-applied
+    input:
+      tag: v1.2.3
+      validation-mode: update
+      alias-state: absent
+    verifies:
+      - alias-follows-newest-release
+      - immutable-release-tags-preserved
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-applied-published-hotfix-squash
+    partition: runtime-context.repository-release-alias-update-applied
+    input:
+      tag: v1.2.4
+      validation-mode: update
+      integration: next patch of a release whose hotfix was squash-integrated into main
+  - contract_id: contract.repository-action-distribution.release-version
+    id: alias-update-applied-never-regresses
+    partition: runtime-context.repository-release-alias-update-applied
+    input:
+      tag: v1.2.3
+      validation-mode: update
+      alias-state: major alias already at a newer release
+    verifies:
+      - alias-follows-newest-release

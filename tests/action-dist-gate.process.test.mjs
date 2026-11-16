@@ -7,6 +7,8 @@ import { root } from "./action-dist-gate.fixtures.mjs";
 
 describe("contract.repository-action-distribution.integrity", () => {
   describe("repository-action-distribution-gates", () => {
+    // evidence_role: supplemental
+    // Regenerating the diagnostic runtime with tsc is a build mechanism of the repository, not an observation of the distribution integrity guarantee.
     // contract_id: contract.repository-action-distribution.integrity
     // flow_id: repository-action-distribution-gates
     test('diagnostic runtime regenerates native JavaScript and declarations from strict source', () => {
@@ -35,6 +37,8 @@ describe("contract.repository-action-distribution.integrity", () => {
       } finally { rmSync(fixture, { recursive: true, force: true }); }
     });
 
+    // evidence_role: supplemental
+    // Forwarding the CI option to ncc is a build mechanism of the installer, not an observation of the distribution integrity guarantee.
     // contract_id: contract.repository-action-distribution.integrity
     // flow_id: repository-action-distribution-gates
     test('installer build forwards the CI option to both ncc entries without changing normal builds', (t) => {
@@ -101,10 +105,15 @@ describe("contract.repository-action-distribution.integrity", () => {
 
     // contract_id: contract.repository-action-distribution.integrity
     // flow_id: repository-action-distribution-gates
-    test('gate CLI rejects a build that leaves an untracked dist file', (t) => {
-      const gate = gateFixture(t, { buildWrites: 'runtime/rust-release/dist/extra.mjs' });
+    test('gate CLI accepts a consistent distribution', (t) => {
       const accepted = gateFixture(t);
       expect(accepted.run().status).toBe(0);
+    });
+
+    // contract_id: contract.repository-action-distribution.integrity
+    // flow_id: repository-action-distribution-gates
+    test('gate CLI rejects a build that leaves an untracked dist file', (t) => {
+      const gate = gateFixture(t, { buildWrites: 'runtime/rust-release/dist/extra.mjs' });
       const rejected = gate.run();
       expect(rejected.status).not.toBe(0);
       expect(rejected.evidence.classification).toMatchObject({ subject: 'repository-action-distribution', stage: 'distribution-inventory', reason: 'dist-untracked' });

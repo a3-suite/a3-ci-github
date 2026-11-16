@@ -964,6 +964,16 @@ describe('repository installer CI result gate', () => {
 
 describe("contract.ci-selective-distribution.publication", () => {
   describe("repository-selective-distribution-release", () => {
+    // evidence_role: supplemental
+    // The step order is a workflow structure, not an observation of the dispatch guarantee.
+    // contract_id: contract.ci-selective-distribution.release-dispatch
+    test('repository release verifies the dispatch ref before checking out the tagged release', () => {
+      const steps = yaml.parse(read('.github/workflows/release.yml')).jobs['prepare-distribution'].steps;
+      const guardIndex = steps.findIndex((step) => step.name === 'Verify dispatch ref is the release tag');
+      expect(guardIndex).toBeGreaterThanOrEqual(0);
+      expect(guardIndex).toBeLessThan(steps.findIndex((entry) => entry.name === 'Checkout tagged release'));
+    });
+
     // contract_id: contract.ci-selective-distribution.release-dispatch
     // integration_id: repository-selective-distribution-release
     test('repository release accepts only a dispatch from the requested release tag', () => {
@@ -972,7 +982,6 @@ describe("contract.ci-selective-distribution.publication", () => {
       const guardIndex = steps.findIndex((step) => step.name === 'Verify dispatch ref is the release tag');
       const step = steps[guardIndex];
       expect(step.env).toEqual({ RELEASE_TAG: '${{ inputs.release-tag }}', DISPATCH_REF: '${{ github.ref }}' });
-      expect(guardIndex).toBeLessThan(steps.findIndex((entry) => entry.name === 'Checkout tagged release'));
       // Act
       const execute = (dispatchRef) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
         encoding: 'utf8', env: { ...process.env, RELEASE_TAG: 'v1.2.3', DISPATCH_REF: dispatchRef }, timeout: spawnTimeoutMs,

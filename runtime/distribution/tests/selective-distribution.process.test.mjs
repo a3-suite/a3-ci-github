@@ -6,10 +6,25 @@ import { expect, test, describe } from 'vitest';
 import { pathToFileURL } from 'node:url';
 import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection, rollbackDistributionTransaction, validateDistributionManifest, verifyFetchedDistribution } from '../fetch-a3-ci-github.mjs';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
-import { cliRollback, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
+import { cliFetch, cliRollback, cliVerify, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
+    // contract_id: contract.ci-selective-distribution.release-generation
+    test('release generator records the source revision and binds every manifest file digest and size to its source file', async () => {
+      await withFixture('a3-ci-github-distribution-release-source-', (root) => {
+        const manifest = validateDistributionManifest(generateRelease(root).manifest);
+        expect(manifest.sourceRevision).toBe(sourceRevision);
+        for (const [relative, entry] of Object.entries(manifest.files)) {
+          const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
+          expect(entry.sha256, relative).toBe(sha256(bytes));
+          expect(entry.size, relative).toBe(bytes.length);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // The deterministic bytes, the selected asset sets, the checksum file and the skills package of a generated release are the content of the release, not observations of a generation guarantee.
     // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator derives deterministic selective assets and checksums from registries', async () => {
       await withFixture('a3-ci-github-distribution-release-', (root) => {
@@ -19,7 +34,6 @@ describe("contract.ci-selective-distribution.delivery", () => {
           expect(fs.readFileSync(path.join(first.output, filename))).toEqual(fs.readFileSync(path.join(baseline.output, filename)));
         }
         const manifest = validateDistributionManifest(first.manifest);
-        expect(manifest.sourceRevision).toBe(sourceRevision);
         for (const binding of Object.values(manifest.reusableWorkflows)) {
           expect(binding.sourceRevision).toBe(sourceRevision);
           expect(binding).not.toHaveProperty('acceptance');
@@ -27,19 +41,6 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(manifest.assets.some((asset) => asset.id === 'runtime.preset')).toBeTruthy();
         expect(manifest.assets.some((asset) => asset.id === 'workflow.quality-gate')).toBeTruthy();
         expect(manifest.files['skills/ci-github/references/ci-script-contracts.reference.yml']).toBeTruthy();
-        for (const relative of [
-          'skills/ci-github/references/release-publication-evidence.reference.yml',
-          'runtime/release-publication/evidence.schema.json',
-          'runtime/preset/action-availability.ts',
-          '.github/workflows/ci-quality-platforms.yml',
-          '.github/workflows/ci-package-preparation.yml',
-          '.github/workflows/ci-release-publication.yml',
-          '.github/workflows/ci-package-publication.yml',
-        ]) {
-          const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
-          expect(manifest.files[relative].sha256).toBe(sha256(bytes));
-          expect(manifest.files[relative].size).toBe(bytes.length);
-        }
         const publication = resolveDistributionSelection(manifest, ['release-publication'], []);
         const publicationFiles = publication.flatMap((asset) => asset.files.map((file) => file.sourcePath));
         const releaseEvidenceFiles = [
@@ -87,6 +88,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
+    // evidence_role: supplemental
+    // Resolving the reusable workflow callee from fetched sources is a runtime preflight mechanism, not an observation of a delivery guarantee.
     // contract_id: contract.ci-selective-distribution.delivery
     test('each selected callee resolves from fetched sources and missing sources remain rejected', async () => {
       await withFixture('a3-ci-github-distribution-callee-preflight-', async (root) => {
@@ -169,6 +172,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(invalidSha.status).toBe(2);
         expect(invalidSha.stderr).toMatch(/distribution-release-source-revision-invalid/);
+        expect(fs.existsSync(path.join(root, 'invalid-sha'))).toBe(false);
         const invalidTag = execute([
           '--output-directory', path.join(root, 'invalid-tag'),
           '--source-revision', sourceRevision,
@@ -176,6 +180,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(invalidTag.status).toBe(2);
         expect(invalidTag.stderr).toMatch(/distribution-release-tag-invalid/);
+        expect(fs.existsSync(path.join(root, 'invalid-tag'))).toBe(false);
         const versionMismatch = execute([
           '--output-directory', path.join(root, 'version-mismatch'),
           '--source-revision', sourceRevision,
@@ -183,6 +188,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(versionMismatch.status).toBe(2);
         expect(versionMismatch.stderr).toMatch(/distribution-release-version-mismatch/);
+        expect(fs.existsSync(path.join(root, 'version-mismatch'))).toBe(false);
         const headMismatch = execute([
           '--output-directory', path.join(root, 'head-mismatch'),
           '--source-revision', 'e'.repeat(40),
@@ -190,8 +196,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(headMismatch.status).toBe(2);
         expect(headMismatch.stderr).toMatch(/distribution-release-source-head-mismatch/);
+        expect(fs.existsSync(path.join(root, 'head-mismatch'))).toBe(false);
         const existingOutput = path.join(root, 'existing');
         fs.mkdirSync(existingOutput);
+        const existingBefore = snapshotTree(existingOutput);
         const outputConflict = execute([
           '--output-directory', existingOutput,
           '--source-revision', sourceRevision,
@@ -199,6 +207,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(outputConflict.status).toBe(2);
         expect(outputConflict.stderr).toMatch(/distribution-release-output-exists/);
+        expect(snapshotTree(existingOutput)).toEqual(existingBefore);
         // Arrange
         const linkedSource = path.join(root, 'linked-source');
         const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8', timeout: 5000 });
@@ -264,6 +273,8 @@ describe("contract.ci-selective-distribution.selection", () => {
 
 describe("contract.ci-selective-distribution.application", () => {
   describe('provider-pin-companion', () => {
+    // evidence_role: supplemental
+    // The asset lock and the preflight consume the applied companions; they are not observations of a plan or apply guarantee.
     // contract_id: contract.ci-selective-distribution.application
     // contract_id: contract.ci-preset-assurance.asset-lock
     test('Release and Package generated companions support lock and preflight without fixture pin injection', async () => {
@@ -493,6 +504,37 @@ describe("contract.ci-selective-distribution.delivery", () => {
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
+    test('fetched selections deliver only the files of their closures and the merged distribution stays verified', async () => {
+      await withFixture('a3-ci-github-distribution-closure-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const fetch = (requestedPresets, requestedAssets = []) => cliFetch({ projectRoot, manifestPath: release.manifestPath,
+          requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
+        const closure = (assets) => resolveDistributionSelection(release.manifest, ['release-request', 'quality-gate'], assets);
+        const undelivered = (distributionRoot, assets) => {
+          const closureFiles = new Set(closure(assets).flatMap((asset) => asset.files.map((file) => file.sourcePath)));
+          return fs.readdirSync(distributionRoot, { recursive: true, withFileTypes: true })
+            .filter((entry) => entry.isFile())
+            .map((entry) => path.relative(distributionRoot, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
+            .filter((relative) => !['manifest.json', 'receipt.json'].includes(relative))
+            .filter((relative) => !closureFiles.has(relative));
+        };
+        fetch(['release-request']);
+        const quality = fetch(['quality-gate']);
+        expect(quality.selectedAssets).toStrictEqual(closure([]).map((asset) => asset.id).sort());
+        expect(undelivered(quality.distributionRoot, [])).toStrictEqual([]);
+        expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+        const merged = fetch(['quality-gate'], ['runtime.adapter-materializer']);
+        expect(merged.action).toBe('merged');
+        expect(undelivered(merged.distributionRoot, ['runtime.adapter-materializer'])).toStrictEqual([]);
+        expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+      });
+    });
+
+    // evidence_role: supplemental
+    // The asset lock, the preflight and the adapter materializer consume the delivered files; they are not observations of a delivery or verification guarantee.
+    // contract_id: contract.ci-selective-distribution.delivery
     test('selected distribution runs preflight and lock without materializer and supports its later acquisition', async () => {
       await withFixture('a3-ci-github-distribution-runtime-', async (root) => {
         const release = prepareRelease(root);
@@ -522,13 +564,6 @@ describe("contract.ci-selective-distribution.delivery", () => {
           manifestBytes: release.manifestBytes, requestedPresets: ['quality-gate'], requestedAssets: [], sourceRoot: repositoryRoot });
         const materializer = path.join(quality.distributionRoot, 'runtime/adapter/materialize-adapter-bundle.ts');
         expect(fs.existsSync(materializer)).toBe(false);
-        const closureFiles = new Set(resolveDistributionSelection(release.manifest, ['release-request', 'quality-gate'], [])
-          .flatMap((asset) => asset.files.map((file) => file.sourcePath)));
-        const deliveredFiles = fs.readdirSync(quality.distributionRoot, { recursive: true, withFileTypes: true })
-          .filter((entry) => entry.isFile())
-          .map((entry) => path.relative(quality.distributionRoot, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
-          .filter((relative) => !['manifest.json', 'receipt.json'].includes(relative));
-        expect(deliveredFiles.filter((relative) => !closureFiles.has(relative))).toStrictEqual([]);
         run(`import assert from 'node:assert/strict';
       import fs from 'node:fs';
       import { resolveQualityWorkflow } from ${moduleUrl(quality.distributionRoot, 'runtime/preset/ci-preset-assets.ts')};

@@ -5,6 +5,7 @@ claims:
   - present
   - in
   - contains
+  - all
 conditions:
   - input
   - environment

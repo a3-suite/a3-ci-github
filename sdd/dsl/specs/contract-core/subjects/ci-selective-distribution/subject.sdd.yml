@@ -97,7 +97,7 @@ contracts:
           - selector: selectedAssets
             meaning: Asset identities whose selected files passed integrity validation.
           - selector: diagnostic
-            meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest.
+            meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest, or for a fetch lock that cannot be held or released.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -108,10 +108,27 @@ contracts:
         fields:
           - selector: unselected-file-count
             meaning: Number of files in the local distribution of the requested revision, other than its manifest and receipt, that belong to no asset of the closure of the selections fetched for the revision.
+      - summary: Consumer file tree without the entries owned by a fetch request, compared before and after it.
+        boundary: boundary.project-ci-assets
+        fields:
+          - selector: consumer-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after the invocation; equal or changed.
+      - summary: Download requests sent by a fetch request.
+        boundary: boundary.download-requests
+        fields:
+          - selector: download-request-origins
+            meaning: Comparison of the origin of every download request sent by the invocation with the trusted origin declared by the manifest; trusted or untrusted.
+      - summary: Files outside the project root that a project path of a fetch request resolves to.
+        boundary: boundary.outside-project-files
+        fields:
+          - selector: outside-project-files-comparison
+            meaning: Comparison of the paths and bytes of the files in the outside directory before and after the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-source-valid
       - environment: runtime-context.selective-distribution-source-invalid
+      - environment: runtime-context.selective-distribution-fetch-lock-failed
+      - environment: runtime-context.distribution-path-escapes-project-root
     guarantees:
       - id: selective-distribution-receipt-exposed
         applies_to:
@@ -128,9 +145,34 @@ contracts:
       - id: selective-distribution-invalid-source-rejected
         applies_to:
           - runtime-context.selective-distribution-source-invalid
+          - runtime-context.selective-distribution-fetch-lock-failed
+          - runtime-context.distribution-path-escapes-project-root
         claim:
           field: diagnostic
           present: true
+      - id: rejected-fetch-preserves-consumer-tree
+        applies_to:
+          - runtime-context.selective-distribution-source-invalid
+          - runtime-context.selective-distribution-fetch-lock-failed
+        claim:
+          field: consumer-tree-comparison
+          in:
+            - equal
+      - id: download-requests-to-trusted-origin
+        applies_to:
+          - runtime-context.selective-distribution-source-valid
+          - runtime-context.selective-distribution-source-invalid
+        claim:
+          field: download-request-origins
+          in:
+            - trusted
+      - id: outside-project-files-preserved
+        applies_to:
+          - runtime-context.distribution-path-escapes-project-root
+        claim:
+          field: outside-project-files-comparison
+          in:
+            - equal
       - id: diagnostic-failure-stage-delivery
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -159,6 +201,8 @@ contracts:
       - summary: Verification result or rejection diagnostic of the local distribution.
         boundary: boundary.cli-result
         fields:
+          - selector: verification-status
+            meaning: Verification status that the invocation reports for the local distribution; verified.
           - selector: diagnostic
             meaning: Stable rejection reason for a local distribution file whose size or SHA-256 differs from its manifest.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -166,16 +210,36 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Consumer file tree compared before and after a verification request.
+        boundary: boundary.project-ci-assets
+        fields:
+          - selector: consumer-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
+      - environment: runtime-context.selective-distribution-source-valid
       - environment: runtime-context.selective-distribution-source-invalid
     guarantees:
+      - id: selective-distribution-fetched-distribution-verified
+        applies_to:
+          - runtime-context.selective-distribution-source-valid
+        claim:
+          field: verification-status
+          in:
+            - verified
       - id: selective-distribution-invalid-source-rejected
         applies_to:
           - runtime-context.selective-distribution-source-invalid
         claim:
           field: diagnostic
           present: true
+      - id: rejected-verification-preserves-consumer-tree
+        applies_to:
+          - runtime-context.selective-distribution-source-invalid
+        claim:
+          field: consumer-tree-comparison
+          in:
+            - equal
       - id: diagnostic-failure-stage-verification
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -187,6 +251,12 @@ contracts:
     inputs:
       - name: source-revision
         meaning: "Received by the contract target: source revision identifier."
+      - name: release-tag
+        meaning: "Received by the contract target: release tag name."
+      - name: output-destination
+        meaning: "Precondition prepared by the case: state of the directory that the generated release is written to."
+      - name: source-path
+        meaning: "Precondition prepared by the case: kind of a path in the committed repository source."
       - name: required-arguments
         meaning: "Received by the contract target: presence of the arguments required by the operation."
     observations:
@@ -202,6 +272,15 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Output destination of a release generation request.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: generated-output-comparison
+            meaning: Comparison of the paths, bytes and existence of the output destination tree before and after the invocation; equal or changed.
+          - selector: manifest-file-digest-comparison
+            meaning: Comparison of each file SHA-256 in the generated manifest with the SHA-256 of that file in the source commit; matched or mismatched.
+          - selector: manifest-file-size-comparison
+            meaning: Comparison of the size recorded for each file in the generated manifest with the size of the file at the same path in the source commit; matched or mismatched.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-release-generation-valid
@@ -219,6 +298,27 @@ contracts:
         claim:
           field: diagnostic
           present: true
+      - id: rejected-generation-preserves-output-destination
+        applies_to:
+          - runtime-context.selective-distribution-release-generation-invalid
+        claim:
+          field: generated-output-comparison
+          in:
+            - equal
+      - id: distribution-release-manifest-digests-bound-to-source
+        applies_to:
+          - runtime-context.selective-distribution-release-generation-valid
+        claim:
+          field: manifest-file-digest-comparison
+          in:
+            - matched
+      - id: distribution-release-manifest-sizes-bound-to-source
+        applies_to:
+          - runtime-context.selective-distribution-release-generation-valid
+        claim:
+          field: manifest-file-size-comparison
+          in:
+            - matched
       - id: diagnostic-failure-stage-release-generation
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -236,6 +336,14 @@ contracts:
         meaning: "Received by the contract target: release tag name."
       - name: provider-response
         meaning: "Precondition prepared by the case: response returned by the release provider for an observation, upload, readback, or finalize request."
+      - name: approved-notes
+        meaning: "Received by the contract target: owner-approved Release notes."
+      - name: prepared-assets
+        meaning: "Precondition prepared by the case: state of the prepared distribution assets."
+      - name: remote-tag-object
+        meaning: "Precondition prepared by the case: tag object that the remote reports for the release tag."
+      - name: existing-release
+        meaning: "Precondition prepared by the case: state of the Release that already exists for the tag."
     observations:
       - summary: Hosted workflow script result for exact-tag GitHub Release publication and byte readback.
         boundary: boundary.script-result
@@ -253,23 +361,79 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Release requests sent to the provider by a publish request and the Release state that the provider holds.
+        boundary: boundary.release-provider-requests
+        fields:
+          - selector: release-create-request-count
+            meaning: Number of Release creation requests sent to the provider by the invocation.
+          - selector: upload-request-count
+            meaning: Number of asset upload requests sent to the provider by the invocation.
+          - selector: release-body-comparison
+            meaning: Comparison of the body of the existing Release held by the provider before and after the invocation; equal or changed.
+          - selector: release-publication-state
+            meaning: Publication state of the Release of the tag held by the provider after the invocation; draft or published.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-publication-valid
       - environment: runtime-context.selective-distribution-publication-invalid
+      - environment: runtime-context.selective-distribution-publication-rejected-before-create
+      - environment: runtime-context.selective-distribution-publication-rejected-existing-release-notes-mismatch
+      - environment: runtime-context.selective-distribution-publication-failed-before-finalize
+      - environment: runtime-context.selective-distribution-publication-already-published
     guarantees:
       - id: selective-distribution-publication-exposed
         applies_to:
           - runtime-context.selective-distribution-publication-valid
+          - runtime-context.selective-distribution-publication-already-published
         claim:
           field: readbackStatus
           present: true
       - id: selective-distribution-publication-failure-exposed
         applies_to:
           - runtime-context.selective-distribution-publication-invalid
+          - runtime-context.selective-distribution-publication-rejected-before-create
+          - runtime-context.selective-distribution-publication-rejected-existing-release-notes-mismatch
+          - runtime-context.selective-distribution-publication-failed-before-finalize
         claim:
           field: diagnostic
           present: true
+      - id: release-not-created
+        applies_to:
+          - runtime-context.selective-distribution-publication-rejected-before-create
+          - runtime-context.selective-distribution-publication-rejected-existing-release-notes-mismatch
+        claim:
+          field: release-create-request-count
+          in:
+            - "0"
+      - id: rejected-publication-preserves-release-body
+        applies_to:
+          - runtime-context.selective-distribution-publication-rejected-existing-release-notes-mismatch
+        claim:
+          field: release-body-comparison
+          in:
+            - equal
+      - id: failed-publication-not-published
+        applies_to:
+          - runtime-context.selective-distribution-publication-failed-before-finalize
+        claim:
+          field: release-publication-state
+          in:
+            - draft
+      - id: selective-distribution-release-published
+        applies_to:
+          - runtime-context.selective-distribution-publication-valid
+          - runtime-context.selective-distribution-publication-already-published
+        claim:
+          field: release-publication-state
+          in:
+            - published
+      - id: republication-uploads-nothing
+        applies_to:
+          - runtime-context.selective-distribution-publication-already-published
+        claim:
+          field: upload-request-count
+          in:
+            - "0"
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -339,6 +503,11 @@ contracts:
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
+      - summary: Registry file that holds the implementation references.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: registry-comparison
+            meaning: Comparison of the bytes of the registry file before and after the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-reference-update-invalid
@@ -349,6 +518,13 @@ contracts:
         claim:
           field: diagnostic
           present: true
+      - id: rejected-reference-update-preserves-registry
+        applies_to:
+          - runtime-context.selective-distribution-reference-update-invalid
+        claim:
+          field: registry-comparison
+          in:
+            - equal
       - id: diagnostic-failure-stage-reference-update
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -500,6 +676,14 @@ contracts:
             meaning: Create, reuse, update, or conflict classification for canonical workflow destinations.
           - selector: stale
             meaning: Previously managed paths that the current selection excludes.
+          - selector: absent-destination-actions
+            meaning: Actions that the plan reports for canonical workflow destinations absent before planning, one per destination.
+          - selector: owned-current-destination-actions
+            meaning: Actions that the plan reports for destinations whose bytes equal the generated bytes under recorded ownership, one per destination.
+          - selector: owned-outdated-destination-actions
+            meaning: Actions that the plan reports for destinations whose bytes equal the recorded bytes and differ from the generated bytes, one per destination.
+          - selector: conflicting-destination-actions
+            meaning: Actions that the plan reports for existing destinations without recorded ownership or matching neither generated nor recorded bytes.
           - selector: diagnostic
             meaning: Diagnostic exposed for rejected planning input.
       - summary: Canonical and project-owned CI assets materialized into a consumer project.
@@ -507,6 +691,8 @@ contracts:
         fields:
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+          - selector: consumer-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after the invocation; equal or changed.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -532,6 +718,46 @@ contracts:
         claim:
           field: diagnostic
           present: true
+      - id: rejected-plan-preserves-consumer-tree
+        applies_to:
+          - runtime-context.selective-distribution-application-incomplete
+          - runtime-context.selective-distribution-plan-input-invalid
+        claim:
+          field: consumer-tree-comparison
+          in:
+            - equal
+      - id: plan-creates-absent-destinations
+        applies_to:
+          - runtime-context.selective-distribution-plan-input-valid
+        claim:
+          field: absent-destination-actions
+          all:
+            in:
+              - create
+      - id: plan-reuses-owned-current-destinations
+        applies_to:
+          - runtime-context.selective-distribution-plan-input-valid
+        claim:
+          field: owned-current-destination-actions
+          all:
+            in:
+              - reuse
+      - id: plan-updates-owned-outdated-destinations
+        applies_to:
+          - runtime-context.selective-distribution-plan-input-valid
+        claim:
+          field: owned-outdated-destination-actions
+          all:
+            in:
+              - update
+      - id: plan-reports-conflicting-destinations
+        applies_to:
+          - runtime-context.selective-distribution-plan-input-valid
+        claim:
+          field: conflicting-destination-actions
+          all:
+            in:
+              - conflict
       - id: diagnostic-failure-stage-application
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -600,6 +826,13 @@ contracts:
             meaning: Comparison of bytes and existence of consumer files that are neither a destination of the approved plan nor under the distribution state directory, before and after the apply; equal or changed.
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+          - selector: consumer-tree-comparison
+            meaning: Comparison of consumer file paths and bytes before and after the invocation; equal or changed.
+      - summary: Files outside the project root that a project path of an apply request resolves to.
+        boundary: boundary.outside-project-files
+        fields:
+          - selector: outside-project-files-comparison
+            meaning: Comparison of the paths and bytes of the files in the outside directory before and after the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.selective-distribution-application-valid
@@ -607,6 +840,7 @@ contracts:
       - environment: runtime-context.selective-distribution-plan-changed
       - environment: runtime-context.distribution-partial-apply-restorable
       - environment: runtime-context.distribution-independent-destination-stable
+      - environment: runtime-context.distribution-path-escapes-project-root
     guarantees:
       - id: selective-distribution-transaction-exposed
         applies_to:
@@ -618,9 +852,24 @@ contracts:
         applies_to:
           - runtime-context.selective-distribution-application-conflict
           - runtime-context.selective-distribution-plan-changed
+          - runtime-context.distribution-path-escapes-project-root
         claim:
           field: diagnostic
           present: true
+      - id: rejected-application-preserves-consumer-tree
+        applies_to:
+          - runtime-context.selective-distribution-application-conflict
+        claim:
+          field: consumer-tree-comparison
+          in:
+            - equal
+      - id: outside-project-files-preserved
+        applies_to:
+          - runtime-context.distribution-path-escapes-project-root
+        claim:
+          field: outside-project-files-comparison
+          in:
+            - equal
       - id: diagnostic-failure-stage-application
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -696,10 +945,16 @@ contracts:
             meaning: Comparison of bytes and existence of consumer files that are not destinations of the recorded transaction and not part of its transaction record, before and after the rollback; equal or changed.
           - selector: independent-destination-binding
             meaning: Equality of final bytes and existence with the independently modified state immediately before recovery or rejection, for consumer destinations whose modified state differs from the current identity expected by the plan or recorded transaction.
+      - summary: Files outside the project root that a project path of a rollback request resolves to.
+        boundary: boundary.outside-project-files
+        fields:
+          - selector: outside-project-files-comparison
+            meaning: Comparison of the paths and bytes of the files in the outside directory before and after the invocation; equal or changed.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.distribution-rollback-restorable
       - environment: runtime-context.distribution-independent-destination-stable
+      - environment: runtime-context.distribution-path-escapes-project-root
     guarantees:
       - id: selective-distribution-rollback-exposed
         applies_to:
@@ -726,6 +981,13 @@ contracts:
           - runtime-context.distribution-rollback-restorable
         claim:
           field: non-transaction-files-comparison
+          in:
+            - equal
+      - id: outside-project-files-preserved
+        applies_to:
+          - runtime-context.distribution-path-escapes-project-root
+        claim:
+          field: outside-project-files-comparison
           in:
             - equal
       - id: independent-destination-binding

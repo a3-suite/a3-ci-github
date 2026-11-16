@@ -84,7 +84,6 @@ describe('contract.ci-selective-distribution.publication', () => {
     const report = JSON.parse(prepared.stdout);
     expect(report).toMatchObject({ preparationOnly: true, implementationBindingStatus: 'unverified', implementationSourceRevision: f.implementation });
     expect(report.connection.diagnostics).toEqual([]);
-    expect(f.git('tag', '--list')).toBe('');
     const candidate = cli('--candidate');
     expect(candidate.error).toBeUndefined();
     expect(candidate.status).not.toBe(0);
@@ -106,18 +105,55 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(JSON.parse(invalidPin.stdout).diagnostics).toContainEqual(expect.stringContaining('registry-approved provider pin'));
   });
 
+  // evidence_role: supplemental
+  // Creating no tag is a side effect of the preparation check, not an observation of the binding guarantee.
+  test('implementation preparation creates no tag', () => {
+    const f = fixture();
+    updateReferences(f.directory, f.implementation);
+    f.git('add', '.'); f.git('commit', '-m', 'existing connection');
+    f.write('runtime/payload.mjs', 'export const payload = 2;\n');
+    f.git('add', '.');
+    const prepared = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', '--preparation'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
+    expect(prepared.status, prepared.stderr).toBe(0);
+    expect(f.git('tag', '--list')).toBe('');
+  });
+
+  // evidence_role: supplemental
+  // The absent tag, the tag list after verification, the empty changed paths and the GITHUB_OUTPUT content are side effects of the connection, not observations of the binding guarantee.
+  test.each(['release/0.2.11', 'hotfix/0.2.11'])('one Release connection creates no tag before the release, changes nothing on repeat and writes the gate output on %s', (branch) => {
+    const f = fixture(); f.git('switch', '-c', branch);
+    updateReferences(f.directory, f.implementation, '--check');
+    expect(f.git('tag', '--list')).toBe('');
+    updateReferences(f.directory, f.implementation);
+    const repeated = runScript('update-action-references.mjs', f.directory, ['--check', '--tag', 'v0.2.11', '--implementation-sha', f.implementation]);
+    expect(JSON.parse(repeated.stdout).changedPaths).toEqual([]);
+    f.git('add', '.'); f.git('commit', '-m', 'connect implementation'); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
+    runScript('check-provider-references.mjs', f.directory, ['--contracts', '--release-tag', 'v0.2.11']);
+    expect(f.git('tag', '--list')).toBe('v0.2.11');
+    const workflow = yaml.parse(readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8'));
+    const gate = workflow.jobs['prepare-distribution'].steps.find((step) => step.id === 'provider-binding');
+    const script = gate.run.replace('node runtime/repository/check-provider-references.mjs', `node "${path.join(root, 'runtime/repository/check-provider-references.mjs')}"`);
+    const output = path.join(f.directory, 'tmp/binding-output'); f.write('tmp/binding-output', '');
+    const runGate = () => spawnSync('bash', ['-c', script], { cwd: f.directory, encoding: 'utf8', env: { ...process.env, RELEASE_TAG: 'v0.2.11', GITHUB_OUTPUT: output }, timeout: spawnTimeoutMs });
+    expect(runGate().status).toBe(0);
+    expect(readFileSync(output, 'utf8')).toBe(`implementation_source_sha=${f.implementation}\nimplementation_binding_status=verified\n`);
+    f.write('runtime/payload.mjs', 'export const payload = 2;\n'); f.write('tmp/binding-output', '');
+    runGate();
+    expect(readFileSync(output, 'utf8')).toBe('');
+  });
+
   test.each(['release/0.2.11', 'hotfix/0.2.11'])('one Release connects an untagged implementation on %s', (branch) => {
     // Arrange
     const f = fixture(); f.git('switch', '-c', branch);
     // Act
     const plan = updateReferences(f.directory, f.implementation, '--check');
     // Assert
-    expect(f.git('tag', '--list')).toBe(''); expect(plan.connection.diagnostics).toEqual([]);
+    expect(plan.connection.diagnostics).toEqual([]);
     // Act
     updateReferences(f.directory, f.implementation);
     const repeated = runScript('update-action-references.mjs', f.directory, ['--check', '--tag', 'v0.2.11', '--implementation-sha', f.implementation]);
     // Assert
-    expect(repeated.status, repeated.stderr).toBe(0); expect(JSON.parse(repeated.stdout).changedPaths).toEqual([]);
+    expect(repeated.status, repeated.stderr).toBe(0);
     // Arrange
     f.git('add', '.');
     // Act
@@ -135,7 +171,6 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(checked.diagnostics).toEqual([]); expect(checked.connection.diagnostics).toEqual([]);
     expect(checked.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding.sourceRevision).not.toBe(f.implementation);
-    expect(f.git('tag', '--list')).toBe('v0.2.11');
     expect(metadataOnly.status).toBe(0); expect(JSON.parse(metadataOnly.stdout).implementationBindingStatus).toBe('unverified');
     // Arrange
     const workflow = yaml.parse(readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8'));
@@ -147,14 +182,13 @@ describe('contract.ci-selective-distribution.publication', () => {
     const gateResult = runGate();
     // Assert
     expect(gateResult.status).toBe(0);
-    expect(readFileSync(output, 'utf8')).toBe(`implementation_source_sha=${f.implementation}\nimplementation_binding_status=verified\n`);
     // Arrange
     f.write('runtime/payload.mjs', 'export const payload = 2;\n'); f.write('tmp/binding-output', '');
     // Act
     const rejectedGate = runGate();
     // Assert
     expect(rejectedGate.error).toBeUndefined();
-    expect(rejectedGate.status).not.toBe(0); expect(readFileSync(output, 'utf8')).toBe('');
+    expect(rejectedGate.status).not.toBe(0);
   });
 
   test('one Release verifies a squashed main tag by execution closure while the implementation stays reachable', () => {
@@ -267,7 +301,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     expect(repositorySnapshot(f.directory).registry.actionization.implementationSource.exactRef).toBe('0'.repeat(40));
   });
 
-  test('candidate application rejects closure changes and symlink destinations without writing references', () => {
+  test('candidate application rejects closure changes without writing references', () => {
     // Arrange
     const f = fixture(); const registryBefore = readFileSync(path.join(f.directory, registryPath), 'utf8');
     f.write('runtime/payload.mjs', 'export const payload = 2;\n');
@@ -276,8 +310,11 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Assert
     expect(changedClosure).toMatch(/execution-assets-dirty/);
     expect(readFileSync(path.join(f.directory, registryPath), 'utf8')).toBe(registryBefore);
+  });
+
+  test('candidate application rejects symlink destinations without writing references', () => {
     // Arrange
-    f.git('restore', 'runtime/payload.mjs');
+    const f = fixture(); const registryBefore = readFileSync(path.join(f.directory, registryPath), 'utf8');
     f.write('registry-copy.yml', registryBefore); unlinkSync(path.join(f.directory, registryPath));
     symlinkSync(path.join(f.directory, 'registry-copy.yml'), path.join(f.directory, registryPath));
     // Act

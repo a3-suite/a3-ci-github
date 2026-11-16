@@ -107,10 +107,9 @@ describe("action-index-gate", () => {
 
 describe("contract.repository-action-distribution.catalog", () => {
   describe("repository-action-distribution-gates", () => {
-    // evidence_role: contract
-    // test_level: integration
+    // evidence_role: supplemental
+    // The projection function is called directly; the guarantee of the catalog is observed through the gate CLI.
     // contract_id: contract.repository-action-distribution.catalog
-    // integration_id: repository-action-distribution-gates
     test('catalog projection preserves section boundaries and is idempotent with generated markers', () => {
       // Arrange
       const actions = [{ name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha' }];
