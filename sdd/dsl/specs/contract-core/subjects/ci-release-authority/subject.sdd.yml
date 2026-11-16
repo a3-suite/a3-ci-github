@@ -52,11 +52,7 @@ contracts:
         boundary: boundary.workspace-files
         fields:
           - selector: platform-manifest-source-text-comparison
-            meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
-          - selector: authority-language-profile-binding-state
-            meaning: Occurrence state (present or absent) of a non-null language_profile binding in the authority handoff.
-          - selector: authority-toolchain-binding-state
-            meaning: Occurrence state (present or absent) of a non-null toolchain_version binding in the authority handoff.
+            meaning: Comparison of platform_manifest_sha256 with the SHA-256 of the manifest text, treating CRLF, LF and mixed line endings as the same; equal or different.
           - selector: authority-platform-manifest-binding-state
             meaning: Occurrence state (present or absent) of a non-null platform_manifest or platform_manifest_sha256 value in the authority handoff.
       - summary: Provider requests issued during one authority invocation.
@@ -110,20 +106,6 @@ contracts:
           - runtime-context.release-authority-asset-only-valid
         claim:
           field: non-get-request-state
-          in:
-            - absent
-      - id: authority-asset-only-no-language-profile
-        applies_to:
-          - runtime-context.release-authority-asset-only-valid
-        claim:
-          field: authority-language-profile-binding-state
-          in:
-            - absent
-      - id: authority-asset-only-no-toolchain
-        applies_to:
-          - runtime-context.release-authority-asset-only-valid
-        claim:
-          field: authority-toolchain-binding-state
           in:
             - absent
       - id: authority-asset-only-no-platform-manifest

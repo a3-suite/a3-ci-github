@@ -75,16 +75,12 @@ test_maps:
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: source entrypoint > authority entrypoint records an asset release without language, toolchain or platform bindings
         guarantees:
-          - authority-asset-only-no-language-profile
           - authority-asset-only-no-platform-manifest
-          - authority-asset-only-no-toolchain
           - authority-file
           - authority-get-only-requests
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: dist entrypoint > authority entrypoint records an asset release without language, toolchain or platform bindings
         guarantees:
-          - authority-asset-only-no-language-profile
           - authority-asset-only-no-platform-manifest
-          - authority-asset-only-no-toolchain
           - authority-file
           - authority-get-only-requests

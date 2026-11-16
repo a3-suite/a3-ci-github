@@ -100,12 +100,10 @@ test_maps:
         symbol: source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
         guarantees:
           - quality-summary-failure-propagated
-          - rejected-run-context-no-evidence
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
         guarantees:
           - quality-summary-failure-propagated
-          - rejected-run-context-no-evidence
   - contract_id: contract.ci-quality-summary.outputs
     case_id: mixed-applicability
     tests:
@@ -123,8 +121,8 @@ test_maps:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
         guarantees:
-          - run-url-used-for-missing-evidence
+          - no-row-without-evidence-reference
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
         guarantees:
-          - run-url-used-for-missing-evidence
+          - no-row-without-evidence-reference

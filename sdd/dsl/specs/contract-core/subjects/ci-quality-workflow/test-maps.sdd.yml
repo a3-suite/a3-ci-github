@@ -17,11 +17,6 @@ test_maps:
   - contract_id: contract.ci-quality-workflow.execution
     case_id: ci-quality-workflow-success
     tests:
-      - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > quality diff preparation fetches only the comparison commit and preserves fail-open scope
-        guarantees:
-          - quality-comparison-commit-only
-          - quality-comparison-unavailable-fail-open
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality toolchain callers bind five inputs and preserve execution gates
         guarantees:
@@ -39,14 +34,10 @@ test_maps:
           - quality-pull-request-trusted-assets-from-base
           - quality-results-before-summary
       - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > only trusted Rust quality reuses the Cargo cache while untrusted and Release builds start clean
+        symbol: workflow-contracts > quality-workflow-contract > untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push
         guarantees:
-          - quality-cargo-cache-rust-only
-          - quality-cargo-cache-before-adapter
-          - quality-cargo-cache-failure-isolated
           - quality-untrusted-cargo-cache-absent
           - quality-cargo-cache-save-default-branch-push-only
-          - quality-cargo-cache-save-after-adapter
   - contract_id: contract.ci-quality-workflow.execution
     case_id: ci-quality-workflow-failure
     tests:
@@ -63,11 +54,6 @@ test_maps:
   - contract_id: contract.ci-quality-workflow.execution
     case_id: ci-quality-workflow-platform
     tests:
-      - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > quality diff preparation fetches only the comparison commit and preserves fail-open scope
-        guarantees:
-          - quality-comparison-commit-only
-          - quality-comparison-unavailable-fail-open
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform caller passes explicit inputs and retains the summary identity
         guarantees:

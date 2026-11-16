@@ -24,7 +24,7 @@ contracts:
         boundary: boundary.script-result
         fields:
           - selector: schema
-            meaning: Stable materialization report schema identity.
+            meaning: Materialization report schema identity; present only when materialization completed.
           - selector: bundle
             meaning: Selected adapter bundle identity.
           - selector: files
@@ -69,8 +69,6 @@ contracts:
             meaning: Changes to pre-existing consumer dependency declarations during materialization.
           - selector: conflicting-destination-change
             meaning: Byte changes to an existing destination whose contents conflict with the selected source.
-          - selector: completed-copy-loss
-            meaning: Removal or byte changes of files successfully copied before a later copy failure.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.preset-standard-materialization-valid
@@ -83,8 +81,7 @@ contracts:
           - runtime-context.preset-custom-materialization-valid
         claim:
           field: schema
-          in:
-            - ci.adapter-materializer.v2
+          present: true
       - id: ci-preset-materialization-failure-observed
         applies_to:
           - runtime-context.preset-materialization-rejected
@@ -157,11 +154,6 @@ contracts:
       - id: conflicting-destination-change
         claim:
           field: conflicting-destination-change
-          in:
-            - absent
-      - id: completed-copy-loss
-        claim:
-          field: completed-copy-loss
           in:
             - absent
       - id: changed-range-evidence

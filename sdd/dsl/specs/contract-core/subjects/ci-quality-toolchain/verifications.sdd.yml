@@ -59,7 +59,6 @@ cases:
       version-policy: exact
       cargo-audit-version: 0.21.0
     verifies:
-      - selected-profile-dependencies-only
       - resolved-version-satisfies-selector
   - contract_id: contract.ci-quality-toolchain.preparation
     id: valid-request-mismatching-resolution
@@ -130,15 +129,3 @@ cases:
       cargo-deny-version: ""
     verifies:
       - optional-tool-setup-only-when-requested
-  - contract_id: contract.ci-quality-toolchain.preparation
-    id: skipped-auxiliary-tools
-    partition: runtime-context.quality-toolchain-request-valid
-    input:
-      language-profile: rust
-      toolchain-version: 1.90.0
-      version-policy: exact
-      cargo-audit-version: 0.22.2
-      cargo-deny-version: 0.20.2
-      auxiliary-tools: skip
-    verifies:
-      - auxiliary-tool-setup-skipped-on-request

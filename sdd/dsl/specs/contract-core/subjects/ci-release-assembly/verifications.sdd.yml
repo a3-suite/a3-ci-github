@@ -14,8 +14,8 @@ cases:
         - sdd
       installer: false
     verifies:
-      - bound-handoff
-      - bound-asset-digest
+      - handoff-output-bound
+      - selected-skills-packaged
   - contract_id: contract.ci-release-assembly.outputs
     id: same-release-skills-assembly-invalid
     partition: runtime-context.release-assembly-invalid
@@ -40,13 +40,9 @@ cases:
       output-directory: handoff
     verifies:
       - assembly-success
-      - bound-handoff
-      - bound-asset-digest
+      - handoff-output-bound
       - handoff-source-bound
       - handoff-asset-digest-bound
-      - asset-digest-serialization
-      - asset-digest-asset-order
-      - asset-digest-field-order
       - assembly-no-credential-input
   - contract_id: contract.ci-release-assembly.outputs
     id: output-line-injection
@@ -66,7 +62,8 @@ cases:
     input:
       supplemental-root: supplemental
     verifies:
-      - bound-handoff
+      - handoff-output-bound
+      - handoff-owner-evidence-retained
   - contract_id: contract.ci-release-assembly.outputs
     id: unsafe-build-inputs
     partition: runtime-context.release-assembly-invalid
@@ -79,10 +76,7 @@ cases:
       build-root: build
       checksum-sidecar: canonical
     verifies:
-      - accepted-checksum-encoding
-      - accepted-checksum-digest-form
-      - accepted-checksum-separator
-      - accepted-checksum-line-ending
+      - accepted-checksum-verifiable
   - contract_id: contract.ci-release-assembly.outputs
     id: noncanonical-checksum-sidecar
     partition: runtime-context.release-assembly-invalid
@@ -95,8 +89,7 @@ cases:
     input:
       platform-manifest: CRLF
     verifies:
-      - bound-handoff
-      - bound-asset-digest
+      - handoff-output-bound
   - contract_id: contract.ci-release-assembly.outputs
     id: asset-only-assembly-valid
     partition: runtime-context.release-asset-only-assembly-valid
@@ -108,8 +101,7 @@ cases:
       supplemental-asset: owner-adapter
     verifies:
       - assembly-success
-      - bound-handoff
-      - bound-asset-digest
+      - handoff-output-bound
   - contract_id: contract.ci-release-assembly.outputs
     id: asset-only-assembly-empty
     partition: runtime-context.release-asset-only-assembly-empty

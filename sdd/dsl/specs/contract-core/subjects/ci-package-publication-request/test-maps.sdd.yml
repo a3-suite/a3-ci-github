@@ -7,12 +7,10 @@ test_maps:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint creates and verifies a request
         guarantees:
-          - package-request-status-produced
           - package-request-source-produced
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint creates and verifies a request
         guarantees:
-          - package-request-status-produced
           - package-request-source-produced
   - contract_id: contract.ci-package-publication-request.outputs
     case_id: source-sha-mismatch-rejected
@@ -38,12 +36,10 @@ test_maps:
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
-          - package-request-status-produced
           - request-trigger-run-bound
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
-          - package-request-status-produced
           - request-trigger-run-bound
   - contract_id: contract.ci-package-publication-request.outputs
     case_id: request-trigger-rejected

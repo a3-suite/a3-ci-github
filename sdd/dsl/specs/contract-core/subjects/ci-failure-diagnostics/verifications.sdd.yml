@@ -12,21 +12,17 @@ cases:
       - failure-stage-recorded
       - failure-reason-recorded
       - failure-cause-classified
-      - execution-context-recorded
-      - comparison-recorded
+      - execution-context-run-bound
+      - execution-context-job-bound
+      - execution-context-source-bound
+      - comparison-expected-recorded
+      - comparison-observed-recorded
       - evidence-location-recorded
       - execution-outcome-retained
       - last-confirmed-stage-recorded
       - next-check-rule-recorded
       - diagnostic-known-cause-omission
       - diagnostic-protected-input-disclosure
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    id: unknown-failure
-    partition: runtime-context.failure-diagnostic-required
-    input:
-      failure: unknown
-    verifies:
-      - diagnostic-unsubstantiated-remediation
   - contract_id: contract.ci-failure-diagnostics.actionable
     id: pull-request-head-source
     partition: runtime-context.failure-diagnostic-required

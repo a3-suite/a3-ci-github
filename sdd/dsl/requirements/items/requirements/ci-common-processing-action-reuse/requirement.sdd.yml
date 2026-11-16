@@ -26,6 +26,11 @@ requirements:
       - 公開スキルを選択した場合、製品と同じ固定source・versionに拘束した必要なスキルだけを同じ1回のReleaseで提供し、開発・一時・コンパイル残骸を除外する。installerとの併用でも各owner証跡を保持し、利用者向けの導入・削除案内を同梱構成と一致させる
       - quality descriptor が要求する toolchain version と実際の version の一致を確認でき、不一致を成功扱いにしない
       - 標準 Rust 品質 bundle は、利用者が版と設定ファイルを指定した場合だけ、その設定ファイルを正本とする依存ポリシー検査を実行する。指定しない場合は未実行として結果に記録し、成功として扱わない。設定ファイルを確認できない場合は既定の規則で代替せず停止する
+      - platform 別に品質検査を実行する場合、共通検査（format、security、dependency-policy）の共有は、利用 project が宣言し、platform 間で設定と対象が同等であることを確認した、信頼できる宣言だけで有効になる
+      - 共通検査の共有が有効な場合は共通検査を重複して実行せず、共通検査の結果を含めて全 platform の成功を集約の成功条件とする
+      - 共通検査の共有が有効と判断できない場合（宣言が無い、false、信頼できない宣言、bootstrap）は、全 platform で全検査を維持する
+      - 品質結果の集約 status は、owner の方針で対象外とした行と、descriptor が任意と宣言した検査の未設定による未実行だけを成否の判定から除く。これら以外の未実行・判定不能を成功として扱わない
+      - 全行が対象外の入力は集約せず拒否する
     depends_on:
       - github-actions-action-contract-and-distribution
     external_document_refs:

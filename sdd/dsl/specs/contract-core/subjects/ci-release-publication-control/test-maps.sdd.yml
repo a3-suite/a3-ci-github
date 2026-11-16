@@ -7,12 +7,12 @@ test_maps:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint creates and verifies a publication request
         guarantees:
-          - publication-control-status-produced
+          - publication-control-status-succeeded
           - publication-request-run-id-produced
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint creates and verifies a publication request
         guarantees:
-          - publication-control-status-produced
+          - publication-control-status-succeeded
           - publication-request-run-id-produced
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: changed-approval-rejected
@@ -66,12 +66,10 @@ test_maps:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
-          - publication-control-status-produced
           - request-trigger-run-bound
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         guarantees:
-          - publication-control-status-produced
           - request-trigger-run-bound
   - contract_id: contract.ci-release-publication-control.outputs
     case_id: request-trigger-rejected

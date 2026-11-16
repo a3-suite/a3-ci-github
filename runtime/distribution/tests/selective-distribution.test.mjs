@@ -6,6 +6,20 @@ import { snapshotTree } from '../../preset/tests/support/release-request-fixture
 import { readWorkflowSettings, renderWorkflowTemplate } from '../../preset/workflow-template.mjs';
 import { cliApply, cliFetch, cliFetchPeer, cliPlan, cliRollback, cliVerify, createConsumer, fixturePlanSettings, writeManifest, repositoryRoot, yaml, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease } from "./selective-distribution.fixtures.mjs";
 
+// Counts the requested assets and the registry-required dependencies that a selection closure lacks.
+const closureGapCount = (manifest, requestedPresets, requestedAssets, selectedAssets) => {
+  const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
+  const pending = [...requestedAssets, ...requestedPresets.flatMap((id) => manifest.presets.find((preset) => preset.id === id).requiredAssets)];
+  const required = new Set();
+  while (pending.length > 0) {
+    const id = pending.pop();
+    if (required.has(id)) continue;
+    required.add(id);
+    pending.push(...assets.get(id).dependencies);
+  }
+  return [...required].filter((id) => !selectedAssets.includes(id)).length;
+};
+
 const failureOf = (run) => {
   try { run(); } catch (error) { return error; }
   throw new Error('expected the distribution CLI to fail');
@@ -290,12 +304,14 @@ describe("contract.ci-selective-distribution.selection", () => {
         };
         for (const [preset, workflows] of Object.entries(expected)) {
           const selected = fetchSelection(preset, [preset], []);
+          expect(closureGapCount(release.manifest, [preset], [], selected.selectedAssets)).toBe(0);
           expect(selected.selectedAssets).not.toContain('runtime.adapter-materializer');
           expect(workflowSources(selected)).toStrictEqual(workflows.map((file) => `.github/workflows/${file}`).sort());
         }
         expect(() => fetchSelection('platforms-without-runtime', ['quality-gate'], ['workflow.quality-gate-platforms']))
           .toThrow(/^distribution-dependency-missing$/);
         const platforms = fetchSelection('platforms', ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']);
+        expect(closureGapCount(release.manifest, ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'], platforms.selectedAssets)).toBe(0);
         expect(workflowSources(platforms)).toStrictEqual(['.github/workflows/ci-quality-platforms.yml', '.github/workflows/ci-quality.yml']);
         expect(() => fetchSelection('materializer', [], ['runtime.adapter-materializer'])).toThrow(/^distribution-dependency-missing$/);
       });
@@ -375,6 +391,7 @@ describe("contract.ci-selective-distribution.selection", () => {
         const fetchSelection = (name, requestedPresets, requestedAssets, manifestPath = release.manifestPath) => cliFetch({
           projectRoot: createConsumer(root, name), manifestPath, requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
         const presetAssets = fetchSelection('preset', ['quality-gate'], []).selectedAssets;
+        expect(closureGapCount(release.manifest, ['quality-gate'], [], presetAssets)).toBe(0);
         expect(presetAssets).toContain('registry.ci-github');
         expect(presetAssets).toContain('workflow.quality-gate');
         for (const [name, requestedPresets, requestedAssets, diagnostic, comparison] of [
@@ -394,8 +411,9 @@ describe("contract.ci-selective-distribution.selection", () => {
         const cyclic = structuredClone(release.manifest);
         cyclic.assets.find((asset) => asset.id === 'registry.ci-github').dependencies.push('runtime.preset');
         expect(() => fetchSelection('cyclic', ['quality-gate'], [], writeManifest(root, cyclic))).toThrow(/^distribution-dependency-cycle$/);
-        expect(fetchSelection('direct', [], ['runtime.preset', 'registry.ci-github', 'runtime.diagnostics']).selectedAssets)
-          .toStrictEqual(['registry.ci-github', 'runtime.diagnostics', 'runtime.preset']);
+        const direct = fetchSelection('direct', [], ['runtime.preset', 'registry.ci-github', 'runtime.diagnostics']).selectedAssets;
+        expect(closureGapCount(release.manifest, [], ['runtime.preset', 'registry.ci-github', 'runtime.diagnostics'], direct)).toBe(0);
+        expect(direct).toStrictEqual(['registry.ci-github', 'runtime.diagnostics', 'runtime.preset']);
       });
     });
   });

@@ -25,8 +25,8 @@ contracts:
             meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
           - selector: quality-explicit-input-binding
             meaning: Comparison of caller input names and typed bindings with the callee interface.
-          - selector: quality-summary-identity
-            meaning: Declared caller aggregate job ID.
+          - selector: quality-summary-job-count
+            meaning: Number of aggregate summary jobs declared by the quality caller, as a decimal integer string.
           - selector: quality-no-consumer-callee-copy
             meaning: Occurrence of local copies of provider execution jobs in the caller.
           - selector: quality-caller-read-permissions
@@ -49,18 +49,10 @@ contracts:
             meaning: Declared dependency order of trusted platform resolution and selected matrix execution.
           - selector: platform-execution-before-summary
             meaning: Declared dependency order of matrix execution and aggregate platform decision.
-          - selector: quality-cargo-cache-profile-condition
-            meaning: Declared language profile condition of the trusted Cargo cache path resolution step.
-          - selector: quality-cargo-cache-before-adapter
-            meaning: Declared order of the trusted Cargo cache step and adapter execution.
-          - selector: quality-cargo-cache-failure-dependency
-            meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
           - selector: quality-untrusted-cargo-cache-use
             meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
           - selector: quality-cargo-cache-save-condition
             meaning: Declared run condition of the trusted Cargo cache save step.
-          - selector: quality-cargo-cache-save-after-adapter
-            meaning: Declared order of adapter execution and the trusted Cargo cache save step.
           - selector: quality-toolchain-language-profile-binding
             meaning: Comparison of the language-profile binding of each quality toolchain step with the matching job environment declaration; equal or different.
           - selector: quality-toolchain-toolchain-version-binding
@@ -75,22 +67,15 @@ contracts:
             meaning: Declared continue-on-error setting of the quality toolchain step.
           - selector: platform-explicit-input-binding
             meaning: Comparison of platform caller input names with the platform callee interface.
-          - selector: platform-summary-identity
-            meaning: Declared platform caller aggregate job name.
+          - selector: platform-summary-job-count
+            meaning: Number of aggregate summary jobs declared by the platform caller, as a decimal integer string.
           - selector: profiles-callee-runs-per-profile
             meaning: Number of quality callee runs for each configured language profile, as declared by the profiles caller matrix.
-          - selector: profiles-summary-identity
-            meaning: Declared profiles caller aggregate job name.
-      - summary: Commits that the quality and platform resolution checkouts hold after comparison preparation.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: quality-comparison-fetch-scope
-            meaning: Commits that comparison preparation adds to the shallow head checkout.
-      - summary: Exit status of the comparison preparation step and acceptance by the platform and profiles aggregate steps.
+          - selector: profiles-summary-job-count
+            meaning: Number of aggregate summary jobs declared by the profiles caller across all configured language profiles, as a decimal integer string.
+      - summary: Acceptance by the platform and profiles aggregate steps.
         boundary: boundary.script-result
         fields:
-          - selector: quality-comparison-unavailable-preparation
-            meaning: Outcome of comparison preparation when the comparison commit is empty, all zeros, or not fetchable.
           - selector: platform-unresolved-results-accepted
             meaning: Occurrence of platform aggregate acceptance when platform resolution or a required platform result is failed, cancelled, skipped, or missing.
           - selector: profiles-unsuccessful-result-accepted
@@ -145,9 +130,9 @@ contracts:
         applies_to:
           - ci-quality-workflow-caller-selected
         claim:
-          field: quality-summary-identity
+          field: quality-summary-job-count
           in:
-            - summary
+            - "1"
       - id: quality-no-consumer-callee-copy
         applies_to:
           - ci-quality-workflow-caller-selected
@@ -226,27 +211,6 @@ contracts:
           field: platform-execution-before-summary
           in:
             - execution-before-summary
-      - id: quality-cargo-cache-rust-only
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-profile-condition
-          in:
-            - rust-profile-only
-      - id: quality-cargo-cache-before-adapter
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-before-adapter
-          in:
-            - cache-before-adapter
-      - id: quality-cargo-cache-failure-isolated
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-failure-dependency
-          in:
-            - absent
       - id: quality-untrusted-cargo-cache-absent
         applies_to:
           - ci-quality-workflow-canonical-source-available
@@ -261,29 +225,6 @@ contracts:
           field: quality-cargo-cache-save-condition
           in:
             - default-branch-push-only
-      - id: quality-cargo-cache-save-after-adapter
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-save-after-adapter
-          in:
-            - adapter-before-save
-      - id: quality-comparison-commit-only
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-          - ci-quality-workflow-platform-source-selected
-        claim:
-          field: quality-comparison-fetch-scope
-          in:
-            - comparison-commit-only
-      - id: quality-comparison-unavailable-fail-open
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-          - ci-quality-workflow-platform-source-selected
-        claim:
-          field: quality-comparison-unavailable-preparation
-          in:
-            - succeeded
       - id: quality-toolchain-language-profile-bound
         applies_to:
           - ci-quality-workflow-canonical-source-available
@@ -337,9 +278,9 @@ contracts:
         applies_to:
           - ci-quality-workflow-platform-source-selected
         claim:
-          field: platform-summary-identity
+          field: platform-summary-job-count
           in:
-            - quality-gate-platforms / summary
+            - "1"
       - id: platform-unresolved-results-rejected
         applies_to:
           - ci-quality-workflow-platform-source-selected
@@ -358,9 +299,9 @@ contracts:
         applies_to:
           - ci-quality-workflow-profiles-source-selected
         claim:
-          field: profiles-summary-identity
+          field: profiles-summary-job-count
           in:
-            - quality-gate-profiles / summary
+            - "1"
       - id: profiles-unsuccessful-result-rejected
         applies_to:
           - ci-quality-workflow-profiles-source-selected

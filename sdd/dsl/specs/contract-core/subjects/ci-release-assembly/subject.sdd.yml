@@ -47,29 +47,23 @@ contracts:
             meaning: Path of the ci.handoff.v1 directory that a successful assembly writes.
           - selector: asset-digest
             meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
+          - selector: handoff-output-binding
+            meaning: Comparison of the release-handoff output path with the output directory passed by the caller; equal or different.
           - selector: handoff-source-identity
             meaning: Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.
           - selector: outcome
             meaning: Failed step outcome when assembly is rejected.
-          - selector: asset-digest-serialization
-            meaning: Serialization of the verified asset list whose SHA-256 equals asset-digest.
-          - selector: asset-digest-asset-order
-            meaning: Order of the assets in the asset-digest serialization.
-          - selector: asset-digest-field-order
-            meaning: Field order of each asset projection in the asset-digest serialization.
-          - selector: accepted-checksum-encoding
-            meaning: Text encoding of a checksum sidecar accepted by a successful assembly.
-          - selector: accepted-checksum-digest-form
-            meaning: Representation of the digest in a checksum sidecar accepted by a successful assembly.
-          - selector: accepted-checksum-separator
-            meaning: Separator between the digest and the asset filename in a checksum sidecar accepted by a successful assembly.
-          - selector: accepted-checksum-line-ending
-            meaning: Line ending of a checksum sidecar accepted by a successful assembly, compared as exact bytes.
       - summary: Release handoff directory written by the assembly.
         boundary: boundary.workspace-files
         fields:
           - selector: handoff-asset-digest-reload
             meaning: Comparison of the asset digest that loading the written handoff yields with the asset-digest output.
+          - selector: owner-evidence-retention-state
+            meaning: Whether every supplied owner evidence record appears unchanged in the handoff evidence directory; retained or lost.
+          - selector: packaged-skill-selection-comparison
+            meaning: Comparison of the SKILL.md paths in the skills ZIP owner evidence with the selected skill set; matched or mismatched.
+          - selector: accepted-checksum-verification
+            meaning: Result of checking each accepted asset against its checksum sidecar with a standard sha256 checksum-file verification; verified or failed.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -95,20 +89,14 @@ contracts:
           field: status
           in:
             - success
-      - id: bound-handoff
+      - id: handoff-output-bound
         applies_to:
           - runtime-context.release-assembly-valid
           - runtime-context.release-asset-only-assembly-valid
         claim:
-          field: release-handoff
-          present: true
-      - id: bound-asset-digest
-        applies_to:
-          - runtime-context.release-assembly-valid
-          - runtime-context.release-asset-only-assembly-valid
-        claim:
-          field: asset-digest
-          present: true
+          field: handoff-output-binding
+          in:
+            - equal
       - id: handoff-source-bound
         applies_to:
           - runtime-context.release-assembly-valid
@@ -138,55 +126,27 @@ contracts:
           field: outcome
           in:
             - failure
-      - id: asset-digest-serialization
+      - id: accepted-checksum-verifiable
         applies_to:
           - runtime-context.release-assembly-valid
         claim:
-          field: asset-digest-serialization
+          field: accepted-checksum-verification
           in:
-            - compact-utf8-json-without-terminal-newline
-      - id: asset-digest-asset-order
+            - verified
+      - id: handoff-owner-evidence-retained
         applies_to:
           - runtime-context.release-assembly-valid
         claim:
-          field: asset-digest-asset-order
+          field: owner-evidence-retention-state
           in:
-            - name-order-localecompare-en
-      - id: asset-digest-field-order
+            - retained
+      - id: selected-skills-packaged
         applies_to:
           - runtime-context.release-assembly-valid
         claim:
-          field: asset-digest-field-order
+          field: packaged-skill-selection-comparison
           in:
-            - name-sha256-size
-      - id: accepted-checksum-encoding
-        applies_to:
-          - runtime-context.release-assembly-valid
-        claim:
-          field: accepted-checksum-encoding
-          in:
-            - utf8-without-bom
-      - id: accepted-checksum-digest-form
-        applies_to:
-          - runtime-context.release-assembly-valid
-        claim:
-          field: accepted-checksum-digest-form
-          in:
-            - lowercase-sha256
-      - id: accepted-checksum-separator
-        applies_to:
-          - runtime-context.release-assembly-valid
-        claim:
-          field: accepted-checksum-separator
-          in:
-            - two-spaces
-      - id: accepted-checksum-line-ending
-        applies_to:
-          - runtime-context.release-assembly-valid
-        claim:
-          field: accepted-checksum-line-ending
-          in:
-            - single-terminal-lf
+            - matched
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required

@@ -51,26 +51,19 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
         fields:
-          - selector: status
-            meaning: Phase completion status output; success.
           - selector: output-directory
             meaning: Output directory path that the phase reports on success.
+          - selector: status
+            meaning: Phase completion status output; success.
+          - selector: output-directory-binding
+            meaning: Comparison of the output directory reported on success with the directory the phase created for its result; equal or different.
           - selector: outcome
             meaning: Step outcome of the phase invocation; success or failure.
-          - selector: diagnostic
-            meaning: Stable failure envelope of the failed supplemental phase.
-          - selector: unvalidated-installer-reason-state
-            meaning: Occurrence state (present or absent) of a standard installer reason accepted outside the bounded strict provider diagnostic, allowlisted reason and matching phase.
-          - selector: cleanup-only-code-mismatch-state
-            meaning: Occurrence state (present or absent) of a sole cleanup failure reported with a reason other than installer-cleanup-failed.
-          - selector: cleanup-status-mismatch-state
-            meaning: Occurrence state (present or absent) of cleanup failure metadata with status other than failed.
-          - selector: cleanup-state-inference-state
-            meaning: Occurrence state (present or absent) of cleanup failure metadata with temporary-state other than unknown.
-          - selector: cleanup-residual-claim-state
-            meaning: Occurrence state (present or absent) of a residual file or path assertion inferred from cleanup failure.
-          - selector: cleanup-extra-field-state
-            meaning: Occurrence state (present or absent) of cleanup metadata fields outside status and temporary-state.
+      - summary: Existing output path state before and after a rejected phase invocation.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: existing-output-content-comparison
+            meaning: Comparison of a pre-existing output path content before and after a rejected phase invocation; unchanged or changed.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -80,6 +73,8 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.supplemental-phase-valid
       - environment: runtime-context.supplemental-phase-invalid
+      - input: existing-output-rejected
+        summary: Invocation rejected because its output directory path already exists.
     guarantees:
       - id: phase-success
         applies_to:
@@ -92,69 +87,30 @@ contracts:
         applies_to:
           - runtime-context.supplemental-phase-valid
         claim:
-          field: output-directory
-          present: true
+          field: output-directory-binding
+          in:
+            - equal
       - id: phase-rejected
         applies_to:
           - runtime-context.supplemental-phase-invalid
+          - existing-output-rejected
         claim:
           field: outcome
           in:
             - failure
-      - id: phase-diagnostic
+      - id: existing-output-unchanged
         applies_to:
-          - runtime-context.supplemental-phase-invalid
+          - existing-output-rejected
         claim:
-          field: diagnostic
-          present: true
+          field: existing-output-content-comparison
+          in:
+            - unchanged
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
           field: failure-stage
           present: true
-      - id: diagnostic-unvalidated-installer-reason
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: unvalidated-installer-reason-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-only-code-mismatch
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-only-code-mismatch-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-status-mismatch
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-status-mismatch-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-state-inference
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-state-inference-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-residual-claim
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-residual-claim-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-extra-field
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-extra-field-state
-          in:
-            - absent
   - id: contract.ci-release-supplemental-asset.assembly
     summary: Supplemental final assembly request from transferred platform candidates.
     inputs:
@@ -196,24 +152,14 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
         fields:
-          - selector: status
-            meaning: Phase completion status output; success.
           - selector: output-directory
             meaning: Output directory path that the phase reports on success.
+          - selector: status
+            meaning: Phase completion status output; success.
+          - selector: output-directory-binding
+            meaning: Comparison of the output directory reported on success with the directory the phase created for its result; equal or different.
           - selector: outcome
             meaning: Step outcome of the phase invocation; success or failure.
-          - selector: diagnostic
-            meaning: Stable failure envelope of the failed supplemental phase.
-          - selector: cleanup-only-code-mismatch-state
-            meaning: Occurrence state (present or absent) of a sole cleanup failure reported with a reason other than installer-cleanup-failed.
-          - selector: cleanup-status-mismatch-state
-            meaning: Occurrence state (present or absent) of cleanup failure metadata with status other than failed.
-          - selector: cleanup-state-inference-state
-            meaning: Occurrence state (present or absent) of cleanup failure metadata with temporary-state other than unknown.
-          - selector: cleanup-residual-claim-state
-            meaning: Occurrence state (present or absent) of a residual file or path assertion inferred from cleanup failure.
-          - selector: cleanup-extra-field-state
-            meaning: Occurrence state (present or absent) of cleanup metadata fields outside status and temporary-state.
       - summary: Transported standard-installer candidate files and finalized publication assets.
         boundary: boundary.workspace-files
         fields:
@@ -224,7 +170,7 @@ contracts:
           - selector: publication-source-snapshots
             meaning: Verification-only installer source snapshots in the final supplemental handoff; absent or present.
           - selector: publication-asset-checksum-sidecars
-            meaning: Comparison of the checksum file bytes of each asset in the final supplemental handoff with the sha256 declared for the asset in supplemental-manifest.json, two spaces, the asset path and one LF; equal or different.
+            meaning: Comparison of each asset checksum file with the sha256 and asset path declared in supplemental-manifest.json; equal or different.
           - selector: declaration-directory-file-name-difference-count
             meaning: Number of file names in the installer declaration directory (.ci/installer) that the invocation added or removed, compared before and after the invocation, as a decimal integer string.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -253,8 +199,9 @@ contracts:
           - runtime-context.supplemental-phase-valid
           - runtime-context.supplemental-asset-release-valid
         claim:
-          field: output-directory
-          present: true
+          field: output-directory-binding
+          in:
+            - equal
       - id: phase-rejected
         applies_to:
           - runtime-context.supplemental-phase-invalid
@@ -284,7 +231,7 @@ contracts:
           field: publication-source-snapshots
           in:
             - absent
-      - id: standard-installer-checksum-sidecar-format
+      - id: standard-installer-checksum-sidecar
         applies_to:
           - runtime-context.standard-installer-evidence-valid
         claim:
@@ -298,50 +245,9 @@ contracts:
           field: declaration-directory-file-name-difference-count
           in:
             - "0"
-      - id: phase-diagnostic
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: diagnostic
-          present: true
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
           field: failure-stage
           present: true
-      - id: diagnostic-cleanup-only-code-mismatch
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-only-code-mismatch-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-status-mismatch
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-status-mismatch-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-state-inference
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-state-inference-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-residual-claim
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-residual-claim-state
-          in:
-            - absent
-      - id: diagnostic-cleanup-extra-field
-        applies_to:
-          - runtime-context.supplemental-phase-invalid
-        claim:
-          field: cleanup-extra-field-state
-          in:
-            - absent

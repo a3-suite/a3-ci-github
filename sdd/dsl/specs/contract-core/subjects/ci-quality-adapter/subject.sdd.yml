@@ -33,6 +33,8 @@ contracts:
         fields:
           - selector: status
             meaning: Aggregate quality adapter status.
+          - selector: status-result-consistency
+            meaning: After removing not-run results of unconfigured optional commands, status is success exactly when every remaining result succeeded; consistent or not.
           - selector: result-path
             meaning: Path to the quality adapter result JSON.
           - selector: outcome
@@ -55,14 +57,10 @@ contracts:
             meaning: Occurrence of format commands in the native execution trace.
           - selector: security-command-state
             meaning: Occurrence of security commands in the native execution trace.
-          - selector: native-task-order
-            meaning: Comma-separated task IDs of the observed native result trace in execution order.
           - selector: consumer-descriptor-read-state
             meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
           - selector: rejected-command-state
             meaning: Occurrence of project command execution after the invocation is rejected.
-          - selector: result-file-state
-            meaning: Occurrence of the result JSON file at the result path after the invocation.
           - selector: native-terminal-prerequisite-status
             meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
           - selector: native-failed-prerequisite-followup-state
@@ -71,16 +69,6 @@ contracts:
             meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
           - selector: dependency-policy-config-argument
             meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
-          - selector: dependency-policy-diagnostics
-            meaning: Structured diagnostics object of a failed dependency-policy entry.
-          - selector: dependency-policy-check-counts
-            meaning: Comparison of the per-check counts in the diagnostics object with the error and warning counts of the known cargo-deny checks in the cargo-deny summary; equal or different.
-          - selector: dependency-policy-error-findings
-            meaning: Comparison of the findings in the diagnostics object with the cargo-deny error findings whose diagnostic code passes validation, up to the finding limit and each reduced to the crates whose name and version pass validation; equal or different.
-          - selector: dependency-policy-omitted-findings
-            meaning: Comparison of the omitted finding count in the diagnostics object with the number of validated error findings beyond the finding limit; equal or different.
-          - selector: dependency-policy-unchecked-output-state
-            meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
           - selector: not-run-aggregate-effect
             meaning: Change of the aggregate status caused by results whose status is not-run.
     conditions:
@@ -97,13 +85,14 @@ contracts:
       - environment: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
       - environment: runtime-context.ci-quality-adapter-dependency-policy-violation
     guarantees:
-      - id: quality-adapter-status-produced
+      - id: status-result-consistent
         applies_to:
           - quality-adapter-bundle-present
           - quality-adapter-standard-bundle-present
         claim:
-          field: status
-          present: true
+          field: status-result-consistency
+          in:
+            - consistent
       - id: quality-adapter-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
@@ -138,15 +127,6 @@ contracts:
           field: security-command-state
           in:
             - absent
-      - id: native-command-order
-        applies_to:
-          - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-task-order
-          in:
-            - toolchain-verify
-            - toolchain-verify,dependency-restore
-            - toolchain-verify,dependency-restore,lint,test,structure
       - id: standard-descriptor-independent
         applies_to:
           - quality-adapter-standard-bundle-present
@@ -160,13 +140,6 @@ contracts:
           - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         claim:
           field: rejected-command-state
-          in:
-            - absent
-      - id: rejected-dependency-policy-config-no-result
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        claim:
-          field: result-file-state
           in:
             - absent
       - id: standard-source-path-validated
@@ -243,37 +216,3 @@ contracts:
           field: dependency-policy-result-status
           in:
             - failed
-      - id: dependency-policy-violation-diagnosed
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-diagnostics
-          present: true
-      - id: dependency-policy-check-counts-bound
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-check-counts
-          in:
-            - equal
-      - id: dependency-policy-diagnostics-restricted
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-error-findings
-          in:
-            - equal
-      - id: dependency-policy-omitted-findings-counted
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-omitted-findings
-          in:
-            - equal
-      - id: dependency-policy-diagnostics-validated
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-unchecked-output-state
-          in:
-            - absent

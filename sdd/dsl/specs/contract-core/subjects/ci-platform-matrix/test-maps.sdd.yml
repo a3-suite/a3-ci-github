@@ -7,12 +7,10 @@ test_maps:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint emits the validated matrix
         guarantees:
-          - platform-matrix-produced
           - manifest-matrix-binding
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint emits the validated matrix
         guarantees:
-          - platform-matrix-produced
           - manifest-matrix-binding
   - contract_id: contract.ci-platform-matrix.outputs
     case_id: invalid-platform-manifest
@@ -33,24 +31,18 @@ test_maps:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
         guarantees:
-          - platform-matrix-produced
-          - ordered-quality-matrix-produced
-          - ordered-expected-platforms-produced
           - manifest-matrix-binding
-          - quality-id-order
+          - quality-id-set
           - quality-runner-binding
-          - expected-id-order
+          - expected-id-set
           - shared-checks-absence
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
         guarantees:
-          - platform-matrix-produced
-          - ordered-quality-matrix-produced
-          - ordered-expected-platforms-produced
           - manifest-matrix-binding
-          - quality-id-order
+          - quality-id-set
           - quality-runner-binding
-          - expected-id-order
+          - expected-id-set
           - shared-checks-absence
   - contract_id: contract.ci-platform-matrix.outputs
     case_id: invalid-quality-selection
@@ -82,22 +74,16 @@ test_maps:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
         guarantees:
-          - platform-matrix-produced
-          - ordered-quality-matrix-produced
-          - ordered-expected-platforms-produced
           - manifest-matrix-binding
-          - quality-id-order
+          - quality-id-set
           - quality-runner-binding
-          - expected-id-order
+          - expected-id-set
           - shared-checks-value
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
         guarantees:
-          - platform-matrix-produced
-          - ordered-quality-matrix-produced
-          - ordered-expected-platforms-produced
           - manifest-matrix-binding
-          - quality-id-order
+          - quality-id-set
           - quality-runner-binding
-          - expected-id-order
+          - expected-id-set
           - shared-checks-value

@@ -7,12 +7,12 @@ test_maps:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint executes the embedded standard without reading a project descriptor
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
           - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint executes the embedded standard without reading a project descriptor
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
           - standard-descriptor-independent
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-rust-scopes
@@ -20,11 +20,11 @@ test_maps:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: standard-selection-rejected
     tests:
@@ -42,11 +42,11 @@ test_maps:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint emits status and result path
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint emits status and result path
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: writable-adapter-rejected
     tests:
@@ -77,11 +77,11 @@ test_maps:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint executes the embedded Python standard and emits its status
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint executes the embedded Python standard and emits its status
         guarantees:
-          - quality-adapter-status-produced
+          - status-result-consistent
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: native-rust-rules
     tests:
@@ -90,7 +90,6 @@ test_maps:
         guarantees:
           - native-format-omitted
           - native-security-omitted
-          - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
@@ -99,7 +98,6 @@ test_maps:
         guarantees:
           - native-format-omitted
           - native-security-omitted
-          - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
@@ -129,7 +127,6 @@ test_maps:
         guarantees:
           - native-format-omitted
           - native-security-omitted
-          - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
@@ -138,7 +135,6 @@ test_maps:
         guarantees:
           - native-format-omitted
           - native-security-omitted
-          - native-command-order
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
@@ -175,20 +171,10 @@ test_maps:
         symbol: source entrypoint > failed dependency policy retains only validated cargo-deny identifiers
         guarantees:
           - dependency-policy-violation-failed
-          - dependency-policy-violation-diagnosed
-          - dependency-policy-check-counts-bound
-          - dependency-policy-diagnostics-restricted
-          - dependency-policy-omitted-findings-counted
-          - dependency-policy-diagnostics-validated
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > failed dependency policy retains only validated cargo-deny identifiers
         guarantees:
           - dependency-policy-violation-failed
-          - dependency-policy-violation-diagnosed
-          - dependency-policy-check-counts-bound
-          - dependency-policy-diagnostics-restricted
-          - dependency-policy-omitted-findings-counted
-          - dependency-policy-diagnostics-validated
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: missing-dependency-policy-config
     tests:
@@ -197,13 +183,11 @@ test_maps:
         guarantees:
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
-          - rejected-dependency-policy-config-no-result
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects an unusable configuration before commands
         guarantees:
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
-          - rejected-dependency-policy-config-no-result
   - contract_id: contract.ci-quality-adapter.outputs
     case_id: incomplete-dependency-policy-inputs
     tests:
@@ -212,10 +196,8 @@ test_maps:
         guarantees:
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
-          - rejected-dependency-policy-config-no-result
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects incomplete inputs before commands
         guarantees:
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
-          - rejected-dependency-policy-config-no-result

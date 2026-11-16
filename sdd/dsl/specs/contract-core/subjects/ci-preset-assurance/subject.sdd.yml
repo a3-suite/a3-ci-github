@@ -41,12 +41,12 @@ contracts:
             meaning: Success or failed provider preflight status.
           - selector: inspectedPresets
             meaning: Applied presets included in the preflight decision.
-          - selector: missingSettings
-            meaning: Required settings or assets that could not be resolved.
-          - selector: mismatches
-            meaning: Canonical, identity, permission, trust, or integrity mismatches.
-          - selector: evidence
-            meaning: Evidence collected for inspected workflows and assets.
+          - selector: unavailable-action-state
+            meaning: Whether missingSettings names the selected Action whose release is pending; reported or not-reported.
+          - selector: supplemental-phase-drift-state
+            meaning: Whether mismatches names the supplemental phase drift or the retired release entrypoint; reported or not-reported.
+          - selector: evidence-entry-state
+            meaning: Whether evidence has an entry for the inspected workflows and assets; reported or empty.
           - selector: semanticReviewRequired
             meaning: Whether evidence outside provider preflight still requires semantic review.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -82,15 +82,17 @@ contracts:
         applies_to:
           - selected-action-unavailable
         claim:
-          field: missingSettings
-          present: true
+          field: unavailable-action-state
+          in:
+            - reported
       - id: supplemental-phase-drift-reported
         applies_to:
           - supplemental-phase-drift
           - retired-release-entrypoints-present
         claim:
-          field: mismatches
-          present: true
+          field: supplemental-phase-drift-state
+          in:
+            - reported
       - id: ci-preset-assurance-valid-preset-succeeds
         applies_to:
           - ci-preset-assurance-applied-preset-valid
@@ -102,8 +104,9 @@ contracts:
         applies_to:
           - ci-preset-assurance-applied-preset-valid
         claim:
-          field: evidence
-          present: true
+          field: evidence-entry-state
+          in:
+            - reported
       - id: ci-preset-assurance-semantic-review-state-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
@@ -162,8 +165,6 @@ contracts:
             meaning: Exact vX.Y.Z Release tag of the distribution that generated the lock.
           - selector: generatedAt
             meaning: Minute-normalized observation timestamp of the generated lock.
-          - selector: assets
-            meaning: Lock entries that record the canonical and applied SHA-256 identity of each asset path.
           - selector: asset-path-coverage
             meaning: Comparison of the set of lock asset paths with the managed asset destinations and the pin companion path.
           - selector: requested-source-comparison
@@ -201,12 +202,6 @@ contracts:
           - ci-preset-assurance-lock-input-valid
         claim:
           field: releaseTag
-          present: true
-      - id: ci-preset-assurance-lock-assets-recorded
-        applies_to:
-          - ci-preset-assurance-lock-input-valid
-        claim:
-          field: assets
           present: true
       - id: ci-preset-assurance-lock-assets-cover-managed-paths
         applies_to:

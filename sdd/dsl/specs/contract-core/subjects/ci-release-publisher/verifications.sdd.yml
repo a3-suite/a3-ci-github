@@ -42,12 +42,13 @@ cases:
       - receipt-file
   - contract_id: contract.ci-release-publisher.outputs
     id: pre-create-handoff-change
-    partition: runtime-context.release-publisher-invalid
+    partition: rejected-before-write
     input:
       handoff: changed-during-final-absence-observation
     verifies:
       - rejected
       - no-success-outputs
+      - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     id: asset-inventory-propagation
     partition: runtime-context.release-publisher-valid
@@ -93,28 +94,31 @@ cases:
       - no-success-outputs
   - contract_id: contract.ci-release-publisher.outputs
     id: invalid-local-bindings
-    partition: runtime-context.release-publisher-invalid
+    partition: rejected-before-write
     input:
       approval: expired
     verifies:
       - rejected
       - no-success-outputs
+      - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     id: tampered-handoff-asset
-    partition: runtime-context.release-publisher-invalid
+    partition: rejected-before-write
     input:
       handoff: tampered
     verifies:
       - rejected
       - no-success-outputs
+      - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     id: remote-rejection
-    partition: runtime-context.release-publisher-invalid
+    partition: rejected-before-write
     input:
       remote: moved-source
     verifies:
       - rejected
       - no-success-outputs
+      - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     id: partial-failure
     partition: runtime-context.release-publisher-invalid

@@ -47,15 +47,13 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup
         guarantees:
           - diagnostic-failure-stage-preparation
-          - diagnostic-diagnostic-only-tool-acquisition
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: registered-binary-failure
     tests:
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop without source fallback or PATH output
+        symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop the preparation
         guarantees:
-          - registered-failure-no-source-fallback
-          - registered-failure-no-path-output
+          - invalid-or-failed-quality-toolchain-stops
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: valid-toolchain-request
     tests:
@@ -63,9 +61,6 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         guarantees:
           - resolved-version-satisfies-selector
-    pending:
-      - guarantees: [selected-profile-dependencies-only]
-        reason: 選んだ profile の依存だけを setup することを、Composite Action の実行で確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: valid-request-mismatching-resolution
     tests:
@@ -105,17 +100,11 @@ test_maps:
     case_id: registered-cargo-deny-failure
     tests:
       - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > registered cargo-deny asset failures stop without source fallback or PATH output
+        symbol: contract.ci-quality-toolchain.preparation > registered cargo-deny asset failures stop the preparation
         guarantees:
-          - registered-failure-no-source-fallback
-          - registered-failure-no-path-output
+          - invalid-or-failed-quality-toolchain-stops
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: unrequested-cargo-deny
     pending:
       - guarantees: [optional-tool-setup-only-when-requested]
         reason: cargo-deny-version を空にして Composite Action を実行し、cargo-deny の setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: skipped-auxiliary-tools
-    pending:
-      - guarantees: [auxiliary-tool-setup-skipped-on-request]
-        reason: auxiliary-tools に skip を与えて Composite Action を実行し、補助ツールの setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。

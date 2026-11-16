@@ -9,7 +9,7 @@ import { assembleRelease } from '../../../runtime/release-publication/assembly';
 import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-manifest-decoder';
 import { validateHandoffIntegrity } from '../../ci-handoff-integrity/src/integrity';
 import { runInstallerCli } from '../../../runtime/installer/cli';
-import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepareAssembly, python, repository, runSupplementalAction, target } from './standard-installer-fixtures';
+import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepareAssembly, python, repository, rejectSupplementalAction, runSupplementalAction, target } from './standard-installer-fixtures';
 
 holdProcessOutput('stderr');
 
@@ -72,7 +72,7 @@ describe('standard installer', () => {
             const code = index === 4 ? 'source-text-utf8-invalid' : relative === 'platform.yml' ? 'platform-mismatch'
               : relative === '.ci/installer/assembly.json' ? 'owner-adapter-source-mismatch' : 'installer-declaration-source-mismatch';
             // Act / Assert
-            expect(() => runSupplementalAction(options)).toThrow(code);
+            rejectSupplementalAction(options, code);
             expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
           }
         }
@@ -89,7 +89,7 @@ describe('standard installer', () => {
           fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
           fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), `import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/${JSON.stringify(relative)}\np.write_bytes(p.read_bytes().replace(b"\\n",b"\\r\\n"))\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n`);
           // Act / Assert
-          expect(() => runSupplementalAction(options, installerRoot)).toThrow('build-input-mutated');
+          rejectSupplementalAction(options, 'build-input-mutated', installerRoot);
           expect(fs.existsSync(path.join(f.root, options.outputDirectory, 'supplemental-manifest.json'))).toBe(false);
         }
       }
@@ -123,8 +123,19 @@ describe('standard installer', () => {
       for (const asset of handoff.assets) {
         expect(fs.readFileSync(path.join(f.root, 'handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
       }
-      expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.readdirSync(path.join(f.root, '.ci/installer')).sort()).toEqual(['assembly.json', 'product.json']);
+    });
+    // evidence_role: supplemental
+    // Leaving no managed directory or temporary handoff directory is a filesystem side effect of assembly that no contract guarantee covers.
+    test('assembly leaves no managed directory or temporary handoff directory', (t) => {
+      // Arrange
+      const f = fixture(t);
+      runSupplementalAction(f.options);
+      const assembled = prepareAssembly(f);
+      // Act
+      runSupplementalAction(assembled);
+      // Assert
+      expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
     test('revalidates downloaded platform evidence', (t) => {
@@ -171,7 +182,7 @@ describe('standard installer', () => {
       if (mutation === 'missing') fs.unlinkSync(source);
       else if (mutation === 'modified') fs.appendFileSync(source, 'corruption');
       else fs.writeFileSync(path.join(candidate, '.undeclared'), 'unexpected');
-      expect(() => runSupplementalAction(assembled)).toThrow('standard-installer-failed');
+      rejectSupplementalAction(assembled, 'standard-installer-failed');
       expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
     });
     test('keeps unselected release targets outside native selection', (t) => {
@@ -194,14 +205,14 @@ describe('standard installer', () => {
         const build = JSON.parse(fs.readFileSync(buildPath, 'utf8'));
         fs.writeFileSync(buildPath, JSON.stringify({ ...build, ...changes }));
         // Act / Assert
-        expect(() => runSupplementalAction(f.options)).toThrow('standard-installer-failed');
+        rejectSupplementalAction(f.options, 'standard-installer-failed');
         expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
         fs.writeFileSync(buildPath, JSON.stringify(build));
         fs.rmdirSync(path.join(f.root, 'platform-output'));
         runSupplementalAction(f.options);
         const assembled = prepareAssembly(f);
         fs.writeFileSync(path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, 'asset-manifest.json'), JSON.stringify({ ...build, ...changes }));
-        expect(() => runSupplementalAction(assembled)).toThrow('standard-installer-failed');
+        rejectSupplementalAction(assembled, 'standard-installer-failed');
         expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
       }
     });
@@ -214,7 +225,7 @@ describe('standard installer', () => {
       for (const bytes of malformed) {
         fs.writeFileSync(checksumPath, bytes);
         // Act / Assert
-        expect(() => runSupplementalAction(f.options)).toThrow('standard-installer-failed');
+        rejectSupplementalAction(f.options, 'standard-installer-failed');
         expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
         fs.rmdirSync(path.join(f.root, 'platform-output'));
       }
@@ -225,7 +236,7 @@ describe('standard installer', () => {
       for (const bytes of malformed) {
         fs.writeFileSync(transportedChecksum, bytes);
         // Act / Assert
-        expect(() => runSupplementalAction(assembled)).toThrow('standard-installer-failed');
+        rejectSupplementalAction(assembled, 'standard-installer-failed');
         expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
         fs.rmdirSync(path.join(f.root, 'handoff'));
       }
@@ -235,9 +246,8 @@ describe('standard installer', () => {
       const f = fixture(t);
       fs.appendFileSync(path.join(f.root, 'platform.yml'), '\n');
       // Act
-      const attempt = (): void => runSupplementalAction(f.options);
+      rejectSupplementalAction(f.options, 'platform-mismatch');
       // Assert
-      expect(attempt).toThrow('platform-mismatch');
       expect(fs.existsSync(path.join(f.root, 'platform-output'))).toBe(false);
     });
     test('rejects platform mutation during provider execution', (t) => {
@@ -247,9 +257,8 @@ describe('standard installer', () => {
       fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
       fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), 'import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/r["authority"]["platform_manifest"]\np.write_bytes(p.read_bytes()+b"\\n")\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n');
       // Act
-      const attempt = (): void => runSupplementalAction(f.options, installerRoot);
+      rejectSupplementalAction(f.options, 'platform-mismatch', installerRoot);
       // Assert
-      expect(attempt).toThrow('platform-mismatch');
       expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
     });
     test('rejects changed product declaration before generating output', (t) => {
@@ -257,9 +266,8 @@ describe('standard installer', () => {
       const f = fixture(t);
       fs.appendFileSync(path.join(f.root, '.ci/installer/product.json'), ' ');
       // Act
-      const attempt = (): void => runSupplementalAction(f.options);
+      rejectSupplementalAction(f.options, 'installer-declaration-source-mismatch');
       // Assert
-      expect(attempt).toThrow('installer-declaration-source-mismatch');
       expect(fs.existsSync(path.join(f.root, 'platform-output'))).toBe(false);
     });
     test('rejects modified candidate even if supplied file hashes match', (t) => {
@@ -275,9 +283,8 @@ describe('standard installer', () => {
       record.files[assetName] = sha256(fs.readFileSync(candidate));
       fs.writeFileSync(recordPath, JSON.stringify(record));
       // Act
-      const attempt = (): void => runSupplementalAction(options);
+      rejectSupplementalAction(options, 'standard-installer-failed');
       // Assert
-      expect(attempt).toThrow('standard-installer-failed');
       expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
     });
   });

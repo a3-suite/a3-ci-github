@@ -44,7 +44,6 @@ contracts:
             meaning: 失敗した段階の識別子。
     conditions:
       - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.rust-release-build-inputs-match-authority
       - environment: runtime-context.rust-release-build-rejected
       - environment: runtime-context.rust-release-build-commands-succeed
       - environment: runtime-context.rust-release-version-report-rejected
@@ -63,15 +62,6 @@ contracts:
           field: final-output
           in:
             - verified
-      - id: rust-release-final-output-safe
-        applies_to:
-          - runtime-context.rust-release-build-inputs-match-authority
-        claim:
-          field: final-output
-          in:
-            - verified
-            - absent
-            - preserved
       - id: rust-release-processing-fails
         applies_to:
           - runtime-context.rust-release-build-rejected

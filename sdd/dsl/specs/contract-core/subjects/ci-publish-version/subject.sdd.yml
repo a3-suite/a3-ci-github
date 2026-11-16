@@ -23,10 +23,12 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
         fields:
-          - selector: status
-            meaning: Whether the version plan was materialized successfully.
           - selector: publish-version
             meaning: The materialized publish version.
+          - selector: status
+            meaning: Whether the version plan was materialized successfully.
+          - selector: publish-version-plan-comparison
+            meaning: Comparison of the publish-version output with the exact publish version in the owner-approved plan; equal or different.
           - selector: outcome
             meaning: Failure outcome of the rejected publish version step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -43,8 +45,9 @@ contracts:
         applies_to:
           - runtime-context.publish-version-plan-valid
         claim:
-          field: publish-version
-          present: true
+          field: publish-version-plan-comparison
+          in:
+            - equal
       - id: publish-version-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid

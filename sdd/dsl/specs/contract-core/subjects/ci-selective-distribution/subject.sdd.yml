@@ -17,8 +17,8 @@ contracts:
       - summary: Selected asset closure or stable dependency diagnostic exposed by distribution selection.
         boundary: boundary.cli-result
         fields:
-          - selector: selectedAssets
-            meaning: Stable asset identities in the validated selection closure.
+          - selector: selection-closure-gap-count
+            meaning: Number of requested assets and registry-required dependencies that are absent from selectedAssets.
           - selector: diagnostic
             meaning: Stable rejection reason for an unknown or incomplete selection.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -40,8 +40,9 @@ contracts:
         applies_to:
           - runtime-context.selective-distribution-selection-valid
         claim:
-          field: selectedAssets
-          present: true
+          field: selection-closure-gap-count
+          in:
+            - "0"
       - id: selective-distribution-missing-dependency-rejected
         applies_to:
           - runtime-context.selective-distribution-selection-incomplete
@@ -94,8 +95,6 @@ contracts:
         fields:
           - selector: sourceRevision
             meaning: Full immutable source commit SHA.
-          - selector: selectedAssets
-            meaning: Asset identities whose selected files passed integrity validation.
           - selector: diagnostic
             meaning: Stable rejection reason for invalid manifest, source, redirect, size, or digest, or for a fetch lock that cannot be held or released.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -106,6 +105,8 @@ contracts:
       - summary: Files of the local distribution of the requested revision.
         boundary: boundary.workspace-files
         fields:
+          - selector: selected-asset-missing-file-count
+            meaning: Number of assets in the selection closure whose selected files are absent from the local distribution of the requested revision.
           - selector: unselected-file-count
             meaning: Number of files in the local distribution of the requested revision, other than its manifest and receipt, that belong to no asset of the closure of the selections fetched for the revision.
       - summary: Consumer file tree without the entries owned by a fetch request, compared before and after it.
@@ -140,8 +141,9 @@ contracts:
         applies_to:
           - runtime-context.selective-distribution-source-valid
         claim:
-          field: selectedAssets
-          present: true
+          field: selected-asset-missing-file-count
+          in:
+            - "0"
       - id: selective-distribution-invalid-source-rejected
         applies_to:
           - runtime-context.selective-distribution-source-invalid
@@ -353,7 +355,7 @@ contracts:
           - selector: assetNames
             meaning: Manifest, standalone fetch CLI, checksum, and same-source Agent Skills ZIP and its checksum asset names without bundled implementation files.
           - selector: readbackStatus
-            meaning: Readback status that the publisher reports for the remote Release assets.
+            meaning: Readback status reported for the remote Release assets; verified only after they match the prepared bytes.
           - selector: diagnostic
             meaning: Stable failure evidence of the rejected publication.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -387,7 +389,8 @@ contracts:
           - runtime-context.selective-distribution-publication-already-published
         claim:
           field: readbackStatus
-          present: true
+          in:
+            - verified
       - id: selective-distribution-publication-failure-exposed
         applies_to:
           - runtime-context.selective-distribution-publication-invalid
@@ -452,7 +455,7 @@ contracts:
         boundary: boundary.script-result
         fields:
           - selector: readbackStatus
-            meaning: Readback status that the readback reports for the remote Release assets.
+            meaning: Readback status reported for the remote Release assets; verified only after they match the prepared bytes.
           - selector: diagnostic
             meaning: Stable failure evidence of the rejected readback.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -470,7 +473,8 @@ contracts:
           - runtime-context.selective-distribution-readback-valid
         claim:
           field: readbackStatus
-          present: true
+          in:
+            - verified
       - id: selective-distribution-readback-failure-exposed
         applies_to:
           - runtime-context.selective-distribution-readback-invalid

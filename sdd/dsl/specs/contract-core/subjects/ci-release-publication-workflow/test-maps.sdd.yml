@@ -8,76 +8,46 @@ test_maps:
         symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication
         guarantees:
           - release-fixed-provider-reference
-          - release-explicit-owner-inputs
           - release-request-before-publication
           - release-authority-before-publication
           - release-control-sha-bound
           - release-control-head-verified
           - release-handoff-before-publication
           - release-publication-before-readback
-          - release-tokens-explicit
-          - supplemental-upload-selected-root
-          - supplemental-hidden-files-selected
-          - supplemental-download-root
           - supplemental-final-assembly-input
-          - release-publication-serialized
-      - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
-        guarantees:
-          - release-publication-needs-authority-and-assembly
-      - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > release-publication-workflow-contract > platform builds check out the committed line endings on every runner
-        guarantees:
-          - release-build-committed-line-endings
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: .ci/platforms.yml"
         guarantees:
-          - release-assemble-control-checkout-manifest-only
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: platforms.yml"
         guarantees:
-          - release-assemble-control-checkout-manifest-only
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: custom path/platform [literal]*?#!.yml"
         guarantees:
-          - release-assemble-control-checkout-manifest-only
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: release control checkout > trusted source identity and file scope > keeps Git identity and artifact handoffs without product working files for publish
         guarantees:
-          - release-publish-control-checkout-empty
           - release-control-sha-bound
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflow declares serialized publication
+        guarantees:
+          - release-publication-serialized
       - path: tests/control-checkout.test.mjs
-        symbol: release control checkout > trusted source identity and file scope > keeps public skill source complete with credentials removed
+        symbol: release control checkout > trusted source identity and file scope > removes credentials from the fixed assembly source checkout
         guarantees:
-          - release-assembly-source-unfiltered
           - release-assembly-source-credentials-removed
-      - path: tests/control-checkout.process.test.mjs
-        symbol: release control checkout > trusted source identity and file scope > avoids fetching and materializing unrelated large product blobs
-        guarantees:
-          - release-control-checkout-narrowed-objects
-      - path: tests/control-checkout.process.test.mjs
-        symbol: release control checkout > unsupported and missing selections > preserves full checkout fallback and rejects multiline scope injection
-        guarantees:
-          - release-control-checkout-unsupported-manifest-full
-          - release-control-checkout-multiline-manifest-rejected
-      - path: tests/control-checkout.process.test.mjs
-        symbol: release control checkout > unsupported and missing selections > does not silently supply another file when the declared manifest is missing
-        guarantees:
-          - release-assemble-control-checkout-manifest-only
   - contract_id: contract.ci-release-publication-workflow.publication
     case_id: ci-release-publication-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows preserve failed and unknown outcomes
         guarantees:
-          - ci-release-publication-workflow-failure-observed
-          - release-failure-summary-always
           - release-failed-prerequisite-blocks
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
@@ -98,18 +68,17 @@ test_maps:
     case_id: ci-asset-release-publication-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication runs no product build, checks the asset selection before authority and runs quality only for a selected profile
+        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication runs no product build and checks the asset selection before authority
         guarantees:
           - asset-publication-no-build-job
           - asset-publication-selection-before-authority
-          - asset-publication-quality-when-profile-selected
   - contract_id: contract.ci-release-publication-workflow.asset-publication
     case_id: ci-asset-release-publication-workflow-failure
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication blocks on every unsuccessful prerequisite and always summarizes
+        symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication blocks on every unsuccessful prerequisite
         guarantees:
-          - asset-publication-failure-summary-always
+          - asset-publication-failed-prerequisite-blocks
   - contract_id: contract.ci-release-publication-workflow.asset-publication
     case_id: detailed-failure-asset-publication
     tests:

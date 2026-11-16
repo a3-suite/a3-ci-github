@@ -27,6 +27,8 @@ contracts:
             meaning: Package publication request path.
           - selector: source-sha
             meaning: Verified source commit SHA.
+          - selector: source-sha-comparison
+            meaning: Comparison of the source-sha output with the source commit SHA passed to the Action; equal or different.
           - selector: version
             meaning: Verified package version.
           - selector: target-identity
@@ -50,19 +52,13 @@ contracts:
       - environment: runtime-context.request-trigger-verification-invoked
       - environment: runtime-context.action-input-invalid
     guarantees:
-      - id: package-request-status-produced
-        applies_to:
-          - runtime-context.request-trigger-verification-invoked
-          - runtime-context.package-publication-request-succeeded
-        claim:
-          field: status
-          present: true
       - id: package-request-source-produced
         applies_to:
           - runtime-context.package-publication-request-succeeded
         claim:
-          field: source-sha
-          present: true
+          field: source-sha-comparison
+          in:
+            - equal
       - id: package-request-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid

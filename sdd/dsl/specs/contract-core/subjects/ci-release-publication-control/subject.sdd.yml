@@ -49,13 +49,13 @@ contracts:
       - environment: runtime-context.request-trigger-verification-invoked
       - environment: runtime-context.action-input-invalid
     guarantees:
-      - id: publication-control-status-produced
+      - id: publication-control-status-succeeded
         applies_to:
-          - runtime-context.request-trigger-verification-invoked
           - runtime-context.release-publication-request-verified
         claim:
           field: status
-          present: true
+          in:
+            - success
       - id: publication-request-run-id-produced
         applies_to:
           - runtime-context.release-publication-request-verified

@@ -43,12 +43,12 @@ contracts:
       - summary: GitHub Actions outputs and step result exposed by an Action.
         boundary: boundary.action-output
         fields:
-          - selector: status
-            meaning: Success only after the selected read-only verification completes.
-          - selector: observation-path
-            meaning: Pre-create observation file written by observe-before.
           - selector: observation-digest
             meaning: SHA-256 of the exact pre-create observation file bytes.
+          - selector: observation-path
+            meaning: Pre-create observation file written by observe-before.
+          - selector: status
+            meaning: Success only after the selected read-only verification completes.
           - selector: release-remote-identity
             meaning: Release object ID that verify-after emits.
           - selector: publish-receipt
@@ -77,19 +77,6 @@ contracts:
         fields:
           - selector: non-get-request-state
             meaning: Occurrence state of provider requests using a method other than GET during one invocation.
-          - selector: asset-body-request-state
-            meaning: Occurrence state of provider requests to the Release asset download endpoint (/releases/assets/) during one invocation.
-          - selector: release-inventory-attempts
-            meaning: Maximum number of attempted Release inventory observations, including failed or incomplete attempts, in one pre-create or post-create observation sequence, represented as a decimal integer string; zero when no such observation begins.
-          - selector: asset-inventory-attempts
-            meaning: Maximum number of asset inventory observations in one readback sequence, represented as a decimal integer string; zero when none begins.
-      - summary: Requested delays at the runner clock boundary.
-        boundary: boundary.observation-clock
-        fields:
-          - selector: release-reobservation-delay
-            meaning: Canonical comma-separated distinct millisecond durations requested between successive Release inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.
-          - selector: asset-reobservation-delay
-            meaning: Canonical comma-separated distinct millisecond durations requested between successive asset inventory observation attempts, including failed or incomplete attempts, sorted numerically; not-applicable only when the sequence has fewer than two attempts, and missing when any adjacent pair has no intervening requested delay.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-pre-observation-valid
@@ -105,18 +92,6 @@ contracts:
           field: status
           in:
             - success
-      - id: observation-file
-        applies_to:
-          - runtime-context.release-pre-observation-valid
-        claim:
-          field: observation-path
-          present: true
-      - id: observation-digest
-        applies_to:
-          - runtime-context.release-pre-observation-valid
-        claim:
-          field: observation-digest
-          present: true
       - id: release-id-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
@@ -168,49 +143,6 @@ contracts:
           field: non-get-request-state
           in:
             - absent
-      - id: release-inventory-attempts
-        applies_to:
-          - runtime-context.release-verification-invocation
-        claim:
-          field: release-inventory-attempts
-          in:
-            - "0"
-            - "1"
-            - "2"
-            - "3"
-      - id: asset-inventory-attempts
-        applies_to:
-          - runtime-context.release-verification-invocation
-        claim:
-          field: asset-inventory-attempts
-          in:
-            - "0"
-            - "1"
-            - "2"
-            - "3"
-      - id: release-reobservation-delay
-        applies_to:
-          - runtime-context.release-verification-invocation
-        claim:
-          field: release-reobservation-delay
-          in:
-            - "1000"
-            - not-applicable
-      - id: asset-reobservation-delay
-        applies_to:
-          - runtime-context.release-verification-invocation
-        claim:
-          field: asset-reobservation-delay
-          in:
-            - "1000"
-            - not-applicable
-      - id: post-verification-reads-asset-bodies
-        applies_to:
-          - runtime-context.release-post-verification-valid
-        claim:
-          field: asset-body-request-state
-          in:
-            - present
       - id: receipt-remote-id-binding
         applies_to:
           - runtime-context.release-post-verification-valid

@@ -25,12 +25,18 @@ contracts:
             meaning: 失敗理由を表す安定した識別子。
           - selector: failure-cause
             meaning: 失敗原因の判別状態（known、unknown、unavailable のいずれか）。
-          - selector: execution-context
-            meaning: 失敗時に観測した実行文脈の記録。
-          - selector: comparison
-            meaning: 違反した規則に対する期待値と観測値の記録。
-          - selector: evidence-location
-            meaning: 元の診断と関連証跡の所在の記録。
+          - selector: execution-context-run-binding
+            meaning: Comparison of the run identifier in the failure diagnostic context with the identifier of the failing invocation workflow run; matched or different.
+          - selector: execution-context-job-binding
+            meaning: Comparison of the job identifier in the failure diagnostic context with the identifier of the failing invocation workflow job; matched or different.
+          - selector: execution-context-source-binding
+            meaning: Comparison of the source revision in the failure diagnostic context with the revision checked out for the failing invocation; matched or different.
+          - selector: comparison-expected
+            meaning: Expected value of the violated rule recorded in the diagnostic comparison.
+          - selector: comparison-observed
+            meaning: Observed value, or the unavailable reason, recorded in the diagnostic comparison.
+          - selector: evidence-location-log
+            meaning: Location of the original diagnostic in the workflow run, job and step log.
           - selector: execution-outcome
             meaning: 元の失敗の結果（failure または unresolved）。
           - selector: last-confirmed-stage
@@ -57,8 +63,6 @@ contracts:
             meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
           - selector: diagnostic-only-retry-state
             meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
-          - selector: unsubstantiated-remediation-state
-            meaning: Occurrence state (present or absent) of remediation or rerun safety asserted without applicable state evidence.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
     guarantees:
@@ -95,24 +99,46 @@ contracts:
             - known
             - unknown
             - unavailable
-      - id: execution-context-recorded
+      - id: execution-context-run-bound
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
-          field: execution-context
+          field: execution-context-run-binding
+          in:
+            - matched
+      - id: execution-context-job-bound
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: execution-context-job-binding
+          in:
+            - matched
+      - id: execution-context-source-bound
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: execution-context-source-binding
+          in:
+            - matched
+      - id: comparison-expected-recorded
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        claim:
+          field: comparison-expected
           present: true
-      - id: comparison-recorded
+      - id: comparison-observed-recorded
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
-          field: comparison
+          field: comparison-observed
           present: true
       - id: evidence-location-recorded
         applies_to:
           - runtime-context.failure-diagnostic-required
         claim:
-          field: evidence-location
-          present: true
+          field: evidence-location-log
+          in:
+            - workflow-run-job-step-log
       - id: execution-outcome-retained
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -203,13 +229,6 @@ contracts:
           field: diagnostic-only-retry-state
           in:
             - absent
-      - id: diagnostic-unsubstantiated-remediation
-        applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: unsubstantiated-remediation-state
-          in:
-            - absent
   - id: contract.ci-failure-diagnostics.workflow-evidence
     summary: Managed workflow failure summary definitions.
     inputs:
@@ -266,16 +285,24 @@ contracts:
       - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
         boundary: boundary.diagnostic-result
         fields:
-          - selector: bootstrap-diagnostic
-            meaning: Machine-readable failure envelope emitted by a failing public runtime bootstrap.
+          - selector: bootstrap-failure-stage
+            meaning: Failure stage identifier in the bootstrap failure envelope.
+          - selector: bootstrap-failure-reason
+            meaning: Stable failure reason identifier in the bootstrap failure envelope.
     conditions:
       - input: ci-failure-diagnostics-bootstrap-fails
     guarantees:
-      - id: ci-failure-diagnostics-bootstrap-envelope-emitted
+      - id: ci-failure-diagnostics-bootstrap-stage-emitted
         applies_to:
           - ci-failure-diagnostics-bootstrap-fails
         claim:
-          field: bootstrap-diagnostic
+          field: bootstrap-failure-stage
+          present: true
+      - id: ci-failure-diagnostics-bootstrap-reason-emitted
+        applies_to:
+          - ci-failure-diagnostics-bootstrap-fails
+        claim:
+          field: bootstrap-failure-reason
           present: true
   - id: contract.ci-failure-diagnostics.existing-state
     summary: Invocation of a selected contract boundary, read against pre-existing files that the boundary does not own.

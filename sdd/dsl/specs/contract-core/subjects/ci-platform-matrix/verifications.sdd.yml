@@ -17,7 +17,6 @@ cases:
             runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
     verifies:
-      - platform-matrix-produced
       - manifest-matrix-binding
   - contract_id: contract.ci-platform-matrix.outputs
     id: invalid-platform-manifest
@@ -48,13 +47,10 @@ cases:
           - id: macos-arm64
           - id: linux-x64
     verifies:
-      - platform-matrix-produced
-      - ordered-quality-matrix-produced
-      - ordered-expected-platforms-produced
       - manifest-matrix-binding
-      - quality-id-order
+      - quality-id-set
       - quality-runner-binding
-      - expected-id-order
+      - expected-id-set
       - shared-checks-absence
   - contract_id: contract.ci-platform-matrix.outputs
     id: invalid-quality-selection
@@ -87,11 +83,8 @@ cases:
           - id: macos-arm64
         sharedStandardChecks: true
     verifies:
-      - platform-matrix-produced
-      - ordered-quality-matrix-produced
-      - ordered-expected-platforms-produced
       - manifest-matrix-binding
-      - quality-id-order
+      - quality-id-set
       - quality-runner-binding
-      - expected-id-order
+      - expected-id-set
       - shared-checks-value

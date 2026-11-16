@@ -8,12 +8,10 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: detailed-failure-outputs
     tests:
@@ -67,12 +65,10 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental-phase-source > supplemental source preserves owner shebang failure semantics
         guarantees:
@@ -92,9 +88,17 @@ test_maps:
     case_id: unsafe-phase-path
     tests:
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental source rejects unsafe paths, invalid phases and existing outputs
+        symbol: supplemental source rejects unsafe paths and invalid phases
         guarantees:
           - phase-rejected
+  - contract_id: contract.ci-release-supplemental-asset.outputs
+    case_id: existing-output-rejection
+    tests:
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects an existing output directory without changing it
+        guarantees:
+          - phase-rejected
+          - existing-output-unchanged
   - contract_id: contract.ci-release-supplemental-asset.outputs
     case_id: identity-selection
     tests:
@@ -199,60 +203,6 @@ test_maps:
         symbol: standard installer > assembly > rejects newline-only input mutation during provider execution in both phases
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: diagnostic-standard-installer-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
-        guarantees:
-          - phase-diagnostic
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
-        guarantees:
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: primary-and-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: sole-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: untrusted-installer-process-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > standard installer rejects malformed or untrusted process diagnostics
-        guarantees:
-          - diagnostic-unvalidated-installer-reason
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-entry-name-publication
     tests:
@@ -261,7 +211,7 @@ test_maps:
         guarantees:
           - standard-installer-publication-assets-produced
           - standard-installer-source-snapshots-excluded
-          - standard-installer-checksum-sidecar-format
+          - standard-installer-checksum-sidecar
           - standard-installer-declaration-directory-unchanged
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-entry-name-rejection
@@ -270,12 +220,10 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: detailed-failure-outputs
     tests:
@@ -303,12 +251,10 @@ test_maps:
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         guarantees:
           - phase-rejected
-          - phase-diagnostic
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-candidate-mutation
     tests:
@@ -374,7 +320,7 @@ test_maps:
           - standard-installer-evidence-preserved
           - standard-installer-publication-assets-produced
           - standard-installer-source-snapshots-excluded
-          - standard-installer-checksum-sidecar-format
+          - standard-installer-checksum-sidecar
           - standard-installer-declaration-directory-unchanged
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: standard-evidence-missing
@@ -397,16 +343,6 @@ test_maps:
         symbol: standard installer > assembly > rejects extra transferred platform evidence
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: primary-and-cleanup-failure
-    pending:
-      - guarantees: [diagnostic-cleanup-status-mismatch, diagnostic-cleanup-state-inference, diagnostic-cleanup-residual-claim, diagnostic-cleanup-extra-field]
-        reason: 写像していた e2e テストは build-platform で cleanup 失敗を起こし、assemble の cleanup 失敗を与えるテストが無い
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: sole-cleanup-failure
-    pending:
-      - guarantees: [diagnostic-cleanup-only-code-mismatch, diagnostic-cleanup-status-mismatch, diagnostic-cleanup-state-inference, diagnostic-cleanup-residual-claim, diagnostic-cleanup-extra-field]
-        reason: 写像していた e2e テストは build-platform で cleanup 失敗を起こし、assemble の cleanup 失敗を与えるテストが無い
   - contract_id: contract.ci-release-supplemental-asset.assembly
     case_id: input-mutation
     tests:

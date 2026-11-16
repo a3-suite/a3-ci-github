@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, test, onTestFinished } from 'vitest';
 
 const actions = fs.readdirSync('actions').filter((name) => fs.existsSync(`actions/${name}/src/index.ts`));
+const sourceRevision = '0123456789abcdef0123456789abcdef01234567';
 describe.each(actions)('%s failure boundary', (action) => {
   // contract_id: contract.ci-failure-diagnostics.actionable
   // flow_id: action-failure-diagnostics
@@ -17,7 +18,7 @@ describe.each(actions)('%s failure boundary', (action) => {
     fs.writeFileSync(output, '');
     fs.writeFileSync(sentinel, 'unchanged');
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('INPUT_')));
-    Object.assign(env, { GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'private-token-must-not-appear', RUNNER_TEMP: fixture, GITHUB_PATH: path.join(fixture, 'path'), GITHUB_RUN_ID: '123', GITHUB_JOB: 'diagnostic-test' });
+    Object.assign(env, { GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'private-token-must-not-appear', RUNNER_TEMP: fixture, GITHUB_PATH: path.join(fixture, 'path'), GITHUB_RUN_ID: '123', GITHUB_JOB: 'diagnostic-test', CI_SOURCE_REVISION: sourceRevision });
     const root = path.resolve('actions', action);
     const require = createRequire(path.join(root, 'package.json'));
     const args = surface === 'source' ? ['--import', require.resolve('tsx'), path.join(root, 'src/index.ts')] : [path.join(root, 'dist/index.js')];
@@ -30,8 +31,9 @@ describe.each(actions)('%s failure boundary', (action) => {
     expect(evidence.classification.reason).not.toBe('unknown-failure');
     expect(evidence.classification.cause).toBe('known');
     expect(evidence.classification.stage).toBeTruthy();
-    expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test' });
-    expect(evidence.comparison).toBeTruthy();
+    expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test', source: sourceRevision });
+    expect(evidence.comparison.expected).toBeTruthy();
+    expect(evidence.comparison.observed).toBeTruthy();
     expect(evidence['evidence-location']).toMatchObject({ log: 'workflow-run-job-step-log', artifact: 'not-generated' });
     expect(evidence['execution-state'].outcome).toBe(action === 'ci-change-scope' ? 'unresolved' : 'failure');
     expect(evidence['execution-state'].lastConfirmed).toBeTruthy();

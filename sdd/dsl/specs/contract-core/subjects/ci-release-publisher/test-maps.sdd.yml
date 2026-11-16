@@ -68,11 +68,13 @@ test_maps:
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a handoff asset changed during final absence observation before create
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     case_id: asset-inventory-propagation
     tests:
@@ -157,11 +159,13 @@ test_maps:
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects an expired approval before writes
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     case_id: tampered-handoff-asset
     tests:
@@ -170,11 +174,13 @@ test_maps:
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a tampered handoff asset before writes
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     case_id: remote-rejection
     tests:
@@ -183,11 +189,13 @@ test_maps:
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a moved tag source before writes
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-write-on-rejection
   - contract_id: contract.ci-release-publisher.outputs
     case_id: partial-failure
     tests:

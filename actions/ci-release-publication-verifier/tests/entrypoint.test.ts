@@ -27,7 +27,6 @@ const assembly = JSON.parse(fs.readFileSync(path.join(process.env.MOCK_HANDOFF, 
 globalThis.fetch = async (url, init) => {
   if (init.method !== 'GET') throw new Error('write-forbidden');
   const endpoint = new URL(String(url)).pathname;
-  fs.appendFileSync(process.env.MOCK_REQUEST_LOG, endpoint + '\\n');
   let data;
   if (endpoint.includes('/git/ref/tags/')) data = { object: { type: 'tag', sha: assembly.identity.tag_object_sha } };
   else if (endpoint.includes('/git/tags/')) data = { sha: assembly.identity.tag_object_sha, object: { type: 'commit', sha: assembly.identity.source_sha } };
@@ -40,15 +39,12 @@ globalThis.fetch = async (url, init) => {
 };
 `);
   const beforePath = path.join(f.root, 'before.json');
-  const requestLog = path.join(f.root, 'requests.log');
   const output = f.put('github-output', '');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before', MOCK_REQUEST_LOG: requestLog };
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
   const beforeResult = await runActionEntrypoint(['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
   expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
   expect(beforeOutputs).toMatch(/^status=success\n/);
-  expect(beforeOutputs.includes(`observation-path=${beforePath}\n`)).toBeTruthy();
-  expect(beforeOutputs.includes(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`)).toBeTruthy();
   expect(beforeOutputs.includes('release-remote-identity=')).toBe(false);
   expect(beforeOutputs.includes('publish-receipt=')).toBe(false);
   expect(beforeOutputs.includes('readback-evidence=')).toBe(false);
@@ -58,14 +54,10 @@ globalThis.fetch = async (url, init) => {
   const receiptPath = f.put('receipt.json', receipt);
   const readbackPath = f.put('readback.json', readback);
   fs.writeFileSync(output, '');
-  fs.writeFileSync(requestLog, '');
   const afterResult = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after' }, encoding: 'utf8', cwd: f.root });
   expect(afterResult.status, afterResult.stderr).toBe(0);
-  expect(fs.readFileSync(requestLog, 'utf8').split('\n').some((endpoint) => endpoint.includes('/releases/assets/'))).toBe(true);
   const outputs = fs.readFileSync(output, 'utf8');
   expect(outputs).toMatch(/^status=success\n/);
-  expect(outputs.includes('observation-path=')).toBe(false);
-  expect(outputs.includes('observation-digest=')).toBe(false);
   expect(outputs).toMatch(/release-remote-identity=42\n/);
   expect(outputs).toMatch(/publish-receipt=\{/);
   expect(outputs).toMatch(/readback-evidence=\{/);

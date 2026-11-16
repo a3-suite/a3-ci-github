@@ -73,8 +73,7 @@ test('authority entrypoint binds explicit decision, owner workflow and snapshot 
     const run = runAuthority(entrypointArgs, f);
     // Assert
     expect(run.result.status, run.result.stderr).toBe(0);
-    expect(run.authority()).toMatchObject({ version: '1.2.3', owner_contract: { id: 'git.release-flow' },
-      publication: { source_sha: source, target_identity: 'platform-set', repository } });
+    expect(run.outputs).toMatch(/^authority-path=.+$/m);
     expect(run.methods.length).toBeGreaterThan(0);
     expect(new Set(run.methods)).toStrictEqual(new Set(['GET']));
   } finally { fs.rmSync(f.root, { recursive: true }); }
@@ -82,6 +81,40 @@ test('authority entrypoint binds explicit decision, owner workflow and snapshot 
 
 // contract_id: contract.ci-release-authority.outputs
 test('authority entrypoint accepts canonical repository casing while preserving approved identity', () => {
+  // Arrange
+  const f = fixture();
+  try {
+    (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = repository.toUpperCase();
+    for (const id of ['11', '22']) {
+      const run = f.responses[`/repos/${repository}/actions/runs/${id}`] as Record<string, Record<string, unknown>>;
+      run.repository.full_name = repository.toUpperCase();
+    }
+    // Act
+    const run = runAuthority(entrypointArgs, f);
+    // Assert
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(run.outputs).toMatch(/^authority-path=.+$/m);
+  } finally { fs.rmSync(f.root, { recursive: true }); }
+});
+
+// evidence_role: supplemental
+// The content of the authority file is an implementation detail of the handoff that no contract guarantee covers.
+test('authority entrypoint writes the approved identity into the authority file', () => {
+  // Arrange
+  const f = fixture();
+  try {
+    // Act
+    const run = runAuthority(entrypointArgs, f);
+    // Assert
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(run.authority()).toMatchObject({ version: '1.2.3', owner_contract: { id: 'git.release-flow' },
+      publication: { source_sha: source, target_identity: 'platform-set', repository } });
+  } finally { fs.rmSync(f.root, { recursive: true }); }
+});
+
+// evidence_role: supplemental
+// The repository casing preserved in the authority file is an implementation detail of the handoff that no contract guarantee covers.
+test('authority entrypoint preserves the canonical repository casing in the authority file', () => {
   // Arrange
   const f = fixture();
   try {

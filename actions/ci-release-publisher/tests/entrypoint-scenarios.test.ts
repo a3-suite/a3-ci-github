@@ -93,11 +93,10 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'readback.json'), 'utf8')).release_id).toBe('42');
     expect(`${outcome.result.stdout}${outcome.result.stderr}${outcome.outputs}`).not.toContain('synthetic-secret');
   };
-  const expectRejectedBeforeWrites = (outcome: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['run']>>, outputRoot: string) => {
+  const expectRejectedBeforeWrites = (outcome: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['run']>>) => {
     expect(outcome.result.status).toBe(1);
     expect(outcome.outputs).toBe('');
     expect(outcome.writes).toStrictEqual([]);
-    expect(fs.existsSync(outputRoot)).toBe(false);
     expect(outcome.result.stderr).not.toContain('synthetic-secret');
   };
 
@@ -147,58 +146,80 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
   // contract_id: contract.ci-release-publisher.outputs
   test('publisher entrypoint rejects a handoff asset changed during final absence observation before create', async (t) => {
     // Arrange
-    const { f, outputRoot, run } = await setup(t);
+    const { f, run } = await setup(t);
     // Act
     const outcome = await run({ changeHandoffAsset: path.join(f.options.outputRoot, 'assets', f.name) });
     // Assert
-    expectRejectedBeforeWrites(outcome, outputRoot);
+    expectRejectedBeforeWrites(outcome);
     expect(outcome.result.stderr).toMatch(/checksum-mismatch/);
   });
 
   // contract_id: contract.ci-release-publisher.outputs
   test('publisher entrypoint rejects an expired approval before writes', async (t) => {
     // Arrange
-    const { f, outputRoot, run } = await setup(t);
+    const { f, run } = await setup(t);
     f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'), 'utf8')), approvalExpiresAt: '2000-01-01T00:00:00Z' });
     // Act
     const outcome = await run();
     // Assert
-    expectRejectedBeforeWrites(outcome, outputRoot);
+    expectRejectedBeforeWrites(outcome);
     expect(outcome.result.stderr).toMatch(/approval-expired-or-invalid/);
   });
 
   // contract_id: contract.ci-release-publisher.outputs
   test('publisher entrypoint rejects a tampered handoff asset before writes', async (t) => {
     // Arrange
-    const { f, outputRoot, run } = await setup(t);
+    const { f, run } = await setup(t);
     f.put(`handoff/assets/${f.name}`, 'changed');
     // Act
     const outcome = await run();
     // Assert
-    expectRejectedBeforeWrites(outcome, outputRoot);
+    expectRejectedBeforeWrites(outcome);
     expect(outcome.result.stderr).toMatch(/checksum-mismatch/);
   });
 
   // contract_id: contract.ci-release-publisher.outputs
   test('publisher entrypoint rejects a moved tag source before writes', async (t) => {
     // Arrange
-    const { outputRoot, run } = await setup(t);
+    const { run } = await setup(t);
     // Act
     const outcome = await run({ tagCommit: 'f'.repeat(40) });
     // Assert
-    expectRejectedBeforeWrites(outcome, outputRoot);
+    expectRejectedBeforeWrites(outcome);
     expect(outcome.result.stderr).toMatch(/source-identity-mismatch/);
   });
 
   // contract_id: contract.ci-release-publisher.outputs
   test('publisher entrypoint refuses to write over an existing same-tag published release', async (t) => {
     // Arrange
-    const { outputRoot, run } = await setup(t);
+    const { run } = await setup(t);
     // Act
     const outcome = await run({ existingRelease: 'published' });
     // Assert
-    expectRejectedBeforeWrites(outcome, outputRoot);
+    expectRejectedBeforeWrites(outcome);
     expect(outcome.result.stderr).toMatch(/existing-release-or-asset/);
+  });
+
+  // evidence_role: supplemental
+  // Creating no output directory is a filesystem side effect of the rejection, not an observation of the provider write requests.
+  test('publisher entrypoint creates no output directory when it rejects before writes', async (t) => {
+    // Arrange
+    const rejections: Array<[string, (f: Awaited<ReturnType<typeof setup>>['f']) => Record<string, unknown>]> = [
+      ['changed handoff asset', (f) => ({ changeHandoffAsset: path.join(f.options.outputRoot, 'assets', f.name) })],
+      ['expired approval', (f) => { f.put('publication-request.json', { ...JSON.parse(fs.readFileSync(path.join(f.root, 'publication-request.json'), 'utf8')), approvalExpiresAt: '2000-01-01T00:00:00Z' }); return {}; }],
+      ['tampered handoff asset', (f) => { f.put(`handoff/assets/${f.name}`, 'changed'); return {}; }],
+      ['moved tag source', () => ({ tagCommit: 'f'.repeat(40) })],
+      ['existing published release', () => ({ existingRelease: 'published' })],
+    ];
+    for (const [name, prepare] of rejections) {
+      const { f, outputRoot, run } = await setup(t);
+      const scenario = prepare(f);
+      // Act
+      const outcome = await run(scenario);
+      // Assert
+      expect(outcome.result.status, name).toBe(1);
+      expect(fs.existsSync(outputRoot), name).toBe(false);
+    }
   });
 
   // contract_id: contract.ci-release-publisher.outputs

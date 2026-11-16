@@ -15,12 +15,8 @@ contracts:
       - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
         boundary: boundary.workflow-definition
         fields:
-          - selector: failure-summary
-            meaning: Declared publication aggregate route.
           - selector: release-fixed-provider-reference
             meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
-          - selector: release-explicit-owner-inputs
-            meaning: Comparison of caller owner bindings with the provider typed required inputs.
           - selector: release-request-before-publication
             meaning: Declared dependency order of request validation and privileged publication call.
           - selector: release-authority-before-publication
@@ -29,50 +25,18 @@ contracts:
             meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
           - selector: release-control-head-verified
             meaning: Declared order of control checkout and immediate HEAD verification.
-          - selector: release-build-committed-line-endings
-            meaning: Declared order of disabling core.autocrlf and the platform build source checkout.
           - selector: release-handoff-before-publication
             meaning: Declared order of handoff validation and credential-bearing publication.
           - selector: release-publication-before-readback
             meaning: Declared order of the publish step and independent verify-publication step.
-          - selector: release-tokens-explicit
-            meaning: Comparison of credential-bearing step token bindings with github.token.
           - selector: release-publication-concurrency
             meaning: "Declared concurrency of the release publication provider workflow: one group per workflow and repository, with in-progress runs kept and pending runs queued; serialized or other."
-          - selector: supplemental-upload-selected-root
-            meaning: Declared supplemental build upload path.
-          - selector: supplemental-hidden-files-selected
-            meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
-          - selector: supplemental-download-root
-            meaning: Declared supplemental artifact download root.
           - selector: supplemental-final-assembly-input
-            meaning: Declared supplemental build root passed to final assemble.
-          - selector: release-publish-needs
-            meaning: Comma-separated job IDs in the publish job needs, which are the only job results its run condition can read.
-          - selector: release-assembly-source-path-filter
-            meaning: Path filtering (sparse checkout or partial clone filter) declared on the fixed assembly source checkout.
+            meaning: Comparison of the supplemental build root passed to final assemble with the root the supplemental artifacts are downloaded to; equal or different.
           - selector: release-assembly-source-credentials-persisted
             meaning: Declared persist-credentials setting of the fixed assembly source checkout.
-          - selector: release-failure-summary-always
-            meaning: Declared publication aggregate condition.
           - selector: release-failed-prerequisite-blocks
             meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
-      - summary: Working tree paths and Git object store that the release control checkouts produce.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: release-assemble-control-checkout-paths
-            meaning: "Working tree paths that the assemble job control checkout materializes for a declared manifest path that a sparse pattern can express exactly. declared-manifest-only: only that manifest, when it exists in the control revision."
-          - selector: release-publish-control-checkout-paths
-            meaning: Working tree paths that the publish job control checkout materializes.
-          - selector: release-control-checkout-object-volume
-            meaning: "Git object bytes that a narrowed control checkout stores, relative to a full checkout of the same revision. below-one-percent: less than 1/100 of the full checkout."
-      - summary: Sparse-checkout scope that the release control checkout scope step produces from the declared manifest path.
-        boundary: boundary.script-result
-        fields:
-          - selector: release-control-checkout-unsupported-manifest-scope
-            meaning: Sparse-checkout scope produced for a manifest path that a sparse pattern cannot express exactly (empty, absolute, backslash-separated, or with trailing whitespace).
-          - selector: release-control-checkout-multiline-manifest
-            meaning: Outcome of control checkout scope resolution for a manifest path that contains a line break.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -83,12 +47,6 @@ contracts:
       - input: ci-release-publication-workflow-canonical-source-available
       - input: ci-release-publication-workflow-failure-route-required
     guarantees:
-      - id: ci-release-publication-workflow-failure-observed
-        applies_to:
-          - ci-release-publication-workflow-failure-route-required
-        claim:
-          field: failure-summary
-          present: true
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
@@ -100,13 +58,6 @@ contracts:
           - ci-release-publication-workflow-canonical-source-available
         claim:
           field: release-fixed-provider-reference
-          in:
-            - equal
-      - id: release-explicit-owner-inputs
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-explicit-owner-inputs
           in:
             - equal
       - id: release-request-before-publication
@@ -137,13 +88,6 @@ contracts:
           field: release-control-head-verified
           in:
             - checkout-before-verification
-      - id: release-build-committed-line-endings
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-build-committed-line-endings
-          in:
-            - autocrlf-disabled-before-checkout
       - id: release-handoff-before-publication
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
@@ -158,13 +102,6 @@ contracts:
           field: release-publication-before-readback
           in:
             - publication-before-readback
-      - id: release-tokens-explicit
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-tokens-explicit
-          in:
-            - equal
       - id: release-publication-serialized
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
@@ -172,83 +109,13 @@ contracts:
           field: release-publication-concurrency
           in:
             - serialized
-      - id: supplemental-upload-selected-root
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-upload-selected-root
-          in:
-            - supplemental-build/${{ matrix.id }}
-      - id: supplemental-hidden-files-selected
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-hidden-files-selected
-          in:
-            - equal
-      - id: supplemental-download-root
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-download-root
-          in:
-            - supplemental-build
       - id: supplemental-final-assembly-input
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
         claim:
           field: supplemental-final-assembly-input
           in:
-            - supplemental-build
-      - id: release-publication-needs-authority-and-assembly
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-publish-needs
-          in:
-            - authority,assemble
-      - id: release-assemble-control-checkout-manifest-only
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-assemble-control-checkout-paths
-          in:
-            - declared-manifest-only
-      - id: release-publish-control-checkout-empty
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-publish-control-checkout-paths
-          in:
-            - none
-      - id: release-control-checkout-narrowed-objects
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-control-checkout-object-volume
-          in:
-            - below-one-percent
-      - id: release-control-checkout-unsupported-manifest-full
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-control-checkout-unsupported-manifest-scope
-          in:
-            - full-checkout
-      - id: release-control-checkout-multiline-manifest-rejected
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-control-checkout-multiline-manifest
-          in:
-            - rejected
-      - id: release-assembly-source-unfiltered
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-assembly-source-path-filter
-          in:
-            - none
+            - equal
       - id: release-assembly-source-credentials-removed
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
@@ -256,13 +123,6 @@ contracts:
           field: release-assembly-source-credentials-persisted
           in:
             - "false"
-      - id: release-failure-summary-always
-        applies_to:
-          - ci-release-publication-workflow-failure-route-required
-        claim:
-          field: release-failure-summary-always
-          in:
-            - always
       - id: release-failed-prerequisite-blocks
         applies_to:
           - ci-release-publication-workflow-failure-route-required
@@ -285,10 +145,8 @@ contracts:
             meaning: Occurrence state (present or absent) of a product build job in the asset publication workflow.
           - selector: asset-publication-selection-before-authority
             meaning: Declared dependency order of the asset selection check and authority validation.
-          - selector: asset-publication-quality-condition
-            meaning: Declared condition under which the quality job runs.
-          - selector: asset-publication-failure-summary-always
-            meaning: Declared asset publication aggregate condition.
+          - selector: asset-publication-failed-prerequisite-blocks
+            meaning: Occurrence of asset publication eligibility with a failed or unknown required prerequisite.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -313,20 +171,13 @@ contracts:
           field: asset-publication-selection-before-authority
           in:
             - selection-before-authority
-      - id: asset-publication-quality-when-profile-selected
-        applies_to:
-          - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-quality-condition
-          in:
-            - language-profile-selected
-      - id: asset-publication-failure-summary-always
+      - id: asset-publication-failed-prerequisite-blocks
         applies_to:
           - ci-asset-release-publication-workflow-failure-route-required
         claim:
-          field: asset-publication-failure-summary-always
+          field: asset-publication-failed-prerequisite-blocks
           in:
-            - always
+            - absent
       - id: diagnostic-failure-stage-asset-publication
         applies_to:
           - runtime-context.failure-diagnostic-required

@@ -31,15 +31,10 @@ contracts:
       - summary: The provisioned jq command is visible to later steps.
         boundary: boundary.runner-path
         fields:
-          - selector: jq
-            meaning: jq executable resolved from the job command search path.
+          - selector: exposed-jq-asset-comparison
+            meaning: Comparison of the jq on the job command search path with the checksum-matched official asset for the requested version and platform; matched or different.
           - selector: path-handoff-state
             meaning: Occurrence state (present or absent) of an entry written by the invocation to the runner path handoff file (GITHUB_PATH).
-      - summary: Directories that the invocation created in the runner temporary directory.
-        boundary: boundary.runner-files
-        fields:
-          - selector: provisioned-directory-state
-            meaning: Occurrence state (present or absent) of a directory created by the invocation in the runner temporary directory for downloaded, extracted, or installed files.
       - summary: Provisioning success or failure is visible to the caller.
         boundary: boundary.action-output
         fields:
@@ -59,8 +54,9 @@ contracts:
         applies_to:
           - runtime-context.jq-release-asset-valid
         claim:
-          field: jq
-          present: true
+          field: exposed-jq-asset-comparison
+          in:
+            - matched
       - id: failed-provisioning-stops
         applies_to:
           - runtime-context.jq-release-asset-invalid
@@ -73,13 +69,6 @@ contracts:
           - runtime-context.jq-release-asset-invalid
         claim:
           field: path-handoff-state
-          in:
-            - absent
-      - id: failed-provisioning-leaves-no-artifacts
-        applies_to:
-          - runtime-context.jq-release-asset-invalid
-        claim:
-          field: provisioned-directory-state
           in:
             - absent
       - id: diagnostic-failure-stage-provision

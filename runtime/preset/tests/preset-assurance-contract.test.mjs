@@ -89,7 +89,9 @@ describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
         // Act
         const result = run(args);
         // Assert
-        expect(diagnosticOf(result).reason).toBe(reason);
+        const diagnostic = diagnosticOf(result);
+        expect(diagnostic.reason).toBe(reason);
+        expect(diagnostic.failureEvidence.classification.stage).toBeTruthy();
         expect(result.stdout).toBe('');
         expect(snapshotTree(fixture)).toStrictEqual(before);
       };

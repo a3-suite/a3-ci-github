@@ -37,6 +37,8 @@ describe("repository-contract-subject-execution", () => {
 
 describe("repository-contract-subject-execution", () => {
 
+  // evidence_role: supplemental
+  // Accepting the repository execution definition with every test path inside the repository is an implementation safety check that no contract guarantee covers.
   // flow_id: repository-contract-subject-execution
   test('definition check accepts the repository execution definition with tests inside the repository', () => {
     // Arrange

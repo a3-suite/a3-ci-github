@@ -13,7 +13,7 @@ cases:
       actions-root: actions
       runtime-root: runtime
     verifies:
-      - distribution-plan-produced
+      - consistent-distribution-accepted
   - contract_id: contract.repository-action-distribution.integrity
     id: inconsistent-distribution-state
     partition: runtime-context.repository-action-distribution-inconsistent
@@ -35,9 +35,7 @@ cases:
       actions-root: actions
       catalog-path: README.md
     verifies:
-      - action-catalog-projected
       - catalog-action-set-matched
-      - catalog-usage-text-preserved
   - contract_id: contract.repository-action-distribution.source-verification
     id: maintained-action-source-verification
     partition: runtime-context.repository-action-distribution-inputs-available
@@ -45,10 +43,8 @@ cases:
       actions-root: actions
       prepared-by: distribution-plan
     verifies:
-      - action-source-verification-plan-produced
       - source-verification-actions-covered
       - source-verification-runtime-tests-covered
-      - source-verification-without-rebuild
   - contract_id: contract.repository-action-distribution.release-version
     id: matching-release-version
     partition: runtime-context.repository-exact-release-tag-available

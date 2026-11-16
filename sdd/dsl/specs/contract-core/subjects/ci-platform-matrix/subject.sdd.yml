@@ -39,12 +39,12 @@ contracts:
             meaning: Present when an expected-platforms output was emitted and absent otherwise.
           - selector: full-matrix-binding
             meaning: Equality of the complete matrix include array, including order and all entry values, with the validated manifest.
-          - selector: quality-id-order
-            meaning: Equality of the quality matrix platform_id sequence with the supplied selection ID sequence.
+          - selector: quality-id-set
+            meaning: Equality of the set of quality matrix platform_id values with the supplied selection ID set, order not compared.
           - selector: quality-runner-binding
             meaning: Equality of each quality entry runner with the validated manifest runner for that entry platform_id.
-          - selector: expected-id-order
-            meaning: Equality of the comma-separated expected-platforms value with the supplied selection ID sequence.
+          - selector: expected-id-set
+            meaning: Equality of the set of comma-separated expected-platforms IDs with the supplied selection ID set, order not compared.
           - selector: shared-checks-value
             meaning: Equality of each quality entry shared_standard_checks value with the explicitly supplied boolean sharedStandardChecks.
           - selector: shared-checks-absence
@@ -62,14 +62,6 @@ contracts:
       - environment: runtime-context.quality-selection-shared-checks-supplied
       - environment: runtime-context.quality-selection-shared-checks-omitted
     guarantees:
-      - id: platform-matrix-produced
-        applies_to:
-          - runtime-context.platform-manifest-valid
-          - runtime-context.quality-selection-shared-checks-omitted
-          - runtime-context.quality-selection-shared-checks-supplied
-        claim:
-          field: matrix
-          present: true
       - id: invalid-platform-manifest-fails
         applies_to:
           - runtime-context.platform-manifest-invalid
@@ -86,20 +78,6 @@ contracts:
           field: matrix-output-state
           in:
             - absent
-      - id: ordered-quality-matrix-produced
-        applies_to:
-          - runtime-context.quality-selection-shared-checks-omitted
-          - runtime-context.quality-selection-shared-checks-supplied
-        claim:
-          field: quality-matrix
-          present: true
-      - id: ordered-expected-platforms-produced
-        applies_to:
-          - runtime-context.quality-selection-shared-checks-omitted
-          - runtime-context.quality-selection-shared-checks-supplied
-        claim:
-          field: expected-platforms
-          present: true
       - id: invalid-selection-has-no-quality-matrix
         applies_to:
           - runtime-context.quality-platform-selection-invalid
@@ -129,12 +107,12 @@ contracts:
           field: full-matrix-binding
           in:
             - matched
-      - id: quality-id-order
+      - id: quality-id-set
         applies_to:
           - runtime-context.quality-selection-shared-checks-omitted
           - runtime-context.quality-selection-shared-checks-supplied
         claim:
-          field: quality-id-order
+          field: quality-id-set
           in:
             - matched
       - id: quality-runner-binding
@@ -145,12 +123,12 @@ contracts:
           field: quality-runner-binding
           in:
             - matched
-      - id: expected-id-order
+      - id: expected-id-set
         applies_to:
           - runtime-context.quality-selection-shared-checks-omitted
           - runtime-context.quality-selection-shared-checks-supplied
         claim:
-          field: expected-id-order
+          field: expected-id-set
           in:
             - matched
       - id: shared-checks-value

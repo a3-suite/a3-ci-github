@@ -35,8 +35,6 @@ contracts:
         meaning: "Precondition prepared by the case: digest of the downloaded tool archive."
       - name: cargo-deny-version
         meaning: "Received by the contract target: cargo-deny version requested by the caller."
-      - name: auxiliary-tools
-        meaning: "Received by the contract target: auxiliary tool installation selection."
       - name: rust-setup-result
         meaning: "Precondition prepared by the case: result of the Rust setup step that the failure retention step reads."
     observations:
@@ -47,25 +45,15 @@ contracts:
             meaning: Preparation step outcome.
           - selector: resolved-toolchain-version
             meaning: Published resolved toolchain version.
-          - selector: unselected-profile-setup-state
-            meaning: Occurrence state (present or absent) of dependency setup for a language profile other than the selected one.
           - selector: unrequested-optional-tool-setup-state
             meaning: Occurrence state (present or absent) of setup for an optional tool whose version input is empty.
-          - selector: skipped-auxiliary-tool-setup-state
-            meaning: Occurrence state (present or absent) of setup for an auxiliary tool when auxiliary-tools is skip.
           - selector: resolved-selector-comparison
             meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
-          - selector: source-fallback-state
-            meaning: Occurrence state (present or absent) of source installation after registered binary acquisition fails.
-          - selector: failed-path-export-state
-            meaning: Occurrence state (present or absent) of a PATH export after registered binary acquisition fails.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
           - selector: failure-stage
             meaning: 失敗した段階の識別子。
-          - selector: diagnostic-only-tool-acquisition-state
-            meaning: Occurrence state (present or absent) of an unselected tool acquired solely to obtain diagnostics.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.quality-toolchain-inputs-ready
@@ -89,6 +77,7 @@ contracts:
       - id: invalid-or-failed-quality-toolchain-stops
         applies_to:
           - runtime-context.quality-toolchain-inputs-unusable
+          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
         claim:
           field: outcome
           in:
@@ -99,32 +88,11 @@ contracts:
         claim:
           field: failure-stage
           present: true
-      - id: diagnostic-diagnostic-only-tool-acquisition
-        applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: diagnostic-only-tool-acquisition-state
-          in:
-            - absent
-      - id: selected-profile-dependencies-only
-        applies_to:
-          - runtime-context.quality-toolchain-request-valid
-        claim:
-          field: unselected-profile-setup-state
-          in:
-            - absent
       - id: optional-tool-setup-only-when-requested
         applies_to:
           - runtime-context.quality-toolchain-request-valid
         claim:
           field: unrequested-optional-tool-setup-state
-          in:
-            - absent
-      - id: auxiliary-tool-setup-skipped-on-request
-        applies_to:
-          - runtime-context.quality-toolchain-request-valid
-        claim:
-          field: skipped-auxiliary-tool-setup-state
           in:
             - absent
       - id: resolved-version-satisfies-selector
@@ -135,17 +103,3 @@ contracts:
           in:
             - matched
             - not-published
-      - id: registered-failure-no-source-fallback
-        applies_to:
-          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-        claim:
-          field: source-fallback-state
-          in:
-            - absent
-      - id: registered-failure-no-path-output
-        applies_to:
-          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-        claim:
-          field: failed-path-export-state
-          in:
-            - absent

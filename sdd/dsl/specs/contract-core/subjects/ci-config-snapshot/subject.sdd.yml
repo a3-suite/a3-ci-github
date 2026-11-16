@@ -20,7 +20,7 @@ contracts:
         boundary: boundary.action-output
         fields:
           - selector: status
-            meaning: Whether configuration resolution and snapshot writing succeeded.
+            meaning: Whether configuration resolution and snapshot writing succeeded; success or failed.
           - selector: snapshot-path
             meaning: Path of the written configuration snapshot.
           - selector: digest
@@ -42,7 +42,8 @@ contracts:
           - sources-input-present
         claim:
           field: status
-          present: true
+          in:
+            - success
       - id: config-snapshot-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid

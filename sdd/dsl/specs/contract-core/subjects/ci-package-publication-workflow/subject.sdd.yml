@@ -42,7 +42,7 @@ contracts:
           - selector: package-failed-prerequisite-blocks
             meaning: Occurrence of publication eligibility with failed or unknown required preparation or request validation.
           - selector: package-publication-concurrency
-            meaning: "Declared concurrency of the package publication provider workflow: one group per workflow, repository and target identity, with in-progress runs kept and pending runs queued; serialized or other."
+            meaning: "Declared concurrency of the package publication provider workflow: runs publishing to the same target never execute concurrently; serialized or other."
           - selector: package-preparation-permissions
             meaning: "Declared permissions of the package preparation provider workflow and its build job: no workflow permissions and read-only contents for build; least-privilege or other."
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.

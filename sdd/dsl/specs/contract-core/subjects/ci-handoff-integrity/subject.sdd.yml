@@ -45,12 +45,13 @@ contracts:
       - input: handoff-input-present
       - environment: runtime-context.action-input-invalid
     guarantees:
-      - id: handoff-status-produced
+      - id: handoff-status-succeeded
         applies_to:
           - handoff-input-present
         claim:
           field: status
-          present: true
+          in:
+            - success
       - id: handoff-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid

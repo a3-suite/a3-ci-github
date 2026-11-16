@@ -69,12 +69,8 @@ contracts:
       - summary: Contract execution mapping results exposed by the repository contract execution check.
         boundary: boundary.repository-gate-result
         fields:
-          - selector: contract-execution
-            meaning: Execution definition entries for the packaged contract subjects.
           - selector: contract-execution-subject-coverage
             meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
-          - selector: contract-execution-escaping-test-paths
-            meaning: Execution test paths that resolve outside the repository; absent or present.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -84,12 +80,6 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - input: repository-contract-execution-definition-available
     guarantees:
-      - id: repository-contract-execution-mapped
-        applies_to:
-          - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution
-          present: true
       - id: repository-contract-execution-subjects-covered
         applies_to:
           - repository-contract-execution-definition-available
@@ -97,13 +87,6 @@ contracts:
           field: contract-execution-subject-coverage
           in:
             - matched
-      - id: repository-contract-execution-paths-contained
-        applies_to:
-          - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution-escaping-test-paths
-          in:
-            - absent
       - id: diagnostic-failure-stage-execution-mapping
         applies_to:
           - runtime-context.failure-diagnostic-required

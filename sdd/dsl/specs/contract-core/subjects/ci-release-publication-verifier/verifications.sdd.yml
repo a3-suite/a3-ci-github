@@ -16,7 +16,6 @@ cases:
       permission-metadata: absent
     verifies:
       - observation-status
-      - observation-file
   - contract_id: contract.ci-release-publication-verifier.outputs
     id: credential-evidence-boundary
     partition: runtime-context.release-observation-invalid
@@ -58,7 +57,6 @@ cases:
       - release-id-emitted
       - bound-receipt
       - readback-evidence-emitted
-      - post-verification-reads-asset-bodies
       - receipt-remote-id-binding
       - receipt-readback-id-binding
       - release-output-id-binding

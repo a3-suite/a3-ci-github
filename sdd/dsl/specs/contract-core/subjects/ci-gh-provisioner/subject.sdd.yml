@@ -37,11 +37,6 @@ contracts:
             meaning: GitHub CLI executable resolved from the job command search path.
           - selector: path-handoff-state
             meaning: Occurrence state (present or absent) of an entry written by the invocation to the runner path handoff file (GITHUB_PATH).
-      - summary: Directories that the invocation created in the runner temporary directory.
-        boundary: boundary.runner-files
-        fields:
-          - selector: provisioned-directory-state
-            meaning: Occurrence state (present or absent) of a directory created by the invocation in the runner temporary directory for downloaded, extracted, or installed files.
       - summary: Provisioning success or failure is visible to the caller.
         boundary: boundary.action-output
         fields:
@@ -75,13 +70,6 @@ contracts:
           - runtime-context.gh-release-asset-invalid
         claim:
           field: path-handoff-state
-          in:
-            - absent
-      - id: failed-provisioning-leaves-no-artifacts
-        applies_to:
-          - runtime-context.gh-release-asset-invalid
-        claim:
-          field: provisioned-directory-state
           in:
             - absent
       - id: diagnostic-failure-stage-provision

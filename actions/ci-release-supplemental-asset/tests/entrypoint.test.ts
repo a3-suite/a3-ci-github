@@ -101,6 +101,27 @@ test('supplemental entrypoint rejects the old Windows entry name with expected-n
     expect(diagnostic['sanitized-reason']).toBe('installer-windows-entry-name-invalid');
     expect(diagnostic.comparison.expected).toEqual(['install.ps1']);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
+  }
+});
+
+// evidence_role: supplemental
+// Creating no new output after a rejection is a side effect that follows from rust-release-build, not from the supplemental asset contract.
+// flow_id: supplemental-safe-diagnostics
+// test_level: e2e
+test('supplemental entrypoint creates no output for the old Windows entry name', (t) => {
+  // Arrange
+  for (const operation of ['build-platform', 'assemble']) {
+    const f = standardFixture(t, 'native-offline-dry-run-v1', 'install-windows-x86_64.ps1');
+    const options = { ...f.options, operation };
+    if (operation === 'assemble') {
+      fs.mkdirSync(path.join(f.root, 'supplemental-download'));
+      fs.writeFileSync(path.join(f.root, 'supplemental-download/input'), 'unverified');
+      Object.assign(options, { supplementalBuildRoot: 'supplemental-download' });
+    }
+    // Act
+    const { result } = runDistributedAction(f, options, entrypointArgs);
+    // Assert
+    expect(result.status).toBe(1);
     expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
   }
 });
@@ -143,10 +164,26 @@ test('supplemental entrypoint assembles an asset release from empty build roots 
   // Assert
   expect(result.status, String(result.stderr)).toBe(0);
   expect(fs.readFileSync(valid.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
+  expect(fs.existsSync(path.join(valid.root, 'new output'))).toBe(true);
   expect(rejected.status).toBe(1);
   expect(String(rejected.stderr)).toMatch(/unexpected-build-input/);
   expect(fs.readFileSync(withBuild.outputPath, 'utf8')).toBe('');
-  expect(fs.existsSync(path.join(withBuild.root, 'new output'))).toBe(false);
+});
+
+// evidence_role: supplemental
+// Creating no new output after a rejection is a side effect that follows from rust-release-build, not from the supplemental asset contract.
+test('supplemental entrypoint creates no output for an asset release with build input', (t) => {
+  // Arrange
+  const f = fixture(t);
+  f.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '__unset__' },
+    { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
+  for (const directory of ['standard build', 'supplemental build']) fs.rmSync(path.join(f.root, directory, 'input'));
+  fs.writeFileSync(path.join(f.root, 'standard build/input'), 'product build');
+  // Act
+  const rejected = bundle(f, { INPUT_OPERATION: 'assemble', 'INPUT_SUPPLEMENTAL-BUILD-ROOT': 'supplemental build' });
+  // Assert
+  expect(rejected.status).toBe(1);
+  expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
 });
 
 });

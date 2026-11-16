@@ -7,11 +7,11 @@ test_maps:
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint validates a handoff
         guarantees:
-          - handoff-status-produced
+          - handoff-status-succeeded
       - path: actions/ci-handoff-integrity/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint validates a handoff
         guarantees:
-          - handoff-status-produced
+          - handoff-status-succeeded
   - contract_id: contract.ci-handoff-integrity.outputs
     case_id: source-identity-mismatch-rejected
     tests:

@@ -19,7 +19,7 @@ cases:
       execution-scope: all
       toolchain-version: 1.80.0
     verifies:
-      - quality-adapter-status-produced
+      - status-result-consistent
   - contract_id: contract.ci-quality-adapter.outputs
     id: standard-selection-rejected
     partition: runtime-context.action-input-invalid
@@ -31,7 +31,7 @@ cases:
     input:
       standard-bundle-id: python-uv-quality
     verifies:
-      - quality-adapter-status-produced
+      - status-result-consistent
   - contract_id: contract.ci-quality-adapter.outputs
     id: read-only-adapter-execution
     partition: quality-adapter-bundle-present

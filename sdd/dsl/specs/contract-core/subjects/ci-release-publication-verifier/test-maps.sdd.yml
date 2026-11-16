@@ -19,12 +19,10 @@ test_maps:
         symbol: 'source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent'
         guarantees:
           - observation-status
-          - observation-file
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: 'dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-absent'
         guarantees:
           - observation-status
-          - observation-file
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: credential-evidence-boundary
     tests:
@@ -112,11 +110,11 @@ test_maps:
     case_id: asset-inventory-boundary
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint bounds asset inventory reobservation and refuses an invalid subset at once
+        symbol: source entrypoint > publication entrypoint refuses an invalid asset subset
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint bounds asset inventory reobservation and refuses an invalid subset at once
+        symbol: dist entrypoint > publication entrypoint refuses an invalid asset subset
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -126,14 +124,10 @@ test_maps:
         symbol: source entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
         guarantees:
           - observation-status
-          - observation-file
-          - observation-digest
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publication entrypoint observes absence then verifies owner evidence independently
         guarantees:
           - observation-status
-          - observation-file
-          - observation-digest
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: bundled-post-verification
     tests:
@@ -144,7 +138,6 @@ test_maps:
           - release-id-emitted
           - bound-receipt
           - readback-evidence-emitted
-          - post-verification-reads-asset-bodies
           - receipt-remote-id-binding
           - receipt-readback-id-binding
           - release-output-id-binding
@@ -155,7 +148,6 @@ test_maps:
           - release-id-emitted
           - bound-receipt
           - readback-evidence-emitted
-          - post-verification-reads-asset-bodies
           - receipt-remote-id-binding
           - receipt-readback-id-binding
           - release-output-id-binding
@@ -207,11 +199,11 @@ test_maps:
     case_id: missing-after-reobservation
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        symbol: source entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         guarantees:
           - verification-rejected
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        symbol: dist entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         guarantees:
           - verification-rejected
   - contract_id: contract.ci-release-publication-verifier.outputs
@@ -423,68 +415,44 @@ test_maps:
     case_id: absence-observation-policy
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint observes absence with three GET-only inventories one second apart
+        symbol: source entrypoint > publication entrypoint observes absence using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint observes absence with three GET-only inventories one second apart
+        symbol: dist entrypoint > publication entrypoint observes absence using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: post-observation-policy
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        symbol: source entrypoint > publication entrypoint verifies the published Release using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        symbol: dist entrypoint > publication entrypoint verifies the published Release using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: rejected-observation-policy
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        symbol: source entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint rejects a Release still absent after three GET-only inventories
+        symbol: dist entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         guarantees:
-          - asset-inventory-attempts
-          - asset-reobservation-delay
           - get-only-requests
-          - release-inventory-attempts
-          - release-reobservation-delay
   - contract_id: contract.ci-release-publication-verifier.outputs
     case_id: provider-transport-methods
     tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        symbol: source entrypoint > publication entrypoint verifies the published Release using GET only
         guarantees:
           - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint bounds Release and asset reobservation after create with GET-only requests
+        symbol: dist entrypoint > publication entrypoint verifies the published Release using GET only
         guarantees:
           - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts

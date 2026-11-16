@@ -101,7 +101,8 @@ describe('standard installer', () => {
       }
     });
 
-    // contract_id: contract.ci-release-supplemental-asset.outputs
+    // evidence_role: supplemental
+    // The accepted installer reason allowlist and phase match are implementation checks of the diagnostic channel; no contract guarantee covers them.
     // flow_id: standard-installer-diagnostic-rejection
     // test_level: e2e
     test('standard installer rejects malformed or untrusted process diagnostics', (t) => {
@@ -161,8 +162,14 @@ describe('standard installer', () => {
       // Arrange
       const f = fixture(t);
       checkoutLineEndings(f.root, 'crlf');
+      const reportedAction = (fixtureRoot: typeof f, options: SupplementalOptionsType) => {
+        const { result, output } = runDistributedAction(fixtureRoot, options);
+        expect(fs.readFileSync(output, 'utf8')).toContain(`output-directory=${options.outputDirectory}\n`);
+        expect(fs.existsSync(path.join(fixtureRoot.root, options.outputDirectory))).toBe(true);
+        return result;
+      };
       const execute = (options: SupplementalOptionsType): void => {
-        const result = surface === 'Action' ? runDistributedAction(f, options).result : spawnSync(process.execPath,
+        const result = surface === 'Action' ? reportedAction(f, options) : spawnSync(process.execPath,
           [path.join(repository, 'runtime/installer/run-installer.mjs'), '--operation', options.operation, '--source-root', f.root,
             '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', options.standardBuildRoot,
             ...(options.supplementalBuildRoot ? ['--supplemental-build-root', options.supplementalBuildRoot] : []),

@@ -78,7 +78,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       comparison: { field: 'version', expected: 'exact-numeric-version' },
     });
     expect(readGithubPath(paths.githubPath)).toBeUndefined();
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   for (const [arch, platform] of [['X64', 'linux_amd64'], ['ARM64', 'linux_arm64']] as const) {
@@ -113,7 +112,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     });
     // Assert
     expectStopped(outcome, paths, 'checksum-validation');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects an unsupported runner before download or PATH handoff', () => {
@@ -123,8 +121,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, { RUNNER_OS: 'Windows', RUNNER_ARCH: 'X64' }, {});
     // Assert
     expectStopped(outcome, paths, 'download-verify-install');
-    expect(outcome.requested).toStrictEqual([]);
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action reports an unavailable release asset before PATH handoff', () => {
@@ -134,7 +130,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, {}, { [checksumUrl]: manifest('0'.repeat(64), assetName('linux_amd64')) });
     // Assert
     expectStopped(outcome, paths, 'asset-download');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects a checksum manifest without the asset entry', () => {
@@ -145,7 +140,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, {}, { [checksumUrl]: Buffer.from(''), [`${releaseUrl}/${assetName('linux_amd64')}`]: asset });
     // Assert
     expectStopped(outcome, paths, 'checksum-inventory');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects an extraction failure before PATH handoff', () => {
@@ -156,7 +150,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, {}, { [checksumUrl]: manifest(sha256(asset), assetName('linux_amd64')), [`${releaseUrl}/${assetName('linux_amd64')}`]: asset });
     // Assert
     expectStopped(outcome, paths, 'asset-install');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects an installation failure before PATH handoff', () => {
@@ -170,7 +163,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     });
     // Assert
     expectStopped(outcome, paths, 'install-directory');
-    expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
   });
 
   test('Action removes the installed binary when PATH update fails', () => {
@@ -187,6 +179,62 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(outcome.result.status).toBe(1);
     expect(failureDiagnostic(outcome.result.stderr)).toMatchObject({ classification: { subject: 'ci-gh-provisioner', stage: 'path-export' } });
     expect(readdirSync(paths.githubPath)).toStrictEqual([]);
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+  });
+
+  // evidence_role: supplemental
+  // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
+  describe('Action leaves no working directory after a rejected provisioning', () => {
+    type Paths = ReturnType<typeof workspace>;
+    const routes = (paths: Paths, digest?: string): Record<string, Buffer> => {
+      const asset = archive(paths.root, 'linux_amd64');
+      return { [checksumUrl]: manifest(digest ?? sha256(asset), assetName('linux_amd64')), [`${releaseUrl}/${assetName('linux_amd64')}`]: asset };
+    };
+    const rejections: Array<[string, Record<string, string>, (paths: Paths) => Record<string, Buffer>]> = [
+      ['an invalid version', { 'INPUT_GH-VERSION': 'not-exact' }, () => ({})],
+      ['a checksum mismatch', {}, (paths) => routes(paths, '0'.repeat(64))],
+      ['an unsupported runner', { RUNNER_OS: 'Windows', RUNNER_ARCH: 'X64' }, () => ({})],
+      ['an unavailable asset', {}, () => ({ [checksumUrl]: manifest('0'.repeat(64), assetName('linux_amd64')) })],
+      ['a manifest without the asset entry', {}, (paths) => ({ ...routes(paths), [checksumUrl]: Buffer.from('') })],
+      ['an extraction failure', {}, () => { const asset = Buffer.from('not an archive'); return { [checksumUrl]: manifest(sha256(asset), assetName('linux_amd64')), [`${releaseUrl}/${assetName('linux_amd64')}`]: asset }; }],
+    ];
+    test.each(rejections)('%s', (_name, env, routesFor) => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, env, routesFor(paths));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+    });
+
+    test('an unsupported runner makes no request', () => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { RUNNER_OS: 'Windows', RUNNER_ARCH: 'X64' }, {});
+      // Assert
+      expect(outcome.requested).toStrictEqual([]);
+    });
+
+    test('an installation failure does not create the missing runner temporary directory', () => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { RUNNER_TEMP: path.join(paths.root, 'missing') }, routes(paths));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
+    });
+
+    test('a failed PATH update', () => {
+      // Arrange
+      const paths = workspace();
+      mkdirSync(paths.githubPath);
+      // Act
+      const outcome = run(paths, {}, routes(paths));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+    });
   });
 });

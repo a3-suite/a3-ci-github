@@ -139,13 +139,11 @@ test_maps:
         guarantees:
           - ci-preset-assurance-lock-source-bound
           - ci-preset-assurance-lock-release-bound
-          - ci-preset-assurance-lock-assets-recorded
           - ci-preset-assurance-lock-assets-cover-managed-paths
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: contract.ci-preset-assurance.asset-lock > consumer-preset-asset-lock-cli > public asset lock CLI records source revision and managed assets
         guarantees:
           - ci-preset-assurance-lock-source-bound
-          - ci-preset-assurance-lock-assets-recorded
   - contract_id: contract.ci-preset-assurance.asset-lock
     case_id: case.ci-preset-assurance.asset-lock-invalid-revision-rejected
     tests:

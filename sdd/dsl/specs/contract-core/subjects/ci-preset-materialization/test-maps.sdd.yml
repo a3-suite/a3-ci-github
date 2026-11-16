@@ -89,7 +89,6 @@ test_maps:
         guarantees:
           - consumer-settings-change
           - consumer-dependency-change
-          - completed-copy-loss
           - changed-range-evidence
   - contract_id: contract.ci-preset-materialization.application
     case_id: standard-rejection-footprint

@@ -112,6 +112,7 @@ test('entrypoint uses the workflow run URL for rows without evidence', () => {
     const evidence = fs.readFileSync(run.evidencePath, 'utf8');
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
     expect(evidence.split(runUrl).length - 1).toBe(2);
+    expect(evidence.match(/^- 証跡: `[^`]+`$/gm)).toHaveLength(evidence.match(/^- 対象: /gm)!.length);
     expect(evidence).toContain('explicit.log');
     expect(evidence).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
     const line = run.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
@@ -137,6 +138,23 @@ test('entrypoint rejects rows without evidence when the run context is missing o
     try {
       expect(run.result.status, JSON.stringify(overrides)).not.toBe(0);
       expect(run.result.stderr).toContain('ci-summary-evidence-invalid');
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+// evidence_role: supplemental
+// The absence of an evidence file after a rejected run context is a side effect that no contract guarantee covers.
+test('entrypoint writes no evidence file when the run context is missing or invalid', () => {
+  // Arrange
+  const row = { unit: 'build', execution: 'build', rawResult: 'success', applicable: true };
+  for (const overrides of [{ GITHUB_RUN_ID: undefined }, { GITHUB_RUN_ID: '42\nINJECTED' }, { GITHUB_SERVER_URL: 'http://github.com' }, { GITHUB_SERVER_URL: 'https://github.com:99999' }, { GITHUB_SERVER_URL: 'https://github.com/path' }, { GITHUB_REPOSITORY: 'owner' }]) {
+    // Act
+    const run = runBundled({ jobs: [row] }, true, 'distinct', { ...runEnv, ...overrides });
+    try {
+      // Assert
+      expect(run.result.status, JSON.stringify(overrides)).not.toBe(0);
       expect(fs.existsSync(run.evidencePath)).toBe(false);
     } finally {
       fs.rmSync(run.tempRoot, { recursive: true, force: true });
@@ -264,54 +282,61 @@ test('entrypoint fails unresolved and invalid path relationships', () => {
   }
 });
 
+const retainsSourceFailure = (mode: 'evidence-generation' | 'summary-write' | 'unknown') => {
+  // Arrange
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-summary-failure-'));
+  const evidencePath = path.join(tempRoot, 'evidence.md');
+  const summaryPath = path.join(tempRoot, 'summary.md');
+  const outputPath = path.join(tempRoot, 'output');
+  fs.writeFileSync(outputPath, '');
+  if (mode === 'evidence-generation') fs.mkdirSync(evidencePath);
+  if (mode === 'summary-write') fs.mkdirSync(summaryPath);
+  const mock = path.join(tempRoot, 'failure.mjs');
+  fs.writeFileSync(mock, `import fs from 'node:fs';const append=fs.appendFileSync;fs.appendFileSync=(file,...args)=>{if(file===process.env.FAILURE_SUMMARY)throw new Error('private-token-must-not-appear');return append(file,...args);};`);
+  try {
+    // Act
+    const result = spawnSync(process.execPath, [...(mode === 'unknown' ? ['--import', mock] : []), ...bundledEntrypoint], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath,
+        GITHUB_STEP_SUMMARY: summaryPath, FAILURE_SUMMARY: summaryPath,
+        'INPUT_EVIDENCE-PATH': evidencePath, 'INPUT_SUMMARY-PATH': summaryPath,
+        'INPUT_SUMMARY-JSON': JSON.stringify({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'original-job-log' }] }),
+      },
+    });
+    // Assert
+    expect(result.status).toBe(1);
+    const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+    const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
+    expect(evidence.classification.stage).toBe(mode === 'evidence-generation' ? 'evidence-write' : 'summary-write');
+    expect(evidence.context.inputs.sourceOutcome).toBe('failed');
+    expect(evidence['execution-state'].write).toBe('write-may-be-partial');
+    expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
+    expect(evidence['next-check'].stage).toBe(evidence.classification.stage);
+    if (mode !== 'evidence-generation') {
+      expect(fs.readFileSync(evidencePath, 'utf8')).toContain('job result: failure');
+      expect(evidence['evidence-location'].file).toBe('configured-evidence-path');
+      expect(evidence['execution-state'].retention).toBe('log-and-file');
+    }
+    if (mode === 'unknown') {
+      expect(evidence.classification).toMatchObject({ reason: 'unknown-failure', cause: 'unknown' });
+      expect(evidence['next-check']).toStrictEqual({
+        stage: 'summary-write', rule: 'unknown-failure',
+        input: evidence.context.inputs, unknownCause: true,
+      });
+    }
+    expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
+    expect(fs.readFileSync(outputPath, 'utf8')).not.toContain('success');
+  } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
+};
+
 // contract_id: contract.ci-failure-diagnostics.actionable
 // flow_id: summary-failure-retention
-for (const mode of ['evidence-generation', 'summary-write', 'unknown'] as const) {
-  test(`retains source failure when ${mode} fails`, () => {
-    // Arrange
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-summary-failure-'));
-    const evidencePath = path.join(tempRoot, 'evidence.md');
-    const summaryPath = path.join(tempRoot, 'summary.md');
-    const outputPath = path.join(tempRoot, 'output');
-    fs.writeFileSync(outputPath, '');
-    if (mode === 'evidence-generation') fs.mkdirSync(evidencePath);
-    if (mode === 'summary-write') fs.mkdirSync(summaryPath);
-    const mock = path.join(tempRoot, 'failure.mjs');
-    fs.writeFileSync(mock, `import fs from 'node:fs';const append=fs.appendFileSync;fs.appendFileSync=(file,...args)=>{if(file===process.env.FAILURE_SUMMARY)throw new Error('private-token-must-not-appear');return append(file,...args);};`);
-    try {
-      // Act
-      const result = spawnSync(process.execPath, [...(mode === 'unknown' ? ['--import', mock] : []), ...bundledEntrypoint], {
-        cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath,
-          GITHUB_STEP_SUMMARY: summaryPath, FAILURE_SUMMARY: summaryPath,
-          'INPUT_EVIDENCE-PATH': evidencePath, 'INPUT_SUMMARY-PATH': summaryPath,
-          'INPUT_SUMMARY-JSON': JSON.stringify({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'original-job-log' }] }),
-        },
-      });
-      // Assert
-      expect(result.status).toBe(1);
-      const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
-      const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
-      expect(evidence.classification.stage).toBe(mode === 'evidence-generation' ? 'evidence-write' : 'summary-write');
-      expect(evidence.context.inputs.sourceOutcome).toBe('failed');
-      expect(evidence['execution-state'].write).toBe('write-may-be-partial');
-      expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
-      expect(evidence['next-check'].stage).toBe(evidence.classification.stage);
-      if (mode !== 'evidence-generation') {
-        expect(fs.readFileSync(evidencePath, 'utf8')).toContain('job result: failure');
-        expect(evidence['evidence-location'].file).toBe('configured-evidence-path');
-        expect(evidence['execution-state'].retention).toBe('log-and-file');
-      }
-      if (mode === 'unknown') {
-        expect(evidence.classification).toMatchObject({ reason: 'unknown-failure', cause: 'unknown' });
-        expect(evidence['next-check']).toStrictEqual({
-          stage: 'summary-write', rule: 'unknown-failure',
-          input: evidence.context.inputs, unknownCause: true,
-        });
-      }
-      expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
-      expect(fs.readFileSync(outputPath, 'utf8')).not.toContain('success');
-    } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
-  });
+for (const mode of ['evidence-generation', 'summary-write'] as const) {
+  test(`retains source failure when ${mode} fails`, () => retainsSourceFailure(mode));
 }
+
+// evidence_role: supplemental
+// The diagnostic of a failure whose cause is unknown is not observed by a verification case of contract.ci-failure-diagnostics.actionable.
+// flow_id: summary-failure-retention
+test('retains source failure when unknown fails', () => retainsSourceFailure('unknown'));
 
 });

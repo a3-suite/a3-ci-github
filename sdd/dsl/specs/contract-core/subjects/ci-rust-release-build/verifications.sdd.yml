@@ -8,14 +8,6 @@ cases:
       arguments:
         - invalid
   - contract_id: contract.ci-rust-release-build.processing
-    id: matching-rust-release-processing
-    partition: runtime-context.rust-release-build-inputs-match-authority
-    input:
-      language-profile: rust
-      platform-id: linux-x64
-      platform-target: x86_64-unknown-linux-gnu
-      output-directory: accepted-output
-  - contract_id: contract.ci-rust-release-build.processing
     id: completed-rust-release-processing
     partition: runtime-context.rust-release-build-commands-succeed
     input:

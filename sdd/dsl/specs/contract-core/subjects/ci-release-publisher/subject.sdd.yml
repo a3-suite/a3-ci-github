@@ -57,6 +57,8 @@ contracts:
             meaning: Additional provider writes after the first failed or uncertain publication operation.
           - selector: publication-delete
             meaning: Provider DELETE requests during publication.
+          - selector: publication-write-after-rejection
+            meaning: Occurrence state (present or absent) of provider write requests during an invocation rejected before any write.
           - selector: publication-existing-release-write
             meaning: Provider writes to a same-tag Release observed before creation.
           - selector: publication-created-id-binding
@@ -65,6 +67,8 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
       - environment: runtime-context.release-publisher-valid
       - environment: runtime-context.release-publisher-invalid
+      - input: rejected-before-write
+        summary: Invocation rejected by a local or provider-observed check before the first provider write request.
     guarantees:
       - id: receipt-file
         applies_to:
@@ -81,6 +85,7 @@ contracts:
       - id: rejected
         applies_to:
           - runtime-context.release-publisher-invalid
+          - rejected-before-write
         claim:
           field: outcome
           in:
@@ -88,6 +93,7 @@ contracts:
       - id: no-success-outputs
         applies_to:
           - runtime-context.release-publisher-invalid
+          - rejected-before-write
         claim:
           field: successful-output-state
           in:
@@ -111,6 +117,13 @@ contracts:
       - id: publication-delete
         claim:
           field: publication-delete
+          in:
+            - absent
+      - id: publication-write-on-rejection
+        applies_to:
+          - rejected-before-write
+        claim:
+          field: publication-write-after-rejection
           in:
             - absent
       - id: publication-existing-release-write

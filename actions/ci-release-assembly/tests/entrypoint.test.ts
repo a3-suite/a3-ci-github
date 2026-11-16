@@ -37,6 +37,17 @@ test('missing build inventory retains the failing stage and exact missing entrie
   expect(fs.existsSync(f.options.outputRoot)).toBe(false);
 });
 
+// Verifies a sidecar as a standard sha256 checksum file does: each line is `<lowercase sha256><two spaces><asset name>` and matches the actual bytes of that asset.
+const sidecarVerifiesAsset = (assetsDirectory: string, sidecar: string): boolean => {
+  const text = fs.readFileSync(path.join(assetsDirectory, sidecar), 'utf8');
+  if (!text.endsWith('\n')) return false;
+  return text.slice(0, -1).split('\n').every((line) => {
+    const match = /^([0-9a-f]{64}) {2}([^\s/]+)$/.exec(line);
+    return match !== null && fs.existsSync(path.join(assetsDirectory, match[2]!))
+      && crypto.createHash('sha256').update(fs.readFileSync(path.join(assetsDirectory, match[2]!))).digest('hex') === match[1];
+  });
+};
+
 // contract_id: contract.ci-release-assembly.outputs
 // flow_id: release-assembly-entrypoint
 test('assembly bundle packages selected release skills', (t) => {
@@ -48,6 +59,7 @@ test('assembly bundle packages selected release skills', (t) => {
   // Assert
   expect(result.status, result.stderr).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toContain('status=success\n');
+  expect(fs.readFileSync(output, 'utf8')).toContain(`release-handoff=${f.options.outputRoot}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets.map((asset: { name: string }) => asset.name)).toContain('project-skills.zip');
   expect(fs.readdirSync(path.join(f.options.outputRoot, 'evidence'))).toHaveLength(3);
@@ -82,6 +94,9 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
   expect(assembly.assets).toStrictEqual(assets);
   expect(assembly.asset_digest).toBe(digest);
   expect(assembly.identity.source_sha).toBe(f.identity.source_sha);
+  const assetsDirectory = path.join(f.options.outputRoot, 'assets');
+  expect(fs.readdirSync(assetsDirectory).filter((name) => name.endsWith('.sha256'))).toStrictEqual(['project-1.0.0-linux.tar.gz.sha256']);
+  expect(sidecarVerifiesAsset(assetsDirectory, 'project-1.0.0-linux.tar.gz.sha256')).toBe(true);
   expect(JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'handoff.json'), 'utf8')).source_sha).toBe(f.identity.source_sha);
 });
 
@@ -160,6 +175,7 @@ test('assembly bundle binds supplemental owner evidence into the handoff', (t) =
   // Assert
   expect(run.result.status, run.result.stderr).toBe(0);
   expect(run.outputs).toContain('status=success\n');
+  expect(run.outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets.map((asset: { name: string }) => asset.name)).toEqual(expect.arrayContaining([f.name, 'instructions.zip']));
   const evidence = fs.readdirSync(path.join(f.options.outputRoot, 'evidence'));
@@ -203,6 +219,7 @@ test('assembly bundle binds the LF platform manifest identity for a CRLF checkou
   // Assert
   expect(run.result.status, run.result.stderr).toBe(0);
   expect(run.outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
+  expect(run.outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.identity).toStrictEqual(f.identity);
   expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(true);

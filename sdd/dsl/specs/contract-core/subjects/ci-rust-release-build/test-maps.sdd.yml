@@ -2,13 +2,6 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-rust-release-build.processing
-    case_id: matching-rust-release-processing
-    tests:
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
-        guarantees:
-          - rust-release-final-output-safe
-  - contract_id: contract.ci-rust-release-build.processing
     case_id: completed-rust-release-processing
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs

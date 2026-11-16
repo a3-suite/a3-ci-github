@@ -8,20 +8,14 @@ test_maps:
         symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:
           - assembly-success
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
           - handoff-source-bound
-          - asset-digest-serialization
-          - asset-digest-field-order
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:
           - assembly-success
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
           - handoff-source-bound
-          - asset-digest-serialization
-          - asset-digest-field-order
     pending:
       - guarantees:
           - assembly-no-credential-input
@@ -29,9 +23,6 @@ test_maps:
       - guarantees:
           - handoff-asset-digest-bound
         reason: 書き込んだ handoff を読み込み直して得る digest は handoff を読む後段の Action が観測するもので、assembly の entrypoint の結果には出ない。写像していたテストは内部関数の loadAssembly で読み込み直していた。
-      - guarantees:
-          - asset-digest-asset-order
-        reason: entrypoint の fixture が作る asset は名前順と生成順が一致し、生成順と異なる名前順で digest を計算することを契約対象で確かめるテストが無い。写像していたテストは内部関数の assetDigest に逆順の配列を渡していた。
   - contract_id: contract.ci-release-assembly.outputs
     case_id: output-line-injection
     tests:
@@ -60,11 +51,13 @@ test_maps:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle binds supplemental owner evidence into the handoff
         guarantees:
-          - bound-handoff
+          - handoff-output-bound
+          - handoff-owner-evidence-retained
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle binds supplemental owner evidence into the handoff
         guarantees:
-          - bound-handoff
+          - handoff-output-bound
+          - handoff-owner-evidence-retained
   - contract_id: contract.ci-release-assembly.outputs
     case_id: unsafe-build-inputs
     tests:
@@ -93,30 +86,22 @@ test_maps:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:
-          - accepted-checksum-encoding
-          - accepted-checksum-digest-form
-          - accepted-checksum-separator
-          - accepted-checksum-line-ending
+          - accepted-checksum-verifiable
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle emits bound outputs only on complete success
         guarantees:
-          - accepted-checksum-encoding
-          - accepted-checksum-digest-form
-          - accepted-checksum-separator
-          - accepted-checksum-line-ending
+          - accepted-checksum-verifiable
   - contract_id: contract.ci-release-assembly.outputs
     case_id: platform-checkout-eol
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle binds the LF platform manifest identity for a CRLF checkout
         guarantees:
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle binds the LF platform manifest identity for a CRLF checkout
         guarantees:
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
   - contract_id: contract.ci-release-assembly.outputs
     case_id: detailed-failure-outputs
     tests:
@@ -130,13 +115,13 @@ test_maps:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle packages selected release skills
         guarantees:
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
+          - selected-skills-packaged
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle packages selected release skills
         guarantees:
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
+          - selected-skills-packaged
   - contract_id: contract.ci-release-assembly.outputs
     case_id: same-release-skills-assembly-invalid
     tests:
@@ -155,14 +140,12 @@ test_maps:
         symbol: source entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
         guarantees:
           - assembly-success
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
         guarantees:
           - assembly-success
-          - bound-handoff
-          - bound-asset-digest
+          - handoff-output-bound
   - contract_id: contract.ci-release-assembly.outputs
     case_id: asset-only-assembly-empty
     tests:

@@ -7,7 +7,7 @@ test_maps:
       - path: tests/action-dist-gate.process.test.mjs
         symbol: contract.repository-action-distribution.integrity > repository-action-distribution-gates > gate CLI accepts a consistent distribution
         guarantees:
-          - distribution-plan-produced
+          - consistent-distribution-accepted
   - contract_id: contract.repository-action-distribution.integrity
     case_id: inconsistent-distribution-state
     tests:
@@ -28,13 +28,10 @@ test_maps:
       - path: tests/action-index-gate.test.mjs
         symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
         guarantees:
-          - action-catalog-projected
           - catalog-action-set-matched
-          - catalog-usage-text-preserved
       - path: tests/action-index-gate.test.mjs
         symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > removes rows for deleted actions
         guarantees:
-          - action-catalog-projected
           - catalog-action-set-matched
   - contract_id: contract.repository-action-distribution.source-verification
     case_id: maintained-action-source-verification
@@ -42,10 +39,8 @@ test_maps:
       - path: tests/action-package-verification.process.test.mjs
         symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI typechecks and tests every bundled Action and shared runtime test without install or build
         guarantees:
-          - action-source-verification-plan-produced
           - source-verification-actions-covered
           - source-verification-runtime-tests-covered
-          - source-verification-without-rebuild
   - contract_id: contract.repository-action-distribution.release-version
     case_id: matching-release-version
     tests:
@@ -107,7 +102,6 @@ test_maps:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     case_id: development-release-version
@@ -147,7 +141,6 @@ test_maps:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > ordinary release accepts only the current main tip tree and refuses historical squash trees
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     case_id: alias-update-invalid-same-version-different-tree
@@ -155,12 +148,10 @@ test_maps:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different content
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > squash integrated base rejects a same-version main with different mode
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     case_id: alias-update-invalid-unrelated-hotfix-source
@@ -168,7 +159,6 @@ test_maps:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > tree-equivalent main does not authorize an unrelated next hotfix source
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     case_id: alias-update-invalid-evidence-unavailable
@@ -176,17 +166,14 @@ test_maps:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at main
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at tree
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at ancestry
         guarantees:
-          - alias-update-rejected
           - alias-tags-preserved
   - contract_id: contract.repository-action-distribution.release-version
     case_id: detailed-failure-alias-update

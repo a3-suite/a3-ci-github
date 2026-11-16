@@ -31,6 +31,7 @@ success_outcomes:
 failure_outcomes:
   - 入力、標準 bundle または descriptor が不正な場合は対象コマンドを実行せず失敗する
   - workflow の権限、runner、job 境界、publish は Action が決定せず provider 側へ委譲する
+  - 差分範囲を解決できない場合は、品質チェックを省略せず実行対象として扱う
 related_requirements:
   - ci-common-processing-action-reuse
   - github-actions-action-contract-and-distribution

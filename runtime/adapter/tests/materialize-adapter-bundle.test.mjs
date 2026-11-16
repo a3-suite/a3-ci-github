@@ -192,6 +192,26 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
   }
 });
 
+const failLaterCopy = (fixture) => {
+  writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+  writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
+  const firstDestination = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
+  const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
+  const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
+  writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+  const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
+  const copyFile = fs.copyFileSync;
+  const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
+  const copy = vi.spyOn(fs, 'copyFileSync').mockImplementation((source, destination, ...options) => {
+    if (destination === failedDestination) throw injected;
+    return copyFile(source, destination, ...options);
+  });
+  let failure;
+  try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
+  finally { copy.mockRestore(); }
+  return { failure, injected, firstDestination, failedDestination, settings, diagnostic };
+};
+
 describe("contract.ci-preset-materialization.application", () => {
   describe("adapter-materialization-rejection", () => {
     // evidence_role: contract
@@ -226,35 +246,27 @@ describe("contract.ci-preset-materialization.application", () => {
     // integration_id: adapter-materialization-rejection
     // contract_id: contract.ci-preset-materialization.application
     test('materializer retains completed copies and reports the changed range after a later copy fails', () => withCustomBundle((fixture) => {
-      // Arrange
-      writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
-      writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
-      const firstDestination = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
-      const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
-      const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
-      writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
-      const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
-      const copyFile = fs.copyFileSync;
-      const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
-      const copy = vi.spyOn(fs, 'copyFileSync').mockImplementation((source, destination, ...options) => {
-        if (destination === failedDestination) throw injected;
-        return copyFile(source, destination, ...options);
-      });
-      let failure;
-
       // Act
-      try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
-      finally { copy.mockRestore(); }
+      const { failure, injected, failedDestination, settings, diagnostic } = failLaterCopy(fixture);
 
       // Assert
       expect(failure).toBe(injected);
-      expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
       expect(existsSync(failedDestination)).toBe(false);
       expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
       expect(diagnostic.evidence(failure)).toMatchObject({
         classification: { stage: 'copy' },
         context: { inputs: { written: ['.ci/runtime/helper.ts'], current: '.ci/adapters/test-bundle.json' } },
       });
+    }));
+
+    // evidence_role: supplemental
+    // A copy completed before a later copy fails is new output, not a consumer asset the materializer is required to protect.
+    test('materializer keeps a copy completed before a later copy fails', () => withCustomBundle((fixture) => {
+      // Act
+      const { firstDestination } = failLaterCopy(fixture);
+
+      // Assert
+      expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
     }));
 
     // evidence_role: contract

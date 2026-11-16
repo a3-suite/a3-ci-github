@@ -79,11 +79,6 @@ describe('contract.ci-selective-distribution.publication', () => {
     f.git('add', '.');
     const cli = (...args) => spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', ...args], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
 
-    const prepared = cli('--preparation');
-    expect(prepared.status, prepared.stderr).toBe(0);
-    const report = JSON.parse(prepared.stdout);
-    expect(report).toMatchObject({ preparationOnly: true, implementationBindingStatus: 'unverified', implementationSourceRevision: f.implementation });
-    expect(report.connection.diagnostics).toEqual([]);
     const candidate = cli('--candidate');
     expect(candidate.error).toBeUndefined();
     expect(candidate.status).not.toBe(0);
@@ -103,6 +98,24 @@ describe('contract.ci-selective-distribution.publication', () => {
     const invalidPin = cli('--preparation');
     expect(invalidPin.status).toBe(1);
     expect(JSON.parse(invalidPin.stdout).diagnostics).toContainEqual(expect.stringContaining('registry-approved provider pin'));
+  });
+
+  // evidence_role: supplemental
+  // The success of the preparation check is not a rejection of the candidate closure that the mapped test observes.
+  test('implementation preparation accepts existing references without a final tag or new binding', () => {
+    // Arrange
+    const f = fixture();
+    updateReferences(f.directory, f.implementation);
+    f.git('add', '.'); f.git('commit', '-m', 'existing connection');
+    f.write('runtime/payload.mjs', 'export const payload = 2;\n');
+    f.git('add', '.');
+    // Act
+    const prepared = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--staged', '--contracts', '--preparation'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
+    // Assert
+    expect(prepared.status, prepared.stderr).toBe(0);
+    const report = JSON.parse(prepared.stdout);
+    expect(report).toMatchObject({ preparationOnly: true, implementationBindingStatus: 'unverified', implementationSourceRevision: f.implementation });
+    expect(report.connection.diagnostics).toEqual([]);
   });
 
   // evidence_role: supplemental
@@ -164,14 +177,12 @@ describe('contract.ci-selective-distribution.publication', () => {
     f.git('add', '.'); f.git('commit', '-m', 'connect implementation'); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
     // Act
     const executed = runScript('check-provider-references.mjs', f.directory, ['--contracts', '--release-tag', 'v0.2.11']);
-    const metadataOnly = runScript('check-provider-references.mjs', f.directory, []);
     // Assert
     expect(executed.status, executed.stderr).toBe(0);
     const checked = JSON.parse(executed.stdout);
     expect(checked.diagnostics).toEqual([]); expect(checked.connection.diagnostics).toEqual([]);
     expect(checked.implementationBindingStatus).toBe('verified');
     expect(checked.implementationBinding.sourceRevision).not.toBe(f.implementation);
-    expect(metadataOnly.status).toBe(0); expect(JSON.parse(metadataOnly.stdout).implementationBindingStatus).toBe('unverified');
     // Arrange
     const workflow = yaml.parse(readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8'));
     const gate = workflow.jobs['prepare-distribution'].steps.find((step) => step.id === 'provider-binding');
@@ -189,6 +200,19 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Assert
     expect(rejectedGate.error).toBeUndefined();
     expect(rejectedGate.status).not.toBe(0);
+  });
+
+  // evidence_role: supplemental
+  // The unverified status of a check without contracts is not a verified, evidence or rejected observation of the binding guarantee.
+  test('a check without contracts reports the implementation binding as unverified', () => {
+    // Arrange
+    const f = fixture(); f.git('switch', '-c', 'release/0.2.11');
+    updateReferences(f.directory, f.implementation);
+    f.git('add', '.'); f.git('commit', '-m', 'connect implementation'); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
+    // Act
+    const metadataOnly = runScript('check-provider-references.mjs', f.directory, []);
+    // Assert
+    expect(metadataOnly.status).toBe(0); expect(JSON.parse(metadataOnly.stdout).implementationBindingStatus).toBe('unverified');
   });
 
   test('one Release verifies a squashed main tag by execution closure while the implementation stays reachable', () => {
@@ -210,8 +234,6 @@ describe('contract.ci-selective-distribution.publication', () => {
       expect(entry.implementationObject).toBe(f.git('rev-parse', `${f.implementation}:${entry.path}`));
       expect(entry.sourceObject).toBe(f.git('rev-parse', `${squashed}:${entry.path}`));
     }
-    // A hotfix branches from this tag, so preparation must accept the reachable implementation outside its ancestry.
-    expect(checkReferences(f.directory, '--preparation').implementationSourceRevision).toBe(f.implementation);
     // Arrange
     const released = f.git('rev-parse', 'release/0.2.11');
     f.git('branch', '-D', 'release/0.2.11'); f.git('update-ref', 'refs/remotes/pull/1/merge', released);
@@ -219,6 +241,23 @@ describe('contract.ci-selective-distribution.publication', () => {
     const unreachable = failure(() => checkRelease(f.directory));
     // Assert
     expect(unreachable).toMatch(/implementation-source-unreachable/);
+  });
+
+  // evidence_role: supplemental
+  // The source revision that preparation reports is not a verified, evidence or rejected observation of the binding guarantee.
+  test('preparation after a squashed main tag accepts the reachable implementation outside its ancestry', () => {
+    // Arrange
+    const f = fixture(); const base = f.git('rev-parse', `${f.implementation}^`);
+    f.git('switch', '-c', 'release/0.2.11');
+    updateReferences(f.directory, f.implementation);
+    f.git('add', '.'); f.git('commit', '-m', 'connect implementation');
+    const squashed = f.git('commit-tree', f.git('rev-parse', 'HEAD^{tree}'), '-p', base, '-m', 'squash release');
+    f.git('switch', 'main'); f.git('reset', '--hard', squashed); f.git('tag', '-a', 'v0.2.11', '-m', 'single release');
+    // Act
+    const prepared = checkReferences(f.directory, '--preparation');
+    // Assert
+    // A hotfix branches from this tag, so preparation must accept the reachable implementation outside its ancestry.
+    expect(prepared.implementationSourceRevision).toBe(f.implementation);
   });
 
   test.each(['VERSION', 'runtime/payload.mjs', 'actions/ci-quality-adapter/action.yml', 'actions/ci-quality-adapter/dist/index.js', 'actions/ci-quality-adapter/scripts/composite.sh'])('single Release rejects changed execution input %s', (relative) => {

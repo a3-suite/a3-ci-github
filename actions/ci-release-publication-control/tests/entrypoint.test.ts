@@ -42,8 +42,6 @@ test('entrypoint creates and verifies a publication request', () => {
   expect(fs.readFileSync(output, 'utf8')).toMatch(/request-run-id<<[^\n]+\n11\n/);
 
   // Arrange
-  const files = ['release-publication-request/request.json', 'release-publication-request/request.json.sha256', 'release-notes-handoff/release-notes.json', 'release-notes-handoff/release-notes-approval.json'];
-  const saved = files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'));
   fs.writeFileSync(output, '');
   // Act
   const replay = spawnSync(process.execPath, [...entrypoint], { env: { ...env, 'INPUT_APPROVAL-ID': 'replacement-approval' }, encoding: 'utf8' });
@@ -51,8 +49,27 @@ test('entrypoint creates and verifies a publication request', () => {
   expect(replay.status).not.toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
   expect(fs.readFileSync(output, 'utf8')).not.toMatch(/request-run-id<</);
-  expect(files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'))).toStrictEqual(saved);
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+// evidence_role: supplemental
+// Leaving the existing handoff files unchanged after a rejected replay is a filesystem side effect that no contract guarantee covers.
+// flow_id: ci-release-publication-control-contract-entrypoint
+test('entrypoint keeps the existing handoff files when it rejects a replay', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-entry-replay-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const output = path.join(root, 'output');
+  fs.writeFileSync(output, '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, ...publicationRequestInputs(root) } as Record<string, string>;
+  expect(spawnSync(process.execPath, [...entrypointArgs], { env, encoding: 'utf8' }).status).toBe(0);
+  const files = ['release-publication-request/request.json', 'release-publication-request/request.json.sha256', 'release-notes-handoff/release-notes.json', 'release-notes-handoff/release-notes-approval.json'];
+  const saved = files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'));
+  // Act
+  const replay = spawnSync(process.execPath, [...entrypointArgs], { env: { ...env, 'INPUT_APPROVAL-ID': 'replacement-approval' }, encoding: 'utf8' });
+  // Assert
+  expect(replay.status).not.toBe(0);
+  expect(files.map((file) => fs.readFileSync(path.join(root, file), 'utf8'))).toStrictEqual(saved);
 });
 
 // contract_id: contract.ci-release-publication-control.outputs

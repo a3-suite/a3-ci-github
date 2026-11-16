@@ -12,7 +12,8 @@ import { provisionerWorkspace, readGithubPath, runProvisionerEntrypoint } from '
 const version = '1.7.1';
 const releaseUrl = `https://github.com/jqlang/jq/releases/download/jq-${version}`;
 const checksumUrl = `${releaseUrl}/sha256sum.txt`;
-const binary = Buffer.from('jq fixture');
+// Each platform asset has distinct content so that exposing another platform's asset is detectable.
+const binaryFor = (asset: string): Buffer => Buffer.from(`jq fixture ${asset}`);
 const roots: string[] = [];
 afterAll(() => { for (const root of roots) rmSync(root, { recursive: true, force: true }); });
 
@@ -26,9 +27,9 @@ function workspace(): { root: string; runnerTemp: string; githubPath: string } {
 
 const manifest = (digest: string, asset: string): Buffer => Buffer.from(`${digest}  ${asset}\n`);
 const sha256 = (value: Buffer): string => createHash('sha256').update(value).digest('hex');
-const releaseRoutes = (asset: string, digest = sha256(binary)): Record<string, Buffer> => ({
+const releaseRoutes = (asset: string, digest = sha256(binaryFor(asset))): Record<string, Buffer> => ({
   [checksumUrl]: manifest(digest, asset),
-  [`${releaseUrl}/${asset}`]: binary,
+  [`${releaseUrl}/${asset}`]: binaryFor(asset),
 });
 const failureDiagnostic = (stderr: string): unknown => {
   const line = stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
@@ -71,7 +72,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       comparison: { field: 'version', expected: 'exact-numeric-version' },
     });
     expect(readGithubPath(paths.githubPath)).toBeUndefined();
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   for (const [runnerOs, arch, asset] of [['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']] as const) {
@@ -85,9 +85,8 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       const exported = readGithubPath(paths.githubPath)?.trim() ?? '';
       expect(path.dirname(exported)).toBe(paths.runnerTemp);
       expect(readdirSync(exported)).toStrictEqual(['jq']);
-      expect(readFileSync(path.join(exported, 'jq'), 'utf8')).toBe('jq fixture');
+      expect(readFileSync(path.join(exported, 'jq'), 'utf8')).toBe(binaryFor(asset).toString());
       expect(statSync(path.join(exported, 'jq')).mode & 0o111).toBe(0o111);
-      expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${asset}`]);
     });
   }
 
@@ -98,7 +97,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, {}, releaseRoutes('jq-linux-amd64', '0'.repeat(64)));
     // Assert
     expectStopped(outcome, paths, 'checksum-validation');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects an unsupported runner before download or PATH handoff', () => {
@@ -108,28 +106,24 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, { RUNNER_OS: 'Windows', RUNNER_ARCH: 'ARM64' }, {});
     // Assert
     expectStopped(outcome, paths, 'download-verify-install');
-    expect(outcome.requested).toStrictEqual([]);
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action reports an unavailable release asset before PATH handoff', () => {
     // Arrange
     const paths = workspace();
     // Act
-    const outcome = run(paths, {}, { [checksumUrl]: manifest(sha256(binary), 'jq-linux-amd64') });
+    const outcome = run(paths, {}, { [checksumUrl]: manifest(sha256(binaryFor('jq-linux-amd64')), 'jq-linux-amd64') });
     // Assert
     expectStopped(outcome, paths, 'asset-download');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects a checksum manifest without the asset entry', () => {
     // Arrange
     const paths = workspace();
     // Act
-    const outcome = run(paths, {}, { [checksumUrl]: Buffer.from(''), [`${releaseUrl}/jq-linux-amd64`]: binary });
+    const outcome = run(paths, {}, { [checksumUrl]: Buffer.from(''), [`${releaseUrl}/jq-linux-amd64`]: binaryFor('jq-linux-amd64') });
     // Assert
     expectStopped(outcome, paths, 'checksum-inventory');
-    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   test('Action rejects an installation failure before PATH handoff', () => {
@@ -139,7 +133,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, { RUNNER_TEMP: path.join(paths.root, 'missing') }, releaseRoutes('jq-linux-amd64'));
     // Assert
     expectStopped(outcome, paths, 'install-directory');
-    expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
   });
 
   test('Action removes the installed binary when PATH update fails', () => {
@@ -152,6 +145,72 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(outcome.result.status).toBe(1);
     expect(failureDiagnostic(outcome.result.stderr)).toMatchObject({ classification: { subject: 'ci-jq-provisioner', stage: 'path-export' } });
     expect(readdirSync(paths.githubPath)).toStrictEqual([]);
+  });
+
+  // evidence_role: supplemental
+  // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
+  for (const [runnerOs, arch, asset] of [['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']] as const) {
+    test(`Action requests only the checksum list and its asset on ${runnerOs}/${arch}`, () => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { RUNNER_OS: runnerOs, RUNNER_ARCH: arch }, releaseRoutes(asset));
+      // Assert
+      expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${asset}`]);
+    });
+  }
+
+  // evidence_role: supplemental
+  // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
+  test('Action makes no request and leaves no working directory for an unsupported runner', () => {
+    // Arrange
+    const paths = workspace();
+    // Act
+    const outcome = run(paths, { RUNNER_OS: 'Windows', RUNNER_ARCH: 'ARM64' }, {});
+    // Assert
+    expect(outcome.requested).toStrictEqual([]);
     expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+  });
+
+  // evidence_role: supplemental
+  // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
+  describe('Action leaves no working directory after a rejected provisioning', () => {
+    const asset = 'jq-linux-amd64';
+    const rejections: Array<[string, Record<string, string>, Record<string, Buffer>]> = [
+      ['an invalid version', { 'INPUT_JQ-VERSION': 'not-exact' }, {}],
+      ['a checksum mismatch', {}, releaseRoutes(asset, '0'.repeat(64))],
+      ['an unavailable asset', {}, { [checksumUrl]: manifest(sha256(binaryFor(asset)), asset) }],
+      ['a manifest without the asset entry', {}, { [checksumUrl]: Buffer.from(''), [`${releaseUrl}/${asset}`]: binaryFor(asset) }],
+    ];
+    test.each(rejections)('%s', (_name, env, routes) => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, env, routes);
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+    });
+
+    test('a failed PATH update', () => {
+      // Arrange
+      const paths = workspace();
+      mkdirSync(paths.githubPath);
+      // Act
+      const outcome = run(paths, {}, releaseRoutes(asset));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
+    });
+
+    test('a missing install directory', () => {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { RUNNER_TEMP: path.join(paths.root, 'missing') }, releaseRoutes(asset));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
+    });
   });
 });

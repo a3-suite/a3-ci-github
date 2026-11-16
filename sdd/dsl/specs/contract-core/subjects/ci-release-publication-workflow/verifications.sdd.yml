@@ -13,27 +13,14 @@ cases:
       workflow-source: .github/workflows/ci-release-publication.yml
     verifies:
       - release-fixed-provider-reference
-      - release-explicit-owner-inputs
       - release-request-before-publication
       - release-authority-before-publication
       - release-control-sha-bound
       - release-control-head-verified
-      - release-build-committed-line-endings
       - release-handoff-before-publication
       - release-publication-before-readback
-      - release-tokens-explicit
       - release-publication-serialized
-      - supplemental-upload-selected-root
-      - supplemental-hidden-files-selected
-      - supplemental-download-root
       - supplemental-final-assembly-input
-      - release-publication-needs-authority-and-assembly
-      - release-assemble-control-checkout-manifest-only
-      - release-publish-control-checkout-empty
-      - release-control-checkout-narrowed-objects
-      - release-control-checkout-unsupported-manifest-full
-      - release-control-checkout-multiline-manifest-rejected
-      - release-assembly-source-unfiltered
       - release-assembly-source-credentials-removed
   - contract_id: contract.ci-release-publication-workflow.publication
     id: ci-release-publication-workflow-failure

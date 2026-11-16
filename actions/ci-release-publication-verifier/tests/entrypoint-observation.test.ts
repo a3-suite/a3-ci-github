@@ -105,7 +105,19 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
   };
 
   // contract_id: contract.ci-release-publication-verifier.outputs
-  test('publication entrypoint observes absence with three GET-only inventories one second apart', async (t) => {
+  test('publication entrypoint observes absence using GET only', async (t) => {
+    // Arrange
+    const { run } = setup(t);
+    // Act
+    const outcome = await run('observe-before', { releases: ['absent'] });
+    // Assert
+    expect(outcome.result.status, outcome.result.stderr).toBe(0);
+    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
+  });
+
+  // evidence_role: supplemental
+  // The observation file and its digest, the number of inventory observations and the requested delays are implementation details that no contract guarantee covers.
+  test('publication entrypoint writes the observation file after three Release inventories one second apart', async (t) => {
     // Arrange
     const { run, beforePath } = setup(t);
     // Act
@@ -113,38 +125,51 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Assert
     expect(outcome.result.status, outcome.result.stderr).toBe(0);
     expect(JSON.parse(fs.readFileSync(beforePath, 'utf8')).release_ids).toStrictEqual([]);
+    expect(outcome.outputs).toContain(`observation-path=${beforePath}\n`);
+    expect(outcome.outputs).toContain(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`);
     expect(outcome.releaseInventories).toBe(3);
     expect(outcome.assetInventories).toBe(0);
-    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
     expect(outcome.delays).toStrictEqual([1000, 1000]);
   });
 
   // contract_id: contract.ci-release-publication-verifier.outputs
   test('publication entrypoint rejects an existing draft before create', async (t) => {
     // Arrange
-    const { run, beforePath } = setup(t);
+    const { run } = setup(t);
     // Act
     const outcome = await run('observe-before', { releases: ['draft'] });
     // Assert
     expectRejected(outcome, /existing-release-or-asset/);
-    expect(fs.existsSync(beforePath)).toBe(false);
   });
 
   // contract_id: contract.ci-release-publication-verifier.outputs
   test('publication entrypoint reobserves absence and rejects a newly visible draft using GET only', async (t) => {
     // Arrange
-    const { run, beforePath } = setup(t);
+    const { run } = setup(t);
     // Act
     const outcome = await run('observe-before', { releases: ['absent', 'draft'] });
     // Assert
     expectRejected(outcome, /existing-release-or-asset/);
-    expect(outcome.releaseInventories).toBe(2);
     expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
-    expect(fs.existsSync(beforePath)).toBe(false);
+  });
+
+  // evidence_role: supplemental
+  // Writing no observation file when the pre-create observation is rejected, and the number of inventories before the rejection, are side effects that no contract guarantee covers.
+  test('publication entrypoint writes no observation file when it rejects a visible draft', async (t) => {
+    // Arrange
+    const { run, beforePath } = setup(t);
+    for (const [releases, inventories] of [[['draft'], 1], [['absent', 'draft'], 2]] as const) {
+      // Act
+      const outcome = await run('observe-before', { releases });
+      // Assert
+      expectRejected(outcome, /existing-release-or-asset/);
+      expect(outcome.releaseInventories).toBe(inventories);
+      expect(fs.existsSync(beforePath)).toBe(false);
+    }
   });
 
   // contract_id: contract.ci-release-publication-verifier.outputs
-  test('publication entrypoint bounds Release and asset reobservation after create with GET-only requests', async (t) => {
+  test('publication entrypoint verifies the published Release using GET only', async (t) => {
     // Arrange
     const { run, afterInputs } = setup(t);
     const inputs = await afterInputs();
@@ -153,15 +178,41 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Assert
     expect(outcome.result.status, outcome.result.stderr).toBe(0);
     expect(outcome.outputs).toMatch(/release-remote-identity=42\n/);
+    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
+  });
+
+  // evidence_role: supplemental
+  // The number of Release and asset inventories, the requested delays, the asset body requests and the absence of observation outputs are implementation details that no contract guarantee covers.
+  test('publication entrypoint bounds Release and asset reobservation after create and reads the asset bodies', async (t) => {
+    // Arrange
+    const { run, afterInputs } = setup(t);
+    const inputs = await afterInputs();
+    // Act
+    const outcome = await run('verify-after', { releases: ['absent', 'absent', 'published'], assets: ['empty', 'empty', 'complete'] }, inputs);
+    // Assert
+    expect(outcome.result.status, outcome.result.stderr).toBe(0);
+    expect(outcome.outputs).not.toMatch(/observation-(path|digest)=/);
     expect(outcome.releaseInventories).toBe(3);
     expect(outcome.assetInventories).toBe(3);
-    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
     expect(outcome.requests.some(entry => entry.endpoint!.includes('/releases/assets/'))).toBe(true);
     expect(outcome.delays).toStrictEqual([1000, 1000, 1000, 1000]);
   });
 
   // contract_id: contract.ci-release-publication-verifier.outputs
-  test('publication entrypoint rejects a Release still absent after three GET-only inventories', async (t) => {
+  test('publication entrypoint rejects a Release that stays absent after create using GET only', async (t) => {
+    // Arrange
+    const { run, afterInputs } = setup(t);
+    const inputs = await afterInputs();
+    // Act
+    const outcome = await run('verify-after', { releases: ['absent'] }, inputs);
+    // Assert
+    expectRejected(outcome, /release-not-visible/);
+    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
+  });
+
+  // evidence_role: supplemental
+  // The number of inventory observations and the requested delays before the rejection are implementation details that no contract guarantee covers.
+  test('publication entrypoint observes a Release that stays absent three times one second apart', async (t) => {
     // Arrange
     const { run, afterInputs } = setup(t);
     const inputs = await afterInputs();
@@ -171,12 +222,25 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     expectRejected(outcome, /release-not-visible/);
     expect(outcome.releaseInventories).toBe(3);
     expect(outcome.assetInventories).toBe(1);
-    expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
     expect(outcome.delays).toStrictEqual([1000, 1000]);
   });
 
   // contract_id: contract.ci-release-publication-verifier.outputs
-  test('publication entrypoint bounds asset inventory reobservation and refuses an invalid subset at once', async (t) => {
+  test('publication entrypoint refuses an invalid asset subset', async (t) => {
+    // Arrange
+    const { run, afterInputs } = setup(t);
+    const inputs = await afterInputs();
+    for (const assets of ['empty', 'unexpected'] as const) {
+      // Act
+      const outcome = await run('verify-after', { releases: ['published'], assets: [assets] }, inputs);
+      // Assert
+      expectRejected(outcome, /asset-set-mismatch/);
+    }
+  });
+
+  // evidence_role: supplemental
+  // The number of asset inventory observations and the absence of asset body requests before the rejection are implementation details that no contract guarantee covers.
+  test('publication entrypoint bounds asset inventory reobservation and reads no asset body for an invalid subset', async (t) => {
     // Arrange
     const { run, afterInputs } = setup(t);
     const inputs = await afterInputs();

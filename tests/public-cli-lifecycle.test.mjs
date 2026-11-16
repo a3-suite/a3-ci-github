@@ -306,7 +306,6 @@ describe("contract.ci-preset-assurance.verification", () => {
           comparison: { field: 'preset-status', expected: 'success', observed: 'failed' },
         });
         expect([...evidence.comparison.missingSettings, ...evidence.comparison.mismatches].some((entry) => String(entry).includes('release-request-tag.yml'))).toBe(true);
-        expect(existsSync(path.join(consumerRoot, '.ci/ci-assets.lock.json'))).toBe(false);
 
         // Act
         const invalidRevision = execute(tsxPath, [
@@ -322,6 +321,22 @@ describe("contract.ci-preset-assurance.verification", () => {
           comparison: { field: 'source-revision', expected: 'full-commit-sha', observed: 'invalid-format' },
         });
         expect(invalidLine).not.toContain('secret-revision');
+      });
+    });
+
+    // evidence_role: supplemental
+    // Writing no lock is a side effect of the rejected generation, not an observation of its failure diagnostic.
+    test('public asset lock CLI writes no lock when the preset findings fail', () => {
+      withFixture('a3-ci-github-lock-drift-', (consumerRoot) => {
+        // Arrange
+        const skillArguments = preparePresetFixture(consumerRoot, false);
+        const workflow = path.join(consumerRoot, '.github/workflows/release-request-tag.yml');
+        writeFileSync(workflow, readFileSync(workflow, 'utf8').replace(/^on:/m, 'on-changed:'));
+        // Act
+        const lockResult = generateAssetLock(consumerRoot, skillArguments);
+        // Assert
+        expect(lockResult.status, lockResult.stderr).toBe(2);
+        expect(existsSync(path.join(consumerRoot, '.ci/ci-assets.lock.json'))).toBe(false);
       });
     });
 

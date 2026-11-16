@@ -37,8 +37,8 @@ contracts:
             meaning: Failure outcome of the rejected quality summary step.
           - selector: applicable-only-status-comparison
             meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
-          - selector: default-evidence-comparison
-            meaning: Comparison of missing-row evidence with the current workflow run URL.
+          - selector: missing-evidence-row-state
+            meaning: Occurrence state (present or absent) of a summary row that has no evidence reference after the invocation.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:
@@ -49,8 +49,6 @@ contracts:
         fields:
           - selector: evidence-step-summary-comparison
             meaning: Comparison of the content of the file at the evidence path with the content of the step summary file given by the runner; equal or different.
-          - selector: evidence-file-state
-            meaning: Occurrence state (present or absent) of the file at the evidence path after the invocation.
     conditions:
       - environment: runtime-context.failure-diagnostic-required
       - input: summary-input-present
@@ -95,17 +93,10 @@ contracts:
           field: applicable-only-status-comparison
           in:
             - equal
-      - id: rejected-run-context-no-evidence
-        applies_to:
-          - runtime-context.ci-quality-summary-summary-run-context-missing
-        claim:
-          field: evidence-file-state
-          in:
-            - absent
-      - id: run-url-used-for-missing-evidence
+      - id: no-row-without-evidence-reference
         applies_to:
           - runtime-context.ci-quality-summary-summary-default-evidence-valid
         claim:
-          field: default-evidence-comparison
+          field: missing-evidence-row-state
           in:
-            - equal
+            - absent

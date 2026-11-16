@@ -90,10 +90,9 @@ export const runDistributedAction = (f: ReturnType<typeof fixture>, options = f.
   return { result, output };
 };
 
-// Runs one phase through the distributed Action and surfaces a failed run as an error carrying its stderr.
 // An injected installer replaces only the provider script inside a copy of the distribution, so the Action boundary
 // still performs every input and output check around a provider that misbehaves.
-export const runSupplementalAction = (options: SupplementalOptionsType, injectedInstaller?: string): void => {
+const spawnSupplementalAction = (options: SupplementalOptionsType, injectedInstaller?: string) => {
   let entrypoint = path.join(repository, 'actions/ci-release-supplemental-asset/dist/index.js');
   if (injectedInstaller !== undefined) {
     const provider = path.join(options.sourceRoot, 'injected-action');
@@ -105,6 +104,21 @@ export const runSupplementalAction = (options: SupplementalOptionsType, injected
   const output = path.join(options.sourceRoot, 'runner-output');
   fs.writeFileSync(output, '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, A3_INSTALLER_PROVIDER_REVISION: 'a'.repeat(40), INPUT_OPERATION: options.operation, 'INPUT_SOURCE-ROOT': options.sourceRoot, 'INPUT_AUTHORITY-PATH': options.authorityPath, 'INPUT_SNAPSHOT-PATH': options.snapshotPath, 'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot, 'INPUT_OUTPUT-DIRECTORY': options.outputDirectory, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '' };
-  const result = spawnSync(process.execPath, [entrypoint], { cwd: options.sourceRoot, encoding: 'utf8', env });
+  return { result: spawnSync(process.execPath, [entrypoint], { cwd: options.sourceRoot, encoding: 'utf8', env }), output };
+};
+
+// Runs one phase through the distributed Action, expects it to succeed and checks the output it reports.
+// A failed run surfaces as an error carrying its stderr.
+export const runSupplementalAction = (options: SupplementalOptionsType, injectedInstaller?: string): void => {
+  const { result, output } = spawnSupplementalAction(options, injectedInstaller);
   if (result.status !== 0) throw new Error(result.stderr || `supplemental-action-exit-${String(result.status)}`);
+  expect(fs.readFileSync(output, 'utf8')).toContain(`output-directory=${options.outputDirectory}\n`);
+  expect(fs.existsSync(path.resolve(options.sourceRoot, options.outputDirectory))).toBe(true);
+};
+
+// Runs one phase through the distributed Action and expects a non-zero exit with the diagnostic in stderr.
+export const rejectSupplementalAction = (options: SupplementalOptionsType, diagnostic: string, injectedInstaller?: string): void => {
+  const { result } = spawnSupplementalAction(options, injectedInstaller);
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toContain(diagnostic);
 };

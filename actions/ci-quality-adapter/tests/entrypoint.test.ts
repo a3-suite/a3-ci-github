@@ -23,6 +23,14 @@ const runAction = (root: string, content: string, inputs: Record<string, string>
   return { result, output, resultPath };
 };
 
+type ResultEntry = { id: string; status: string; reason?: string };
+
+// Only the not-run of an unconfigured optional command is excluded; the status is success exactly when every other result succeeded.
+const statusMatchesResults = (payload: { status: string; results: ResultEntry[] }): boolean => {
+  const remaining = payload.results.filter((entry) => !(entry.status === 'not-run' && entry.reason === 'not-configured'));
+  return (payload.status === 'success') === remaining.every((entry) => entry.status === 'success');
+};
+
 // contract_id: contract.ci-quality-adapter.outputs
 // flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint emits status and result path', () => {
@@ -37,6 +45,7 @@ test('entrypoint emits status and result path', () => {
       const expectedStatus = exitCode === 0 ? 'success' : 'failed';
       expect(run.result.status).toBe(exitCode === 0 ? 0 : 1);
       expect(payload.status).toBe(expectedStatus);
+      expect(statusMatchesResults(payload)).toBe(true);
       expect(payload.results.at(-1).exitCode).toBe(exitCode);
       expect(fs.readFileSync(run.output, 'utf8')).toMatch(new RegExp(`status.*${expectedStatus}`, 's'));
       expect(fs.readFileSync(run.output, 'utf8').includes(run.resultPath)).toBeTruthy();
@@ -54,6 +63,26 @@ test('entrypoint emits status and result path', () => {
       if (exitCode !== 0) expect(run.result.stdout.indexOf(saved) < run.result.stdout.indexOf('::error::quality-adapter-failed')).toBeTruthy();
     } finally { fs.rmSync(root, { recursive: true, force: true }); }
   }
+});
+
+// evidence_role: supplemental
+// Guards the predicate that the mapped tests apply to the real Action results.
+test('status consistency rejects success reported over a not-run command other than an unconfigured optional command', () => {
+  // Arrange
+  const unconfiguredPolicy = { id: 'dependency-policy', status: 'not-run', reason: 'not-configured' };
+  const unconfiguredLint = { id: 'lint', status: 'not-run', reason: 'not-configured' };
+  const skippedLint = { id: 'lint', status: 'not-run', reason: 'skipped' };
+  const passed = [{ id: 'test', status: 'success' }];
+  // Act
+  const outcomes = [
+    statusMatchesResults({ status: 'success', results: [...passed, unconfiguredPolicy] }),
+    statusMatchesResults({ status: 'success', results: [unconfiguredLint, ...passed] }),
+    statusMatchesResults({ status: 'success', results: [skippedLint, ...passed] }),
+    statusMatchesResults({ status: 'success', results: [{ ...unconfiguredPolicy, status: 'success' }, { id: 'test', status: '判定不能' }] }),
+    statusMatchesResults({ status: 'failed', results: [skippedLint, ...passed] }),
+  ];
+  // Assert
+  expect(outcomes).toStrictEqual([true, true, false, false, true]);
 });
 
 // flow_id: ci-quality-adapter-entrypoint-regression
@@ -140,6 +169,7 @@ test('entrypoint executes the embedded Python standard and emits its status', (t
   expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
   const result = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
   expect(result).toMatchObject({ adapter: 'python-uv-quality', status: 'success' });
+  expect(statusMatchesResults(result)).toBe(true);
   expect(result.results.map((entry: { id: string }) => entry.id)).toStrictEqual(['toolchain-verify', 'dependency-restore', 'format', 'lint', 'test', 'security', 'structure']);
   expect(fs.readFileSync(commands, 'utf8').trim().split('\n').map((line) => JSON.parse(line)[0])).toStrictEqual(['sync', 'run', 'run', 'run', 'run', 'run']);
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*success/s);
@@ -166,6 +196,7 @@ test('entrypoint executes the embedded standard without reading a project descri
     const result = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
     expect(result.adapter).toBe('typescript-npm-quality');
     expect(result.status).toBe('success');
+    expect(statusMatchesResults(result)).toBe(true);
     expect(result.results.map((entry: { id: string }) => entry.id)).toStrictEqual(['toolchain-verify', 'dependency-restore', 'format', 'lint', 'typecheck', 'test', 'security', 'structure']);
     expect(fs.readFileSync(commands, 'utf8').trim().split('\n').length).toBe(7);
     expect(fs.existsSync(path.join(root, '.ci/adapters'))).toBe(false);
@@ -194,6 +225,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     const saved = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
     // Assert
     expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
+    expect(statusMatchesResults(saved)).toBe(true);
     expect(saved.results.map((entry: { id: string }) => entry.id)).toStrictEqual(scope === 'native'
       ? ['toolchain-verify', 'dependency-restore', 'lint', 'test', 'structure']
       : ['toolchain-verify', 'dependency-restore', 'format', 'lint', 'test', 'security', 'dependency-policy', 'structure']);
@@ -246,6 +278,7 @@ test('unconfigured dependency policy is recorded as not-run without changing the
   // Assert
   expect(run.result.status, run.result.stdout + run.result.stderr).toBe(0);
   expect(payload.status).toBe('success');
+  expect(statusMatchesResults(payload)).toBe(true);
   expect(payload.results.find((entry: { id: string }) => entry.id === 'dependency-policy')).toStrictEqual(expect.objectContaining({ status: 'not-run', reason: 'not-configured', exitCode: null }));
   expect(payload.results.filter((entry: { status: string }) => entry.status !== 'not-run').every((entry: { status: string }) => entry.status === 'success')).toBe(true);
   expect(commands().map(args => args[0])).not.toContain('deny');
@@ -329,7 +362,6 @@ test('dependency policy rejects an unusable configuration before commands', (t) 
       expect(run.result.status, `${scope} ${config}`).toBe(1);
       expect(run.result.stderr + run.result.stdout).toContain(`"reason":"quality-adapter-${code}"`);
       expect(commands()).toStrictEqual([]);
-      expect(fs.existsSync(run.resultPath)).toBe(false);
     }
   }
 });
@@ -349,6 +381,27 @@ test('dependency policy rejects incomplete inputs before commands', (t) => {
       expect(run.result.status, scope).toBe(1);
       expect(run.result.stderr + run.result.stdout).toContain('"reason":"quality-adapter-optional-command-incomplete"');
       expect(commands()).toStrictEqual([]);
+    }
+  }
+});
+
+// evidence_role: supplemental
+// The absence of a result file after a rejected dependency policy configuration is a side effect that no contract guarantee covers.
+test('dependency policy rejection leaves no result file', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-no-result-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { inputs } = rustPolicyFixture(root);
+  fs.mkdirSync(path.join(root, 'runtime/deny-directory'));
+  const rejected = [...['runtime/missing-deny.toml', 'runtime/deny-directory', path.join(root, 'runtime/deny.toml'), '../deny.toml']
+    .map((config) => ({ CI_CARGO_DENY_VERSION: '0.20.2', CI_CARGO_DENY_CONFIG_PATH: config })),
+  { CI_CARGO_DENY_VERSION: '0.20.2' }, { CI_CARGO_DENY_CONFIG_PATH: 'runtime/deny.toml' }];
+  for (const partial of rejected) {
+    for (const scope of ['all', 'native']) {
+      // Act
+      const run = runAction(root, 'ignored', { ...inputs, 'INPUT_EXECUTION-SCOPE': scope, ...partial });
+      // Assert
+      expect(run.result.status, scope).toBe(1);
       expect(fs.existsSync(run.resultPath)).toBe(false);
     }
   }
