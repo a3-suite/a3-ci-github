@@ -80,16 +80,21 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(readGithubPath(paths.githubPath)).toBeUndefined();
   });
 
+  const installChecksummedAsset = (arch: string, platform: string) => {
+    // Arrange
+    const paths = workspace();
+    const asset = archive(paths.root, platform);
+    // Act
+    const outcome = run(paths, { RUNNER_ARCH: arch }, {
+      [checksumUrl]: manifest(sha256(asset), assetName(platform)),
+      [`${releaseUrl}/${assetName(platform)}`]: asset,
+    });
+    return { paths, outcome };
+  };
+
   for (const [arch, platform] of [['X64', 'linux_amd64'], ['ARM64', 'linux_arm64']] as const) {
     test(`Action installs the checksummed Linux/${arch} asset and exports its directory`, () => {
-      // Arrange
-      const paths = workspace();
-      const asset = archive(paths.root, platform);
-      // Act
-      const outcome = run(paths, { RUNNER_ARCH: arch }, {
-        [checksumUrl]: manifest(sha256(asset), assetName(platform)),
-        [`${releaseUrl}/${assetName(platform)}`]: asset,
-      });
+      const { paths, outcome } = installChecksummedAsset(arch, platform);
       // Assert
       expect(outcome.result.status, outcome.result.stderr).toBe(0);
       const exported = readGithubPath(paths.githubPath)?.trim() ?? '';
@@ -97,6 +102,14 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(readdirSync(exported)).toStrictEqual(['gh']);
       expect(readFileSync(path.join(exported, 'gh'), 'utf8')).toBe('gh fixture');
       expect(statSync(path.join(exported, 'gh')).mode & 0o111).toBe(0o111);
+    });
+
+    // evidence_role: supplemental
+    // The requests made to the release are an implementation detail that no contract guarantee covers.
+    test(`Action requests the checksum manifest then the Linux/${arch} asset`, () => {
+      const { outcome } = installChecksummedAsset(arch, platform);
+      // Assert
+      expect(outcome.result.status, outcome.result.stderr).toBe(0);
       expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${assetName(platform)}`]);
     });
   }

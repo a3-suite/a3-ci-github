@@ -383,6 +383,25 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         }
         expect(fs.existsSync(path.join(projectRoot, '.ci/provider-action-pins.yml'))).toBe(false);
         expect(fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8')).toBe('unrelated owner content\n');
+      });
+    });
+    // evidence_role: supplemental
+    // The fetched distribution root outliving a rollback is a side effect of the transaction, not an observation of a lock generation guarantee.
+    // contract_id: contract.ci-selective-distribution.application
+    test('rolling back an applied distribution keeps the fetched distribution root', async () => {
+      await withFixture('distribution-rollback-fetched-root-', async (root) => {
+        // Arrange
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot, { recursive: true });
+        const selection = { requestedPresets: ['release-request'], requestedAssets: [] };
+        const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const plan = planDistributionApplication({ projectRoot, sourceRevision, ...selection });
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        // Act
+        rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId });
+        // Assert
         expect(fs.existsSync(fetched.distributionRoot)).toBe(true);
       });
     });

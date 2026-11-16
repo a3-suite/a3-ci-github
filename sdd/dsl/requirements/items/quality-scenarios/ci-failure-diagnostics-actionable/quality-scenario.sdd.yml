@@ -20,6 +20,5 @@ related_requirements:
   - ci-failure-diagnostics
 related_contracts:
   - contract.ci-failure-diagnostics.actionable
-  - contract.ci-failure-diagnostics.existing-state
   - contract.ci-failure-diagnostics.workflow-evidence
   - contract.ci-failure-diagnostics.bootstrap-diagnostic

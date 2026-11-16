@@ -83,8 +83,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   });
 
-  // contract_id: contract.ci-quality-toolchain.preparation
-  test('quality toolchain Rust scripts preserve pinned arguments environment and setup failures', () => {
+  const runRustScripts = (mode) => {
     fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
     const directory = fs.mkdtempSync(path.join(root, 'tmp/quality-toolchain-'));
     try {
@@ -99,14 +98,22 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const audit = action.runs.steps.find((step) => step.name === 'Set up cargo-audit').run;
       expect(run(rust, env, directory).status).toBe(0);
       expect(run(audit, env, directory).status).toBe(0);
-      expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toStrictEqual(['toolchain install 1.90.0 --profile minimal --component rustfmt --component clippy', 'install cargo-audit --locked --version 0.21.0']);
-      expect(fs.readFileSync(output, 'utf8')).toBe('RUSTUP_TOOLCHAIN=1.90.0\n');
+      if (mode === 'details') expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toStrictEqual(['toolchain install 1.90.0 --profile minimal --component rustfmt --component clippy', 'install cargo-audit --locked --version 0.21.0']);
+      if (mode === 'details') expect(fs.readFileSync(output, 'utf8')).toBe('RUSTUP_TOOLCHAIN=1.90.0\n');
       fs.unlinkSync(output);
       expect(run(rust, { ...env, RUSTUP_EXIT: '13' }, directory).status).toBe(13);
-      expect(fs.existsSync(output)).toBe(false);
+      if (mode === 'details') expect(fs.existsSync(output)).toBe(false);
       expect(run(audit, { ...env, CARGO_EXIT: '17' }, directory).status).toBe(17);
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
-  });
+  };
+
+  // contract_id: contract.ci-quality-toolchain.preparation
+  test('quality toolchain Rust scripts preserve pinned arguments environment and setup failures', () => runRustScripts('status'));
+
+  // evidence_role: supplemental
+  // The setup arguments and the exported environment file are implementation details that no contract guarantee covers.
+  test('quality toolchain Rust scripts pass pinned arguments and export the toolchain only on success', () => runRustScripts('details'));
+
   // contract_id: contract.ci-quality-toolchain.preparation
   // flow_id: quality-toolchain-failure-retention
   test('failure retention identifies the failed setup without executing another setup', () => {

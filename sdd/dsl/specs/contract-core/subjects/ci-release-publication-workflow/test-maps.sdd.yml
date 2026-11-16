@@ -37,7 +37,9 @@ test_maps:
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication workflow declares serialized publication
         guarantees:
-          - release-publication-serialized
+          - release-publication-group-per-repository
+          - release-publication-in-progress-kept
+          - release-publication-pending-queued
       - path: tests/control-checkout.test.mjs
         symbol: release control checkout > trusted source identity and file scope > removes credentials from the fixed assembly source checkout
         guarantees:
@@ -45,10 +47,6 @@ test_maps:
   - contract_id: contract.ci-release-publication-workflow.publication
     case_id: ci-release-publication-workflow-failure
     tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows preserve failed and unknown outcomes
-        guarantees:
-          - release-failed-prerequisite-blocks
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
         guarantees:

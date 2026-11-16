@@ -37,7 +37,7 @@ test_maps:
     case_id: maintained-action-source-verification
     tests:
       - path: tests/action-package-verification.process.test.mjs
-        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI typechecks and tests every bundled Action and shared runtime test without install or build
+        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI typechecks and tests every bundled Action and shared runtime test
         guarantees:
           - source-verification-actions-covered
           - source-verification-runtime-tests-covered

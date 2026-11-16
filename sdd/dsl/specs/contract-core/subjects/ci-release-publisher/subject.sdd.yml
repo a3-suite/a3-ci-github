@@ -68,7 +68,7 @@ contracts:
       - environment: runtime-context.release-publisher-valid
       - environment: runtime-context.release-publisher-invalid
       - input: rejected-before-write
-        summary: Invocation rejected by a local or provider-observed check before the first provider write request.
+        summary: Handoff, approval, binding or observed remote state that fails a check before the first provider write.
     guarantees:
       - id: receipt-file
         applies_to:

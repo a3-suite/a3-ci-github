@@ -47,8 +47,6 @@ contracts:
             meaning: Path of the ci.handoff.v1 directory that a successful assembly writes.
           - selector: asset-digest
             meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
-          - selector: handoff-output-binding
-            meaning: Comparison of the release-handoff output path with the output directory passed by the caller; equal or different.
           - selector: handoff-source-identity
             meaning: Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.
           - selector: outcome
@@ -94,9 +92,8 @@ contracts:
           - runtime-context.release-assembly-valid
           - runtime-context.release-asset-only-assembly-valid
         claim:
-          field: handoff-output-binding
-          in:
-            - equal
+          field: release-handoff
+          equals_input: input.output-directory
       - id: handoff-source-bound
         applies_to:
           - runtime-context.release-assembly-valid

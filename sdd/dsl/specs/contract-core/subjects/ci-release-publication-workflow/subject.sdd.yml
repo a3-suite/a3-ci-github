@@ -29,8 +29,12 @@ contracts:
             meaning: Declared order of handoff validation and credential-bearing publication.
           - selector: release-publication-before-readback
             meaning: Declared order of the publish step and independent verify-publication step.
-          - selector: release-publication-concurrency
-            meaning: "Declared concurrency of the release publication provider workflow: one group per workflow and repository, with in-progress runs kept and pending runs queued; serialized or other."
+          - selector: release-publication-concurrency-group
+            meaning: "Declared concurrency group of the release publication provider workflow; per-workflow-and-repository or other."
+          - selector: release-publication-in-progress-run
+            meaning: "Declared handling of an in-progress run when another run enters the concurrency group; kept or cancelled."
+          - selector: release-publication-pending-run
+            meaning: "Declared handling of pending runs in the concurrency group; queued or other."
           - selector: supplemental-final-assembly-input
             meaning: Comparison of the supplemental build root passed to final assemble with the root the supplemental artifacts are downloaded to; equal or different.
           - selector: release-assembly-source-credentials-persisted
@@ -102,13 +106,27 @@ contracts:
           field: release-publication-before-readback
           in:
             - publication-before-readback
-      - id: release-publication-serialized
+      - id: release-publication-group-per-repository
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
         claim:
-          field: release-publication-concurrency
+          field: release-publication-concurrency-group
           in:
-            - serialized
+            - per-workflow-and-repository
+      - id: release-publication-in-progress-kept
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publication-in-progress-run
+          in:
+            - kept
+      - id: release-publication-pending-queued
+        applies_to:
+          - ci-release-publication-workflow-canonical-source-available
+        claim:
+          field: release-publication-pending-run
+          in:
+            - queued
       - id: supplemental-final-assembly-input
         applies_to:
           - ci-release-publication-workflow-canonical-source-available

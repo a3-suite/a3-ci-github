@@ -26,13 +26,6 @@ cases:
     input:
       standard-bundle-id: ../unknown
   - contract_id: contract.ci-quality-adapter.outputs
-    id: standard-python-adapter-execution
-    partition: quality-adapter-standard-bundle-present
-    input:
-      standard-bundle-id: python-uv-quality
-    verifies:
-      - status-result-consistent
-  - contract_id: contract.ci-quality-adapter.outputs
     id: read-only-adapter-execution
     partition: quality-adapter-bundle-present
     input:

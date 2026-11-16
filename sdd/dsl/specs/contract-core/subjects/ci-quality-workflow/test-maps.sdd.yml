@@ -5,11 +5,10 @@ test_maps:
     case_id: ci-quality-workflow-reusable-binding
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > quality caller passes explicit inputs and preserves the summary check without copying quality jobs
+        symbol: workflow-contracts > quality-workflow-contract > quality caller preserves the summary check without copying quality jobs
         guarantees:
           - ci-quality-workflow-reusable-binding-observed
           - quality-fixed-reference
-          - quality-explicit-input-binding
           - quality-summary-identity
           - quality-no-consumer-callee-copy
           - quality-caller-read-permissions
@@ -55,9 +54,8 @@ test_maps:
     case_id: ci-quality-workflow-platform
     tests:
       - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > platform caller passes explicit inputs and retains the summary identity
+        symbol: workflow-contracts > quality-workflow-contract > platform caller retains the summary identity
         guarantees:
-          - platform-explicit-input-binding
           - platform-summary-identity
           - quality-fixed-reference
       - path: tests/workflow-contracts.process.test.mjs

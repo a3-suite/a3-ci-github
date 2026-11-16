@@ -1,0 +1,16 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-source-line-ending-neutrality
+    type: functional
+    summary: checkoutの改行の設定が異なるrunnerでも、同じsourceを同一と判定し、誤って拒否しない
+    rationale: >-
+      platformごとのrunnerはcheckoutの改行の設定が異なり得る。改行の違いだけで同じsourceを別物と判定すると、
+      正しいRelease要求を誤って拒否し、公開できなくなるため
+    subject:
+      namespace: ci
+      key: source-line-ending-neutrality
+    priority: must
+    fit_criteria:
+      - 改行の設定が異なるrunnerでcheckoutした同じsourceは、同一と判定する
+      - 改行以外の内容が異なるsourceは、同一と判定しない

@@ -59,7 +59,7 @@ contracts:
             meaning: Comparison of the output directory reported on success with the directory the phase created for its result; equal or different.
           - selector: outcome
             meaning: Step outcome of the phase invocation; success or failure.
-      - summary: Existing output path state before and after a rejected phase invocation.
+      - summary: Content of a pre-existing output path before and after a phase invocation.
         boundary: boundary.workspace-files
         fields:
           - selector: existing-output-content-comparison

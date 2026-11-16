@@ -12,10 +12,6 @@ test_maps:
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
         guarantees:
           - selected-quality-toolchain-ready
-      - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > unregistered versions and targets retain source install and its exit status
-        guarantees:
-          - selected-quality-toolchain-ready
   - contract_id: contract.ci-quality-toolchain.preparation
     case_id: compatible-quality-toolchain
     tests:

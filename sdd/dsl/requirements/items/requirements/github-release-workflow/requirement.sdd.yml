@@ -21,4 +21,3 @@ requirements:
       - 製品のbuildを持たないprojectも、同じ承認・source固定・readbackの経路で、公開宣言したスキルZIPとproject固有の補助assetの少なくとも一方を公開でき、公開するassetが無い選択は公開前に停止する
       - 公開前の検証・組み立ての処理が使う認証情報は、後続の処理から参照できる状態に残さない
       - 同じ版の Release を二重に公開しない
-      - platform の source の同一性は、checkout の改行の差（CRLF、LF、混在）を同一とみなした内容で比べる

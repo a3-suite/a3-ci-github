@@ -11,6 +11,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = entrypointArgs;
 const hash = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest('hex');
+const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort();
 
 describe('runActionEntrypoint', () => {
 
@@ -122,6 +123,7 @@ test('publication entrypoint rejects output path line injection before remote ob
   f.assemble();
   const output = f.put('github-output', '');
   const injected = `${path.join(f.root, 'before.json')}\nstatus=success`;
+  const filesBefore = fileNames(f.root);
   const result = await runActionEntrypoint([...bundle], {
     env: {
       ...process.env, GH_TOKEN: 'synthetic-secret', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
@@ -134,6 +136,7 @@ test('publication entrypoint rejects output path line injection before remote ob
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
   expect(fs.existsSync(injected)).toBe(false);
+  expect(fileNames(f.root)).toEqual(filesBefore);
   expect(result.stderr).toMatch(/input-invalid:observation-path/);
 });
 
@@ -166,10 +169,7 @@ test('publication entrypoint refuses missing credentials without success evidenc
     ['metadata-false-token-mismatch', 'denied', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1],
     ['metadata-malformed', 'malformed', {}, 1],
   ];
-  for (const [label, metadata, context, expectedStatus] of cases) {
-    // contract_id: contract.ci-release-publication-verifier.outputs
-    // flow_id: release-publication-safe-diagnostics
-    test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, async (t) => {
+  async function observeCredentialEvidence(t: Parameters<typeof fixture>[0], metadata: string, context: Record<string, string>, expectedStatus: number, mode: 'status' | 'observation-file'): Promise<void> {
     const f = fixture(t);
     f.assemble();
     const output = f.put('github-output', '');
@@ -186,6 +186,7 @@ globalThis.fetch = async (url, init) => {
     : metadata === 'denied' ? { permissions: { push: false } }
     : metadata === 'malformed' ? { permissions: { push: 'synthetic-secret' } } : {}) });
 };`);
+    const filesBefore = fileNames(f.root);
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'),
       ...context,
@@ -195,21 +196,34 @@ globalThis.fetch = async (url, init) => {
     }, cwd: f.root, encoding: 'utf8' });
     expect(result.status, result.stderr).toBe(expectedStatus);
     if (expectedStatus === 0) {
-      expect(JSON.parse(fs.readFileSync(before, 'utf8')).release_ids).toEqual([]);
+      if (mode === 'observation-file') expect(JSON.parse(fs.readFileSync(before, 'utf8')).release_ids).toEqual([]);
       expect(fs.readFileSync(output, 'utf8')).toContain('status=success');
     } else {
       expect(fs.existsSync(before)).toBe(false);
+      expect(fileNames(f.root)).toEqual(filesBefore);
       expect(fs.readFileSync(output, 'utf8')).toBe('');
       const reason = metadata === 'denied' ? 'push-permission-denied' : metadata === 'malformed' ? 'push-permission-invalid' : 'permissions-missing';
       expect(result.stderr).toContain(`"sanitized-reason":"${reason}"`);
     }
     expect(`${result.stdout}${result.stderr}${fs.readFileSync(output, 'utf8')}`).not.toContain('synthetic-secret');
-    });
+  }
+
+  for (const [label, metadata, context, expectedStatus] of cases) {
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    // flow_id: release-publication-safe-diagnostics
+    test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, (t) => observeCredentialEvidence(t, metadata, context, expectedStatus, 'status'));
+  }
+
+  // evidence_role: supplemental
+  // The content of the pre-create observation file is an implementation detail of the observation; no contract guarantee covers it.
+  // flow_id: release-publication-safe-diagnostics
+  for (const [label, metadata, context, expectedStatus] of cases.filter(([, , , status]) => status === 0)) {
+    test(`publication entrypoint writes the empty release inventory to the observation file: ${label}`, (t) => observeCredentialEvidence(t, metadata, context, expectedStatus, 'observation-file'));
   }
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // flow_id: release-publication-safe-diagnostics
-for (const [failure, reason, phase] of [
+const safeDiagnosticCases: [string, string, string][] = [
   ['network', 'network-failed', 'request'], ['timeout', 'request-timeout', 'request'],
   ['body-timeout', 'request-timeout', 'response'],
   ['http', 'provider-read-failed', 'request'], ['json', 'response-invalid-json', 'response'],
@@ -219,7 +233,9 @@ for (const [failure, reason, phase] of [
   ['repository', 'repository-identity-mismatch', 'repository'],
   ['inventory', 'response-shape-invalid', 'inventory'], ['duplicate', 'inventory-duplicate-id', 'inventory'],
   ['pagination', 'pagination-limit', 'inventory'],
-]) test(`publication entrypoint exposes safe diagnostics for ${failure}`, async (t) => {
+];
+
+async function observeSafeDiagnostics(t: Parameters<typeof fixture>[0], failure: string, reason: string, phase: string, mode: 'diagnostic' | 'requests'): Promise<void> {
   for (const httpStatus of failure === 'http' ? [401, 403, 404, 429, 500, 503] : [403]) {
     const f = fixture(t);
     f.assemble();
@@ -257,6 +273,7 @@ globalThis.fetch = async (url, init) => {
     if (kind === 'repository') repository.full_name = 'synthetic-secret';
     return Response.json(repository, { headers });
   };`);
+    const filesBefore = fileNames(f.root);
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
@@ -267,6 +284,7 @@ globalThis.fetch = async (url, init) => {
     expect(result.status).toBe(1);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
     expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
+    expect(fileNames(f.root)).toEqual(filesBefore);
     expect(result.stderr).not.toContain('synthetic-secret');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
     expect(diagnostic.operation).toBe('remote-observation');
@@ -283,15 +301,24 @@ globalThis.fetch = async (url, init) => {
     expect(evidence['execution-state'].write).toBe('not-started');
     const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line: string) => JSON.parse(line) as { method: string; endpoint: string });
     expect(calls.every(call => call.method === 'GET')).toBe(true);
-    expect(calls.slice(0, 3).map(call => call.endpoint)).toEqual([
-      `/repos/owner/project/git/ref/tags/${f.identity.tag}`,
-      `/repos/owner/project/git/tags/${f.identity.tag_object_sha}`,
-      '/repos/owner/project',
-    ]);
-    const inventoryRequests = phase === 'inventory' ? failure === 'pagination' ? LIMITS.pages : 1 : 0;
-    expect(calls.slice(3).map(call => call.endpoint)).toEqual(Array(inventoryRequests).fill('/repos/owner/project/releases'));
+    if (mode === 'requests') {
+      expect(calls.slice(0, 3).map(call => call.endpoint)).toEqual([
+        `/repos/owner/project/git/ref/tags/${f.identity.tag}`,
+        `/repos/owner/project/git/tags/${f.identity.tag_object_sha}`,
+        '/repos/owner/project',
+      ]);
+      const inventoryRequests = phase === 'inventory' ? failure === 'pagination' ? LIMITS.pages : 1 : 0;
+      expect(calls.slice(3).map(call => call.endpoint)).toEqual(Array(inventoryRequests).fill('/repos/owner/project/releases'));
+    }
   }
-});
+}
+
+for (const [failure, reason, phase] of safeDiagnosticCases) test(`publication entrypoint exposes safe diagnostics for ${failure}`, (t) => observeSafeDiagnostics(t, failure, reason, phase, 'diagnostic'));
+
+// evidence_role: supplemental
+// The order and count of the observation requests are implementation checks of the remote observation; no contract guarantee covers them.
+// flow_id: release-publication-safe-diagnostics
+for (const [failure, reason, phase] of safeDiagnosticCases) test(`publication entrypoint requests the repository and inventory endpoints in order for ${failure}`, (t) => observeSafeDiagnostics(t, failure, reason, phase, 'requests'));
 
 });
 });

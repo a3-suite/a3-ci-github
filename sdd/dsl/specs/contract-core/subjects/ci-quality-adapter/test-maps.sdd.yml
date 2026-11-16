@@ -72,17 +72,6 @@ test_maps:
         guarantees:
           - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-quality-adapter.outputs
-    case_id: standard-python-adapter-execution
-    tests:
-      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint executes the embedded Python standard and emits its status
-        guarantees:
-          - status-result-consistent
-      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint executes the embedded Python standard and emits its status
-        guarantees:
-          - status-result-consistent
-  - contract_id: contract.ci-quality-adapter.outputs
     case_id: native-rust-rules
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts

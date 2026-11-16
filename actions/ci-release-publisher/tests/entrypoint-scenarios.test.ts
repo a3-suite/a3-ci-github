@@ -49,7 +49,7 @@ globalThis.fetch = async (url, init) => {
   else if (endpoint.endsWith('/releases')) {
     if (++releaseInventories === 1 && scenario.changeHandoffAsset) fs.writeFileSync(scenario.changeHandoffAsset, 'changed during observation');
     data = created ? [{ id: 42, tag_name: tag, draft: !finalized }] : scenario.existingRelease ? [{ id: 9, tag_name: tag, draft: scenario.existingRelease === 'draft' }] : [];
-  } else data = { full_name: scenario.repositoryName ?? assembly.identity.repository, permissions: { push: scenario.push ?? true }, default_branch: 'main' };
+  } else data = { full_name: scenario.repositoryName ?? assembly.identity.repository, permissions: { push: scenario.push ?? true }, default_branch: scenario.defaultBranch ?? 'main' };
   return new Response(JSON.stringify(data), { status });
 };
 `;
@@ -105,9 +105,19 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Arrange
     const { assembly, outputRoot, run } = await setup(t);
     // Act
-    const outcome = await run();
+    const outcome = await run({ defaultBranch: 'moved' });
     // Assert
     expectPublished(outcome, outputRoot, assembly.assets.length);
+  });
+
+  // evidence_role: supplemental
+  // Issuing no commit or tree request to predict acceptance is an implementation detail that no contract guarantee covers.
+  test('publisher entrypoint issues no commit or tree request to predict acceptance', async (t) => {
+    // Arrange
+    const { run } = await setup(t);
+    // Act
+    const outcome = await run();
+    // Assert
     expect(outcome.requests.filter(entry => entry.endpoint.includes('/commits/') || entry.endpoint.includes('/git/trees/'))).toStrictEqual([]);
   });
 

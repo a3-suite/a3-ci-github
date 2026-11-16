@@ -30,7 +30,7 @@ contracts:
       - name: path-update
         meaning: "Precondition prepared by the case: outcome of updating the runner command path."
     observations:
-      - summary: The provisioned GitHub CLI command is visible to later steps.
+      - summary: Executable resolved from the runner command search path and the entry written to the path handoff file.
         boundary: boundary.runner-path
         fields:
           - selector: gh

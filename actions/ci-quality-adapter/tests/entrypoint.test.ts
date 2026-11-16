@@ -12,6 +12,9 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const descriptor = qualityAdapterDescriptor;
 
+const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort();
+
+// `filesBefore` and `filesAfter` are the file names under the root around the invocation. The failure result output (`output`) exists before the invocation, so it does not change the names.
 const runAction = (root: string, content: string, inputs: Record<string, string> = {}) => {
   const descriptor = path.join(root, 'adapter.yml');
   const output = path.join(root, 'output');
@@ -19,8 +22,9 @@ const runAction = (root: string, content: string, inputs: Record<string, string>
   fs.writeFileSync(descriptor, content);
   fs.writeFileSync(output, '');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, 'INPUT_BUNDLE-PATH': descriptor, 'INPUT_SOURCE-ROOT': root, 'INPUT_RESULT-PATH': resultPath, 'INPUT_TOOLCHAIN-VERSION': process.version.slice(1), 'INPUT_REQUIRE-TRUSTED-PROJECT-SCRIPTS': 'false' } as Record<string, string>;
+  const filesBefore = fileNames(root);
   const result = spawnSync(process.execPath, [...entrypointArgs], { env: { ...env, ...inputs }, encoding: 'utf8' });
-  return { result, output, resultPath };
+  return { result, output, resultPath, filesBefore, filesAfter: fileNames(root) };
 };
 
 type ResultEntry = { id: string; status: string; reason?: string };
@@ -142,6 +146,7 @@ test('entrypoint rejects an unknown standard ID without a descriptor fallback', 
     expect(run.result.status).not.toBe(0);
     expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-bundle-unknown/);
     expect(fs.existsSync(run.resultPath)).toBe(false);
+    expect(run.filesAfter).toEqual(run.filesBefore);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -175,9 +180,7 @@ test('entrypoint executes the embedded Python standard and emits its status', (t
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*success/s);
 });
 
-// contract_id: contract.ci-quality-adapter.outputs
-// flow_id: ci-quality-adapter-standard-selection
-test('entrypoint executes the embedded standard without reading a project descriptor', () => {
+const executeEmbeddedStandard = (mode: 'result' | 'descriptor-directory'): void => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-standard-'));
   try {
     const bin = path.join(root, 'bin');
@@ -199,9 +202,18 @@ test('entrypoint executes the embedded standard without reading a project descri
     expect(statusMatchesResults(result)).toBe(true);
     expect(result.results.map((entry: { id: string }) => entry.id)).toStrictEqual(['toolchain-verify', 'dependency-restore', 'format', 'lint', 'typecheck', 'test', 'security', 'structure']);
     expect(fs.readFileSync(commands, 'utf8').trim().split('\n').length).toBe(7);
-    expect(fs.existsSync(path.join(root, '.ci/adapters'))).toBe(false);
+    if (mode === 'descriptor-directory') expect(fs.existsSync(path.join(root, '.ci/adapters'))).toBe(false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
-});
+};
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-standard-selection
+test('entrypoint executes the embedded standard without reading a project descriptor', () => executeEmbeddedStandard('result'));
+
+// evidence_role: supplemental
+// The absence of a project descriptor directory after a successful run is a file tree state that no contract guarantee observes.
+// flow_id: ci-quality-adapter-standard-selection
+test('entrypoint leaves no project descriptor directory after executing the embedded standard', () => executeEmbeddedStandard('descriptor-directory'));
 
 // contract_id: contract.ci-quality-adapter.outputs
 // flow_id: ci-quality-adapter-execution-scope
@@ -245,6 +257,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     expect(run.result.stderr + run.result.stdout).toMatch(/quality-adapter-(execution-scope-invalid|native-scope-unsupported)/);
     expect(fs.readFileSync(log, 'utf8')).toBe('');
     expect(fs.existsSync(run.resultPath)).toBe(false);
+    expect(run.filesAfter).toEqual(run.filesBefore);
   }
 });
 
@@ -450,6 +463,7 @@ test('entrypoint rejects a non-read-only descriptor', () => {
   expect(result.status).not.toBe(0);
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*failed/s);
   expect(fs.existsSync(run.resultPath)).toBe(false);
+  expect(run.filesAfter).toEqual(run.filesBefore);
   expect(result.stdout).not.toMatch(/\"schema\": \"ci\.adapter-runner\.v1\"/);
   expect(`${result.stdout}${result.stderr}`).toMatch(/quality-adapter-execution-boundary-invalid/);
   fs.rmSync(root, { recursive: true, force: true });

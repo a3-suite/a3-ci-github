@@ -57,7 +57,7 @@ test_maps:
       - path: runtime/preset/tests/action-availability.test.mjs
         symbol: preset-actionized-fallback-rejection > preflight rejects all retired Release entrypoints and references without modifying the consumer
         guarantees:
-          - supplemental-phase-drift-reported
+          - retired-release-entrypoint-reported
   - contract_id: contract.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.valid-preset-succeeds
     tests:
@@ -74,6 +74,7 @@ test_maps:
           - ci-preset-assurance-valid-preset-succeeds
           - ci-preset-assurance-valid-evidence-exposed
           - ci-preset-assurance-semantic-review-state-exposed
+          - valid-consumer-unchanged
   - contract_id: contract.ci-preset-assurance.verification
     case_id: case.ci-preset-assurance.drift-fails
     tests:
@@ -182,8 +183,8 @@ test_maps:
       - path: runtime/preset/tests/preset-validation-contract.test.mjs
         symbol: contract.ci-preset-assurance.asset-lock > preset-asset-lock-contract > asset lock generation records the source revision and canonical asset digests
         guarantees:
-          - lock-source-equals-request
-          - lock-release-equals-request
+          - ci-preset-assurance-lock-source-bound
+          - ci-preset-assurance-lock-release-bound
           - lock-canonical-digests-match
           - lock-applied-digests-match
   - contract_id: contract.ci-preset-assurance.verification

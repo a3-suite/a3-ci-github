@@ -19,7 +19,9 @@ cases:
       - release-control-head-verified
       - release-handoff-before-publication
       - release-publication-before-readback
-      - release-publication-serialized
+      - release-publication-group-per-repository
+      - release-publication-in-progress-kept
+      - release-publication-pending-queued
       - supplemental-final-assembly-input
       - release-assembly-source-credentials-removed
   - contract_id: contract.ci-release-publication-workflow.publication

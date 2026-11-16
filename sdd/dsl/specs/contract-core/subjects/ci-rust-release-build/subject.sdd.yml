@@ -28,15 +28,18 @@ contracts:
       - name: output-destination-state
         meaning: "Precondition prepared by the case: state of the output destination before the invocation."
     observations:
-      - summary: The shared script exposes whether the authority-bound Rust release asset was built, packaged, and verified.
+      - summary: Step outcome and diagnostic codes reported by the shared release build script.
         boundary: boundary.script-result
         fields:
           - selector: outcome
             meaning: Step outcome of the release build invocation; success or failure.
-          - selector: final-output
-            meaning: "State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged."
           - selector: diagnostic-codes
             meaning: Stable diagnostic codes reported by the failed step.
+      - summary: Final output destination of the release build in the workspace.
+        boundary: boundary.workspace-files
+        fields:
+          - selector: final-output
+            meaning: "State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged."
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
         boundary: boundary.diagnostic-result
         fields:

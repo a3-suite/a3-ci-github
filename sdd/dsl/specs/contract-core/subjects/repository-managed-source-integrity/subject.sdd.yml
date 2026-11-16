@@ -12,8 +12,8 @@ contracts:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     observations:
-      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary: boundary.repository-gate-result
+      - summary: Repository-owned canonical asset roots, registered sources and legacy source locations in the repository tree.
+        boundary: boundary.workspace-files
         fields:
           - selector: missing-canonical-asset-roots
             meaning: Occurrence state (present or absent) of a repository-owned canonical asset root directory missing from the repository tree.

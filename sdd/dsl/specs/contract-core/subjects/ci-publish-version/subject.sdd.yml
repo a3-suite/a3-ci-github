@@ -27,8 +27,6 @@ contracts:
             meaning: The materialized publish version.
           - selector: status
             meaning: Whether the version plan was materialized successfully.
-          - selector: publish-version-plan-comparison
-            meaning: Comparison of the publish-version output with the exact publish version in the owner-approved plan; equal or different.
           - selector: outcome
             meaning: Failure outcome of the rejected publish version step.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -45,9 +43,8 @@ contracts:
         applies_to:
           - runtime-context.publish-version-plan-valid
         claim:
-          field: publish-version-plan-comparison
-          in:
-            - equal
+          field: publish-version
+          equals_input: input.publish-version
       - id: publish-version-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid

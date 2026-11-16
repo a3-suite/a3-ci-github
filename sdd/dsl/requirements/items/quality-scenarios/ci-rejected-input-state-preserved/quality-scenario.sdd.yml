@@ -1,0 +1,15 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-rejected-input-state-preserved
+summary: 入力を拒否した処理の終了後に、出力先へ新しいファイルが残らない
+quality_attribute: reliability
+stimulus: CIの処理が、必須の入力の欠落や不正な値などの理由で入力を拒否する
+environment: GitHub Actions上でActionまたはruntimeを実行し、対象のrootと実行環境の一時領域に既存のファイルがある
+response: 失敗結果の出力を除き、既存のファイルを変えず、出力先を含む実行環境に新しいファイルを残さずに終了する
+response_measure:
+  - 拒否の前後で、実行環境の一時領域と対象のrootにある管理外の既存ファイルの内容が一致する
+  - 拒否の前後で、対象のrootと出力先のファイル名の一覧が一致する
+related_requirements:
+  - ci-rejected-input-state-preserved
+related_contracts:
+  - contract.ci-failure-diagnostics.existing-state

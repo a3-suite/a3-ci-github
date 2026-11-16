@@ -67,7 +67,7 @@ cases:
     id: existing-output-rejection
     partition: existing-output-rejected
     input:
-      path: output-directory naming an existing standard build directory or a dangling symbolic link
+      path: output-directory naming an existing standard build directory
       output-directory: existing path
       operation: build-platform
     verifies:

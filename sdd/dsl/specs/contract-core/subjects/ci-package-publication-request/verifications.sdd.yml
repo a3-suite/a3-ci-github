@@ -31,6 +31,7 @@ cases:
     partition: runtime-context.package-publication-request-succeeded
     input:
       operation: verify
+      source-sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       expected-source-sha: source SHA recorded by the preceding create operation
   - contract_id: contract.ci-package-publication-request.outputs
     id: source-sha-mismatch-rejected

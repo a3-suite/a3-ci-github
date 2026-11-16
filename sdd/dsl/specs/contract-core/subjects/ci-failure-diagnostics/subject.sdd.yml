@@ -67,32 +67,22 @@ contracts:
       - environment: runtime-context.failure-diagnostic-required
     guarantees:
       - id: failure-subject-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: failure-subject
           present: true
       - id: failure-operation-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: failure-operation
           present: true
       - id: failure-stage-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: failure-stage
           present: true
       - id: failure-reason-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: failure-reason
           present: true
       - id: failure-cause-classified
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: failure-cause
           in:
@@ -100,131 +90,93 @@ contracts:
             - unknown
             - unavailable
       - id: execution-context-run-bound
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: execution-context-run-binding
           in:
             - matched
       - id: execution-context-job-bound
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: execution-context-job-binding
           in:
             - matched
       - id: execution-context-source-bound
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: execution-context-source-binding
           in:
             - matched
       - id: comparison-expected-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: comparison-expected
           present: true
       - id: comparison-observed-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: comparison-observed
           present: true
       - id: evidence-location-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: evidence-location-log
           in:
             - workflow-run-job-step-log
       - id: execution-outcome-retained
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: execution-outcome
           in:
             - failure
             - unresolved
       - id: last-confirmed-stage-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: last-confirmed-stage
           present: true
       - id: next-check-rule-recorded
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: next-check-rule
           present: true
       - id: diagnostic-known-cause-omission
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: known-cause-omission-state
           in:
             - absent
       - id: diagnostic-unsubstantiated-context
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: unsubstantiated-context-state
           in:
             - absent
       - id: diagnostic-protected-input-disclosure
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: protected-input-disclosure-state
           in:
             - absent
       - id: diagnostic-unchecked-output-disclosure
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: unchecked-output-disclosure-state
           in:
             - absent
       - id: diagnostic-signed-url-disclosure
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: signed-url-disclosure-state
           in:
             - absent
       - id: diagnostic-whole-payload-disclosure
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: whole-payload-disclosure-state
           in:
             - absent
       - id: diagnostic-original-diagnostic-loss
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: original-diagnostic-loss-state
           in:
             - absent
       - id: diagnostic-invalid-evidence-reference
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: invalid-evidence-reference-state
           in:
             - absent
       - id: diagnostic-original-outcome-replacement
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: original-outcome-replacement-state
           in:
             - absent
       - id: diagnostic-diagnostic-only-retry
-        applies_to:
-          - runtime-context.failure-diagnostic-required
         claim:
           field: diagnostic-only-retry-state
           in:
@@ -293,14 +245,10 @@ contracts:
       - input: ci-failure-diagnostics-bootstrap-fails
     guarantees:
       - id: ci-failure-diagnostics-bootstrap-stage-emitted
-        applies_to:
-          - ci-failure-diagnostics-bootstrap-fails
         claim:
           field: bootstrap-failure-stage
           present: true
       - id: ci-failure-diagnostics-bootstrap-reason-emitted
-        applies_to:
-          - ci-failure-diagnostics-bootstrap-fails
         claim:
           field: bootstrap-failure-reason
           present: true
@@ -311,19 +259,23 @@ contracts:
         meaning: "Precondition prepared by the case: failure that the contract target detects before it starts writing state."
       - name: existing-file
         meaning: "Precondition prepared by the case: file that exists before the invocation and that the contract target does not own or manage."
+      - name: output-destination
+        meaning: "Received by the contract target: path of the destination to which the contract target writes its output files."
     observations:
       - summary: Files in the runner temporary directory before and after a rejected invocation.
         boundary: boundary.runner-files
         fields:
           - selector: runner-temp-existing-file-content
             meaning: Comparison of the content of a pre-existing file in the runner temporary directory that the contract target does not own, before and after the rejected invocation; equal or changed.
-      - summary: Files in the target repository root before and after a rejected invocation.
+      - summary: Files in the target repository root and the output destination before and after a rejected invocation.
         boundary: boundary.workspace-files
         fields:
           - selector: target-root-unmanaged-file-content
             meaning: Comparison of the content of a pre-existing file in the target repository root that the contract target does not manage, before and after the rejected invocation; equal or changed.
           - selector: target-root-file-names
             meaning: Comparison of the file names in the target repository root before and after the rejected invocation; equal or changed.
+          - selector: output-destination-file-names
+            meaning: Comparison of the file names in the output destination before and after the rejected invocation, excluding the failure result output; equal or changed.
     conditions:
       - input: ci-failure-diagnostics-rejected-before-write
     guarantees:
@@ -340,5 +292,10 @@ contracts:
       - id: failure-target-root-unextended
         claim:
           field: target-root-file-names
+          in:
+            - equal
+      - id: failure-output-destination-unextended
+        claim:
+          field: output-destination-file-names
           in:
             - equal

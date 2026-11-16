@@ -8,7 +8,7 @@ import { test, describe, expect, onTestFinished } from 'vitest';
 import { createDocsOnlyMatcher, detectChangeScope } from '../actions/ci-change-scope/src/scope.ts';
 import { materializePublishVersion } from '../actions/ci-publish-version/src/materialize.ts';
 import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapshot.ts';
-import { spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepContaining, stepIndexContaining, assertNeeds, assertPublicationControl, referenceFixture, pinOldActionReferences } from "./workflow-contracts.fixtures.mjs";
+import { spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepContaining, stepIndexContaining, assertNeeds, assertPublicationEntry, assertPublicationControl, referenceFixture, pinOldActionReferences } from "./workflow-contracts.fixtures.mjs";
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
@@ -221,28 +221,29 @@ describe("workflow-contracts", () => {
       expect(cache.with.key.startsWith(cache.with['restore-keys'])).toBe(true);
     });
 
+    const platformSummaryCases = [
+      ['success', 'success', 'true', 'linux-x64', 'success', true],
+      ['success', 'success', 'true', 'linux-x64,macos-arm64', 'success', true],
+      ['success', 'failure', 'true', 'linux-x64,macos-arm64', 'failed', false],
+      ['success', 'skipped', 'false', 'linux-x64,macos-arm64', 'success', true],
+      ['failure', 'skipped', 'false', 'linux-x64', 'failed', false],
+      ['success', 'failure', 'true', 'linux-x64', 'failed', false],
+      ['success', 'cancelled', 'true', 'linux-x64', '未実施', false],
+      ['success', 'skipped', 'true', 'linux-x64', '未実施', false],
+      ['success', '', 'true', 'linux-x64', '判定不能', false],
+      ['', '', '', '', '判定不能', false],
+      ['success', 'skipped', 'false', '', 'failed', false],
+    ];
+
     // flow_id: quality-workflow-contract
     test('platform summary scripts preserve docs-only failed cancelled and missing outcomes', () => {
       const summary = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs['platform-summary'];
       const enforce = summary.steps.find((step) => step.name === 'Enforce required platform results').run;
       const build = summary.steps.find((step) => step.id === 'platform-summary').run;
-      const cases = [
-        ['success', 'success', 'true', 'linux-x64', 'success', true],
-        ['success', 'success', 'true', 'linux-x64,macos-arm64', 'success', true],
-        ['success', 'failure', 'true', 'linux-x64,macos-arm64', 'failed', false],
-        ['success', 'skipped', 'false', 'linux-x64,macos-arm64', 'success', true],
-        ['failure', 'skipped', 'false', 'linux-x64', 'failed', false],
-        ['success', 'failure', 'true', 'linux-x64', 'failed', false],
-        ['success', 'cancelled', 'true', 'linux-x64', '未実施', false],
-        ['success', 'skipped', 'true', 'linux-x64', '未実施', false],
-        ['success', '', 'true', 'linux-x64', '判定不能', false],
-        ['', '', '', '', '判定不能', false],
-        ['success', 'skipped', 'false', '', 'failed', false],
-      ];
       mkdirSync(path.join(root, 'tmp'), { recursive: true });
       const directory = mkdtempSync(path.join(root, 'tmp/platform-summary-'));
       try {
-        for (const [resolve, platform, runCi, expected, status, accepted] of cases) {
+        for (const [resolve, platform, runCi, expected, status, accepted] of platformSummaryCases) {
           const output = path.join(directory, 'output');
           writeFileSync(output, '');
           const env = { ...process.env, RESOLVE_RESULT: resolve, PLATFORM_RESULT: platform,
@@ -253,15 +254,36 @@ describe("workflow-contracts", () => {
           const payload = readFileSync(output, 'utf8').trim().slice('summary='.length);
           const records = JSON.parse(payload).jobs;
           expect(records[0].result).toBe(status);
-          expect(records[0].evidence).toBe(env.WORKFLOW_RUN_URL);
-          if (accepted && runCi === 'true') expect(records[0].reason).toBe(`all selected platforms succeeded: ${expected}`);
-          if (accepted && runCi === 'false') expect(records.slice(1).map((entry) => [entry.unit, entry.result])).toStrictEqual([['platform:linux-x64', '対象外'], ['platform:macos-arm64', '対象外']]);
           const action = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
             cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', 'INPUT_SUMMARY-JSON': payload,
               'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'), 'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md') }, timeout: spawnTimeoutMs,
           });
           expect([enforcement.error, action.error], 'a process did not finish').toEqual([undefined, undefined]);
           expect(enforcement.status === 0 && action.status === 0, JSON.stringify({ resolve, platform, runCi, expected })).toBe(accepted);
+        }
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+    });
+
+    // evidence_role: supplemental
+    // The evidence link, the reason text and the not-applicable rows of the platform summary record are details that the unresolved-result guarantee does not observe.
+    // flow_id: quality-workflow-contract
+    test('platform summary record links the run and names the selected platforms', () => {
+      const summary = yaml.parse(read('.github/workflows/ci-quality-platforms.yml')).jobs['platform-summary'];
+      const build = summary.steps.find((step) => step.id === 'platform-summary').run;
+      mkdirSync(path.join(root, 'tmp'), { recursive: true });
+      const directory = mkdtempSync(path.join(root, 'tmp/platform-summary-record-'));
+      try {
+        for (const [resolve, platform, runCi, expected, , accepted] of platformSummaryCases) {
+          const output = path.join(directory, 'output');
+          writeFileSync(output, '');
+          const env = { ...process.env, RESOLVE_RESULT: resolve, PLATFORM_RESULT: platform,
+            RUN_CI: runCi, EXPECTED_PLATFORMS: expected, WORKFLOW_RUN_URL: 'https://github.com/example/project/actions/runs/1', GITHUB_OUTPUT: output };
+          const result = spawnSync('bash', ['-c', build], { cwd: directory, env, encoding: 'utf8', timeout: spawnTimeoutMs });
+          expect(result.status, result.stderr).toBe(0);
+          const records = JSON.parse(readFileSync(output, 'utf8').trim().slice('summary='.length)).jobs;
+          expect(records[0].evidence).toBe(env.WORKFLOW_RUN_URL);
+          if (accepted && runCi === 'true') expect(records[0].reason).toBe(`all selected platforms succeeded: ${expected}`);
+          if (accepted && runCi === 'false') expect(records.slice(1).map((entry) => [entry.unit, entry.result])).toStrictEqual([['platform:linux-x64', '対象外'], ['platform:macos-arm64', '対象外']]);
         }
       } finally { rmSync(directory, { recursive: true, force: true }); }
     });
@@ -279,13 +301,35 @@ describe("workflow-contracts", () => {
       const publication = read('.github/workflows/ci-release-publication.yml');
       const callerPublish = jobBlock(caller, 'publish');
       assertNeeds(callerPublish, ['validate-request']);
-      includesAll(callerPublish, [/contents: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
-      const callerSummary = jobBlock(caller, 'summary');
-      assertNeeds(callerSummary, ['validate-request', 'publish']);
-      includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
+      includesAll(callerPublish, [/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
       expect(publication).toMatch(/workflow_call:/);
       assertPublicationControl(publication, 'release');
       const provider = yaml.parse(publication);
+      const supplementalSteps = provider.jobs['supplemental-asset'].steps;
+      const supplementalDownload = supplementalSteps.find(step => step.with?.pattern === 'supplemental-build-*');
+      const finalAssembly = supplementalSteps.find(step => step.with?.operation === 'assemble');
+      expect(finalAssembly.with['supplemental-build-root']).toBe(supplementalDownload.with.path);
+      const publicationJob = jobBlock(publication, 'publish');
+      assertNeeds(publicationJob, ['authority', 'assemble']);
+      expect(stepIndexContaining(publicationJob, '- name: Verify trusted control checkout') < stepIndexContaining(publicationJob, '- name: Validate release handoff integrity')).toBeTruthy();
+      expect(stepIndexContaining(publicationJob, '- name: Validate release handoff integrity') < stepIndexContaining(publicationJob, '- name: Verify approval is still valid')).toBeTruthy();
+      expect(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish')).toBeTruthy();
+      expect(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence')).toBeTruthy();
+      includesAll(stepContaining(publicationJob, '- id: publish'), [new RegExp(`ci-release-publisher@${actionRef}`)]);
+      expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh/);
+    });
+
+    // evidence_role: supplemental
+    // The permissions of the caller, the publication entry checks and the needs, conditions and artifact paths of the build, supplemental asset and summary jobs are workflow wiring that no mapped contract guarantee observes.
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflows wire the publication entry, the build and supplemental asset jobs and the summaries', () => {
+      const caller = read('workflows/release/release-publication-caller.yml');
+      const publication = read('.github/workflows/ci-release-publication.yml');
+      includesAll(jobBlock(caller, 'publish'), [/contents: write/]);
+      const callerSummary = jobBlock(caller, 'summary');
+      assertNeeds(callerSummary, ['validate-request', 'publish']);
+      includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
+      assertPublicationEntry(publication, 'release');
       const buildJob = jobBlock(publication, 'build');
       assertNeeds(buildJob, ['authority', 'source-gate']);
       const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');
@@ -303,18 +347,6 @@ describe("workflow-contracts", () => {
         /^          standard-build-root: build$/m,
         /^          output-directory: supplemental-asset$/m,
       ]);
-      const supplementalSteps = provider.jobs['supplemental-asset'].steps;
-      const supplementalDownload = supplementalSteps.find(step => step.with?.pattern === 'supplemental-build-*');
-      const finalAssembly = supplementalSteps.find(step => step.with?.operation === 'assemble');
-      expect(finalAssembly.with['supplemental-build-root']).toBe(supplementalDownload.with.path);
-      const publicationJob = jobBlock(publication, 'publish');
-      assertNeeds(publicationJob, ['authority', 'assemble']);
-      expect(stepIndexContaining(publicationJob, '- name: Verify trusted control checkout') < stepIndexContaining(publicationJob, '- name: Validate release handoff integrity')).toBeTruthy();
-      expect(stepIndexContaining(publicationJob, '- name: Validate release handoff integrity') < stepIndexContaining(publicationJob, '- name: Verify approval is still valid')).toBeTruthy();
-      expect(stepIndexContaining(publicationJob, '- name: Verify approval is still valid') < stepIndexContaining(publicationJob, '- id: publish')).toBeTruthy();
-      expect(stepIndexContaining(publicationJob, '- id: publish') < stepIndexContaining(publicationJob, '- name: Verify publication readback evidence')).toBeTruthy();
-      includesAll(stepContaining(publicationJob, '- id: publish'), [new RegExp(`ci-release-publisher@${actionRef}`)]);
-      expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh/);
       const publicationSummary = jobBlock(publication, 'summary');
       assertNeeds(publicationSummary, ['authority', 'source-gate', 'quality', 'build', 'supplemental-asset', 'assemble', 'publish']);
       includesAll(publicationSummary, [/if: always\(\)/, /ci-quality-summary@/]);
@@ -505,7 +537,7 @@ describe("workflow-contracts", () => {
       expect(prepareJob).toMatch(/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-preparation\.yml@<package-preparation-workflow-sha>/);
       const publishJob = jobBlock(caller, 'publish');
       assertNeeds(publishJob, ['validate-request', 'prepare']);
-      includesAll(publishJob, [/packages: write/, /uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-publication\.yml@<package-publication-workflow-sha>/]);
+      includesAll(publishJob, [/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-publication\.yml@<package-publication-workflow-sha>/]);
       const callerSummary = jobBlock(caller, 'summary');
       assertNeeds(callerSummary, ['validate-request', 'prepare', 'publish']);
       includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
@@ -520,12 +552,6 @@ describe("workflow-contracts", () => {
       expect(publication).toMatch(/workflow_call:/);
       assertPublicationControl(publication, 'package');
       const publicationJob = jobBlock(publication, 'publish');
-      includesAll(publicationJob, [
-        /packages: write/,
-        /^      - name: Verify publication entry$/m,
-        /CALLER_WORKFLOW_REF: \$\{\{ github\.workflow_ref \}\}/,
-      ]);
-      expect(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity')).toBeTruthy();
       expect(stepIndexContaining(publicationJob, '- name: Validate package handoff integrity') < stepIndexContaining(publicationJob, '- name: Publish verified package handoff')).toBeTruthy();
       expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/PACKAGE_REGISTRY_TOKEN|CI_GITHUB_TOKEN/);
       const providerDefinition = yaml.parse(publication);
@@ -554,6 +580,23 @@ describe("workflow-contracts", () => {
         /\.ci\/trusted\/ci-package-publish\.sh package-handoff/,
       ]);
       includesAll(jobBlock(publication, 'summary'), [/needs: publish/, /if: always\(\)/, /ci-quality-summary@/]);
+    });
+
+    // evidence_role: supplemental
+    // The registry permission and the publication entry checks are workflow wiring that no mapped contract guarantee observes.
+    // flow_id: package-publication-workflow-contract
+    test('package publication workflows grant the registry permission and verify the publication entry first', () => {
+      const caller = read('workflows/package/package-publication-caller.yml');
+      const publication = read('.github/workflows/ci-package-publication.yml');
+      includesAll(jobBlock(caller, 'publish'), [/packages: write/]);
+      assertPublicationEntry(publication, 'package');
+      const publicationJob = jobBlock(publication, 'publish');
+      includesAll(publicationJob, [
+        /packages: write/,
+        /^      - name: Verify publication entry$/m,
+        /CALLER_WORKFLOW_REF: \$\{\{ github\.workflow_ref \}\}/,
+      ]);
+      expect(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity')).toBeTruthy();
     });
 
     // evidence_role: supplemental

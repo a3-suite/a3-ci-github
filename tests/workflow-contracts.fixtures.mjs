@@ -74,7 +74,7 @@ const unitRecord = (summary, unit) => {
   return remainder.slice(0, end + 1);
 };
 
-const assertPublicationControl = (text, kind) => {
+const assertPublicationEntry = (text, kind) => {
   const workflow = yaml.parse(text);
   const entryJob = kind === 'release' ? 'authority' : 'publish';
   const entry = workflow.jobs[entryJob].steps[0];
@@ -100,6 +100,11 @@ const assertPublicationControl = (text, kind) => {
     CALLER_WORKFLOW_REF: ['', `other/consumer/.github/workflows/${kind}-publication-caller.yml@refs/heads/main`, `example/consumer/.github/workflows/other.yml@refs/heads/main`, `example/consumer/.github/workflows/${kind}-publication-caller.yml@refs/tags/v1`, '$(exit 0)'],
     CONTROL_SHA: ['', 'main', 'a'.repeat(39), 'A'.repeat(40), '$(exit 0)'],
   })) for (const value of values) expect(run({ ...valid, [field]: value }).status, `${kind}: ${field}=${value}`).not.toBe(0);
+};
+
+const assertPublicationControl = (text, kind) => {
+  const workflow = yaml.parse(text);
+  const entryJob = kind === 'release' ? 'authority' : 'publish';
   const controlJobs = kind === 'release' ? ['authority', 'quality', 'assemble', 'publish'] : ['publish'];
   for (const jobName of controlJobs) {
     const job = workflow.jobs[jobName];
@@ -146,4 +151,4 @@ const pinOldActionReferences = (fixture) => {
       registry.actionization.implementationSource.releaseTag = 'v0.2.0';
       writeFileSync(path.join(fixture, registryPath), yaml.stringify(registry));
     };
-export { spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepsOf, stepContaining, stepIndexContaining, stepBlock, summaryNeeds, assertNeeds, unitRecord, assertPublicationControl, referenceFixture, pinOldActionReferences };
+export { spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepsOf, stepContaining, stepIndexContaining, stepBlock, summaryNeeds, assertNeeds, unitRecord, assertPublicationEntry, assertPublicationControl, referenceFixture, pinOldActionReferences };

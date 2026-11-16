@@ -48,9 +48,7 @@ describe('repository-cli-source-verification', () => {
 describe("contract.repository-action-distribution.source-verification", () => {
   describe("repository-action-source-verification", () => {
 
-    // contract_id: contract.repository-action-distribution.source-verification
-    // flow_id: repository-action-source-verification
-    test('source verification CLI typechecks and tests every bundled Action and shared runtime test without install or build', (t) => {
+    const runSourceVerificationCli = (t, mode) => {
       // Arrange
       const parent = path.join(root, 'tests/tmp');
       fs.mkdirSync(parent, { recursive: true });
@@ -97,8 +95,17 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
       expect(runs).toHaveLength(1);
       const tested = runs[0].args.slice(3).filter((value) => !value.startsWith('--')).map((file) => path.relative(fixture, file).split(path.sep).join('/'));
       expect(tested.sort()).toStrictEqual(['actions/alpha/tests/a.test.ts', ...sharedTests].sort());
-      expect(invocations.some((entry) => [].concat(entry.args).join(' ').split(' ').some((value) => ['ci', 'install', 'build'].includes(value)))).toBe(false);
-    });
+      if (mode === 'commands') expect(invocations.some((entry) => [].concat(entry.args).join(' ').split(' ').some((value) => ['ci', 'install', 'build'].includes(value)))).toBe(false);
+    };
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI typechecks and tests every bundled Action and shared runtime test', (t) => runSourceVerificationCli(t, 'coverage'));
+
+    // evidence_role: supplemental
+    // Running neither install nor build is an implementation detail that no contract guarantee covers.
+    // flow_id: repository-action-source-verification
+    test('source verification CLI runs neither install nor build', (t) => runSourceVerificationCli(t, 'commands'));
 
     // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification

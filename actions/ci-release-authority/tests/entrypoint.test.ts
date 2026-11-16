@@ -8,6 +8,9 @@ import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
+// The output destination is the output directory option; it may not exist yet.
+const fileNames = (directory: string): string[] => (fs.existsSync(directory) ? fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort() : []);
+
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 // flow_id: ci-release-authority-bundle
@@ -25,11 +28,12 @@ test('authority entrypoint emits verified outputs and suppresses outputs on reje
       const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: repository, GITHUB_OUTPUT: output,
         TEST_RESPONSES: responses, 'INPUT_ROOT-DIRECTORY': f.root, 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory,
         'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_PUBLICATION-REQUEST-RUN-ID': '22', 'INPUT_GITHUB-TOKEN': invalid ? '' : 'synthetic-secret' };
+      const filesBefore = fileNames(f.options.outputDirectory);
       const result = spawnSync(process.execPath, ['--import', preload, ...entrypointArgs], { env, encoding: 'utf8' });
       expect(result.status, result.stderr).toBe(invalid ? 1 : 0);
       expect(result.stderr.includes('synthetic-secret')).toBe(false);
       const bytes = fs.readFileSync(output, 'utf8');
-      if (invalid) { expect(bytes).toBe(''); expect(fs.existsSync(f.options.outputDirectory)).toBe(false); }
+      if (invalid) { expect(bytes).toBe(''); expect(fs.existsSync(f.options.outputDirectory)).toBe(false); expect(fileNames(f.options.outputDirectory)).toEqual(filesBefore); }
       else { expect(bytes.includes(`source_sha=${source}\n`)).toBeTruthy(); expect(bytes.includes('version=1.2.3\n')).toBeTruthy(); }
     } finally { fs.rmSync(f.root, { recursive: true }); }
   }
@@ -48,10 +52,14 @@ const runAuthority = (entrypointArgs: string[], f: ReturnType<typeof fixture>) =
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: repository, GITHUB_OUTPUT: output,
     TEST_RESPONSES: responses, TEST_METHODS: methods, 'INPUT_ROOT-DIRECTORY': f.root, 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory,
     'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_PUBLICATION-REQUEST-RUN-ID': '22', 'INPUT_GITHUB-TOKEN': 'synthetic-secret' };
+  const filesBefore = fileNames(f.options.outputDirectory);
   const result = spawnSync(process.execPath, ['--import', preload, ...entrypointArgs], { env, encoding: 'utf8' });
+  const filesAfter = fileNames(f.options.outputDirectory);
   const authorityPath = path.join(f.options.outputDirectory, 'authority.json');
   return {
     result,
+    filesBefore,
+    filesAfter,
     outputs: fs.readFileSync(output, 'utf8'),
     methods: fs.readFileSync(methods, 'utf8').split('\n').filter(Boolean),
     authority: () => JSON.parse(fs.readFileSync(authorityPath, 'utf8')),
@@ -167,6 +175,7 @@ test('authority entrypoint rejects an expired approval without authority output'
     expect(run.result.stderr).toMatch(/approval-is-expired/);
     expect(run.outputs).toBe('');
     expect(run.authorityExists()).toBe(false);
+    expect(run.filesAfter).toEqual(run.filesBefore);
   } finally { fs.rmSync(f.root, { recursive: true }); }
 });
 

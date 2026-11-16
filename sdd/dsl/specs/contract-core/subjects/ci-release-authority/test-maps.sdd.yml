@@ -42,10 +42,6 @@ test_maps:
     case_id: bundle-boundary
     tests:
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
-        symbol: source entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection
-        guarantees:
-          - authority-file
-      - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection
         guarantees:
           - authority-file

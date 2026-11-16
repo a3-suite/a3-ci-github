@@ -44,9 +44,11 @@ contracts:
           - selector: unavailable-action-state
             meaning: Whether missingSettings names the selected Action whose release is pending; reported or not-reported.
           - selector: supplemental-phase-drift-state
-            meaning: Whether mismatches names the supplemental phase drift or the retired release entrypoint; reported or not-reported.
-          - selector: evidence-entry-state
-            meaning: Whether evidence has an entry for the inspected workflows and assets; reported or empty.
+            meaning: Whether mismatches names the supplemental phase drift; reported or not-reported.
+          - selector: retired-release-entrypoint-state
+            meaning: Whether mismatches names the retired release entrypoint; reported or not-reported.
+          - selector: evidence-entry-count
+            meaning: Number of entries that evidence holds for the inspected workflows and assets.
           - selector: semanticReviewRequired
             meaning: Whether evidence outside provider preflight still requires semantic review.
       - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
@@ -88,9 +90,15 @@ contracts:
       - id: supplemental-phase-drift-reported
         applies_to:
           - supplemental-phase-drift
-          - retired-release-entrypoints-present
         claim:
           field: supplemental-phase-drift-state
+          in:
+            - reported
+      - id: retired-release-entrypoint-reported
+        applies_to:
+          - retired-release-entrypoints-present
+        claim:
+          field: retired-release-entrypoint-state
           in:
             - reported
       - id: ci-preset-assurance-valid-preset-succeeds
@@ -104,9 +112,9 @@ contracts:
         applies_to:
           - ci-preset-assurance-applied-preset-valid
         claim:
-          field: evidence-entry-state
-          in:
-            - reported
+          field: evidence-entry-count
+          range:
+            min: 1
       - id: ci-preset-assurance-semantic-review-state-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
@@ -167,10 +175,6 @@ contracts:
             meaning: Minute-normalized observation timestamp of the generated lock.
           - selector: asset-path-coverage
             meaning: Comparison of the set of lock asset paths with the managed asset destinations and the pin companion path.
-          - selector: requested-source-comparison
-            meaning: Comparison of lock sourceRevision with the requested full source revision.
-          - selector: requested-release-comparison
-            meaning: Comparison of lock releaseTag with the requested Release tag.
           - selector: canonical-digest-comparison
             meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
           - selector: applied-digest-comparison
@@ -194,15 +198,17 @@ contracts:
       - id: ci-preset-assurance-lock-source-bound
         applies_to:
           - ci-preset-assurance-lock-input-valid
+          - runtime-context.ci-preset-assurance-canonical-lock-input
         claim:
           field: sourceRevision
-          present: true
+          equals_input: input.source-revision
       - id: ci-preset-assurance-lock-release-bound
         applies_to:
           - ci-preset-assurance-lock-input-valid
+          - runtime-context.ci-preset-assurance-canonical-lock-input
         claim:
           field: releaseTag
-          present: true
+          equals_input: input.release-tag
       - id: ci-preset-assurance-lock-assets-cover-managed-paths
         applies_to:
           - ci-preset-assurance-lock-input-valid
@@ -222,20 +228,6 @@ contracts:
         claim:
           field: failure-stage
           present: true
-      - id: lock-source-equals-request
-        applies_to:
-          - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: requested-source-comparison
-          in:
-            - equal
-      - id: lock-release-equals-request
-        applies_to:
-          - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: requested-release-comparison
-          in:
-            - equal
       - id: lock-canonical-digests-match
         applies_to:
           - runtime-context.ci-preset-assurance-canonical-lock-input

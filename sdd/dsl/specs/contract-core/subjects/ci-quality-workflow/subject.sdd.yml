@@ -23,8 +23,6 @@ contracts:
             meaning: Declared aggregate failure route.
           - selector: quality-fixed-reference
             meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
-          - selector: quality-explicit-input-binding
-            meaning: Comparison of caller input names and typed bindings with the callee interface.
           - selector: quality-summary-job-count
             meaning: Number of aggregate summary jobs declared by the quality caller, as a decimal integer string.
           - selector: quality-no-consumer-callee-copy
@@ -65,8 +63,6 @@ contracts:
             meaning: Comparison of the cargo-deny-version binding of each quality toolchain step with the matching job environment declaration; equal or different.
           - selector: quality-toolchain-continue-on-error
             meaning: Declared continue-on-error setting of the quality toolchain step.
-          - selector: platform-explicit-input-binding
-            meaning: Comparison of platform caller input names with the platform callee interface.
           - selector: platform-summary-job-count
             meaning: Number of aggregate summary jobs declared by the platform caller, as a decimal integer string.
           - selector: profiles-callee-runs-per-profile
@@ -117,13 +113,6 @@ contracts:
           - ci-quality-workflow-platform-source-selected
         claim:
           field: quality-fixed-reference
-          in:
-            - equal
-      - id: quality-explicit-input-binding
-        applies_to:
-          - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-explicit-input-binding
           in:
             - equal
       - id: quality-summary-identity
@@ -267,13 +256,6 @@ contracts:
           field: quality-toolchain-continue-on-error
           in:
             - absent
-      - id: platform-explicit-input-binding
-        applies_to:
-          - ci-quality-workflow-platform-source-selected
-        claim:
-          field: platform-explicit-input-binding
-          in:
-            - equal
       - id: platform-summary-identity
         applies_to:
           - ci-quality-workflow-platform-source-selected

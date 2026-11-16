@@ -17,6 +17,7 @@ describe.each(actions)('%s failure boundary', (action) => {
     const sentinel = path.join(fixture, 'existing-state');
     fs.writeFileSync(output, '');
     fs.writeFileSync(sentinel, 'unchanged');
+    const filesBefore = fs.readdirSync(fixture).sort();
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('INPUT_')));
     Object.assign(env, { GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'private-token-must-not-appear', RUNNER_TEMP: fixture, GITHUB_PATH: path.join(fixture, 'path'), GITHUB_RUN_ID: '123', GITHUB_JOB: 'diagnostic-test', CI_SOURCE_REVISION: sourceRevision });
     const root = path.resolve('actions', action);
@@ -41,6 +42,7 @@ describe.each(actions)('%s failure boundary', (action) => {
     expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
     expect(fs.readFileSync(sentinel, 'utf8')).toBe('unchanged');
     expect(fs.readFileSync(output, 'utf8')).not.toContain('success');
+    expect(fs.readdirSync(fixture).sort()).toEqual(filesBefore);
   });
 });
 

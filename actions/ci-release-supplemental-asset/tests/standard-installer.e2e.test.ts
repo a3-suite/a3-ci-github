@@ -67,10 +67,7 @@ describe('standard installer', () => {
       }
     });
 
-    // contract_id: contract.ci-failure-diagnostics.actionable
-    // flow_id: installer-transfer-diagnostics
-    // test_level: e2e
-    test('distributed Action diagnoses transferred installer evidence missing or changed', (t) => {
+    const rejectTransferredEvidence = (t: TestContext, assertRejected: (mode: string, run: ReturnType<typeof runDistributedAction>, root: string) => void) => {
       // Arrange
       const f = fixture(t);
       const build = runDistributedAction(f);
@@ -83,22 +80,40 @@ describe('standard installer', () => {
           if (mode === 'missing') fs.unlinkSync(archive);
           else fs.writeFileSync(archive, 'modified-evidence');
           // Act
-          const { result, output } = runDistributedAction(f, { ...options, outputDirectory: `handoff-${mode}` });
-          // Assert
-          expect(result.status).toBe(1);
-          const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
-          const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
-          expect(evidence.classification.stage).toBe('standard-installer-execution');
-          expect(evidence.comparison.comparison.field).toBe('installer-candidate-files');
-          expect(evidence.comparison.comparison[mode]).toEqual(['.installer-source.zip']);
-          expect(evidence.comparison['exit-status']).toBe(1);
-          expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
-          expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
-          expect(evidence['next-check'].stage).toBe('standard-installer-execution');
-          expect(fs.readFileSync(output, 'utf8')).toBe('');
-          expect(fs.existsSync(path.join(f.root, `handoff-${mode}/supplemental-manifest.json`))).toBe(false);
+          assertRejected(mode, runDistributedAction(f, { ...options, outputDirectory: `handoff-${mode}` }), f.root);
         } finally { fs.writeFileSync(archive, bytes); }
       }
+    };
+
+    // contract_id: contract.ci-failure-diagnostics.actionable
+    // flow_id: installer-transfer-diagnostics
+    // test_level: e2e
+    test('distributed Action diagnoses transferred installer evidence missing or changed', (t) => {
+      rejectTransferredEvidence(t, (mode, { result, output }) => {
+        // Assert
+        expect(result.status).toBe(1);
+        const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+        const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
+        expect(evidence.classification.stage).toBe('standard-installer-execution');
+        expect(evidence.comparison.comparison.field).toBe('installer-candidate-files');
+        expect(evidence.comparison.comparison[mode]).toEqual(['.installer-source.zip']);
+        expect(evidence.comparison['exit-status']).toBe(1);
+        expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
+        expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
+        expect(evidence['next-check'].stage).toBe('standard-installer-execution');
+        expect(fs.readFileSync(output, 'utf8')).toBe('');
+      });
+    });
+
+    // evidence_role: supplemental
+    // A rejected transfer may leave partial supplemental output, so the absent manifest is not an observation of the existing-state guarantees.
+    // flow_id: installer-transfer-diagnostics
+    // test_level: e2e
+    test('distributed Action writes no supplemental manifest when transferred installer evidence is missing or changed', (t) => {
+      rejectTransferredEvidence(t, (mode, _run, root) => {
+        // Assert
+        expect(fs.existsSync(path.join(root, `handoff-${mode}/supplemental-manifest.json`))).toBe(false);
+      });
     });
 
     // evidence_role: supplemental

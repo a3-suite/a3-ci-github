@@ -5,6 +5,7 @@ cases:
     id: same-release-skills-assembly-valid
     partition: runtime-context.release-assembly-valid
     input:
+      output-directory: handoff
       operation: assemble
       repository: owner/project
       public-skills:
@@ -60,6 +61,7 @@ cases:
     id: supplemental-binding
     partition: runtime-context.release-assembly-valid
     input:
+      output-directory: handoff
       supplemental-root: supplemental
     verifies:
       - handoff-output-bound
@@ -87,6 +89,7 @@ cases:
     id: platform-checkout-eol
     partition: runtime-context.release-assembly-valid
     input:
+      output-directory: handoff
       platform-manifest: CRLF
     verifies:
       - handoff-output-bound
@@ -94,6 +97,7 @@ cases:
     id: asset-only-assembly-valid
     partition: runtime-context.release-asset-only-assembly-valid
     input:
+      output-directory: handoff
       operation: assemble
       release-implementation: asset-release
       public-skills:

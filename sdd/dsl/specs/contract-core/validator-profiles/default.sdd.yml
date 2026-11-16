@@ -4,6 +4,8 @@ profile_id: default-contract-core-validator-profile
 claims:
   - present
   - in
+  - equals_input
+  - range
   - contains
   - all
 conditions:
