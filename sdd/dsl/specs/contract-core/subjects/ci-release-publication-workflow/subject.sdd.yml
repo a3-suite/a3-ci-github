@@ -10,20 +10,18 @@ contracts:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
+        meaning: "Received by the summary Action: result of a job in the publication workflow."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The summary Action receives a failed publication workflow job result.
       - id: ci-release-publication-workflow-canonical-source-available
         summary: The repository release publication workflow source is inspected.
-      - id: ci-release-publication-workflow-failure-route-required
-        summary: A release publication job fails.
     guarantees:
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The summary Action reports the failure stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: release-fixed-provider-reference
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
@@ -86,9 +84,9 @@ contracts:
         statement: '`release-assembly-source-credentials-persisted` is one of `"false"`. Declared persist-credentials setting of the fixed assembly source checkout.'
       - id: release-failed-prerequisite-blocks
         applies_to:
-          - ci-release-publication-workflow-failure-route-required
+          - ci-release-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: '`release-failed-prerequisite-blocks` is one of `"absent"`. Occurrence of publication eligibility with a failed or unknown required prerequisite.'
+        statement: '`release-failed-prerequisite-blocks` is one of `"absent"`. The publish job is ineligible when authority or assembly has a result other than success, or when the workflow is cancelled.'
     input_kind:
       kind: operation
       name: ci-release-publication-workflow
@@ -98,14 +96,12 @@ contracts:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
+        meaning: "Received by the summary Action: result of a job in the publication workflow."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The summary Action receives a failed publication workflow job result.
       - id: ci-asset-release-publication-workflow-canonical-source-available
         summary: The repository asset release publication workflow source is inspected.
-      - id: ci-asset-release-publication-workflow-failure-route-required
-        summary: An asset release publication job fails.
     guarantees:
       - id: asset-publication-no-build-job
         applies_to:
@@ -119,14 +115,14 @@ contracts:
         statement: '`asset-publication-selection-before-authority` is one of `"selection-before-authority"`. Declared dependency order of the asset selection check and authority validation.'
       - id: asset-publication-failed-prerequisite-blocks
         applies_to:
-          - ci-asset-release-publication-workflow-failure-route-required
+          - ci-asset-release-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: '`asset-publication-failed-prerequisite-blocks` is one of `"absent"`. Occurrence of asset publication eligibility with a failed or unknown required prerequisite.'
+        statement: '`asset-publication-failed-prerequisite-blocks` is one of `"absent"`. The asset publication job is ineligible when authority or assembly has a result other than success, or when the workflow is cancelled. Assembly also requires successful completion of each applicable prerequisite.'
       - id: diagnostic-failure-stage-asset-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The summary Action reports the failure stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-release-publication-workflow

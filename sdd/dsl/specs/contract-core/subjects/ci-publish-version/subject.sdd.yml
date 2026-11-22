@@ -21,20 +21,18 @@ contracts:
         meaning: "Received by the contract target: exact publish version in the plan."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The required plan input is unavailable or invalid, the version cannot be materialized, or writing an Action output fails.
       - id: runtime-context.publish-version-plan-valid
-        summary: The invocation meets the shared runtime context `runtime-context.publish-version-plan-valid`.
-      - id: runtime-context.action-input-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+        summary: The invocation meets the shared runtime context `runtime-context.publish-version-plan-valid` and can write all Action outputs.
     guarantees:
       - id: publish-version-output-produced
         applies_to:
           - runtime-context.publish-version-plan-valid
         boundary: boundary.action-output
-        statement: "`publish-version` equals the invocation input `publish-version`. The materialized publish version. Observable fields at this boundary also include `status` (Whether the version plan was materialized successfully)."
+        statement: "`publish-version` equals the plan's explicit version for the exact strategy, or the plan's template with its declared components substituted for the generated strategy. `status` is `success`."
       - id: publish-version-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
+          - runtime-context.failure-diagnostic-required
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected publish version step.'
       - id: diagnostic-failure-stage-outputs

@@ -102,7 +102,9 @@ describe("workflow-contracts", () => {
       expect(summaryJobCount(caller)).toBe(1);
       expect(caller.jobs.quality.steps).toBe(undefined);
       expect(caller.jobs.quality.permissions.contents).toBe('read');
-      expect(caller.jobs.quality.uses).toBe('a3-suite/a3-ci-github/.github/workflows/ci-quality.yml@<quality-workflow-sha>');
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const { source, referencePlaceholder } = registry.qualityReusableWorkflow;
+      expect(caller.jobs.quality.uses).toBe(`a3-suite/a3-ci-github/${source}@${referencePlaceholder}`);
       expect(caller.jobs.summary.if).toBe('always()');
     });
 
@@ -179,10 +181,28 @@ describe("workflow-contracts", () => {
       assertNeeds(summary, ['trusted', 'untrusted-pr']);
       includesAll(summary, [/if: always\(\)/, /uses: a3-suite\/a3-ci-github\/actions\/ci-quality-summary@/]);
       const main = yaml.parse(workflow).jobs;
+      for (const job of [main.trusted, main['untrusted-pr']]) {
+        const scope = job.steps.findIndex((step) => step.id === 'change-scope');
+        const adapter = job.steps.findIndex((step) => step.id === 'quality-adapter');
+        expect(scope).toBeGreaterThanOrEqual(0);
+        expect(job.steps[scope].uses).toMatch(/\/actions\/ci-change-scope@/);
+        expect(adapter).toBeGreaterThan(scope);
+        const checkout = job.steps.findIndex(step => step.name === 'Checkout trusted CI assets');
+        expect(checkout).toBeGreaterThanOrEqual(0);
+        expect(adapter).toBeGreaterThan(checkout);
+        expect(job.steps[adapter].if).toBe("steps.change-scope.outputs['run-ci'] != 'false'");
+      }
       const ordered = main.trusted.steps;
       const adapterIndex = ordered.findIndex((step) => step.id === 'quality-adapter');
       expect(adapterIndex).toBeGreaterThan(ordered.findIndex((step) => step.name === 'Checkout trusted CI assets'));
-      expect(adapterIndex).toBeGreaterThan(ordered.findIndex((step) => step.id === 'trusted-assets'));
+      const trustedAssets = ordered.findIndex(step => step.id === 'trusted-assets');
+      expect(trustedAssets).toBeGreaterThanOrEqual(0);
+      expect(adapterIndex).toBeGreaterThan(trustedAssets);
+      const platforms = yaml.parse(read('.github/workflows/ci-quality-platforms.yml'));
+      for (const id of ['resolve-platforms', 'platform']) {
+        const checkout = platforms.jobs[id].steps.find(step => step.name === 'Checkout trusted CI assets');
+        expect(checkout.with.ref).toBe("${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}");
+      }
     });
     // integration_id: quality-workflow-contract
     test('quality workflow keeps adapter wiring, permissions and per-bundle trusted asset selection', () => {
@@ -236,7 +256,9 @@ describe("workflow-contracts", () => {
     // integration_id: quality-workflow-contract
     test('platform caller retains the summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
-      expect(caller.jobs.platforms.uses).toBe('a3-suite/a3-ci-github/.github/workflows/ci-quality-platforms.yml@<quality-platforms-workflow-sha>');
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const { source, referencePlaceholder } = registry.qualityPlatformsReusableWorkflow;
+      expect(caller.jobs.platforms.uses).toBe(`a3-suite/a3-ci-github/${source}@${referencePlaceholder}`);
       expect(summaryJobCount(caller)).toBe(1);
     });
 
@@ -280,7 +302,9 @@ describe("workflow-contracts", () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
       const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
       expect(caller.jobs.quality.uses).toBe(single.jobs.quality.uses);
-      expect(caller.jobs.quality.strategy.matrix).toStrictEqual({ include: '<quality-profiles>' });
+      expect(caller.jobs.quality.strategy).toStrictEqual({ 'fail-fast': false, matrix: { include: '<quality-profiles>' } });
+      expect(caller.jobs['profiles-summary'].needs).toBe('quality');
+      expect(caller.jobs['profiles-summary'].if).toBe('always()');
       expect(summaryJobCount(caller)).toBe(1);
     });
 
@@ -451,12 +475,34 @@ describe("workflow-contracts", () => {
       const workflow = read('workflows/release/release-request-tag.yml');
       expect(workflow).toMatch(/push:\n    tags:/);
       includesAll(jobBlock(workflow, 'request'), [/permissions:\n      contents: read\n    env:/, /ci-annotated-tag-resolver@/, /ci-release-request-handoff@/]);
-      const requestSteps = yaml.parse(workflow).jobs.request.steps;
+      const definition = yaml.parse(workflow);
+      const requestSteps = definition.jobs.request.steps;
       const tagIndex = requestSteps.findIndex((step) => step.uses?.includes('/ci-annotated-tag-resolver@'));
       const handoffIndex = requestSteps.findIndex((step) => step.uses?.includes('/ci-release-request-handoff@'));
       expect(tagIndex).toBeGreaterThanOrEqual(0);
       expect(handoffIndex).toBeGreaterThan(tagIndex);
-      expect(workflow).not.toMatch(/contents: write/);
+      const handoff = requestSteps[handoffIndex];
+      const uploadIndex = requestSteps.findIndex((step) => step.uses?.startsWith('actions/upload-artifact@'));
+      expect(uploadIndex).toBeGreaterThan(handoffIndex);
+      const upload = requestSteps[uploadIndex];
+      expect(requestSteps[tagIndex].id).toBe('tag');
+      expect(handoff.with).toMatchObject({
+        'tag-source-sha': '${{ steps.tag.outputs.source-sha }}',
+        'tag-object-sha': '${{ steps.tag.outputs.tag-object-sha }}',
+      });
+      expect(upload.with).toMatchObject({
+        name: 'release-request',
+        path: handoff.with['output-directory'],
+        'if-no-files-found': 'error',
+      });
+      for (const step of [requestSteps[tagIndex], handoff, upload]) {
+        expect(step.if).toBeUndefined();
+        expect(step['continue-on-error']).toBeUndefined();
+      }
+      expect(definition.permissions).toStrictEqual({});
+      for (const job of Object.values(definition.jobs)) {
+        expect(job.permissions).toStrictEqual({ contents: 'read' });
+      }
       includesAll(jobBlock(workflow, 'summary'), [/needs: request/, /if: always\(\)/, /permissions:\n      contents: read/, /ci-quality-summary@/]);
     });
 
@@ -471,7 +517,9 @@ describe("workflow-contracts", () => {
 
     // integration_id: release-request-workflow-contract
     test('release request workflow reports handoff failure in its summary', () => {
-      const summary = jobBlock(read('workflows/release/release-request-tag.yml'), 'summary');
+      const workflow = read('workflows/release/release-request-tag.yml');
+      const summary = jobBlock(workflow, 'summary');
+      expect(yaml.parse(workflow).jobs.summary.needs).toBe('request');
       for (const pattern of [/if: always\(\)/, /ci-quality-summary@/, /request job result:/, /"rawResult":"\$\{\{ needs\.request\.result \}\}"/]) expect(summary).toMatch(pattern);
     });
   });
@@ -619,6 +667,7 @@ describe("workflow-contracts", () => {
       // Assert
       expect(Object.keys(jobs)).not.toContain('build');
       expect(Object.keys(jobs)).not.toContain('source-gate');
+      expect(selection).toBeDefined();
       expect(authoritySteps.indexOf(selection)).toBeLessThan(authoritySteps.findIndex(step => step.id === 'authority'));
     });
 
@@ -671,8 +720,15 @@ describe("workflow-contracts", () => {
       // Assert
       expect(blocked).toStrictEqual([]);
       expect(evaluate(jobs.assemble.if, successful, inputs, true)).toBe(false);
-      expect(evaluate(jobs.publish.if, { authority: 'success', assemble: 'failure' }, inputs)).toBe(false);
-      expect(evaluate(jobs.publish.if, { authority: 'success', assemble: 'success' }, inputs)).toBe(true);
+      const publicationPrerequisites = { authority: 'success', assemble: 'success' };
+      expect(jobs.publish.needs).toStrictEqual(Object.keys(publicationPrerequisites));
+      expect(evaluate(jobs.publish.if, publicationPrerequisites, inputs)).toBe(true);
+      expect(evaluate(jobs.publish.if, publicationPrerequisites, inputs, true)).toBe(false);
+      for (const id of Object.keys(publicationPrerequisites)) {
+        for (const result of ['failure', 'cancelled', 'skipped', '']) {
+          expect(evaluate(jobs.publish.if, { ...publicationPrerequisites, [id]: result }, inputs), `${id}:${result}`).toBe(false);
+        }
+      }
     });
 
     // evidence_role: supplemental
@@ -865,6 +921,8 @@ describe("workflow-contracts", () => {
         /^    name: Rust release contract \/ Windows$/m,
         /^    runs-on: windows-2025$/m,
         /--testNamePattern="PowerShell\|Windows"/,
+        /runtime\/rust-release\/tests\/rust-release-scripts\.process\.test\.mjs/,
+        /runtime\/release-publication\/tests\/assembly\.process\.test\.mjs/,
       ]);
       includesAll(installerWindows, [
         /^    name: Installer contract \/ Windows$/m,
@@ -1107,16 +1165,20 @@ describe("workflow-contracts", () => {
           continue;
         }
         for (const contract of subject.contracts) {
-          const guarantee = contract.guarantees.find((entry) => entry.statement.startsWith('`failure-stage` is present.'));
+          const guarantee = contract.guarantees.find((entry) => entry.id.startsWith('diagnostic-failure-stage-'));
           expect(guarantee, contract.id).toBeDefined();
-          expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
           expect(guarantee.boundary, contract.id).toBe('boundary.diagnostic-result');
+          expect(guarantee.statement, contract.id).toMatch(/`(?:classification\.stage|failure-stage)`/);
           expect(guarantee.statement, contract.id).toContain(shared.id);
           const mapping = subject.testMaps.find((entry) => entry.contract_id === contract.id);
-          const diagnosticGuarantees = [...(mapping?.tests ?? []), ...(mapping?.pending ?? [])]
-            .filter((entry) => entry.partition === diagnosticPartition)
-            .flatMap((entry) => entry.guarantees ?? [guarantee.id]);
-          expect(diagnosticGuarantees, contract.id).toContain(guarantee.id);
+          expect(guarantee.applies_to?.length, contract.id).toBeGreaterThan(0);
+          for (const partition of guarantee.applies_to) {
+            expect(contract.conditions.map(({ id }) => id), contract.id).toContain(partition);
+            const diagnosticGuarantees = [...(mapping?.tests ?? []), ...(mapping?.pending ?? [])]
+              .filter((entry) => entry.partition === partition)
+              .flatMap((entry) => entry.guarantees ?? [guarantee.id]);
+            expect(diagnosticGuarantees, `${contract.id} / ${partition}`).toContain(guarantee.id);
+          }
         }
       }
     });
@@ -1130,6 +1192,8 @@ describe("workflow-contracts", () => {
       ['.github/workflows/ci-quality-platforms.yml', 'platform-summary'],
       ['workflows/release/release-publication-caller.yml', 'summary'],
       ['.github/workflows/ci-release-publication.yml', 'summary'],
+      ['.github/workflows/ci-asset-release-publication.yml', 'summary'],
+      ['workflows/release/asset-release-publication-caller.yml', 'summary'],
       ['workflows/package/package-publication-caller.yml', 'summary'],
       ['.github/workflows/ci-package-preparation.yml', 'summary'],
       ['.github/workflows/ci-package-publication.yml', 'summary'],
@@ -1139,7 +1203,15 @@ describe("workflow-contracts", () => {
     // integration_id: failure-diagnostics-contract
     test('managed workflows expose correlated secret-safe failure evidence without hiding source results', () => {
       for (const [relative, summaryId] of failureSummaryWorkflows) {
-        const summary = jobBlock(read(relative), summaryId);
+        const source = read(relative);
+        const summary = jobBlock(source, summaryId);
+        const { jobs } = yaml.parse(source);
+        const sourceJobs = summaryNeeds(summary);
+        expect(sourceJobs.length, relative).toBeGreaterThan(0);
+        for (const sourceJob of sourceJobs) {
+          expect(jobs[sourceJob], `${relative}: ${sourceJob}`).toBeDefined();
+          expect(jobs[sourceJob]['continue-on-error'] ?? false, `${relative}: ${sourceJob}`).toBe(false);
+        }
         includesAll(summary, [
           /^    if: always\(\)$/m,
           /ci-quality-summary@/,
@@ -1149,13 +1221,26 @@ describe("workflow-contracts", () => {
 
         if (summaryId === 'platform-summary' && relative === '.github/workflows/ci-quality-platforms.yml') continue;
 
-        for (const sourceJob of summaryNeeds(summary)) {
+        for (const sourceJob of sourceJobs) {
           const record = unitRecord(summary, sourceJob);
           const escapedJob = sourceJob.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           // The row passes the raw GitHub job result; failed and missing states are normalized by the ci-quality-summary contract.
           expect(record).toMatch(new RegExp(`"rawResult":"\\$\\{\\{ needs\\.${escapedJob}\\.result \\}\\}"`));
           expect(record).toMatch(new RegExp(`"reason":"[^"]*needs\\.${escapedJob}\\.result`));
         }
+      }
+      for (const relative of ['workflows/package/package-publication-request.yml', 'workflows/release/release-publication-request.yml']) {
+        const { jobs } = yaml.parse(read(relative));
+        const steps = jobs.request.steps;
+        const summary = steps.at(-1);
+        expect(summary.uses, relative).toMatch(/\/ci-quality-summary@/);
+        expect(summary.if, relative).toBe('always()');
+        expect(summary['continue-on-error'] ?? false, relative).toBe(false);
+        expect(JSON.stringify(summary), relative).not.toMatch(/secrets(?:\.|\s*\[)/);
+        const { jobs: rows } = JSON.parse(summary.with['summary-json']);
+        expect(rows, relative).toEqual([expect.objectContaining({
+          unit: 'request', rawResult: '${{ job.status }}', reason: expect.stringContaining('${{ job.status }}'),
+        })]);
       }
     });
 
@@ -1198,14 +1283,29 @@ describe("workflow-contracts", () => {
 
     // integration_id: quality-workflow-contract
     test('quality toolchain callers bind five inputs and preserve execution gates', () => {
+      const bindings = {
+        'language-profile': 'CI_LANGUAGE_PROFILE',
+        'toolchain-version': 'CI_TOOLCHAIN_VERSION',
+        'uv-version': 'CI_UV_VERSION',
+        'cargo-audit-version': 'CI_CARGO_AUDIT_VERSION',
+        'cargo-deny-version': 'CI_CARGO_DENY_VERSION',
+      };
       for (const [file, jobId] of toolchainCallerJobs) {
-        const job = yaml.parse(read(file)).jobs[jobId];
-        const call = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
-        expect(call.length, file).toBe(1);
-        expect(call[0].uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
-        const expected = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}' };
-for (const name of ['language-profile', 'toolchain-version', 'uv-version', 'cargo-audit-version', 'cargo-deny-version']) expect(call[0].with[name], `${file} ${name}`).toBe(expected[name]);
-        expect(call[0]['continue-on-error']).toBe(undefined);
+        const workflow = yaml.parse(read(file));
+        const job = workflow.jobs[jobId];
+        const calls = job.steps.filter((step) => step.uses?.includes('/actions/ci-quality-toolchain@'));
+        expect(calls, file).toHaveLength(1);
+        const [call] = calls;
+        expect(call.uses).toBe(`a3-suite/a3-ci-github/actions/ci-quality-toolchain@${actionRef}`);
+        const environment = { ...workflow.env, ...job.env, ...call.env };
+        for (const [input, variable] of Object.entries(bindings)) {
+          expect(call.with[input], `${file} ${input}`).toBe(`\${{ env.${variable} }}`);
+          const source = jobId === 'platform' && input === 'toolchain-version'
+            ? '${{ needs.resolve-platforms.outputs.toolchain-version }}'
+            : `\${{ inputs.${input} }}`;
+          expect(environment[variable], `${file} ${jobId} ${variable}`).toBe(source);
+        }
+        expect(call['continue-on-error']).toBeUndefined();
       }
     });
 

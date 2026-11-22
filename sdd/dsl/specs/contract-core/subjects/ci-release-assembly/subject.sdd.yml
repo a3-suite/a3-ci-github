@@ -38,23 +38,28 @@ contracts:
       - name: supplemental-asset
         meaning: "Received by the contract target: supplemental asset implementation selected for the release."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.release-assembly-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-assembly-valid`.
+        summary: The authority selects a platform release with matching snapshot, platform manifest and verified asset inputs, and required writes can complete.
       - id: runtime-context.release-asset-only-assembly-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-asset-only-assembly-valid`.
+        summary: The authority selects an asset-only release with a nonempty verified selection, and required writes can complete.
       - id: runtime-context.release-assembly-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.release-assembly-invalid`.
+        summary: Assembly rejects its inputs or fails before starting the Action output write. An empty asset-only selection has its own condition.
       - id: runtime-context.release-asset-only-assembly-empty
-        summary: The invocation meets the shared runtime context `runtime-context.release-asset-only-assembly-empty`.
+        summary: The asset-only inputs are valid but select no assets.
+      - id: release-assembly-action-output-write-failed
+        summary: The handoff has been assembled but the Action output write fails.
     guarantees:
+      - id: platform-manifest-line-ending-preserves-identity
+        applies_to:
+          - runtime-context.release-assembly-valid
+        boundary: boundary.workspace-files
+        statement: The written assembly identity equals the authority identity when the checked-out platform manifest differs only in line endings.
       - id: assembly-success
         applies_to:
           - runtime-context.release-assembly-valid
           - runtime-context.release-asset-only-assembly-valid
         boundary: boundary.action-output
-        statement: '`status` is one of `"success"`. Status output of the assembly invocation; success. Observable fields at this boundary also include `asset-digest` (SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests).'
+        statement: '`status` is one of `"success"`. The `asset-digest` output equals the SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.'
       - id: handoff-output-bound
         applies_to:
           - runtime-context.release-assembly-valid
@@ -64,22 +69,25 @@ contracts:
       - id: handoff-source-bound
         applies_to:
           - runtime-context.release-assembly-valid
-        boundary: boundary.action-output
-        statement: '`handoff-source-identity` is one of `"equal"`. Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.'
+          - runtime-context.release-asset-only-assembly-valid
+        boundary: boundary.workspace-files
+        statement: '`handoff-source-identity` is one of `"equal"`. Comparison of the source_sha of the identity written in the handoff with the authority source_sha.'
       - id: handoff-asset-digest-bound
         applies_to:
           - runtime-context.release-assembly-valid
+          - runtime-context.release-asset-only-assembly-valid
         boundary: boundary.workspace-files
         statement: '`handoff-asset-digest-reload` is one of `"equal"`. Comparison of the asset digest that loading the written handoff yields with the asset-digest output.'
       - id: assembly-no-credential-input
         applies_to:
           - runtime-context.release-assembly-valid
         boundary: boundary.action-caller
-        statement: '`credential-input-state` is one of `"absent"`. Occurrence state (present or absent) of a declared input that accepts a provider credential.'
+        statement: '`credential-input-state` is one of `"absent"`. The Action declares no provider credential input and completes assembly without a provider credential.'
       - id: assembly-rejected
         applies_to:
           - runtime-context.release-assembly-invalid
           - runtime-context.release-asset-only-assembly-empty
+          - release-assembly-action-output-write-failed
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Failed step outcome when assembly is rejected.'
       - id: accepted-checksum-verifiable
@@ -99,9 +107,11 @@ contracts:
         statement: '`packaged-skill-selection-comparison` is one of `"matched"`. Comparison of the SKILL.md paths in the skills ZIP owner evidence with the selected skill set; matched or mismatched.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.release-assembly-invalid
+          - runtime-context.release-asset-only-assembly-empty
+          - release-assembly-action-output-write-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-release-assembly

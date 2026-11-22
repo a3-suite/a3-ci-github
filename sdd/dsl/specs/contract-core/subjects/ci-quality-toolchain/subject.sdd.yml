@@ -35,25 +35,23 @@ contracts:
         meaning: "Precondition prepared by the case: digest of the downloaded tool archive."
       - name: cargo-deny-version
         meaning: "Received by the contract target: cargo-deny version requested by the caller."
-      - name: rust-setup-result
-        meaning: "Precondition prepared by the case: result of the Rust setup step that the failure retention step reads."
+      - name: auxiliary-tools
+        meaning: "Received by the contract target: whether the Rust auxiliary tools should be installed."
+      - name: uv-version
+        meaning: "Received by the contract target: requested uv version for Python."
+      - name: provider-python-version
+        meaning: "Precondition prepared by the case: Python version supplied by the setup provider."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.quality-toolchain-inputs-ready
         summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-inputs-ready`.
       - id: runtime-context.quality-toolchain-inputs-unusable
         summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-inputs-unusable`.
-      - id: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-toolchain-registered-binary-input-unusable`.
-      - id: runtime-context.quality-toolchain-request-valid
-        summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-request-valid`.
     guarantees:
       - id: resolved-quality-toolchain-produced
         applies_to:
           - runtime-context.quality-toolchain-inputs-ready
         boundary: boundary.action-output
-        statement: "`resolved-toolchain-version` is present. Published resolved toolchain version."
+        statement: "`resolved-toolchain-version` is present. The Action publishes the resolved version only after all selected setup steps succeed."
       - id: selected-quality-toolchain-ready
         applies_to:
           - runtime-context.quality-toolchain-inputs-ready
@@ -62,24 +60,23 @@ contracts:
       - id: invalid-or-failed-quality-toolchain-stops
         applies_to:
           - runtime-context.quality-toolchain-inputs-unusable
-          - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
         boundary: boundary.action-output
-        statement: '`outcome` is one of `"failure"`. Preparation step outcome.'
+        statement: '`outcome` is one of `"failure"`. The selected preparation step reports failure.'
       - id: diagnostic-failure-stage-preparation
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.quality-toolchain-inputs-unusable
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The failure diagnostic identifies the failed preparation stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: optional-tool-setup-only-when-requested
         applies_to:
-          - runtime-context.quality-toolchain-request-valid
+          - runtime-context.quality-toolchain-inputs-ready
         boundary: boundary.action-output
-        statement: '`unrequested-optional-tool-setup-state` is one of `"absent"`. Occurrence state (present or absent) of setup for an optional tool whose version input is empty.'
+        statement: The optional cargo-deny setup is skipped when its version is empty. Both Rust auxiliary tools are skipped under the skip policy.
       - id: resolved-version-satisfies-selector
         applies_to:
-          - runtime-context.quality-toolchain-request-valid
+          - runtime-context.quality-toolchain-inputs-ready
         boundary: boundary.action-output
-        statement: '`resolved-selector-comparison` is one of `"matched"`, `"not-published"`. Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.'
+        statement: '`resolved-selector-comparison` is one of `"matched"`. The published resolved toolchain version satisfies the requested exact version or bounded compatible selector.'
     input_kind:
       kind: operation
       name: ci-quality-toolchain

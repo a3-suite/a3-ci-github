@@ -10,30 +10,28 @@ contracts:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
+        meaning: "Received by the summary Action: result of the release request job."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The summary Action receives a failed or cancelled release request job result.
       - id: ci-release-request-workflow-canonical-source-available
         summary: The canonical release request workflow source is inspected.
-      - id: ci-release-request-workflow-failure-route-required
-        summary: A job handling the release request fails.
     guarantees:
       - id: ci-release-request-workflow-success-observed
         applies_to:
           - ci-release-request-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: "`request-handoff` is present. Declared request handoff route."
+        statement: "The workflow uploads the release request artifact from the handoff output directory only after successful tag resolution and handoff generation."
       - id: ci-release-request-workflow-failure-observed
         applies_to:
-          - ci-release-request-workflow-failure-route-required
+          - ci-release-request-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: "`failure-summary` is present. Declared request aggregate route."
+        statement: "The request summary receives the result of the request job."
       - id: diagnostic-failure-stage-handoff
         applies_to:
           - runtime-context.failure-diagnostic-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The summary Action reports the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: request-no-publication-permission
         applies_to:
           - ci-release-request-workflow-canonical-source-available
@@ -46,7 +44,7 @@ contracts:
         statement: '`request-tag-before-handoff` is one of `"tag-before-handoff"`. Declared order of annotated-tag resolution and immutable request handoff.'
       - id: request-failure-summary-always
         applies_to:
-          - ci-release-request-workflow-failure-route-required
+          - ci-release-request-workflow-canonical-source-available
         boundary: boundary.workflow-definition
         statement: '`request-failure-summary-always` is one of `"always"`. Declared request failure summary condition.'
     input_kind:

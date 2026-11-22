@@ -25,7 +25,7 @@ test_maps:
           - invalid-toolchain-processing-fails
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-github-toolchain-verifier.outputs
@@ -40,8 +40,13 @@ test_maps:
         partition: runtime-context.github-toolchain-script-failed
         guarantees:
           - verification-failure-propagated
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > ci-github-toolchain-verifier composite shell step publishes the input rejection stage
+        partition: runtime-context.github-toolchain-script-failed
         guarantees:
           - diagnostic-failure-stage-outputs
-        reason: Composite Action に無効な mode を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。
+      - path: actions/ci-github-toolchain-verifier/tests/composite-execution.test.mjs
+        symbol: contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite fails when the verified output cannot be written
+        partition: github-toolchain-output-write-denied
+        guarantees:
+          - verification-failure-propagated

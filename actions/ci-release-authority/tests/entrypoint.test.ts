@@ -40,7 +40,7 @@ test('authority entrypoint emits verified outputs and suppresses outputs on reje
 });
 
 // Each run serves the fixture responses through a preload that records every request method.
-const runAuthority = (entrypointArgs: string[], f: ReturnType<typeof fixture>) => {
+const runAuthority = (entrypointArgs: string[], f: ReturnType<typeof fixture>, outputWritable = true) => {
   const responses = path.join(f.root, 'responses.json');
   const methods = path.join(f.root, 'methods.txt');
   fs.writeFileSync(responses, JSON.stringify(f.responses));
@@ -49,18 +49,30 @@ const runAuthority = (entrypointArgs: string[], f: ReturnType<typeof fixture>) =
   fs.writeFileSync(preload, `import fs from 'node:fs';\nconst responses = JSON.parse(fs.readFileSync(process.env.TEST_RESPONSES));\nglobalThis.fetch = async (url, init) => { fs.appendFileSync(process.env.TEST_METHODS, (init?.method ?? 'GET') + '\\n'); return new Response(JSON.stringify(responses[String(url).replace('https://api.github.com', '')] ?? {}), {status:200}); };\n`);
   const output = path.join(f.root, 'output');
   fs.writeFileSync(output, '');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: repository, GITHUB_OUTPUT: output,
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REPOSITORY: repository, GITHUB_OUTPUT: outputWritable ? output : f.root,
     TEST_RESPONSES: responses, TEST_METHODS: methods, 'INPUT_ROOT-DIRECTORY': f.root, 'INPUT_SNAPSHOT-PATH': 'snapshot.json', 'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory,
     'INPUT_RELEASE-REQUEST-RUN-ID': '11', 'INPUT_PUBLICATION-REQUEST-RUN-ID': '22', 'INPUT_GITHUB-TOKEN': 'synthetic-secret' };
   const filesBefore = fileNames(f.options.outputDirectory);
   const result = spawnSync(process.execPath, ['--import', preload, ...entrypointArgs], { env, encoding: 'utf8' });
   const filesAfter = fileNames(f.options.outputDirectory);
   const authorityPath = path.join(f.options.outputDirectory, 'authority.json');
+  const outputs = fs.readFileSync(output, 'utf8');
+  if (result.status === 0) {
+    expect(Object.fromEntries(outputs.trimEnd().split('\n').map(line => line.split(/=(.*)/s).slice(0, 2)))).toStrictEqual({
+      'authority-path': authorityPath,
+      source_sha: source,
+      version: '1.2.3',
+      target_identity: 'platform-set',
+      'approval-id': 'approved',
+      'body-sha256': crypto.createHash('sha256').update('# Approved release\n').digest('hex'),
+    });
+    expect(fs.existsSync(authorityPath)).toBe(true);
+  }
   return {
     result,
     filesBefore,
     filesAfter,
-    outputs: fs.readFileSync(output, 'utf8'),
+    outputs,
     methods: fs.readFileSync(methods, 'utf8').split('\n').filter(Boolean),
     authority: () => JSON.parse(fs.readFileSync(authorityPath, 'utf8')),
     authorityExists: () => fs.existsSync(authorityPath),
@@ -191,6 +203,16 @@ test('authority entrypoint records an asset release without language, toolchain 
     expect(run.result.status, run.result.stderr).toBe(0);
     expect(run.authority()).toMatchObject({ language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null, version: '1.2.3' });
     expect(new Set(run.methods)).toStrictEqual(new Set(['GET']));
+  } finally { fs.rmSync(f.root, { recursive: true }); }
+});
+
+test('authority fails when Action outputs cannot be written', () => {
+  const f = fixture();
+  try {
+    const run = runAuthority(entrypointArgs, f, false);
+    expect(run.result.status).toBe(1);
+    expect(run.result.stderr).toContain('"stage":"output-write"');
+    expect(run.authorityExists()).toBe(true);
   } finally { fs.rmSync(f.root, { recursive: true }); }
 });
 

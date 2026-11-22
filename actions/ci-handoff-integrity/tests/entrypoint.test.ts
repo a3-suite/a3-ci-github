@@ -21,10 +21,10 @@ const createHandoff = () => {
   fs.writeFileSync(path.join(tempRoot, 'handoff.json'), JSON.stringify({ schema: 'ci.handoff.v1', source_sha: sourceSha, version: '1.0.0', target_identity: 'linux-x64', manifest: 'manifest.json' }));
   return tempRoot;
 };
-const runBundled = (handoffRoot: string, inputSourceSha: string) => {
+const runBundled = (handoffRoot: string, inputSourceSha: string, outputWritable = true) => {
   const output = path.join(handoffRoot, 'outputs');
   fs.writeFileSync(output, '', 'utf8');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output } as Record<string, string>;
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputWritable ? output : handoffRoot } as Record<string, string>;
   env['INPUT_HANDOFF-ROOT'] = handoffRoot;
   env['INPUT_DESCRIPTOR'] = 'handoff.json';
   env['INPUT_SOURCE-SHA'] = inputSourceSha;
@@ -51,17 +51,37 @@ test('entrypoint validates a handoff', () => {
 });
 
 // flow_id: ci-handoff-integrity-entrypoint-regression
-test('entrypoint fails an identity mismatch', () => {
+test('entrypoint fails an identity mismatch', (t) => {
   // Arrange
   const handoffRoot = createHandoff();
+  t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));
   // Act
   const run = runBundled(handoffRoot, 'mismatched-source');
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status).toBe(1);
+  expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"handoff-identity-comparison"/m);
   const outputs = fs.readFileSync(run.output, 'utf8');
   expect(outputs.match(/^status<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2]).toBe('failed');
   expect(outputs).not.toMatch(/^(descriptor|manifest|manifest-digest|entries)<</m);
-  fs.rmSync(handoffRoot, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-handoff-integrity.outputs
+test('entrypoint rejects missing handoff identity', (t) => {
+  const handoffRoot = createHandoff();
+  t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));
+  const { result } = runBundled(handoffRoot, '');
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"handoff-verification"/m);
+});
+
+// contract_id: contract.ci-handoff-integrity.outputs
+test('entrypoint rejects malformed handoff metadata', (t) => {
+  const handoffRoot = createHandoff();
+  t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(handoffRoot, 'handoff.json'), '{');
+  const { result } = runBundled(handoffRoot, sourceSha);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":/m);
 });
 
 // contract_id: contract.ci-handoff-integrity.outputs
@@ -82,6 +102,15 @@ test('entrypoint retains the failed artifact path and digest comparison', (t) =>
   expect(fs.readFileSync(path.join(handoffRoot, 'manifest.json'))).toEqual(before);
   expect(fs.readFileSync(path.join(handoffRoot, 'artifact.bin'), 'utf8')).toBe('changed');
   expect(fs.readFileSync(run.output, 'utf8')).not.toMatch(/^(descriptor|manifest|manifest-digest|entries)<</m);
+});
+
+// contract_id: contract.ci-handoff-integrity.outputs
+test('entrypoint diagnoses failure to write handoff outputs', (t) => {
+  const handoffRoot = createHandoff();
+  t.onTestFinished(() => fs.rmSync(handoffRoot, { recursive: true, force: true }));
+  const { result } = runBundled(handoffRoot, sourceSha, false);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
 });
 
 });

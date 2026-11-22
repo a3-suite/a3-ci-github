@@ -2,6 +2,7 @@ import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wri
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 import { aggregateCoverageMaps, assertSourceCoverageFiles, loadDefinition, parseLcov, selectUnitIntegrationTests, validateDefinition } from './coverage-tools/contract-subject-coverage.mjs';
 import { collectActions, collectScriptBundles } from '../runtime/repository/check-action-dist.mjs';
 
@@ -168,6 +169,28 @@ describe("repository-contract-subject-execution", () => {
     const executionSubjects = definition.subjects.map((subject) => subject.subjectId);
     // Assert
     expect([...executionSubjects].sort()).toStrictEqual([...packageSubjects].sort());
+  });
+
+  // integration_id: repository-contract-subject-execution
+  test('contract subject execution includes every mapped test file', () => {
+    const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const definition = loadDefinition();
+    const subjectRoot = path.join(projectRoot, 'sdd/dsl/specs/contract-core/subjects');
+
+    for (const relativeMap of globSync('*/test-maps.sdd.yml', { cwd: subjectRoot })) {
+      const directory = path.dirname(path.join(subjectRoot, relativeMap));
+      const { subject: { id } } = parseYaml(readFileSync(path.join(directory, 'subject.sdd.yml'), 'utf8'));
+      const execution = definition.subjects.find(({ subjectId }) => subjectId === id);
+      expect(execution, id).toBeDefined();
+      const executionPaths = new Set(execution.segments.flatMap(({ cwd, tests = [] }) =>
+        tests.map((file) => path.resolve(projectRoot, cwd, file))));
+      const { test_maps: maps } = parseYaml(readFileSync(path.join(subjectRoot, relativeMap), 'utf8'));
+      for (const { tests } of maps) {
+        for (const { path: file } of tests) {
+          expect(executionPaths.has(path.resolve(projectRoot, file)), `${id}: ${file}`).toBe(true);
+        }
+      }
+    }
   });
 });
 
@@ -354,6 +377,10 @@ describe("repository-contract-subject-execution", () => {
   test('Action source entrypoint observations belong to E2E without source coverage', () => {
     // Arrange
     const definition = loadDefinition();
+    const additionalEntrypointTests = {
+      'subject.ci.release-publisher': ['tests/entrypoint-scenarios.test.ts'],
+      'subject.ci.release-publication-verifier': ['tests/entrypoint-observation.test.ts'],
+    };
     const entrypoints = definition.subjects.flatMap((subject) => subject.segments
       .filter((segment) => segment.id === 'e2e-source-entrypoint')
       .map((segment) => ({ subject, segment })));
@@ -364,6 +391,7 @@ describe("repository-contract-subject-execution", () => {
       level: segment.level,
       scope: segment.coverage.scope,
       tests: segment.tests,
+      expectedTests: ['tests/entrypoint.test.ts', ...(additionalEntrypointTests[subject.subjectId] ?? [])],
       include: segment.coverage.include,
     }));
     // Assert
@@ -378,7 +406,7 @@ describe("repository-contract-subject-execution", () => {
       expect(observation.cwd).toBe(observation.expectedCwd);
       expect(observation.level).toBe('e2e');
       expect(observation.scope).toBe('source');
-      expect(observation.tests).toStrictEqual(['tests/entrypoint.test.ts']);
+      expect(observation.tests).toStrictEqual(observation.expectedTests);
       expect(observation.include).toStrictEqual(['src/index.ts']);
     }
   });

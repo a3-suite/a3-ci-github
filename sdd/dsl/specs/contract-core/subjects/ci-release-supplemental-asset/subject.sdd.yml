@@ -48,14 +48,14 @@ contracts:
       - name: failure
         meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.supplemental-phase-valid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-valid`.
+        summary: The selected phase receives valid inputs and evidence, its new output directory can be created, and the Action outputs can be written.
       - id: runtime-context.supplemental-phase-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-invalid`.
+        summary: The phase rejects invalid inputs or fails before writing Action outputs. An existing output directory has its own condition.
       - id: existing-output-rejected
-        summary: Invocation rejected because its output directory path already exists.
+        summary: The phase rejects an output directory path that already exists.
+      - id: supplemental-action-output-write-failed
+        summary: The phase writes its result but cannot write the Action outputs.
     guarantees:
       - id: phase-success
         applies_to:
@@ -71,6 +71,7 @@ contracts:
         applies_to:
           - runtime-context.supplemental-phase-invalid
           - existing-output-rejected
+          - supplemental-action-output-write-failed
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Step outcome of the phase invocation; success or failure.'
       - id: existing-output-unchanged
@@ -80,14 +81,16 @@ contracts:
         statement: '`existing-output-content-comparison` is one of `"unchanged"`. Comparison of a pre-existing output path content before and after a rejected phase invocation; unchanged or changed.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.supplemental-phase-invalid
+          - existing-output-rejected
+          - supplemental-action-output-write-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-release-supplemental-asset
   - id: contract.ci-release-supplemental-asset.assembly
-    summary: Supplemental final assembly request from transferred platform candidates.
+    summary: Supplemental asset processing through the Action or the standard installer CLI, including platform candidate preparation and final assembly from transferred candidates.
     inputs:
       - name: implementation
         meaning: "Received by the contract target: supplemental asset implementation recorded in the snapshot."
@@ -124,28 +127,35 @@ contracts:
       - name: build-roots
         meaning: "Precondition prepared by the case: content of the standard and supplemental build roots."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.supplemental-phase-valid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-valid`.
+        summary: A platform release uses a valid owner adapter phase or standard installer build-platform phase, and required destinations can be written.
       - id: runtime-context.supplemental-phase-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-invalid`.
+        summary: A platform release cannot complete the selected phase or emit the required Action outputs. CLI phase-input mismatch has its own condition.
       - id: runtime-context.standard-installer-evidence-valid
-        summary: The invocation meets the shared runtime context `runtime-context.standard-installer-evidence-valid`.
+        summary: Standard installer assemble receives complete, matching transferred candidate evidence for the selected release platforms and required destinations can be written.
       - id: runtime-context.supplemental-asset-release-valid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-asset-release-valid`.
+        summary: An asset-only release has valid owner adapter inputs, empty build roots, and writable destinations.
       - id: runtime-context.supplemental-asset-release-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.supplemental-asset-release-invalid`.
+        summary: An asset-only release has invalid phase inputs, fails assembly, or cannot write required Action outputs.
+      - id: installer-cli-phase-input-mismatch
+        summary: The installer CLI receives a supplemental build root in build-platform, or receives no supplemental build root in assemble.
     guarantees:
+      - id: installer-cli-phase-input-rejected
+        applies_to:
+          - installer-cli-phase-input-mismatch
+        boundary: boundary.cli-result
+        statement: The installer CLI exits with failure and reports phase-input-mismatch at phase-selection before creating the requested output directory.
       - id: phase-success
         applies_to:
           - runtime-context.supplemental-phase-valid
+          - runtime-context.standard-installer-evidence-valid
           - runtime-context.supplemental-asset-release-valid
         boundary: boundary.action-output
         statement: '`status` is one of `"success"`. Phase completion status output; success.'
       - id: phase-output
         applies_to:
           - runtime-context.supplemental-phase-valid
+          - runtime-context.standard-installer-evidence-valid
           - runtime-context.supplemental-asset-release-valid
         boundary: boundary.action-output
         statement: '`output-directory-binding` is one of `"equal"`. Comparison of the output directory reported on success with the directory the phase created for its result; equal or different. Observable fields at this boundary also include `output-directory` (Output directory path that the phase reports on success).'
@@ -159,7 +169,7 @@ contracts:
         applies_to:
           - runtime-context.standard-installer-evidence-valid
         boundary: boundary.workspace-files
-        statement: '`candidate-files` is one of `"matched"`. Comparison of the transferred candidate directory filenames and SHA-256 bytes with the files declared by platform-record.json, including .installer-source.zip; matched or mismatched.'
+        statement: '`candidate-files` is one of `"matched"`. After assembly, the transferred candidate directory still contains exactly the filenames and bytes bound by the SHA-256 values in platform-record.json, including .installer-source.zip.'
       - id: standard-installer-publication-assets-produced
         applies_to:
           - runtime-context.standard-installer-evidence-valid
@@ -182,9 +192,10 @@ contracts:
         statement: '`declaration-directory-file-name-difference-count` is one of `"0"`. Number of file names in the installer declaration directory (.ci/installer) that the invocation added or removed, compared before and after the invocation, as a decimal integer string.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.supplemental-phase-invalid
+          - runtime-context.supplemental-asset-release-invalid
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-release-supplemental-asset

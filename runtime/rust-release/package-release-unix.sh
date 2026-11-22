@@ -92,6 +92,7 @@ ci_failure_expected=unavailable
 ci_failure_observed=unavailable
 if ! mkdir "$output_dir"; then exit 1; fi
 output_claimed=true
+ci_failure_stage=output-publish
 ci_failure_write=output-may-be-partial
 for name in "${artifact_names[@]}"; do
   mv "$staging_dir/$name" "$output_dir/$name"

@@ -3,6 +3,27 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-failure-diagnostics.actionable
     tests:
+      - path: runtime/diagnostics/tests/failure.test.mjs
+        symbol: failure evidence > known validation retains comparison, stage and existing state
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - failure-cause-classified
+          - failure-reason-recorded
+          - comparison-expected-recorded
+          - comparison-observed-recorded
+          - execution-outcome-retained
+          - last-confirmed-stage-recorded
+          - diagnostic-known-cause-omission
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > standalone distribution diagnostics bind workflow context to the declared checkout
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - execution-context-run-bound
+          - execution-context-job-bound
+          - execution-context-source-bound
+          - evidence-location-recorded
+          - last-confirmed-stage-recorded
+          - diagnostic-unsubstantiated-context
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
         partition: runtime-context.failure-diagnostic-required
@@ -77,6 +98,11 @@ test_maps:
         symbol: source entrypoint > retains source failure when evidence-generation fails
         partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - diagnostic-invalid-evidence-reference
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution-recovery > rollback retains its original rejection when owned lock cleanup fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
           - diagnostic-original-diagnostic-loss
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed
@@ -129,216 +155,252 @@ test_maps:
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publisher failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publisher failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-request-handoff failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-request-handoff failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-supplemental-asset failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-supplemental-asset failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-change-scope failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-change-scope failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-package-publication-request failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-package-publication-request failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-publish-version failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-publish-version failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-authority failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-authority failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-handoff-integrity failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-handoff-integrity failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-jq-provisioner failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-jq-provisioner failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-control failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-control failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-verifier failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-verifier failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-annotated-tag-resolver failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-gh-provisioner failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-gh-provisioner failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-platform-matrix failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-platform-matrix failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-quality-adapter failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-quality-adapter failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-quality-summary failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-quality-summary failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-assembly failure boundary > source retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-assembly failure boundary > dist retains actionable input failure without private input values
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
           - failure-output-destination-unextended
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > distribution selection rejection preserves state and diagnostic context
@@ -686,6 +748,16 @@ test_maps:
           - failure-output-destination-unextended
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > dependency policy rejection leaves no result file
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > dependency policy rejection leaves no result file
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-output-destination-unextended

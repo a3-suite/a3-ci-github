@@ -16,8 +16,9 @@ const bundledEntrypoint = entrypointArgs;
 const runBundled = (
   input: unknown,
   includeSummaryPath = true,
-  pathMode: 'distinct' | 'same' | 'hardlink' | 'nested' = 'distinct',
+  pathMode: 'distinct' | 'same' | 'hardlink' | 'nested' | 'output-directory' = 'distinct',
   envOverrides: Record<string, string | undefined> = {},
+  priorSummary?: string,
 ) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-quality-summary-'));
   const summaryPath = path.join(tempRoot, 'summary.md');
@@ -28,6 +29,7 @@ const runBundled = (
       : path.join(tempRoot, 'evidence.md');
   const outputPath = path.join(tempRoot, 'outputs');
   fs.writeFileSync(outputPath, '', 'utf8');
+  if (priorSummary !== undefined) fs.writeFileSync(summaryPath, priorSummary, 'utf8');
   if (pathMode === 'hardlink') {
     fs.writeFileSync(summaryPath, '', 'utf8');
     fs.linkSync(summaryPath, evidencePath);
@@ -36,7 +38,7 @@ const runBundled = (
   delete env.GITHUB_STEP_SUMMARY;
   delete env['INPUT_SUMMARY-PATH'];
   env.GITHUB_ACTIONS = 'true';
-  env.GITHUB_OUTPUT = outputPath;
+  env.GITHUB_OUTPUT = pathMode === 'output-directory' ? tempRoot : outputPath;
   env['INPUT_SUMMARY-JSON'] = JSON.stringify(input);
   env['INPUT_EVIDENCE-PATH'] = evidencePath;
   if (includeSummaryPath) env.GITHUB_STEP_SUMMARY = summaryPath;
@@ -83,15 +85,72 @@ test('entrypoint writes matching evidence and outputs', () => {
   // Arrange
   const input = successInput;
   // Act
-  const run = runBundled(input, true, 'nested');
+  for (const priorSummary of [undefined, '既存のサマリー\r\n\r\n']) {
+    const run = runBundled(input, true, 'nested', {}, priorSummary);
+    try {
+      // Assert
+      expect(run.result.status).toBe(0);
+      const evidence = fs.readFileSync(run.evidencePath);
+      expect(fs.readFileSync(run.summaryPath)).toStrictEqual(Buffer.concat([Buffer.from(priorSummary ?? ''), evidence]));
+      expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'digest')).toBe(`sha256:${createHash('sha256').update(evidence).digest('hex')}`);
+      expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
+      expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'evidence-path')).toBe(run.evidencePath);
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
+test('entrypoint keeps aggregation and evidence consistent when input conditions combine', () => {
+  const cases = [
+    { result: 'success', collection: '完了', reason: undefined, status: 'success' },
+    { result: 'failed', collection: '完了', reason: 'check failed', status: 'failed' },
+    { result: '判定不能', collection: '取得不可', reason: 'check unavailable', status: 'unresolved' },
+    { result: 'blocked', collection: '完了', reason: 'check blocked', status: 'blocked' },
+    { result: '未実施', collection: '完了', reason: 'check not run', status: 'blocked' },
+    { result: 'success', collection: '一部取得', reason: undefined, status: 'unresolved' },
+  ];
+  const priorSummary = '既存のサマリー\r\n';
+  for (const { result, collection, reason, status } of cases) {
+    const run = runBundled({ jobs: [
+      { unit: 'applicable', execution: 'check', result, collection, reason, evidence: 'applicable.log' },
+      { unit: 'explained', execution: 'check', result: 'success', collection: '完了', reason: 'reported context' },
+      { unit: 'excluded', execution: 'check', result: '対象外', reason: 'owner policy', collection: '取得不可' },
+    ] }, true, 'distinct', runEnv, priorSummary);
+    try {
+      const evidence = fs.readFileSync(run.evidencePath);
+      const outputs = fs.readFileSync(run.outputPath, 'utf8');
+      expect(run.result.status, status).toBe(status === 'success' ? 0 : 1);
+      expect(outputValue(outputs, 'status')).toBe(status);
+      expect(outputValue(outputs, 'evidence-path')).toBe(run.evidencePath);
+      expect(outputValue(outputs, 'digest')).toBe(`sha256:${createHash('sha256').update(evidence).digest('hex')}`);
+      expect(fs.readFileSync(run.summaryPath)).toStrictEqual(Buffer.concat([Buffer.from(priorSummary), evidence]));
+      const markdown = evidence.toString('utf8');
+      expect(markdown).toContain('| `applicable` |');
+      for (const unit of ['explained', 'excluded']) {
+        expect(markdown).toContain(`- 対象: \`${unit}\`\n- 証跡: \`${runUrl}\``);
+      }
+      if (status !== 'success') {
+        expect(markdown).toContain('- 対象: `applicable`\n- 証跡: `applicable.log`');
+        expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-result"/m);
+      } else {
+        expect(markdown).not.toContain('- 対象: `applicable`');
+      }
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+test('entrypoint diagnoses failure to write Action outputs', () => {
+  const run = runBundled(successInput, true, 'output-directory');
   try {
-    // Assert
-    expect(run.result.status).toBe(0);
-    const evidence = fs.readFileSync(run.evidencePath, 'utf8');
-    expect(evidence).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'digest')).toBe(`sha256:${createHash('sha256').update(evidence, 'utf8').digest('hex')}`);
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'evidence-path')).toBe(run.evidencePath);
+    expect(run.result.status).toBe(1);
+    expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
+    expect(fs.existsSync(run.evidencePath)).toBe(true);
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
   }
@@ -100,23 +159,46 @@ test('entrypoint writes matching evidence and outputs', () => {
 // contract_id: contract.ci-quality-summary.outputs
 // flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint uses the workflow run URL for rows without evidence', () => {
-  // Failed rows render their evidence in the details section.
   const run = runBundled({
     jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true }],
     tests: [
       { unit: 'contract', execution: 'node', result: 'failed', collection: '完了', reason: 'assertion failed' },
       { unit: 'explicit', execution: 'node', result: 'failed', evidence: 'explicit.log', collection: '完了', reason: 'assertion failed' },
+      { unit: 'successful', execution: 'node', result: 'success', collection: '完了' },
+      { unit: 'excluded', execution: 'node', result: '対象外', collection: '取得不可', reason: 'owner policy' },
     ],
   }, true, 'distinct', runEnv);
   try {
     const evidence = fs.readFileSync(run.evidencePath, 'utf8');
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
-    expect(evidence.split(runUrl).length - 1).toBe(2);
-    expect(evidence.match(/^- 証跡: `[^`]+`$/gm)).toHaveLength(evidence.match(/^- 対象: /gm)!.length);
-    expect(evidence).toContain('explicit.log');
+    const outputs = fs.readFileSync(run.outputPath, 'utf8');
+    expect(run.result.status).toBe(1);
+    expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-result"/m);
+    expect(outputValue(outputs, 'status')).toBe('failed');
+    expect(outputValue(outputs, 'evidence-path')).toBe(run.evidencePath);
+    expect(outputValue(outputs, 'digest')).toBe(`sha256:${createHash('sha256').update(fs.readFileSync(run.evidencePath)).digest('hex')}`);
+    expect(evidence).toContain('| `successful` |');
+    expect(evidence).not.toContain('- 対象: `successful`');
+    expect([...evidence.matchAll(/^- 対象: `([^`]+)`\n- 証跡: `([^`]+)`$/gm)].map(([, unit, reference]) => [unit, reference])).toStrictEqual([
+      ['build', runUrl],
+      ['contract', runUrl],
+      ['explicit', 'explicit.log'],
+      ['excluded', runUrl],
+    ]);
     expect(evidence).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
     const line = run.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
     expect(JSON.parse(line.slice('ci-failure-diagnostic:'.length)).context.inputs.jobs).toEqual([{ unit: 'build', rawResult: 'failure', evidence: runUrl }]);
+    const supplied = runBundled({ jobs: [
+      { unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'build.log' },
+      { unit: 'successful', execution: 'test', rawResult: 'success', applicable: true, evidence: 'test.log' },
+    ] }, true, 'distinct', runEnv);
+    try {
+      const details = fs.readFileSync(supplied.evidencePath, 'utf8');
+      expect(details).toContain('- 対象: `build`\n- 証跡: `build.log`');
+      expect(details).toContain('| `successful` |');
+      expect(details).not.toContain('- 対象: `successful`');
+    } finally {
+      fs.rmSync(supplied.tempRoot, { recursive: true, force: true });
+    }
     const enterprise = runBundled({ jobs: [{ unit: 'build', execution: 'build', rawResult: 'failure', applicable: true }] }, true, 'distinct', { ...runEnv, GITHUB_SERVER_URL: 'https://git.example.com' });
     try {
       const enterpriseLine = enterprise.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
@@ -169,8 +251,12 @@ test('entrypoint normalizes a raw GitHub job result', () => {
     unit: 'build', execution: 'build', rawResult: 'failure', applicable: true, evidence: 'run',
   }] });
   try {
-    expect(run.result.status).not.toBe(0);
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
+    const outputs = fs.readFileSync(run.outputPath, 'utf8');
+    expect(run.result.status).toBe(1);
+    expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-result"/m);
+    expect(outputValue(outputs, 'status')).toBe('failed');
+    expect(outputValue(outputs, 'evidence-path')).toBe(run.evidencePath);
+    expect(outputValue(outputs, 'digest')).toBe(`sha256:${createHash('sha256').update(fs.readFileSync(run.evidencePath)).digest('hex')}`);
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/job result: failure/);
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
   } finally {
@@ -191,7 +277,10 @@ test('entrypoint ignores intentionally excluded test rows in the aggregate statu
   try {
     // Assert
     expect(run.result.status, run.result.stderr).toBe(0);
-    expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('success');
+    const outputs = fs.readFileSync(run.outputPath, 'utf8');
+    expect(outputValue(outputs, 'status')).toBe('success');
+    expect(outputValue(outputs, 'evidence-path')).toBe(run.evidencePath);
+    expect(outputValue(outputs, 'digest')).toBe(`sha256:${createHash('sha256').update(fs.readFileSync(run.evidencePath)).digest('hex')}`);
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toMatch(/⏭ 対象外/);
     expect(fs.readFileSync(run.evidencePath, 'utf8')).toBe(fs.readFileSync(run.summaryPath, 'utf8'));
   } finally {
@@ -234,6 +323,19 @@ test('entrypoint fails an input where every row is excluded', () => {
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
     fs.rmSync(run.tempRoot, { recursive: true, force: true });
+  }
+});
+
+// contract_id: contract.ci-quality-summary.outputs
+test('entrypoint diagnoses missing and malformed summary JSON', () => {
+  for (const input of [undefined, '{']) {
+    const run = runBundled(successInput, true, 'distinct', { 'INPUT_SUMMARY-JSON': input });
+    try {
+      expect(run.result.status).toBe(1);
+      expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-input"/m);
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
   }
 });
 
@@ -311,7 +413,10 @@ const retainsSourceFailure = (mode: 'evidence-generation' | 'summary-write' | 'u
     expect(evidence['execution-state'].write).toBe('write-may-be-partial');
     expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
     expect(evidence['next-check'].stage).toBe(evidence.classification.stage);
-    if (mode !== 'evidence-generation') {
+    if (mode === 'evidence-generation') {
+      expect(evidence['evidence-location'].file).toBe('not-generated');
+      expect(evidence['execution-state'].retention).toBe('log-only');
+    } else {
       expect(fs.readFileSync(evidencePath, 'utf8')).toContain('job result: failure');
       expect(evidence['evidence-location'].file).toBe('configured-evidence-path');
       expect(evidence['execution-state'].retention).toBe('log-and-file');

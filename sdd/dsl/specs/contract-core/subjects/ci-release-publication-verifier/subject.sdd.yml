@@ -40,38 +40,34 @@ contracts:
       - name: remote-response
         meaning: "Precondition prepared by the case: form of the provider responses."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.release-pre-observation-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-pre-observation-valid`.
+        summary: The operation is observe-before, the supplied authority and handoff are valid, remote evidence establishes absence, and required files can be written.
       - id: runtime-context.release-post-verification-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-post-verification-valid`.
+        summary: The operation is verify-after, all receipt, readback and authority bindings match the independent provider responses, and Action outputs can be written.
       - id: runtime-context.release-observation-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.release-observation-invalid`.
-      - id: runtime-context.release-verification-invocation
-        summary: The invocation meets the shared runtime context `runtime-context.release-verification-invocation`.
+        summary: The operation or local inputs are invalid, provider evidence is unavailable or inconsistent with the selected verification, or a required write cannot complete.
     guarantees:
       - id: observation-status
         applies_to:
           - runtime-context.release-pre-observation-valid
           - runtime-context.release-post-verification-valid
         boundary: boundary.action-output
-        statement: '`status` is one of `"success"`. Success only after the selected read-only verification completes. Observable fields at this boundary also include `observation-digest` (SHA-256 of the exact pre-create observation file bytes), `observation-path` (Pre-create observation file written by observe-before).'
+        statement: '`status` is one of `"success"`. After a successful `observe-before`, `observation-path` equals the supplied path and `observation-digest` is the SHA-256 of the exact bytes written there. After a successful `verify-after`, the observation path and digest are absent.'
       - id: release-id-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
         boundary: boundary.action-output
-        statement: "`release-remote-identity` is present. Release object ID that verify-after emits."
+        statement: "`release-remote-identity` contains the verified Release object ID."
       - id: bound-receipt
         applies_to:
           - runtime-context.release-post-verification-valid
         boundary: boundary.action-output
-        statement: "`publish-receipt` is present. Publication receipt exposed by the verifier."
+        statement: "`publish-receipt` contains the validated publication receipt as JSON."
       - id: readback-evidence-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
         boundary: boundary.action-output
-        statement: "`readback-evidence` is present. Readback evidence that verify-after emits for the published Release."
+        statement: "`readback-evidence` contains the validated readback record as JSON."
       - id: verification-rejected
         applies_to:
           - runtime-context.release-observation-invalid
@@ -80,21 +76,23 @@ contracts:
       - id: verification-diagnostic
         applies_to:
           - runtime-context.release-observation-invalid
-        boundary: boundary.action-output
-        statement: "`diagnostic` is present. Stable failure envelope of the rejected remote verification."
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic records a sanitized reason for rejection."
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.release-observation-invalid
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary failure diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: diagnostic-checksum-observation-conflation
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.release-observation-invalid
         boundary: boundary.diagnostic-result
         statement: '`checksum-observation-conflation-state` is one of `"absent"`. Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.'
       - id: get-only-requests
         applies_to:
-          - runtime-context.release-verification-invocation
+          - runtime-context.release-pre-observation-valid
+          - runtime-context.release-post-verification-valid
+          - runtime-context.release-observation-invalid
         boundary: boundary.release-provider-requests
         statement: '`non-get-request-state` is one of `"absent"`. Occurrence state of provider requests using a method other than GET during one invocation.'
       - id: receipt-remote-id-binding

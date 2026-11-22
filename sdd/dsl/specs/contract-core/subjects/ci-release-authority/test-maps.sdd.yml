@@ -38,11 +38,6 @@ test_maps:
           - no-success-outputs
           - rejected
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
-        symbol: dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection
-        partition: runtime-context.release-authority-valid
-        guarantees:
-          - authority-file
-      - path: actions/ci-release-authority/tests/entrypoint.test.ts
         symbol: source entrypoint > authority entrypoint binds the LF platform manifest digest for CRLF and mixed checkouts
         partition: runtime-context.release-authority-valid
         guarantees:
@@ -56,7 +51,7 @@ test_maps:
           - platform-source-text-digest
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-authority failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-authority-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-authority/tests/entrypoint.test.ts
@@ -73,3 +68,15 @@ test_maps:
           - authority-asset-only-no-platform-manifest
           - authority-file
           - authority-get-only-requests
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority fails when Action outputs cannot be written
+        partition: release-authority-output-write-denied
+        guarantees:
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority fails when Action outputs cannot be written
+        partition: release-authority-output-write-denied
+        guarantees:
+          - rejected
+          - diagnostic-failure-stage-outputs

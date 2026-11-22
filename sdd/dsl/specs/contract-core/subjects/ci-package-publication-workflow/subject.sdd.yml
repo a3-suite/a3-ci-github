@@ -10,25 +10,23 @@ contracts:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
+        meaning: "Received by the summary Action: result of a package workflow job."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The summary Action processes a failed or cancelled package workflow job result.
       - id: ci-package-publication-workflow-canonical-source-available
-        summary: The canonical package publication workflow source is inspected.
-      - id: ci-package-publication-workflow-failure-route-required
-        summary: The package publication caller must handle a failed publication job.
+        summary: Repository verification receives the canonical workflow definitions for inspection.
     guarantees:
       - id: ci-package-publication-workflow-failure-observed
         applies_to:
-          - ci-package-publication-workflow-failure-route-required
+          - ci-package-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: "`failure-summary` is present. Declared package aggregate route."
+        statement: "The request summary receives the request job status, and the caller summary receives the publication job result."
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The summary Action records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: package-fixed-provider-reference
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
@@ -81,19 +79,19 @@ contracts:
         statement: '`package-owner-publisher-invoked` is one of `"package-handoff"`. Declared owner publisher argument.'
       - id: package-failure-summary-always
         applies_to:
-          - ci-package-publication-workflow-failure-route-required
+          - ci-package-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
         statement: '`package-failure-summary-always` is one of `"always"`. Declared publication aggregate condition.'
       - id: package-failed-prerequisite-blocks
         applies_to:
-          - ci-package-publication-workflow-failure-route-required
+          - ci-package-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
         statement: '`package-failed-prerequisite-blocks` is one of `"absent"`. Occurrence of publication eligibility with failed or unknown required preparation or request validation.'
       - id: package-publication-serialized
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
         boundary: boundary.workflow-definition
-        statement: '`package-publication-concurrency` is one of `"serialized"`. Declared concurrency of the package publication provider workflow: runs publishing to the same target never execute concurrently; serialized or other.'
+        statement: '`package-publication-concurrency` is one of `"serialized"`. Declared concurrency of the package publication provider workflow: the group includes the workflow, repository and target identity, and pending runs are queued without cancelling an in-progress run.'
       - id: package-preparation-least-privilege
         applies_to:
           - ci-package-publication-workflow-canonical-source-available

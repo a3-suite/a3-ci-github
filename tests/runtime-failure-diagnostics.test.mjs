@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { describe, expect, test, onTestFinished } from 'vitest';
+import { parse } from 'yaml';
 
 const root = process.cwd();
 const require = createRequire(path.join(root, 'runtime/preset/package.json'));
@@ -15,6 +16,62 @@ const commands = [
 ];
 
 describe('runtime failure diagnostics', () => {
+  test('standalone distribution diagnostics bind workflow context to the declared checkout', () => {
+    const source = 'a'.repeat(40);
+    const eventSha = 'b'.repeat(40);
+    for (const declared of [source, '']) {
+      const result = spawnSync(process.execPath, ['runtime/distribution/fetch-a3-ci-github.mjs', 'verify'], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
+          GITHUB_RUN_ID: '123', GITHUB_JOB: 'verify_distribution', GITHUB_EVENT_NAME: 'pull_request',
+          GITHUB_SHA: eventSha, CI_SOURCE_REVISION: declared },
+      });
+      expect(result.status).toBe(2);
+      const { failureEvidence } = JSON.parse(result.stderr);
+      expect(failureEvidence.context).toMatchObject({ run: '123', job: 'verify_distribution',
+        source: declared || 'unavailable' });
+      expect(failureEvidence['evidence-location'].log).toBe('workflow-run-job-step-log');
+      expect(failureEvidence['execution-state'].lastConfirmed).toBe('unavailable');
+      expect(result.stderr).not.toContain(eventSha);
+    }
+  });
+
+  test.each([
+    ['ci-rust-source-gate', 'profile-binding', { 'language-profile': 'invalid' }],
+    ['ci-rust-release-build', 'input-validation', {
+      'language-profile': 'invalid', 'platform-manifest': 'platforms.yml', 'toolchain-version': '1.80.0',
+      'platform-id': 'fixture', 'platform-target': 'x86_64-unknown-linux-gnu', 'output-directory': 'output',
+      'cargo-manifest-path': 'Cargo.toml', 'release-binary-name': 'fixture', 'release-asset-prefix': 'fixture',
+    }],
+    ['ci-github-toolchain-verifier', 'mode-validation', { mode: 'invalid', 'jq-version': '1.7.1' }],
+  ])('%s composite shell step publishes the input rejection stage', (subject, stage, suppliedInputs) => {
+    fs.mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
+    const fixture = fs.mkdtempSync(path.join(root, 'tests/tmp/composite-diagnostic-'));
+    onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
+    const authority = path.join(fixture, 'authority.json');
+    const output = path.join(fixture, 'github-output');
+    fs.writeFileSync(authority, JSON.stringify({ language_profile: 'rust' }));
+    fs.writeFileSync(output, '');
+    const actionPath = path.join(root, 'actions', subject);
+    const action = parse(fs.readFileSync(path.join(actionPath, 'action.yml'), 'utf8'));
+    expect(action.runs).toMatchObject({ using: 'composite', steps: [{ shell: 'bash' }] });
+    const [step] = action.runs.steps;
+    const inputs = { 'authority-path': authority, ...suppliedInputs };
+    const bindings = Object.fromEntries(Object.entries(step.env).map(([variable, expression]) => {
+      const input = /^\$\{\{ inputs\.([\w-]+) \}\}$/.exec(expression);
+      expect(input, expression).not.toBeNull();
+      return [variable, inputs[input[1]] ?? action.inputs[input[1]].default ?? ''];
+    }));
+    const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
+      cwd: fixture, encoding: 'utf8', env: { ...process.env, ...bindings,
+        GITHUB_ACTIONS: 'true', GITHUB_ACTION_PATH: actionPath, GITHUB_OUTPUT: output },
+    });
+    expect(result.status).toBe(1);
+    const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+    expect(diagnostic, result.stderr).not.toBeNull();
+    expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ subject, stage });
+    expect(fs.readFileSync(output, 'utf8')).toBe('');
+  });
+
   // contract_id: contract.ci-failure-diagnostics.actionable
   // flow_id: runtime-failure-diagnostics
   test.each(commands)('%s preserves its outcome and safe diagnostic context', (_name, subject, args, status) => {
@@ -40,11 +97,16 @@ describe('runtime failure diagnostics', () => {
     onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
     const sentinel = path.join(directory, 'state');
     fs.writeFileSync(sentinel, 'unchanged');
-    const command = { selection: 'plan', delivery: 'fetch', application: 'apply', rollback: 'rollback' }[operation];
+    const [command, stage] = {
+      selection: ['plan', 'plan'],
+      delivery: ['fetch', 'input-validation'],
+      application: ['apply', 'apply'],
+      rollback: ['rollback', 'rollback'],
+    }[operation];
     const result = spawnSync(process.execPath, ['runtime/distribution/fetch-a3-ci-github.mjs', command, '--repo-root', directory], { cwd: root, encoding: 'utf8' });
     const envelope = JSON.parse(result.stderr);
     expect(result.status).toBe(2);
-    expect(envelope.failureEvidence.classification).toMatchObject({ subject: 'ci-selective-distribution', operation: command });
+    expect(envelope.failureEvidence.classification).toMatchObject({ subject: 'ci-selective-distribution', operation: command, stage });
     expect(envelope.failureEvidence['execution-state'].write).toBe('not-started');
     expect(envelope.failureEvidence['next-check'].rule).toBe(envelope.diagnostic);
     expect(fs.readFileSync(sentinel, 'utf8')).toBe('unchanged');

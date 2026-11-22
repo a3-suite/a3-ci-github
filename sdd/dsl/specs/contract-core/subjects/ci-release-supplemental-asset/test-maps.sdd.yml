@@ -15,9 +15,10 @@ test_maps:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
+          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint emits success for the v2 build-platform phase
         partition: runtime-context.supplemental-phase-valid
@@ -47,11 +48,6 @@ test_maps:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects injected output before owner execution
-        partition: runtime-context.supplemental-phase-invalid
-        guarantees:
-          - phase-rejected
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
@@ -98,12 +94,6 @@ test_maps:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > executes standard mode from the distributed Action and reports verified output
-        partition: runtime-context.supplemental-phase-valid
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > executes packaged local CLI with the same fixed boundary
         partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
@@ -166,8 +156,39 @@ test_maps:
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint preserves existing output on rejection
+        partition: existing-output-rejected
+        guarantees:
+          - phase-rejected
+          - existing-output-unchanged
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint retains its result when the Action output write fails
+        partition: supplemental-action-output-write-failed
+        guarantees:
+          - phase-rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint preserves existing output on rejection
+        partition: existing-output-rejected
+        guarantees:
+          - phase-rejected
+          - existing-output-unchanged
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint retains its result when the Action output write fails
+        partition: supplemental-action-output-write-failed
+        guarantees:
+          - phase-rejected
+          - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-supplemental-asset.assembly
     tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed CLI rejects a supplemental root for the wrong operation
+        partition: installer-cli-phase-input-mismatch
+        guarantees:
+          - installer-cli-phase-input-rejected
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > verifies native candidate and produces handoff without consumer implementation
         partition: runtime-context.standard-installer-evidence-valid
@@ -188,9 +209,10 @@ test_maps:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
+          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint emits success for the v2 assemble phase
         partition: runtime-context.supplemental-phase-valid
@@ -204,11 +226,6 @@ test_maps:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        partition: runtime-context.supplemental-phase-invalid
-        guarantees:
-          - phase-rejected
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
@@ -218,12 +235,6 @@ test_maps:
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > keeps unselected release targets outside native selection
-        partition: runtime-context.supplemental-phase-valid
-        guarantees:
-          - phase-success
-          - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects release id or target mismatches in both phases
         partition: runtime-context.supplemental-phase-invalid
@@ -241,8 +252,8 @@ test_maps:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI accepts CRLF checkout through both phases
-        partition: runtime-context.supplemental-phase-valid
+        symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
+        partition: runtime-context.standard-installer-evidence-valid
         guarantees:
           - phase-success
           - phase-output
@@ -307,8 +318,10 @@ test_maps:
         partition: runtime-context.supplemental-asset-release-invalid
         guarantees:
           - phase-rejected
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
         partition: runtime-context.supplemental-asset-release-invalid
         guarantees:
           - phase-rejected
+          - diagnostic-failure-stage-outputs

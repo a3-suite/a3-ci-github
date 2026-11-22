@@ -92,7 +92,7 @@ jobs:
 
       - name: Test README Action catalog gate
         shell: bash
-        run: npm test -- tests/action-index-gate.test.mjs
+        run: npm test -- tests/action-index-gate.test.mjs tests/action-index-gate.process.test.mjs
 
       - name: Test repository Release delivery
         shell: bash
@@ -116,7 +116,8 @@ jobs:
             runtime/preset/tests/quality-platform-selection.test.mjs \
             runtime/preset/tests/reusable-quality-workflow.test.mjs \
             runtime/preset/tests/standard-quality-bundles.test.mjs \
-            runtime/preset/tests/publication-validation.test.mjs
+            runtime/preset/tests/publication-validation.test.mjs \
+            runtime/preset/tests/publication-validation.process.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
             npm test -- tests/public-cli-lifecycle.test.mjs
           npm test -- runtime/distribution/tests/selective-distribution.test.mjs
@@ -504,7 +505,12 @@ jobs:
 
       - name: Test Windows Rust release contracts
         shell: pwsh
-        run: npm test -- --testNamePattern="PowerShell|Windows" runtime/rust-release/tests/rust-release-scripts.test.mjs
+        run: |
+          Get-Command pwsh -CommandType Application -ErrorAction Stop | Out-Null
+          npm test -- --testNamePattern="PowerShell|Windows" `
+            runtime/rust-release/tests/rust-release-scripts.test.mjs `
+            runtime/rust-release/tests/rust-release-scripts.process.test.mjs `
+            runtime/release-publication/tests/assembly.process.test.mjs
 
   installer-windows:
     name: Installer contract / Windows

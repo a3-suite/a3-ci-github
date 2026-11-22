@@ -8,6 +8,7 @@ test_maps:
         partition: runtime-context.quality-toolchain-inputs-ready
         guarantees:
           - resolved-quality-toolchain-produced
+          - resolved-version-satisfies-selector
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
         partition: runtime-context.quality-toolchain-inputs-ready
@@ -25,19 +26,14 @@ test_maps:
           - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - diagnostic-failure-stage-preparation
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop the preparation
-        partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        partition: runtime-context.quality-toolchain-request-valid
-        guarantees:
-          - resolved-version-satisfies-selector
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
         partition: runtime-context.quality-toolchain-inputs-unusable
@@ -55,11 +51,11 @@ test_maps:
           - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > registered cargo-deny asset failures stop the preparation
-        partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-    pending:
-      - partition: runtime-context.quality-toolchain-request-valid
+      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > optional cargo-deny setup is skipped unless requested and enabled
+        partition: runtime-context.quality-toolchain-inputs-ready
         guarantees:
           - optional-tool-setup-only-when-requested
-        reason: cargo-deny-version を空にして Composite Action を実行し、cargo-deny の setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。

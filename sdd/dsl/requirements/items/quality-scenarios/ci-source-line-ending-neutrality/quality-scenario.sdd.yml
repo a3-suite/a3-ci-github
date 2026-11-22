@@ -13,3 +13,4 @@ related_requirements:
   - ci-source-line-ending-neutrality
 related_contracts:
   - contract.ci-release-authority.outputs
+  - contract.ci-release-assembly.outputs

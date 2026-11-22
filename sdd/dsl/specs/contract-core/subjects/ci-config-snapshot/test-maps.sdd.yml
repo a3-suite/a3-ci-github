@@ -15,16 +15,73 @@ test_maps:
           - config-snapshot-status-produced
       - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
-        partition: runtime-context.action-input-invalid
-        guarantees:
-          - config-snapshot-failure-propagated
-      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
-        partition: runtime-context.action-input-invalid
-        guarantees:
-          - config-snapshot-failure-propagated
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
         partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects a snapshot colliding with GITHUB_OUTPUT
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: source entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > retains saved snapshot evidence when GITHUB_OUTPUT fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses failure to write the snapshot
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses failure to write the snapshot
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects an invalid source configuration
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects an invalid source configuration
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects missing and malformed source JSON
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects missing and malformed source JSON
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects snapshot and output collisions
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-config-snapshot/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects snapshot and output collisions
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - config-snapshot-failure-propagated
           - diagnostic-failure-stage-outputs

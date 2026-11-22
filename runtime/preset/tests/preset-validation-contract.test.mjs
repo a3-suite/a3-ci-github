@@ -256,8 +256,17 @@ describe("preset-validation-contract", () => {
   describe("preset-asset-lock-contract", () => {
     // integration_id: preset-asset-lock-contract
     test('asset lock generation rejects a noncanonical source revision', () => withFixture((root) => {
-      expect(() => writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'not-a-full-sha', releaseTag: 'v0.9.0' })).toThrow(/"stage":"source-revision-validation"/);
-      expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
+      const lockPath = path.join(root, '.ci/ci-assets.lock.json');
+      const rejectInvalidRevision = () => expect(() => writeCiAssetLockCli({
+        repoRoot: root, sourceRevision: 'not-a-full-sha', releaseTag: 'v0.9.0',
+      })).toThrow(/"stage":"source-revision-validation"/);
+      rejectInvalidRevision();
+      expect(existsSync(lockPath)).toBe(false);
+
+      writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' });
+      const before = readFileSync(lockPath);
+      rejectInvalidRevision();
+      expect(readFileSync(lockPath)).toStrictEqual(before);
     }));
 
     // integration_id: preset-asset-lock-contract

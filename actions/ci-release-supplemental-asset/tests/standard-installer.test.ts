@@ -167,10 +167,10 @@ describe('standard installer', () => {
       const record = JSON.parse(fs.readFileSync(path.join(platformRoot, 'platform-record.json'), 'utf8'));
       const candidate = path.join(platformRoot, 'candidate');
       expect(Object.keys(record.files)).toContain('.installer-source.zip');
-      expect(fs.readdirSync(candidate).sort()).toEqual(Object.keys(record.files).sort());
-      for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
       const declarationFiles = fs.readdirSync(path.join(root, '.ci/installer')).sort();
       runSupplementalAction({ operation: 'assemble', sourceRoot: root, authorityPath: 'authority.json', snapshotPath: 'snapshot.json', standardBuildRoot: 'standard-download', supplementalBuildRoot: 'supplemental-download', outputDirectory: 'transport-handoff', installerRoot: path.join(repository, 'runtime/installer'), providerRevision: 'a'.repeat(40) });
+      expect(fs.readdirSync(candidate).sort()).toEqual(Object.keys(record.files).sort());
+      for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'transport-handoff/supplemental-manifest.json'), 'utf8'));
       const declaration = JSON.parse(fs.readFileSync(path.join(root, '.ci/installer/assembly.json'), 'utf8'));
       const declaredAssets = Object.entries(declaration.platforms).flatMap(([platformId, entry]) => [(entry as { assetName: string }).assetName, `manifest-${platformId}.json`]);

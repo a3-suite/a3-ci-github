@@ -24,7 +24,7 @@ trigger: Action の新規作成または公開契約・実装・依存の変更
 main_success_scenario:
   - action.yml に公開 input、output、runtime、entrypoint を定義する
   - 実装で入力制約、secret 取り扱い、成功 output、失敗終了状態を検証する
-  - 共通化する定型処理は単独実行できる script として実装し、Composite Action は入出力写像だけを担当する
+  - Composite Action が委譲する共通処理は、保守者が Action 外からも入力と結果を検証できることを確認する
   - 実装方式に応じた配布物を再生成し、契約テスト、実装テスト、配布物検証を実行する
   - README.md の Action 一覧と用途を実在する Action に合わせ、不一致がないことを確認する
   - 実装と配布物を同じ immutable ref に含め、利用者が source build なしで実行できる状態を公開する

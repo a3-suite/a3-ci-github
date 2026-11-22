@@ -4,6 +4,16 @@ test_maps:
   - contract_id: contract.ci-quality-adapter.outputs
     tests:
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint accepts the requested version as a standalone token
+        partition: quality-adapter-bundle-present
+        guarantees:
+          - quality-adapter-matching-toolchain-allows-preparation
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint accepts the requested version as a standalone token
+        partition: quality-adapter-bundle-present
+        guarantees:
+          - quality-adapter-matching-toolchain-allows-preparation
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint executes the embedded standard without reading a project descriptor
         partition: quality-adapter-standard-bundle-present
         guarantees:
@@ -15,16 +25,6 @@ test_maps:
         guarantees:
           - status-result-consistent
           - standard-descriptor-independent
-      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        partition: quality-adapter-standard-bundle-present
-        guarantees:
-          - status-result-consistent
-      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
-        partition: quality-adapter-standard-bundle-present
-        guarantees:
-          - status-result-consistent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
         partition: runtime-context.action-input-invalid
@@ -57,7 +57,7 @@ test_maps:
           - quality-adapter-failure-propagated
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-quality-adapter failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.action-input-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
@@ -67,8 +67,9 @@ test_maps:
           - native-format-omitted
           - native-security-omitted
           - native-terminal-prerequisite-status
-          - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         partition: runtime-context.ci-quality-adapter-native-rust-valid
@@ -76,8 +77,9 @@ test_maps:
           - native-format-omitted
           - native-security-omitted
           - native-terminal-prerequisite-status
-          - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
         partition: runtime-context.ci-quality-adapter-native-scope-rejected
@@ -90,87 +92,165 @@ test_maps:
           - rejected-scope-no-commands
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > native Rust scope retains toolchain preparation and native command failure
-        partition: runtime-context.ci-quality-adapter-native-rust-valid
+        partition: quality-adapter-native-rust-execution-failed
         guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
-        partition: runtime-context.ci-quality-adapter-native-rust-valid
+        partition: quality-adapter-native-rust-execution-failed
         guarantees:
           - native-format-omitted
           - native-security-omitted
           - native-terminal-prerequisite-status
           - native-no-followup-after-failed-prerequisite
           - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > unconfigured dependency policy is recorded as not-run without changing the aggregate status
         partition: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
         guarantees:
           - unconfigured-dependency-policy-not-run
           - not-run-aggregate-unchanged
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > unconfigured dependency policy is recorded as not-run without changing the aggregate status
         partition: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
         guarantees:
           - unconfigured-dependency-policy-not-run
           - not-run-aggregate-unchanged
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > configured dependency policy runs cargo-deny with the declared configuration
         partition: runtime-context.ci-quality-adapter-dependency-policy-configured
         guarantees:
           - configured-dependency-policy-executed
           - configured-dependency-policy-explicit-config
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > configured dependency policy runs cargo-deny with the declared configuration
         partition: runtime-context.ci-quality-adapter-dependency-policy-configured
         guarantees:
           - configured-dependency-policy-executed
           - configured-dependency-policy-explicit-config
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > failed dependency policy retains only validated cargo-deny identifiers
         partition: runtime-context.ci-quality-adapter-dependency-policy-violation
         guarantees:
           - dependency-policy-violation-failed
+          - dependency-policy-violation-diagnostics-filtered
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > failed dependency policy retains only validated cargo-deny identifiers
         partition: runtime-context.ci-quality-adapter-dependency-policy-violation
         guarantees:
           - dependency-policy-violation-failed
+          - dependency-policy-violation-diagnostics-filtered
+          - status-result-consistent
+          - standard-descriptor-independent
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > dependency policy rejects an unusable configuration before commands
         partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         guarantees:
+          - diagnostic-failure-stage-outputs
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects an unusable configuration before commands
         partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         guarantees:
+          - diagnostic-failure-stage-outputs
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: source entrypoint > dependency policy rejects incomplete inputs before commands
         partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         guarantees:
+          - diagnostic-failure-stage-outputs
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
         symbol: dist entrypoint > dependency policy rejects incomplete inputs before commands
         partition: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
         guarantees:
+          - diagnostic-failure-stage-outputs
           - quality-adapter-failure-propagated
           - rejected-scope-no-commands
-    pending:
-      - partition: runtime-context.quality-adapter-toolchain-version-report-rejected
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint publishes the toolchain version mismatch code without child output
+        partition: runtime-context.quality-adapter-toolchain-version-report-rejected
         guarantees:
           - quality-adapter-toolchain-version-diagnostic-present
-        reason: entrypoint は command の stdout と stderr を公開結果とログで protected-child-output に置き換えるため、quality-adapter-toolchain-version-mismatch の診断コードを Action の出力・結果ファイル・失敗診断から観測できない。
-      - partition: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint publishes the toolchain version mismatch code without child output
+        partition: runtime-context.quality-adapter-toolchain-version-report-rejected
         guarantees:
-          - standard-source-path-validated
-          - standard-content-digest-checked
-        reason: 組み込みの standard bundle は Action の外部入力から差し替えられず、entrypoint の結果にも照合した source path と内容 digest が出ないため、受け入れた binding を契約対象で観測できない。
+          - quality-adapter-toolchain-version-diagnostic-present
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > native Rust scope retains toolchain preparation and native command failure
+        partition: quality-adapter-native-rust-version-rejected
+        guarantees:
+          - native-format-omitted
+          - native-security-omitted
+          - native-terminal-prerequisite-status
+          - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs
+          - quality-adapter-toolchain-version-diagnostic-present
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
+        partition: quality-adapter-native-rust-version-rejected
+        guarantees:
+          - native-format-omitted
+          - native-security-omitted
+          - native-terminal-prerequisite-status
+          - native-no-followup-after-failed-prerequisite
+          - native-dependency-policy-omitted
+          - status-result-consistent
+          - standard-descriptor-independent
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs
+          - quality-adapter-toolchain-version-diagnostic-present
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > native Rust scope retains toolchain preparation and native command failure
+        partition: quality-adapter-action-output-write-failed
+        guarantees:
+          - diagnostic-failure-stage-outputs
+          - quality-adapter-failure-propagated
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > native Rust scope retains toolchain preparation and native command failure
+        partition: quality-adapter-action-output-write-failed
+        guarantees:
+          - diagnostic-failure-stage-outputs
+          - quality-adapter-failure-propagated
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint reports failure when the result JSON cannot be saved
+        partition: quality-adapter-result-write-failed
+        guarantees:
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint reports failure when the result JSON cannot be saved
+        partition: quality-adapter-result-write-failed
+        guarantees:
+          - quality-adapter-failure-propagated
+          - diagnostic-failure-stage-outputs

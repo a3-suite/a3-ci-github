@@ -11,6 +11,10 @@ contracts:
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: audit-mode
         meaning: "Received by the contract target: audit mode selected by the request."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer project root to inspect."
+      - name: skill-collection-root
+        meaning: "Received by the contract target: external skill collection root supplied for resolving registered sources."
       - name: output
         meaning: "Received by the contract target: output path requested by the caller."
       - name: selected-pending-action
@@ -29,68 +33,60 @@ contracts:
         meaning: "Precondition prepared by the case: preset assets applied to the consumer project."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
-      - id: runtime-context.preset-assurance-roots-missing
-        summary: The invocation meets the shared runtime context `runtime-context.preset-assurance-roots-missing`.
-      - id: runtime-context.preset-assurance-read-only-output-requested
-        summary: The invocation meets the shared runtime context `runtime-context.preset-assurance-read-only-output-requested`.
-      - id: selected-action-unavailable
-        summary: The selected release-publication preset depends on an Action that is pending release.
-      - id: supplemental-phase-drift
-        summary: An applied supplemental phase combines owner-adapter ownership with an installer configuration path.
-      - id: retired-release-entrypoints-present
-        summary: The release-publication preset still exposes or invokes a retired release entrypoint.
+        summary: The invocation arguments are accepted, but setup or runtime failure prevents a preflight report.
+      - id: preset-assurance-invalid-invocation
+        summary: The read-only command rejects invalid invocation arguments, including a missing explicit repository root or a forbidden output destination.
       - id: ci-preset-assurance-applied-preset-valid
         summary: The selected applied preset agrees with its canonical source in a read-only audit.
       - id: ci-preset-assurance-applied-preset-drifted
-        summary: An applied preset differs from its canonical source.
+        summary: Inspection completes and finds a missing setting, an unavailable dependency or a mismatch in the applied configuration.
     guarantees:
       - id: ci-preset-assurance-explicit-roots-required
         applies_to:
-          - runtime-context.preset-assurance-roots-missing
-          - runtime-context.preset-assurance-read-only-output-requested
+          - preset-assurance-invalid-invocation
         boundary: boundary.cli-result
-        statement: "`reason` is present. Stable machine-readable rejection reason."
+        statement: "The CLI reports `outcome: cannot-start` and `reason: invalid-input`."
       - id: unavailable-action-reported
         applies_to:
-          - selected-action-unavailable
+          - ci-preset-assurance-applied-preset-drifted
         boundary: boundary.cli-result
         statement: '`unavailable-action-state` is one of `"reported"`. Whether missingSettings names the selected Action whose release is pending; reported or not-reported.'
       - id: supplemental-phase-drift-reported
         applies_to:
-          - supplemental-phase-drift
+          - ci-preset-assurance-applied-preset-drifted
         boundary: boundary.cli-result
         statement: '`supplemental-phase-drift-state` is one of `"reported"`. Whether mismatches names the supplemental phase drift; reported or not-reported.'
       - id: retired-release-entrypoint-reported
         applies_to:
-          - retired-release-entrypoints-present
+          - ci-preset-assurance-applied-preset-drifted
         boundary: boundary.cli-result
         statement: '`retired-release-entrypoint-state` is one of `"reported"`. Whether mismatches names the retired release entrypoint; reported or not-reported.'
       - id: ci-preset-assurance-valid-preset-succeeds
         applies_to:
           - ci-preset-assurance-applied-preset-valid
         boundary: boundary.cli-result
-        statement: '`status` is one of `"success"`. Success or failed provider preflight status.'
+        statement: '`status` is one of `"success"`. Provider preflight status.'
       - id: ci-preset-assurance-valid-evidence-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
         boundary: boundary.cli-result
-        statement: "`evidence-entry-count` is at least `1`. Number of entries that evidence holds for the inspected workflows and assets. Observable fields at this boundary also include `outcome` (Bootstrap outcome when assurance cannot start), `message` (Actionable explanation of the rejected invocation), `inspectedPresets` (Applied presets included in the preflight decision)."
+        statement: "`evidence-entry-count` is at least `1`. The report includes evidence for inspected workflows and assets and names the evaluated presets in `inspectedPresets`."
       - id: ci-preset-assurance-semantic-review-state-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
         boundary: boundary.cli-result
-        statement: "`semanticReviewRequired` is present. Whether evidence outside provider preflight still requires semantic review."
+        statement: "`semanticReviewRequired` is true. Provider preflight leaves semantic review to the caller."
       - id: ci-preset-assurance-drift-fails
         applies_to:
           - ci-preset-assurance-applied-preset-drifted
         boundary: boundary.cli-result
-        statement: '`status` is one of `"failed"`. Success or failed provider preflight status.'
+        statement: '`status` is one of `"failed"`. Provider preflight status.'
       - id: diagnostic-failure-stage-verification
         applies_to:
           - runtime-context.failure-diagnostic-required
+          - preset-assurance-invalid-invocation
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: valid-consumer-unchanged
         applies_to:
           - ci-preset-assurance-applied-preset-valid
@@ -109,6 +105,10 @@ contracts:
     inputs:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer project root whose applied assets the lock records."
+      - name: skill-collection-root
+        meaning: "Received by the contract target: external skill collection root supplied for resolving registered sources."
       - name: source-revision
         meaning: "Received by the contract target: source revision identifier."
       - name: release-tag
@@ -116,46 +116,43 @@ contracts:
       - name: distribution-release
         meaning: "Precondition prepared by the case: Release tag named by the fetched distribution manifest beside the generator."
       - name: preset
-        meaning: "Received by the contract target: preset identifier selected for validation."
+        meaning: "Precondition prepared by the case: applied preset identified from the consumer project during lock generation."
       - name: consumer-assets
         meaning: "Precondition prepared by the case: CI assets present in the consumer project."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
-      - id: ci-preset-assurance-lock-input-valid
-        summary: The lock request supplies a full source revision and a valid release tag.
+        summary: The lock request is rejected for an argument, distribution binding, preset or file error outside the invalid revision or tag condition.
       - id: ci-preset-assurance-lock-input-invalid
-        summary: The lock request supplies a source revision that is not a full commit SHA.
+        summary: The lock request has a missing or malformed exact release tag or a noncanonical source revision.
       - id: runtime-context.ci-preset-assurance-canonical-lock-input
         summary: The invocation meets the shared runtime context `runtime-context.ci-preset-assurance-canonical-lock-input`.
     guarantees:
       - id: ci-preset-assurance-lock-source-bound
         applies_to:
-          - ci-preset-assurance-lock-input-valid
           - runtime-context.ci-preset-assurance-canonical-lock-input
         boundary: boundary.project-ci-assets
         statement: "`sourceRevision` equals the invocation input `source-revision`. Full immutable distribution commit SHA. Observable fields at this boundary also include `generatedAt` (Minute-normalized observation timestamp of the generated lock)."
       - id: ci-preset-assurance-lock-release-bound
         applies_to:
-          - ci-preset-assurance-lock-input-valid
           - runtime-context.ci-preset-assurance-canonical-lock-input
         boundary: boundary.project-ci-assets
         statement: "`releaseTag` equals the invocation input `release-tag`. Exact vX.Y.Z Release tag of the distribution that generated the lock."
       - id: ci-preset-assurance-lock-assets-cover-managed-paths
         applies_to:
-          - ci-preset-assurance-lock-input-valid
+          - runtime-context.ci-preset-assurance-canonical-lock-input
         boundary: boundary.project-ci-assets
         statement: '`asset-path-coverage` is one of `"equal"`. Comparison of the set of lock asset paths with the managed asset destinations and the pin companion path.'
       - id: ci-preset-assurance-invalid-revision-rejected
         applies_to:
           - ci-preset-assurance-lock-input-invalid
         boundary: boundary.script-result
-        statement: "`diagnostic` is present. Stable reason that prevents an invalid lock from being written."
+        statement: "The generator fails with a diagnostic for the invalid revision or release tag and does not write a lock."
       - id: diagnostic-failure-stage-asset-lock
         applies_to:
           - runtime-context.failure-diagnostic-required
+          - ci-preset-assurance-lock-input-invalid
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: lock-canonical-digests-match
         applies_to:
           - runtime-context.ci-preset-assurance-canonical-lock-input

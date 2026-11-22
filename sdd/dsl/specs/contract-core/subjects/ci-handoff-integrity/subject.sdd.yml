@@ -21,20 +21,18 @@ contracts:
         meaning: "Received by the contract target: target identity bound to the handoff."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: Required inputs are absent or invalid, the handoff fails its identity or integrity checks, or writing an Action output fails.
       - id: handoff-input-present
-        summary: The handoff directory contains a valid descriptor, manifest and artifact matching the requested source, version and target.
-      - id: runtime-context.action-input-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+        summary: The supplied handoff satisfies the requested source, version, and target identities, its descriptor, manifest, and artifacts pass integrity checks, and all Action outputs can be written.
     guarantees:
       - id: handoff-status-succeeded
         applies_to:
           - handoff-input-present
         boundary: boundary.action-output
-        statement: '`status` is one of `"success"`. Whether handoff validation succeeded. Observable fields at this boundary also include `descriptor` (Validated descriptor path relative to the handoff root), `manifest` (Validated manifest path relative to the handoff root), `manifest-digest` (SHA-256 digest of manifest bytes), `entries` (Number of validated manifest entries).'
+        statement: '`status` is `"success"`. The `descriptor` and `manifest` outputs identify the validated files relative to the handoff root. `manifest-digest` equals the SHA-256 digest of the validated manifest bytes, and `entries` equals the number of validated manifest entries.'
       - id: handoff-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
+          - runtime-context.failure-diagnostic-required
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected handoff validation step.'
       - id: diagnostic-failure-stage-outputs

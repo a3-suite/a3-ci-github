@@ -4,14 +4,15 @@ import crypto from 'node:crypto';
 import { describe, test, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from '../../../runtime/release-publication/tests/fixtures.mjs';
+import { loadAssembly } from '../../../runtime/release-publication/observation.js';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = entrypointArgs;
-const environment = (options: Record<string, string>, output: string): NodeJS.ProcessEnv => ({
-  ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
+const environment = (options: Record<string, string>, output: string, inherited = process.env): NodeJS.ProcessEnv => ({
+  ...inherited, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
   INPUT_REPOSITORY: options.repository, 'INPUT_AUTHORITY-PATH': options.authorityPath,
   'INPUT_SNAPSHOT-PATH': options.snapshotPath, 'INPUT_PLATFORM-MANIFEST-PATH': options.platformManifestPath ?? '',
   'INPUT_PLATFORM-MATRIX': options.platformMatrix ?? '', 'INPUT_BUILD-ROOT': options.buildRoot ?? '',
@@ -87,12 +88,15 @@ test('assembly bundle emits bound outputs only on complete success', (t) => {
     { name: 'project-1.0.0-linux.tar.gz.sha256', sha256: crypto.createHash('sha256').update(checksum).digest('hex'), size: checksum.length },
   ];
   const digest = crypto.createHash('sha256').update(JSON.stringify(assets)).digest('hex');
-  const result = spawnSync(process.execPath, [...bundle], { env: { ...environment(f.options, output), PATH: path.join(f.root, 'no-cli') }, encoding: 'utf8', cwd: f.root });
+  const { SystemRoot, TEMP, TMP, TMPDIR } = process.env;
+  const env = environment(f.options, output, { SystemRoot, TEMP, TMP, TMPDIR, PATH: path.join(f.root, 'no-cli') });
+  const result = spawnSync(process.execPath, [...bundle], { env, encoding: 'utf8', cwd: f.root });
   expect(result.status, result.stderr).toBe(0);
   expect(fs.readFileSync(output, 'utf8')).toBe(`status=success\nrelease-handoff=${f.options.outputRoot}\nasset-digest=${digest}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets).toStrictEqual(assets);
   expect(assembly.asset_digest).toBe(digest);
+  expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.asset_digest).toBe(digest);
   expect(assembly.identity.source_sha).toBe(f.identity.source_sha);
   const assetsDirectory = path.join(f.options.outputRoot, 'assets');
   expect(fs.readdirSync(assetsDirectory).filter((name) => name.endsWith('.sha256'))).toStrictEqual(['project-1.0.0-linux.tar.gz.sha256']);
@@ -147,8 +151,14 @@ test('assembly bundle assembles an asset release without build inputs and fails 
   expect(outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets.map((asset: { name: string }) => asset.name)).toEqual(expect.arrayContaining(['project-skills.zip', 'instructions.zip']));
+  const expectedDigest = crypto.createHash('sha256').update(JSON.stringify(assembly.assets)).digest('hex');
+  expect(outputs).toContain(`asset-digest=${expectedDigest}\n`);
+  const reloaded = loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly;
+  expect(reloaded.asset_digest).toBe(expectedDigest);
+  expect(reloaded.identity.source_sha).toBe(f.identity.source_sha);
   expect(rejected.status).toBe(1);
   expect(rejected.stderr).toContain('asset-set-empty');
+  expect(rejected.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"[^"]+"/m);
   expect(fs.readFileSync(emptyOutput, 'utf8')).toBe('');
   expect(fs.existsSync(empty.options.outputRoot)).toBe(false);
 });
@@ -178,9 +188,17 @@ test('assembly bundle binds supplemental owner evidence into the handoff', (t) =
   expect(run.outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
   const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
   expect(assembly.assets.map((asset: { name: string }) => asset.name)).toEqual(expect.arrayContaining([f.name, 'instructions.zip']));
-  const evidence = fs.readdirSync(path.join(f.options.outputRoot, 'evidence'));
-  expect(evidence).toHaveLength(3);
-  expect(evidence.map((name) => fs.readFileSync(path.join(f.options.outputRoot, 'evidence', name), 'utf8'))).toContain('opaque owner record');
+  const evidenceDirectory = path.join(f.options.outputRoot, 'evidence');
+  const evidence = fs.readdirSync(evidenceDirectory);
+  const supplied = ['owner.json', 'provenance.json', 'verification.json'];
+  expect(evidence).toHaveLength(supplied.length);
+  for (const file of supplied) {
+    const retained = evidence.filter(name => name.endsWith(`-${file}`));
+    expect(retained, file).toHaveLength(1);
+    expect(fs.readFileSync(path.join(evidenceDirectory, retained[0]))).toEqual(
+      fs.readFileSync(path.join(f.options.supplementalRoot, file)),
+    );
+  }
 });
 
 // contract_id: contract.ci-release-assembly.outputs
@@ -209,20 +227,29 @@ test('assembly bundle rejects a checksum sidecar with a single-space separator',
 
 // contract_id: contract.ci-release-assembly.outputs
 // flow_id: release-assembly-entrypoint
-test('assembly bundle binds the LF platform manifest identity for a CRLF checkout', (t) => {
-  // Arrange
+test('assembly bundle preserves manifest identity across CRLF and mixed checkouts', (t) => {
+  for (const lineEndings of ['CRLF', 'mixed']) {
+    const f = fixture(t);
+    const lf = fs.readFileSync(f.options.platformManifestPath, 'utf8');
+    const manifest = lineEndings === 'CRLF' ? lf.replaceAll('\n', '\r\n') : lf.replace('\n', '\r\n');
+    fs.writeFileSync(f.options.platformManifestPath, manifest);
+    const run = runAssembly(f);
+    expect(run.result.status, run.result.stderr).toBe(0);
+    expect(run.outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
+    expect(run.outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
+    const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
+    expect(assembly.identity).toStrictEqual(f.identity);
+    expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(true);
+  }
+});
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint-rejection
+test('assembly bundle rejects platform manifest edits beyond line endings', (t) => {
   const f = fixture(t);
   const lf = fs.readFileSync(f.options.platformManifestPath, 'utf8');
-  fs.writeFileSync(f.options.platformManifestPath, lf.replaceAll('\n', '\r\n'));
-  // Act
-  const run = runAssembly(f);
-  // Assert
-  expect(run.result.status, run.result.stderr).toBe(0);
-  expect(run.outputs).toMatch(/^asset-digest=[0-9a-f]{64}$/m);
-  expect(run.outputs).toContain(`release-handoff=${f.options.outputRoot}\n`);
-  const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
-  expect(assembly.identity).toStrictEqual(f.identity);
-  expect(fs.existsSync(path.join(f.options.outputRoot, 'handoff.json'))).toBe(true);
+  fs.writeFileSync(f.options.platformManifestPath, `${lf}\n# content changed\n`.replaceAll('\n', '\r\n'));
+  expectAssemblyRejected(f, runAssembly(f), /platform-mismatch/);
 });
 
 // contract_id: contract.ci-release-assembly.outputs
@@ -234,6 +261,16 @@ test('assembly bundle rejects a selected skill without its required SKILL.md', (
   const run = runAssembly(f);
   // Assert
   expectAssemblyRejected(f, run, /skills-required-file-missing/);
+});
+
+test('assembly retains the verified handoff when the Action output write fails', (t) => {
+  const f = fixture(t);
+  const result = spawnSync(process.execPath, [...bundle], {
+    env: environment(f.options, f.root), encoding: 'utf8', cwd: f.root,
+  });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('"stage":"output-write"');
+  expect(loadAssembly({ ...f.options, handoffRoot: f.options.outputRoot }).assembly.identity).toStrictEqual(f.identity);
 });
 
 });

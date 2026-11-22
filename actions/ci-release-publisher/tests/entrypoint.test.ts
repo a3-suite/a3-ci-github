@@ -98,8 +98,10 @@ globalThis.fetch = async (url, init) => {
   expect(evidence['execution-state'].write).toBe('draft-created-assets-may-be-partial');
   expect(evidence['execution-state'].rollback).toBe('unavailable');
   const failedWrites = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { method: string; endpoint: string });
-  expect(failedWrites.filter(entry => entry.endpoint.endsWith('/releases'))).toHaveLength(1);
-  expect(failedWrites.some(entry => entry.method === 'PATCH')).toBe(false);
+  expect(failedWrites).toStrictEqual([
+    { method: 'POST', endpoint: '/repos/owner/project/releases' },
+    { method: 'POST', endpoint: '/repos/owner/project/releases/42/assets' },
+  ]);
   });
   }
 

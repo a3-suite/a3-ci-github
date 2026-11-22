@@ -5,24 +5,16 @@ test_maps:
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        partition: runtime-context.failure-diagnostic-required
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        partition: runtime-context.failure-diagnostic-required
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
         partition: runtime-context.release-publisher-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - rejected
           - no-success-outputs
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
         partition: runtime-context.release-publisher-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - rejected
           - no-success-outputs
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
@@ -41,6 +33,7 @@ test_maps:
         symbol: source entrypoint > publisher entrypoint creates once by immutable ID and leaves acceptance to the create response
         partition: runtime-context.release-publisher-valid
         guarantees:
+          - publication-delete
           - receipt-file
           - readback-file
           - publication-created-id-binding
@@ -48,6 +41,7 @@ test_maps:
         symbol: dist entrypoint > publisher entrypoint creates once by immutable ID and leaves acceptance to the create response
         partition: runtime-context.release-publisher-valid
         guarantees:
+          - publication-delete
           - receipt-file
           - readback-file
           - publication-created-id-binding
@@ -63,14 +57,14 @@ test_maps:
           - receipt-file
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint rejects a handoff asset changed during final absence observation before create
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a handoff asset changed during final absence observation before create
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
@@ -139,69 +133,71 @@ test_maps:
           - no-success-outputs
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint rejects an expired approval before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects an expired approval before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint rejects a tampered handoff asset before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a tampered handoff asset before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint rejects a moved tag source before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint rejects a moved tag source before writes
-        partition: rejected-before-write
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
           - publication-write-on-rejection
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint stops after an uncertain upload without retry, recovery or delete
-        partition: runtime-context.release-publisher-invalid
+        partition: publication-operation-failed
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-delete
+          - diagnostic-failure-stage-outputs
           - publication-created-id-binding
           - publication-write-retry
           - publication-recovery-write
-          - publication-delete
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint stops after an uncertain upload without retry, recovery or delete
-        partition: runtime-context.release-publisher-invalid
+        partition: publication-operation-failed
         guarantees:
           - rejected
           - no-success-outputs
+          - publication-delete
+          - diagnostic-failure-stage-outputs
           - publication-created-id-binding
           - publication-write-retry
           - publication-recovery-write
-          - publication-delete
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publisher failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
@@ -209,31 +205,24 @@ test_maps:
         partition: runtime-context.release-publisher-invalid
         guarantees:
           - publication-existing-release-write
+          - publication-delete
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: dist entrypoint > publisher entrypoint refuses to write over an existing same-tag published release
         partition: runtime-context.release-publisher-invalid
         guarantees:
           - publication-existing-release-write
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
           - publication-delete
-          - publication-existing-release-write
-          - publication-created-id-binding
-        reason: この区分の既存テストは、列挙した保証に対応する provider write の条件と結果を直接検証していない。
-      - partition: runtime-context.release-publisher-valid
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher retains evidence when the Action output write fails
+        partition: publication-action-output-write-failed
         guarantees:
-          - publication-recovery-write
+          - rejected
+          - diagnostic-failure-stage-outputs
           - publication-delete
-          - publication-existing-release-write
-        reason: この区分の既存テストは、列挙した保証に対応する provider write の条件と結果を直接検証していない。
-      - partition: rejected-before-write
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher retains evidence when the Action output write fails
+        partition: publication-action-output-write-failed
         guarantees:
-          - publication-write-retry
-          - publication-recovery-write
+          - rejected
+          - diagnostic-failure-stage-outputs
           - publication-delete
-          - publication-existing-release-write
-          - publication-created-id-binding
-        reason: この区分の既存テストは、列挙した保証に対応する provider write の条件と結果を直接検証していない。

@@ -1,6 +1,6 @@
 import { describe, test, expect, onTestFinished, beforeAll, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
@@ -182,7 +182,15 @@ describe('contract.ci-selective-distribution.publication', () => {
     const checked = JSON.parse(executed.stdout);
     expect(checked.diagnostics).toEqual([]); expect(checked.connection.diagnostics).toEqual([]);
     expect(checked.implementationBindingStatus).toBe('verified');
-    expect(checked.implementationBinding.sourceRevision).not.toBe(f.implementation);
+    expect(checked.implementationBinding).toMatchObject({
+      implementationSourceRevision: f.implementation,
+      sourceRevision: f.git('rev-parse', 'refs/tags/v0.2.11^{commit}'),
+    });
+    expect(checked.implementationBinding.checkedObjects).toContainEqual({
+      path: 'runtime/payload.mjs',
+      implementationObject: f.git('rev-parse', `${f.implementation}:runtime/payload.mjs`),
+      sourceObject: f.git('rev-parse', 'refs/tags/v0.2.11:runtime/payload.mjs'),
+    });
     // Arrange
     const workflow = yaml.parse(readFileSync(path.join(root, '.github/workflows/release.yml'), 'utf8'));
     const gate = workflow.jobs['prepare-distribution'].steps.find((step) => step.id === 'provider-binding');
@@ -200,6 +208,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     // Assert
     expect(rejectedGate.error).toBeUndefined();
     expect(rejectedGate.status).not.toBe(0);
+    expect(rejectedGate.stderr).toContain('implementation-publication-source-dirty');
   });
 
   // evidence_role: supplemental
@@ -322,7 +331,12 @@ describe('contract.ci-selective-distribution.publication', () => {
     const missingObject = failure(() => updateReferences(f.directory, 'f'.repeat(40)));
     const unrelatedObject = failure(() => updateReferences(f.directory, unrelated));
     // Assert
-    expect(missingArgument).toMatch(/"reason":"action-reference-sha-invalid"/); expect(missingObject).toBeDefined(); expect(unrelatedObject).toMatch(/unreachable/);
+    expect(missingArgument).toMatch(/^ci-failure-diagnostic:.*"classification":\{[^}]*"stage":"input-validation"/m);
+    expect(missingArgument).toMatch(/"reason":"action-reference-sha-invalid"/);
+    expect(missingObject).toMatch(/"stage":"implementation-binding"/);
+    expect(missingObject).toMatch(/implementation-binding-commit-required/);
+    expect(unrelatedObject).toMatch(/"stage":"implementation-binding"/);
+    expect(unrelatedObject).toMatch(/implementation-source-unreachable/);
     expect(readFileSync(path.join(f.directory, registryPath), 'utf8')).toBe(registryBefore);
   });
 
@@ -360,6 +374,7 @@ describe('contract.ci-selective-distribution.publication', () => {
     const redirected = failure(() => updateReferences(f.directory, f.implementation));
     // Assert
     expect(redirected).toMatch(/"reason":"action-reference-symlink-rejected"/);
+    expect(readlinkSync(path.join(f.directory, registryPath))).toBe(path.join(f.directory, 'registry-copy.yml'));
     expect(readFileSync(path.join(f.directory, 'registry-copy.yml'), 'utf8')).toBe(registryBefore);
   });
 
@@ -389,7 +404,15 @@ describe('contract.ci-selective-distribution.publication', () => {
       const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
       // Assert
       expect(result.status).toBe(1); expect(JSON.parse(result.stdout).implementationBindingStatus).toBe('rejected');
+      expect(result.stderr).toMatch(/"stage":"repository-binding"/);
     }
+  });
+
+  test('provider reference check identifies invalid arguments before repository binding', () => {
+    const f = fixture();
+    const result = runScript('check-provider-references.mjs', f.directory, ['--unbound-option']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toMatch(/"stage":"input-validation","reason":"provider-reference-arguments-invalid"/);
   });
 
   test('single Release cannot validate an unexecutable fixed bundle or bypass execution checks', () => {
@@ -441,5 +464,6 @@ describe('contract.ci-selective-distribution.publication', () => {
     const result = spawnSync(process.execPath, [path.join(root, 'runtime/repository/check-provider-references.mjs'), '--contracts', '--release-tag', 'v0.2.11'], { cwd: f.directory, encoding: 'utf8', timeout: spawnTimeoutMs });
     // Assert
     expect(result.status).toBe(1); expect(JSON.parse(result.stdout).implementationBindingStatus).toBe('rejected');
+    expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"classification":\{[^}]*"stage":"repository-binding"/m);
   });
 });

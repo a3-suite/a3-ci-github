@@ -277,10 +277,13 @@ describe("repository-release-alias-update", () => {
     expect(first.status, first.stderr).toBe(0);
     for (const alias of ['v1', 'v1.2']) expect(remoteTagSource(work, alias)).toBe(sourceSha);
     expect(remoteTagObject(work, 'v1.2.3')).toBe(exactTag);
+    const aliasObjects = ['v1', 'v1.2'].map(alias => remoteTagObject(work, alias));
 
     const second = updateAliases(work, 'v1.2.3', sourceSha);
     expect(second.status, second.stderr).toBe(0);
     expect(second.stdout).toMatch(/already points|already at least as new/);
+    expect(['v1', 'v1.2'].map(alias => remoteTagObject(work, alias))).toStrictEqual(aliasObjects);
+    expect(remoteTagObject(work, 'v1.2.3')).toBe(exactTag);
   });
 
   // evidence_role: supplemental
@@ -325,6 +328,7 @@ describe("repository-release-alias-update", () => {
     const missingResult = updateAliases(missing.work, 'v1.2.3', missingSha);
     expect(missingResult.status).toBe(1);
     expect(missingResult.stderr).toMatch(/must contain VERSION/);
+    expect(missingResult.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"release-version"/m);
     expect(remoteTagObject(missing.work, 'v1')).toBe('');
     expect(remoteTagObject(missing.work, 'v1.2')).toBe('');
 
@@ -355,6 +359,7 @@ describe("repository-release-alias-update", () => {
     const mismatch = updateAliases(work, 'v1.2.3', sourceSha);
     expect(mismatch.status).toBe(1);
     expect(mismatch.stderr).toMatch(/does not match repository VERSION/);
+    expect(mismatch.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"release-version"/m);
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');
 

@@ -3,6 +3,11 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-quality-workflow.execution
     tests:
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
+        partition: ci-quality-workflow-caller-selected
+        guarantees:
+          - quality-caller-required-result-rejected
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality caller preserves the summary check without copying quality jobs
         partition: ci-quality-workflow-caller-selected
@@ -27,6 +32,7 @@ test_maps:
         symbol: workflow-contracts > quality-workflow-contract > quality workflow declares trusted execution and aggregate summary
         partition: ci-quality-workflow-canonical-source-available
         guarantees:
+          - quality-change-scope-gates-adapter
           - quality-source-before-adapter
           - quality-fork-pull-request-untrusted
           - quality-pull-request-trusted-assets-from-base
@@ -37,14 +43,9 @@ test_maps:
         guarantees:
           - quality-untrusted-cargo-cache-absent
           - quality-cargo-cache-save-default-branch-push-only
-      - path: tests/workflow-contracts.process.test.mjs
-        symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
-        partition: ci-quality-workflow-failure-route-required
-        guarantees:
-          - ci-quality-workflow-failure-observed
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality workflow keeps failed or missing checks visible
-        partition: ci-quality-workflow-failure-route-required
+        partition: ci-quality-workflow-canonical-source-available
         guarantees:
           - ci-quality-workflow-failure-observed
           - quality-failure-summary-always

@@ -52,7 +52,7 @@ test_maps:
           - release-assembly-source-credentials-removed
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
-        partition: ci-release-publication-workflow-failure-route-required
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-failed-prerequisite-blocks
       - path: tests/workflow-failure-diagnostics.test.mjs
@@ -75,7 +75,7 @@ test_maps:
           - asset-publication-selection-before-authority
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication blocks on every unsuccessful prerequisite
-        partition: ci-asset-release-publication-workflow-failure-route-required
+        partition: ci-asset-release-publication-workflow-canonical-source-available
         guarantees:
           - asset-publication-failed-prerequisite-blocks
       - path: tests/workflow-failure-diagnostics.test.mjs

@@ -22,4 +22,4 @@ command:
         - repo-root
         - transaction
   usage:
-    - node runtime/distribution/fetch-a3-ci-github.mjs rollback [options]
+    - node runtime/distribution/fetch-a3-ci-github.mjs rollback --transaction <ID> [--repo-root <PATH>]

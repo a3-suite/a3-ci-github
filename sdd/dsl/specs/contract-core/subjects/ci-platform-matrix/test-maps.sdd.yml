@@ -82,3 +82,63 @@ test_maps:
           - quality-runner-binding
           - expected-id-set
           - shared-checks-value
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint preserves bootstrap and invalid policy boundaries
+        partition: runtime-context.platform-manifest-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint preserves bootstrap and invalid policy boundaries
+        partition: runtime-context.platform-manifest-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects an oversized manifest before parsing
+        partition: runtime-context.platform-manifest-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects an oversized manifest before parsing
+        partition: runtime-context.platform-manifest-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs
+        partition: runtime-context.quality-platform-selection-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+          - invalid-selection-has-no-quality-matrix
+          - invalid-selection-has-no-expected-platforms
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects malformed shared checks and unknown selection fields without outputs
+        partition: runtime-context.quality-platform-selection-invalid
+        guarantees:
+          - invalid-platform-manifest-fails
+          - invalid-platform-manifest-has-no-output
+          - invalid-selection-has-no-quality-matrix
+          - invalid-selection-has-no-expected-platforms
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses failure to write matrix outputs
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses failure to write matrix outputs
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint accepts consumer versioned runners only with trusted policy
+        partition: runtime-context.platform-manifest-valid
+        guarantees:
+          - manifest-matrix-binding
+      - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint accepts consumer versioned runners only with trusted policy
+        partition: runtime-context.platform-manifest-valid
+        guarantees:
+          - manifest-matrix-binding

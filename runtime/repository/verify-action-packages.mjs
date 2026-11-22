@@ -117,7 +117,10 @@ export const sharedRuntimeVerificationPlan = (root, nodePath = process.execPath)
   const installerTest = path.join(root, 'runtime/installer/tests/common-regression.test.mjs');
   if (!existsSync(installerTest)) throw new Error('shared installer verification dependencies are missing');
   const processTests = globSync(['tests/*.process.test.mjs', 'runtime/*/tests/*.process.test.mjs',
-    'actions/*/tests/composite-execution.test.mjs'], { cwd: root }).sort().map((file) => path.join(root, file));
+    'actions/*/tests/composite-execution.test.mjs'], { cwd: root })
+    // The Windows Rust release job owns this PowerShell-only file.
+    .filter((file) => file.split(path.sep).join('/') !== 'runtime/release-publication/tests/assembly.process.test.mjs')
+    .sort().map((file) => path.join(root, file));
   return [...(processTests.length ? [{
     command: nodePath,
     args: [path.join(root, 'node_modules/vitest/vitest.mjs'), 'run', '--config', path.join(root, 'vitest.config.mjs'), ...processTests],

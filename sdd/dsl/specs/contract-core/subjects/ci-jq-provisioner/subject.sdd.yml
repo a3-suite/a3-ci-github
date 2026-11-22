@@ -28,12 +28,10 @@ contracts:
       - name: path-update
         meaning: "Precondition prepared by the case: outcome of updating the runner command path."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.jq-release-asset-valid
-        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-valid`.
+        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-valid`, with all required runner paths present and file operations permitted.
       - id: runtime-context.jq-release-asset-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-invalid`.
+        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-invalid`, or a required runner path is absent or the PATH handoff write fails.
     guarantees:
       - id: checked-jq-available
         applies_to:
@@ -52,9 +50,9 @@ contracts:
         statement: '`path-handoff-state` is one of `"absent"`. Occurrence state (present or absent) of an entry written by the invocation to the runner path handoff file (GITHUB_PATH).'
       - id: diagnostic-failure-stage-provision
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.jq-release-asset-invalid
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-jq-provisioner

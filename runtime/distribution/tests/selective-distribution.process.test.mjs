@@ -8,6 +8,60 @@ import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection,
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
 import { cliFetch, cliRollback, cliVerify, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
 
+describe('contract.ci-selective-distribution.verification', () => {
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify rejects missing or malformed cache metadata without changing the consumer tree', async () => {
+    await withFixture('distribution-verify-metadata-', (root) => {
+      const release = prepareRelease(root);
+      const projectRoot = path.join(root, 'consumer');
+      fs.mkdirSync(projectRoot);
+      const verify = () => cliVerify({ projectRoot, sourceRevision });
+      const empty = snapshotTree(projectRoot);
+      expect(verify).toThrow(/^distribution-local-manifest-missing$/);
+      expect(snapshotTree(projectRoot)).toStrictEqual(empty);
+
+      const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath,
+        requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+      for (const name of ['manifest', 'receipt']) {
+        const metadataPath = path.join(fetched.distributionRoot, `${name}.json`);
+        const original = fs.readFileSync(metadataPath);
+        fs.writeFileSync(metadataPath, '{');
+        const malformed = snapshotTree(projectRoot);
+        expect(verify).toThrow(new RegExp(`^distribution-local-${name}-invalid$`));
+        expect(snapshotTree(projectRoot)).toStrictEqual(malformed);
+        fs.writeFileSync(metadataPath, original);
+      }
+    });
+  });
+
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify reports verified for a merged distribution', async () => {
+    await withFixture('distribution-verify-merged-', (root) => {
+      const release = prepareRelease(root);
+      const projectRoot = path.join(root, 'consumer');
+      fs.mkdirSync(projectRoot);
+      const options = { projectRoot, manifestPath: release.manifestPath, sourceRoot: committedSourceRoot };
+      cliFetch({ ...options, requestedPresets: ['release-request'] });
+      cliFetch({ ...options, requestedPresets: ['quality-gate'] });
+      cliFetch({ ...options, requestedPresets: ['quality-gate'], requestedAssets: ['runtime.adapter-materializer'] });
+
+      expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+    });
+  });
+
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify reports input validation for missing malformed and unbound arguments', () => {
+    const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+    for (const args of [[], ['--source-revision', 'invalid'], ['--manifest', 'unused']]) {
+      const result = spawnSync(process.execPath, [cli, 'verify', ...args], { encoding: 'utf8' });
+      expect(result.status, args.join(' ')).toBe(2);
+      expect(JSON.parse(result.stderr).failureEvidence.classification).toMatchObject({
+        operation: 'verify', stage: 'input-validation',
+      });
+    }
+  });
+});
+
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.release-generation
@@ -130,7 +184,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.release-generation
-    test('release generator binds every published byte to the exact source commit', async () => {
+    test('release generator hashes committed bytes when the working tree differs', async () => {
       await withFixture('a3-ci-github-distribution-release-binding-', (root) => {
         const sourcePath = 'workflows/quality/quality-gate.yml';
         const workingPath = path.join(committedSourceRoot, sourcePath);
@@ -161,6 +215,18 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.release-generation
+    test('release generator reports the argument validation stage when the output option is missing', () => {
+      const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
+      const result = spawnSync(tsx, [generator], { encoding: 'utf8' });
+      expect(result.status).toBe(2);
+      const prefix = 'ci-failure-diagnostic:';
+      const evidence = result.stderr.split('\n').find((line) => line.startsWith(prefix));
+      expect(JSON.parse(evidence.slice(prefix.length)).classification).toMatchObject({
+        operation: 'generate', stage: 'input-validation', reason: 'distribution-release-output-required',
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator rejects invalid version source and output boundaries', async () => {
       await withFixture('a3-ci-github-distribution-release-guards-', (root) => {
         const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
@@ -188,6 +254,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(versionMismatch.status).toBe(2);
         expect(versionMismatch.stderr).toMatch(/distribution-release-version-mismatch/);
+        expect(versionMismatch.stderr).toMatch(/^ci-failure-diagnostic:.*"classification":\{[^}]*"stage":"distribution-generation"/m);
         expect(fs.existsSync(path.join(root, 'version-mismatch'))).toBe(false);
         const headMismatch = execute([
           '--output-directory', path.join(root, 'head-mismatch'),
@@ -232,6 +299,19 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(linkedResult.status).toBe(2);
         expect(linkedResult.stderr).toContain('distribution-source-symlink');
         expect(fs.existsSync(linkedOutput)).toBe(false);
+
+        fs.unlinkSync(path.join(linkedSource, linkedAsset));
+        fs.unlinkSync(path.join(linkedSource, '.ci/release-skills.json'));
+        fixtureGit(['add', '-u']);
+        fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing skill declaration fixture']);
+        const missingDeclarationOutput = path.join(root, 'missing-declaration-output');
+        const missingDeclaration = spawnSync(tsx, [generator,
+          '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+          '--release-tag', releaseTag, '--output-directory', missingDeclarationOutput,
+        ], { encoding: 'utf8' });
+        expect(missingDeclaration.status).toBe(2);
+        expect(missingDeclaration.stderr).toContain('skills-declaration-invalid');
+        expect(fs.existsSync(missingDeclarationOutput)).toBe(false);
       });
     });
   });
@@ -569,35 +649,37 @@ describe("contract.ci-selective-distribution.delivery", () => {
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
-    test('fetched selections deliver only the files of their closures and the merged distribution stays verified', async () => {
+    test('fetched selections deliver only the files of their closures', async () => {
       await withFixture('a3-ci-github-distribution-closure-', async (root) => {
         const release = prepareRelease(root);
         const projectRoot = path.join(root, 'consumer');
         fs.mkdirSync(projectRoot);
         const fetch = (requestedPresets, requestedAssets = []) => cliFetch({ projectRoot, manifestPath: release.manifestPath,
           requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
-        const closure = (assets) => resolveDistributionSelection(release.manifest, ['release-request', 'quality-gate'], assets);
-        const undelivered = (distributionRoot, assets) => {
-          const closureFiles = new Set(closure(assets).flatMap((asset) => asset.files.map((file) => file.sourcePath)));
+        const closure = (presets, assets = []) => resolveDistributionSelection(release.manifest, presets, assets);
+        const deliveredPaths = (distributionRoot) => {
           return fs.readdirSync(distributionRoot, { recursive: true, withFileTypes: true })
-            .filter((entry) => entry.isFile())
+            .filter((entry) => !entry.isDirectory())
             .map((entry) => path.relative(distributionRoot, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
-            .filter((relative) => !['manifest.json', 'receipt.json'].includes(relative))
-            .filter((relative) => !closureFiles.has(relative));
+            .filter((relative) => !['manifest.json', 'receipt.json'].includes(relative));
         };
-        const missingAssets = (distributionRoot, assets) => closure(assets)
-          .filter((asset) => asset.files.some((file) => !fs.existsSync(path.join(distributionRoot, file.sourcePath)))).length;
-        fetch(['release-request']);
+        const expectClosure = (result, presets, assets) => {
+          const selected = closure(presets, assets);
+          const expectedPaths = new Set(selected.flatMap((asset) => asset.files.map((file) => file.sourcePath)));
+          expect(result.sourceRevision).toBe(release.manifest.sourceRevision);
+          expect(result.selectedAssets).toStrictEqual(selected.map((asset) => asset.id).sort());
+          expect(deliveredPaths(result.distributionRoot).sort()).toStrictEqual([...expectedPaths].sort());
+          for (const relative of expectedPaths) {
+            expect(fs.lstatSync(path.join(result.distributionRoot, relative)).isFile(), relative).toBe(true);
+          }
+        };
+        const first = fetch(['release-request']);
+        expectClosure(first, ['release-request']);
         const quality = fetch(['quality-gate']);
-        expect(quality.selectedAssets).toStrictEqual(closure([]).map((asset) => asset.id).sort());
-        expect(missingAssets(quality.distributionRoot, [])).toBe(0);
-        expect(undelivered(quality.distributionRoot, [])).toStrictEqual([]);
-        expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+        expectClosure(quality, ['release-request', 'quality-gate']);
         const merged = fetch(['quality-gate'], ['runtime.adapter-materializer']);
         expect(merged.action).toBe('merged');
-        expect(missingAssets(merged.distributionRoot, ['runtime.adapter-materializer'])).toBe(0);
-        expect(undelivered(merged.distributionRoot, ['runtime.adapter-materializer'])).toStrictEqual([]);
-        expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+        expectClosure(merged, ['release-request', 'quality-gate'], ['runtime.adapter-materializer']);
       });
     });
 

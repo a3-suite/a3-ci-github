@@ -4,27 +4,120 @@ test_maps:
   - contract_id: contract.ci-annotated-tag-resolver.outputs
     tests:
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint resolves an annotated tag to its commit
+        symbol: source entrypoint > entrypoint resolves an annotated tag and diagnoses output write failure
         partition: runtime-context.annotated-tag-resolution-valid
         guarantees:
           - tag-resolution-outputs-produced
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint resolves an annotated tag to its commit
+        symbol: dist entrypoint > entrypoint resolves an annotated tag and diagnoses output write failure
         partition: runtime-context.annotated-tag-resolution-valid
         guarantees:
           - tag-resolution-outputs-produced
       - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint fails when the token is missing
-        partition: runtime-context.action-input-invalid
-        guarantees:
-          - tag-resolution-failure-propagated
-      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint fails when the token is missing
-        partition: runtime-context.action-input-invalid
-        guarantees:
-          - tag-resolution-failure-propagated
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values
+        symbol: source entrypoint > entrypoint resolves an annotated tag and diagnoses output write failure
         partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint resolves an annotated tag and diagnoses output write failure
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails when the token is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails when the token is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses provider rejection
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses provider rejection
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses lightweight tag
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses lightweight tag
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails when the repository is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails when the repository is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails when the tag is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails when the tag is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses invalid tag SHA
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses invalid tag SHA
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails when the repository is malformed
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails when the repository is malformed
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses non-commit target
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-annotated-tag-resolver/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses non-commit target
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - tag-resolution-failure-propagated
           - diagnostic-failure-stage-outputs

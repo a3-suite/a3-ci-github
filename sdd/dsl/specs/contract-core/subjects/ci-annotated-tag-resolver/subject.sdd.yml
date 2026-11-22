@@ -17,20 +17,18 @@ contracts:
         meaning: "Received by the contract target: token passed to the Action."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: A required Action input is absent or invalid, the provider cannot resolve the requested annotated tag and commit with canonical SHAs, or writing an Action output fails.
       - id: runtime-context.annotated-tag-resolution-valid
-        summary: The invocation meets the shared runtime context `runtime-context.annotated-tag-resolution-valid`.
-      - id: runtime-context.action-input-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+        summary: The invocation meets the shared runtime context `runtime-context.annotated-tag-resolution-valid` and can write all Action outputs.
     guarantees:
       - id: tag-resolution-outputs-produced
         applies_to:
           - runtime-context.annotated-tag-resolution-valid
         boundary: boundary.action-output
-        statement: "`source-sha` is present. SHA of the commit referenced by the tag. Observable fields at this boundary also include `tag-object-sha` (SHA of the annotated tag object), `tag-object-type` (Git object type)."
+        statement: "`source-sha` equals the commit SHA referenced by the annotated tag. `tag-object-sha` equals the Git object SHA referenced by the requested tag ref, and `tag-object-type` is `tag`."
       - id: tag-resolution-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
+          - runtime-context.failure-diagnostic-required
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected tag resolution step.'
       - id: diagnostic-failure-stage-outputs

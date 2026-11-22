@@ -4,6 +4,20 @@ test_maps:
   - contract_id: contract.ci-gh-provisioner.provision
     tests:
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action preserves existing PATH entries when final handoff fails
+        partition: runtime-context.gh-release-asset-invalid
+        guarantees:
+          - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
+          - failed-provisioning-no-path-handoff
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action preserves existing PATH entries when final handoff fails
+        partition: runtime-context.gh-release-asset-invalid
+        guarantees:
+          - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
+          - failed-provisioning-no-path-handoff
+      - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action installs the checksummed Linux/ARM64 asset and exports its directory
         partition: runtime-context.gh-release-asset-valid
         guarantees:
@@ -28,99 +42,115 @@ test_maps:
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects a checksum mismatch without exposing a binary
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action rejects an invalid version as provisioning failure
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an invalid version as provisioning failure
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action rejects an unsupported runner before download or PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an unsupported runner before download or PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action reports an unavailable release asset before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action reports an unavailable release asset before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action rejects a checksum manifest without the asset entry
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects a checksum manifest without the asset entry
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action rejects an extraction failure before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an extraction failure before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action rejects an installation failure before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action rejects an installation failure before PATH handoff
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action removes the installed binary when PATH update fails
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: actions/ci-gh-provisioner/tests/entrypoint.test.ts
         symbol: dist entrypoint > Action removes the installed binary when PATH update fails
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
           - failed-provisioning-no-path-handoff
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-gh-provisioner failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - diagnostic-failure-stage-provision

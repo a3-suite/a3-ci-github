@@ -40,7 +40,7 @@ describe("contract.ci-rust-release-build.outputs", () => {
           'test "$1" = rust',
           'test "$2" = platform.yml',
           'test "$3" = stable',
-          'test "$4" = linux-x64',
+          'test "$4" = linux-x64 || exit 23',
           'test "$5" = x86_64-unknown-linux-gnu',
           'test "$6" = authority.json',
           'test "$7" = build/linux-x64',
@@ -82,7 +82,15 @@ describe("contract.ci-rust-release-build.outputs", () => {
           env: { ...environment, PLATFORM_ID: 'macos-arm64' },
         });
         // Assert
-        expect(failure.status).not.toBe(0);
+        expect(failure.status).toBe(23);
+        expect(readFileSync(output, 'utf8')).toBe('');
+
+        const denied = spawnSync('bash', ['-euo', 'pipefail', '-c', runBlock()], {
+          encoding: 'utf8',
+          env: { ...environment, GITHUB_OUTPUT: fixture },
+        });
+        expect(denied.status).toBe(1);
+        expect(denied.stderr).toContain(fixture);
         expect(readFileSync(output, 'utf8')).toBe('');
       } finally {
         rmSync(fixture, { recursive: true, force: true });

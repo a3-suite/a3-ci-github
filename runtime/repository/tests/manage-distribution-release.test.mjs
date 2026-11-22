@@ -98,6 +98,9 @@ if [[ "$command" == release && "$1" == edit ]]; then
   if [[ "\${GH_CHANGE_AFTER_PUBLISH:-}" == true ]]; then
     printf changed > "$state/body"
   fi
+  if [[ "\${GH_CHANGE_ASSET_AFTER_PUBLISH:-}" == true ]]; then
+    printf changed > "$state/assets/a3-ci-github-skills.zip"
+  fi
   exit 0
 fi
 if [[ "$command" == release && "$1" == upload ]]; then
@@ -284,10 +287,13 @@ describe("contract.ci-selective-distribution.publication", () => {
       const { stateRoot, run } = scenario('rejected-notes-mismatch');
       expect(run('publish').status).toBe(0);
       const createsBefore = createCount(stateRoot);
+      const uploadsBefore = uploadCount(stateRoot);
       const wrongNotes = run('publish', { APPROVED_RELEASE_NOTES: 'different' });
       expect(wrongNotes.status).toBe(1);
       expect(wrongNotes.stderr).toMatch(/body differs from approved notes/);
       expect(createCount(stateRoot)).toBe(createsBefore);
+      expect(uploadCount(stateRoot)).toBe(uploadsBefore);
+      expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(readFileSync(path.join(stateRoot, 'body'), 'utf8')).toBe('approved');
     });
 
@@ -354,20 +360,39 @@ describe("contract.ci-selective-distribution.publication", () => {
     // contract_id: contract.ci-selective-distribution.publication
     // flow_id: repository-selective-distribution-release
     test('publication creates one published Release and repeated publication uploads nothing', () => {
-      const { stateRoot, run } = scenario('published');
+      const { stateRoot, assetDirectory, run } = scenario('published');
+      const resultJson = (result) => JSON.parse(result.stdout.trimEnd().split('\n').at(-1));
+      const expectedNames = readdirSync(assetDirectory).sort();
       const published = run('publish');
       expect(published.status, published.stderr).toBe(0);
+      expect(createCount(stateRoot)).toBe(1);
       expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('false');
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
-      expect(published.stdout).toMatch(/"readbackStatus":"verified"/);
+      expect(resultJson(published)).toMatchObject({ releaseTag: 'v1.2.3', readbackStatus: 'verified' });
+      expect(resultJson(published).assetNames.sort()).toEqual(expectedNames);
       const uploadsBefore = uploadCount(stateRoot);
 
       const repeated = run('publish');
       expect(repeated.status, repeated.stderr).toBe(0);
-      expect(repeated.stdout).toMatch(/"readbackStatus":"verified"/);
+      expect(createCount(stateRoot)).toBe(1);
+      expect(resultJson(repeated)).toEqual(resultJson(published));
       expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('false');
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(uploadCount(stateRoot)).toBe(uploadsBefore);
+    });
+
+    // contract_id: contract.ci-selective-distribution.publication
+    test('publication resumes a matching draft and verifies the published assets', () => {
+      const { stateRoot, assetDirectory, run } = scenario('resume-matching-draft');
+      expect(run('publish', { GH_FAIL_OPERATION: 'release upload' }).status).not.toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('true');
+
+      const published = run('publish');
+      expect(published.status, published.stderr).toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('false');
+      const result = JSON.parse(published.stdout.trimEnd().split('\n').at(-1));
+      expect(result).toMatchObject({ releaseTag: 'v1.2.3', readbackStatus: 'verified' });
+      expect(result.assetNames.sort()).toEqual(readdirSync(assetDirectory).sort());
     });
 
     // evidence_role: supplemental
@@ -389,6 +414,15 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(changedAfterPublish.stderr).toMatch(/body differs from approved notes/);
     });
 
+    // contract_id: contract.ci-selective-distribution.publication
+    test('publication rejects asset bytes changed during finalize', () => {
+      const { run } = scenario('asset-changed-during-finalize');
+      const result = run('publish', { GH_CHANGE_ASSET_AFTER_PUBLISH: 'true' });
+      expect(result.status).toBe(1);
+      expect(result.stdout).not.toContain('"readbackStatus":"verified"');
+      expect(result.stderr).toMatch(/Release asset readback differs from prepared bytes/);
+    });
+
     // contract_id: contract.ci-selective-distribution.release-readback
     // flow_id: repository-selective-distribution-release
     test('readback accepts the published Release and rejects changed notes, assets and identities', () => {
@@ -403,12 +437,14 @@ describe("contract.ci-selective-distribution.publication", () => {
       writeFileSync(path.join(stateRoot, 'body'), 'approved\n');
       const extraLf = run('readback');
       expect(extraLf.status).toBe(1);
+      expect(extraLf.stderr).toMatch(/^ci-failure-diagnostic:.*"classification":\{[^}]*"stage":"release-observation"/m);
       expect(extraLf.stderr).toMatch(/body differs from approved notes/);
       writeFileSync(path.join(stateRoot, 'body'), 'approved');
 
       const raced = run('readback', { GH_RACE_AFTER_READBACK: 'true' });
       expect(raced.status).toBe(1);
       expect(raced.stderr).toMatch(/asset identity changed during readback/);
+      expect(diagnosticRecords(raced).at(-1).classification.stage).toBe('asset-snapshot');
       rmSync(path.join(stateRoot, 'race'));
 
       const unmanagedAsset = path.join(stateRoot, 'assets/unmanaged.zip');
@@ -418,10 +454,34 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(unmanaged.stderr).toMatch(/unmanaged asset/);
       rmSync(unmanagedAsset);
 
-      writeFileSync(path.join(stateRoot, 'assets/fetch-a3-ci-github.mjs'), 'changed\n');
+      const cliAsset = path.join(stateRoot, 'assets/fetch-a3-ci-github.mjs');
+      rmSync(cliAsset);
+      const missing = run('readback');
+      expect(missing.status).toBe(1);
+      expect(missing.stderr).toMatch(/GitHub Release asset is missing: fetch-a3-ci-github.mjs/);
+      expect(diagnosticRecords(missing).at(-1).classification.stage).toBe('asset-snapshot');
+
+      writeFileSync(cliAsset, 'changed\n');
       const changed = run('readback');
       expect(changed.status).toBe(1);
       expect(changed.stderr).toMatch(/readback differs from prepared bytes/);
+      expect(diagnosticRecords(changed).at(-1).classification.stage).toBe('asset-readback');
+    });
+
+    // contract_id: contract.ci-selective-distribution.release-readback
+    test('readback rejects missing and draft Releases at release observation', () => {
+      const { stateRoot, run } = scenario('readback-unpublished');
+      const missing = run('readback');
+      expect(missing.status).toBe(1);
+      expect(missing.stderr).toMatch(/GitHub Release does not exist/);
+      expect(diagnosticRecords(missing).at(-1).classification.stage).toBe('release-observation');
+
+      expect(run('publish', { GH_FAIL_OPERATION: 'release upload' }).status).not.toBe(0);
+      expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8')).toBe('true');
+      const draft = run('readback');
+      expect(draft.status).toBe(1);
+      expect(draft.stderr).toMatch(/readback requires a published Release/);
+      expect(diagnosticRecords(draft).at(-1).classification.stage).toBe('release-observation');
     });
 
     // evidence_role: supplemental

@@ -140,6 +140,9 @@ resolve_release_id() {
   -f query='query($owner:String!,$name:String!,$tag:String!){repository(owner:$owner,name:$name){release(tagName:$tag){databaseId}}}' \
   --jq '.data.repository.release.databaseId // empty'
 }
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=release-observation
+ci_failure_field=release-id
 release_id="$(resolve_release_id)"
 if [[ -z "$release_id" ]]; then
   [[ "$operation" == publish ]] || fail "GitHub Release does not exist: $release_tag"
@@ -171,6 +174,11 @@ observed_draft="$(gh_value "$release_endpoint" --jq .draft)"
   || fail "GitHub Release identity is invalid"
 verify_release_metadata() {
   local expected_draft="$1"
+  if [[ "$ci_failure_stage" != release-observation ]]; then
+    ci_failure_last_confirmed=$ci_failure_stage
+    ci_failure_stage=release-observation
+    ci_failure_field=release-metadata
+  fi
   [[ "$(gh_value "$release_endpoint" --jq .id)" == "$observed_release_id" ]] \
     || fail "GitHub Release identity changed during verification"
   [[ "$(gh_value "$release_endpoint" --jq '.tag_name | @base64')" == "$approved_title_base64" ]] \
@@ -205,6 +213,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+ci_failure_last_confirmed=$ci_failure_stage
+ci_failure_stage=asset-snapshot
+ci_failure_field=release-assets
 snapshot="$(release_snapshot)"
 allow_missing=false
 [[ "$operation" == publish && "$observed_draft" == true ]] && allow_missing=true
@@ -220,26 +231,35 @@ if [[ "$operation" == publish && "$observed_draft" == true ]]; then
       gh_safe release upload "$release_tag" "$asset_directory/$asset" --repo "$repository" >/dev/null
     fi
   done
+  ci_failure_last_confirmed=$ci_failure_stage
+  ci_failure_stage=asset-snapshot
+  ci_failure_field=release-assets
   snapshot="$(release_snapshot)"
 fi
-validated_snapshot="$snapshot"
-validate_snapshot "$validated_snapshot" false
-for asset in "${assets[@]}"; do
-  asset_id="$(asset_id_from_snapshot "$validated_snapshot" "$asset")"
-  ci_failure_last_confirmed=$ci_failure_stage
-  ci_failure_stage=asset-readback
-  ci_failure_field=$asset
-  gh_safe api \
-    -H 'Accept: application/octet-stream' \
-    "repos/$repository/releases/assets/$asset_id" > "$temporary_root/$asset" \
-    || fail "Release asset readback failed: $asset"
-  cmp --silent "$asset_directory/$asset" "$temporary_root/$asset" \
-    || fail "Release asset readback differs from prepared bytes: $asset"
-done
+verify_asset_readback() {
+  local validated_snapshot="$1" asset asset_id final_snapshot
+  validate_snapshot "$validated_snapshot" false
+  for asset in "${assets[@]}"; do
+    asset_id="$(asset_id_from_snapshot "$validated_snapshot" "$asset")"
+    ci_failure_last_confirmed=$ci_failure_stage
+    ci_failure_stage=asset-readback
+    ci_failure_field=$asset
+    gh_safe api \
+      -H 'Accept: application/octet-stream' \
+      "repos/$repository/releases/assets/$asset_id" > "$temporary_root/$asset" \
+      || fail "Release asset readback failed: $asset"
+    cmp --silent "$asset_directory/$asset" "$temporary_root/$asset" \
+      || fail "Release asset readback differs from prepared bytes: $asset"
+  done
 
-final_snapshot="$(release_snapshot)"
-[[ "$final_snapshot" == "$validated_snapshot" ]] \
-  || fail "GitHub Release asset identity changed during readback"
+  ci_failure_last_confirmed=$ci_failure_stage
+  ci_failure_stage=asset-snapshot
+  ci_failure_field=release-assets
+  final_snapshot="$(release_snapshot)"
+  [[ "$final_snapshot" == "$validated_snapshot" ]] \
+    || fail "GitHub Release asset identity changed during readback"
+}
+verify_asset_readback "$snapshot"
 verify_tag_identity
 verify_release_metadata "$observed_draft"
 if [[ "$operation" == publish ]]; then
@@ -249,6 +269,11 @@ if [[ "$operation" == publish ]]; then
     ci_failure_field=publication-state
     ci_failure_write=finalize-result-unknown
     gh_safe release edit "$release_tag" --repo "$repository" --draft=false >/dev/null
+    ci_failure_last_confirmed=$ci_failure_stage
+    ci_failure_stage=asset-snapshot
+    ci_failure_field=release-assets
+    snapshot="$(release_snapshot)"
+    verify_asset_readback "$snapshot"
   fi
   verify_tag_identity
   verify_release_metadata false

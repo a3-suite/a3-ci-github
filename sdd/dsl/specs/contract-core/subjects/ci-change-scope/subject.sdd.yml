@@ -13,31 +13,49 @@ contracts:
         meaning: "Received by the contract target: base commit SHA."
       - name: head-sha
         meaning: "Received by the contract target: head commit SHA."
+      - name: event-name
+        meaning: GitHub event name used to select a base SHA when no explicit base was provided.
+      - name: pr-base-sha
+        meaning: Pull request base commit offered as a fallback for pull request events.
+      - name: before-sha
+        meaning: Previous revision offered as a fallback when neither a base nor a pull request base was selected.
       - name: docs-only-patterns
         meaning: "Received by the contract target: documentation-only path patterns."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The Action cannot produce its outputs because preparing the change scope raises an error or the configured output destination rejects a required write.
       - id: change-range-input-present
-        summary: The base and head SHAs refer to the same commit or to an ancestor and its descendant in the checkout.
+        summary: The selected base and head are valid commit SHAs, the checked-out Git repository can compute changed paths for them, and the Action outputs can be written.
       - id: runtime-context.action-input-insufficient
-        summary: The invocation meets the shared runtime context `runtime-context.action-input-insufficient`.
+        summary: The selected base or head SHA is absent or invalid, or Git cannot compute changed paths for them. The Action outputs can be written.
     guarantees:
       - id: change-scope-status-produced
         applies_to:
           - change-range-input-present
+          - runtime-context.action-input-insufficient
         boundary: boundary.action-output
-        statement: "`status` is present. Whether the change range was evaluated successfully or unresolved. Observable fields at this boundary also include `run-docs` (Whether documentation checks should run), `files` (Newline-separated changed paths), `docs-files` (Newline-separated documentation paths), `other-files` (Newline-separated non-documentation paths)."
+        statement: "`status` is `success` when the change range can be evaluated and `unresolved` otherwise. Observable fields at this boundary also include `run-docs` (Whether documentation checks should run), `files` (Newline-separated changed paths), `docs-files` (Newline-separated documentation paths), `other-files` (Newline-separated non-documentation paths)."
       - id: change-scope-unresolved-runs-ci
         applies_to:
           - runtime-context.action-input-insufficient
         boundary: boundary.action-output
-        statement: '`run-ci` is one of `"true"`. Whether CI checks should run.'
+        statement: "`run-ci` and `run-docs` are both `true`, and the unresolved Action step completes successfully."
+      - id: change-scope-resolved-flags-match-paths
+        applies_to:
+          - change-range-input-present
+        boundary: boundary.action-output
+        statement: "`run-ci` is `true` exactly when the range has a non-documentation path. `run-docs` is `true` exactly when the range has a documentation path."
+      - id: change-scope-output-failure-propagated
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: The Action step fails when it cannot produce its outputs.
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
+          - runtime-context.action-input-insufficient
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "`failure-stage` is present. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`. It reports an unresolved outcome when the change range cannot be evaluated and a failure outcome when the Action cannot produce its outputs."
     input_kind:
       kind: operation
       name: ci-change-scope

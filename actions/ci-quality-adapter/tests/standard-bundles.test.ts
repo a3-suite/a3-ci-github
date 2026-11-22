@@ -3,7 +3,7 @@ import { standardQualityBundle, verifyStandardQualityBundle } from '../../../run
 import { parseAdapterBundle } from '../src/adapter.js';
 
 describe('ci-quality-adapter-standard-selection', () => {
-  // contract_id: contract.ci-quality-adapter.outputs
+  // evidence_role: supplemental
   // integration_id: ci-quality-adapter-standard-selection
   test('fixed standard bundles preserve repository owner metadata and require no copied assets', () => {
     for (const [id, profile] of [['rust-cargo-quality', 'rust'], ['python-uv-quality', 'python'], ['typescript-npm-quality', 'typescript']]) {

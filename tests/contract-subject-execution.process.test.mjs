@@ -3,9 +3,22 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { aggregateCoverageMaps, loadDefinition } from './coverage-tools/contract-subject-coverage.mjs';
+import { aggregateCoverageMaps, collectSubjectCoverage, loadDefinition } from './coverage-tools/contract-subject-coverage.mjs';
 
 describe("repository-contract-subject-execution", () => {
+
+  test('execution rejects an unfiltered segment when all tests are skipped', (t) => {
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
+    const directory = mkdtempSync(path.join(root, 'tests/tmp/skipped-segment-'));
+    t.onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
+    const fixture = path.join(directory, 'skipped.test.mjs');
+    writeFileSync(fixture, "import { test } from 'vitest'; test.skip('unavailable', () => {});\n");
+    const subject = { subjectId: 'fixture', segments: [
+      { id: 'unfiltered', level: 'e2e', cwd: '.', tests: [path.relative(root, fixture)] },
+    ] };
+    expect(() => collectSubjectCoverage(subject, root, directory)).toThrow('fixture/unfiltered: no selected tests passed');
+  });
 
   // flow_id: repository-contract-subject-execution
   test('measurement and aggregation reject declared bundles labelled as source', () => {

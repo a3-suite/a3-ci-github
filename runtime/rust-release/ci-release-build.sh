@@ -162,11 +162,3 @@ ci_failure_write=output-may-be-partial
 bash "$script_dir/package-release-unix.sh" \
   "$binary_path" "$binary_name" "$asset_prefix" "$version" "$platform_id" \
   "$platform_target" "$source_sha" "$output_dir"
-ci_failure_last_confirmed=$ci_failure_stage
-ci_failure_stage=asset-verification
-ci_failure_field=release-archive
-ci_failure_expected=unavailable
-ci_failure_observed=unavailable
-bash "$script_dir/verify-release-asset-unix.sh" \
-  "$binary_name" "$asset_prefix" "$version" "$platform_id" \
-  "$platform_target" "$source_sha" "$output_dir"

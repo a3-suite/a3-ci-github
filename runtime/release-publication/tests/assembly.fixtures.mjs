@@ -17,6 +17,9 @@ const spawnTimeoutMs = 10000;
 const pwshProbe = spawnSync('pwsh', ['--version'], { encoding: 'utf8', timeout: spawnTimeoutMs });
 // A missing pwsh disables the PowerShell tests; a start-up failure or timeout must fail the run instead of skipping them.
 if (pwshProbe.error && pwshProbe.error.code !== 'ENOENT') throw pwshProbe.error;
-const hasPwsh = pwshProbe.status === 0;
+if (!pwshProbe.error && pwshProbe.status !== 0) {
+  throw new Error(`PowerShell version probe failed (${pwshProbe.signal ?? pwshProbe.status}): ${pwshProbe.stderr}`);
+}
+const hasPwsh = !pwshProbe.error;
 
 export { spawnTimeoutMs, pwshProbe, hasPwsh };

@@ -13,9 +13,10 @@ test_maps:
         partition: runtime-context.rust-source-does-not-match-authority
         guarantees:
           - rust-source-processing-fails
+          - diagnostic-failure-stage-processing
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.rust-source-does-not-match-authority
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-source-gate.outputs
@@ -30,8 +31,13 @@ test_maps:
         partition: runtime-context.rust-source-script-failed
         guarantees:
           - source-verification-failure-propagated
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > ci-rust-source-gate composite shell step publishes the input rejection stage
+        partition: runtime-context.rust-source-script-failed
         guarantees:
           - diagnostic-failure-stage-outputs
-        reason: Composite Action に不正な language-profile を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。
+      - path: actions/ci-rust-source-gate/tests/composite-execution.test.mjs
+        symbol: contract.ci-rust-source-gate.outputs > ci-rust-source-gate-action > composite source gate exposes verified only after script success
+        partition: rust-source-output-write-denied
+        guarantees:
+          - source-verification-failure-propagated

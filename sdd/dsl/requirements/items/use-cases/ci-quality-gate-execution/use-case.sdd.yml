@@ -32,6 +32,8 @@ failure_outcomes:
   - 差分範囲を解決できない場合は、品質チェックを省略せず実行対象として扱う
 related_requirements:
   - ci-common-processing-action-reuse
+  - ci-rust-dependency-policy-selection
+  - ci-quality-results-aggregation
   - github-actions-action-contract-and-distribution
 related_contracts:
   - contract.ci-quality-workflow.execution

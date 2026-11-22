@@ -24,24 +24,25 @@ contracts:
       - name: release-implementation
         meaning: "Received by the contract target: release implementation recorded in the snapshot."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.release-authority-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-authority-valid`.
+        summary: The verified release inputs select a platform-bound implementation with a matching manifest, and authority and Action outputs can be written.
       - id: runtime-context.release-authority-asset-only-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-authority-asset-only-valid`.
+        summary: The verified release inputs select the asset-only implementation, and authority and Action outputs can be written.
       - id: runtime-context.release-authority-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.release-authority-invalid`.
+        summary: Inputs or provider responses cannot establish an approved authority, or the authority handoff cannot be written. No Action output write has started.
+      - id: release-authority-output-write-denied
+        summary: The authority handoff has been written but writing the Action outputs fails.
     guarantees:
       - id: authority-file
         applies_to:
           - runtime-context.release-authority-valid
           - runtime-context.release-authority-asset-only-valid
         boundary: boundary.action-output
-        statement: "`authority-path` is present. Path to the generated authority handoff. Observable fields at this boundary also include `source_sha` (Verified annotated tag commit SHA), `version` (Explicit owner version bound to the publication request), `target_identity` (Explicit opaque owner publication target), `approval-id` (Verified notes approval ID), `body-sha256` (Digest of separately approved Release notes body)."
+        statement: "`authority-path` names the generated authority file. `source_sha` equals the verified annotated tag commit. `version` and `target_identity` equal the approved publication request fields. `approval-id` and `body-sha256` equal the verified notes approval ID and digest."
       - id: rejected
         applies_to:
           - runtime-context.release-authority-invalid
+          - release-authority-output-write-denied
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Authority validation step outcome.'
       - id: no-success-outputs
@@ -51,9 +52,10 @@ contracts:
         statement: '`successful-output-state` is one of `"absent"`. Occurrence state of successful outputs.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.release-authority-invalid
+          - release-authority-output-write-denied
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: platform-source-text-digest
         applies_to:
           - runtime-context.release-authority-valid

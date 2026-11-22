@@ -1,6 +1,6 @@
 import { DiagnosticError } from '../diagnostics/failure.mjs';
-import { createHash } from 'node:crypto';
-import { appendFile, rm } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { lstat, open, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 export type FetchAsset = (url: string) => Promise<Buffer>;
@@ -63,12 +63,10 @@ export async function downloadVerifiedAsset(request: VerifiedAssetRequest): Prom
   return content;
 }
 
-// Only the install and PATH export stages write, and each failure there reports its directory rollback.
-// Removing the directory cannot undo a partial GITHUB_PATH append, so that stage reports the PATH file instead.
+// A failed PATH export leaves the runner handoff unchanged. Its write state records install cleanup.
 export function provisionWriteState(error: unknown): string {
   const details = error instanceof DiagnosticError && error.details && typeof error.details === 'object' ? error.details as { stage?: unknown; rollback?: unknown } : undefined;
   const rollback = details?.rollback;
-  if (details?.stage === 'path-export') return 'github-path-may-be-partial';
   if (rollback === 'removed') return 'rolled-back';
   if (rollback === 'cleanup-failed') return 'temporary-install-may-exist';
   return 'not-started';
@@ -79,10 +77,28 @@ export async function exportDirectoryToPath(
   githubPath: string,
   failurePrefix: string,
 ): Promise<string> {
+  const temporary = path.join(path.dirname(githubPath), `.provision-path-${randomUUID()}`);
+  let ownsTemporary = false;
   try {
-    await appendFile(githubPath, `${path.dirname(installed)}\n`, 'utf8');
+    const current = await lstat(githubPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    });
+    if (current && !current.isFile()) throw new Error('PATH handoff must be a regular file');
+    const prior = current ? await readFile(githubPath) : Buffer.alloc(0);
+    const handle = await open(temporary, 'wx', current ? current.mode & 0o777 : 0o666);
+    ownsTemporary = true;
+    try {
+      await handle.writeFile(Buffer.concat([prior, Buffer.from(`${path.dirname(installed)}\n`)]));
+    } finally {
+      await handle.close();
+    }
+    await rename(temporary, githubPath);
   } catch (error) {
     let rollback = 'removed';
+    if (ownsTemporary) {
+      try { await rm(temporary, { force: true }); } catch { rollback = 'cleanup-failed'; }
+    }
     try { await rm(path.dirname(installed), { recursive: true, force: true }); } catch { rollback = 'cleanup-failed'; }
     throw new DiagnosticError(`${failurePrefix}: PATH update failed`, { cause: error, diagnostics: { stage: 'path-export', field: 'GITHUB_PATH', observed: 'write-failed', expected: 'append-installed-directory', rollback } });
   }

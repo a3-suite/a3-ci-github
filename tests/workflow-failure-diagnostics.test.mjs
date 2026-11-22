@@ -48,7 +48,7 @@ describe('workflow failure diagnostics', () => {
     if (status !== 'success') {
       const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
       const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
-      expect(evidence.classification.stage).toBeTruthy();
+      expect(evidence.classification.stage).toBe('summary-result');
       expect(evidence.context.inputs.jobs[0]).toEqual({ unit: 'request', rawResult: status, evidence: runUrl });
     }
   });
@@ -80,7 +80,7 @@ describe('workflow failure diagnostics', () => {
     const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
     const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
     expect(result.status).toBe(1);
-    expect(evidence.classification.stage).toBeTruthy();
+    expect(evidence.classification.stage).toBe('summary-result');
     expect(evidence.context).toMatchObject({ run: '123', job: 'summary' });
     expect(evidence.context.inputs.jobs[0]).toEqual({ unit: ids[0], rawResult: 'failure', evidence: runUrl });
     expect(evidence.context.inputs.sourceOutcome).toBe('failed');

@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { scriptRoot, hasPwsh, nativePowerShells, withFixture, run, sha256, failureEvidence, initializeGitFixture } from "./rust-release-scripts.fixtures.mjs";
@@ -220,6 +220,22 @@ describe("contract.ci-rust-release-build.processing", () => {
         .filter((entry) => entry.isFile())
         .map((entry) => [path.relative(acceptedOutput, path.join(entry.parentPath, entry.name)), readFileSync(path.join(entry.parentPath, entry.name))])
         .sort(([left], [right]) => left.localeCompare(right));
+      const verified = run(path.join(scriptRoot, 'verify-release-asset-unix.sh'), [
+        'example-cli', 'example-cli', '0.3.0', platformId, platformTarget, sourceSha, acceptedOutput,
+      ], { cwd: fixture });
+      expect(verified.status, verified.stderr).toBe(0);
+
+      const malformedTar = path.join(fakeBin, 'tar');
+      writeFileSync(malformedTar, '#!/usr/bin/env bash\n[[ "$3" == "-czf" ]] || exit 1\nprintf invalid > "$4"\n');
+      chmodSync(malformedTar, 0o755);
+      const rejectedArchiveOutput = path.join(fixture, 'rejected-archive');
+      const rejectedArchive = runBuild(args('1.90.0', platformTarget, rejectedArchiveOutput), { env: environment });
+      expect(rejectedArchive.status).not.toBe(0);
+      expect(rejectedArchive.stderr).toContain('"operation":"verify-asset"');
+      expect(existsSync(rejectedArchiveOutput)).toBe(false);
+      expect(readdirSync(fixture).filter(name => name.startsWith('rejected-archive.tmp.'))).toStrictEqual([]);
+      unlinkSync(malformedTar);
+
       const acceptedTree = outputTree();
       // Act
       const existingOutput = runBuild(args('1.90.0', platformTarget, acceptedOutput), { env: environment });
@@ -227,6 +243,31 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(existingOutput.status).not.toBe(0);
       expect(failureEvidence(existingOutput.stderr).classification.stage).toBe('input-validation');
       expect(outputTree()).toStrictEqual(acceptedTree);
+
+      const publishingOutput = path.join(fixture, 'publication-write-failed');
+      const partialMoves = path.join(fixture, 'partial-moves.log');
+      const fakeMove = path.join(fakeBin, 'mv');
+      writeFileSync(fakeMove, [
+        '#!/usr/bin/env bash',
+        'if [[ "$2" == "$FAIL_PUBLICATION_OUTPUT/"* ]]; then',
+        '  if [[ -f "$PARTIAL_MOVES" ]]; then exit 74; fi',
+        '  command -p mv "$@" || exit $?',
+        '  printf "%s\\n" "$2" > "$PARTIAL_MOVES"',
+        '  exit 0',
+        'fi',
+        'exec /bin/mv "$@"',
+        '',
+      ].join('\n'));
+      chmodSync(fakeMove, 0o755);
+      const failedPublication = runBuild(args('1.90.0', platformTarget, publishingOutput), {
+        env: { ...environment, FAIL_PUBLICATION_OUTPUT: publishingOutput, PARTIAL_MOVES: partialMoves },
+      });
+      unlinkSync(fakeMove);
+      expect(failedPublication.status).not.toBe(0);
+      expect(failedPublication.stderr).toContain('"stage":"output-publish"');
+      expect(path.dirname(readFileSync(partialMoves, 'utf8').trim())).toBe(publishingOutput);
+      expect(existsSync(publishingOutput)).toBe(false);
+      expect(readdirSync(fixture).filter(name => name.startsWith('publication-write-failed.tmp.'))).toEqual([]);
 
       const failedSetup = runBuild(args(
         '1.90.0', platformTarget, path.join(fixture, 'setup-failed'),
@@ -288,8 +329,10 @@ describe("contract.ci-rust-release-build.processing", () => {
         ), { env: { ...environment, FAKE_VERSION_OUTPUT: output } });
         expect(rejectedOutput.status, `${output} should be rejected`).not.toBe(0);
         expect(rejectedOutput.stderr).toMatch(/binary-version-mismatch/);
+        expect(failureEvidence(rejectedOutput.stderr).classification.stage).toBe('binary-version-verification');
         expect(rejectedOutput.stderr).toMatch(/expected=/);
         expect(rejectedOutput.stderr).toMatch(/received=/);
+        expect(existsSync(path.join(fixture, `version-rejected-${index}`))).toBe(false);
       }
 
       // Act + Assert: a non-zero version command fails even when the output contains the token.
@@ -299,6 +342,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       expect(failedVersionCommand.status).not.toBe(0);
       expect(failedVersionCommand.stderr).toMatch(/binary-version-mismatch/);
       expect(failedVersionCommand.stderr).toMatch(/received=/);
+      expect(existsSync(path.join(fixture, 'version-failed-command'))).toBe(false);
 
       // Act
       const targetMismatch = runBuild(args(
@@ -436,25 +480,29 @@ describe("contract.ci-rust-release-build.processing", () => {
       writeFileSync(binary, 'release-binary');
       chmodSync(binary, 0o755);
       const tar = path.join(fakeBin, 'tar');
-      writeFileSync(tar, '#!/usr/bin/env bash\nexit 1\n');
-      chmodSync(tar, 0o755);
 
-      // Act
-      const failed = run(path.join(scriptRoot, 'package-release-unix.sh'), [
-        binary,
-        'example-cli',
-        'example-cli',
-        '1.2.3',
-        'linux-x64',
-        'x86_64-unknown-linux-gnu',
-        'a'.repeat(40),
-        `${output}${path.sep}`,
-      ], { env: { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}` } });
+      for (const [tarBody, failedStage] of [
+        ['exit 1', 'archive-create'],
+        ['[[ "$3" == "-czf" ]] || exit 1; printf invalid > "$4"', 'asset-read'],
+      ]) {
+        writeFileSync(tar, `#!/usr/bin/env bash\n${tarBody}\n`);
+        chmodSync(tar, 0o755);
+        const failed = run(path.join(scriptRoot, 'package-release-unix.sh'), [
+          binary,
+          'example-cli',
+          'example-cli',
+          '1.2.3',
+          'linux-x64',
+          'x86_64-unknown-linux-gnu',
+          'a'.repeat(40),
+          `${output}${path.sep}`,
+        ], { env: { ...process.env, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}` } });
 
-      // Assert
-      expect(failed.status).not.toBe(0);
-      expect(existsSync(output)).toBe(false);
-      expect(readdirSync(fixture).filter((name) => name.startsWith('release-output.tmp.'))).toStrictEqual([]);
+        expect(failed.status).not.toBe(0);
+        expect(failed.stderr).toContain(`"stage":"${failedStage}"`);
+        expect(existsSync(output)).toBe(false);
+        expect(readdirSync(fixture).filter((name) => name.startsWith('release-output.tmp.'))).toStrictEqual([]);
+      }
     }));
 
     // evidence_role: supplemental

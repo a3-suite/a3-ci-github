@@ -4,6 +4,20 @@ test_maps:
   - contract_id: contract.ci-release-publication-control.outputs
     tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint keeps the existing handoff files when it rejects a replay
+        partition: publication-control-create-destination-exists
+        guarantees:
+          - publication-control-existing-handoff-preserved
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint keeps the existing handoff files when it rejects a replay
+        partition: publication-control-create-destination-exists
+        guarantees:
+          - publication-control-existing-handoff-preserved
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint creates and verifies a publication request
         partition: runtime-context.release-publication-request-verified
         guarantees:
@@ -53,28 +67,67 @@ test_maps:
           - rejected-publication-control-no-request-handoff
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-control failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.action-input-invalid
         guarantees:
+          - publication-control-failure-propagated
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        partition: runtime-context.request-trigger-verification-invoked
+        partition: publication-control-trigger-valid
         guarantees:
           - request-trigger-run-bound
+          - publication-control-status-succeeded
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        partition: runtime-context.request-trigger-verification-invoked
+        partition: publication-control-trigger-valid
         guarantees:
           - request-trigger-run-bound
+          - publication-control-status-succeeded
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        partition: runtime-context.action-input-invalid
+        partition: publication-control-trigger-rejected
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
+          - request-trigger-run-bound
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        partition: runtime-context.action-input-invalid
+        partition: publication-control-trigger-rejected
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
+          - request-trigger-run-bound
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint creates and verifies a publication request
+        partition: publication-control-create-or-approval-valid
+        guarantees:
+          - publication-control-status-succeeded
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects a changed approval ID
+        partition: publication-control-create-or-approval-valid
+        guarantees:
+          - publication-control-status-succeeded
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint creates and verifies a publication request
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint creates and verifies a publication request
+        partition: publication-control-create-or-approval-valid
+        guarantees:
+          - publication-control-status-succeeded
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects a changed approval ID
+        partition: publication-control-create-or-approval-valid
+        guarantees:
+          - publication-control-status-succeeded
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint creates and verifies a publication request
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs

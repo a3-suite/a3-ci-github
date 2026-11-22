@@ -37,6 +37,50 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   });
 
   // contract_id: contract.ci-quality-toolchain.preparation
+  test('optional cargo-deny setup is skipped unless requested and enabled', (t) => {
+    const parent = path.join(root, 'tmp');
+    fs.mkdirSync(parent, { recursive: true });
+    const directory = fs.mkdtempSync(path.join(parent, 'quality-optional-setup-'));
+    t.onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const log = path.join(directory, 'setup-log');
+    fs.mkdirSync(path.join(directory, 'scripts'));
+    for (const tool of ['cargo-audit', 'cargo-deny']) {
+      fs.writeFileSync(path.join(directory, 'scripts', `setup-${tool}.sh`), `printf '%s\\n' '${tool}' >> "$SETUP_LOG"\n`);
+    }
+
+    const steps = action.runs.steps.filter((step) => ['cargo-audit', 'cargo-deny'].includes(step.id));
+    expect(steps.map((step) => step.id)).toEqual(['cargo-audit', 'cargo-deny']);
+    // Interpret only the input comparisons used by these steps. Unsupported syntax fails the test.
+    for (const [version, tools, expected] of [
+      ['', 'install', ['cargo-audit']],
+      ['0.20.2', 'install', ['cargo-audit', 'cargo-deny']],
+      ['0.20.2', 'skip', []],
+    ]) {
+      fs.writeFileSync(log, '');
+      const inputs = { 'language-profile': 'rust', 'cargo-deny-version': version, 'auxiliary-tools': tools };
+      const validation = run(action.runs.steps[0].run, {
+        ...selected('rust', '1.90.0', '', '0.21.0'), CI_VERSION_POLICY: 'exact',
+        CI_CARGO_DENY_VERSION: version, CI_AUXILIARY_TOOLS: tools,
+      });
+      expect(validation.status, validation.stderr).toBe(0);
+      for (const step of steps) {
+        const conditions = step.if.split(/\s*&&\s*/).map((clause) => {
+          const match = /^inputs\.([\w-]+) (==|!=) '([^']*)'$/.exec(clause);
+          expect(match, clause).not.toBeNull();
+          const [, input, operator, value] = match;
+          expect(inputs).toHaveProperty(input);
+          return operator === '==' ? inputs[input] === value : inputs[input] !== value;
+        });
+        if (conditions.every(Boolean)) {
+          const result = run(step.run, { GITHUB_ACTION_PATH: directory, SETUP_LOG: log }, directory);
+          expect(result.status, result.stderr).toBe(0);
+        }
+      }
+      expect(fs.readFileSync(log, 'utf8').split('\n').filter(Boolean)).toEqual(expected);
+    }
+  });
+
+  // contract_id: contract.ci-quality-toolchain.preparation
   test('compatible policy accepts bounded Node and Python selectors while exact policy stays strict', () => {
     const script = action.runs.steps[0].run;
     expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).not.toBe(0);
@@ -78,7 +122,15 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const output = path.join(directory, 'publish-output');
       expect(run(publish.run, { CI_RESOLVED_VERSION: '24.21.0', GITHUB_OUTPUT: output }).status).toBe(0);
       expect(fs.readFileSync(output, 'utf8')).toBe('version=24.21.0\n');
-      expect(action.runs.steps.indexOf(publish)).toBeGreaterThan(action.runs.steps.findIndex((step) => step.id === 'cargo-audit'));
+      expect(action.outputs['resolved-toolchain-version'].value).toBe('${{ steps.publish-version.outputs.version }}');
+      expect(publish.env.CI_RESOLVED_VERSION).toBe('${{ steps.resolve-version.outputs.version }}');
+      for (const id of ['validate-inputs', 'typescript', 'python', 'resolve-version', 'uv', 'rust', 'cargo-audit', 'cargo-deny']) {
+        const selectedStep = action.runs.steps.find((step) => step.id === id);
+        expect(selectedStep, id).toBeDefined();
+        expect(action.runs.steps.indexOf(publish), id).toBeGreaterThan(action.runs.steps.indexOf(selectedStep));
+        expect(selectedStep['continue-on-error'], id).toBeUndefined();
+      }
+      expect(publish['continue-on-error']).toBeUndefined();
       expect(publish.if).toBeUndefined();
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   });

@@ -5,30 +5,13 @@ command:
   path:
     - node
     - runtime/installer/run-installer.mjs
-  summary: Assemble and verify exact standard installer candidates with the fixed provider runtime
+    - --operation
+    - assemble
+  summary: Assemble transferred standard installer candidates into a verified supplemental handoff
   usage_targets:
-    - id: build-platform
-      summary: Verify the exact native platform candidate before evidence finalization
-      option_bindings:
-        - option_id: operation
-          presence: required
-        - option_id: source-root
-          presence: required
-        - option_id: authority-path
-          presence: required
-        - option_id: snapshot-path
-          presence: required
-        - option_id: standard-build-root
-          presence: required
-        - option_id: output-directory
-          presence: required
-        - option_id: provider-revision
-          presence: required
     - id: assemble
       summary: Verify transported candidates and emit supplemental handoff
       option_bindings:
-        - option_id: operation
-          presence: required
         - option_id: source-root
           presence: required
         - option_id: authority-path
@@ -47,7 +30,6 @@ command:
     - id: assembly
       title: Fixed assembly inputs
       options:
-        - operation
         - source-root
         - authority-path
         - snapshot-path
@@ -56,4 +38,4 @@ command:
         - provider-revision
         - supplemental-build-root
   usage:
-    - node runtime/installer/run-installer.mjs --operation <build-platform|assemble> --source-root PATH --authority-path PATH --snapshot-path PATH --standard-build-root PATH [--supplemental-build-root PATH] --output-directory PATH --provider-revision SHA
+    - node runtime/installer/run-installer.mjs --operation assemble --source-root PATH --authority-path PATH --snapshot-path PATH --standard-build-root PATH --supplemental-build-root PATH --output-directory PATH --provider-revision SHA

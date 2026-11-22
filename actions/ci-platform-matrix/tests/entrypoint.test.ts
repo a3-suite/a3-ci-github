@@ -10,7 +10,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
-const runBundled = (manifest: string, selection?: string, runnerPolicy?: string) => {
+const runBundled = (manifest: string, selection?: string, runnerPolicy?: string, outputWritable = true) => {
   const temporaryParent = path.resolve(root, '../../tmp');
   fs.mkdirSync(temporaryParent, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(temporaryParent, 'ci-platform-matrix-'));
@@ -18,7 +18,7 @@ const runBundled = (manifest: string, selection?: string, runnerPolicy?: string)
   const outputPath = path.join(tempRoot, 'outputs');
   fs.writeFileSync(manifestPath, manifest, 'utf8');
   fs.writeFileSync(outputPath, '', 'utf8');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath } as Record<string, string>;
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputWritable ? outputPath : tempRoot } as Record<string, string>;
   env['INPUT_MANIFEST-PATH'] = manifestPath;
   delete env['INPUT_RUNNER-POLICY'];
   if (runnerPolicy !== undefined) env['INPUT_RUNNER-POLICY'] = runnerPolicy;
@@ -178,6 +178,18 @@ test('entrypoint fails without any outputs for invalid selection', () => {
     expect(run.result.stderr).toMatch(/not declared/);
     expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+test('entrypoint diagnoses failure to write matrix outputs', () => {
+  const manifest = 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]';
+  const { result, tempRoot } = runBundled(manifest, undefined, undefined, false);
+  try {
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 });

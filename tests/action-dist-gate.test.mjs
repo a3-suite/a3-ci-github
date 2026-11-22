@@ -48,9 +48,8 @@ describe("contract.repository-action-distribution.integrity", () => {
 
       for (const action of collectActions(root)) {
         expect(subjectPaths.has(action.name), `missing contract subject for ${action.name}`).toBe(true);
-        const actionText = readFileSync(path.join(root, 'actions', action.name, 'action.yml'), 'utf8');
-        const outputSection = actionText.match(/^outputs:\n([\s\S]*?)^runs:/m)?.[1] ?? '';
-        const outputs = [...outputSection.matchAll(/^  ([a-z0-9-]+):/gm)].map((match) => match[1]);
+        const actionDefinition = yaml.parse(readFileSync(path.join(root, 'actions', action.name, 'action.yml'), 'utf8'));
+        const outputs = Object.keys(actionDefinition.outputs ?? {});
         const subjectRoot = path.join(root, 'sdd/dsl/specs/contract-core/subjects', action.name);
         const subject = yaml.parse(readFileSync(path.join(subjectRoot, 'subject.sdd.yml'), 'utf8'));
         const guarantees = subject.contracts.flatMap((contract) => contract.guarantees)
@@ -59,7 +58,9 @@ describe("contract.repository-action-distribution.integrity", () => {
           const field = `\`${output}\``;
           const observed = guarantees.some(({ statement }) => {
             const [, observableFields] = statement.split(' Observable fields at this boundary also include ');
-            return statement.startsWith(`${field} `) || (observableFields?.includes(`${field} (`) ?? false);
+            const outputClauses = statement.matchAll(/((?:`[\w-]+`(?:,? (?:and )?(?=`[\w-]+`))?)+) (?:outputs? )?(?:is|equals?|identif(?:y|ies)|reports?|contains?|names?)\b/g);
+            return Array.from(outputClauses).some(([, fields]) => fields.includes(field))
+              || (observableFields?.includes(`${field} (`) ?? false);
           });
           expect(observed, `${action.name} output is not observed: ${output}`).toBe(true);
         }

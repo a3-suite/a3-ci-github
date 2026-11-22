@@ -105,6 +105,11 @@ const validateSegment = (segment, subjectId, root) => {
     assert(readFileSync(resolvedTestPath, 'utf8').length >= 0, `${subjectId}/${segment.id}: test is unreadable`);
   }
   assert(isObject(segment.coverage), `${subjectId}/${segment.id}: coverage is required`);
+  if (segment.testNamePattern !== undefined) {
+    assert(segment.coverage.enabled === false && typeof segment.testNamePattern === 'string' && segment.testNamePattern.length > 0,
+      `${subjectId}/${segment.id}: testNamePattern requires a non-measured segment and a non-empty pattern`);
+    assert.doesNotThrow(() => new RegExp(segment.testNamePattern), `${subjectId}/${segment.id}: invalid testNamePattern`);
+  }
   if (segment.coverage.enabled) {
     assert(['source', 'repository-scripts'].includes(segment.coverage.scope), `${subjectId}/${segment.id}: source-only coverage requires source or repository-scripts scope`);
     assert(Array.isArray(segment.coverage.include) && segment.coverage.include.length > 0, `${subjectId}/${segment.id}: coverage include is required`);
@@ -195,7 +200,12 @@ const commandForSegment = (segment, reportPath, root, dryRun = false) => {
     const config = { root, test: { globals: false, include: segment.tests.map((file) => path.resolve(root, segment.cwd, file)), pool: 'forks', maxWorkers: 1, testTimeout: 60000, coverage: { enabled: false } } };
     writeFileSync(configPath, `export default ${JSON.stringify(config)};\n`);
   }
-  return { command: process.execPath, args: [path.join(SCRIPT_ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--config', configPath] };
+  const args = [path.join(SCRIPT_ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--config', configPath];
+  if (segment.testNamePattern !== undefined) args.push('--testNamePattern', segment.testNamePattern);
+  const testResultPath = `${reportPath}.vitest-result.json`;
+  if (!dryRun) writeFileSync(testResultPath, '');
+  args.push('--reporter=json', '--outputFile', testResultPath);
+  return { command: process.execPath, args, testResultPath };
 };
 
 const run = (command, args, cwd) => spawnSync(command, args, { cwd, encoding: 'utf8' });
@@ -219,19 +229,25 @@ export const collectSubjectCoverage = (subject, root, reportRoot, dryRun = false
     const cwd = path.join(root, segment.cwd);
     const reportPath = path.join(reportRoot, subject.subjectId.replaceAll('.', '_'), `${segment.id}.lcov`);
     if (segment.coverage?.enabled && !dryRun) mkdirSync(path.dirname(reportPath), { recursive: true });
-    const { command, args } = commandForSegment(segment, reportPath, root, dryRun);
+    const { command, args, testResultPath } = commandForSegment(segment, reportPath, root, dryRun);
     if (dryRun) {
       segments.push({ id: segment.id, level: segment.level, status: 'planned', cwd: segment.cwd, command: [command, ...args], coverageScope: segment.coverage?.scope ?? null });
       continue;
     }
     const result = run(command, args, cwd);
     if (result.status !== 0) throw new Error(`${subject.subjectId}/${segment.id}: tests failed\n${result.stderr || result.stdout}`);
+    if (testResultPath !== undefined) {
+      const rawReport = readFileSync(testResultPath, 'utf8');
+      assert(rawReport, `${subject.subjectId}/${segment.id}: missing test result`);
+      assert(JSON.parse(rawReport).numPassedTests > 0, `${subject.subjectId}/${segment.id}: no selected tests passed`);
+    }
     const resultRecord = {
       id: segment.id,
       level: segment.level,
       status: 'passed',
       cwd: segment.cwd,
       tests: segment.tests,
+      ...(segment.testNamePattern === undefined ? {} : { testNamePattern: segment.testNamePattern }),
       coverageScope: segment.coverage?.scope ?? null,
       coverageResultIdentity: `${subject.subjectId}/${segment.id}`,
     };

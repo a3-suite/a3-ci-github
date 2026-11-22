@@ -23,9 +23,11 @@ test_maps:
         partition: runtime-context.preset-materialization-rejected
         guarantees:
           - ci-preset-materialization-failure-observed
+          - consumer-settings-change
+          - consumer-dependency-change
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > materialization preserves its outcome and safe diagnostic context
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.preset-materialization-rejected
         guarantees:
           - diagnostic-failure-stage-application
       - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
@@ -54,45 +56,32 @@ test_maps:
           - consumer-dependency-change
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
         symbol: materialize-adapter-bundle > materialize-adapter-bundle > materializer separates repository-owned assets from external skill resources
-        partition: runtime-context.preset-materialization-rejected
+        partition: preset-materialization-destination-conflict
         guarantees:
           - conflicting-destination-change
       - path: tests/public-cli-lifecycle.test.mjs
         symbol: contract.ci-preset-materialization.application > consumer-adapter-materialization-cli > public materializer CLI copies reuses and protects consumer adapter files
-        partition: runtime-context.preset-materialization-rejected
+        partition: preset-materialization-destination-conflict
         guarantees:
           - conflicting-destination-change
       - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
         symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer retains completed copies and reports the changed range after a later copy fails
-        partition: runtime-context.preset-materialization-rejected
+        partition: preset-custom-materialization-copy-failed
         guarantees:
           - consumer-settings-change
           - consumer-dependency-change
           - changed-range-evidence
+          - diagnostic-failure-stage-application
       - path: runtime/adapter/tests/standard-quality-footprint.test.mjs
         symbol: adapter-bundle-materialization-contract > registered standard quality bundles require no consumer copies and preserve consumer files
-        partition: runtime-context.preset-materialization-rejected
+        partition: preset-standard-materialization-rejected
         guarantees:
           - standard-copy-state
           - consumer-settings-change
           - consumer-dependency-change
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+          - diagnostic-failure-stage-application
+      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+        symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejection retains the failing stage, paths and conflicting digests
+        partition: preset-materialization-destination-conflict
         guarantees:
-          - standard-copy-state
-          - consumer-settings-change
-          - consumer-dependency-change
-          - conflicting-destination-change
-          - changed-range-evidence
-        reason: 旧ケースから移行したテスト写像に、この区分でこれらの保証を確かめる証拠がない。
-      - partition: runtime-context.preset-standard-materialization-valid
-        guarantees:
-          - conflicting-destination-change
-          - changed-range-evidence
-        reason: 旧ケースから移行したテスト写像に、この区分でこれらの保証を確かめる証拠がない。
-      - partition: runtime-context.preset-custom-materialization-valid
-        guarantees:
-          - standard-copy-state
-          - conflicting-destination-change
-          - changed-range-evidence
-        reason: 旧ケースから移行したテスト写像に、この区分でこれらの保証を確かめる証拠がない。
+          - diagnostic-failure-stage-application

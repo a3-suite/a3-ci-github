@@ -46,6 +46,8 @@ globalThis.fetch = async (url, init) => {
   expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
   expect(beforeOutputs).toMatch(/^status=success\n/);
+  expect(beforeOutputs).toContain(`observation-path=${beforePath}\n`);
+  expect(beforeOutputs).toContain(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`);
   expect(beforeOutputs.includes('release-remote-identity=')).toBe(false);
   expect(beforeOutputs.includes('publish-receipt=')).toBe(false);
   expect(beforeOutputs.includes('readback-evidence=')).toBe(false);
@@ -59,13 +61,14 @@ globalThis.fetch = async (url, init) => {
   expect(afterResult.status, afterResult.stderr).toBe(0);
   const outputs = fs.readFileSync(output, 'utf8');
   expect(outputs).toMatch(/^status=success\n/);
+  expect(outputs).not.toMatch(/^observation-(path|digest)=/m);
   expect(outputs).toMatch(/release-remote-identity=42\n/);
   expect(outputs).toMatch(/publish-receipt=\{/);
   expect(outputs).toMatch(/readback-evidence=\{/);
   const values = Object.fromEntries(outputs.trim().split('\n')
     .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-  expect(JSON.parse(values['publish-receipt']).release_id).toBe('42');
-  expect(JSON.parse(values['readback-evidence']).release_id).toBe('42');
+  expect(JSON.parse(values['publish-receipt'])).toEqual(receipt);
+  expect(JSON.parse(values['readback-evidence'])).toEqual(readback);
   expect(outputs.includes('synthetic-secret')).toBe(false);
 });
 
@@ -109,7 +112,7 @@ globalThis.fetch = async (url, init) => {
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after', MOCK_LOCATION: location }, encoding: 'utf8', cwd: f.root });
     expect(result.status).toBe(1);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
-    expect(result.stderr).not.toContain('secret');
+    expect(result.stdout + result.stderr).not.toContain('secret');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
     expect(diagnostic.operation).toBe('asset-readback');
     expect(diagnostic['sanitized-reason']).toBe(reason);
@@ -197,7 +200,10 @@ globalThis.fetch = async (url, init) => {
     expect(result.status, result.stderr).toBe(expectedStatus);
     if (expectedStatus === 0) {
       if (mode === 'observation-file') expect(JSON.parse(fs.readFileSync(before, 'utf8')).release_ids).toEqual([]);
-      expect(fs.readFileSync(output, 'utf8')).toContain('status=success');
+      const outputs = fs.readFileSync(output, 'utf8');
+      expect(outputs).toContain('status=success\n');
+      expect(outputs).toContain(`observation-path=${before}\n`);
+      expect(outputs).toContain(`observation-digest=${hash(fs.readFileSync(before))}\n`);
     } else {
       expect(fs.existsSync(before)).toBe(false);
       expect(fileNames(f.root)).toEqual(filesBefore);
@@ -255,7 +261,7 @@ globalThis.fetch = async (url, init) => {
     if (kind === 'network') throw new Error('synthetic-secret');
     if (kind === 'timeout') throw new DOMException('synthetic-secret', 'TimeoutError');
     if (kind === 'body-timeout') return new Response(new ReadableStream({ start(controller) { controller.error(new DOMException('synthetic-secret', 'TimeoutError')); } }), { headers });
-    if (kind === 'http') return new Response('synthetic-secret', { status: Number(process.env.MOCK_HTTP_STATUS), headers });
+    if (kind === 'http') return new Response('provider-response-body-with-synthetic-secret', { status: Number(process.env.MOCK_HTTP_STATUS), headers });
     if (kind === 'json') return new Response('synthetic-secret', { headers });
     if (kind === 'empty') return new Response(null, { headers });
     if (kind === 'oversized') return new Response('x'.repeat(4 * 1024 * 1024 + 1), { headers });
@@ -286,6 +292,7 @@ globalThis.fetch = async (url, init) => {
     expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
     expect(fileNames(f.root)).toEqual(filesBefore);
     expect(result.stderr).not.toContain('synthetic-secret');
+    if (failure === 'http') expect(result.stdout + result.stderr).not.toContain('provider-response-body-with-');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
     expect(diagnostic.operation).toBe('remote-observation');
     expect(diagnostic.phase).toBe(phase);

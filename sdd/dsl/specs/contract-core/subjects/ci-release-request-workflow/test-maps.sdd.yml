@@ -12,12 +12,17 @@ test_maps:
           - request-tag-before-handoff
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary
-        partition: ci-release-request-workflow-failure-route-required
+        partition: ci-release-request-workflow-canonical-source-available
         guarantees:
           - ci-release-request-workflow-failure-observed
           - request-failure-summary-always
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-handoff
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-handoff

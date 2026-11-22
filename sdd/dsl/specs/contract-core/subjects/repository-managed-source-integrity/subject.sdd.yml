@@ -13,11 +13,11 @@ contracts:
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The repository lint invocation receives unexpected arguments or fails a check other than the explicit legacy-source check.
       - id: repository-managed-source-integrity-source-available
-        summary: The repository has the canonical managed source layout.
+        summary: The inventory check reads the repository tree and preset asset registry.
       - id: repository-managed-source-integrity-legacy-check-required
-        summary: The repository contains a stale managed source location.
+        summary: The repository lint invocation receives no arguments and finds a registered legacy source location.
     guarantees:
       - id: canonical-asset-roots-present
         applies_to:
@@ -29,16 +29,17 @@ contracts:
           - repository-managed-source-integrity-source-available
         boundary: boundary.workspace-files
         statement: '`missing-registered-sources` is one of `"absent"`. Occurrence state (present or absent) of a workflows, runtime, or lint-rules source path declared by the preset asset registry missing from the repository tree.'
-      - id: legacy-source-locations-absent
+      - id: legacy-source-locations-rejected
         applies_to:
           - repository-managed-source-integrity-legacy-check-required
-        boundary: boundary.workspace-files
-        statement: '`legacy-source-locations` is one of `"absent"`. Occurrence state (present or absent) of a registered legacy source location in the repository tree.'
+        boundary: boundary.repository-gate-result
+        statement: The maintenance gate fails when the repository contains a registered legacy source location.
       - id: diagnostic-failure-stage-integrity
         applies_to:
           - runtime-context.failure-diagnostic-required
+          - repository-managed-source-integrity-legacy-check-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary failure diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: repository-managed-source-integrity
@@ -51,9 +52,9 @@ contracts:
         meaning: "Received by the contract target: contract subject execution definition read by the check."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The execution-definition checker receives an unreadable or invalid definition and rejects it.
       - id: repository-contract-execution-definition-available
-        summary: The repository contract package and its execution definition are available.
+        summary: The coverage comparison receives the current packaged subject scopes and execution definition.
     guarantees:
       - id: repository-contract-execution-subjects-covered
         applies_to:
@@ -64,7 +65,7 @@ contracts:
         applies_to:
           - runtime-context.failure-diagnostic-required
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary failure diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: repository-managed-source-integrity

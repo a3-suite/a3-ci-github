@@ -20,9 +20,12 @@ test_maps:
         partition: runtime-context.rust-release-version-report-rejected
         guarantees:
           - rust-release-version-diagnostic-present
+          - diagnostic-failure-stage-processing
+          - rust-release-processing-fails
+          - rust-release-rejected-final-output-safe
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.rust-release-build-rejected
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-release-build.outputs
@@ -37,8 +40,13 @@ test_maps:
         partition: runtime-context.rust-release-build-script-failed
         guarantees:
           - release-build-failure-propagated
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > ci-rust-release-build composite shell step publishes the input rejection stage
+        partition: runtime-context.rust-release-build-script-failed
         guarantees:
           - diagnostic-failure-stage-outputs
-        reason: Composite Action に不正な language-profile を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。
+      - path: actions/ci-rust-release-build/tests/composite-execution.test.mjs
+        symbol: contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success
+        partition: rust-release-build-output-write-denied
+        guarantees:
+          - release-build-failure-propagated

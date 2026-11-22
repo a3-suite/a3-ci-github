@@ -3,21 +3,13 @@ name: quality-scenario
 quality_scenario_id: github-actions-action-contract-and-distribution-safe
 summary: Action の配布 ref だけで実行でき、入力異常や機密情報を安全に扱う
 quality_attribute: reliability
-stimulus: 利用者が source build や node_modules を用意せず immutable ref の Action を呼び出し、不正入力または secret を含む入力が渡される
+stimulus: 利用者が固定参照の Action を呼び出す
 environment: GitHub Actions runner 上で action.yml と同じ ref の配布物を使用する
 response: 契約に従って成功 output または診断付き失敗を返し、機密値を外部出力しない
 response_measure:
   - JavaScript / TypeScript Action は同じ ref の dist だけで起動し、利用者側の build と依存解決を要求しない
-  - 必須・不正・境界入力は成功扱いにせず、Action の終了状態と診断情報へ反映する
+  - 必須入力の欠落や契約に反する値を拒否し、失敗の終了状態と診断情報を返す
   - secret、token、credential はログ、output、summary、証跡へ出力しない
-  - source、依存、ビルド設定から再生成した配布物と同梱 dist の内容が一致する
-  - Composite Action が参照する script は同じ ref に存在し、Action 外でも同じ入力契約と終了状態を検証できる
-  - Action の追加・削除後に README.md の Action 一覧と用途が実在する Action と一致し、不一致の変更は確定されない
   - workflow の権限、runner、trigger、job 境界を Action 内部へ取り込まない
 related_requirements:
   - github-actions-action-contract-and-distribution
-related_contracts:
-  - contract.repository-action-distribution.integrity
-  - contract.repository-action-distribution.catalog
-  - contract.repository-action-distribution.source-verification
-  - contract.repository-action-distribution.release-version

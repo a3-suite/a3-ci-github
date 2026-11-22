@@ -224,11 +224,14 @@ describe("contract.ci-preset-materialization.application", () => {
       writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
       const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
       writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+      writeFileSync(path.join(fixture.targetRoot, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: {} }));
+      const before = snapshotTree(fixture.targetRoot);
       const sources = ['runtime/adapter/cli-runtime.ts', 'rust/assets/test-bundle.json'];
       const destinations = ['.ci/runtime/helper.ts', '.ci/adapters/test-bundle.json'];
 
       // Act
       const copied = materializeAdapterBundle(fixture.options);
+      const afterCopy = snapshotTree(fixture.targetRoot);
       const reused = materializeAdapterBundle(fixture.options);
 
       // Assert
@@ -238,7 +241,8 @@ describe("contract.ci-preset-materialization.application", () => {
       expect(reused.files).toStrictEqual(sources.map((source, index) => ({ source, destination: destinations[index], action: 'reused' })));
       expect(readFileSync(path.join(fixture.targetRoot, destinations[0]))).toStrictEqual(readFileSync(path.join(repository, sources[0])));
       expect(readFileSync(path.join(fixture.targetRoot, destinations[1]))).toStrictEqual(readFileSync(fixture.descriptorPath));
-      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+      expect(afterCopy).toMatchObject(before);
+      expect(snapshotTree(fixture.targetRoot)).toStrictEqual(afterCopy);
     }));
 
     // evidence_role: contract
@@ -247,10 +251,11 @@ describe("contract.ci-preset-materialization.application", () => {
     // contract_id: contract.ci-preset-materialization.application
     test('materializer retains completed copies and reports the changed range after a later copy fails', () => withCustomBundle((fixture) => {
       // Act
-      const { failure, injected, failedDestination, settings, diagnostic } = failLaterCopy(fixture);
+      const { failure, injected, firstDestination, failedDestination, settings, diagnostic } = failLaterCopy(fixture);
 
       // Assert
       expect(failure).toBe(injected);
+      expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
       expect(existsSync(failedDestination)).toBe(false);
       expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
       expect(diagnostic.evidence(failure)).toMatchObject({
@@ -259,22 +264,13 @@ describe("contract.ci-preset-materialization.application", () => {
       });
     }));
 
-    // evidence_role: supplemental
-    // A copy completed before a later copy fails is new output, not a consumer asset the materializer is required to protect.
-    test('materializer keeps a copy completed before a later copy fails', () => withCustomBundle((fixture) => {
-      // Act
-      const { firstDestination } = failLaterCopy(fixture);
-
-      // Assert
-      expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
-    }));
-
     // evidence_role: contract
     // test_level: integration
     // integration_id: adapter-materialization-rejection
     // contract_id: contract.ci-preset-materialization.application
     test('materializer rejects invalid custom bundle inputs before copying consumer assets', () => withCustomBundle((fixture) => {
       // Arrange
+      writeFileSync(path.join(fixture.targetRoot, 'package.json'), JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } }));
       const cases = [
         [(value) => { value.schemaVersion = '2'; }, /descriptor-invalid/],
         [(value) => { value.executionBoundary = 'write'; }, /descriptor-contract-invalid/],

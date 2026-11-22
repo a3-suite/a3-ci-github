@@ -22,8 +22,29 @@ for (const operation of ['build-platform', 'assemble']) {
     const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
     expect(result.status, String(result.stderr)).toBe(0);
     expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
+    expect(fs.statSync(path.join(f.root, 'new output')).isDirectory()).toBe(true);
   });
 }
+
+test('supplemental entrypoint preserves existing output on rejection', (t) => {
+  const f = fixture(t);
+  const output = path.join(f.root, 'new output');
+  fs.mkdirSync(output);
+  fs.writeFileSync(path.join(output, 'existing'), 'original');
+  const result = bundle(f, { INPUT_OPERATION: 'build-platform' });
+  expect(result.status).toBe(1);
+  expect(String(result.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"[^"]+"/m);
+  expect(fileNames(output)).toEqual(['existing']);
+  expect(fs.readFileSync(path.join(output, 'existing'), 'utf8')).toBe('original');
+});
+
+test('supplemental entrypoint retains its result when the Action output write fails', (t) => {
+  const f = fixture(t);
+  const result = bundle(f, { INPUT_OPERATION: 'build-platform', GITHUB_OUTPUT: f.root });
+  expect(result.status).toBe(1);
+  expect(String(result.stderr)).toContain('"stage":"output-write"');
+  expect(fs.statSync(path.join(f.root, 'new output', 'arguments')).isFile()).toBe(true);
+});
 
 // evidence_role: supplemental
 // The argument vector passed to the owner adapter is an implementation check of the phase; no contract guarantee covers it.
@@ -39,7 +60,7 @@ for (const operation of ['build-platform', 'assemble']) {
 }
 
 test('supplemental entrypoint rejects invalid binding before owner execution', (t) => {
-  const f = fixture(t);
+  const f = fixture(t, ': > owner-started');
   f.configure({ CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'false' });
   const filesBefore = fileNames(f.root);
   const result = bundle(f);
@@ -47,11 +68,12 @@ test('supplemental entrypoint rejects invalid binding before owner execution', (
   expect(String(result.stderr)).toMatch(/supplemental-asset-not-selected/);
   expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
+  expect(fs.existsSync(path.join(f.root, 'owner-started'))).toBe(false);
   expect(fileNames(f.root)).toEqual(filesBefore);
 });
 
 test('supplemental entrypoint rejects injected output before owner execution', (t) => {
-  const f = fixture(t);
+  const f = fixture(t, ': > owner-started');
   const cases: Record<string, string>[] = [{ 'INPUT_OUTPUT-DIRECTORY': 'new output\nstatus=success' }, { GITHUB_OUTPUT: `${f.outputPath}\nstatus=success` }];
   for (const changes of cases) {
     const filesBefore = fileNames(f.root);
@@ -59,13 +81,14 @@ test('supplemental entrypoint rejects injected output before owner execution', (
     expect(result.status).toBe(1);
     expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
+    expect(fs.existsSync(path.join(f.root, 'owner-started'))).toBe(false);
     expect(fileNames(f.root)).toEqual(filesBefore);
   }
 });
 
 test('supplemental entrypoint propagates owner failure without owner diagnostics', (t) => {
   for (const operation of ['build-platform', 'assemble']) {
-    const f = fixture(t, 'echo secret-owner-diagnostic >&2\nexit 23');
+    const f = fixture(t, 'echo private-owner-stdout\necho private-owner-stderr >&2\nexit 23');
     const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
     expect(result.status).toBe(1);
     expect(String(result.stderr)).toMatch(/owner-adapter-failed/);
@@ -78,8 +101,9 @@ test('supplemental entrypoint propagates owner failure without owner diagnostics
     expect(evidence.comparison['exit-status']).toBe(23);
     expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
     expect(diagnostic['sanitized-reason']).toBe('process-failed');
-    expect(String(result.stderr)).not.toMatch(/secret-owner-diagnostic/);
-    expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
+    const output = fs.readFileSync(f.outputPath, 'utf8');
+    expect(String(result.stdout) + String(result.stderr) + output).not.toMatch(/private-owner-(stdout|stderr)/);
+    expect(output).toBe('');
   }
 });
 
@@ -194,6 +218,7 @@ test('supplemental entrypoint assembles an asset release from empty build roots 
   expect(fs.existsSync(path.join(valid.root, 'new output'))).toBe(true);
   expect(rejected.status).toBe(1);
   expect(String(rejected.stderr)).toMatch(/unexpected-build-input/);
+  expect(String(rejected.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"build-input-validation"/m);
   expect(fs.readFileSync(withBuild.outputPath, 'utf8')).toBe('');
 });
 

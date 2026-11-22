@@ -16,7 +16,12 @@ import { fileURLToPath } from 'node:url';
 
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = path.resolve(scriptRoot, '../..');
-const hasPwsh = spawnSync('pwsh', ['--version'], { encoding: 'utf8' }).status === 0;
+const pwshProbe = spawnSync('pwsh', ['--version'], { encoding: 'utf8', timeout: 10000 });
+if (pwshProbe.error && pwshProbe.error.code !== 'ENOENT') throw pwshProbe.error;
+if (!pwshProbe.error && pwshProbe.status !== 0) {
+  throw new Error(`PowerShell version probe failed (${pwshProbe.signal ?? pwshProbe.status}): ${pwshProbe.stderr}`);
+}
+const hasPwsh = !pwshProbe.error;
 const nativePowerShells = process.platform === 'win32' ? ['powershell', 'pwsh'].filter((shell) => spawnSync(shell, ['-NoProfile', '-Command', 'exit 0']).status === 0) : [];
 
 const withFixture = (callback) => {

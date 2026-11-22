@@ -11,6 +11,12 @@ contracts:
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: selection
         meaning: "Received by the contract target: adapter bundle selection passed to the materializer."
+      - name: inventory
+        meaning: "Received by the contract target: path to the adapter bundle inventory."
+      - name: target-root
+        meaning: "Received by the contract target: consumer project root for materialization."
+      - name: output
+        meaning: "Received by the contract target: optional path for the materialization report."
       - name: source-root
         meaning: "Received by the contract target: source root argument."
       - name: destination
@@ -20,21 +26,25 @@ contracts:
       - name: project-settings
         meaning: "Precondition prepared by the case: state of the project settings required by the bundle."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.preset-standard-materialization-valid
         summary: The invocation meets the shared runtime context `runtime-context.preset-standard-materialization-valid`.
       - id: runtime-context.preset-custom-materialization-valid
         summary: The invocation meets the shared runtime context `runtime-context.preset-custom-materialization-valid`.
       - id: runtime-context.preset-materialization-rejected
-        summary: The invocation meets the shared runtime context `runtime-context.preset-materialization-rejected`.
+        summary: Materialization rejects arguments, source binding, project configuration or another input, or fails to write the optional report. This condition covers requests with no valid selection or a custom bundle. Conflicting asset destination bytes and copy failures have their own conditions.
+      - id: preset-standard-materialization-rejected
+        summary: A selected standard Action bundle is rejected due to invalid inputs or failure to write the optional report.
+      - id: preset-materialization-destination-conflict
+        summary: An existing consumer asset destination conflicts with the selected source bytes, so destination validation rejects it before copying.
+      - id: preset-custom-materialization-copy-failed
+        summary: The selected custom bundle passes preflight, but writing one of its destinations fails after copying begins.
     guarantees:
       - id: ci-preset-materialization-success-observed
         applies_to:
           - runtime-context.preset-standard-materialization-valid
           - runtime-context.preset-custom-materialization-valid
         boundary: boundary.script-result
-        statement: "`schema` is present. Materialization report schema identity; present only when materialization completed. Observable fields at this boundary also include `bundle` (Selected adapter bundle identity), `files` (Canonical source, destination, and copy or reuse action for each materialized file), `binding` (Fixed standard Action bundle identity and owner source revision and digest when no project files are copied)."
+        statement: "The successful result is a materialization report with schema `ci.adapter-materializer.v2`."
       - id: ci-preset-materialization-failure-observed
         applies_to:
           - runtime-context.preset-materialization-rejected
@@ -42,10 +52,16 @@ contracts:
         statement: "`diagnostic` is present. Stable thrown diagnostic of the rejected materialization."
       - id: diagnostic-failure-stage-application
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.preset-materialization-rejected
+          - preset-standard-materialization-rejected
+          - preset-materialization-destination-conflict
+          - preset-custom-materialization-copy-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The primary diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: standard-copy-state
+        applies_to:
+          - runtime-context.preset-standard-materialization-valid
+          - preset-standard-materialization-rejected
         boundary: boundary.project-ci-assets
         statement: '`standard-copy-state` is one of `"absent"`. Presence of consumer files newly copied by a standard Action bundle invocation.'
       - id: standard-binding-bundle
@@ -64,9 +80,21 @@ contracts:
         boundary: boundary.script-result
         statement: '`standard-binding-digest` is one of `"matched"`. Equality of the binding SHA-256 and selected fixed standard descriptor content digest.'
       - id: consumer-settings-change
+        applies_to:
+          - runtime-context.preset-standard-materialization-valid
+          - runtime-context.preset-custom-materialization-valid
+          - runtime-context.preset-materialization-rejected
+          - preset-custom-materialization-copy-failed
+          - preset-standard-materialization-rejected
         boundary: boundary.project-ci-assets
         statement: '`consumer-settings-change` is one of `"absent"`. Changes to pre-existing consumer settings bytes during materialization.'
       - id: consumer-dependency-change
+        applies_to:
+          - runtime-context.preset-standard-materialization-valid
+          - runtime-context.preset-custom-materialization-valid
+          - runtime-context.preset-materialization-rejected
+          - preset-custom-materialization-copy-failed
+          - preset-standard-materialization-rejected
         boundary: boundary.project-ci-assets
         statement: '`consumer-dependency-change` is one of `"absent"`. Changes to pre-existing consumer dependency declarations during materialization.'
       - id: copy-report-sources
@@ -85,11 +113,15 @@ contracts:
         boundary: boundary.script-result
         statement: '`copy-report-actions` is one of `"matched"`. Agreement of every reported copy or reuse action with the destination state before invocation.'
       - id: conflicting-destination-change
+        applies_to:
+          - preset-materialization-destination-conflict
         boundary: boundary.project-ci-assets
         statement: '`conflicting-destination-change` is one of `"absent"`. Byte changes to an existing destination whose contents conflict with the selected source.'
       - id: changed-range-evidence
+        applies_to:
+          - preset-custom-materialization-copy-failed
         boundary: boundary.diagnostic-result
-        statement: '`changed-range-evidence` is one of `"matched"`. Agreement, at each failed copy boundary, of diagnostic written destinations and files successfully copied before that boundary. With no failed copy boundary, this comparison is vacuously matched.'
+        statement: '`changed-range-evidence` is one of `"matched"`. The diagnostic lists the destinations successfully copied before the failure as written and identifies the failed destination as current.'
       - id: standard-report-files
         applies_to:
           - runtime-context.preset-standard-materialization-valid

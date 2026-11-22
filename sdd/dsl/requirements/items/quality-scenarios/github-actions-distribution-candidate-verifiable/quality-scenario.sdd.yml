@@ -1,0 +1,18 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: github-actions-distribution-candidate-verifiable
+summary: Actionの公開候補と利用者向けの一覧を公開前に検証できる
+quality_attribute: reliability
+stimulus: 保守者が変更後のActionを含む配布候補を検証する
+environment: Actionの定義、配布候補、対応するソースと利用者向け一覧を参照できる
+response: 配布候補の内容、実行に必要な資材、利用者向け一覧の不一致があれば検証は失敗する
+response_measure:
+  - 再生成した配布物と同梱の配布物が一致する
+  - Composite Actionが参照するスクリプトが同じ実装参照に含まれ、スクリプト単体で公開入力と終了状態を検証できる
+  - Actionの追加・削除後も一覧の項目と用途が実在するActionと一致する
+related_requirements:
+  - github-actions-action-contract-and-distribution
+related_contracts:
+  - contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.catalog
+  - contract.repository-action-distribution.source-verification

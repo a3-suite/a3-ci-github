@@ -18,24 +18,32 @@ contracts:
       - name: output-directory
         meaning: "Received by the contract target: output directory path passed by the caller."
       - name: commands
-        meaning: "Precondition prepared by the case: outcome of the build commands."
-      - name: version
-        meaning: "Received by the contract target: version value passed to the contract target."
+        meaning: "Precondition prepared by the case: results of external tool commands, including Git, Rustup, Cargo and archive tooling."
+      - name: toolchain-version
+        meaning: "Received by the contract target: exact Rust toolchain version."
+      - name: authority-path
+        meaning: "Received by the contract target: path to the release authority containing the approved version."
+      - name: cargo-manifest-path
+        meaning: "Received by the contract target: path to the Cargo manifest."
+      - name: release-binary-name
+        meaning: "Received by the contract target: Cargo binary target and archive entry name."
+      - name: release-asset-prefix
+        meaning: "Received by the contract target: release archive name prefix."
+      - name: checkout-head
+        meaning: "Precondition prepared by the case: HEAD of the source checkout."
       - name: version-output
-        meaning: "Precondition prepared by the case: version reported by the toolchain."
+        meaning: "Precondition prepared by the case: version reported by the built binary."
       - name: platform-manifest
         meaning: "Received by the contract target: content of the platform manifest file."
       - name: output-destination-state
         meaning: "Precondition prepared by the case: state of the output destination before the invocation."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.rust-release-build-rejected
-        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-rejected`.
+        summary: The build cannot proceed because of missing, invalid or conflicting inputs, a failed prerequisite or build command, failure while constructing, verifying or publishing the staged archive, or a conflicting output destination. A rejected binary version response has its own condition.
       - id: runtime-context.rust-release-build-commands-succeed
-        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-commands-succeed`.
+        summary: The supplied profile, checkout HEAD, exact toolchain, package version and unique manifest platform match the release authority. External commands supply usable results, including an accepted binary version and a readable archive matching the expected entry and digest. The new output destination can be claimed and written.
       - id: runtime-context.rust-release-version-report-rejected
-        summary: The invocation meets the shared runtime context `runtime-context.rust-release-version-report-rejected`.
+        summary: The build reaches the binary version check, but the binary does not report the approved version as an independent token or its version command fails.
     guarantees:
       - id: rust-release-processing-succeeds
         applies_to:
@@ -50,11 +58,13 @@ contracts:
       - id: rust-release-processing-fails
         applies_to:
           - runtime-context.rust-release-build-rejected
+          - runtime-context.rust-release-version-report-rejected
         boundary: boundary.script-result
         statement: '`outcome` is one of `"failure"`. Step outcome of the release build invocation; success or failure.'
       - id: rust-release-rejected-final-output-safe
         applies_to:
           - runtime-context.rust-release-build-rejected
+          - runtime-context.rust-release-version-report-rejected
         boundary: boundary.workspace-files
         statement: '`final-output` is one of `"absent"`, `"preserved"`. State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged.'
       - id: rust-release-version-diagnostic-present
@@ -64,12 +74,13 @@ contracts:
         statement: '`diagnostic-codes` contains `"binary-version-mismatch"`. Stable diagnostic codes reported by the failed step.'
       - id: diagnostic-failure-stage-processing
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.rust-release-build-rejected
+          - runtime-context.rust-release-version-report-rejected
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The build diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
-      name: ci-rust-release-build
+      name: ci-release-build.sh
   - id: contract.ci-rust-release-build.outputs
     summary: Language profile, platform, and output directory inputs to the Rust release build Composite Action.
     inputs:
@@ -81,13 +92,27 @@ contracts:
         meaning: "Received by the contract target: build target bound to the selected platform."
       - name: output-directory
         meaning: "Received by the contract target: output directory path passed by the caller."
+      - name: platform-manifest
+        meaning: "Received by the contract target: path to the selected platform manifest."
+      - name: toolchain-version
+        meaning: "Received by the contract target: exact Rust toolchain version."
+      - name: authority-path
+        meaning: "Received by the contract target: path to the release authority JSON."
+      - name: cargo-manifest-path
+        meaning: "Received by the contract target: path to the Cargo manifest."
+      - name: release-binary-name
+        meaning: "Received by the contract target: Cargo binary target and archive entry name."
+      - name: release-asset-prefix
+        meaning: "Received by the contract target: release archive name prefix."
+      - name: github-output
+        meaning: "Received by the contract target: runner file that receives the completed output."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.rust-release-build-script-succeeded
-        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-script-succeeded`.
+        summary: The build script succeeds and the Action output can be written.
       - id: runtime-context.rust-release-build-script-failed
-        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-script-failed`.
+        summary: The build script fails.
+      - id: rust-release-build-output-write-denied
+        summary: The build script succeeds, but writing the Action output fails.
     guarantees:
       - id: completed-output-produced
         applies_to:
@@ -97,13 +122,14 @@ contracts:
       - id: release-build-failure-propagated
         applies_to:
           - runtime-context.rust-release-build-script-failed
+          - rust-release-build-output-write-denied
         boundary: boundary.action-output
-        statement: '`outcome` is one of `"failure"`. The success or failure outcome of the release build step.'
+        statement: '`outcome` is one of `"failure"`. The release build step fails. If the build script failed, the step does not publish `completed`.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.rust-release-build-script-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The build script records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-rust-release-build

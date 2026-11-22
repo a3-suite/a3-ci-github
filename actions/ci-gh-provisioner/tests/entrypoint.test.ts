@@ -194,6 +194,19 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(readdirSync(paths.githubPath)).toStrictEqual([]);
   });
 
+  test('Action preserves existing PATH entries when final handoff fails', () => {
+    const paths = workspace();
+    const asset = archive(paths.root, 'linux_amd64');
+    writeFileSync(paths.githubPath, '/prior/bin\n');
+    const outcome = run(paths, { TEST_FAIL_PATH_RENAME: 'true' }, {
+      [checksumUrl]: manifest(sha256(asset), assetName('linux_amd64')),
+      [`${releaseUrl}/${assetName('linux_amd64')}`]: asset,
+    });
+    expect(outcome.result.status).toBe(1);
+    expect(failureDiagnostic(outcome.result.stderr)).toMatchObject({ classification: { stage: 'path-export' } });
+    expect(readGithubPath(paths.githubPath)).toBe('/prior/bin\n');
+  });
+
   // evidence_role: supplemental
   // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
   describe('Action leaves no working directory after a rejected provisioning', () => {

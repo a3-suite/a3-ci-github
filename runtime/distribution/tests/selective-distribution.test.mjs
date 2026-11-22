@@ -354,6 +354,15 @@ describe("contract.ci-selective-distribution.delivery", () => {
             requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot }), diagnostic).toThrow(new RegExp(`^${diagnostic}$`));
           expect(snapshotTree(projectRoot), diagnostic).toStrictEqual(before);
         }
+        const projectRoot = createConsumer(root, 'malformed-json');
+        const manifestPath = path.join(root, 'malformed-manifest.json');
+        fs.writeFileSync(manifestPath, '{');
+        const before = snapshotTree(projectRoot);
+        const failure = failureOf(() => cliFetch({ projectRoot, manifestPath, requestedPresets: ['quality-gate'],
+          sourceRoot: repositoryRoot }));
+        expect(failure.message).toBe('distribution-manifest-invalid');
+        expect(failure.evidence.classification.stage).toBe('manifest-validation');
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
       });
     });
 
@@ -835,6 +844,52 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(snapshotTree(projectRoot)).toStrictEqual(before);
       });
     });
+
+    // contract_id: contract.ci-selective-distribution.verification
+    test('local verification rejects a manifest for a different revision even with a matching receipt digest', async () => {
+      await withFixture('distribution-local-revision-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath,
+          requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+        const manifestPath = path.join(fetched.distributionRoot, 'manifest.json');
+        const receiptPath = path.join(fetched.distributionRoot, 'receipt.json');
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        manifest.sourceRevision = (sourceRevision[0] === '0' ? '1' : '0') + sourceRevision.slice(1);
+        for (const binding of Object.values(manifest.reusableWorkflows)) {
+          binding.sourceRevision = manifest.sourceRevision;
+          manifest.workflowReferences[binding.referencePlaceholder.slice(1, -1)] = manifest.sourceRevision;
+        }
+        const manifestBytes = Buffer.from(JSON.stringify(manifest));
+        const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+        receipt.manifestSha256 = sha256(manifestBytes);
+        fs.writeFileSync(manifestPath, manifestBytes);
+        fs.writeFileSync(receiptPath, JSON.stringify(receipt));
+        const before = snapshotTree(projectRoot);
+
+        expect(() => cliVerify({ projectRoot, sourceRevision })).toThrow(/^distribution-local-manifest-revision-mismatch$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.verification
+    test('local verification rejects a receipt that omits a file of its selected assets', async () => {
+      await withFixture('distribution-local-receipt-file-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath,
+          requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+        const receiptPath = path.join(fetched.distributionRoot, 'receipt.json');
+        const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+        const [omitted, ...remaining] = receipt.files;
+        fs.writeFileSync(path.join(fetched.distributionRoot, omitted), 'tampered\n');
+        fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, files: remaining }));
+        const before = snapshotTree(projectRoot);
+
+        expect(() => cliVerify({ projectRoot, sourceRevision })).toThrow(/^distribution-local-receipt-files-mismatch$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
   });
 });
 
@@ -889,6 +944,7 @@ describe("contract.ci-selective-distribution.application", () => {
       await withFixture('a3-ci-github-distribution-partial-', async (root) => {
         const { projectRoot, plan, changedPath, failure } = await failPartialApply(root, { retainLock: false });
         expect(failure.message).toBe('distribution-plan-input-changed');
+        expect(failure.evidence.classification).toMatchObject({ operation: 'apply', stage: 'destination-recheck' });
         expect(failure.evidence['execution-state']).toMatchObject({ rollback: 'restored' });
         expect(fs.existsSync(path.join(projectRoot, plan.actions[0].destination))).toBe(false);
         expect(fs.readFileSync(changedPath, 'utf8')).toBe('changed-after-plan\n');
@@ -900,6 +956,30 @@ describe("contract.ci-selective-distribution.application", () => {
         fs.writeFileSync(transactionPath, `${JSON.stringify(transaction, null, 2)}\n`);
         expect(cliRollback({ projectRoot, transactionId: transaction.transactionId }).status).toBe('rolled-back');
         expect(fs.readFileSync(changedPath, 'utf8')).toBe('changed-after-plan\n');
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test.each(['source', 'manifest', 'plan', 'ownership'])('partial apply restores prior writes when %s changes', async (changedInput) => {
+      await withFixture('distribution-apply-input-recheck-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        const selection = { requestedPresets: ['release-publication'], requestedAssets: [] };
+        const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath, sourceRoot: repositoryRoot, ...selection });
+        const plan = cliPlan({ projectRoot, sourceRevision, ...selection });
+        expect(plan.actions.length).toBeGreaterThan(1);
+        const [file, reason] = {
+          source: [path.join(fetched.distributionRoot, plan.actions[1].sourcePath), 'distribution-plan-source-changed'],
+          manifest: [path.join(fetched.distributionRoot, 'manifest.json'), 'distribution-plan-manifest-changed'],
+          plan: [plan.planPath, 'distribution-plan-approval-invalid'],
+          ownership: [path.join(projectRoot, '.ci/ci-assets.lock.json'), 'distribution-plan-ownership-changed'],
+        }[changedInput];
+        const failure = failureOf(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest,
+          faults: { transactionHooks: [{ status: 'applying', index: 1, write: { path: file, content: 'changed-after-first-write\n' } }] } }));
+        expect(failure.evidence.classification).toMatchObject({ reason, stage: 'plan-recheck' });
+        expect(failure.evidence['execution-state'].rollback).toBe('restored');
+        for (const entry of plan.actions) expect(fs.existsSync(path.join(projectRoot, entry.destination))).toBe(false);
+        expect(fs.readFileSync(file, 'utf8')).toBe('changed-after-first-write\n');
       });
     });
 
@@ -931,6 +1011,56 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    test('application writes the approved destinations and preserves unrelated files', async () => {
+      await withFixture('distribution-apply-approved-destinations-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        const selection = { requestedPresets: ['release-publication'], requestedAssets: [] };
+        cliFetch({ projectRoot, manifestPath: release.manifestPath, sourceRoot: repositoryRoot, ...selection });
+        const plan = cliPlan({ projectRoot, sourceRevision, ...selection });
+        fs.writeFileSync(path.join(projectRoot, 'README.md'), 'consumer-owned content\n');
+        fs.writeFileSync(path.join(projectRoot, '.a3-skills', 'consumer-note.md'), 'consumer-owned skill notes\n');
+        const unrelatedFiles = () => Object.fromEntries(Object.entries(snapshotTree(projectRoot))
+          .filter(([entry]) => {
+            const relative = entry.split(path.sep).join('/');
+            return !relative.endsWith('/') && !relative.startsWith('.a3-skills/ci-github/')
+              && !plan.actions.some(({ destination }) => destination === relative);
+          }));
+        const before = unrelatedFiles();
+
+        const result = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        expect(result).toMatchObject({ planDigest: plan.planDigest, status: 'applied',
+          transactionId: expect.stringMatching(/^[0-9]+-[a-f0-9]{12}$/) });
+        const recordPath = path.join(projectRoot, '.a3-skills/ci-github/transactions', result.transactionId, 'transaction.json');
+        const transaction = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+        expect(transaction).toMatchObject({ transactionId: result.transactionId, planDigest: plan.planDigest, status: 'applied' });
+        expect(transaction.actions.map(({ destination, beforeSha256 }) => ({ destination, beforeSha256 })))
+          .toStrictEqual(plan.actions.map(({ destination, destinationSha256 }) => ({ destination, beforeSha256: destinationSha256 })));
+        expect(plan.actions.length).toBeGreaterThan(1);
+        for (const entry of plan.actions) {
+          expect(sha256(fs.readFileSync(path.join(projectRoot, entry.destination)))).toBe(entry.generatedSha256);
+        }
+        expect(unrelatedFiles()).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('application rejects a planned conflict without modifying consumer files', async () => {
+      await withFixture('distribution-apply-planned-conflict-', (root) => {
+        const { projectRoot, options, plan } = prepareQualityPlan(root);
+        const destination = path.join(projectRoot, plan.actions[0].destination);
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, 'consumer-owned content\n');
+        const conflict = cliPlan(options);
+        const before = snapshotTree(projectRoot);
+
+        expect(() => cliApply({ projectRoot, planPath: conflict.planPath, approvalDigest: conflict.planDigest }))
+          .toThrow(/^distribution-plan-has-conflicts$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
     test('application rejects a plan while another mutation holds the mutation lock', async () => {
       await withFixture('a3-ci-github-distribution-mutation-lock-', async (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -938,6 +1068,23 @@ describe("contract.ci-selective-distribution.application", () => {
         const before = snapshotTree(projectRoot);
         expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-apply-locked$/);
         expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.application
+    test('application rejects changed or malformed plan bytes without writing', async () => {
+      await withFixture('distribution-apply-approval-', (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        const original = fs.readFileSync(plan.planPath, 'utf8');
+        const changed = JSON.parse(original);
+        changed.stale.push('.github/workflows/changed.yml');
+        for (const bytes of [JSON.stringify(changed), 'null', '{']) {
+          fs.writeFileSync(plan.planPath, bytes);
+          const before = snapshotTree(projectRoot);
+          expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest }))
+            .toThrow(/^distribution-plan-approval-invalid$/);
+          expect(snapshotTree(projectRoot)).toStrictEqual(before);
+        }
       });
     });
 
@@ -952,7 +1099,9 @@ describe("contract.ci-selective-distribution.application", () => {
         fs.rmSync(assetLockPath);
         const plan = cliPlan(options);
         fs.writeFileSync(assetLockPath, '{}\n');
-        expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-plan-ownership-changed$/);
+        const failure = failureOf(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest }));
+        expect(failure.message).toBe('distribution-plan-ownership-changed');
+        expect(failure.evidence.classification).toMatchObject({ operation: 'apply', stage: 'plan-recheck' });
       });
     });
 
@@ -1037,7 +1186,47 @@ describe("contract.ci-selective-distribution.application", () => {
       });
     });
 
-    // contract_id: contract.ci-selective-distribution.application
+    // contract_id: contract.ci-selective-distribution.rollback
+    test('rollback removes a destination created by the recorded transaction', async () => {
+      await withFixture('distribution-rollback-created-destination-', (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        const destination = path.join(projectRoot, plan.actions[0].destination);
+        expect(fs.existsSync(destination)).toBe(false);
+        const { transactionId } = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        expect(fs.existsSync(destination)).toBe(true);
+
+        expect(cliRollback({ projectRoot, transactionId }).rollbackStatus).toBe('restored');
+        expect(fs.existsSync(destination)).toBe(false);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.rollback
+    test('rollback restores the previous bytes of an updated destination and preserves unrelated files', async () => {
+      await withFixture('distribution-rollback-updated-destination-', (root) => {
+        const { projectRoot, options, workflow, workflowPath, canonical, writeOwnership } = prepareOwnedWorkflow(root);
+        const previous = Buffer.from(canonical.toString('utf8').replaceAll('ubuntu-24.04', 'ubuntu-22.04'));
+        expect(previous).not.toEqual(canonical);
+        fs.writeFileSync(workflow, previous);
+        writeOwnership(previous);
+        const plan = cliPlan(options);
+        const applied = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
+        const ordinaryFiles = () => Object.fromEntries(Object.entries(snapshotTree(projectRoot))
+          .filter(([entry]) => {
+            const relative = entry.split(path.sep).join('/');
+            return relative !== workflowPath && !relative.startsWith('.a3-skills/ci-github/transactions/');
+          }));
+        const before = ordinaryFiles();
+
+        expect(cliRollback({ projectRoot, transactionId: applied.transactionId })).toMatchObject({
+          status: 'rolled-back', rollbackStatus: 'restored',
+        });
+        expect(fs.readFileSync(workflow)).toStrictEqual(previous);
+        expect(ordinaryFiles()).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.rollback
     test('rollback refuses to overwrite consumer changes made after apply', async () => {
       await withFixture('a3-ci-github-distribution-rollback-conflict-', async (root) => {
         const release = prepareRelease(root);
@@ -1277,6 +1466,33 @@ describe("contract.ci-selective-distribution.delivery", () => {
       });
     });
 
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.delivery
+    // integration_id: selective-distribution-delivery
+    test('fetch preserves the prior cache when cleanup rejects a cache extension', async () => {
+      await withFixture('distribution-extension-cleanup-', async (root) => {
+        const release = prepareRelease(root);
+        for (const operation of ['close', 'remove', 'staging']) {
+          const projectRoot = createConsumer(root, operation);
+          const options = { projectRoot, manifestPath: release.manifestPath, sourceRoot: committedSourceRoot };
+          const fetched = cliFetch({ ...options, requestedPresets: ['release-request'] });
+          const before = consumerTree(projectRoot);
+          const lock = { path: path.join(fetched.distributionRoot, '.fetch.lock') };
+          const faults = operation === 'close' ? { failClose: [lock] } : {
+            failRemove: operation === 'remove' ? [lock] : [{ pattern: '[\\\\/]\\.staging-[^\\\\/]+$' }],
+          };
+
+          const failure = failureOf(() => cliFetch({ ...options, requestedPresets: ['quality-gate'], faults }));
+
+          expect(failure.message, operation).toBe(operation === 'staging'
+            ? 'distribution-fetch-cleanup-failed' : 'distribution-lock-cleanup-failed');
+          expect(failure.evidence['execution-state'].rollback, operation).toBe('restored');
+          expect(consumerTree(projectRoot), operation).toEqual(before);
+        }
+      });
+    });
+
     // evidence_role: supplemental
     // Calling the transport and leaving a staging directory are implementation mechanisms of the fetch, not observations of a guarantee.
     test('fetch removes staging and skips the transport even when closing or removing its owned lock fails', async () => {
@@ -1406,16 +1622,91 @@ describe("contract.ci-selective-distribution.application", () => {
           ['digest', (lock) => { lock.assets[0].appliedSha256 = 'invalid'; }],
           ['missing digest', (lock) => { delete lock.assets[0].appliedSha256; }],
         ];
-        for (const [label, mutate] of cases) {
+        const malformedLocks = cases.map(([label, mutate]) => {
           const lock = structuredClone(valid);
           mutate(lock);
-          fs.writeFileSync(lockPath, JSON.stringify(lock));
+          return [label, JSON.stringify(lock)];
+        });
+        malformedLocks.push(['malformed JSON', '{'], ['null document', 'null'], ['boolean document', 'false']);
+        for (const [label, bytes] of malformedLocks) {
+          fs.writeFileSync(lockPath, bytes);
           const before = snapshotTree(projectRoot);
           // Act / Assert
-          expect(() => cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] }), label)
-            .toThrow(/^distribution-prior-asset-lock-invalid$/);
+          const failure = failureOf(() => cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] }));
+          expect(failure.message, label).toBe('distribution-prior-asset-lock-invalid');
+          expect(failure.evidence.classification, label).toMatchObject({
+            operation: 'plan', stage: 'prior-ownership-validation',
+          });
           expect(snapshotTree(projectRoot), label).toStrictEqual(before);
         }
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.plan
+    test('plan rejects a preset whose assets were not fetched without modifying the consumer tree', async () => {
+      await withFixture('distribution-plan-unfetched-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['release-request'],
+          sourceRoot: committedSourceRoot });
+        const before = snapshotTree(projectRoot);
+
+        expect(() => cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], settings: {} }))
+          .toThrow(/^distribution-selection-not-fetched$/);
+        expect(snapshotTree(projectRoot)).toStrictEqual(before);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.plan
+    test('plan exposes its digest actions and previously managed paths outside the selection', async () => {
+      await withFixture('distribution-plan-evidence-', (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'],
+          sourceRoot: committedSourceRoot });
+        const stalePath = '.github/workflows/retired.yml';
+        const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
+        fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+        fs.writeFileSync(lockPath, JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock',
+          sourceRevision, assets: [{ path: stalePath, appliedSha256: sha256('previously managed bytes') }] }));
+
+        const { planPath, planDigest, ...payload } = cliPlan({ projectRoot, sourceRevision,
+          requestedPresets: ['quality-gate'], requestedAssets: [] });
+
+        expect(planDigest).toBe(sha256(`${JSON.stringify(payload, null, 2)}\n`));
+        expect(JSON.parse(fs.readFileSync(planPath, 'utf8'))).toEqual({ ...payload, planDigest });
+        expect(payload.actions.map(({ destination, action }) => ({ destination, action })))
+          .toEqual([{ destination: '.github/workflows/quality-gate.yml', action: 'create' }]);
+        expect(payload.stale).toEqual([stalePath]);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.plan
+    test('plan reports a conflict without replacing an independently edited destination', async () => {
+      await withFixture('distribution-plan-independent-destination-', (root) => {
+        const { options, workflow, workflowPath } = prepareOwnedWorkflow(root);
+        const edit = Buffer.from('independent consumer edit\n');
+        fs.writeFileSync(workflow, edit);
+
+        const plan = cliPlan(options);
+
+        expect(plan.actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'conflict' }));
+        expect(fs.readFileSync(workflow)).toStrictEqual(edit);
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.plan
+    test('plan reuses current destinations and updates destinations with owned older bytes', async () => {
+      await withFixture('distribution-plan-owned-destinations-', (root) => {
+        const { options, workflow, workflowPath, canonical, writeOwnership } = prepareOwnedWorkflow(root);
+        expect(cliPlan(options).actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'reuse' }));
+
+        const older = Buffer.from(canonical.toString('utf8').replaceAll('ubuntu-24.04', 'ubuntu-22.04'));
+        expect(older).not.toEqual(canonical);
+        fs.writeFileSync(workflow, older);
+        writeOwnership(older);
+
+        expect(cliPlan(options).actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'update' }));
       });
     });
 
@@ -1503,9 +1794,30 @@ describe('contract.ci-selective-distribution.application', () => {
       await withFixture('distribution-rollback-cleanup-', async (projectRoot) => {
         const { failure, transactionId } = failRollbackCleanup(projectRoot);
         expect(failure.message).toBe('distribution-transaction-missing');
+        expect(failure.evidence.classification).toMatchObject({
+          stage: 'transaction-validation', reason: 'distribution-transaction-missing',
+        });
         expect(failure.evidence['evidence-location'].transaction).toBe(transactionId);
         expect(failure.evidence['execution-state']).toMatchObject({ write: 'not-started', rollback: 'unavailable',
           cleanup: 'lock-cleanup-failed', cleanupFailures: ['lock-remove'] });
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.rollback
+    test('rollback rejects malformed transaction metadata before restoring files', async () => {
+      await withFixture('distribution-rollback-invalid-record-', (root) => {
+        const { projectRoot, plan } = prepareQualityPlan(root);
+        const { transactionId } = cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const recordPath = path.join(projectRoot, '.a3-skills/ci-github/transactions', transactionId, 'transaction.json');
+        const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+        for (const bytes of ['{', 'null', JSON.stringify({ ...record, actions: null })]) {
+          fs.writeFileSync(recordPath, bytes);
+          const before = snapshotTree(projectRoot);
+          const failure = failureOf(() => cliRollback({ projectRoot, transactionId }));
+          expect(failure.message).toBe('distribution-transaction-not-rollbackable');
+          expect(failure.evidence.classification).toMatchObject({ operation: 'rollback', stage: 'transaction-validation' });
+          expect(snapshotTree(projectRoot)).toStrictEqual(before);
+        }
       });
     });
 
@@ -1529,6 +1841,7 @@ describe('contract.ci-selective-distribution.application', () => {
         for (const operation of ['apply', 'rollback']) {
           const { failure } = failCompletedCleanup(root, release, operation);
           expect(failure.message, operation).toBe('distribution-lock-cleanup-failed');
+          expect(failure.evidence.classification.stage, operation).toBe('lock-cleanup');
           expect(failure.evidence['execution-state'].write, operation).toBe(operation === 'apply' ? 'applied' : 'rolled-back');
           expect(failure.evidence['execution-state'].rollback, operation).toBe(operation === 'apply' ? 'not-required' : 'restored');
           expect(failure.evidence['evidence-location'].transaction, operation).toMatch(/^[0-9]+-[0-9a-f]{12}$/);

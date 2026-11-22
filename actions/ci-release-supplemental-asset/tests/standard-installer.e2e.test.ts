@@ -179,8 +179,10 @@ describe('standard installer', () => {
       checkoutLineEndings(f.root, 'crlf');
       const reportedAction = (fixtureRoot: typeof f, options: SupplementalOptionsType) => {
         const { result, output } = runDistributedAction(fixtureRoot, options);
-        expect(fs.readFileSync(output, 'utf8')).toContain(`output-directory=${options.outputDirectory}\n`);
-        expect(fs.existsSync(path.join(fixtureRoot.root, options.outputDirectory))).toBe(true);
+        expect(fs.readFileSync(output, 'utf8').trimEnd().split('\n')).toStrictEqual([
+          'status=success', `output-directory=${options.outputDirectory}`,
+        ]);
+        expect(fs.statSync(path.join(fixtureRoot.root, options.outputDirectory)).isDirectory()).toBe(true);
         return result;
       };
       const execute = (options: SupplementalOptionsType): void => {
@@ -211,6 +213,22 @@ describe('standard installer', () => {
       // Assert
       expect(result.status, result.stderr).toBe(0);
       expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(true);
+    });
+
+    // contract_id: contract.ci-release-supplemental-asset.assembly
+    // flow_id: standard-installer-process-startup
+    test('distributed CLI rejects a supplemental root for the wrong operation', (t) => {
+      const f = fixture(t);
+      for (const [operation, extra] of [['build-platform', ['--supplemental-build-root', 'transferred']], ['assemble', []]] as const) {
+        const result = spawnSync(process.execPath, [path.join(repository, 'runtime/installer/run-installer.mjs'),
+          '--operation', operation, '--source-root', f.root, '--authority-path', 'authority.json',
+          '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard', '--output-directory', 'wrong-phase-output',
+          '--provider-revision', 'a'.repeat(40), ...extra], { encoding: 'utf8' });
+        expect(result.status).toBe(1);
+        expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"phase-selection"/m);
+        expect(result.stderr).toContain('phase-input-mismatch');
+        expect(fs.existsSync(path.join(f.root, 'wrong-phase-output'))).toBe(false);
+      }
     });
 
     // evidence_role: contract

@@ -16,12 +16,10 @@ contracts:
       - name: authority-source-sha
         meaning: "Precondition prepared by the case: relation between the authority source SHA and the checked-out commit."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.rust-source-matches-authority
-        summary: The invocation meets the shared runtime context `runtime-context.rust-source-matches-authority`.
+        summary: The caller supplies a Rust profile and readable release authority that selects Rust and contains a valid source SHA equal to the checkout HEAD. Required Git and jq reads succeed.
       - id: runtime-context.rust-source-does-not-match-authority
-        summary: The invocation meets the shared runtime context `runtime-context.rust-source-does-not-match-authority`.
+        summary: A required argument is missing, a required authority or checkout read fails, the requested or recorded profile is not Rust, or the authority SHA is invalid or differs from HEAD.
     guarantees:
       - id: rust-source-processing-succeeds
         applies_to:
@@ -35,12 +33,12 @@ contracts:
         statement: '`outcome` is one of `"failure"`. Step outcome of the source gate invocation; success or failure.'
       - id: diagnostic-failure-stage-processing
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.rust-source-does-not-match-authority
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The script records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
-      name: ci-rust-source-gate
+      name: ci-source-gate.sh
   - id: contract.ci-rust-source-gate.outputs
     summary: Language profile and release authority inputs to the Rust source gate Composite Action.
     inputs:
@@ -48,13 +46,15 @@ contracts:
         meaning: "Received by the contract target: language profile selected by the caller."
       - name: authority-path
         meaning: "Received by the contract target: path to the release authority file."
+      - name: github-output
+        meaning: "Received by the contract target: runner file that receives the verified output."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.rust-source-script-succeeded
-        summary: The invocation meets the shared runtime context `runtime-context.rust-source-script-succeeded`.
+        summary: The source gate script succeeds, and the Action output can be written.
       - id: runtime-context.rust-source-script-failed
-        summary: The invocation meets the shared runtime context `runtime-context.rust-source-script-failed`.
+        summary: The source gate script fails.
+      - id: rust-source-output-write-denied
+        summary: The source gate script succeeds, but writing the Action output fails.
     guarantees:
       - id: verified-output-produced
         applies_to:
@@ -64,13 +64,14 @@ contracts:
       - id: source-verification-failure-propagated
         applies_to:
           - runtime-context.rust-source-script-failed
+          - rust-source-output-write-denied
         boundary: boundary.action-output
-        statement: '`outcome` is one of `"failure"`. The success or failure outcome of the source verification step.'
+        statement: '`outcome` is one of `"failure"`. The source verification step fails. If the source gate script failed, the step does not publish `verified`.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.rust-source-script-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The script records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: ci-rust-source-gate

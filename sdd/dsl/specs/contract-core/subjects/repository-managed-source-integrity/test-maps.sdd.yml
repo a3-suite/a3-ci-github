@@ -14,11 +14,12 @@ test_maps:
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-integrity
-    pending:
-      - partition: repository-managed-source-integrity-legacy-check-required
+      - path: tests/repository-managed-source-integrity.process.test.mjs
+        symbol: repository-managed-source-integrity > repository lint rejects each registered legacy source location
+        partition: repository-managed-source-integrity-legacy-check-required
         guarantees:
-          - legacy-source-locations-absent
-        reason: case は旧 location を持つ tree を入力とするが、契約対象の maintenance gate（runtime/repository/lint-repository.sh）は旧 location を検査せず、写像していたテストは実 repository に旧 location が無いことを確かめるだけである。
+          - legacy-source-locations-rejected
+          - diagnostic-failure-stage-integrity
   - contract_id: contract.repository-managed-source-integrity.execution-mapping
     tests:
       - path: tests/contract-subject-execution.test.mjs

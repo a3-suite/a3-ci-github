@@ -23,26 +23,20 @@ contracts:
         meaning: "Received by the contract target: workflow run ID of the request."
       - name: request-actor
         meaning: "Received by the contract target: actor of the request."
-      - name: tag
-        meaning: "Received by the contract target: release tag name."
-      - name: ref
-        meaning: "Received by the contract target: tag ref passed to the Action."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: Required inputs are absent or invalid, the request cannot be written to its destination, or writing an Action output fails.
       - id: runtime-context.release-request-handoff-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-request-handoff-valid`.
-      - id: runtime-context.action-input-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+        summary: The invocation meets the shared runtime context `runtime-context.release-request-handoff-valid` and can write all Action outputs.
     guarantees:
       - id: request-handoff-output-produced
         applies_to:
           - runtime-context.release-request-handoff-valid
         boundary: boundary.action-output
-        statement: "`request-path` is present. Path to the immutable release request JSON. Observable fields at this boundary also include `request-digest` (Path to the request digest file)."
+        statement: "`request-path` identifies the written request, which records the triggering tag and ref, the supplied source and tag object SHAs, and the requesting run and actor. The request delegates version resolution to the Release authority. `request-digest` identifies the digest file whose recorded SHA-256 equals the digest of the request bytes."
       - id: request-handoff-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
+          - runtime-context.failure-diagnostic-required
         boundary: boundary.action-output
         statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected release request handoff step.'
       - id: diagnostic-failure-stage-outputs

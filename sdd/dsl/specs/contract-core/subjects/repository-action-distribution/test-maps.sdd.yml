@@ -20,26 +20,26 @@ test_maps:
           - inconsistent-distribution-rejected
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > repository distribution retains the failing metadata gate before build
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.repository-action-distribution-inconsistent
         guarantees:
           - diagnostic-failure-stage-integrity
   - contract_id: contract.repository-action-distribution.catalog
     tests:
-      - path: tests/action-index-gate.test.mjs
+      - path: tests/action-index-gate.process.test.mjs
         symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
-      - path: tests/action-index-gate.test.mjs
+      - path: tests/action-index-gate.process.test.mjs
         symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > removes rows for deleted actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+      - path: tests/action-index-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the projection stage when the catalog is stale
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
-        reason: case の入力で catalog gate を実行し、失敗の段階が診断に残ることを確かめるテストが無い。
   - contract_id: contract.repository-action-distribution.source-verification
     tests:
       - path: tests/action-package-verification.process.test.mjs
@@ -48,35 +48,33 @@ test_maps:
         guarantees:
           - source-verification-actions-covered
           - source-verification-runtime-tests-covered
-    pending:
-      - partition: runtime-context.failure-diagnostic-required
+      - path: tests/action-package-verification.process.test.mjs
+        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI reports the failed typecheck stage
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-source-verification
-        reason: case の入力で source verification gate を実行し、失敗の段階が診断に残ることを確かめるテストが無い。
   - contract_id: contract.repository-action-distribution.release-version
     tests:
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater creates major and minor aliases idempotently
-        partition: runtime-context.repository-exact-release-tag-available
+        partition: runtime-context.repository-release-alias-update-applied
         guarantees:
           - release-version-confirmed
+          - alias-follows-newest-release
+          - immutable-release-tags-preserved
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
         partition: runtime-context.repository-release-version-invalid-or-mismatched
         guarantees:
           - invalid-or-mismatched-release-version-rejected
           - alias-tags-preserved
+          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release alias updater rejects a tag that differs from repository VERSION
         partition: runtime-context.repository-release-version-invalid-or-mismatched
         guarantees:
           - invalid-or-mismatched-release-version-rejected
           - alias-tags-preserved
-      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
-        symbol: repository-release-alias-update > release alias updater rejects missing and invalid repository VERSION
-        partition: runtime-context.failure-diagnostic-required
-        guarantees:
-          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > canonical next-patch hotfix can publish before main integration and rejects stale branch or base
         partition: runtime-context.repository-release-alias-update-invalid
@@ -148,12 +146,6 @@ test_maps:
           - diagnostic-failure-stage-release-version
           - immutable-release-tags-preserved
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
-        symbol: repository-release-alias-update > release alias updater creates major and minor aliases idempotently
-        partition: runtime-context.repository-release-alias-update-applied
-        guarantees:
-          - alias-follows-newest-release
-          - immutable-release-tags-preserved
-      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > published hotfix squash integration permits the next patch and preserves immutable tags and newer aliases
         partition: runtime-context.repository-release-alias-update-applied
         guarantees:
@@ -165,3 +157,16 @@ test_maps:
         partition: runtime-context.repository-release-alias-update-applied
         guarantees:
           - alias-follows-newest-release
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > release source validation performs no alias mutation
+        partition: runtime-context.repository-release-alias-update-valid
+        guarantees:
+          - release-version-confirmed
+          - alias-source-integrated
+          - alias-tags-preserved
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > release alias updater rejects invalid identity and bare repositories before remote mutation
+        partition: runtime-context.repository-release-alias-update-invalid
+        guarantees:
+          - alias-tags-preserved
+          - diagnostic-failure-stage-release-version

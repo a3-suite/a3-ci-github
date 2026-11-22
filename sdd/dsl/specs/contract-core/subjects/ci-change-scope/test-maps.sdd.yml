@@ -8,23 +8,64 @@ test_maps:
         partition: change-range-input-present
         guarantees:
           - change-scope-status-produced
+          - change-scope-resolved-flags-match-paths
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint reports a valid range
         partition: change-range-input-present
         guarantees:
           - change-scope-status-produced
+          - change-scope-resolved-flags-match-paths
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails open for an invalid SHA
         partition: runtime-context.action-input-insufficient
         guarantees:
           - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails open for an invalid SHA
         partition: runtime-context.action-input-insufficient
         guarantees:
           - change-scope-unresolved-runs-ci
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-change-scope failure boundary > source retains actionable input failure without private input values
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails open and keeps both SHAs when the base commit is unavailable
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-status-produced
+          - change-scope-unresolved-runs-ci
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails when the change scope outputs cannot be written
         partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - change-scope-output-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails open and keeps both SHAs when the base commit is unavailable
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-status-produced
+          - change-scope-unresolved-runs-ci
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails when the change scope outputs cannot be written
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - change-scope-output-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails open for a missing base SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails open for a missing base SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
           - diagnostic-failure-stage-outputs

@@ -201,22 +201,26 @@ test_maps:
         guarantees:
           - verification-rejected
           - verification-diagnostic
+          - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
         partition: runtime-context.release-observation-invalid
         guarantees:
           - verification-rejected
           - verification-diagnostic
+          - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         partition: runtime-context.release-observation-invalid
         guarantees:
           - verification-rejected
+          - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: dist entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
         partition: runtime-context.release-observation-invalid
         guarantees:
           - verification-rejected
+          - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint rejects receipt and readback evidence with mismatching bindings
         partition: runtime-context.release-observation-invalid
@@ -369,66 +373,46 @@ test_maps:
           - verification-diagnostic
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-verifier failure boundary > source retains actionable input failure without private input values
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint reports an asset readback checksum failure as its own diagnostic
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-checksum-observation-conflation
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: dist entrypoint > publication entrypoint reports an asset readback checksum failure as its own diagnostic
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-checksum-observation-conflation
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint reports an asset readback transport failure as its own diagnostic
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-checksum-observation-conflation
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: dist entrypoint > publication entrypoint reports an asset readback transport failure as its own diagnostic
-        partition: runtime-context.failure-diagnostic-required
+        partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-checksum-observation-conflation
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint observes absence using GET only
-        partition: runtime-context.release-verification-invocation
+        partition: runtime-context.release-pre-observation-valid
         guarantees:
           - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: dist entrypoint > publication entrypoint observes absence using GET only
-        partition: runtime-context.release-verification-invocation
+        partition: runtime-context.release-pre-observation-valid
         guarantees:
           - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint verifies the published Release using GET only
-        partition: runtime-context.release-verification-invocation
+        partition: runtime-context.release-post-verification-valid
         guarantees:
           - get-only-requests
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: dist entrypoint > publication entrypoint verifies the published Release using GET only
-        partition: runtime-context.release-verification-invocation
-        guarantees:
-          - get-only-requests
-      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: source entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
-        partition: runtime-context.release-verification-invocation
-        guarantees:
-          - get-only-requests
-      - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
-        symbol: dist entrypoint > publication entrypoint rejects a Release that stays absent after create using GET only
-        partition: runtime-context.release-verification-invocation
-        guarantees:
-          - get-only-requests
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
-        partition: runtime-context.release-verification-invocation
-        guarantees:
-          - get-only-requests
-      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
-        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
-        partition: runtime-context.release-verification-invocation
+        partition: runtime-context.release-post-verification-valid
         guarantees:
           - get-only-requests

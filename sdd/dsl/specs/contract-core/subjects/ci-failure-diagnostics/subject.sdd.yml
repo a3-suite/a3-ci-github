@@ -8,12 +8,14 @@ contracts:
     summary: Failure of a selected contract boundary.
     inputs:
       - name: failure
-        meaning: "Precondition prepared by the case: failure that the instrumented CI processing encounters."
+        meaning: "Precondition prepared by the case: rejected input, failed operation or unresolved result at the selected CI boundary."
+      - name: execution-context
+        meaning: "Precondition prepared by the case: run and job identity available from the execution environment."
       - name: checkout
-        meaning: "Precondition prepared by the case: source checked out for the failing run."
+        meaning: "Precondition prepared by the case: checkout revision when its identity can be established."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: The selected CI boundary rejects input, encounters a failure, or cannot resolve its result. Ordinary unselected or skipped work does not enter this partition.
     guarantees:
       - id: failure-subject-recorded
         boundary: boundary.diagnostic-result
@@ -38,7 +40,7 @@ contracts:
         statement: '`execution-context-job-binding` is one of `"matched"`. Comparison of the job identifier in the failure diagnostic context with the identifier of the failing invocation workflow job; matched or different.'
       - id: execution-context-source-bound
         boundary: boundary.diagnostic-result
-        statement: '`execution-context-source-binding` is one of `"matched"`. Comparison of the source revision in the failure diagnostic context with the revision checked out for the failing invocation; matched or different.'
+        statement: '`execution-context-source-binding` is matched when the reported source equals the verified checkout revision. The reported source is `"unavailable"` when checkout identity cannot be established.'
       - id: comparison-expected-recorded
         boundary: boundary.diagnostic-result
         statement: "`comparison-expected` is present. Expected value of the violated rule recorded in the diagnostic comparison."
@@ -47,10 +49,10 @@ contracts:
         statement: "`comparison-observed` is present. Observed value, or the unavailable reason, recorded in the diagnostic comparison."
       - id: evidence-location-recorded
         boundary: boundary.diagnostic-result
-        statement: '`evidence-location-log` is one of `"workflow-run-job-step-log"`. Location of the original diagnostic in the workflow run, job and step log.'
+        statement: '`evidence-location-log` identifies the emitting workflow step log in GitHub Actions and stderr in a local invocation.'
       - id: execution-outcome-retained
         boundary: boundary.diagnostic-result
-        statement: '`execution-outcome` is one of `"failure"`, `"unresolved"`. 元の失敗の結果（failure または unresolved）。'
+        statement: '`execution-outcome` retains the original failure or unresolved outcome, including `"cannot-start"` and `"cannot-complete"` when those are the bootstrap outcome.'
       - id: last-confirmed-stage-recorded
         boundary: boundary.diagnostic-result
         statement: "`last-confirmed-stage` is present. 失敗前に最後に確定した段階の識別子。"
@@ -110,7 +112,7 @@ contracts:
         statement: '`workflow-secret-safe-summary` is one of `"absent"`. Secret context references in managed diagnostic summary definitions; absent or present.'
       - id: ci-failure-diagnostics-workflow-diagnostic-order
         boundary: boundary.workflow-definition
-        statement: '`workflow-diagnostic-order` is one of `"after-source-jobs"`. Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.'
+        statement: '`workflow-diagnostic-order` places each aggregate diagnostic job after its declared source jobs via `needs`, and each same-job diagnostic step after the work it summarizes.'
       - id: ci-failure-diagnostics-workflow-source-result-retained
         boundary: boundary.workflow-definition
         statement: '`workflow-source-result-replacement` is one of `"absent"`. Aggregate diagnostic outcomes that replace an original source job result; absent or present.'
@@ -124,14 +126,14 @@ contracts:
         meaning: "Precondition prepared by the case: state of the prepared runtime that the bootstrap starts."
     conditions:
       - id: ci-failure-diagnostics-bootstrap-fails
-        summary: The prepared runtime is unavailable when the workflow bootstraps.
+        summary: The preset assurance bootstrap cannot locate its prepared runtime, its package metadata differs from the canonical runtime, or its dependency tree is invalid.
     guarantees:
       - id: ci-failure-diagnostics-bootstrap-stage-emitted
         boundary: boundary.diagnostic-result
-        statement: "`bootstrap-failure-stage` is present. Failure stage identifier in the bootstrap failure envelope."
+        statement: "`failureEvidence.classification.stage` identifies runtime discovery, lock validation or dependency validation according to the failed bootstrap check."
       - id: ci-failure-diagnostics-bootstrap-reason-emitted
         boundary: boundary.diagnostic-result
-        statement: "`bootstrap-failure-reason` is present. Stable failure reason identifier in the bootstrap failure envelope."
+        statement: "`reason` and `failureEvidence.classification.reason` identify the same bootstrap failure."
     input_kind:
       kind: operation
       name: ci-failure-diagnostics
@@ -146,11 +148,14 @@ contracts:
         meaning: "Received by the contract target: path of the destination to which the contract target writes its output files."
     conditions:
       - id: ci-failure-diagnostics-rejected-before-write
-        summary: Required inputs are absent and the invocation is rejected before writing to its output destination.
+        summary: Required inputs or external evidence are missing, unavailable or invalid at a validation boundary before writing to the output destination.
     guarantees:
       - id: failure-runner-temp-preserved
         boundary: boundary.runner-files
         statement: '`runner-temp-existing-file-content` is one of `"equal"`. Comparison of the content of a pre-existing file in the runner temporary directory that the contract target does not own, before and after the rejected invocation; equal or changed.'
+      - id: failure-runner-temp-unextended
+        boundary: boundary.runner-files
+        statement: No new files remain in the runner temporary directory after the rejected invocation, apart from failure result output.
       - id: failure-target-root-preserved
         boundary: boundary.workspace-files
         statement: '`target-root-unmanaged-file-content` is one of `"equal"`. Comparison of the content of a pre-existing file in the target repository root that the contract target does not manage, before and after the rejected invocation; equal or changed.'

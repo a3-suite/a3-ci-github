@@ -9,7 +9,7 @@
 
 ## バージョン制約の判断
 
-runnerだけでなく、toolchain、runtime、依存package、Actionや配布資材の参照を追加・更新するときも、[導入・更新要件](../../sdd/dsl/requirements/items/requirements/github-ci-project-lifecycle/requirement.sdd.yml)に照らして固定の必要性と選択の幅を慎重に決めます。既存の固定値や検証済み一覧があることだけを、同じ制限を維持する理由にしません。
+runnerだけでなく、toolchain、runtime、依存package、Actionや配布資材の参照を追加・更新するときも、[バージョン選択要件](../../sdd/dsl/requirements/items/requirements/github-ci-version-selection/requirement.sdd.yml)に照らして固定の必要性と選択の幅を慎重に決めます。既存の固定値や検証済み一覧があることだけを、同じ制限を維持する理由にしません。
 
 決定前に、次を自問します。
 

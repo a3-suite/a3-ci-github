@@ -25,4 +25,4 @@ command:
       options:
         - repo-root
   usage:
-    - node runtime/distribution/fetch-a3-ci-github.mjs verify [options]
+    - node runtime/distribution/fetch-a3-ci-github.mjs verify --source-revision <SHA> [--repo-root <PATH>]

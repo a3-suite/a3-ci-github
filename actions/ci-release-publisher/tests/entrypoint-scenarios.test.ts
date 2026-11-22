@@ -71,8 +71,8 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     const output = f.put('github-output', '');
     const calls = f.put('calls.jsonl', '');
     const outputRoot = path.join(f.root, 'write');
-    const run = async (scenario: Record<string, unknown> = {}) => {
-      const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: output, PATH: path.join(f.root, 'no-cli'),
+    const run = async (scenario: Record<string, unknown> = {}, outputWritable = true) => {
+      const env = { ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'), GITHUB_OUTPUT: outputWritable ? output : f.root, PATH: path.join(f.root, 'no-cli'),
         'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_RELEASE-HANDOFF-ROOT': f.options.outputRoot, 'INPUT_PRE-OBSERVATION-PATH': beforePath,
         'INPUT_WRITE-OUTPUT-DIRECTORY': outputRoot, MOCK_HANDOFF: f.options.outputRoot, MOCK_CALLS: calls, MOCK_SCENARIO: JSON.stringify(scenario) };
       const result = await runActionEntrypoint(['--import', mock, ...entrypointArgs], { env, cwd: f.root, encoding: 'utf8' });
@@ -86,8 +86,14 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
   const expectPublished = (outcome: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['run']>>, outputRoot: string, assets: number) => {
     expect(outcome.result.status, outcome.result.stderr).toBe(0);
     expect(outcome.outputs).toBe(`receipt-path=${outputRoot}/receipt.json\nreadback-path=${outputRoot}/readback.json\n`);
+    expect(fs.statSync(path.join(outputRoot, 'receipt.json')).isFile()).toBe(true);
+    expect(fs.statSync(path.join(outputRoot, 'readback.json')).isFile()).toBe(true);
     expect(writeKinds(outcome.writes)).toStrictEqual(['create', ...Array(assets).fill('upload'), 'finalize']);
-    expect(outcome.writes.slice(1).every(entry => entry.endpoint.includes('/releases/42'))).toBe(true);
+    expect(outcome.writes.map(entry => [entry.method, entry.endpoint])).toStrictEqual([
+      ['POST', '/repos/owner/project/releases'],
+      ...Array.from({ length: assets }, () => ['POST', '/repos/owner/project/releases/42/assets']),
+      ['PATCH', '/repos/owner/project/releases/42'],
+    ]);
     expect(fs.readdirSync(outputRoot).sort()).toStrictEqual(['readback.json', 'receipt.json']);
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'receipt.json'), 'utf8')).release_id).toBe('42');
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'readback.json'), 'utf8')).release_id).toBe('42');
@@ -247,5 +253,16 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     expect(fs.existsSync(path.join(outputRoot, 'receipt.json'))).toBe(false);
     expect(fs.existsSync(path.join(outputRoot, 'readback.json'))).toBe(false);
     expect(outcome.result.stderr).not.toContain('synthetic-secret');
+    expect(outcome.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"/m);
+  });
+
+  test('publisher retains evidence when the Action output write fails', async (t) => {
+    const { outputRoot, run } = await setup(t);
+    const outcome = await run({}, false);
+    expect(outcome.result.status).toBe(1);
+    expect(outcome.result.stderr).toContain('"stage":"output-write"');
+    expect(outcome.writes.some(request => request.method === 'DELETE')).toBe(false);
+    expect(fs.statSync(path.join(outputRoot, 'receipt.json')).isFile()).toBe(true);
+    expect(fs.statSync(path.join(outputRoot, 'readback.json')).isFile()).toBe(true);
   });
 });

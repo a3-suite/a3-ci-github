@@ -19,6 +19,8 @@ contracts:
         meaning: "Received by the contract target: platform selection file path."
       - name: selection-document
         meaning: "Received by the contract target: content of the platform selection file."
+      - name: github-output
+        meaning: "Precondition prepared by the case: output destination provided by the runner."
     conditions:
       - id: runtime-context.failure-diagnostic-required
         summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
@@ -38,7 +40,7 @@ contracts:
           - runtime-context.platform-manifest-invalid
           - runtime-context.quality-platform-selection-invalid
         boundary: boundary.action-output
-        statement: '`outcome` is one of `"failure"`. Success for a valid bounded manifest and failure otherwise.'
+        statement: '`outcome` is `"failure"` when the manifest or the supplied quality selection is rejected.'
       - id: invalid-platform-manifest-has-no-output
         applies_to:
           - runtime-context.platform-manifest-invalid

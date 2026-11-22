@@ -12,6 +12,7 @@ options:
     kind: value
     value_name: PATH
     summary: Consumer project root containing the applied CI assets
+    default: '.'
   - id: skill-collection-root
     long: --skill-collection-root
     kind: value
@@ -42,7 +43,7 @@ options:
     long: --inventory
     kind: value
     value_name: PATH
-    summary: Repository-relative adapter bundle inventory path
+    summary: Path to an adapter bundle inventory inside the provider repository
   - id: bundle
     long: --bundle
     kind: value
@@ -95,6 +96,7 @@ options:
     kind: value
     value_name: PATH
     summary: a3-ci-github repository snapshot used to prepare Release distribution metadata
+    default: '.'
   - id: output-directory
     long: --output-directory
     kind: value
@@ -105,11 +107,6 @@ options:
     kind: value
     value_name: TAG
     summary: Exact vX.Y.Z Release tag bound to VERSION and source revision
-  - id: operation
-    long: --operation
-    kind: value
-    value_name: PHASE
-    summary: Select build-platform or assemble
   - id: authority-path
     long: --authority-path
     kind: value
@@ -129,8 +126,7 @@ options:
     long: --supplemental-build-root
     kind: value
     value_name: PATH
-    summary: Workspace-relative downloaded supplemental platform root, required for
-      assemble
+    summary: Workspace-relative downloaded supplemental platform root
   - id: provider-revision
     long: --provider-revision
     kind: value

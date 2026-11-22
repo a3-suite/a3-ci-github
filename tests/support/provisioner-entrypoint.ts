@@ -4,6 +4,16 @@ import path from 'node:path';
 
 // Serves only the listed release URLs; any other URL answers 404 so that a missing route reads as an unavailable asset.
 const preloadSource = `import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
+if (process.env.TEST_FAIL_PATH_RENAME === 'true') {
+  const rename = fsp.rename;
+  fsp.rename = async (source, destination) => {
+    if (destination === process.env.GITHUB_PATH) throw new Error('injected PATH promotion failure');
+    return rename(source, destination);
+  };
+  syncBuiltinESMExports();
+}
 const routes = JSON.parse(fs.readFileSync(process.env.TEST_FETCH_ROUTES, 'utf8'));
 globalThis.fetch = async (url) => {
   fs.appendFileSync(process.env.TEST_FETCH_LOG, String(url) + '\\n');

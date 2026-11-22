@@ -88,17 +88,25 @@ describe("workflow-contracts", () => {
       mkdirSync(path.join(root, 'tmp'), { recursive: true });
       const directory = mkdtempSync(path.join(root, 'tmp/reusable-quality-summary-'));
       try {
+        const output = path.join(directory, 'output');
         for (const { source, template } of templates) for (const result of ['success', 'failure', 'cancelled', 'skipped', '', 'unknown']) {
           const payload = template.replaceAll('${{ needs.' + source + '.result }}', result);
+          writeFileSync(output, '');
           const run = spawnSync(process.execPath, [path.join(root, 'actions/ci-quality-summary/dist/index.js')], {
             cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
+              GITHUB_OUTPUT: output,
               GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'example/project', GITHUB_RUN_ID: '1',
               'INPUT_SUMMARY-JSON': payload, 'INPUT_SUMMARY-PATH': path.join(directory, 'summary.md'),
               'INPUT_EVIDENCE-PATH': path.join(directory, 'evidence.md'),
             }, timeout: spawnTimeoutMs,
           });
           expect(run.error, `${result}: the process did not finish`).toBeUndefined();
-          expect(run.status === 0, `${result}: ${run.stderr}`).toBe(result === 'success');
+          expect(run.status, `${result}: ${run.stderr}`).toBe(result === 'success' ? 0 : 1);
+          if (result !== 'success') {
+            const line = run.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+            expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}').classification)
+              .toMatchObject({ stage: result === '' ? 'summary-classification' : 'summary-result' });
+          }
         }
       } finally { rmSync(directory, { recursive: true, force: true }); }
     });
@@ -302,6 +310,9 @@ describe("workflow-contracts", () => {
       const callerPublish = jobBlock(caller, 'publish');
       assertNeeds(callerPublish, ['validate-request']);
       includesAll(callerPublish, [/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const { source, referencePlaceholder } = registry.releasePublicationReusableWorkflow;
+      expect(yaml.parse(caller).jobs.publish.uses).toBe(`a3-suite/a3-ci-github/${source}@${referencePlaceholder}`);
       expect(publication).toMatch(/workflow_call:/);
       assertPublicationControl(publication, 'release');
       const provider = yaml.parse(publication);
@@ -531,7 +542,15 @@ describe("workflow-contracts", () => {
       expect(callerDefinition.jobs.publish.secrets).toStrictEqual({ PACKAGE_REGISTRY_TOKEN: '${{ secrets.PACKAGE_REGISTRY_TOKEN }}' });
 
       const publication = read('.github/workflows/ci-package-publication.yml');
-      expect(yaml.parse(publication).concurrency.group).toContain('inputs.target_identity');
+      expect(yaml.parse(publication).concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const providerReference = ({ source, referencePlaceholder }) => `a3-suite/a3-ci-github/${source}@${referencePlaceholder}`;
+      expect(callerDefinition.jobs.prepare.uses).toBe(providerReference(registry.packagePreparationReusableWorkflow));
+      expect(callerDefinition.jobs.publish.uses).toBe(providerReference(registry.packagePublicationReusableWorkflow));
       const prepareJob = jobBlock(caller, 'prepare');
       assertNeeds(prepareJob, ['validate-request']);
       expect(prepareJob).toMatch(/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-preparation\.yml@<package-preparation-workflow-sha>/);
@@ -1077,17 +1096,41 @@ describe("contract.ci-selective-distribution.publication", () => {
       const steps = yaml.parse(read('.github/workflows/release.yml')).jobs['prepare-distribution'].steps;
       const guardIndex = steps.findIndex((step) => step.name === 'Verify dispatch ref is the release tag');
       const step = steps[guardIndex];
+      expect(guardIndex).toBeLessThan(steps.findIndex((candidate) => candidate.uses?.startsWith('actions/checkout@')));
       // Act
-      const execute = (dispatchRef) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
-        encoding: 'utf8', env: { ...process.env, RELEASE_TAG: 'v1.2.3', DISPATCH_REF: dispatchRef }, timeout: spawnTimeoutMs,
+      const execute = (dispatchRef, releaseTag = 'v1.2.3') => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], {
+        encoding: 'utf8', env: { ...process.env, RELEASE_TAG: releaseTag, DISPATCH_REF: dispatchRef,
+          GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '452', GITHUB_JOB: 'prepare-distribution',
+          GITHUB_SHA: 'a'.repeat(40) }, timeout: spawnTimeoutMs,
       });
       // Assert
       expect(execute('refs/tags/v1.2.3').status).toBe(0);
+      for (const releaseTag of ['', 'v01.2.3', 'v1.2.3-rc.1']) {
+        const rejected = execute(`refs/tags/${releaseTag}`, releaseTag);
+        expect(rejected.status, releaseTag).toBe(1);
+        const [, evidence] = rejected.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(JSON.parse(evidence)).toMatchObject({
+          classification: { stage: 'dispatch-ref-validation', reason: 'release-dispatch-tag-invalid' },
+          comparison: { field: 'release-tag', expected: 'exact-semver-tag', observed: 'invalid' },
+          'execution-state': { outcome: 'failure', exit: 1, lastConfirmed: 'not-started', write: 'not-started' },
+        });
+      }
       for (const dispatchRef of ['refs/heads/main', 'refs/heads/hotfix/1.2.3', 'refs/tags/v1.2.4', 'v1.2.3', '']) {
         const rejected = execute(dispatchRef);
         expect(rejected.error, dispatchRef).toBeUndefined();
         expect(rejected.status, dispatchRef).not.toBe(0);
         expect(rejected.stderr, dispatchRef).toContain('refs/tags/v1.2.3');
+        const diagnostic = rejected.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(diagnostic, rejected.stderr).not.toBeNull();
+        expect(JSON.parse(diagnostic[1])).toMatchObject({
+          classification: { subject: 'ci-selective-distribution', operation: 'release-dispatch',
+            stage: 'dispatch-ref-validation', reason: 'release-dispatch-ref-mismatch' },
+          context: { run: '452', job: 'prepare-distribution', source: 'unavailable' },
+          'evidence-location': { log: 'workflow-run-job-step-log', artifact: 'not-generated' },
+          comparison: { field: 'dispatch-ref', expected: 'requested-release-tag-ref', observed: 'mismatch' },
+          'execution-state': { outcome: 'failure', exit: rejected.status, lastConfirmed: 'tag-format-validation', write: 'not-started' },
+          'next-check': { rule: 'release-dispatch-ref-mismatch', input: 'release-tag-and-dispatch-ref' },
+        });
       }
     });
   });

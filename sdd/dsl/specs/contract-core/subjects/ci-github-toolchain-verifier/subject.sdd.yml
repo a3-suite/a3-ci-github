@@ -22,12 +22,10 @@ contracts:
       - name: sha256sum-version
         meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.github-toolchain-matches-request
-        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-matches-request`.
+        summary: The script receives exactly one supported mode, and each selected command supplies a successful version response matching its exact requested version.
       - id: runtime-context.github-toolchain-does-not-match-request
-        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-does-not-match-request`.
+        summary: The script receives the wrong number of arguments, an unsupported mode, an absent selected command, a failed version response, or a missing or mismatched exact version.
     guarantees:
       - id: exact-toolchain-processing-succeeds
         applies_to:
@@ -41,9 +39,9 @@ contracts:
         statement: '`outcome` is one of `"failure"`. Outcome of the exact toolchain verification, either success or failure.'
       - id: diagnostic-failure-stage-processing
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.github-toolchain-does-not-match-request
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The script records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
       name: verify-github-toolchain.sh
@@ -58,13 +56,17 @@ contracts:
         meaning: "Precondition prepared by the case: jq version reported by the runner."
       - name: sha256sum-version
         meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
+      - name: requested-versions
+        meaning: "Received by the contract target: exact versions supplied as Action inputs for the selected commands."
+      - name: github-output
+        meaning: "Received by the contract target: runner file that receives the verified output."
     conditions:
-      - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
       - id: runtime-context.github-toolchain-script-succeeded
-        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-script-succeeded`.
+        summary: The shared script returns success and the Action output sink permits writing.
       - id: runtime-context.github-toolchain-script-failed
-        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-script-failed`.
+        summary: The shared script returns a failure.
+      - id: github-toolchain-output-write-denied
+        summary: The shared script returns success, but the Action output write fails.
     guarantees:
       - id: verified-output-produced
         applies_to:
@@ -74,13 +76,14 @@ contracts:
       - id: verification-failure-propagated
         applies_to:
           - runtime-context.github-toolchain-script-failed
+          - github-toolchain-output-write-denied
         boundary: boundary.action-output
-        statement: '`outcome` is one of `"failure"`. The success or failure outcome of the verification step.'
+        statement: '`outcome` is one of `"failure"`. The verification step fails. A failed script does not publish `verified`.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
+          - runtime-context.github-toolchain-script-failed
         boundary: boundary.diagnostic-result
-        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+        statement: "The script records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
     input_kind:
       kind: operation
-      name: verify-github-toolchain.sh
+      name: ci-github-toolchain-verifier

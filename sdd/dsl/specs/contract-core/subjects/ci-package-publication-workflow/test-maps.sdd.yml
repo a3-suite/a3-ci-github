@@ -21,7 +21,7 @@ test_maps:
           - package-preparation-least-privilege
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > package-publication-workflow-contract > package workflows preserve failed and unknown outcomes
-        partition: ci-package-publication-workflow-failure-route-required
+        partition: ci-package-publication-workflow-canonical-source-available
         guarantees:
           - ci-package-publication-workflow-failure-observed
           - package-failure-summary-always
@@ -33,6 +33,11 @@ test_maps:
           - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job failure result
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-publication
+      - path: tests/workflow-failure-diagnostics.test.mjs
+        symbol: workflow failure diagnostics > workflows/package/package-publication-request.yml summary preserves the current job cancelled result
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-publication

@@ -2,7 +2,7 @@
 // test_level: e2e
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, describe, test, expect } from 'vitest';
 
@@ -72,6 +72,15 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       comparison: { field: 'version', expected: 'exact-numeric-version' },
     });
     expect(readGithubPath(paths.githubPath)).toBeUndefined();
+  });
+
+  test('Action preserves existing PATH entries when final handoff fails', () => {
+    const paths = workspace();
+    writeFileSync(paths.githubPath, '/prior/bin\n');
+    const outcome = run(paths, { TEST_FAIL_PATH_RENAME: 'true' }, releaseRoutes('jq-linux-amd64'));
+    expect(outcome.result.status).toBe(1);
+    expect(failureDiagnostic(outcome.result.stderr)).toMatchObject({ classification: { stage: 'path-export' } });
+    expect(readGithubPath(paths.githubPath)).toBe('/prior/bin\n');
   });
 
   for (const [runnerOs, arch, asset] of [['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']] as const) {

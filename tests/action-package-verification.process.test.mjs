@@ -71,6 +71,7 @@ describe("contract.repository-action-distribution.source-verification", () => {
       const sharedTests = ['tests/boundary.process.test.mjs', 'runtime/provisioner/tests/provision-core.test.ts', 'runtime/installer/tests/common-regression.test.mjs',
         ...['assembly.test.mjs', 'observation.test.mjs', 'observation-policy.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((name) => `runtime/release-publication/tests/${name}`)];
       for (const relative of sharedTests) write(relative, '\n');
+      write('runtime/release-publication/tests/assembly.process.test.mjs', '\n');
       write('cli.ts', 'export const value: string = "valid";\n');
       write('tsconfig.cli.json', JSON.stringify({ compilerOptions: { noEmit: true, strict: true }, files: ['cli.ts'] }));
       const log = path.join(fixture, 'invocations.log');
@@ -82,15 +83,24 @@ const output = args.find((value) => value.startsWith('--outputFile='));
 const files = args.slice(3).filter((value) => !value.startsWith('--'));
 if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringify({ success: true, testResults: files.map((name) => ({ name, status: 'passed', assertionResults: [{ fullName: 'stub > passes', status: 'passed' }] })) }));
 `);
-      write('bin/npm', `#!/bin/sh\nprintf '{"runner":"npm","cwd":"%s","args":"%s"}\\n' "$PWD" "$*" >> ${JSON.stringify(log)}\n`, 0o755);
+      write('bin/npm', `#!/bin/sh\nprintf '{"runner":"npm","cwd":"%s","args":"%s"}\\n' "$PWD" "$*" >> ${JSON.stringify(log)}\nexit ${mode === 'typecheck-failure' ? 7 : 0}\n`, 0o755);
       // Act
       const result = spawnSync(process.execPath, [path.join(fixture, 'runtime/repository/verify-action-packages.mjs')], { cwd: fixture, encoding: 'utf8',
         env: { ...process.env, PATH: `${path.join(fixture, 'bin')}${path.delimiter}${process.env.PATH}` } });
       // Assert
+      const invocations = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      const actionLint = { runner: 'npm', cwd: fs.realpathSync(path.join(fixture, 'actions/alpha')), args: 'run lint' };
+      if (mode === 'typecheck-failure') {
+        expect(result.status).toBe(1);
+        const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(diagnostic).not.toBeNull();
+        expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ stage: 'typecheck', reason: 'action-source-verification-failed' });
+        expect(invocations).toStrictEqual([actionLint]);
+        return;
+      }
       expect(result.status, result.stdout + result.stderr).toBe(0);
       expect(result.stdout).toContain('Action source verification passed (1 bundled Actions).');
-      const invocations = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
-      expect(invocations.filter((entry) => entry.runner === 'npm')).toStrictEqual([{ runner: 'npm', cwd: fs.realpathSync(path.join(fixture, 'actions/alpha')), args: 'run lint' }]);
+      expect(invocations.filter((entry) => entry.runner === 'npm')).toStrictEqual([actionLint]);
       const runs = invocations.filter((entry) => entry.runner === 'vitest');
       expect(runs).toHaveLength(1);
       const tested = runs[0].args.slice(3).filter((value) => !value.startsWith('--')).map((file) => path.relative(fixture, file).split(path.sep).join('/'));
@@ -101,6 +111,10 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
     // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification
     test('source verification CLI typechecks and tests every bundled Action and shared runtime test', (t) => runSourceVerificationCli(t, 'coverage'));
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI reports the failed typecheck stage', (t) => runSourceVerificationCli(t, 'typecheck-failure'));
 
     // evidence_role: supplemental
     // Running neither install nor build is an implementation detail that no contract guarantee covers.

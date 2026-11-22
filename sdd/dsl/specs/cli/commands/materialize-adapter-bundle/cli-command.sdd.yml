@@ -8,7 +8,7 @@ command:
   summary: Materialize one registered adapter bundle into a consumer project without overwriting conflicting files
   usage_targets:
     - id: materialize
-      summary: Return a standard Action binding without source-root; custom placement requires source-root
+      summary: Return a standard Action binding without copying adapter files into the consumer project
       option_bindings:
         - option_id: source-root
           presence: optional
@@ -43,4 +43,5 @@ command:
         - target-root
         - output
   usage:
-    - tsx runtime/adapter/materialize-adapter-bundle.ts [--source-root <PATH>] --inventory <PATH> --bundle <ID> --target-root <PATH> [--output <PATH>] (source-root required for custom bundles)
+    - tsx runtime/adapter/materialize-adapter-bundle.ts --inventory <PATH> --bundle <STANDARD-ID> --target-root <PATH> [--source-root <PATH>] [--output <PATH>]
+    - tsx runtime/adapter/materialize-adapter-bundle.ts --inventory <PATH> --bundle <CUSTOM-ID> --target-root <PATH> --source-root <PATH> [--output <PATH>]

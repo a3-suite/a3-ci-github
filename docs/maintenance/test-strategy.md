@@ -57,6 +57,8 @@ Hosted検証では、本番のAPI取得条件（ページサイズを含む）�
 
 ## 実行
 
+リポジトリ全体のローカル回帰には、品質ゲートの `setup-node` が指定する Node.js と npm、Git、Bash、`tar`、Python が必要です。Python は Unix 系で `python3`、Windows で `python` として解決できるようにします。JavaScript のテスト依存は各パッケージの lockfile から復元します。PowerShell の梱包・組立ケースは `pwsh` が見つからない環境でスキップし、Windows の toolchain 検査は Windows 上で実行します。これらのケースは品質ゲートの Windows Rust release ジョブの結果を確認します。
+
 固定 runtime の依存を復元した後、ローカル E2E を実行します。
 
 ```sh
