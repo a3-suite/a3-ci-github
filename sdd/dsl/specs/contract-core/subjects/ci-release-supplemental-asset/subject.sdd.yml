@@ -47,70 +47,45 @@ contracts:
         meaning: "Precondition prepared by the case: change made to the fixed source after checkout."
       - name: failure
         meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: output-directory
-            meaning: Output directory path that the phase reports on success.
-          - selector: status
-            meaning: Phase completion status output; success.
-          - selector: output-directory-binding
-            meaning: Comparison of the output directory reported on success with the directory the phase created for its result; equal or different.
-          - selector: outcome
-            meaning: Step outcome of the phase invocation; success or failure.
-      - summary: Content of a pre-existing output path before and after a phase invocation.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: existing-output-content-comparison
-            meaning: Comparison of a pre-existing output path content before and after a rejected phase invocation; unchanged or changed.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.supplemental-phase-valid
-      - environment: runtime-context.supplemental-phase-invalid
-      - input: existing-output-rejected
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.supplemental-phase-valid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-valid`.
+      - id: runtime-context.supplemental-phase-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-invalid`.
+      - id: existing-output-rejected
         summary: Invocation rejected because its output directory path already exists.
     guarantees:
       - id: phase-success
         applies_to:
           - runtime-context.supplemental-phase-valid
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Phase completion status output; success.'
       - id: phase-output
         applies_to:
           - runtime-context.supplemental-phase-valid
-        claim:
-          field: output-directory-binding
-          in:
-            - equal
+        boundary: boundary.action-output
+        statement: '`output-directory-binding` is one of `"equal"`. Comparison of the output directory reported on success with the directory the phase created for its result; equal or different. Observable fields at this boundary also include `output-directory` (Output directory path that the phase reports on success).'
       - id: phase-rejected
         applies_to:
           - runtime-context.supplemental-phase-invalid
           - existing-output-rejected
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Step outcome of the phase invocation; success or failure.'
       - id: existing-output-unchanged
         applies_to:
           - existing-output-rejected
-        claim:
-          field: existing-output-content-comparison
-          in:
-            - unchanged
+        boundary: boundary.workspace-files
+        statement: '`existing-output-content-comparison` is one of `"unchanged"`. Comparison of a pre-existing output path content before and after a rejected phase invocation; unchanged or changed.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-supplemental-asset
   - id: contract.ci-release-supplemental-asset.assembly
     summary: Supplemental final assembly request from transferred platform candidates.
     inputs:
@@ -148,106 +123,68 @@ contracts:
         meaning: "Received by the contract target: release implementation recorded in the snapshot."
       - name: build-roots
         meaning: "Precondition prepared by the case: content of the standard and supplemental build roots."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: output-directory
-            meaning: Output directory path that the phase reports on success.
-          - selector: status
-            meaning: Phase completion status output; success.
-          - selector: output-directory-binding
-            meaning: Comparison of the output directory reported on success with the directory the phase created for its result; equal or different.
-          - selector: outcome
-            meaning: Step outcome of the phase invocation; success or failure.
-      - summary: Transported standard-installer candidate files and finalized publication assets.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: candidate-files
-            meaning: Comparison of the transferred candidate directory filenames and SHA-256 bytes with the files declared by platform-record.json, including .installer-source.zip; matched or mismatched.
-          - selector: publication-asset-paths
-            meaning: Comparison of the set of asset paths in the final supplemental handoff manifest with the declared installer and manifest asset paths.
-          - selector: publication-source-snapshots
-            meaning: Verification-only installer source snapshots in the final supplemental handoff; absent or present.
-          - selector: publication-asset-checksum-sidecars
-            meaning: Comparison of each asset checksum file with the sha256 and asset path declared in supplemental-manifest.json; equal or different.
-          - selector: declaration-directory-file-name-difference-count
-            meaning: Number of file names in the installer declaration directory (.ci/installer) that the invocation added or removed, compared before and after the invocation, as a decimal integer string.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.supplemental-phase-valid
-      - environment: runtime-context.supplemental-phase-invalid
-      - environment: runtime-context.standard-installer-evidence-valid
-      - environment: runtime-context.supplemental-asset-release-valid
-      - environment: runtime-context.supplemental-asset-release-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.supplemental-phase-valid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-valid`.
+      - id: runtime-context.supplemental-phase-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-phase-invalid`.
+      - id: runtime-context.standard-installer-evidence-valid
+        summary: The invocation meets the shared runtime context `runtime-context.standard-installer-evidence-valid`.
+      - id: runtime-context.supplemental-asset-release-valid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-asset-release-valid`.
+      - id: runtime-context.supplemental-asset-release-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.supplemental-asset-release-invalid`.
     guarantees:
       - id: phase-success
         applies_to:
           - runtime-context.supplemental-phase-valid
           - runtime-context.supplemental-asset-release-valid
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Phase completion status output; success.'
       - id: phase-output
         applies_to:
           - runtime-context.supplemental-phase-valid
           - runtime-context.supplemental-asset-release-valid
-        claim:
-          field: output-directory-binding
-          in:
-            - equal
+        boundary: boundary.action-output
+        statement: '`output-directory-binding` is one of `"equal"`. Comparison of the output directory reported on success with the directory the phase created for its result; equal or different. Observable fields at this boundary also include `output-directory` (Output directory path that the phase reports on success).'
       - id: phase-rejected
         applies_to:
           - runtime-context.supplemental-phase-invalid
           - runtime-context.supplemental-asset-release-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Step outcome of the phase invocation; success or failure.'
       - id: standard-installer-evidence-preserved
         applies_to:
           - runtime-context.standard-installer-evidence-valid
-        claim:
-          field: candidate-files
-          in:
-            - matched
+        boundary: boundary.workspace-files
+        statement: '`candidate-files` is one of `"matched"`. Comparison of the transferred candidate directory filenames and SHA-256 bytes with the files declared by platform-record.json, including .installer-source.zip; matched or mismatched.'
       - id: standard-installer-publication-assets-produced
         applies_to:
           - runtime-context.standard-installer-evidence-valid
-        claim:
-          field: publication-asset-paths
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`publication-asset-paths` is one of `"equal"`. Comparison of the set of asset paths in the final supplemental handoff manifest with the declared installer and manifest asset paths.'
       - id: standard-installer-source-snapshots-excluded
         applies_to:
           - runtime-context.standard-installer-evidence-valid
-        claim:
-          field: publication-source-snapshots
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`publication-source-snapshots` is one of `"absent"`. Verification-only installer source snapshots in the final supplemental handoff; absent or present.'
       - id: standard-installer-checksum-sidecar
         applies_to:
           - runtime-context.standard-installer-evidence-valid
-        claim:
-          field: publication-asset-checksum-sidecars
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`publication-asset-checksum-sidecars` is one of `"equal"`. Comparison of each asset checksum file with the sha256 and asset path declared in supplemental-manifest.json; equal or different.'
       - id: standard-installer-declaration-directory-unchanged
         applies_to:
           - runtime-context.standard-installer-evidence-valid
-        claim:
-          field: declaration-directory-file-name-difference-count
-          in:
-            - "0"
+        boundary: boundary.workspace-files
+        statement: '`declaration-directory-file-name-difference-count` is one of `"0"`. Number of file names in the installer declaration directory (.ci/installer) that the invocation added or removed, compared before and after the invocation, as a decimal integer string.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-supplemental-asset

@@ -19,49 +19,29 @@ contracts:
         meaning: "Received by the contract target: version value passed to the contract target."
       - name: target-identity
         meaning: "Received by the contract target: target identity bound to the handoff."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether handoff validation succeeded.
-          - selector: descriptor
-            meaning: Validated descriptor path relative to the handoff root.
-          - selector: manifest
-            meaning: Validated manifest path relative to the handoff root.
-          - selector: manifest-digest
-            meaning: SHA-256 digest of manifest bytes.
-          - selector: entries
-            meaning: Number of validated manifest entries.
-          - selector: outcome
-            meaning: Failure outcome of the rejected handoff validation step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: handoff-input-present
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: handoff-input-present
+        summary: The handoff directory contains a valid descriptor, manifest and artifact matching the requested source, version and target.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
     guarantees:
       - id: handoff-status-succeeded
         applies_to:
           - handoff-input-present
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Whether handoff validation succeeded. Observable fields at this boundary also include `descriptor` (Validated descriptor path relative to the handoff root), `manifest` (Validated manifest path relative to the handoff root), `manifest-digest` (SHA-256 digest of manifest bytes), `entries` (Number of validated manifest entries).'
       - id: handoff-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected handoff validation step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-handoff-integrity

@@ -11,247 +11,130 @@ contracts:
         meaning: "Precondition prepared by the case: failure that the instrumented CI processing encounters."
       - name: checkout
         meaning: "Precondition prepared by the case: source checked out for the failing run."
-    observations:
-      - summary: Failure evidence in final logs and existing referenced evidence.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-subject
-            meaning: 失敗した契約対象の識別子。
-          - selector: failure-operation
-            meaning: 失敗した操作の識別子。
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-          - selector: failure-reason
-            meaning: 失敗理由を表す安定した識別子。
-          - selector: failure-cause
-            meaning: 失敗原因の判別状態（known、unknown、unavailable のいずれか）。
-          - selector: execution-context-run-binding
-            meaning: Comparison of the run identifier in the failure diagnostic context with the identifier of the failing invocation workflow run; matched or different.
-          - selector: execution-context-job-binding
-            meaning: Comparison of the job identifier in the failure diagnostic context with the identifier of the failing invocation workflow job; matched or different.
-          - selector: execution-context-source-binding
-            meaning: Comparison of the source revision in the failure diagnostic context with the revision checked out for the failing invocation; matched or different.
-          - selector: comparison-expected
-            meaning: Expected value of the violated rule recorded in the diagnostic comparison.
-          - selector: comparison-observed
-            meaning: Observed value, or the unavailable reason, recorded in the diagnostic comparison.
-          - selector: evidence-location-log
-            meaning: Location of the original diagnostic in the workflow run, job and step log.
-          - selector: execution-outcome
-            meaning: 元の失敗の結果（failure または unresolved）。
-          - selector: last-confirmed-stage
-            meaning: 失敗前に最後に確定した段階の識別子。
-          - selector: next-check-rule
-            meaning: 次に確認すべき規則の識別子。
-          - selector: known-cause-omission-state
-            meaning: Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.
-          - selector: unsubstantiated-context-state
-            meaning: Occurrence state (present or absent) of context values presented without acquisition evidence.
-          - selector: protected-input-disclosure-state
-            meaning: Occurrence state (present or absent) of protected input values exposed in diagnostics.
-          - selector: unchecked-output-disclosure-state
-            meaning: Occurrence state (present or absent) of unchecked child process or provider output exposed in diagnostics.
-          - selector: signed-url-disclosure-state
-            meaning: Occurrence state (present or absent) of signed URLs exposed in diagnostics.
-          - selector: whole-payload-disclosure-state
-            meaning: Occurrence state (present or absent) of whole input, response, argv, or environment payloads exposed in diagnostics.
-          - selector: original-diagnostic-loss-state
-            meaning: Occurrence state (present or absent) of the primary diagnostic lost from final logs.
-          - selector: invalid-evidence-reference-state
-            meaning: Occurrence state (present or absent) of a reference to evidence that was not generated or retained.
-          - selector: original-outcome-replacement-state
-            meaning: Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.
-          - selector: diagnostic-only-retry-state
-            meaning: Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
     guarantees:
       - id: failure-subject-recorded
-        claim:
-          field: failure-subject
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-subject` is present. 失敗した契約対象の識別子。"
       - id: failure-operation-recorded
-        claim:
-          field: failure-operation
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-operation` is present. 失敗した操作の識別子。"
       - id: failure-stage-recorded
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。"
       - id: failure-reason-recorded
-        claim:
-          field: failure-reason
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-reason` is present. 失敗理由を表す安定した識別子。"
       - id: failure-cause-classified
-        claim:
-          field: failure-cause
-          in:
-            - known
-            - unknown
-            - unavailable
+        boundary: boundary.diagnostic-result
+        statement: '`failure-cause` is one of `"known"`, `"unknown"`, `"unavailable"`. 失敗原因の判別状態（known、unknown、unavailable のいずれか）。'
       - id: execution-context-run-bound
-        claim:
-          field: execution-context-run-binding
-          in:
-            - matched
+        boundary: boundary.diagnostic-result
+        statement: '`execution-context-run-binding` is one of `"matched"`. Comparison of the run identifier in the failure diagnostic context with the identifier of the failing invocation workflow run; matched or different.'
       - id: execution-context-job-bound
-        claim:
-          field: execution-context-job-binding
-          in:
-            - matched
+        boundary: boundary.diagnostic-result
+        statement: '`execution-context-job-binding` is one of `"matched"`. Comparison of the job identifier in the failure diagnostic context with the identifier of the failing invocation workflow job; matched or different.'
       - id: execution-context-source-bound
-        claim:
-          field: execution-context-source-binding
-          in:
-            - matched
+        boundary: boundary.diagnostic-result
+        statement: '`execution-context-source-binding` is one of `"matched"`. Comparison of the source revision in the failure diagnostic context with the revision checked out for the failing invocation; matched or different.'
       - id: comparison-expected-recorded
-        claim:
-          field: comparison-expected
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`comparison-expected` is present. Expected value of the violated rule recorded in the diagnostic comparison."
       - id: comparison-observed-recorded
-        claim:
-          field: comparison-observed
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`comparison-observed` is present. Observed value, or the unavailable reason, recorded in the diagnostic comparison."
       - id: evidence-location-recorded
-        claim:
-          field: evidence-location-log
-          in:
-            - workflow-run-job-step-log
+        boundary: boundary.diagnostic-result
+        statement: '`evidence-location-log` is one of `"workflow-run-job-step-log"`. Location of the original diagnostic in the workflow run, job and step log.'
       - id: execution-outcome-retained
-        claim:
-          field: execution-outcome
-          in:
-            - failure
-            - unresolved
+        boundary: boundary.diagnostic-result
+        statement: '`execution-outcome` is one of `"failure"`, `"unresolved"`. 元の失敗の結果（failure または unresolved）。'
       - id: last-confirmed-stage-recorded
-        claim:
-          field: last-confirmed-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`last-confirmed-stage` is present. 失敗前に最後に確定した段階の識別子。"
       - id: next-check-rule-recorded
-        claim:
-          field: next-check-rule
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`next-check-rule` is present. 次に確認すべき規則の識別子。"
       - id: diagnostic-known-cause-omission
-        claim:
-          field: known-cause-omission-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`known-cause-omission-state` is one of `"absent"`. Occurrence state (present or absent) of a known safe specific cause omitted from the failure classification.'
       - id: diagnostic-unsubstantiated-context
-        claim:
-          field: unsubstantiated-context-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`unsubstantiated-context-state` is one of `"absent"`. Occurrence state (present or absent) of context values presented without acquisition evidence.'
       - id: diagnostic-protected-input-disclosure
-        claim:
-          field: protected-input-disclosure-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`protected-input-disclosure-state` is one of `"absent"`. Occurrence state (present or absent) of protected input values exposed in diagnostics.'
       - id: diagnostic-unchecked-output-disclosure
-        claim:
-          field: unchecked-output-disclosure-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`unchecked-output-disclosure-state` is one of `"absent"`. Occurrence state (present or absent) of unchecked child process or provider output exposed in diagnostics.'
       - id: diagnostic-signed-url-disclosure
-        claim:
-          field: signed-url-disclosure-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`signed-url-disclosure-state` is one of `"absent"`. Occurrence state (present or absent) of signed URLs exposed in diagnostics.'
       - id: diagnostic-whole-payload-disclosure
-        claim:
-          field: whole-payload-disclosure-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`whole-payload-disclosure-state` is one of `"absent"`. Occurrence state (present or absent) of whole input, response, argv, or environment payloads exposed in diagnostics.'
       - id: diagnostic-original-diagnostic-loss
-        claim:
-          field: original-diagnostic-loss-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`original-diagnostic-loss-state` is one of `"absent"`. Occurrence state (present or absent) of the primary diagnostic lost from final logs.'
       - id: diagnostic-invalid-evidence-reference
-        claim:
-          field: invalid-evidence-reference-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`invalid-evidence-reference-state` is one of `"absent"`. Occurrence state (present or absent) of a reference to evidence that was not generated or retained.'
       - id: diagnostic-original-outcome-replacement
-        claim:
-          field: original-outcome-replacement-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`original-outcome-replacement-state` is one of `"absent"`. Occurrence state (present or absent) of the original failure outcome replaced or made successful by diagnostic/summary handling.'
       - id: diagnostic-diagnostic-only-retry
-        claim:
-          field: diagnostic-only-retry-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`diagnostic-only-retry-state` is one of `"absent"`. Occurrence state (present or absent) of a retry initiated solely to obtain diagnostics.'
+    input_kind:
+      kind: operation
+      name: ci-failure-diagnostics
   - id: contract.ci-failure-diagnostics.workflow-evidence
     summary: Managed workflow failure summary definitions.
     inputs:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
-    observations:
-      - summary: Failure summary routes declared in managed workflow definitions.
-        boundary: boundary.workflow-definition
-        fields:
-          - selector: workflow-reasonless-source-rows
-            meaning: Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without a reason that names the result of that source job.
-          - selector: workflow-raw-resultless-source-rows
-            meaning: Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without the raw result of that source job.
-          - selector: workflow-secret-safe-summary
-            meaning: Secret context references in managed diagnostic summary definitions; absent or present.
-          - selector: workflow-diagnostic-order
-            meaning: Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.
-          - selector: workflow-source-result-replacement
-            meaning: Aggregate diagnostic outcomes that replace an original source job result; absent or present.
     conditions:
-      - input: ci-failure-diagnostics-workflow-source-available
+      - id: ci-failure-diagnostics-workflow-source-available
+        summary: The managed repository workflow sources are available for inspection.
     guarantees:
       - id: ci-failure-diagnostics-workflow-reason-bound
-        claim:
-          field: workflow-reasonless-source-rows
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`workflow-reasonless-source-rows` is one of `"absent"`. Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without a reason that names the result of that source job.'
       - id: ci-failure-diagnostics-workflow-raw-result-bound
-        claim:
-          field: workflow-raw-resultless-source-rows
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`workflow-raw-resultless-source-rows` is one of `"absent"`. Occurrence state (present or absent) of a source job row declared in the summary-json input of a managed summary route without the raw result of that source job.'
       - id: ci-failure-diagnostics-workflow-summary-secret-safe
-        claim:
-          field: workflow-secret-safe-summary
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`workflow-secret-safe-summary` is one of `"absent"`. Secret context references in managed diagnostic summary definitions; absent or present.'
       - id: ci-failure-diagnostics-workflow-diagnostic-order
-        claim:
-          field: workflow-diagnostic-order
-          in:
-            - after-source-jobs
+        boundary: boundary.workflow-definition
+        statement: '`workflow-diagnostic-order` is one of `"after-source-jobs"`. Position of each managed aggregate diagnostic job relative to its source jobs; after-source-jobs or before-source-jobs.'
       - id: ci-failure-diagnostics-workflow-source-result-retained
-        claim:
-          field: workflow-source-result-replacement
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`workflow-source-result-replacement` is one of `"absent"`. Aggregate diagnostic outcomes that replace an original source job result; absent or present.'
+    input_kind:
+      kind: operation
+      name: ci-failure-diagnostics
   - id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     summary: Prepared runtime state for the public runtime bootstrap.
     inputs:
       - name: prepared-runtime
         meaning: "Precondition prepared by the case: state of the prepared runtime that the bootstrap starts."
-    observations:
-      - summary: Failure evidence declared by managed workflows or emitted by a public runtime bootstrap.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: bootstrap-failure-stage
-            meaning: Failure stage identifier in the bootstrap failure envelope.
-          - selector: bootstrap-failure-reason
-            meaning: Stable failure reason identifier in the bootstrap failure envelope.
     conditions:
-      - input: ci-failure-diagnostics-bootstrap-fails
+      - id: ci-failure-diagnostics-bootstrap-fails
+        summary: The prepared runtime is unavailable when the workflow bootstraps.
     guarantees:
       - id: ci-failure-diagnostics-bootstrap-stage-emitted
-        claim:
-          field: bootstrap-failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`bootstrap-failure-stage` is present. Failure stage identifier in the bootstrap failure envelope."
       - id: ci-failure-diagnostics-bootstrap-reason-emitted
-        claim:
-          field: bootstrap-failure-reason
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`bootstrap-failure-reason` is present. Stable failure reason identifier in the bootstrap failure envelope."
+    input_kind:
+      kind: operation
+      name: ci-failure-diagnostics
   - id: contract.ci-failure-diagnostics.existing-state
     summary: Invocation of a selected contract boundary, read against pre-existing files that the boundary does not own.
     inputs:
@@ -261,41 +144,22 @@ contracts:
         meaning: "Precondition prepared by the case: file that exists before the invocation and that the contract target does not own or manage."
       - name: output-destination
         meaning: "Received by the contract target: path of the destination to which the contract target writes its output files."
-    observations:
-      - summary: Files in the runner temporary directory before and after a rejected invocation.
-        boundary: boundary.runner-files
-        fields:
-          - selector: runner-temp-existing-file-content
-            meaning: Comparison of the content of a pre-existing file in the runner temporary directory that the contract target does not own, before and after the rejected invocation; equal or changed.
-      - summary: Files in the target repository root and the output destination before and after a rejected invocation.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: target-root-unmanaged-file-content
-            meaning: Comparison of the content of a pre-existing file in the target repository root that the contract target does not manage, before and after the rejected invocation; equal or changed.
-          - selector: target-root-file-names
-            meaning: Comparison of the file names in the target repository root before and after the rejected invocation; equal or changed.
-          - selector: output-destination-file-names
-            meaning: Comparison of the file names in the output destination before and after the rejected invocation, excluding the failure result output; equal or changed.
     conditions:
-      - input: ci-failure-diagnostics-rejected-before-write
+      - id: ci-failure-diagnostics-rejected-before-write
+        summary: Required inputs are absent and the invocation is rejected before writing to its output destination.
     guarantees:
       - id: failure-runner-temp-preserved
-        claim:
-          field: runner-temp-existing-file-content
-          in:
-            - equal
+        boundary: boundary.runner-files
+        statement: '`runner-temp-existing-file-content` is one of `"equal"`. Comparison of the content of a pre-existing file in the runner temporary directory that the contract target does not own, before and after the rejected invocation; equal or changed.'
       - id: failure-target-root-preserved
-        claim:
-          field: target-root-unmanaged-file-content
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`target-root-unmanaged-file-content` is one of `"equal"`. Comparison of the content of a pre-existing file in the target repository root that the contract target does not manage, before and after the rejected invocation; equal or changed.'
       - id: failure-target-root-unextended
-        claim:
-          field: target-root-file-names
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`target-root-file-names` is one of `"equal"`. Comparison of the file names in the target repository root before and after the rejected invocation; equal or changed.'
       - id: failure-output-destination-unextended
-        claim:
-          field: output-destination-file-names
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`output-destination-file-names` is one of `"equal"`. Comparison of the file names in the output destination before and after the rejected invocation, excluding the failure result output; equal or changed.'
+    input_kind:
+      kind: operation
+      name: ci-failure-diagnostics

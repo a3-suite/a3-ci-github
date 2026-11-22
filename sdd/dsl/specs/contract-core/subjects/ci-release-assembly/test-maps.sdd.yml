@@ -2,158 +2,140 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-assembly.outputs
-    case_id: bundled-assembly
     tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - assembly-success
           - handoff-output-bound
           - handoff-source-bound
+          - accepted-checksum-verifiable
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle emits bound outputs only on complete success
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - assembly-success
           - handoff-output-bound
           - handoff-source-bound
-    pending:
-      - guarantees:
-          - assembly-no-credential-input
-        reason: case の入力で Action を実行し、認証情報を受け取らずに組み立てることを確かめるテストが無い。既存のテストは action.yml の input の宣言を静的に読むだけ。
-      - guarantees:
-          - handoff-asset-digest-bound
-        reason: 書き込んだ handoff を読み込み直して得る digest は handoff を読む後段の Action が観測するもので、assembly の entrypoint の結果には出ない。写像していたテストは内部関数の loadAssembly で読み込み直していた。
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: output-line-injection
-    tests:
+          - accepted-checksum-verifiable
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle rejects output path line injection before assembly
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle rejects output path line injection before assembly
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: identity-rejection
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle rejects invalid input without successful outputs
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle rejects invalid input without successful outputs
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: supplemental-binding
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle binds supplemental owner evidence into the handoff
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
           - handoff-owner-evidence-retained
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle binds supplemental owner evidence into the handoff
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
           - handoff-owner-evidence-retained
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: unsafe-build-inputs
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle rejects a build manifest that names another source
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle rejects a build manifest that names another source
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: noncanonical-checksum-sidecar
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle rejects a checksum sidecar with a single-space separator
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle rejects a checksum sidecar with a single-space separator
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: canonical-checksum-sidecar
-    tests:
-      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: source entrypoint > assembly bundle emits bound outputs only on complete success
-        guarantees:
-          - accepted-checksum-verifiable
-      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: dist entrypoint > assembly bundle emits bound outputs only on complete success
-        guarantees:
-          - accepted-checksum-verifiable
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: platform-checkout-eol
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle binds the LF platform manifest identity for a CRLF checkout
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle binds the LF platform manifest identity for a CRLF checkout
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: detailed-failure-outputs
-    tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-assembly failure boundary > source retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: same-release-skills-assembly-valid
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle packages selected release skills
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
           - selected-skills-packaged
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle packages selected release skills
+        partition: runtime-context.release-assembly-valid
         guarantees:
           - handoff-output-bound
           - selected-skills-packaged
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: same-release-skills-assembly-invalid
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle rejects a selected skill without its required SKILL.md
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle rejects a selected skill without its required SKILL.md
+        partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: asset-only-assembly-valid
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        partition: runtime-context.release-asset-only-assembly-valid
         guarantees:
           - assembly-success
           - handoff-output-bound
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        partition: runtime-context.release-asset-only-assembly-valid
         guarantees:
           - assembly-success
           - handoff-output-bound
-  - contract_id: contract.ci-release-assembly.outputs
-    case_id: asset-only-assembly-empty
-    tests:
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        partition: runtime-context.release-asset-only-assembly-empty
         guarantees:
           - assembly-rejected
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: dist entrypoint > assembly bundle assembles an asset release without build inputs and fails an empty selection
+        partition: runtime-context.release-asset-only-assembly-empty
         guarantees:
           - assembly-rejected
+    pending:
+      - partition: runtime-context.release-assembly-valid
+        guarantees:
+          - assembly-no-credential-input
+        reason: case の入力で Action を実行し、認証情報を受け取らずに組み立てることを確かめるテストが無い。既存のテストは action.yml の input の宣言を静的に読むだけ。
+      - partition: runtime-context.release-assembly-valid
+        guarantees:
+          - handoff-asset-digest-bound
+        reason: 書き込んだ handoff を読み込み直して得る digest は handoff を読む後段の Action が観測するもので、assembly の entrypoint の結果には出ない。写像していたテストは内部関数の loadAssembly で読み込み直していた。

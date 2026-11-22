@@ -27,42 +27,29 @@ contracts:
         meaning: "Received by the contract target: release tag name."
       - name: ref
         meaning: "Received by the contract target: tag ref passed to the Action."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: request-path
-            meaning: Path to the immutable release request JSON.
-          - selector: request-digest
-            meaning: Path to the request digest file.
-          - selector: outcome
-            meaning: Failure outcome of the rejected release request handoff step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-request-handoff-valid
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.release-request-handoff-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-request-handoff-valid`.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
     guarantees:
       - id: request-handoff-output-produced
         applies_to:
           - runtime-context.release-request-handoff-valid
-        claim:
-          field: request-path
-          present: true
+        boundary: boundary.action-output
+        statement: "`request-path` is present. Path to the immutable release request JSON. Observable fields at this boundary also include `request-digest` (Path to the request digest file)."
       - id: request-handoff-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected release request handoff step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-request-handoff

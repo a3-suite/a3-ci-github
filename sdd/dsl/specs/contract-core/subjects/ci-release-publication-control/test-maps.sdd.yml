@@ -2,96 +2,79 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-publication-control.outputs
-    case_id: publication-request-round-trip
     tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint creates and verifies a publication request
+        partition: runtime-context.release-publication-request-verified
         guarantees:
           - publication-control-status-succeeded
           - publication-request-run-id-produced
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint creates and verifies a publication request
+        partition: runtime-context.release-publication-request-verified
         guarantees:
           - publication-control-status-succeeded
           - publication-request-run-id-produced
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: changed-approval-rejected
-    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects a changed approval ID
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects a changed approval ID
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: owner-decision-required
-    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects missing owner decision before creating artifacts
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects missing owner decision before creating artifacts
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: unsupported-publication-request-rejected
-    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects a v1 publication request on verification
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects a v1 publication request on verification
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: detailed-failure-outputs
-    tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publication-control failure boundary > source retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: request-trigger-accepted
-    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        partition: runtime-context.request-trigger-verification-invoked
         guarantees:
           - request-trigger-run-bound
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        partition: runtime-context.request-trigger-verification-invoked
         guarantees:
           - request-trigger-run-bound
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: request-trigger-rejected
-    tests:
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        guarantees:
-          - request-trigger-run-bound
-      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
-        guarantees:
-          - request-trigger-run-bound
-  - contract_id: contract.ci-release-publication-control.outputs
-    case_id: request-trigger-failure-propagated
-    tests:
-      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint verifies the triggering request workflow run before artifact download
+        partition: runtime-context.action-input-invalid
         guarantees:
           - publication-control-failure-propagated
           - rejected-publication-control-no-request-handoff

@@ -27,71 +27,49 @@ contracts:
         meaning: "Received by the contract target: content of the platform manifest file."
       - name: output-destination-state
         meaning: "Precondition prepared by the case: state of the output destination before the invocation."
-    observations:
-      - summary: Step outcome and diagnostic codes reported by the shared release build script.
-        boundary: boundary.script-result
-        fields:
-          - selector: outcome
-            meaning: Step outcome of the release build invocation; success or failure.
-          - selector: diagnostic-codes
-            meaning: Stable diagnostic codes reported by the failed step.
-      - summary: Final output destination of the release build in the workspace.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: final-output
-            meaning: "State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged."
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.rust-release-build-rejected
-      - environment: runtime-context.rust-release-build-commands-succeed
-      - environment: runtime-context.rust-release-version-report-rejected
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.rust-release-build-rejected
+        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-rejected`.
+      - id: runtime-context.rust-release-build-commands-succeed
+        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-commands-succeed`.
+      - id: runtime-context.rust-release-version-report-rejected
+        summary: The invocation meets the shared runtime context `runtime-context.rust-release-version-report-rejected`.
     guarantees:
       - id: rust-release-processing-succeeds
         applies_to:
           - runtime-context.rust-release-build-commands-succeed
-        claim:
-          field: outcome
-          in:
-            - success
+        boundary: boundary.script-result
+        statement: '`outcome` is one of `"success"`. Step outcome of the release build invocation; success or failure.'
       - id: rust-release-final-output-verified-on-success
         applies_to:
           - runtime-context.rust-release-build-commands-succeed
-        claim:
-          field: final-output
-          in:
-            - verified
+        boundary: boundary.workspace-files
+        statement: '`final-output` is one of `"verified"`. State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged.'
       - id: rust-release-processing-fails
         applies_to:
           - runtime-context.rust-release-build-rejected
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.script-result
+        statement: '`outcome` is one of `"failure"`. Step outcome of the release build invocation; success or failure.'
       - id: rust-release-rejected-final-output-safe
         applies_to:
           - runtime-context.rust-release-build-rejected
-        claim:
-          field: final-output
-          in:
-            - absent
-            - preserved
+        boundary: boundary.workspace-files
+        statement: '`final-output` is one of `"absent"`, `"preserved"`. State of the final output destination after the invocation. verified: the final asset is present and verified, absent: no agent-owned final asset exists, preserved: a destination owned by another process remains unchanged.'
       - id: rust-release-version-diagnostic-present
         applies_to:
           - runtime-context.rust-release-version-report-rejected
-        claim:
-          field: diagnostic-codes
-          contains: binary-version-mismatch
+        boundary: boundary.script-result
+        statement: '`diagnostic-codes` contains `"binary-version-mismatch"`. Stable diagnostic codes reported by the failed step.'
       - id: diagnostic-failure-stage-processing
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-rust-release-build
   - id: contract.ci-rust-release-build.outputs
     summary: Language profile, platform, and output directory inputs to the Rust release build Composite Action.
     inputs:
@@ -103,41 +81,29 @@ contracts:
         meaning: "Received by the contract target: build target bound to the selected platform."
       - name: output-directory
         meaning: "Received by the contract target: output directory path passed by the caller."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: completed
-            meaning: Whether the release build script reported its run as completed.
-          - selector: outcome
-            meaning: The success or failure outcome of the release build step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.rust-release-build-script-succeeded
-      - environment: runtime-context.rust-release-build-script-failed
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.rust-release-build-script-succeeded
+        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-script-succeeded`.
+      - id: runtime-context.rust-release-build-script-failed
+        summary: The invocation meets the shared runtime context `runtime-context.rust-release-build-script-failed`.
     guarantees:
       - id: completed-output-produced
         applies_to:
           - runtime-context.rust-release-build-script-succeeded
-        claim:
-          field: completed
-          in:
-            - "true"
+        boundary: boundary.action-output
+        statement: '`completed` is one of `"true"`. Whether the release build script reported its run as completed.'
       - id: release-build-failure-propagated
         applies_to:
           - runtime-context.rust-release-build-script-failed
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. The success or failure outcome of the release build step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-rust-release-build

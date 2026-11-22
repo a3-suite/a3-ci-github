@@ -39,128 +39,79 @@ contracts:
         meaning: "Precondition prepared by the case: independent readback evidence available to the verifier."
       - name: remote-response
         meaning: "Precondition prepared by the case: form of the provider responses."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: observation-digest
-            meaning: SHA-256 of the exact pre-create observation file bytes.
-          - selector: observation-path
-            meaning: Pre-create observation file written by observe-before.
-          - selector: status
-            meaning: Success only after the selected read-only verification completes.
-          - selector: release-remote-identity
-            meaning: Release object ID that verify-after emits.
-          - selector: publish-receipt
-            meaning: Publication receipt exposed by the verifier.
-          - selector: readback-evidence
-            meaning: Readback evidence that verify-after emits for the published Release.
-          - selector: outcome
-            meaning: Failed step outcome when remote observation or evidence verification is rejected.
-          - selector: diagnostic
-            meaning: Stable failure envelope of the rejected remote verification.
-          - selector: receipt-remote-id-binding
-            meaning: Equality of emitted publish-receipt.release_id with the immutable Release object ID from the independent GET response.
-          - selector: receipt-readback-id-binding
-            meaning: Equality of emitted readback-evidence.release_id with emitted publish-receipt.release_id.
-          - selector: release-output-id-binding
-            meaning: Equality of emitted release-remote-identity with emitted publish-receipt.release_id.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-          - selector: checksum-observation-conflation-state
-            meaning: Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.
-      - summary: Atomic boundary comparisons used by this contract.
-        boundary: boundary.release-provider-requests
-        fields:
-          - selector: non-get-request-state
-            meaning: Occurrence state of provider requests using a method other than GET during one invocation.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-pre-observation-valid
-      - environment: runtime-context.release-post-verification-valid
-      - environment: runtime-context.release-observation-invalid
-      - environment: runtime-context.release-verification-invocation
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.release-pre-observation-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-pre-observation-valid`.
+      - id: runtime-context.release-post-verification-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-post-verification-valid`.
+      - id: runtime-context.release-observation-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.release-observation-invalid`.
+      - id: runtime-context.release-verification-invocation
+        summary: The invocation meets the shared runtime context `runtime-context.release-verification-invocation`.
     guarantees:
       - id: observation-status
         applies_to:
           - runtime-context.release-pre-observation-valid
           - runtime-context.release-post-verification-valid
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Success only after the selected read-only verification completes. Observable fields at this boundary also include `observation-digest` (SHA-256 of the exact pre-create observation file bytes), `observation-path` (Pre-create observation file written by observe-before).'
       - id: release-id-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: release-remote-identity
-          present: true
+        boundary: boundary.action-output
+        statement: "`release-remote-identity` is present. Release object ID that verify-after emits."
       - id: bound-receipt
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: publish-receipt
-          present: true
+        boundary: boundary.action-output
+        statement: "`publish-receipt` is present. Publication receipt exposed by the verifier."
       - id: readback-evidence-emitted
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: readback-evidence
-          present: true
+        boundary: boundary.action-output
+        statement: "`readback-evidence` is present. Readback evidence that verify-after emits for the published Release."
       - id: verification-rejected
         applies_to:
           - runtime-context.release-observation-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failed step outcome when remote observation or evidence verification is rejected.'
       - id: verification-diagnostic
         applies_to:
           - runtime-context.release-observation-invalid
-        claim:
-          field: diagnostic
-          present: true
+        boundary: boundary.action-output
+        statement: "`diagnostic` is present. Stable failure envelope of the rejected remote verification."
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: diagnostic-checksum-observation-conflation
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: checksum-observation-conflation-state
-          in:
-            - absent
+        boundary: boundary.diagnostic-result
+        statement: '`checksum-observation-conflation-state` is one of `"absent"`. Occurrence state (present or absent) of a known checksum mismatch classified as unknown observation.'
       - id: get-only-requests
         applies_to:
           - runtime-context.release-verification-invocation
-        claim:
-          field: non-get-request-state
-          in:
-            - absent
+        boundary: boundary.release-provider-requests
+        statement: '`non-get-request-state` is one of `"absent"`. Occurrence state of provider requests using a method other than GET during one invocation.'
       - id: receipt-remote-id-binding
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: receipt-remote-id-binding
-          in:
-            - matched
+        boundary: boundary.action-output
+        statement: '`receipt-remote-id-binding` is one of `"matched"`. Equality of emitted publish-receipt.release_id with the immutable Release object ID from the independent GET response.'
       - id: receipt-readback-id-binding
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: receipt-readback-id-binding
-          in:
-            - matched
+        boundary: boundary.action-output
+        statement: '`receipt-readback-id-binding` is one of `"matched"`. Equality of emitted readback-evidence.release_id with emitted publish-receipt.release_id.'
       - id: release-output-id-binding
         applies_to:
           - runtime-context.release-post-verification-valid
-        claim:
-          field: release-output-id-binding
-          in:
-            - matched
+        boundary: boundary.action-output
+        statement: '`release-output-id-binding` is one of `"matched"`. Equality of emitted release-remote-identity with emitted publish-receipt.release_id.'
+    input_kind:
+      kind: operation
+      name: ci-release-publication-verifier

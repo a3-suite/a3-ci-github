@@ -23,80 +23,54 @@ contracts:
         meaning: "Received by the contract target: repository identity passed by the caller."
       - name: run-id
         meaning: "Precondition prepared by the case: run ID provided by the runner."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Aggregate quality status.
-          - selector: digest
-            meaning: SHA-256 digest of rendered summary evidence.
-          - selector: evidence-path
-            meaning: Path written for rendered summary evidence.
-          - selector: outcome
-            meaning: Failure outcome of the rejected quality summary step.
-          - selector: applicable-only-status-comparison
-            meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
-          - selector: missing-evidence-row-state
-            meaning: Occurrence state (present or absent) of a summary row that has no evidence reference after the invocation.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Evidence file and step summary file written by the invocation.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: evidence-step-summary-comparison
-            meaning: Comparison of the content of the file at the evidence path with the content of the step summary file given by the runner; equal or different.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: summary-input-present
-      - environment: runtime-context.action-input-invalid
-      - environment: runtime-context.ci-quality-summary-summary-mixed-applicability
-      - environment: runtime-context.ci-quality-summary-summary-default-evidence-valid
-      - environment: runtime-context.ci-quality-summary-summary-all-excluded
-      - environment: runtime-context.ci-quality-summary-summary-run-context-missing
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: summary-input-present
+        summary: The invocation supplies a valid job summary document.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+      - id: runtime-context.ci-quality-summary-summary-mixed-applicability
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-summary-summary-mixed-applicability`.
+      - id: runtime-context.ci-quality-summary-summary-default-evidence-valid
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-summary-summary-default-evidence-valid`.
+      - id: runtime-context.ci-quality-summary-summary-all-excluded
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-summary-summary-all-excluded`.
+      - id: runtime-context.ci-quality-summary-summary-run-context-missing
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-summary-summary-run-context-missing`.
     guarantees:
       - id: quality-summary-status-produced
         applies_to:
           - summary-input-present
-        claim:
-          field: status
-          present: true
+        boundary: boundary.action-output
+        statement: "`status` is present. Aggregate quality status. Observable fields at this boundary also include `digest` (SHA-256 digest of rendered summary evidence), `evidence-path` (Path written for rendered summary evidence)."
       - id: evidence-matches-step-summary
         applies_to:
           - summary-input-present
-        claim:
-          field: evidence-step-summary-comparison
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`evidence-step-summary-comparison` is one of `"equal"`. Comparison of the content of the file at the evidence path with the content of the step summary file given by the runner; equal or different.'
       - id: quality-summary-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
           - runtime-context.ci-quality-summary-summary-all-excluded
           - runtime-context.ci-quality-summary-summary-run-context-missing
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected quality summary step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: excluded-rows-not-aggregated
         applies_to:
           - runtime-context.ci-quality-summary-summary-mixed-applicability
-        claim:
-          field: applicable-only-status-comparison
-          in:
-            - equal
+        boundary: boundary.action-output
+        statement: '`applicable-only-status-comparison` is one of `"equal"`. Comparison of the aggregate status with aggregation of applicable rows alone.'
       - id: no-row-without-evidence-reference
         applies_to:
           - runtime-context.ci-quality-summary-summary-default-evidence-valid
-        claim:
-          field: missing-evidence-row-state
-          in:
-            - absent
+        boundary: boundary.action-output
+        statement: '`missing-evidence-row-state` is one of `"absent"`. Occurrence state (present or absent) of a summary row that has no evidence reference after the invocation.'
+    input_kind:
+      kind: operation
+      name: ci-quality-summary

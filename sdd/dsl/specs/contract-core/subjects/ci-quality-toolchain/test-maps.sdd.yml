@@ -2,105 +2,64 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: selected-quality-toolchain
     tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        partition: runtime-context.quality-toolchain-inputs-ready
         guarantees:
           - resolved-quality-toolchain-produced
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        partition: runtime-context.quality-toolchain-inputs-ready
         guarantees:
           - selected-quality-toolchain-ready
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: compatible-quality-toolchain
-    tests:
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        guarantees:
-          - resolved-quality-toolchain-produced
-    pending:
-      - guarantees: [selected-quality-toolchain-ready]
-        reason: compatible の selector `24` で setup した Node が使える状態になることを確かめるテストが無い。既存の compatible policy のテストは `24.x` などの別の selector を与える。
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: invalid-quality-toolchain
-    tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain validation accepts selected exact versions and rejects invalid inputs before setup
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: failed-quality-toolchain-setup
-    tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > quality toolchain Rust scripts preserve pinned arguments environment and setup failures
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: detailed-failure-preparation
-    tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-preparation
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: registered-binary-failure
-    tests:
       - path: actions/ci-quality-toolchain/tests/cargo-audit.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > registered asset failures stop the preparation
+        partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: valid-toolchain-request
-    tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        partition: runtime-context.quality-toolchain-request-valid
         guarantees:
           - resolved-version-satisfies-selector
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: valid-request-mismatching-resolution
-    tests:
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        guarantees:
-          - resolved-version-satisfies-selector
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: mismatching-provider-version
-    tests:
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: missing-provider-version
-    tests:
-      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
-        symbol: contract.ci-quality-toolchain.preparation > resolved output matches the selector and is published only after selected setup
-        guarantees:
-          - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: selected-cargo-deny
-    tests:
       - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > verified cargo-deny archive is extracted executed and exported without cargo compilation
+        partition: runtime-context.quality-toolchain-inputs-ready
         guarantees:
           - selected-quality-toolchain-ready
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: invalid-cargo-deny-version
-    tests:
       - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > invalid cargo-deny version stops before download or source install
+        partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: registered-cargo-deny-failure
-    tests:
       - path: actions/ci-quality-toolchain/tests/cargo-deny.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > registered cargo-deny asset failures stop the preparation
+        partition: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
-  - contract_id: contract.ci-quality-toolchain.preparation
-    case_id: unrequested-cargo-deny
     pending:
-      - guarantees: [optional-tool-setup-only-when-requested]
+      - partition: runtime-context.quality-toolchain-request-valid
+        guarantees:
+          - optional-tool-setup-only-when-requested
         reason: cargo-deny-version を空にして Composite Action を実行し、cargo-deny の setup が動かないことを確かめるテストが無い。既存のテストは action.yml の定義を読むだけ。

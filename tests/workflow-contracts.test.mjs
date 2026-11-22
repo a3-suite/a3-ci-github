@@ -1082,25 +1082,24 @@ describe("workflow-contracts", () => {
       const packageData = yaml.parse(read(`${base}/contract-package.sdd.yml`));
       const diagnosticPartition = 'runtime-context.failure-diagnostic-required';
       const shared = yaml.parse(read(`${base}/subjects/ci-failure-diagnostics/subject.sdd.yml`)).contracts[0];
-      const commonObservation = shared.observations.find((entry) => entry.boundary === 'boundary.diagnostic-result');
       // Act
       const subjects = packageData.subject_scopes.map((scopePath) => ({
         ...yaml.parse(read(`${base}/${scopePath}subject.sdd.yml`)),
-        verifications: yaml.parse(read(`${base}/${scopePath}verifications.sdd.yml`)),
+        testMaps: yaml.parse(read(`${base}/${scopePath}test-maps.sdd.yml`)).test_maps,
       }));
       // Assert
-      const commonSelectors = commonObservation.fields.map((field) => field.selector);
+      const commonGuarantees = shared.guarantees.filter((entry) => entry.boundary === 'boundary.diagnostic-result');
+      const commonSelectors = commonGuarantees.map(({ statement }) => /^`([^`]+)`/.exec(statement)?.[1]);
       const minimumFields = [
         'failure-subject', 'failure-operation', 'failure-stage', 'failure-reason', 'failure-cause',
         'execution-context-run-binding', 'execution-context-job-binding', 'execution-context-source-binding',
         'comparison-expected', 'comparison-observed', 'evidence-location-log', 'execution-outcome', 'last-confirmed-stage', 'next-check-rule',
       ];
       expect(commonSelectors).toEqual(expect.arrayContaining(minimumFields));
-      const policyClaims = shared.guarantees.filter((guarantee) => 'in' in guarantee.claim && guarantee.claim.in.includes('absent'));
+      const policyClaims = commonGuarantees.filter(({ id }) => id.startsWith('diagnostic-'));
       expect(policyClaims.length).toBeGreaterThan(0);
       for (const guarantee of policyClaims) {
-        expect(guarantee.claim.in).toStrictEqual(['absent']);
-        expect(commonSelectors).toContain(guarantee.claim.field);
+        expect(guarantee.statement).toMatch(/^`[^`]+` is one of `"absent"`\./);
       }
       for (const subject of subjects) {
         if (subject.subject.id === 'subject.ci.failure-diagnostics') {
@@ -1108,16 +1107,16 @@ describe("workflow-contracts", () => {
           continue;
         }
         for (const contract of subject.contracts) {
-          const guarantee = contract.guarantees.find((entry) => entry.claim.field === 'failure-stage');
+          const guarantee = contract.guarantees.find((entry) => entry.statement.startsWith('`failure-stage` is present.'));
           expect(guarantee, contract.id).toBeDefined();
-          expect(guarantee.claim.present, contract.id).toBe(true);
           expect(guarantee.applies_to, contract.id).toContain(diagnosticPartition);
-          const observation = contract.observations.find((entry) => entry.fields.some((field) => field.selector === 'failure-stage'));
-          expect(observation.boundary, contract.id).toBe('boundary.diagnostic-result');
-          expect(observation.summary, contract.id).toContain(shared.id);
-          const failureCase = subject.verifications.cases.find((entry) => entry.contract_id === contract.id && entry.partition === diagnosticPartition);
-          expect(failureCase, contract.id).toBeDefined();
-          expect(failureCase.verifies ?? [guarantee.id], contract.id).toContain(guarantee.id);
+          expect(guarantee.boundary, contract.id).toBe('boundary.diagnostic-result');
+          expect(guarantee.statement, contract.id).toContain(shared.id);
+          const mapping = subject.testMaps.find((entry) => entry.contract_id === contract.id);
+          const diagnosticGuarantees = [...(mapping?.tests ?? []), ...(mapping?.pending ?? [])]
+            .filter((entry) => entry.partition === diagnosticPartition)
+            .flatMap((entry) => entry.guarantees ?? [guarantee.id]);
+          expect(diagnosticGuarantees, contract.id).toContain(guarantee.id);
         }
       }
     });

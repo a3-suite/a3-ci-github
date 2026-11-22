@@ -19,42 +19,29 @@ contracts:
         meaning: "Received by the contract target: version components in the plan."
       - name: publish-version
         meaning: "Received by the contract target: exact publish version in the plan."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: publish-version
-            meaning: The materialized publish version.
-          - selector: status
-            meaning: Whether the version plan was materialized successfully.
-          - selector: outcome
-            meaning: Failure outcome of the rejected publish version step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.publish-version-plan-valid
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.publish-version-plan-valid
+        summary: The invocation meets the shared runtime context `runtime-context.publish-version-plan-valid`.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
     guarantees:
       - id: publish-version-output-produced
         applies_to:
           - runtime-context.publish-version-plan-valid
-        claim:
-          field: publish-version
-          equals_input: input.publish-version
+        boundary: boundary.action-output
+        statement: "`publish-version` equals the invocation input `publish-version`. The materialized publish version. Observable fields at this boundary also include `status` (Whether the version plan was materialized successfully)."
       - id: publish-version-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected publish version step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-publish-version

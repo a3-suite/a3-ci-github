@@ -21,42 +21,32 @@ contracts:
         meaning: "Precondition prepared by the case: jq version reported by the runner."
       - name: sha256sum-version
         meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
-    observations:
-      - summary: The shared script exposes whether exact toolchain verification succeeded or failed.
-        boundary: boundary.script-result
-        fields:
-          - selector: outcome
-            meaning: Outcome of the exact toolchain verification, either success or failure.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.github-toolchain-matches-request
-      - environment: runtime-context.github-toolchain-does-not-match-request
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.github-toolchain-matches-request
+        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-matches-request`.
+      - id: runtime-context.github-toolchain-does-not-match-request
+        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-does-not-match-request`.
     guarantees:
       - id: exact-toolchain-processing-succeeds
         applies_to:
           - runtime-context.github-toolchain-matches-request
-        claim:
-          field: outcome
-          in:
-            - success
+        boundary: boundary.script-result
+        statement: '`outcome` is one of `"success"`. Outcome of the exact toolchain verification, either success or failure.'
       - id: invalid-toolchain-processing-fails
         applies_to:
           - runtime-context.github-toolchain-does-not-match-request
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.script-result
+        statement: '`outcome` is one of `"failure"`. Outcome of the exact toolchain verification, either success or failure.'
       - id: diagnostic-failure-stage-processing
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: verify-github-toolchain.sh
   - id: contract.ci-github-toolchain-verifier.outputs
     summary: Verification mode and toolchain version inputs to the GitHub toolchain verifier Composite Action.
     inputs:
@@ -68,41 +58,29 @@ contracts:
         meaning: "Precondition prepared by the case: jq version reported by the runner."
       - name: sha256sum-version
         meaning: "Precondition prepared by the case: sha256sum version reported by the runner."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: verified
-            meaning: Whether every command selected by mode matched its exact expected version.
-          - selector: outcome
-            meaning: The success or failure outcome of the verification step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.github-toolchain-script-succeeded
-      - environment: runtime-context.github-toolchain-script-failed
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.github-toolchain-script-succeeded
+        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-script-succeeded`.
+      - id: runtime-context.github-toolchain-script-failed
+        summary: The invocation meets the shared runtime context `runtime-context.github-toolchain-script-failed`.
     guarantees:
       - id: verified-output-produced
         applies_to:
           - runtime-context.github-toolchain-script-succeeded
-        claim:
-          field: verified
-          in:
-            - "true"
+        boundary: boundary.action-output
+        statement: '`verified` is one of `"true"`. Whether every command selected by mode matched its exact expected version.'
       - id: verification-failure-propagated
         applies_to:
           - runtime-context.github-toolchain-script-failed
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. The success or failure outcome of the verification step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: verify-github-toolchain.sh

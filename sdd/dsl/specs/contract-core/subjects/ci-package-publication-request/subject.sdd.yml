@@ -17,63 +17,36 @@ contracts:
         meaning: "Received by the contract target: source commit SHA passed by the caller."
       - name: expected-source-sha
         meaning: "Received by the contract target: source commit SHA that the verify operation expects the saved request to carry."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Package publication request operation status.
-          - selector: request-path
-            meaning: Package publication request path.
-          - selector: source-sha
-            meaning: Verified source commit SHA.
-          - selector: version
-            meaning: Verified package version.
-          - selector: target-identity
-            meaning: Verified package target identity.
-          - selector: language-profile
-            meaning: Verified language profile.
-          - selector: toolchain
-            meaning: Verified fixed toolchain.
-          - selector: outcome
-            meaning: Failure outcome of the rejected package publication request step.
-          - selector: accepted-trigger-run
-            meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.package-publication-request-succeeded
-      - environment: runtime-context.request-trigger-verification-invoked
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.package-publication-request-succeeded
+        summary: The invocation meets the shared runtime context `runtime-context.package-publication-request-succeeded`.
+      - id: runtime-context.request-trigger-verification-invoked
+        summary: The invocation meets the shared runtime context `runtime-context.request-trigger-verification-invoked`.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
     guarantees:
       - id: package-request-source-produced
         applies_to:
           - runtime-context.package-publication-request-succeeded
-        claim:
-          field: source-sha
-          equals_input: input.source-sha
+        boundary: boundary.action-output
+        statement: "`source-sha` equals the invocation input `source-sha`. Verified source commit SHA. Observable fields at this boundary also include `status` (Package publication request operation status), `request-path` (Package publication request path), `version` (Verified package version), `target-identity` (Verified package target identity), `language-profile` (Verified language profile), `toolchain` (Verified fixed toolchain)."
       - id: package-request-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected package publication request step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: request-trigger-run-bound
         applies_to:
           - runtime-context.request-trigger-verification-invoked
-        claim:
-          field: accepted-trigger-run
-          in:
-            - successful-default-branch-dispatch-of-own-request-workflow
-            - absent
+        boundary: boundary.action-output
+        statement: '`accepted-trigger-run` is one of `"successful-default-branch-dispatch-of-own-request-workflow"`, `"absent"`. Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.'
+    input_kind:
+      kind: operation
+      name: ci-package-publication-request

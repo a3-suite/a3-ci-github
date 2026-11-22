@@ -27,192 +27,125 @@ contracts:
         meaning: "Received by the contract target: cargo-deny version passed by the caller."
       - name: cargo-deny-config-path
         meaning: "Received by the contract target: cargo-deny configuration path passed by the caller."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Aggregate quality adapter status.
-          - selector: status-result-consistency
-            meaning: After removing not-run results of unconfigured optional commands, status is success exactly when every remaining result succeeded; consistent or not.
-          - selector: result-path
-            meaning: Path to the quality adapter result JSON.
-          - selector: outcome
-            meaning: Failure outcome of the rejected quality adapter step.
-          - selector: diagnostic-codes
-            meaning: Stable diagnostic codes reported by the failed step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Adapter result JSON, command logs and embedded records in the workspace.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: accepted-source-binding
-            meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
-          - selector: accepted-content-digest
-            meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
-          - selector: format-command-state
-            meaning: Occurrence of format commands in the native execution trace.
-          - selector: security-command-state
-            meaning: Occurrence of security commands in the native execution trace.
-          - selector: consumer-descriptor-read-state
-            meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
-          - selector: rejected-command-state
-            meaning: Occurrence of project command execution after the invocation is rejected.
-          - selector: native-terminal-prerequisite-status
-            meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
-          - selector: native-failed-prerequisite-followup-state
-            meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
-          - selector: dependency-policy-result-status
-            meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
-          - selector: dependency-policy-config-argument
-            meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
-          - selector: not-run-aggregate-effect
-            meaning: Change of the aggregate status caused by results whose status is not-run.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: quality-adapter-bundle-present
-      - environment: runtime-context.action-input-invalid
-      - input: quality-adapter-standard-bundle-present
-      - environment: runtime-context.quality-adapter-toolchain-version-report-rejected
-      - environment: runtime-context.ci-quality-adapter-native-rust-valid
-      - environment: runtime-context.ci-quality-adapter-native-scope-rejected
-      - environment: runtime-context.ci-quality-adapter-embedded-bundle-supplied
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-configured
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-violation
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: quality-adapter-bundle-present
+        summary: The invocation selects a custom adapter bundle by path.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
+      - id: quality-adapter-standard-bundle-present
+        summary: The invocation selects a built-in standard adapter bundle by ID.
+      - id: runtime-context.quality-adapter-toolchain-version-report-rejected
+        summary: The invocation meets the shared runtime context `runtime-context.quality-adapter-toolchain-version-report-rejected`.
+      - id: runtime-context.ci-quality-adapter-native-rust-valid
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-native-rust-valid`.
+      - id: runtime-context.ci-quality-adapter-native-scope-rejected
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-native-scope-rejected`.
+      - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-embedded-bundle-supplied`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-unconfigured`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-configured
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-configured`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-config-unusable`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-violation
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-violation`.
     guarantees:
       - id: status-result-consistent
         applies_to:
           - quality-adapter-bundle-present
           - quality-adapter-standard-bundle-present
-        claim:
-          field: status-result-consistency
-          in:
-            - consistent
+        boundary: boundary.action-output
+        statement: '`status-result-consistency` is one of `"consistent"`. After removing not-run results of unconfigured optional commands, status is success exactly when every remaining result succeeded; consistent or not. Observable fields at this boundary also include `status` (Aggregate quality adapter status), `result-path` (Path to the quality adapter result JSON).'
       - id: quality-adapter-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
           - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected quality adapter step.'
       - id: quality-adapter-toolchain-version-diagnostic-present
         applies_to:
           - runtime-context.quality-adapter-toolchain-version-report-rejected
-        claim:
-          field: diagnostic-codes
-          contains: quality-adapter-toolchain-version-mismatch
+        boundary: boundary.action-output
+        statement: '`diagnostic-codes` contains `"quality-adapter-toolchain-version-mismatch"`. Stable diagnostic codes reported by the failed step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: native-format-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: format-command-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`format-command-state` is one of `"absent"`. Occurrence of format commands in the native execution trace.'
       - id: native-security-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: security-command-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`security-command-state` is one of `"absent"`. Occurrence of security commands in the native execution trace.'
       - id: standard-descriptor-independent
         applies_to:
           - quality-adapter-standard-bundle-present
-        claim:
-          field: consumer-descriptor-read-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`consumer-descriptor-read-state` is one of `"absent"`. Occurrence of consumer descriptor reads for an embedded standard invocation.'
       - id: rejected-scope-no-commands
         applies_to:
           - runtime-context.ci-quality-adapter-native-scope-rejected
           - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        claim:
-          field: rejected-command-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`rejected-command-state` is one of `"absent"`. Occurrence of project command execution after the invocation is rejected.'
       - id: standard-source-path-validated
         applies_to:
           - runtime-context.ci-quality-adapter-embedded-bundle-supplied
-        claim:
-          field: accepted-source-binding
-          in:
-            - allowed-source-path
+        boundary: boundary.workspace-files
+        statement: '`accepted-source-binding` is one of `"allowed-source-path"`. Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.'
       - id: standard-content-digest-checked
         applies_to:
           - runtime-context.ci-quality-adapter-embedded-bundle-supplied
-        claim:
-          field: accepted-content-digest
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`accepted-content-digest` is one of `"equal"`. Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.'
       - id: native-terminal-prerequisite-status
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-terminal-prerequisite-status
-          in:
-            - failed
-            - 判定不能
-            - continued
+        boundary: boundary.workspace-files
+        statement: '`native-terminal-prerequisite-status` is one of `"failed"`, `"判定不能"`, `"continued"`. Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.'
       - id: native-no-followup-after-failed-prerequisite
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-failed-prerequisite-followup-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`native-failed-prerequisite-followup-state` is one of `"absent"`. Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.'
       - id: native-dependency-policy-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"absent"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
       - id: unconfigured-dependency-policy-not-run
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - not-run
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"not-run"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
       - id: not-run-aggregate-unchanged
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-        claim:
-          field: not-run-aggregate-effect
-          in:
-            - none
+        boundary: boundary.workspace-files
+        statement: '`not-run-aggregate-effect` is one of `"none"`. Change of the aggregate status caused by results whose status is not-run.'
       - id: configured-dependency-policy-executed
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-configured
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - success
-            - failed
-            - 判定不能
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"success"`, `"failed"`, `"判定不能"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
       - id: configured-dependency-policy-explicit-config
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-configured
-        claim:
-          field: dependency-policy-config-argument
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-config-argument` is one of `"equal"`. Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.'
       - id: dependency-policy-violation-failed
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - failed
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"failed"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
+    input_kind:
+      kind: operation
+      name: ci-quality-adapter

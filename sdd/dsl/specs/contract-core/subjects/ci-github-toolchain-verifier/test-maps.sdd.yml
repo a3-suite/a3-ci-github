@@ -2,56 +2,46 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-github-toolchain-verifier.processing
-    case_id: matching-exact-toolchain-processing
     tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > accepts every supported verification mode
+        partition: runtime-context.github-toolchain-matches-request
         guarantees:
           - exact-toolchain-processing-succeeds
-  - contract_id: contract.ci-github-toolchain-verifier.processing
-    case_id: mismatching-exact-toolchain-processing
-    tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects an unsupported mode
+        partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
-  - contract_id: contract.ci-github-toolchain-verifier.processing
-    case_id: unavailable-toolchain-processing
-    tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects an unavailable selected command
+        partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
-  - contract_id: contract.ci-github-toolchain-verifier.processing
-    case_id: version-mismatch-toolchain-processing
-    tests:
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command
+        partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
-  - contract_id: contract.ci-github-toolchain-verifier.processing
-    case_id: detailed-failure-processing
-    tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-github-toolchain-verifier.outputs
-    case_id: matching-selected-tool-versions
     tests:
       - path: actions/ci-github-toolchain-verifier/tests/composite-execution.test.mjs
         symbol: contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification
+        partition: runtime-context.github-toolchain-script-succeeded
         guarantees:
           - verified-output-produced
-  - contract_id: contract.ci-github-toolchain-verifier.outputs
-    case_id: mismatching-selected-tool-version
-    tests:
       - path: actions/ci-github-toolchain-verifier/tests/composite-execution.test.mjs
         symbol: contract.ci-github-toolchain-verifier.outputs > ci-github-toolchain-verifier-action > composite run exposes verified only after exact toolchain verification
+        partition: runtime-context.github-toolchain-script-failed
         guarantees:
           - verification-failure-propagated
-  - contract_id: contract.ci-github-toolchain-verifier.outputs
-    case_id: detailed-failure-outputs
     pending:
-      - guarantees: [diagnostic-failure-stage-outputs]
+      - partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
         reason: Composite Action に無効な mode を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。

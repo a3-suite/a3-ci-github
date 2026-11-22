@@ -2,67 +2,43 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-rust-release-build.processing
-    case_id: completed-rust-release-processing
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
+        partition: runtime-context.rust-release-build-commands-succeed
         guarantees:
           - rust-release-processing-succeeds
           - rust-release-final-output-verified-on-success
-  - contract_id: contract.ci-rust-release-build.processing
-    case_id: rejected-rust-release-processing
-    tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
+        partition: runtime-context.rust-release-build-rejected
         guarantees:
           - rust-release-processing-fails
           - rust-release-rejected-final-output-safe
-  - contract_id: contract.ci-rust-release-build.processing
-    case_id: existing-output-rejected
-    tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
-        guarantees:
-          - rust-release-processing-fails
-          - rust-release-rejected-final-output-safe
-  - contract_id: contract.ci-rust-release-build.processing
-    case_id: version-report-rejected
-    tests:
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
+        partition: runtime-context.rust-release-version-report-rejected
         guarantees:
           - rust-release-version-diagnostic-present
-  - contract_id: contract.ci-rust-release-build.processing
-    case_id: source-text-boundary
-    tests:
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > release build binds exact toolchain and a unique manifest platform before building
-        guarantees:
-          - rust-release-processing-fails
-          - rust-release-rejected-final-output-safe
-  - contract_id: contract.ci-rust-release-build.processing
-    case_id: detailed-failure-processing
-    tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-release-build.outputs
-    case_id: matching-authority-bound-build-inputs
     tests:
       - path: actions/ci-rust-release-build/tests/composite-execution.test.mjs
         symbol: contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success
+        partition: runtime-context.rust-release-build-script-succeeded
         guarantees:
           - completed-output-produced
-  - contract_id: contract.ci-rust-release-build.outputs
-    case_id: mismatching-authority-bound-build-inputs
-    tests:
       - path: actions/ci-rust-release-build/tests/composite-execution.test.mjs
         symbol: contract.ci-rust-release-build.outputs > ci-rust-release-build-action > composite release build exposes completed only after script success
+        partition: runtime-context.rust-release-build-script-failed
         guarantees:
           - release-build-failure-propagated
-  - contract_id: contract.ci-rust-release-build.outputs
-    case_id: detailed-failure-outputs
     pending:
-      - guarantees: [diagnostic-failure-stage-outputs]
+      - partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
         reason: Composite Action に不正な language-profile を与えて失敗段階の診断を確かめるテストが無い。既存のテストは共有 script を直接起動する。

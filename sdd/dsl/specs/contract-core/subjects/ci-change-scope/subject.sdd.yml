@@ -15,48 +15,29 @@ contracts:
         meaning: "Received by the contract target: head commit SHA."
       - name: docs-only-patterns
         meaning: "Received by the contract target: documentation-only path patterns."
-    observations:
-      - summary: Change-scope outputs exposed by the Action to the caller.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether the change range was evaluated successfully or unresolved.
-          - selector: run-ci
-            meaning: Whether CI checks should run.
-          - selector: run-docs
-            meaning: Whether documentation checks should run.
-          - selector: files
-            meaning: Newline-separated changed paths.
-          - selector: docs-files
-            meaning: Newline-separated documentation paths.
-          - selector: other-files
-            meaning: Newline-separated non-documentation paths.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: change-range-input-present
-      - environment: runtime-context.action-input-insufficient
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: change-range-input-present
+        summary: The base and head SHAs refer to the same commit or to an ancestor and its descendant in the checkout.
+      - id: runtime-context.action-input-insufficient
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-insufficient`.
     guarantees:
       - id: change-scope-status-produced
         applies_to:
           - change-range-input-present
-        claim:
-          field: status
-          present: true
+        boundary: boundary.action-output
+        statement: "`status` is present. Whether the change range was evaluated successfully or unresolved. Observable fields at this boundary also include `run-docs` (Whether documentation checks should run), `files` (Newline-separated changed paths), `docs-files` (Newline-separated documentation paths), `other-files` (Newline-separated non-documentation paths)."
       - id: change-scope-unresolved-runs-ci
         applies_to:
           - runtime-context.action-input-insufficient
-        claim:
-          field: run-ci
-          in:
-            - "true"
+        boundary: boundary.action-output
+        statement: '`run-ci` is one of `"true"`. Whether CI checks should run.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-change-scope

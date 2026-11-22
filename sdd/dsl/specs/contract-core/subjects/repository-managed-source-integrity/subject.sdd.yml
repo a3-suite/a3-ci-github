@@ -11,53 +11,37 @@ contracts:
         meaning: "Precondition prepared by the case: state of the repository tree read by the managed source gate."
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
-    observations:
-      - summary: Repository-owned canonical asset roots, registered sources and legacy source locations in the repository tree.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: missing-canonical-asset-roots
-            meaning: Occurrence state (present or absent) of a repository-owned canonical asset root directory missing from the repository tree.
-          - selector: missing-registered-sources
-            meaning: Occurrence state (present or absent) of a workflows, runtime, or lint-rules source path declared by the preset asset registry missing from the repository tree.
-          - selector: legacy-source-locations
-            meaning: Occurrence state (present or absent) of a registered legacy source location in the repository tree.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: repository-managed-source-integrity-source-available
-      - input: repository-managed-source-integrity-legacy-check-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: repository-managed-source-integrity-source-available
+        summary: The repository has the canonical managed source layout.
+      - id: repository-managed-source-integrity-legacy-check-required
+        summary: The repository contains a stale managed source location.
     guarantees:
       - id: canonical-asset-roots-present
         applies_to:
           - repository-managed-source-integrity-source-available
-        claim:
-          field: missing-canonical-asset-roots
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`missing-canonical-asset-roots` is one of `"absent"`. Occurrence state (present or absent) of a repository-owned canonical asset root directory missing from the repository tree.'
       - id: registered-sources-present
         applies_to:
           - repository-managed-source-integrity-source-available
-        claim:
-          field: missing-registered-sources
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`missing-registered-sources` is one of `"absent"`. Occurrence state (present or absent) of a workflows, runtime, or lint-rules source path declared by the preset asset registry missing from the repository tree.'
       - id: legacy-source-locations-absent
         applies_to:
           - repository-managed-source-integrity-legacy-check-required
-        claim:
-          field: legacy-source-locations
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`legacy-source-locations` is one of `"absent"`. Occurrence state (present or absent) of a registered legacy source location in the repository tree.'
       - id: diagnostic-failure-stage-integrity
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-managed-source-integrity
   - id: contract.repository-managed-source-integrity.execution-mapping
     summary: Repository contract execution definition.
     inputs:
@@ -65,31 +49,22 @@ contracts:
         meaning: "Received by the contract target: contract package definition read by the execution mapping."
       - name: execution-definition
         meaning: "Received by the contract target: contract subject execution definition read by the check."
-    observations:
-      - summary: Contract execution mapping results exposed by the repository contract execution check.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: contract-execution-subject-coverage
-            meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: repository-contract-execution-definition-available
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: repository-contract-execution-definition-available
+        summary: The repository contract package and its execution definition are available.
     guarantees:
       - id: repository-contract-execution-subjects-covered
         applies_to:
           - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution-subject-coverage
-          in:
-            - matched
+        boundary: boundary.repository-gate-result
+        statement: '`contract-execution-subject-coverage` is one of `"matched"`. Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.'
       - id: diagnostic-failure-stage-execution-mapping
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-managed-source-integrity

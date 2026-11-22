@@ -15,42 +15,32 @@ contracts:
         meaning: "Received by the contract target: shared runtime root directory."
       - name: untracked-distribution-path
         meaning: "Precondition prepared by the case: distribution file or Composite Action referenced script that exists in the working tree but is not tracked by Git."
-    observations:
-      - summary: Distribution consistency result exposed by the repository distribution gate.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: distribution
-            meaning: Distribution gate result; success or failure.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.repository-action-distribution-inputs-available
-      - environment: runtime-context.repository-action-distribution-inconsistent
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.repository-action-distribution-inputs-available
+        summary: The invocation meets the shared runtime context `runtime-context.repository-action-distribution-inputs-available`.
+      - id: runtime-context.repository-action-distribution-inconsistent
+        summary: The invocation meets the shared runtime context `runtime-context.repository-action-distribution-inconsistent`.
     guarantees:
       - id: consistent-distribution-accepted
         applies_to:
           - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: distribution
-          in:
-            - success
+        boundary: boundary.repository-gate-result
+        statement: '`distribution` is one of `"success"`. Distribution gate result; success or failure.'
       - id: inconsistent-distribution-rejected
         applies_to:
           - runtime-context.repository-action-distribution-inconsistent
-        claim:
-          field: distribution
-          in:
-            - failure
+        boundary: boundary.repository-gate-result
+        statement: '`distribution` is one of `"failure"`. Distribution gate result; success or failure.'
       - id: diagnostic-failure-stage-integrity
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
   - id: contract.repository-action-distribution.catalog
     summary: Repository Action catalog projection invocation.
     inputs:
@@ -58,34 +48,25 @@ contracts:
         meaning: "Received by the contract target: Actions root directory."
       - name: catalog-path
         meaning: "Received by the contract target: path to the Action catalog file."
-    observations:
-      - summary: Catalog projection result exposed by the repository catalog gate.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: catalog-action-set
-            meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.repository-action-catalog-inputs-available
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.repository-action-catalog-inputs-available
+        summary: The invocation meets the shared runtime context `runtime-context.repository-action-catalog-inputs-available`.
     guarantees:
       - id: catalog-action-set-matched
         applies_to:
           - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: catalog-action-set
-          in:
-            - matched
+        boundary: boundary.repository-gate-result
+        statement: '`catalog-action-set` is one of `"matched"`. Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.'
       - id: diagnostic-failure-stage-catalog
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
   - id: contract.repository-action-distribution.source-verification
     summary: Repository Action source verification planning invocation.
     inputs:
@@ -93,43 +74,30 @@ contracts:
         meaning: "Received by the contract target: Actions root directory."
       - name: prepared-by
         meaning: "Precondition prepared by the case: process that prepared the distribution input."
-    observations:
-      - summary: Source verification plan exposed by the repository source verification gate.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: source-verification-action-coverage
-            meaning: Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.
-          - selector: source-verification-runtime-tests
-            meaning: Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.repository-action-distribution-inputs-available
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.repository-action-distribution-inputs-available
+        summary: The invocation meets the shared runtime context `runtime-context.repository-action-distribution-inputs-available`.
     guarantees:
       - id: source-verification-actions-covered
         applies_to:
           - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification-action-coverage
-          in:
-            - matched
+        boundary: boundary.repository-gate-result
+        statement: '`source-verification-action-coverage` is one of `"matched"`. Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.'
       - id: source-verification-runtime-tests-covered
         applies_to:
           - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification-runtime-tests
-          in:
-            - matched
+        boundary: boundary.repository-gate-result
+        statement: '`source-verification-runtime-tests` is one of `"matched"`. Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.'
       - id: diagnostic-failure-stage-source-verification
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
   - id: contract.repository-action-distribution.release-version
     summary: Release tag alias update request against the repository VERSION and the integrated release source.
     inputs:
@@ -151,86 +119,59 @@ contracts:
         meaning: "Precondition prepared by the case: response of the remote to the alias push."
       - name: alias-state
         meaning: "Precondition prepared by the case: alias tags that already exist on the remote before the invocation."
-    observations:
-      - summary: Release version comparison and release source integration exposed by the release alias updater.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: release-version
-            meaning: Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.
-          - selector: aliasSourceIntegration
-            meaning: Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Release tags that the remote holds after an alias update invocation.
-        boundary: boundary.remote-release-tags
-        fields:
-          - selector: alias-tag-comparison
-            meaning: Comparison of the major and minor alias tags of the release tag on the remote before and after the invocation; equal or changed.
-          - selector: alias-source-comparison
-            meaning: Comparison of the source commit of each alias tag with the source commit of the newest release tag of the same line; equal or different.
-          - selector: release-tag-object-comparison
-            meaning: Comparison of the objects of the exact release tags on the remote before and after the invocation; equal or changed.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.repository-exact-release-tag-available
-      - environment: runtime-context.repository-release-version-invalid-or-mismatched
-      - environment: runtime-context.repository-release-alias-update-valid
-      - environment: runtime-context.repository-release-alias-update-applied
-      - environment: runtime-context.repository-release-alias-update-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.repository-exact-release-tag-available
+        summary: The invocation meets the shared runtime context `runtime-context.repository-exact-release-tag-available`.
+      - id: runtime-context.repository-release-version-invalid-or-mismatched
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-version-invalid-or-mismatched`.
+      - id: runtime-context.repository-release-alias-update-valid
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-alias-update-valid`.
+      - id: runtime-context.repository-release-alias-update-applied
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-alias-update-applied`.
+      - id: runtime-context.repository-release-alias-update-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-alias-update-invalid`.
     guarantees:
       - id: release-version-confirmed
         applies_to:
           - runtime-context.repository-exact-release-tag-available
-        claim:
-          field: release-version
-          in:
-            - equal
+        boundary: boundary.repository-gate-result
+        statement: '`release-version` is one of `"equal"`. Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.'
       - id: invalid-or-mismatched-release-version-rejected
         applies_to:
           - runtime-context.repository-release-version-invalid-or-mismatched
-        claim:
-          field: release-version
-          in:
-            - failure
+        boundary: boundary.repository-gate-result
+        statement: '`release-version` is one of `"failure"`. Comparison of the target source VERSION with the version of the exact release tag; equal, or failure when VERSION is missing, invalid, or different.'
       - id: alias-source-integrated
         applies_to:
           - runtime-context.repository-release-alias-update-valid
           - runtime-context.repository-release-alias-update-applied
-        claim:
-          field: aliasSourceIntegration
-          in:
-            - integrated
-            - canonical-hotfix-tip
+        boundary: boundary.repository-gate-result
+        statement: '`aliasSourceIntegration` is one of `"integrated"`, `"canonical-hotfix-tip"`. Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.'
       - id: alias-tags-preserved
         applies_to:
           - runtime-context.repository-release-version-invalid-or-mismatched
           - runtime-context.repository-release-alias-update-valid
           - runtime-context.repository-release-alias-update-invalid
-        claim:
-          field: alias-tag-comparison
-          in:
-            - equal
+        boundary: boundary.remote-release-tags
+        statement: '`alias-tag-comparison` is one of `"equal"`. Comparison of the major and minor alias tags of the release tag on the remote before and after the invocation; equal or changed.'
       - id: alias-follows-newest-release
         applies_to:
           - runtime-context.repository-release-alias-update-applied
-        claim:
-          field: alias-source-comparison
-          in:
-            - equal
+        boundary: boundary.remote-release-tags
+        statement: '`alias-source-comparison` is one of `"equal"`. Comparison of the source commit of each alias tag with the source commit of the newest release tag of the same line; equal or different.'
       - id: immutable-release-tags-preserved
         applies_to:
           - runtime-context.repository-release-alias-update-applied
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: release-tag-object-comparison
-          in:
-            - equal
+        boundary: boundary.remote-release-tags
+        statement: '`release-tag-object-comparison` is one of `"equal"`. Comparison of the objects of the exact release tags on the remote before and after the invocation; equal or changed.'
       - id: diagnostic-failure-stage-release-version
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution

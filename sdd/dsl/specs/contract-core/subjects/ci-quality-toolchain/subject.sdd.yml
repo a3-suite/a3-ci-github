@@ -37,69 +37,49 @@ contracts:
         meaning: "Received by the contract target: cargo-deny version requested by the caller."
       - name: rust-setup-result
         meaning: "Precondition prepared by the case: result of the Rust setup step that the failure retention step reads."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: outcome
-            meaning: Preparation step outcome.
-          - selector: resolved-toolchain-version
-            meaning: Published resolved toolchain version.
-          - selector: unrequested-optional-tool-setup-state
-            meaning: Occurrence state (present or absent) of setup for an optional tool whose version input is empty.
-          - selector: resolved-selector-comparison
-            meaning: Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.quality-toolchain-inputs-ready
-      - environment: runtime-context.quality-toolchain-inputs-unusable
-      - environment: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-      - environment: runtime-context.quality-toolchain-request-valid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.quality-toolchain-inputs-ready
+        summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-inputs-ready`.
+      - id: runtime-context.quality-toolchain-inputs-unusable
+        summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-inputs-unusable`.
+      - id: runtime-context.ci-quality-toolchain-registered-binary-input-unusable
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-toolchain-registered-binary-input-unusable`.
+      - id: runtime-context.quality-toolchain-request-valid
+        summary: The invocation meets the shared runtime context `runtime-context.quality-toolchain-request-valid`.
     guarantees:
       - id: resolved-quality-toolchain-produced
         applies_to:
           - runtime-context.quality-toolchain-inputs-ready
-        claim:
-          field: resolved-toolchain-version
-          present: true
+        boundary: boundary.action-output
+        statement: "`resolved-toolchain-version` is present. Published resolved toolchain version."
       - id: selected-quality-toolchain-ready
         applies_to:
           - runtime-context.quality-toolchain-inputs-ready
-        claim:
-          field: outcome
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"success"`. Preparation step outcome.'
       - id: invalid-or-failed-quality-toolchain-stops
         applies_to:
           - runtime-context.quality-toolchain-inputs-unusable
           - runtime-context.ci-quality-toolchain-registered-binary-input-unusable
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Preparation step outcome.'
       - id: diagnostic-failure-stage-preparation
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: optional-tool-setup-only-when-requested
         applies_to:
           - runtime-context.quality-toolchain-request-valid
-        claim:
-          field: unrequested-optional-tool-setup-state
-          in:
-            - absent
+        boundary: boundary.action-output
+        statement: '`unrequested-optional-tool-setup-state` is one of `"absent"`. Occurrence state (present or absent) of setup for an optional tool whose version input is empty.'
       - id: resolved-version-satisfies-selector
         applies_to:
           - runtime-context.quality-toolchain-request-valid
-        claim:
-          field: resolved-selector-comparison
-          in:
-            - matched
-            - not-published
+        boundary: boundary.action-output
+        statement: '`resolved-selector-comparison` is one of `"matched"`, `"not-published"`. Comparison of an emitted resolved toolchain version with the requested exact or compatible selector; not-published denotes absence of a resolved version output.'
+    input_kind:
+      kind: operation
+      name: ci-quality-toolchain

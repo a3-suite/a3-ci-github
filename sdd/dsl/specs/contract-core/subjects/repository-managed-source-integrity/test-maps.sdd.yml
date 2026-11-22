@@ -2,36 +2,32 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.repository-managed-source-integrity.integrity
-    case_id: repository-managed-source-integrity-success
     tests:
       - path: tests/repository-managed-source-integrity.test.mjs
         symbol: repository-managed-source-integrity > managed source inventory resolves every canonical repository asset
+        partition: repository-managed-source-integrity-source-available
         guarantees:
           - canonical-asset-roots-present
           - registered-sources-present
-  - contract_id: contract.repository-managed-source-integrity.integrity
-    case_id: repository-managed-source-integrity-failure
-    pending:
-      - guarantees: [legacy-source-locations-absent]
-        reason: case は旧 location を持つ tree を入力とするが、契約対象の maintenance gate（runtime/repository/lint-repository.sh）は旧 location を検査せず、写像していたテストは実 repository に旧 location が無いことを確かめるだけである。
-  - contract_id: contract.repository-managed-source-integrity.integrity
-    case_id: detailed-failure-integrity
-    tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > managed-source rejects invalid invocation with retained shell failure context
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-integrity
+    pending:
+      - partition: repository-managed-source-integrity-legacy-check-required
+        guarantees:
+          - legacy-source-locations-absent
+        reason: case は旧 location を持つ tree を入力とするが、契約対象の maintenance gate（runtime/repository/lint-repository.sh）は旧 location を検査せず、写像していたテストは実 repository に旧 location が無いことを確かめるだけである。
   - contract_id: contract.repository-managed-source-integrity.execution-mapping
-    case_id: repository-contract-execution-mapped
     tests:
       - path: tests/contract-subject-execution.test.mjs
         symbol: repository-contract-subject-execution > execution definition covers every contract-package subject scope
+        partition: repository-contract-execution-definition-available
         guarantees:
           - repository-contract-execution-subjects-covered
-  - contract_id: contract.repository-managed-source-integrity.execution-mapping
-    case_id: detailed-failure-execution-mapping
-    tests:
       - path: tests/contract-subject-execution.process.test.mjs
         symbol: repository-contract-subject-execution > definition check retains the rejected mapping as failure details without private parser text
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-execution-mapping

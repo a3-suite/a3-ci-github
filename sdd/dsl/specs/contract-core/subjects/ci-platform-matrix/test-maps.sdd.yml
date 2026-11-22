@@ -2,34 +2,32 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-platform-matrix.outputs
-    case_id: valid-platform-manifest
     tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint emits the validated matrix
+        partition: runtime-context.platform-manifest-valid
         guarantees:
           - manifest-matrix-binding
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint emits the validated matrix
+        partition: runtime-context.platform-manifest-valid
         guarantees:
           - manifest-matrix-binding
-  - contract_id: contract.ci-platform-matrix.outputs
-    case_id: invalid-platform-manifest
-    tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails closed for an unsupported runner
+        partition: runtime-context.platform-manifest-invalid
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails closed for an unsupported runner
+        partition: runtime-context.platform-manifest-invalid
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
-  - contract_id: contract.ci-platform-matrix.outputs
-    case_id: valid-quality-selection
-    tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
+        partition: runtime-context.quality-selection-shared-checks-omitted
         guarantees:
           - manifest-matrix-binding
           - quality-id-set
@@ -38,17 +36,16 @@ test_maps:
           - shared-checks-absence
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint emits ordered quality outputs without changing the manifest matrix
+        partition: runtime-context.quality-selection-shared-checks-omitted
         guarantees:
           - manifest-matrix-binding
           - quality-id-set
           - quality-runner-binding
           - expected-id-set
           - shared-checks-absence
-  - contract_id: contract.ci-platform-matrix.outputs
-    case_id: invalid-quality-selection
-    tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails without any outputs for invalid selection
+        partition: runtime-context.quality-platform-selection-invalid
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
@@ -56,23 +53,20 @@ test_maps:
           - invalid-selection-has-no-expected-platforms
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails without any outputs for invalid selection
+        partition: runtime-context.quality-platform-selection-invalid
         guarantees:
           - invalid-platform-manifest-fails
           - invalid-platform-manifest-has-no-output
           - invalid-selection-has-no-quality-matrix
           - invalid-selection-has-no-expected-platforms
-  - contract_id: contract.ci-platform-matrix.outputs
-    case_id: detailed-failure-outputs
-    tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-platform-matrix failure boundary > source retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-platform-matrix.outputs
-    case_id: valid-quality-selection-with-shared-checks
-    tests:
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        partition: runtime-context.quality-selection-shared-checks-supplied
         guarantees:
           - manifest-matrix-binding
           - quality-id-set
@@ -81,6 +75,7 @@ test_maps:
           - shared-checks-value
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
+        partition: runtime-context.quality-selection-shared-checks-supplied
         guarantees:
           - manifest-matrix-binding
           - quality-id-set

@@ -2,10 +2,10 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-publication-workflow.publication
-    case_id: ci-release-publication-workflow-success
     tests:
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication workflows separate request validation from privileged publication
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-fixed-provider-reference
           - release-request-before-publication
@@ -17,70 +17,69 @@ test_maps:
           - supplemental-final-assembly-input
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: .ci/platforms.yml"
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: platforms.yml"
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: "release control checkout > trusted source identity and file scope > materializes only the declared manifest at the fixed control SHA: custom path/platform [literal]*?#!.yml"
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-control-sha-bound
           - release-control-head-verified
       - path: tests/control-checkout.process.test.mjs
         symbol: release control checkout > trusted source identity and file scope > keeps Git identity and artifact handoffs without product working files for publish
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-control-sha-bound
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication workflow declares serialized publication
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-publication-group-per-repository
           - release-publication-in-progress-kept
           - release-publication-pending-queued
       - path: tests/control-checkout.test.mjs
         symbol: release control checkout > trusted source identity and file scope > removes credentials from the fixed assembly source checkout
+        partition: ci-release-publication-workflow-canonical-source-available
         guarantees:
           - release-assembly-source-credentials-removed
-  - contract_id: contract.ci-release-publication-workflow.publication
-    case_id: ci-release-publication-workflow-failure
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-publication-workflow-contract > release publication runs after successful assembly even when supplemental-asset is skipped
+        partition: ci-release-publication-workflow-failure-route-required
         guarantees:
           - release-failed-prerequisite-blocks
-  - contract_id: contract.ci-release-publication-workflow.publication
-    case_id: detailed-failure-publication
-    tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > release-publication aggregate retains failed job identity and run evidence
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-publication
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/release/release-publication-request.yml summary preserves the current job failure result
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-publication
   - contract_id: contract.ci-release-publication-workflow.asset-publication
-    case_id: ci-asset-release-publication-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication runs no product build and checks the asset selection before authority
+        partition: ci-asset-release-publication-workflow-canonical-source-available
         guarantees:
           - asset-publication-no-build-job
           - asset-publication-selection-before-authority
-  - contract_id: contract.ci-release-publication-workflow.asset-publication
-    case_id: ci-asset-release-publication-workflow-failure
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > asset-release-publication-workflow-contract > asset release publication blocks on every unsuccessful prerequisite
+        partition: ci-asset-release-publication-workflow-failure-route-required
         guarantees:
           - asset-publication-failed-prerequisite-blocks
-  - contract_id: contract.ci-release-publication-workflow.asset-publication
-    case_id: detailed-failure-asset-publication
-    tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > asset-release-publication aggregate retains failed job identity and run evidence
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-asset-publication

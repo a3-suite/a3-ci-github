@@ -11,157 +11,94 @@ contracts:
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
         meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
-    observations:
-      - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-        boundary: boundary.workflow-definition
-        fields:
-          - selector: failure-summary
-            meaning: Declared package aggregate route.
-          - selector: package-fixed-provider-reference
-            meaning: Comparison of caller preparation/publication references with registered provider workflow reference declarations.
-          - selector: package-explicit-owner-inputs
-            meaning: Comparison of caller owner bindings with the provider typed required inputs.
-          - selector: package-request-before-preparation
-            meaning: Declared dependency order of request validation and preparation.
-          - selector: package-preparation-before-publication
-            meaning: Declared dependency order of preparation and privileged publication.
-          - selector: package-preparation-secret-bindings
-            meaning: Occurrence of secrets that the caller passes to, or the provider declares for, the package preparation workflow.
-          - selector: package-control-sha-bound
-            meaning: Comparison of trusted control checkout revision with github.workflow_sha.
-          - selector: package-control-head-verified
-            meaning: Declared order of control checkout and immediate HEAD verification.
-          - selector: package-handoff-before-publication
-            meaning: Declared order of package handoff validation and credential-bearing owner publisher invocation.
-          - selector: package-credential-scope
-            meaning: Occurrence of registry token bindings outside the owner publication step within the provider workflow execution.
-          - selector: package-owner-publisher-invoked
-            meaning: Declared owner publisher argument.
-          - selector: package-failure-summary-always
-            meaning: Declared publication aggregate condition.
-          - selector: package-failed-prerequisite-blocks
-            meaning: Occurrence of publication eligibility with failed or unknown required preparation or request validation.
-          - selector: package-publication-concurrency
-            meaning: "Declared concurrency of the package publication provider workflow: runs publishing to the same target never execute concurrently; serialized or other."
-          - selector: package-preparation-permissions
-            meaning: "Declared permissions of the package preparation provider workflow and its build job: no workflow permissions and read-only contents for build; least-privilege or other."
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: ci-package-publication-workflow-canonical-source-available
-      - input: ci-package-publication-workflow-failure-route-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: ci-package-publication-workflow-canonical-source-available
+        summary: The canonical package publication workflow source is inspected.
+      - id: ci-package-publication-workflow-failure-route-required
+        summary: The package publication caller must handle a failed publication job.
     guarantees:
       - id: ci-package-publication-workflow-failure-observed
         applies_to:
           - ci-package-publication-workflow-failure-route-required
-        claim:
-          field: failure-summary
-          present: true
+        boundary: boundary.workflow-definition
+        statement: "`failure-summary` is present. Declared package aggregate route."
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: package-fixed-provider-reference
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-fixed-provider-reference
-          in:
-            - equal
+        boundary: boundary.workflow-definition
+        statement: '`package-fixed-provider-reference` is one of `"equal"`. Comparison of caller preparation/publication references with registered provider workflow reference declarations.'
       - id: package-explicit-owner-inputs
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-explicit-owner-inputs
-          in:
-            - equal
+        boundary: boundary.workflow-definition
+        statement: '`package-explicit-owner-inputs` is one of `"equal"`. Comparison of caller owner bindings with the provider typed required inputs.'
       - id: package-request-before-preparation
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-request-before-preparation
-          in:
-            - request-before-preparation
+        boundary: boundary.workflow-definition
+        statement: '`package-request-before-preparation` is one of `"request-before-preparation"`. Declared dependency order of request validation and preparation.'
       - id: package-preparation-before-publication
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-preparation-before-publication
-          in:
-            - preparation-before-publication
+        boundary: boundary.workflow-definition
+        statement: '`package-preparation-before-publication` is one of `"preparation-before-publication"`. Declared dependency order of preparation and privileged publication.'
       - id: package-preparation-secrets-absent
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-preparation-secret-bindings
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`package-preparation-secret-bindings` is one of `"absent"`. Occurrence of secrets that the caller passes to, or the provider declares for, the package preparation workflow.'
       - id: package-control-sha-bound
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-control-sha-bound
-          in:
-            - equal
+        boundary: boundary.workflow-definition
+        statement: '`package-control-sha-bound` is one of `"equal"`. Comparison of trusted control checkout revision with github.workflow_sha.'
       - id: package-control-head-verified
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-control-head-verified
-          in:
-            - checkout-before-verification
+        boundary: boundary.workflow-definition
+        statement: '`package-control-head-verified` is one of `"checkout-before-verification"`. Declared order of control checkout and immediate HEAD verification.'
       - id: package-handoff-before-publication
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-handoff-before-publication
-          in:
-            - handoff-before-publication
+        boundary: boundary.workflow-definition
+        statement: '`package-handoff-before-publication` is one of `"handoff-before-publication"`. Declared order of package handoff validation and credential-bearing owner publisher invocation.'
       - id: package-credential-scope
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-credential-scope
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`package-credential-scope` is one of `"absent"`. Occurrence of registry token bindings outside the owner publication step within the provider workflow execution.'
       - id: package-owner-publisher-invoked
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-owner-publisher-invoked
-          in:
-            - package-handoff
+        boundary: boundary.workflow-definition
+        statement: '`package-owner-publisher-invoked` is one of `"package-handoff"`. Declared owner publisher argument.'
       - id: package-failure-summary-always
         applies_to:
           - ci-package-publication-workflow-failure-route-required
-        claim:
-          field: package-failure-summary-always
-          in:
-            - always
+        boundary: boundary.workflow-definition
+        statement: '`package-failure-summary-always` is one of `"always"`. Declared publication aggregate condition.'
       - id: package-failed-prerequisite-blocks
         applies_to:
           - ci-package-publication-workflow-failure-route-required
-        claim:
-          field: package-failed-prerequisite-blocks
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`package-failed-prerequisite-blocks` is one of `"absent"`. Occurrence of publication eligibility with failed or unknown required preparation or request validation.'
       - id: package-publication-serialized
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-publication-concurrency
-          in:
-            - serialized
+        boundary: boundary.workflow-definition
+        statement: '`package-publication-concurrency` is one of `"serialized"`. Declared concurrency of the package publication provider workflow: runs publishing to the same target never execute concurrently; serialized or other.'
       - id: package-preparation-least-privilege
         applies_to:
           - ci-package-publication-workflow-canonical-source-available
-        claim:
-          field: package-preparation-permissions
-          in:
-            - least-privilege
+        boundary: boundary.workflow-definition
+        statement: '`package-preparation-permissions` is one of `"least-privilege"`. Declared permissions of the package preparation provider workflow and its build job: no workflow permissions and read-only contents for build; least-privilege or other.'
+    input_kind:
+      kind: operation
+      name: ci-package-publication-workflow

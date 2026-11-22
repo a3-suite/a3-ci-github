@@ -2,10 +2,10 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-quality-workflow.execution
-    case_id: ci-quality-workflow-reusable-binding
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality caller preserves the summary check without copying quality jobs
+        partition: ci-quality-workflow-caller-selected
         guarantees:
           - ci-quality-workflow-reusable-binding-observed
           - quality-fixed-reference
@@ -13,11 +13,9 @@ test_maps:
           - quality-no-consumer-callee-copy
           - quality-caller-read-permissions
           - quality-caller-summary-always
-  - contract_id: contract.ci-quality-workflow.execution
-    case_id: ci-quality-workflow-success
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality toolchain callers bind five inputs and preserve execution gates
+        partition: ci-quality-workflow-canonical-source-available
         guarantees:
           - quality-toolchain-language-profile-bound
           - quality-toolchain-toolchain-version-bound
@@ -27,6 +25,7 @@ test_maps:
           - quality-toolchain-continue-on-error-absent
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality workflow declares trusted execution and aggregate summary
+        partition: ci-quality-workflow-canonical-source-available
         guarantees:
           - quality-source-before-adapter
           - quality-fork-pull-request-untrusted
@@ -34,56 +33,53 @@ test_maps:
           - quality-results-before-summary
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push
+        partition: ci-quality-workflow-canonical-source-available
         guarantees:
           - quality-untrusted-cargo-cache-absent
           - quality-cargo-cache-save-default-branch-push-only
-  - contract_id: contract.ci-quality-workflow.execution
-    case_id: ci-quality-workflow-failure
-    tests:
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
+        partition: ci-quality-workflow-failure-route-required
         guarantees:
           - ci-quality-workflow-failure-observed
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > quality workflow keeps failed or missing checks visible
+        partition: ci-quality-workflow-failure-route-required
         guarantees:
           - ci-quality-workflow-failure-observed
           - quality-failure-summary-always
           - quality-unresolved-results-visible
-  - contract_id: contract.ci-quality-workflow.execution
-    case_id: ci-quality-workflow-platform
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform caller retains the summary identity
+        partition: ci-quality-workflow-platform-source-selected
         guarantees:
           - platform-summary-identity
           - quality-fixed-reference
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > platform summary scripts preserve docs-only failed cancelled and missing outcomes
+        partition: ci-quality-workflow-platform-source-selected
         guarantees:
           - platform-unresolved-results-rejected
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > optional platform quality workflow preserves trusted assets matrix execution and summary
+        partition: ci-quality-workflow-platform-source-selected
         guarantees:
           - platform-resolution-before-execution
           - platform-execution-before-summary
           - quality-pull-request-trusted-assets-from-base
-  - contract_id: contract.ci-quality-workflow.execution
-    case_id: ci-quality-workflow-profiles
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > profiles caller runs the quality callee once per language profile and retains one summary identity
+        partition: ci-quality-workflow-profiles-source-selected
         guarantees:
           - profiles-callee-once-per-profile
           - profiles-summary-identity
       - path: tests/workflow-contracts.process.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > caller summary rejects failed cancelled skipped and missing reusable results through the bundled Action
+        partition: ci-quality-workflow-profiles-source-selected
         guarantees:
           - profiles-unsuccessful-result-rejected
-  - contract_id: contract.ci-quality-workflow.execution
-    case_id: detailed-failure-execution
-    tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > quality aggregate retains failed job identity and run evidence
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-execution

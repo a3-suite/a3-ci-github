@@ -37,116 +37,71 @@ contracts:
         meaning: "Received by the contract target: release implementation recorded in the snapshot."
       - name: supplemental-asset
         meaning: "Received by the contract target: supplemental asset implementation selected for the release."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Status output of the assembly invocation; success.
-          - selector: release-handoff
-            meaning: Path of the ci.handoff.v1 directory that a successful assembly writes.
-          - selector: asset-digest
-            meaning: SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests.
-          - selector: handoff-source-identity
-            meaning: Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.
-          - selector: outcome
-            meaning: Failed step outcome when assembly is rejected.
-      - summary: Release handoff directory written by the assembly.
-        boundary: boundary.workspace-files
-        fields:
-          - selector: handoff-asset-digest-reload
-            meaning: Comparison of the asset digest that loading the written handoff yields with the asset-digest output.
-          - selector: owner-evidence-retention-state
-            meaning: Whether every supplied owner evidence record appears unchanged in the handoff evidence directory; retained or lost.
-          - selector: packaged-skill-selection-comparison
-            meaning: Comparison of the SKILL.md paths in the skills ZIP owner evidence with the selected skill set; matched or mismatched.
-          - selector: accepted-checksum-verification
-            meaning: Result of checking each accepted asset against its checksum sidecar with a standard sha256 checksum-file verification; verified or failed.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Inputs declared by the assembly Action for its caller.
-        boundary: boundary.action-caller
-        fields:
-          - selector: credential-input-state
-            meaning: Occurrence state (present or absent) of a declared input that accepts a provider credential.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-assembly-valid
-      - environment: runtime-context.release-asset-only-assembly-valid
-      - environment: runtime-context.release-assembly-invalid
-      - environment: runtime-context.release-asset-only-assembly-empty
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: runtime-context.release-assembly-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-assembly-valid`.
+      - id: runtime-context.release-asset-only-assembly-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-asset-only-assembly-valid`.
+      - id: runtime-context.release-assembly-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.release-assembly-invalid`.
+      - id: runtime-context.release-asset-only-assembly-empty
+        summary: The invocation meets the shared runtime context `runtime-context.release-asset-only-assembly-empty`.
     guarantees:
       - id: assembly-success
         applies_to:
           - runtime-context.release-assembly-valid
           - runtime-context.release-asset-only-assembly-valid
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Status output of the assembly invocation; success. Observable fields at this boundary also include `asset-digest` (SHA-256 of the canonical sorted inventory of verified asset names, sizes and digests).'
       - id: handoff-output-bound
         applies_to:
           - runtime-context.release-assembly-valid
           - runtime-context.release-asset-only-assembly-valid
-        claim:
-          field: release-handoff
-          equals_input: input.output-directory
+        boundary: boundary.action-output
+        statement: "`release-handoff` equals the invocation input `output-directory`. Path of the ci.handoff.v1 directory that a successful assembly writes."
       - id: handoff-source-bound
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: handoff-source-identity
-          in:
-            - equal
+        boundary: boundary.action-output
+        statement: '`handoff-source-identity` is one of `"equal"`. Comparison of the source_sha of the identity that the assembly returns with the authority source_sha.'
       - id: handoff-asset-digest-bound
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: handoff-asset-digest-reload
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`handoff-asset-digest-reload` is one of `"equal"`. Comparison of the asset digest that loading the written handoff yields with the asset-digest output.'
       - id: assembly-no-credential-input
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: credential-input-state
-          in:
-            - absent
+        boundary: boundary.action-caller
+        statement: '`credential-input-state` is one of `"absent"`. Occurrence state (present or absent) of a declared input that accepts a provider credential.'
       - id: assembly-rejected
         applies_to:
           - runtime-context.release-assembly-invalid
           - runtime-context.release-asset-only-assembly-empty
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failed step outcome when assembly is rejected.'
       - id: accepted-checksum-verifiable
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: accepted-checksum-verification
-          in:
-            - verified
+        boundary: boundary.workspace-files
+        statement: '`accepted-checksum-verification` is one of `"verified"`. Result of checking each accepted asset against its checksum sidecar with a standard sha256 checksum-file verification; verified or failed.'
       - id: handoff-owner-evidence-retained
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: owner-evidence-retention-state
-          in:
-            - retained
+        boundary: boundary.workspace-files
+        statement: '`owner-evidence-retention-state` is one of `"retained"`. Whether every supplied owner evidence record appears unchanged in the handoff evidence directory; retained or lost.'
       - id: selected-skills-packaged
         applies_to:
           - runtime-context.release-assembly-valid
-        claim:
-          field: packaged-skill-selection-comparison
-          in:
-            - matched
+        boundary: boundary.workspace-files
+        statement: '`packaged-skill-selection-comparison` is one of `"matched"`. Comparison of the SKILL.md paths in the skills ZIP owner evidence with the selected skill set; matched or mismatched.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-assembly

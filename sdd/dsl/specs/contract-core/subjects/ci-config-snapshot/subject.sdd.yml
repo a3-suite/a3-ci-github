@@ -15,45 +15,29 @@ contracts:
         meaning: "Received by the contract target: path to the configuration snapshot file."
       - name: github-output
         meaning: "Precondition prepared by the case: GitHub output file provided by the runner."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether configuration resolution and snapshot writing succeeded; success or failed.
-          - selector: snapshot-path
-            meaning: Path of the written configuration snapshot.
-          - selector: digest
-            meaning: SHA-256 digest of resolved snapshot values and sources.
-          - selector: outcome
-            meaning: Failure outcome of the rejected snapshot operation.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: sources-input-present
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+      - id: sources-input-present
+        summary: Source configuration is supplied and the snapshot destination is writable.
+      - id: runtime-context.action-input-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.action-input-invalid`.
     guarantees:
       - id: config-snapshot-status-produced
         applies_to:
           - sources-input-present
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Whether configuration resolution and snapshot writing succeeded; success or failed. Observable fields at this boundary also include `snapshot-path` (Path of the written configuration snapshot), `digest` (SHA-256 digest of resolved snapshot values and sources).'
       - id: config-snapshot-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected snapshot operation.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-config-snapshot

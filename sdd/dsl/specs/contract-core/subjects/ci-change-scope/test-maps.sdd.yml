@@ -2,31 +2,29 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-change-scope.outputs
-    case_id: valid-change-range
     tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint reports a valid range
+        partition: change-range-input-present
         guarantees:
           - change-scope-status-produced
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint reports a valid range
+        partition: change-range-input-present
         guarantees:
           - change-scope-status-produced
-  - contract_id: contract.ci-change-scope.outputs
-    case_id: invalid-sha-unresolved
-    tests:
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails open for an invalid SHA
+        partition: runtime-context.action-input-insufficient
         guarantees:
           - change-scope-unresolved-runs-ci
       - path: actions/ci-change-scope/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails open for an invalid SHA
+        partition: runtime-context.action-input-insufficient
         guarantees:
           - change-scope-unresolved-runs-ci
-  - contract_id: contract.ci-change-scope.outputs
-    case_id: detailed-failure-outputs
-    tests:
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-change-scope failure boundary > source retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-outputs
