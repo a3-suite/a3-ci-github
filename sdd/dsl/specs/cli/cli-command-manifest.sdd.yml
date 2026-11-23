@@ -21,3 +21,5 @@ commands:
     path: commands/generate-ci-distribution-release/cli-command.sdd.yml
   - id: assemble-standard-installer
     path: commands/assemble-standard-installer/cli-command.sdd.yml
+  - id: build-standard-installer-platform
+    path: commands/build-standard-installer-platform/cli-command.sdd.yml

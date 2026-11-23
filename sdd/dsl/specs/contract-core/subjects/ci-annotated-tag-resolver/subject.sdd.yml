@@ -5,7 +5,7 @@ subject:
   summary: Resolve an annotated Git tag to its tag object and source commit.
 contracts:
   - id: contract.ci-annotated-tag-resolver.outputs
-    summary: A valid annotated tag produces tag object and source commit outputs.
+    summary: Repository and release tag inputs to the annotated tag resolver Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -15,44 +15,27 @@ contracts:
         meaning: "Received by the contract target: release tag name."
       - name: github-token
         meaning: "Received by the contract target: token passed to the Action."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: tag-object-sha
-            meaning: SHA of the annotated tag object.
-          - selector: tag-object-type
-            meaning: Git object type.
-          - selector: source-sha
-            meaning: SHA of the commit referenced by the tag.
-          - selector: outcome
-            meaning: Failure outcome of the rejected tag resolution step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.annotated-tag-resolution-valid
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: A required Action input is absent or invalid, the provider cannot resolve the requested annotated tag and commit with canonical SHAs, or writing an Action output fails.
+      - id: runtime-context.annotated-tag-resolution-valid
+        summary: The invocation meets the shared runtime context `runtime-context.annotated-tag-resolution-valid` and can write all Action outputs.
     guarantees:
       - id: tag-resolution-outputs-produced
         applies_to:
           - runtime-context.annotated-tag-resolution-valid
-        claim:
-          field: source-sha
-          present: true
+        boundary: boundary.action-output
+        statement: "`source-sha` equals the commit SHA referenced by the annotated tag. `tag-object-sha` equals the Git object SHA referenced by the requested tag ref, and `tag-object-type` is `tag`."
       - id: tag-resolution-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected tag resolution step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-annotated-tag-resolver

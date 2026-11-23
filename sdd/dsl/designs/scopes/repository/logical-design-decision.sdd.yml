@@ -5,8 +5,8 @@ decisions:
     subjects:
       component_ids:
         - action-contracts
-    decision: 各 GitHub Action の公開 I/O 契約と bundle 済み配布物を、subject ごとに分けず一つの component が所有する
-    rationale: Action 固有の判断は各 Action の src に閉じ、Action 間で判断を共有しない。全 Action が action.yml、node24 entrypoint、bundle 済み dist の同一性を同じ配布ゲートで検証され、同じ exact tag の Release で固定 SHA として公開されるため、component を分ける基準となる配布境界と変更の進め方は全 Action で同じであり、Action ごとの差は実装 module の差に留まるため
+    decision: 各 GitHub Action の公開 I/O 契約と配布物を一つの component が所有する
+    rationale: 各 Action は実行方式に応じた検証を同じ配布ゲートで受け、呼び出し元は同じリポジトリの固定 SHA を使って参照するため、公開契約と配布の変更を同じ責務境界で扱える
     alternatives:
       - summary: subject ごとに Action component を分ける
         reason_not_selected: 変更理由が同じ配布境界を重複させ、route と projection だけが増えるため
@@ -18,10 +18,11 @@ decisions:
       component_ids:
         - runtime-implementations
     decision: Action と hosted delivery が再利用する provider 非依存の共有処理を、capability ごとに分けず一つの component が所有する
-    rationale: 共有処理は Action へ bundle されるか repository の検証・公開から呼ばれ、共通の失敗診断、platform 検証、固定参照検査の境界を共有する。capability ごとの不変条件は仕様側の subject と契約が所有し、この component の変更理由は呼出側から独立した処理を一か所で検証可能に保つことにあるため
+    rationale: Action と repository の検証・公開で共有する失敗診断、platform 検証、固定参照検査を、呼出側から独立して一か所で検証するため
     alternatives:
       - summary: release、provisioning、quality、installer の capability ごとに component を分ける
         reason_not_selected: 共通の診断・platform・固定参照境界を各 component へ重複させるため
     consequences:
       - capability ごとの設計判断は component では区別せず、contract-route の hop と仕様側の契約で追跡する
+      - 障害診断は通常の Action・workflow と共有 runtime の経路で完結させる。診断専用の常設外部基盤、追加 runner、必須の別 workflow は設けない
       - 独立した runtime 境界と公開面を持つ capability は、selective-distribution と同様に別 component に分ける

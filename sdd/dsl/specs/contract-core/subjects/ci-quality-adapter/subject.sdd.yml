@@ -21,219 +21,166 @@ contracts:
         meaning: "Precondition prepared by the case: adapter command that fails."
       - name: command-exit
         meaning: "Precondition prepared by the case: exit status of the failing command."
+      - name: dependency-policy-output
+        meaning: "Precondition prepared by the case: cargo-deny JSON lines that the failing dependency-policy command writes."
       - name: cargo-deny-version
         meaning: "Received by the contract target: cargo-deny version passed by the caller."
       - name: cargo-deny-config-path
         meaning: "Received by the contract target: cargo-deny configuration path passed by the caller."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Aggregate quality adapter status.
-          - selector: result-path
-            meaning: Path to the quality adapter result JSON.
-          - selector: outcome
-            meaning: Failure outcome of the rejected quality adapter step.
-          - selector: diagnostic-codes
-            meaning: Stable diagnostic codes reported by the failed step.
-          - selector: format-command-state
-            meaning: Occurrence of format commands in the native execution trace.
-          - selector: security-command-state
-            meaning: Occurrence of security commands in the native execution trace.
-          - selector: native-task-order
-            meaning: Ordered IDs in the observed native result trace.
-          - selector: consumer-descriptor-read-state
-            meaning: Occurrence of consumer descriptor reads for an embedded standard invocation.
-          - selector: rejected-command-state
-            meaning: Occurrence of project command execution after scope rejection.
-          - selector: native-terminal-prerequisite-status
-            meaning: Status of the final observed result if its ID is toolchain-verify or dependency-restore; continued if the final result is a native command.
-          - selector: native-failed-prerequisite-followup-state
-            meaning: Occurrence of a result after a toolchain-verify or dependency-restore result with a non-success status.
-          - selector: dependency-policy-result-status
-            meaning: Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.
-          - selector: dependency-policy-config-argument
-            meaning: Comparison of the configuration path passed to the dependency-policy command with CI_CARGO_DENY_CONFIG_PATH.
-          - selector: dependency-policy-diagnostics
-            meaning: Presence of structured diagnostics on a failed dependency-policy entry, limited to per-check error and warning counts and error findings with a validated diagnostic code and crate name and version.
-          - selector: dependency-policy-unchecked-output-state
-            meaning: Occurrence state (present or absent) of cargo-deny message, label or span text, or any unvalidated tool output, in the published dependency-policy entry.
-          - selector: not-run-aggregate-effect
-            meaning: Change of the aggregate status caused by results whose status is not-run.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - boundary: boundary.workspace-files
-        fields:
-          - selector: accepted-source-binding
-            meaning: Classification of the embedded record source path against the runtime/adapter/bundles/<safe-basename>.yml path grammar.
-          - selector: accepted-content-digest
-            meaning: Comparison of the embedded descriptor SHA-256 with the digest recorded in its immutable embedded record.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: quality-adapter-bundle-present
-      - environment: runtime-context.action-input-invalid
-      - input: quality-adapter-standard-bundle-present
-      - environment: runtime-context.quality-adapter-toolchain-version-report-rejected
-      - environment: runtime-context.ci-quality-adapter-native-rust-valid
-      - environment: runtime-context.ci-quality-adapter-native-scope-rejected
-      - environment: runtime-context.ci-quality-adapter-embedded-bundle-supplied
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-configured
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-      - environment: runtime-context.ci-quality-adapter-dependency-policy-violation
+      - id: quality-adapter-result-write-failed
+        summary: The invocation computes a result but cannot save the result JSON.
+      - id: quality-adapter-action-output-write-failed
+        summary: The result JSON has been saved, but the invocation cannot write every required Action output.
+      - id: quality-adapter-bundle-present
+        summary: A valid custom bundle is selected by path and can publish its result. Any requested toolchain check either matches the expected version or cannot run. A command that runs and returns a rejected version report has its own condition.
+      - id: runtime-context.action-input-invalid
+        summary: Bundle selection, descriptor or other required input or preparation validation rejects the invocation before a result is computed. Native scope and dependency-policy input rejection have their own conditions.
+      - id: quality-adapter-standard-bundle-present
+        summary: A valid built-in bundle uses default or all scope and can publish its result. Separate conditions cover a rejected toolchain version report and Rust invocations that reach the dependency-policy check.
+      - id: runtime-context.quality-adapter-toolchain-version-report-rejected
+        summary: A default or all scope invocation meets the shared runtime context `runtime-context.quality-adapter-toolchain-version-report-rejected` and can publish its result.
+      - id: runtime-context.ci-quality-adapter-native-rust-valid
+        summary: A valid embedded Rust invocation selects native scope, every prerequisite and selected check succeeds, and the result and Action outputs can be written.
+      - id: quality-adapter-native-rust-version-rejected
+        summary: A valid embedded Rust invocation selects native scope, the toolchain command runs but fails or does not report the requested version, and the result and Action outputs can be written.
+      - id: quality-adapter-native-rust-execution-failed
+        summary: A valid embedded Rust invocation selects native scope and the toolchain command is unavailable, dependency restoration fails or is unavailable, or a selected native check fails or is unavailable. The result and Action outputs can be written.
+      - id: runtime-context.ci-quality-adapter-native-scope-rejected
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-native-scope-rejected`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+        summary: The Rust default or all scope invocation reaches the policy check with both optional settings empty and can publish its result.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-configured
+        summary: The Rust default or all scope invocation reaches the configured policy check and can publish its result. A nonzero policy command that returns structured violation evidence has its own condition.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-config-unusable`.
+      - id: runtime-context.ci-quality-adapter-dependency-policy-violation
+        summary: The Rust default or all scope invocation reaches the configured policy check, receives a nonzero result with structured violation evidence, and can publish its result.
     guarantees:
-      - id: quality-adapter-status-produced
+      - id: quality-adapter-matching-toolchain-allows-preparation
+        applies_to:
+          - quality-adapter-bundle-present
+        boundary: boundary.workspace-files
+        statement: When the custom bundle selects toolchain verification and preparation, a successful check that reports the requested version as a standalone token, optionally prefixed by v or V, is recorded before the preparation result.
+      - id: status-result-consistent
         applies_to:
           - quality-adapter-bundle-present
           - quality-adapter-standard-bundle-present
-        claim:
-          field: status
-          present: true
+          - runtime-context.ci-quality-adapter-native-rust-valid
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+          - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+          - runtime-context.ci-quality-adapter-dependency-policy-configured
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        boundary: boundary.action-output
+        statement: '`status-result-consistency` is one of `"consistent"`. The `result-path` output identifies the saved JSON result, and the `status` output equals its status. Status is success exactly when every result except a not-run unconfigured optional command succeeded.'
       - id: quality-adapter-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
+          - quality-adapter-result-write-failed
+          - quality-adapter-action-output-write-failed
           - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        claim:
-          field: outcome
-          in:
-            - failure
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected quality adapter step.'
       - id: quality-adapter-toolchain-version-diagnostic-present
         applies_to:
           - runtime-context.quality-adapter-toolchain-version-report-rejected
-        claim:
-          field: diagnostic-codes
-          contains: quality-adapter-toolchain-version-mismatch
+          - quality-adapter-native-rust-version-rejected
+        boundary: boundary.diagnostic-result
+        statement: The failed Action publishes `quality-adapter-toolchain-version-mismatch` as its diagnostic reason without exposing the toolchain command output.
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.action-input-invalid
+          - quality-adapter-result-write-failed
+          - quality-adapter-action-output-write-failed
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: native-format-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: format-command-state
-          in:
-            - absent
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.workspace-files
+        statement: '`format-command-state` is one of `"absent"`. Occurrence of format commands in the native execution trace.'
       - id: native-security-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: security-command-state
-          in:
-            - absent
-      - id: native-command-order
-        applies_to:
-          - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-task-order
-          in:
-            - toolchain-verify
-            - toolchain-verify,dependency-restore
-            - toolchain-verify,dependency-restore,lint,test,structure
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.workspace-files
+        statement: '`security-command-state` is one of `"absent"`. Occurrence of security commands in the native execution trace.'
       - id: standard-descriptor-independent
         applies_to:
           - quality-adapter-standard-bundle-present
-        claim:
-          field: consumer-descriptor-read-state
-          in:
-            - absent
+          - runtime-context.ci-quality-adapter-native-rust-valid
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+          - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
+          - runtime-context.ci-quality-adapter-dependency-policy-configured
+          - runtime-context.ci-quality-adapter-dependency-policy-violation
+        boundary: boundary.workspace-files
+        statement: '`consumer-descriptor-read-state` is one of `"absent"`. Occurrence of consumer descriptor reads for an embedded standard invocation.'
       - id: rejected-scope-no-commands
         applies_to:
           - runtime-context.ci-quality-adapter-native-scope-rejected
-        claim:
-          field: rejected-command-state
-          in:
-            - absent
-      - id: standard-source-path-validated
-        applies_to:
-          - runtime-context.ci-quality-adapter-embedded-bundle-supplied
-        claim:
-          field: accepted-source-binding
-          in:
-            - allowed-source-path
-      - id: standard-content-digest-checked
-        applies_to:
-          - runtime-context.ci-quality-adapter-embedded-bundle-supplied
-        claim:
-          field: accepted-content-digest
-          in:
-            - equal
+          - runtime-context.ci-quality-adapter-dependency-policy-config-unusable
+        boundary: boundary.workspace-files
+        statement: '`rejected-command-state` is one of `"absent"`. Occurrence of project command execution after the invocation is rejected.'
       - id: native-terminal-prerequisite-status
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-terminal-prerequisite-status
-          in:
-            - failed
-            - 判定不能
-            - continued
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.workspace-files
+        statement: '`native-terminal-prerequisite-status` is one of `"failed"`, `"判定不能"`, `"continued"`. A failed or unavailable toolchain verification or dependency restoration is the final result. When both prerequisites succeed, the result includes the selected native commands.'
       - id: native-no-followup-after-failed-prerequisite
         applies_to:
-          - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: native-failed-prerequisite-followup-state
-          in:
-            - absent
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.workspace-files
+        statement: '`native-failed-prerequisite-followup-state` is one of `"absent"`. No later command executes or appears in the result after toolchain verification or dependency restoration fails or is unavailable.'
       - id: native-dependency-policy-omitted
         applies_to:
           - runtime-context.ci-quality-adapter-native-rust-valid
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - absent
+          - quality-adapter-native-rust-version-rejected
+          - quality-adapter-native-rust-execution-failed
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"absent"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
       - id: unconfigured-dependency-policy-not-run
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - not-run
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"not-run"`. The result contains a dependency-policy entry with reason not-configured and a null exit code.'
       - id: not-run-aggregate-unchanged
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-        claim:
-          field: not-run-aggregate-effect
-          in:
-            - none
+        boundary: boundary.workspace-files
+        statement: '`not-run-aggregate-effect` is one of `"none"`. The unconfigured dependency-policy result is excluded from the aggregate status calculation.'
       - id: configured-dependency-policy-executed
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-configured
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - success
-            - failed
-            - 判定不能
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"success"`, `"failed"`, `"判定不能"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
       - id: configured-dependency-policy-explicit-config
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-configured
-        claim:
-          field: dependency-policy-config-argument
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-config-argument` is one of `"equal"`. The dependency-policy command receives the exact path from CI_CARGO_DENY_CONFIG_PATH as its configuration argument.'
       - id: dependency-policy-violation-failed
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-result-status
-          in:
-            - failed
-      - id: dependency-policy-violation-diagnosed
+        boundary: boundary.workspace-files
+        statement: '`dependency-policy-result-status` is one of `"failed"`. Status of the dependency-policy entry in the adapter result; absent when the result has no such entry.'
+      - id: dependency-policy-violation-diagnostics-filtered
         applies_to:
           - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-diagnostics
-          present: true
-      - id: dependency-policy-diagnostics-validated
-        applies_to:
-          - runtime-context.ci-quality-adapter-dependency-policy-violation
-        claim:
-          field: dependency-policy-unchecked-output-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: The result JSON retains only validated cargo-deny finding metadata and per-check counts. Raw diagnostic messages, labels, spans, and unstructured child output are protected.
+    input_kind:
+      kind: operation
+      name: ci-quality-adapter

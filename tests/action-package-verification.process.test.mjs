@@ -8,7 +8,7 @@ import { root } from "./action-package-verification.fixtures.mjs";
 
 describe('repository-cli-source-verification', () => {
   describe('cliTypecheckPlan', () => {
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // test_level: e2e
     // flow_id: repository-cli-source-verification
     test('the CLI verification plan accepts valid sources and rejects type errors in every CLI source family', (t) => {
@@ -45,10 +45,84 @@ describe('repository-cli-source-verification', () => {
 });
 
 
-describe("contract.repository-action-distribution.integrity", () => {
+describe("contract.repository-action-distribution.source-verification", () => {
   describe("repository-action-source-verification", () => {
 
-    // contract_id: contract.repository-action-distribution.integrity
+    const runSourceVerificationCli = (t, mode) => {
+      // Arrange
+      const parent = path.join(root, 'tests/tmp');
+      fs.mkdirSync(parent, { recursive: true });
+      const fixture = fs.mkdtempSync(path.join(parent, 'source-verification-cli-'));
+      t.onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
+      const write = (relative, content, mode) => {
+        fs.mkdirSync(path.dirname(path.join(fixture, relative)), { recursive: true });
+        fs.writeFileSync(path.join(fixture, relative), content, mode ? { mode } : undefined);
+      };
+      for (const relative of ['runtime/repository/verify-action-packages.mjs', 'runtime/repository/check-action-dist.mjs', 'runtime/repository/check-runtime-boundaries.mjs',
+        'runtime/diagnostics/failure.mjs', 'runtime/vitest/vitest-report-core.mjs']) write(relative, fs.readFileSync(path.join(root, relative)));
+      write('actions/alpha/action.yml', 'name: alpha\nruns:\n  using: node24\n  main: dist/index.js\n');
+      for (const [relative, content] of [['README.md', '# alpha\n'], ['package.json', JSON.stringify({ scripts: { lint: 'tsc --noEmit' } })], ['package-lock.json', '{}\n'],
+        ['tsconfig.json', '{}\n'], ['src/index.ts', 'export {};\n'], ['dist/index.js', '\n'], ['tests/a.test.ts', '\n']]) write(`actions/alpha/${relative}`, content);
+      fs.symlinkSync(path.join(collectActionPackages(root)[0].path, 'node_modules'), path.join(fixture, 'actions/alpha/node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+      for (const name of ['ci-gh-provisioner', 'ci-release-assembly']) {
+        write(`actions/${name}/action.yml`, `name: ${name}\nruns:\n  using: composite\n  steps: []\n`);
+        write(`actions/${name}/README.md`, `# ${name}\n`);
+      }
+      const sharedTests = ['tests/boundary.process.test.mjs', 'runtime/provisioner/tests/provision-core.test.ts', 'runtime/installer/tests/common-regression.test.mjs',
+        ...['assembly.test.mjs', 'observation.test.mjs', 'observation-policy.test.mjs', 'schema.test.ts', 'publisher.test.mjs', 'notes-binding.test.ts', 'skill-zip.test.ts'].map((name) => `runtime/release-publication/tests/${name}`)];
+      for (const relative of sharedTests) write(relative, '\n');
+      write('runtime/release-publication/tests/assembly.process.test.mjs', '\n');
+      write('cli.ts', 'export const value: string = "valid";\n');
+      write('tsconfig.cli.json', JSON.stringify({ compilerOptions: { noEmit: true, strict: true }, files: ['cli.ts'] }));
+      const log = path.join(fixture, 'invocations.log');
+      // The stub records each runner invocation and reports every requested file as passed, so the CLI's own report check applies.
+      write('node_modules/vitest/vitest.mjs', `import fs from 'node:fs';
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ runner: 'vitest', args }) + '\\n');
+const output = args.find((value) => value.startsWith('--outputFile='));
+const files = args.slice(3).filter((value) => !value.startsWith('--'));
+if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringify({ success: true, testResults: files.map((name) => ({ name, status: 'passed', assertionResults: [{ fullName: 'stub > passes', status: 'passed' }] })) }));
+`);
+      write('bin/npm', `#!/bin/sh\nprintf '{"runner":"npm","cwd":"%s","args":"%s"}\\n' "$PWD" "$*" >> ${JSON.stringify(log)}\nexit ${mode === 'typecheck-failure' ? 7 : 0}\n`, 0o755);
+      // Act
+      const result = spawnSync(process.execPath, [path.join(fixture, 'runtime/repository/verify-action-packages.mjs')], { cwd: fixture, encoding: 'utf8',
+        env: { ...process.env, PATH: `${path.join(fixture, 'bin')}${path.delimiter}${process.env.PATH}` }, timeout: 30_000 });
+      // Assert
+      expect(result.error, 'the source verification CLI did not finish normally').toBeUndefined();
+      const invocations = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      const actionLint = { runner: 'npm', cwd: fs.realpathSync(path.join(fixture, 'actions/alpha')), args: 'run lint' };
+      if (mode === 'typecheck-failure') {
+        expect(result.status).toBe(1);
+        const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(diagnostic).not.toBeNull();
+        expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ stage: 'typecheck', reason: 'action-source-verification-failed' });
+        expect(invocations).toStrictEqual([actionLint]);
+        return;
+      }
+      expect(result.status, result.stdout + result.stderr).toBe(0);
+      expect(result.stdout).toContain('Action source verification passed (1 bundled Actions).');
+      expect(invocations.filter((entry) => entry.runner === 'npm')).toStrictEqual([actionLint]);
+      const runs = invocations.filter((entry) => entry.runner === 'vitest');
+      expect(runs).toHaveLength(1);
+      const tested = runs[0].args.slice(3).filter((value) => !value.startsWith('--')).map((file) => path.relative(fixture, file).split(path.sep).join('/'));
+      expect(tested.sort()).toStrictEqual(['actions/alpha/tests/a.test.ts', ...sharedTests].sort());
+      if (mode === 'commands') expect(invocations.some((entry) => [].concat(entry.args).join(' ').split(' ').some((value) => ['ci', 'install', 'build'].includes(value)))).toBe(false);
+    };
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI typechecks and tests every bundled Action and shared runtime test', (t) => runSourceVerificationCli(t, 'coverage'));
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI reports the failed typecheck stage', (t) => runSourceVerificationCli(t, 'typecheck-failure'));
+
+    // evidence_role: supplemental
+    // Running neither install nor build is an implementation detail that no contract guarantee covers.
+    // flow_id: repository-action-source-verification
+    test('source verification CLI runs neither install nor build', (t) => runSourceVerificationCli(t, 'commands'));
+
+    // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification
     test('batched typechecks keep project globals isolated and reject errors after a previous successful build', (t) => {
       // Arrange
@@ -82,7 +156,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(step.args).toContain('--force');
     });
 
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification
     test('the formal Action source gate rejects type errors independently of bundling', (t) => {
       const parent = path.join(root, 'tests/tmp');

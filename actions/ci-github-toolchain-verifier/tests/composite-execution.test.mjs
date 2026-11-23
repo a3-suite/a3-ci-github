@@ -69,6 +69,16 @@ describe("contract.ci-github-toolchain-verifier.outputs", () => {
       // Assert
       expect(failure.status).toBe(1);
       expect(failure.stderr).toMatch(/jq-version-mismatch/);
+      const diagnostic = failure.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+      expect(JSON.parse(diagnostic?.[1] ?? '{}').classification).toMatchObject({
+        stage: 'tool-version-validation',
+      });
+      expect(readFileSync(fixture.output, 'utf8')).toBe('');
+    }));
+    test('composite fails when the verified output cannot be written', () => withCompositeFixture((fixture) => {
+      const failure = runComposite(fixture, { GITHUB_OUTPUT: fixture.fixture });
+      expect(failure.status).toBe(1);
+      expect(failure.stderr).toContain(fixture.fixture);
       expect(readFileSync(fixture.output, 'utf8')).toBe('');
     }));
   });

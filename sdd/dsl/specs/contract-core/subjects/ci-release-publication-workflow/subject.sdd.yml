@@ -10,263 +10,119 @@ contracts:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
-    observations:
-      - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-        boundary: boundary.workflow-definition
-        fields:
-          - selector: publication-boundary
-            meaning: Declared publication call and dependency graph.
-          - selector: failure-summary
-            meaning: Declared publication aggregate route.
-          - selector: evidence-transfer
-            meaning: Declared supplemental artifact transfer routes.
-          - selector: release-fixed-provider-reference
-            meaning: Comparison of caller publication reference with the registered provider workflow reference declaration.
-          - selector: release-explicit-owner-inputs
-            meaning: Comparison of caller owner bindings with the provider typed required inputs.
-          - selector: release-request-before-publication
-            meaning: Declared dependency order of request validation and privileged publication call.
-          - selector: release-authority-before-publication
-            meaning: Declared dependency order of authority validation and publication.
-          - selector: release-control-sha-bound
-            meaning: Comparison of the trusted control checkout revision with github.workflow_sha.
-          - selector: release-control-head-verified
-            meaning: Declared order of control checkout and immediate HEAD verification.
-          - selector: release-build-committed-line-endings
-            meaning: Declared order of disabling core.autocrlf and the platform build source checkout.
-          - selector: release-handoff-before-publication
-            meaning: Declared order of handoff validation and credential-bearing publication.
-          - selector: release-publication-before-readback
-            meaning: Declared order of the publish step and independent verify-publication step.
-          - selector: release-tokens-explicit
-            meaning: Comparison of credential-bearing step token bindings with github.token.
-          - selector: supplemental-upload-selected-root
-            meaning: Declared supplemental build upload path.
-          - selector: supplemental-hidden-files-selected
-            meaning: Comparison of hidden-file upload selection with the standard-installer selection expression.
-          - selector: supplemental-download-root
-            meaning: Declared supplemental artifact download root.
-          - selector: supplemental-final-assembly-input
-            meaning: Declared supplemental build root passed to final assemble.
-          - selector: release-failure-summary-always
-            meaning: Declared publication aggregate condition.
-          - selector: release-failed-prerequisite-blocks
-            meaning: Occurrence of publication eligibility with a failed or unknown required prerequisite.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+        meaning: "Received by the summary Action: result of a job in the publication workflow."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: ci-release-publication-workflow-canonical-source-available
-      - input: ci-release-publication-workflow-failure-route-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The summary Action receives a failed publication workflow job result.
+      - id: ci-release-publication-workflow-canonical-source-available
+        summary: The repository release publication workflow source is inspected.
     guarantees:
-      - id: ci-release-publication-workflow-success-observed
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: publication-boundary
-          present: true
-      - id: ci-release-publication-workflow-failure-observed
-        applies_to:
-          - ci-release-publication-workflow-failure-route-required
-        claim:
-          field: failure-summary
-          present: true
-      - id: ci-release-publication-workflow-evidence-transfer-declared
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: evidence-transfer
-          present: true
       - id: diagnostic-failure-stage-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "The summary Action reports the failure stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: release-fixed-provider-reference
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-fixed-provider-reference
-          in:
-            - equal
-      - id: release-explicit-owner-inputs
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-explicit-owner-inputs
-          in:
-            - equal
+        boundary: boundary.workflow-definition
+        statement: '`release-fixed-provider-reference` is one of `"equal"`. Comparison of caller publication reference with the registered provider workflow reference declaration.'
       - id: release-request-before-publication
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-request-before-publication
-          in:
-            - request-before-publication
+        boundary: boundary.workflow-definition
+        statement: '`release-request-before-publication` is one of `"request-before-publication"`. Declared dependency order of request validation and privileged publication call.'
       - id: release-authority-before-publication
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-authority-before-publication
-          in:
-            - authority-before-publication
+        boundary: boundary.workflow-definition
+        statement: '`release-authority-before-publication` is one of `"authority-before-publication"`. Declared dependency order of authority validation and publication.'
       - id: release-control-sha-bound
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-control-sha-bound
-          in:
-            - equal
+        boundary: boundary.workflow-definition
+        statement: '`release-control-sha-bound` is one of `"equal"`. Comparison of the trusted control checkout revision with github.workflow_sha.'
       - id: release-control-head-verified
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-control-head-verified
-          in:
-            - checkout-before-verification
-      - id: release-build-committed-line-endings
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-build-committed-line-endings
-          in:
-            - autocrlf-disabled-before-checkout
+        boundary: boundary.workflow-definition
+        statement: '`release-control-head-verified` is one of `"checkout-before-verification"`. Declared order of control checkout and immediate HEAD verification.'
       - id: release-handoff-before-publication
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-handoff-before-publication
-          in:
-            - handoff-before-publication
+        boundary: boundary.workflow-definition
+        statement: '`release-handoff-before-publication` is one of `"handoff-before-publication"`. Declared order of handoff validation and credential-bearing publication.'
       - id: release-publication-before-readback
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-publication-before-readback
-          in:
-            - publication-before-readback
-      - id: release-tokens-explicit
+        boundary: boundary.workflow-definition
+        statement: '`release-publication-before-readback` is one of `"publication-before-readback"`. Declared order of the publish step and independent verify-publication step.'
+      - id: release-publication-group-per-repository
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: release-tokens-explicit
-          in:
-            - equal
-      - id: supplemental-upload-selected-root
+        boundary: boundary.workflow-definition
+        statement: '`release-publication-concurrency-group` is one of `"per-workflow-and-repository"`. Declared concurrency group of the release publication provider workflow; per-workflow-and-repository or other.'
+      - id: release-publication-in-progress-kept
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-upload-selected-root
-          in:
-            - supplemental-build/${{ matrix.id }}
-      - id: supplemental-hidden-files-selected
+        boundary: boundary.workflow-definition
+        statement: '`release-publication-in-progress-run` is one of `"kept"`. Declared handling of an in-progress run when another run enters the concurrency group; kept or cancelled.'
+      - id: release-publication-pending-queued
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-hidden-files-selected
-          in:
-            - equal
-      - id: supplemental-download-root
-        applies_to:
-          - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-download-root
-          in:
-            - supplemental-build
+        boundary: boundary.workflow-definition
+        statement: '`release-publication-pending-run` is one of `"queued"`. Declared handling of pending runs in the concurrency group; queued or other.'
       - id: supplemental-final-assembly-input
         applies_to:
           - ci-release-publication-workflow-canonical-source-available
-        claim:
-          field: supplemental-final-assembly-input
-          in:
-            - supplemental-build
-      - id: release-failure-summary-always
+        boundary: boundary.workflow-definition
+        statement: '`supplemental-final-assembly-input` is one of `"equal"`. Comparison of the supplemental build root passed to final assemble with the root the supplemental artifacts are downloaded to; equal or different.'
+      - id: release-assembly-source-credentials-removed
         applies_to:
-          - ci-release-publication-workflow-failure-route-required
-        claim:
-          field: release-failure-summary-always
-          in:
-            - always
+          - ci-release-publication-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`release-assembly-source-credentials-persisted` is one of `"false"`. Declared persist-credentials setting of the fixed assembly source checkout.'
       - id: release-failed-prerequisite-blocks
         applies_to:
-          - ci-release-publication-workflow-failure-route-required
-        claim:
-          field: release-failed-prerequisite-blocks
-          in:
-            - absent
+          - ci-release-publication-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`release-failed-prerequisite-blocks` is one of `"absent"`. The publish job is ineligible when authority or assembly has a result other than success, or when the workflow is cancelled.'
+    input_kind:
+      kind: operation
+      name: ci-release-publication-workflow
   - id: contract.ci-release-publication-workflow.asset-publication
     summary: Canonical asset release publication workflow definition for projects without a product build.
     inputs:
       - name: workflow-source
         meaning: "Received by the contract target: workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
-    observations:
-      - summary: Canonical asset publication workflow triggers, jobs, orchestration, and summaries exposed for repository verification.
-        boundary: boundary.workflow-definition
-        fields:
-          - selector: asset-publication-boundary
-            meaning: Declared asset publication call and dependency graph.
-          - selector: asset-publication-build-job-state
-            meaning: Occurrence state (present or absent) of a product build job in the asset publication workflow.
-          - selector: asset-publication-selection-before-authority
-            meaning: Declared dependency order of the asset selection check and authority validation.
-          - selector: asset-publication-quality-condition
-            meaning: Declared condition under which the quality job runs.
-          - selector: asset-publication-failure-summary-always
-            meaning: Declared asset publication aggregate condition.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+        meaning: "Received by the summary Action: result of a job in the publication workflow."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: ci-asset-release-publication-workflow-canonical-source-available
-      - input: ci-asset-release-publication-workflow-failure-route-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The summary Action receives a failed publication workflow job result.
+      - id: ci-asset-release-publication-workflow-canonical-source-available
+        summary: The repository asset release publication workflow source is inspected.
     guarantees:
-      - id: asset-publication-success-observed
-        applies_to:
-          - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-boundary
-          present: true
       - id: asset-publication-no-build-job
         applies_to:
           - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-build-job-state
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`asset-publication-build-job-state` is one of `"absent"`. Occurrence state (present or absent) of a product build job in the asset publication workflow.'
       - id: asset-publication-selection-before-authority
         applies_to:
           - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-selection-before-authority
-          in:
-            - selection-before-authority
-      - id: asset-publication-quality-when-profile-selected
+        boundary: boundary.workflow-definition
+        statement: '`asset-publication-selection-before-authority` is one of `"selection-before-authority"`. Declared dependency order of the asset selection check and authority validation.'
+      - id: asset-publication-failed-prerequisite-blocks
         applies_to:
           - ci-asset-release-publication-workflow-canonical-source-available
-        claim:
-          field: asset-publication-quality-condition
-          in:
-            - language-profile-selected
-      - id: asset-publication-failure-summary-always
-        applies_to:
-          - ci-asset-release-publication-workflow-failure-route-required
-        claim:
-          field: asset-publication-failure-summary-always
-          in:
-            - always
+        boundary: boundary.workflow-definition
+        statement: '`asset-publication-failed-prerequisite-blocks` is one of `"absent"`. The asset publication job is ineligible when authority or assembly has a result other than success, or when the workflow is cancelled. Assembly also requires successful completion of each applicable prerequisite.'
       - id: diagnostic-failure-stage-asset-publication
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "The summary Action reports the failure stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-publication-workflow

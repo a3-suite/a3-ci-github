@@ -10,7 +10,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
 
-const runBundled = (manifest: string, selection?: string, runnerPolicy?: string) => {
+const runBundled = (manifest: string, selection?: string, runnerPolicy?: string, outputWritable = true) => {
   const temporaryParent = path.resolve(root, '../../tmp');
   fs.mkdirSync(temporaryParent, { recursive: true });
   const tempRoot = fs.mkdtempSync(path.join(temporaryParent, 'ci-platform-matrix-'));
@@ -18,7 +18,7 @@ const runBundled = (manifest: string, selection?: string, runnerPolicy?: string)
   const outputPath = path.join(tempRoot, 'outputs');
   fs.writeFileSync(manifestPath, manifest, 'utf8');
   fs.writeFileSync(outputPath, '', 'utf8');
-  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputPath } as Record<string, string>;
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputWritable ? outputPath : tempRoot } as Record<string, string>;
   env['INPUT_MANIFEST-PATH'] = manifestPath;
   delete env['INPUT_RUNNER-POLICY'];
   if (runnerPolicy !== undefined) env['INPUT_RUNNER-POLICY'] = runnerPolicy;
@@ -61,7 +61,7 @@ test('entrypoint fails closed for an unsupported runner', () => {
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-latest\n    target: x86_64-unknown-linux-gnu\n');
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status, run.result.stderr).toBe(1);
   expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   expect(`${run.result.stdout}\n${run.result.stderr}`).toMatch(/platform-matrix-platform-0-runner-invalid/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
@@ -70,20 +70,27 @@ test('entrypoint fails closed for an unsupported runner', () => {
 // contract_id: contract.ci-platform-matrix.outputs
 // flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint accepts consumer versioned runners only with trusted policy', () => {
-  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, 'trusted');
+  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-14, target: aarch64-apple-darwin}]', undefined, 'trusted');
   try {
     expect(run.result.status, run.result.stderr).toBe(0);
-    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-15","target":"aarch64-apple-darwin"}]}');
+    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-14","target":"aarch64-apple-darwin"}]}');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
 // flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
-  for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
+  for (const policy of [undefined, 'bootstrap']) {
+    const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, policy);
+    try {
+      expect(run.result.status, run.result.stderr).toBe(0);
+      expect(JSON.parse(fs.readFileSync(run.outputPath, 'utf8').trim().slice('matrix='.length)).include[0].runner).toBe('macos-15');
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
+  for (const [runner, policy] of [['macos-14', undefined], ['macos-14', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
     const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
     try {
-      expect(run.result.status).not.toBe(0);
+      expect(run.result.status, run.result.stderr).toBe(1);
       expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
       expect(run.result.stderr).toMatch(/platform-matrix-(?:platform-0-runner|runner-policy)-invalid/);
     } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
@@ -97,7 +104,7 @@ test('entrypoint rejects an oversized manifest before parsing', () => {
   // Act
   const run = runBundled(`platforms:\n${' '.repeat(64 * 1024)}`);
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status, run.result.stderr).toBe(1);
   expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   expect(run.result.stderr).toMatch(/platform-matrix-manifest-too-large/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
@@ -111,7 +118,7 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
     runner: ubuntu-24.04
     target: x86_64-unknown-linux-gnu
   - id: macos-arm64
-    runner: macos-14
+    runner: macos-15
     target: aarch64-apple-darwin
 `, 'platforms: [{id: macos-arm64}, {id: linux-x64}]');
   try {
@@ -120,10 +127,10 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
       .map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
     expect(JSON.parse(outputs.matrix)).toStrictEqual({ include: [
       { id: 'linux-x64', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' },
-      { id: 'macos-arm64', runner: 'macos-14', target: 'aarch64-apple-darwin' },
+      { id: 'macos-arm64', runner: 'macos-15', target: 'aarch64-apple-darwin' },
     ] });
     expect(JSON.parse(outputs['quality-matrix'])).toStrictEqual({ include: [
-      { platform_id: 'macos-arm64', runner: 'macos-14' },
+      { platform_id: 'macos-arm64', runner: 'macos-15' },
       { platform_id: 'linux-x64', runner: 'ubuntu-24.04' },
     ] });
     expect(outputs['expected-platforms']).toBe('macos-arm64,linux-x64');
@@ -159,13 +166,13 @@ test('entrypoint rejects malformed shared checks and unknown selection fields wi
     const run = runBundled(manifest, `platforms: [{id: linux-x64}]\nsharedStandardChecks: ${value}`);
     try {
       // Assert
-      expect(run.result.status).not.toBe(0);
+      expect(run.result.status, run.result.stderr).toBe(1);
       expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
       expect(run.result.stderr).toContain('sharedStandardChecks must be a boolean');
     } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
   }
   const run = runBundled(manifest, 'platforms: [{id: linux-x64}]\nsharedStandardChecks: true\nunknown: false');
-  try { expect(run.result.status).not.toBe(0); expect(fs.readFileSync(run.outputPath, 'utf8')).toBe(''); }
+  try { expect(run.result.status, run.result.stderr).toBe(1); expect(fs.readFileSync(run.outputPath, 'utf8')).toBe(''); }
   finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
@@ -174,10 +181,22 @@ test('entrypoint rejects malformed shared checks and unknown selection fields wi
 test('entrypoint fails without any outputs for invalid selection', () => {
   const run = runBundled('platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]', 'platforms: [{id: unknown}]');
   try {
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(run.result.stderr).toMatch(/not declared/);
     expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+});
+
+// contract_id: contract.ci-platform-matrix.outputs
+test('entrypoint diagnoses failure to write matrix outputs', () => {
+  const manifest = 'platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]';
+  const { result, tempRoot } = runBundled(manifest, undefined, undefined, false);
+  try {
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 });

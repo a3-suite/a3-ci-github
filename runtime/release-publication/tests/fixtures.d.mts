@@ -2,17 +2,21 @@ import type { TestContext } from 'vitest';
 import type { AssemblyType, ReleaseIdentityType } from '../schema';
 import type { ReadOnlyClientType } from '../observation';
 import type { Platform } from '../../platform/platform-manifest-core.mjs';
+export function preObservationFixture(options: { authorityPath: string; repository: string; handoffRoot: string }): Record<string, unknown>;
 export function standardPublicationTokenEnvironment(repository: string, token: string): Record<string, string>;
 export function fixture(t: TestContext, platform?: Platform): {
   root: string;
   identity: ReleaseIdentityType;
+  name: string;
+  payload: Buffer;
+  buildManifest: Record<string, unknown> & { assets: Record<string, unknown>[] };
   options: Record<string, string> & { repository: string; authorityPath: string; snapshotPath: string; platformManifestPath: string; platformMatrix: string; buildRoot: string; outputRoot: string };
   put(relative: string, value: unknown): string;
   assemble(): AssemblyType;
 };
 export function remoteClient(f: ReturnType<typeof fixture>, assembly: AssemblyType, changes?: Record<string, unknown>): { client: ReadOnlyClientType; calls: unknown[] };
 
-export function releaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
+export function releaseSkillsFixture(t: TestContext, mutate?: (configuration: unknown, root: string) => void, mutateIndex?: (git: (args: string[]) => unknown) => void, configPath?: string): ReturnType<typeof fixture>;
 export function selectedReleaseSkillsFixture(t: TestContext): ReturnType<typeof fixture>;
 export function toAssetRelease<F extends ReturnType<typeof fixture>>(f: F): F;
 export function putSupplementalAsset<F extends ReturnType<typeof fixture>>(f: F, ownerContract?: string): F;

@@ -2,535 +2,328 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-entry-name-rejection
     tests:
-      - path: runtime/installer/tests/common-regression.test.mjs
-        symbol: contract.ci-release-supplemental-asset.outputs > standard entry names > rejects nonstandard public names before generating output
-        guarantees:
-          - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: detailed-failure-outputs
-    tests:
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-release-supplemental-asset failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
-        guarantees:
-          - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: platform-phase
-    tests:
+          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint emits success for the v2 build-platform phase
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint emits success for the v2 build-platform phase
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: unselected-binding
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects invalid binding before owner execution
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects invalid binding before owner execution
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: injected-output
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects injected output before owner execution
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects injected output before owner execution
-        guarantees:
-          - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: owner-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental-phase-source > supplemental source preserves owner shebang failure semantics
-        guarantees:
-          - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: input-mutation
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint rejects mutated standard inputs and retains partial output
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint rejects mutated standard inputs and retains partial output
+        symbol: source entrypoint > supplemental entrypoint rejects mutated standard inputs
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: unsafe-phase-path
-    tests:
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint rejects mutated standard inputs
+        partition: runtime-context.supplemental-phase-invalid
+        guarantees:
+          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental source rejects unsafe paths, invalid phases and existing outputs
+        symbol: supplemental source rejects unsafe paths and invalid phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: identity-selection
-    tests:
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental source rejects an existing output directory without changing it
+        partition: existing-output-rejected
+        guarantees:
+          - phase-rejected
+          - existing-output-unchanged
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source rejects snapshot, source and owner selection mismatches
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: missing-output
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source rejects missing and empty owner output
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-installer
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > executes standard mode from the distributed Action and reports verified output
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > executes packaged local CLI with the same fixed boundary
-        guarantees:
-          - phase-success
-          - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-declaration-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects changed product declaration before generating output
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-provider-profile-refusal
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > rejects unsupported provider profile without successful Action output or generated assets
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-platform-subset
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > keeps unselected release targets outside native selection
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-platform-binding
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects release id or target mismatches in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-platform-authority
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects platform authority drift before execution
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-platform-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects platform mutation during provider execution
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-checksum-bytes
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects noncanonical checksum bytes in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-checkout-eol
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed CLI accepts CRLF checkout through both phases
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-source-content
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects changes beyond checkout line endings in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: standard-execution-eol-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects newline-only input mutation during provider execution in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: diagnostic-standard-installer-diagnostic
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
+        symbol: source entrypoint > supplemental entrypoint preserves existing output on rejection
+        partition: existing-output-rejected
         guarantees:
-          - phase-diagnostic
+          - phase-rejected
+          - existing-output-unchanged
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint preserves safe standard installer diagnostics
+        symbol: source entrypoint > supplemental entrypoint retains its result when the Action output write fails
+        partition: supplemental-action-output-write-failed
         guarantees:
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: diagnostic-owner-process-diagnostic
-    tests:
+          - phase-rejected
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        symbol: dist entrypoint > supplemental entrypoint preserves existing output on rejection
+        partition: existing-output-rejected
         guarantees:
-          - phase-diagnostic
+          - phase-rejected
+          - existing-output-unchanged
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        symbol: dist entrypoint > supplemental entrypoint retains its result when the Action output write fails
+        partition: supplemental-action-output-write-failed
         guarantees:
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: primary-and-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: sole-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.outputs
-    case_id: untrusted-installer-process-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > standard installer rejects malformed or untrusted process diagnostics
-        guarantees:
-          - diagnostic-unvalidated-installer-reason
+          - phase-rejected
+          - diagnostic-failure-stage-outputs
   - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-entry-name-publication
     tests:
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed CLI rejects a supplemental root for the wrong operation
+        partition: installer-cli-phase-input-mismatch
+        guarantees:
+          - installer-cli-phase-input-rejected
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > verifies native candidate and produces handoff without consumer implementation
+        partition: runtime-context.standard-installer-evidence-valid
         guarantees:
           - standard-installer-publication-assets-produced
           - standard-installer-source-snapshots-excluded
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-entry-name-rejection
-    tests:
-      - path: runtime/installer/tests/common-regression.test.mjs
-        symbol: contract.ci-release-supplemental-asset.outputs > standard entry names > rejects nonstandard public names before generating output
-        guarantees:
-          - phase-rejected
-          - phase-diagnostic
+          - standard-installer-checksum-sidecar
+          - standard-installer-declaration-directory-unchanged
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-          - phase-diagnostic
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint rejects the old Windows entry name with expected-name diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: detailed-failure-outputs
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: assembly-phase
-    tests:
+          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint emits success for the v2 assemble phase
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint emits success for the v2 assemble phase
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: owner-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-candidate-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects modified candidate even if supplied file hashes match
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-platform-subset
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > keeps unselected release targets outside native selection
-        guarantees:
-          - phase-success
-          - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-platform-binding
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects release id or target mismatches in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-checksum-bytes
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects noncanonical checksum bytes in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-checkout-eol
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts lf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts crlf checkout declarations through both phases and release assembly
-        guarantees:
-          - phase-success
-          - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
-        symbol: standard installer > assembly > accepts mixed checkout declarations through both phases and release assembly
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
+        partition: runtime-context.supplemental-phase-valid
         guarantees:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
         symbol: standard installer > assembly > distributed Action accepts CRLF checkout through both phases
+        partition: runtime-context.standard-installer-evidence-valid
         guarantees:
           - phase-success
           - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI accepts CRLF checkout through both phases
-        guarantees:
-          - phase-success
-          - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-source-content
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects changes beyond checkout line endings in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-execution-eol-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects newline-only input mutation during provider execution in both phases
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-evidence-preserved
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > revalidates downloaded platform evidence
+        partition: runtime-context.standard-installer-evidence-valid
         guarantees:
           - standard-installer-evidence-preserved
           - standard-installer-publication-assets-produced
           - standard-installer-source-snapshots-excluded
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-evidence-missing
-    tests:
+          - standard-installer-checksum-sidecar
+          - standard-installer-declaration-directory-unchanged
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects missing transferred platform evidence
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-evidence-modified
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects modified transferred platform evidence
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: standard-evidence-extra
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects extra transferred platform evidence
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: diagnostic-owner-process-diagnostic
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
-      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
-        symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
-        guarantees:
-          - phase-diagnostic
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: primary-and-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: sole-cleanup-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
-        guarantees:
-          - diagnostic-cleanup-only-code-mismatch
-          - diagnostic-cleanup-status-mismatch
-          - diagnostic-cleanup-state-inference
-          - diagnostic-cleanup-residual-claim
-          - diagnostic-cleanup-extra-field
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: input-mutation
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source rejects mutated authority, snapshot, adapter and supplemental inputs
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental source accepts empty markers and rejects their mutation > true
+        partition: runtime-context.supplemental-phase-invalid
         guarantees:
           - phase-rejected
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: supplemental-asset-release-valid
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        partition: runtime-context.supplemental-asset-release-valid
         guarantees:
           - phase-success
           - phase-output
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        partition: runtime-context.supplemental-asset-release-valid
         guarantees:
           - phase-success
           - phase-output
-      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
-        guarantees:
-          - phase-output
-  - contract_id: contract.ci-release-supplemental-asset.assembly
-    case_id: supplemental-asset-release-invalid
-    tests:
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        partition: runtime-context.supplemental-asset-release-invalid
         guarantees:
           - phase-rejected
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: dist entrypoint > supplemental entrypoint assembles an asset release from empty build roots and fails with build input
+        partition: runtime-context.supplemental-asset-release-invalid
         guarantees:
           - phase-rejected
-      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
-        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
-        guarantees:
-          - phase-rejected
+          - diagnostic-failure-stage-outputs

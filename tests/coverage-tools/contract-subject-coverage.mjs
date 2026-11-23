@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -105,6 +105,11 @@ const validateSegment = (segment, subjectId, root) => {
     assert(readFileSync(resolvedTestPath, 'utf8').length >= 0, `${subjectId}/${segment.id}: test is unreadable`);
   }
   assert(isObject(segment.coverage), `${subjectId}/${segment.id}: coverage is required`);
+  if (segment.testNamePattern !== undefined) {
+    assert(segment.coverage.enabled === false && typeof segment.testNamePattern === 'string' && segment.testNamePattern.length > 0,
+      `${subjectId}/${segment.id}: testNamePattern requires a non-measured segment and a non-empty pattern`);
+    assert.doesNotThrow(() => new RegExp(segment.testNamePattern), `${subjectId}/${segment.id}: invalid testNamePattern`);
+  }
   if (segment.coverage.enabled) {
     assert(['source', 'repository-scripts'].includes(segment.coverage.scope), `${subjectId}/${segment.id}: source-only coverage requires source or repository-scripts scope`);
     assert(Array.isArray(segment.coverage.include) && segment.coverage.include.length > 0, `${subjectId}/${segment.id}: coverage include is required`);
@@ -153,7 +158,9 @@ const loadCheckedDefinition = (definitionPath) => {
   const diagnostic = new FailureContext('repository-managed-source-integrity', 'contract-execution-mapping');
   diagnostic.at('execution-definition-validation', { input: 'contract-subject-execution-definition' });
   try {
-    return loadDefinition(definitionPath);
+    const definition = loadDefinition(definitionPath);
+    planAggregateCoverage(definition.subjects, SCRIPT_ROOT);
+    return definition;
   } catch (error) {
     const observed = error instanceof assert.AssertionError && !error.generatedMessage ? error.message : safeErrorReason(error);
     diagnostic.report(new DiagnosticError('execution-definition-invalid', { diagnostics: { field: 'contract-subject-execution', expected: 'explicit-segments-with-tests-inside-repository', observed } }));
@@ -195,7 +202,12 @@ const commandForSegment = (segment, reportPath, root, dryRun = false) => {
     const config = { root, test: { globals: false, include: segment.tests.map((file) => path.resolve(root, segment.cwd, file)), pool: 'forks', maxWorkers: 1, testTimeout: 60000, coverage: { enabled: false } } };
     writeFileSync(configPath, `export default ${JSON.stringify(config)};\n`);
   }
-  return { command: process.execPath, args: [path.join(SCRIPT_ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--config', configPath] };
+  const args = [path.join(SCRIPT_ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--config', configPath];
+  if (segment.testNamePattern !== undefined) args.push('--testNamePattern', segment.testNamePattern);
+  const testResultPath = `${reportPath}.vitest-result.json`;
+  if (!dryRun) writeFileSync(testResultPath, '');
+  args.push('--reporter=json', '--outputFile', testResultPath);
+  return { command: process.execPath, args, testResultPath };
 };
 
 const run = (command, args, cwd) => spawnSync(command, args, { cwd, encoding: 'utf8' });
@@ -219,19 +231,25 @@ export const collectSubjectCoverage = (subject, root, reportRoot, dryRun = false
     const cwd = path.join(root, segment.cwd);
     const reportPath = path.join(reportRoot, subject.subjectId.replaceAll('.', '_'), `${segment.id}.lcov`);
     if (segment.coverage?.enabled && !dryRun) mkdirSync(path.dirname(reportPath), { recursive: true });
-    const { command, args } = commandForSegment(segment, reportPath, root, dryRun);
+    const { command, args, testResultPath } = commandForSegment(segment, reportPath, root, dryRun);
     if (dryRun) {
       segments.push({ id: segment.id, level: segment.level, status: 'planned', cwd: segment.cwd, command: [command, ...args], coverageScope: segment.coverage?.scope ?? null });
       continue;
     }
     const result = run(command, args, cwd);
     if (result.status !== 0) throw new Error(`${subject.subjectId}/${segment.id}: tests failed\n${result.stderr || result.stdout}`);
+    if (testResultPath !== undefined) {
+      const rawReport = readFileSync(testResultPath, 'utf8');
+      assert(rawReport, `${subject.subjectId}/${segment.id}: missing test result`);
+      assert(JSON.parse(rawReport).numPassedTests > 0, `${subject.subjectId}/${segment.id}: no selected tests passed`);
+    }
     const resultRecord = {
       id: segment.id,
       level: segment.level,
       status: 'passed',
       cwd: segment.cwd,
       tests: segment.tests,
+      ...(segment.testNamePattern === undefined ? {} : { testNamePattern: segment.testNamePattern }),
       coverageScope: segment.coverage?.scope ?? null,
       coverageResultIdentity: `${subject.subjectId}/${segment.id}`,
     };
@@ -314,8 +332,20 @@ export const aggregateCoverageMaps = (coverageMaps, root) => {
   };
 };
 
-export const collectAggregateCoverage = (subjects, root, reportRoot) => {
-  const maps = [];
+export const resolveCoverageSources = ({ root, cwd, include, exclude }) => {
+  const includes = include.map((pattern) => path.resolve(cwd, pattern));
+  const excludes = [...exclude.map((pattern) => path.resolve(cwd, pattern)), '**/node_modules/**'];
+  const files = [...new Set(globSync(includes, { exclude: excludes }).map((filename) => realpathSync(filename)))].filter((filename) => {
+    const relative = path.relative(root, filename);
+    assert(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `coverage source escapes root: ${filename}`);
+    return /\.(?:[cm]?[jt]s)$/.test(filename) && !/\.d\.[cm]?ts$/.test(filename);
+  });
+  assert(files.length, 'coverage include resolves to no source files');
+  assertSourceCoverageFiles(root, files);
+  return files;
+};
+
+const planAggregateCoverage = (subjects, root) => {
   const groups = new Map();
   for (const subject of subjects) {
     for (const segment of subject.segments) {
@@ -329,12 +359,26 @@ export const collectAggregateCoverage = (subjects, root, reportRoot) => {
       groups.set(groupId, group);
     }
   }
-  for (const [groupId, { identity, scope, segments: group }] of groups) {
+  const ownerByFile = new Map();
+  return [...groups].map(([groupId, { identity, scope, segments: group }]) => {
     const cwd = path.join(root, group[0].cwd);
     const resolvePaths = (segment, paths) => paths.map((entry) => path.relative(cwd, path.resolve(root, segment.cwd, entry)).split(path.sep).join('/'));
     const tests = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.tests)))];
     const include = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.include)))];
     const exclude = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.exclude)))];
+    for (const filename of resolveCoverageSources({ root, cwd, include, exclude })) {
+      const owner = ownerByFile.get(filename);
+      assert(owner === undefined || owner === groupId,
+        `coverage source ${path.relative(root, filename)} belongs to multiple instrumentation groups (${owner} and ${groupId})`);
+      ownerByFile.set(filename, groupId);
+    }
+    return { groupId, identity, scope, group, cwd, tests, include, exclude };
+  });
+};
+
+export const collectAggregateCoverage = (subjects, root, reportRoot) => {
+  const maps = [];
+  for (const { groupId, identity, scope, group, cwd, tests, include, exclude } of planAggregateCoverage(subjects, root)) {
     const lcovPath = path.join(reportRoot, 'aggregate', identity.replaceAll('.', '_'), `${scope}.lcov`);
     mkdirSync(path.dirname(lcovPath), { recursive: true });
     const { command, args } = commandForSegment({ cwd: group[0].cwd, tests,

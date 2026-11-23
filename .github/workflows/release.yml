@@ -37,14 +37,6 @@ jobs:
       implementation_source_sha: ${{ steps.provider-binding.outputs.implementation_source_sha }}
       implementation_binding_status: ${{ steps.provider-binding.outputs.implementation_binding_status }}
     steps:
-      - name: Validate requested exact tag format
-        env:
-          RELEASE_TAG: ${{ inputs.release-tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-
       - name: Verify dispatch ref is the release tag
         env:
           RELEASE_TAG: ${{ inputs.release-tag }}
@@ -52,9 +44,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          reject_dispatch() {
+            local reason="$1" field="$2" expected="$3" observed="$4"
+            local last_confirmed="$5"
+            local run="${GITHUB_RUN_ID:-}" job="${GITHUB_JOB:-}" log=stderr
+            [[ "$run" =~ ^[0-9]{1,20}$ ]] || run=unavailable
+            [[ "$job" =~ ^[a-zA-Z0-9_-]{1,100}$ ]] || job=unavailable
+            [[ "${GITHUB_ACTIONS:-}" != true ]] || log=workflow-run-job-step-log
+            # The shared diagnostic script is unavailable before checkout.
+            printf '%s\n' "$(
+              printf 'ci-failure-diagnostic:{"classification":{"subject":"ci-selective-distribution","operation":"release-dispatch","stage":"dispatch-ref-validation","reason":"%s","cause":"known"},' "$reason"
+              printf '"context":{"run":"%s","job":"%s","source":"unavailable","input":"release-tag-and-dispatch-ref","values":"protected-or-unavailable"},' "$run" "$job"
+              printf '"comparison":{"field":"%s","expected":"%s","observed":"%s"},' "$field" "$expected" "$observed"
+              printf '"evidence-location":{"log":"%s","artifact":"not-generated"},' "$log"
+              printf '"execution-state":{"outcome":"failure","exit":1,"lastConfirmed":"%s","write":"not-started","rollback":"unavailable"},' "$last_confirmed"
+              printf '"next-check":{"rule":"%s","input":"release-tag-and-dispatch-ref"}}' "$reason"
+            )" >&2
+            exit 1
+          }
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            reject_dispatch release-dispatch-tag-invalid release-tag exact-semver-tag invalid not-started
+          fi
           if [[ "$DISPATCH_REF" != "refs/tags/$RELEASE_TAG" ]]; then
             echo "release workflow must be dispatched from refs/tags/$RELEASE_TAG, not $DISPATCH_REF" >&2
-            exit 1
+            reject_dispatch release-dispatch-ref-mismatch dispatch-ref requested-release-tag-ref mismatch tag-format-validation
           fi
 
       - name: Checkout tagged release

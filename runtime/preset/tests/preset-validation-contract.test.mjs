@@ -6,7 +6,6 @@ import { test, describe, expect, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
 
 import { loadRegistry, parseYaml } from '../preset-registry.ts';
-import { validateCiPreset } from '../validate-ci-preset.ts';
 import { validateCiPresetInternal } from '../validate-ci-preset-core.ts';
 import { writeCiAssetLock } from '../ci-asset-lock-plan.ts';
 import { validateDescriptor } from '../descriptor-validation.ts';
@@ -19,6 +18,7 @@ import {
   snapshotTree,
   writeReleaseRequestFixture,
 } from './support/release-request-fixture.mjs';
+import { validateCiPresetCli, writeCiAssetLockCli } from './support/preset-cli.mjs';
 
 const testRoot = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(testRoot, '../../..');
@@ -54,13 +54,13 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
         mutate(changed);
         writeFileSync(path.join(root, model.pinPath), stringify(changed));
         const before = snapshotTree(root);
-        expect(validateCiPreset({ repoRoot: root, presets: ['release-request'] }).status).toBe('failed');
-        expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }))
-          .toThrow(/approved pin companion/);
+        expect(validateCiPresetCli({ repoRoot: root, presets: ['release-request'] }).status).toBe('failed');
+        expect(() => writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }))
+          .toThrow(/"stage":"preset-validation".*"observed":"failed"/);
         expect(snapshotTree(root)).toStrictEqual(before);
       }
       writeFileSync(path.join(root, model.pinPath), JSON.stringify(Object.fromEntries(Object.entries(document).reverse())));
-      expect(writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }).assets.some(entry => entry.path === model.pinPath)).toBe(true);
+      expect(writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' }).assets.some(entry => entry.path === model.pinPath)).toBe(true);
     }));
     // integration_id: preset-asset-lock-contract
     // contract_id: contract.ci-preset-assurance.asset-lock
@@ -69,17 +69,17 @@ describe("contract.ci-preset-assurance.asset-lock", () => {
     test('asset lock generation records the source revision and canonical asset digests', () => withFixture((root) => {
       // Arrange
       const sourceRevision = 'c'.repeat(40);
+      const minute = (date) => `${date.toISOString().slice(0, 16)}Z`;
+      const startedAt = minute(new Date());
       // Act
-      const lock = writeCiAssetLock({
-        repoRoot: root,
-        sourceRevision,
-        releaseTag: 'v0.9.0',
-        generatedAt: '2026-09-17T00:41:59Z',
-      });
+      const lock = writeCiAssetLockCli({ repoRoot: root, sourceRevision, releaseTag: 'v0.9.0' });
+      const finishedAt = minute(new Date());
       // Assert
       expect(lock.sourceRevision).toBe(sourceRevision);
       expect(lock.releaseTag).toBe('v0.9.0');
-      expect(lock.generatedAt).toBe('2026-09-17T00:41Z');
+      // The CLI stamps its run time truncated to the minute, so it lies between the minutes around the run.
+      expect(lock.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$/);
+      expect(lock.generatedAt >= startedAt && lock.generatedAt <= finishedAt, lock.generatedAt).toBe(true);
       expect(lock.assets.map((asset) => asset.path).sort()).toStrictEqual([...releaseRequestAssets.map((asset) => asset.destination), model.pinPath].sort());
       const pins = lock.assets.find((asset) => asset.path === model.pinPath);
       expect(pins.canonicalSha256).toBe(model.sha256(readFileSync(path.join(repositoryRoot, 'skills/ci-github/assets/registry/ci-github-preset-assets.yml'))));
@@ -111,7 +111,7 @@ describe("contract.ci-preset-assurance.verification", () => {
       });
       const before = snapshotTree(root);
       // Act
-      const report = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+      const report = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
       // Assert
       expect(report.status).toBe('success');
       expect(report.inspectedPresets).toStrictEqual(['release-request']);
@@ -142,7 +142,7 @@ describe("preset-validation-contract", () => {
       writeFileSync(workflowPath, canonical.replace('contents: read', 'contents: write'));
       const permissionDrift = snapshotTree(root);
 
-      const permissionReport = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+      const permissionReport = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
       expect(permissionReport.status).toBe('failed');
       expect(permissionReport.mismatches.some((finding) => finding.path.includes('permissions.contents'))).toBeTruthy();
       expect(snapshotTree(root)).toStrictEqual(permissionDrift);
@@ -153,7 +153,7 @@ describe("preset-validation-contract", () => {
         'd'.repeat(40),
       ));
       const pinDrift = snapshotTree(root);
-      const pinReport = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+      const pinReport = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
       expect(pinReport.status).toBe('failed');
       expect(pinReport.mismatches.some((finding) => finding.message.includes('approved pin'))).toBeTruthy();
       expect(snapshotTree(root)).toStrictEqual(pinDrift);
@@ -180,7 +180,7 @@ describe("preset-validation-contract", () => {
         writeFileSync(workflowPath, JSON.stringify(changed));
         const before = snapshotTree(root);
         // Act
-        const rejected = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+        const rejected = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
         // Assert
         expect(rejected.status).toBe('failed');
         expect(rejected.mismatches.some((finding) => finding.message.startsWith('canonical drift:'))).toBeTruthy();
@@ -203,7 +203,7 @@ describe("preset-validation-contract", () => {
       writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
       const before = snapshotTree(root);
 
-      const report = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+      const report = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
       expect(report.status).toBe('failed');
       expect(report.mismatches.some((finding) => finding.message.includes('canonical digest'))).toBeTruthy();
       expect(snapshotTree(root)).toStrictEqual(before);
@@ -235,7 +235,7 @@ describe("preset-validation-contract", () => {
         writeFileSync(lockPath, JSON.stringify(changed));
         const snapshot = snapshotTree(root);
         // Act
-        const rejected = validateCiPreset({ repoRoot: root, ...(message === 'unmanaged asset' ? {} : { presets: ['release-request'] }) });
+        const rejected = validateCiPresetCli({ repoRoot: root, ...(message === 'unmanaged asset' ? {} : { presets: ['release-request'] }) });
         // Assert
         expect(rejected.status, message).toBe('failed');
         expect([...rejected.mismatches, ...rejected.missingSettings].some((finding) => finding.message.includes(message)), message).toBeTruthy();
@@ -244,7 +244,7 @@ describe("preset-validation-contract", () => {
       // Arrange
       writeFileSync(lockPath, '{');
       // Act
-      const malformed = validateCiPreset({ repoRoot: root, presets: ['release-request'] });
+      const malformed = validateCiPresetCli({ repoRoot: root, presets: ['release-request'] });
       // Assert
       expect(malformed.mismatches.some((finding) => finding.message.includes('not valid JSON'))).toBeTruthy();
       expect(readFileSync(lockPath, 'utf8')).toBe('{');
@@ -256,14 +256,33 @@ describe("preset-validation-contract", () => {
   describe("preset-asset-lock-contract", () => {
     // integration_id: preset-asset-lock-contract
     test('asset lock generation rejects a noncanonical source revision', () => withFixture((root) => {
-      expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'not-a-full-sha', releaseTag: 'v0.9.0' })).toThrow(/sourceRevision must be a full commit SHA/);
-      expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
+      const lockPath = path.join(root, '.ci/ci-assets.lock.json');
+      const rejectInvalidRevision = () => expect(() => writeCiAssetLockCli({
+        repoRoot: root, sourceRevision: 'not-a-full-sha', releaseTag: 'v0.9.0',
+      })).toThrow(/"stage":"source-revision-validation"/);
+      rejectInvalidRevision();
+      expect(existsSync(lockPath)).toBe(false);
+
+      writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag: 'v0.9.0' });
+      const before = readFileSync(lockPath);
+      rejectInvalidRevision();
+      expect(readFileSync(lockPath)).toStrictEqual(before);
     }));
 
     // integration_id: preset-asset-lock-contract
-    test.each(['', '0.9.0', 'v0.9', 'latest'])('asset lock generation rejects the release tag %j', (releaseTag) => withFixture((root) => {
-      expect(() => writeCiAssetLock({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag })).toThrow(/releaseTag must be an exact vX\.Y\.Z tag/);
-      expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
+    // An empty value is already rejected while the CLI arguments are read, before the tag itself is validated.
+    test.each([['', 'input-validation'], ['0.9.0', 'release-tag-validation'], ['v0.9', 'release-tag-validation'], ['latest', 'release-tag-validation']])('asset lock generation rejects the release tag %j', (releaseTag, stage) => withFixture((root) => {
+      const lockPath = path.join(root, '.ci/ci-assets.lock.json');
+      const options = { repoRoot: root, sourceRevision: 'c'.repeat(40) };
+      const rejectInvalidTag = () => expect(() => writeCiAssetLockCli({ ...options, releaseTag }))
+        .toThrow(new RegExp(`"stage":"${stage}"`));
+      rejectInvalidTag();
+      expect(existsSync(lockPath)).toBe(false);
+
+      writeCiAssetLockCli({ ...options, releaseTag: 'v0.9.0' });
+      const before = readFileSync(lockPath);
+      rejectInvalidTag();
+      expect(readFileSync(lockPath)).toStrictEqual(before);
     }));
   });
 });
@@ -460,7 +479,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         if (expected) expect(findings.some((item) => item.message.includes(expected)), `${label}: ${JSON.stringify(findings)}`).toBeTruthy();
         else expect(findings, label).toStrictEqual([]);
         if (expected) {
-          const publicReport = validateCiPreset({ repoRoot: root, presets: ['quality-gate'] });
+          const publicReport = validateCiPresetCli({ repoRoot: root, presets: ['quality-gate'] });
           expect(publicReport.status, label).toBe('failed');
           expect([...publicReport.missingSettings, ...publicReport.mismatches].some((item) => item.message.includes(expected)), label).toBeTruthy();
         }
@@ -582,7 +601,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         // Assert
         expect(report.mismatches.some((item) => item.path === `${asset.destination}:on.${event}` && item.message.startsWith('registered trigger extension')), label).toBe(rejected);
         if (rejected) {
-          const publicReport = validateCiPreset({ repoRoot: root, presets: ['quality-gate'] });
+          const publicReport = validateCiPresetCli({ repoRoot: root, presets: ['quality-gate'] });
           expect(publicReport.status, label).toBe('failed');
           expect(publicReport.mismatches.some((item) => item.path === `${asset.destination}:on.${event}` && item.message.startsWith('registered trigger extension')), label).toBeTruthy();
         }

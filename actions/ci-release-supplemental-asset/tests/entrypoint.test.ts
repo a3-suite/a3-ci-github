@@ -7,6 +7,8 @@ import { fixture as standardFixture, archiveName, runDistributedAction } from '.
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
 
+const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort();
+
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, string> = {}) => runEntrypoint(f, changes, entrypointArgs);
@@ -20,34 +22,73 @@ for (const operation of ['build-platform', 'assemble']) {
     const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
     expect(result.status, String(result.stderr)).toBe(0);
     expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
+    expect(fs.statSync(path.join(f.root, 'new output')).isDirectory()).toBe(true);
+  });
+}
+
+test('supplemental entrypoint preserves existing output on rejection', (t) => {
+  const f = fixture(t);
+  const output = path.join(f.root, 'new output');
+  fs.mkdirSync(output);
+  fs.writeFileSync(path.join(output, 'existing'), 'original');
+  const result = bundle(f, { INPUT_OPERATION: 'build-platform' });
+  expect(result.status).toBe(1);
+  expect(String(result.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"[^"]+"/m);
+  expect(fileNames(output)).toEqual(['existing']);
+  expect(fs.readFileSync(path.join(output, 'existing'), 'utf8')).toBe('original');
+});
+
+test('supplemental entrypoint retains its result when the Action output write fails', (t) => {
+  const f = fixture(t);
+  const result = bundle(f, { INPUT_OPERATION: 'build-platform', GITHUB_OUTPUT: f.root });
+  expect(result.status).toBe(1);
+  expect(String(result.stderr)).toContain('"stage":"output-write"');
+  expect(fs.statSync(path.join(f.root, 'new output', 'arguments')).isFile()).toBe(true);
+});
+
+// evidence_role: supplemental
+// The argument vector passed to the owner adapter is an implementation check of the phase; no contract guarantee covers it.
+// flow_id: supplemental-phase-entrypoint
+// test_level: e2e
+for (const operation of ['build-platform', 'assemble']) {
+  test(`supplemental entrypoint passes the ${operation} arguments to the owner adapter`, (t) => {
+    const f = fixture(t);
+    const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
+    expect(result.status, String(result.stderr)).toBe(0);
     expect(fs.readFileSync(path.join(f.root, 'new output/arguments'), 'utf8')).toBe([operation, 'authority.json', 'snapshot.json', 'standard build', ...(operation === 'assemble' ? ['supplemental build'] : []), 'new output', ''].join('\n'));
   });
 }
 
 test('supplemental entrypoint rejects invalid binding before owner execution', (t) => {
-  const f = fixture(t);
+  const f = fixture(t, ': > owner-started');
   f.configure({ CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED: 'false' });
+  const filesBefore = fileNames(f.root);
   const result = bundle(f);
   expect(result.status).toBe(1);
   expect(String(result.stderr)).toMatch(/supplemental-asset-not-selected/);
   expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
+  expect(fs.existsSync(path.join(f.root, 'owner-started'))).toBe(false);
+  expect(fileNames(f.root)).toEqual(filesBefore);
 });
 
 test('supplemental entrypoint rejects injected output before owner execution', (t) => {
-  const f = fixture(t);
+  const f = fixture(t, ': > owner-started');
   const cases: Record<string, string>[] = [{ 'INPUT_OUTPUT-DIRECTORY': 'new output\nstatus=success' }, { GITHUB_OUTPUT: `${f.outputPath}\nstatus=success` }];
   for (const changes of cases) {
+    const filesBefore = fileNames(f.root);
     const result = bundle(f, changes);
     expect(result.status).toBe(1);
     expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
     expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
+    expect(fs.existsSync(path.join(f.root, 'owner-started'))).toBe(false);
+    expect(fileNames(f.root)).toEqual(filesBefore);
   }
 });
 
 test('supplemental entrypoint propagates owner failure without owner diagnostics', (t) => {
   for (const operation of ['build-platform', 'assemble']) {
-    const f = fixture(t, 'echo secret-owner-diagnostic >&2\nexit 23');
+    const f = fixture(t, 'echo private-owner-stdout\necho private-owner-stderr >&2\nexit 23');
     const result = bundle(f, { INPUT_OPERATION: operation, 'INPUT_SUPPLEMENTAL-BUILD-ROOT': operation === 'assemble' ? 'supplemental build' : '' });
     expect(result.status).toBe(1);
     expect(String(result.stderr)).toMatch(/owner-adapter-failed/);
@@ -60,17 +101,27 @@ test('supplemental entrypoint propagates owner failure without owner diagnostics
     expect(evidence.comparison['exit-status']).toBe(23);
     expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
     expect(diagnostic['sanitized-reason']).toBe('process-failed');
-    expect(String(result.stderr)).not.toMatch(/secret-owner-diagnostic/);
-    expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
+    const output = fs.readFileSync(f.outputPath, 'utf8');
+    expect(String(result.stdout) + String(result.stderr) + output).not.toMatch(/private-owner-(stdout|stderr)/);
+    expect(output).toBe('');
   }
 });
 
-test('supplemental entrypoint rejects mutated standard inputs and retains partial output', (t) => {
+test('supplemental entrypoint rejects mutated standard inputs', (t) => {
   const f = fixture(t, 'mkdir -p -- "${!#}"\nprintf data > "${!#}/asset"\nprintf changed > "$4/input"');
   const result = bundle(f);
   expect(result.status).toBe(1);
   expect(String(result.stderr)).toMatch(/build-input-mutated/);
   expect(fs.readFileSync(f.outputPath, 'utf8')).toBe('');
+});
+
+// evidence_role: supplemental
+// The partial output retained by a rejection and the retry that the retained output refuses are implementation details that no mapped guarantee observes.
+// flow_id: supplemental-phase-entrypoint
+// test_level: e2e
+test('supplemental entrypoint retains partial output of a rejected mutation and refuses a retry into it', (t) => {
+  const f = fixture(t, 'mkdir -p -- "${!#}"\nprintf data > "${!#}/asset"\nprintf changed > "$4/input"');
+  expect(bundle(f).status).toBe(1);
   expect(fs.readFileSync(path.join(f.root, 'new output/asset'), 'utf8')).toBe('data');
   const retry = bundle(f);
   expect(retry.status).toBe(1);
@@ -101,6 +152,27 @@ test('supplemental entrypoint rejects the old Windows entry name with expected-n
     expect(diagnostic['sanitized-reason']).toBe('installer-windows-entry-name-invalid');
     expect(diagnostic.comparison.expected).toEqual(['install.ps1']);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
+  }
+});
+
+// evidence_role: supplemental
+// Creating no new output after a rejection is a side effect that follows from rust-release-build, not from the supplemental asset contract.
+// flow_id: supplemental-safe-diagnostics
+// test_level: e2e
+test('supplemental entrypoint creates no output for the old Windows entry name', (t) => {
+  // Arrange
+  for (const operation of ['build-platform', 'assemble']) {
+    const f = standardFixture(t, 'native-offline-dry-run-v1', 'install-windows-x86_64.ps1');
+    const options = { ...f.options, operation };
+    if (operation === 'assemble') {
+      fs.mkdirSync(path.join(f.root, 'supplemental-download'));
+      fs.writeFileSync(path.join(f.root, 'supplemental-download/input'), 'unverified');
+      Object.assign(options, { supplementalBuildRoot: 'supplemental-download' });
+    }
+    // Act
+    const { result } = runDistributedAction(f, options, entrypointArgs);
+    // Assert
+    expect(result.status).toBe(1);
     expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
   }
 });
@@ -143,10 +215,27 @@ test('supplemental entrypoint assembles an asset release from empty build roots 
   // Assert
   expect(result.status, String(result.stderr)).toBe(0);
   expect(fs.readFileSync(valid.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
+  expect(fs.existsSync(path.join(valid.root, 'new output'))).toBe(true);
   expect(rejected.status).toBe(1);
   expect(String(rejected.stderr)).toMatch(/unexpected-build-input/);
+  expect(String(rejected.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"build-input-validation"/m);
   expect(fs.readFileSync(withBuild.outputPath, 'utf8')).toBe('');
-  expect(fs.existsSync(path.join(withBuild.root, 'new output'))).toBe(false);
+});
+
+// evidence_role: supplemental
+// Creating no new output after a rejection is a side effect that follows from rust-release-build, not from the supplemental asset contract.
+test('supplemental entrypoint creates no output for an asset release with build input', (t) => {
+  // Arrange
+  const f = fixture(t);
+  f.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '__unset__' },
+    { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
+  for (const directory of ['standard build', 'supplemental build']) fs.rmSync(path.join(f.root, directory, 'input'));
+  fs.writeFileSync(path.join(f.root, 'standard build/input'), 'product build');
+  // Act
+  const rejected = bundle(f, { INPUT_OPERATION: 'assemble', 'INPUT_SUPPLEMENTAL-BUILD-ROOT': 'supplemental build' });
+  // Assert
+  expect(rejected.status).toBe(1);
+  expect(fs.existsSync(path.join(f.root, 'new output'))).toBe(false);
 });
 
 });

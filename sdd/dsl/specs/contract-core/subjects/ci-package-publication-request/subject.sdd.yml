@@ -5,80 +5,61 @@ subject:
   summary: Create and verify immutable package publication request handoffs.
 contracts:
   - id: contract.ci-package-publication-request.outputs
-    summary: A package publication request operation exposes its completion status and verified source identity.
+    summary: Validate the triggering run and create or verify the immutable package publication request.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
       - name: operation
         meaning: "Received by the contract target: operation selected by the invocation."
+      - name: request-path
+        meaning: "Received by the contract target: destination for create and path to the saved request for verify."
       - name: workflow-run
-        meaning: "Precondition prepared by the case: triggering workflow run."
+        meaning: "Received by the contract target: workflow_run event payload and repository context for verify-trigger."
       - name: source-sha
         meaning: "Received by the contract target: source commit SHA passed by the caller."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Package publication request operation status.
-          - selector: request-path
-            meaning: Package publication request path.
-          - selector: source-sha
-            meaning: Verified source commit SHA.
-          - selector: version
-            meaning: Verified package version.
-          - selector: target-identity
-            meaning: Verified package target identity.
-          - selector: language-profile
-            meaning: Verified language profile.
-          - selector: toolchain
-            meaning: Verified fixed toolchain.
-          - selector: outcome
-            meaning: Failure outcome of the rejected package publication request step.
-          - selector: accepted-trigger-run
-            meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+      - name: version
+        meaning: "Received by the contract target: approved package version for create."
+      - name: target-identity
+        meaning: "Received by the contract target: approved package target identity for create."
+      - name: language-profile
+        meaning: "Received by the contract target: language profile for create."
+      - name: toolchain
+        meaning: "Received by the contract target: fixed toolchain for create."
+      - name: expected-source-sha
+        meaning: "Received by the contract target: source commit SHA that the verify operation expects the saved request to carry."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.package-publication-request-succeeded
-      - environment: runtime-context.request-trigger-verification-invoked
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: Required Action inputs or the operation name are invalid, create or verify cannot complete using the supplied request, or writing a required output fails. Trigger event rejection has its own condition.
+      - id: runtime-context.package-publication-request-succeeded
+        summary: The create operation receives valid request fields and an unused writable path, or verify receives a valid request bound to the expected source SHA. All Action outputs can be written.
+      - id: package-request-trigger-valid
+        summary: The verify-trigger operation has a request path and receives a successful default-branch dispatch of the designated request workflow in the current repository, with valid run identity and writable Action outputs.
+      - id: package-request-trigger-rejected
+        summary: The verify-trigger operation has a request path, but the event is unavailable or fails the trigger validation criteria.
     guarantees:
-      - id: package-request-status-produced
-        applies_to:
-          - runtime-context.request-trigger-verification-invoked
-          - runtime-context.package-publication-request-succeeded
-        claim:
-          field: status
-          present: true
       - id: package-request-source-produced
         applies_to:
           - runtime-context.package-publication-request-succeeded
-        claim:
-          field: source-sha
-          present: true
+        boundary: boundary.action-output
+        statement: "`status` is `success` and `request-path` equals the supplied request path. The `source-sha`, `version`, `target-identity`, `language-profile`, and `toolchain` outputs equal the validated create inputs or the corresponding fields of the verified request. For verify, `source-sha` also equals `expected-source-sha`."
       - id: package-request-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+          - package-request-trigger-rejected
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected package publication request step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - package-request-trigger-rejected
+        boundary: boundary.diagnostic-result
+        statement: "The primary failure diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: request-trigger-run-bound
         applies_to:
-          - runtime-context.request-trigger-verification-invoked
-        claim:
-          field: accepted-trigger-run
-          in:
-            - successful-default-branch-dispatch-of-own-request-workflow
-            - absent
+          - package-request-trigger-valid
+          - package-request-trigger-rejected
+        boundary: boundary.action-output
+        statement: "For an accepted run, `status` is `success`. The event must identify a successful default-branch dispatch of the designated workflow in the current repository, with the expected workflow name and path, a positive run ID and a lowercase 40-digit hexadecimal head SHA. A rejected run causes a failed step."
+    input_kind:
+      kind: operation
+      name: ci-package-publication-request

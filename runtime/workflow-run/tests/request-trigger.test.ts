@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, test, expect, onTestFinished } from 'vitest';
 import { verifyRequestTrigger } from '../request-trigger.js';
-import { requestTriggerEnvironment } from './request-trigger-fixture.js';
+import { rejectedRequestTriggerEnvironments, requestTriggerEnvironment } from './request-trigger-fixture.js';
 
 describe('verifyRequestTrigger(requestWorkflow, env)', () => {
   // evidence_role: contract
@@ -34,40 +34,17 @@ describe('verifyRequestTrigger(requestWorkflow, env)', () => {
     fs.mkdirSync(temporaryRoot, { recursive: true });
     const root = fs.mkdtempSync(path.join(temporaryRoot, 'request-trigger-'));
     onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
-    const cases: [string, Record<string, unknown>, Record<string, string | undefined>][] = [
-      ['event-name', {}, { GITHUB_EVENT_NAME: 'push' }],
-      ['conclusion', { conclusion: 'failure' }, {}],
-      ['repository', { repository: { full_name: 'other/project' } }, {}],
-      ['workflow-name', { name: 'other-request' }, {}],
-      ['event', { event: 'push' }, {}],
-      ['head-branch', { head_branch: 'feature' }, {}],
-      ['default-branch', {}, { GITHUB_EVENT_PATH: path.join(root, 'no-default-branch.json') }],
-      ['workflow-path', { path: '.github/workflows/other.yml' }, {}],
-      ['run-id', { id: 0 }, {}],
-      ['head-sha', { head_sha: 'A'.repeat(40) }, {}],
-    ];
-    fs.writeFileSync(path.join(root, 'no-default-branch.json'), JSON.stringify({ repository: {}, workflow_run: JSON.parse(fs.readFileSync(requestTriggerEnvironment(root, 'release-publication-request').GITHUB_EVENT_PATH, 'utf8')).workflow_run }));
-    fs.writeFileSync(path.join(root, 'invalid.json'), '{"secret-value"');
-    // Act
-    const failures = cases.map(([field, run, env]) => {
-      try {
-        verifyRequestTrigger('release-publication-request', { ...requestTriggerEnvironment(root, 'release-publication-request', run), ...env });
-        return { field, details: undefined };
-      } catch (error) {
-        return { field, details: (error as { details?: { field?: string } }).details };
-      }
-    });
-    // Assert
-    for (const { field, details } of failures) expect(details?.field, field).toBe(field);
-    for (const file of ['missing.json', 'invalid.json']) {
+    for (const { field, reason, env } of rejectedRequestTriggerEnvironments(root, 'release-publication-request')) {
       let failure: unknown;
       try {
-        verifyRequestTrigger('release-publication-request', { ...requestTriggerEnvironment(root, 'release-publication-request'), GITHUB_EVENT_PATH: path.join(root, file) });
+        verifyRequestTrigger('release-publication-request', env);
       } catch (error) {
         failure = error;
       }
-      expect(String(failure), file).toBe('DiagnosticError: request-trigger-event-unreadable');
-      expect(JSON.stringify((failure as { details?: unknown }).details ?? {})).not.toContain('secret-value');
+      const details = (failure as { details?: { field?: string } })?.details;
+      expect(String(failure), field).toBe(`DiagnosticError: ${reason}`);
+      if (reason === 'request-trigger-mismatch') expect(details?.field, field).toBe(field);
+      else expect(JSON.stringify(details ?? {})).not.toContain('secret-value');
     }
   });
 });

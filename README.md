@@ -71,7 +71,7 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 
 ## 旧 a3-actions の利用者へ
 
-旧 `a3-suite/a3-actions` の公開資産は既存 consumer 向けに維持します。削除または archive は別途承認するまで行いません。
+旧 `a3-suite/a3-actions` は archive 済みです。既存 consumer 向けに公開済み資産を維持し、削除には別途承認が必要です。
 
 ## Action一覧
 

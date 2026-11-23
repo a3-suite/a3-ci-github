@@ -6,11 +6,80 @@ import { expect, test, describe } from 'vitest';
 import { pathToFileURL } from 'node:url';
 import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection, rollbackDistributionTransaction, validateDistributionManifest, verifyFetchedDistribution } from '../fetch-a3-ci-github.mjs';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
-import { repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
+import { cliFetch, cliRollback, cliVerify, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, runReleaseGenerator, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
+
+describe('contract.ci-selective-distribution.verification', () => {
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify rejects missing or malformed cache metadata without changing the consumer tree', async () => {
+    await withFixture('distribution-verify-metadata-', (root) => {
+      const release = prepareRelease(root);
+      const projectRoot = path.join(root, 'consumer');
+      fs.mkdirSync(projectRoot);
+      const verify = () => cliVerify({ projectRoot, sourceRevision });
+      const empty = snapshotTree(projectRoot);
+      expect(verify).toThrow(/^distribution-local-manifest-missing$/);
+      expect(snapshotTree(projectRoot)).toStrictEqual(empty);
+
+      const fetched = cliFetch({ projectRoot, manifestPath: release.manifestPath,
+        requestedPresets: ['release-request'], sourceRoot: committedSourceRoot });
+      for (const name of ['manifest', 'receipt']) {
+        const metadataPath = path.join(fetched.distributionRoot, `${name}.json`);
+        const original = fs.readFileSync(metadataPath);
+        fs.writeFileSync(metadataPath, '{');
+        const malformed = snapshotTree(projectRoot);
+        expect(verify).toThrow(new RegExp(`^distribution-local-${name}-invalid$`));
+        expect(snapshotTree(projectRoot)).toStrictEqual(malformed);
+        fs.writeFileSync(metadataPath, original);
+      }
+    });
+  });
+
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify reports verified for a merged distribution', async () => {
+    await withFixture('distribution-verify-merged-', (root) => {
+      const release = prepareRelease(root);
+      const projectRoot = path.join(root, 'consumer');
+      fs.mkdirSync(projectRoot);
+      const options = { projectRoot, manifestPath: release.manifestPath, sourceRoot: committedSourceRoot };
+      cliFetch({ ...options, requestedPresets: ['release-request'] });
+      cliFetch({ ...options, requestedPresets: ['quality-gate'] });
+      cliFetch({ ...options, requestedPresets: ['quality-gate'], requestedAssets: ['runtime.adapter-materializer'] });
+
+      expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
+    });
+  });
+
+  // contract_id: contract.ci-selective-distribution.verification
+  test('verify reports input validation for missing malformed and unbound arguments', () => {
+    const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+    for (const args of [[], ['--source-revision', 'invalid'], ['--manifest', 'unused']]) {
+      const result = spawnSync(process.execPath, [cli, 'verify', ...args], { encoding: 'utf8' });
+      expect(result.status, args.join(' ')).toBe(2);
+      expect(JSON.parse(result.stderr).failureEvidence.classification).toMatchObject({
+        operation: 'verify', stage: 'input-validation',
+      });
+    }
+  });
+});
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
-    // contract_id: contract.ci-selective-distribution.delivery
+    // contract_id: contract.ci-selective-distribution.release-generation
+    test('release generator records the source revision and binds every manifest file digest and size to its source file', async () => {
+      await withFixture('a3-ci-github-distribution-release-source-', (root) => {
+        const manifest = validateDistributionManifest(generateRelease(root).manifest);
+        expect(manifest.sourceRevision).toBe(sourceRevision);
+        for (const [relative, entry] of Object.entries(manifest.files)) {
+          const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
+          expect(entry.sha256, relative).toBe(sha256(bytes));
+          expect(entry.size, relative).toBe(bytes.length);
+        }
+      });
+    });
+
+    // evidence_role: supplemental
+    // The deterministic bytes, the selected asset sets, the checksum file and the skills package of a generated release are the content of the release, not observations of a generation guarantee.
+    // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator derives deterministic selective assets and checksums from registries', async () => {
       await withFixture('a3-ci-github-distribution-release-', (root) => {
         const first = generateRelease(root);
@@ -19,7 +88,6 @@ describe("contract.ci-selective-distribution.delivery", () => {
           expect(fs.readFileSync(path.join(first.output, filename))).toEqual(fs.readFileSync(path.join(baseline.output, filename)));
         }
         const manifest = validateDistributionManifest(first.manifest);
-        expect(manifest.sourceRevision).toBe(sourceRevision);
         for (const binding of Object.values(manifest.reusableWorkflows)) {
           expect(binding.sourceRevision).toBe(sourceRevision);
           expect(binding).not.toHaveProperty('acceptance');
@@ -27,19 +95,6 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(manifest.assets.some((asset) => asset.id === 'runtime.preset')).toBeTruthy();
         expect(manifest.assets.some((asset) => asset.id === 'workflow.quality-gate')).toBeTruthy();
         expect(manifest.files['skills/ci-github/references/ci-script-contracts.reference.yml']).toBeTruthy();
-        for (const relative of [
-          'skills/ci-github/references/release-publication-evidence.reference.yml',
-          'runtime/release-publication/evidence.schema.json',
-          'runtime/preset/action-availability.ts',
-          '.github/workflows/ci-quality-platforms.yml',
-          '.github/workflows/ci-package-preparation.yml',
-          '.github/workflows/ci-release-publication.yml',
-          '.github/workflows/ci-package-publication.yml',
-        ]) {
-          const bytes = fs.readFileSync(path.join(committedSourceRoot, relative));
-          expect(manifest.files[relative].sha256).toBe(sha256(bytes));
-          expect(manifest.files[relative].size).toBe(bytes.length);
-        }
         const publication = resolveDistributionSelection(manifest, ['release-publication'], []);
         const publicationFiles = publication.flatMap((asset) => asset.files.map((file) => file.sourcePath));
         const releaseEvidenceFiles = [
@@ -87,6 +142,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
+    // evidence_role: supplemental
+    // Resolving the reusable workflow callee from fetched sources is a runtime preflight mechanism, not an observation of a delivery guarantee.
     // contract_id: contract.ci-selective-distribution.delivery
     test('each selected callee resolves from fetched sources and missing sources remain rejected', async () => {
       await withFixture('a3-ci-github-distribution-callee-preflight-', async (root) => {
@@ -126,8 +183,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
       });
     });
 
-    // contract_id: contract.ci-selective-distribution.delivery
-    test('release generator binds every published byte to the exact source commit', async () => {
+    // contract_id: contract.ci-selective-distribution.release-generation
+    test('release generator hashes committed bytes when the working tree differs', async () => {
       await withFixture('a3-ci-github-distribution-release-binding-', (root) => {
         const sourcePath = 'workflows/quality/quality-gate.yml';
         const workingPath = path.join(committedSourceRoot, sourcePath);
@@ -143,7 +200,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
       });
     });
 
-    // contract_id: contract.ci-selective-distribution.delivery
+    // evidence_role: supplemental
+    // Breaks the diagnostic sink, so the failure stage cannot be observed.
     test('release generator retains exit code when diagnostic sinks fail', () => {
       // Arrange
       const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
@@ -156,11 +214,21 @@ describe("contract.ci-selective-distribution.delivery", () => {
       expect(result.stdout + result.stderr).toBe('');
     });
 
-    // contract_id: contract.ci-selective-distribution.delivery
+    // contract_id: contract.ci-selective-distribution.release-generation
+    test('release generator reports the argument validation stage when the output option is missing', () => {
+      const result = runReleaseGenerator([]);
+      expect(result.status).toBe(2);
+      const prefix = 'ci-failure-diagnostic:';
+      const evidence = result.stderr.split('\n').find((line) => line.startsWith(prefix));
+      expect(JSON.parse(evidence.slice(prefix.length)).classification).toMatchObject({
+        operation: 'generate', stage: 'input-validation', reason: 'distribution-release-output-required',
+      });
+    });
+
+    // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator rejects invalid version source and output boundaries', async () => {
       await withFixture('a3-ci-github-distribution-release-guards-', (root) => {
-        const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
-        const execute = (args) => spawnSync(tsx, [generator, '--repository-root', committedSourceRoot, ...args], { encoding: 'utf8' });
+        const execute = (args) => runReleaseGenerator(['--repository-root', committedSourceRoot, ...args]);
         const invalidSha = execute([
           '--output-directory', path.join(root, 'invalid-sha'),
           '--source-revision', 'main',
@@ -168,6 +236,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(invalidSha.status).toBe(2);
         expect(invalidSha.stderr).toMatch(/distribution-release-source-revision-invalid/);
+        expect(fs.existsSync(path.join(root, 'invalid-sha'))).toBe(false);
         const invalidTag = execute([
           '--output-directory', path.join(root, 'invalid-tag'),
           '--source-revision', sourceRevision,
@@ -175,6 +244,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(invalidTag.status).toBe(2);
         expect(invalidTag.stderr).toMatch(/distribution-release-tag-invalid/);
+        expect(fs.existsSync(path.join(root, 'invalid-tag'))).toBe(false);
         const versionMismatch = execute([
           '--output-directory', path.join(root, 'version-mismatch'),
           '--source-revision', sourceRevision,
@@ -182,6 +252,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(versionMismatch.status).toBe(2);
         expect(versionMismatch.stderr).toMatch(/distribution-release-version-mismatch/);
+        expect(versionMismatch.stderr).toMatch(/^ci-failure-diagnostic:.*"classification":\{[^}]*"stage":"distribution-generation"/m);
+        expect(fs.existsSync(path.join(root, 'version-mismatch'))).toBe(false);
         const headMismatch = execute([
           '--output-directory', path.join(root, 'head-mismatch'),
           '--source-revision', 'e'.repeat(40),
@@ -189,8 +261,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(headMismatch.status).toBe(2);
         expect(headMismatch.stderr).toMatch(/distribution-release-source-head-mismatch/);
+        expect(fs.existsSync(path.join(root, 'head-mismatch'))).toBe(false);
         const existingOutput = path.join(root, 'existing');
         fs.mkdirSync(existingOutput);
+        const existingBefore = snapshotTree(existingOutput);
         const outputConflict = execute([
           '--output-directory', existingOutput,
           '--source-revision', sourceRevision,
@@ -198,6 +272,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
         ]);
         expect(outputConflict.status).toBe(2);
         expect(outputConflict.stderr).toMatch(/distribution-release-output-exists/);
+        expect(snapshotTree(existingOutput)).toEqual(existingBefore);
         // Arrange
         const linkedSource = path.join(root, 'linked-source');
         const clone = spawnSync('git', ['clone', '--quiet', '--no-hardlinks', committedSourceRoot, linkedSource], { encoding: 'utf8', timeout: 5000 });
@@ -214,14 +289,60 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const linkedRevision = fixtureGit(['rev-parse', 'HEAD']);
         const linkedOutput = path.join(root, 'linked-output');
         // Act
-        const linkedResult = spawnSync(tsx, [generator,
+        const linkedResult = runReleaseGenerator([
           '--repository-root', linkedSource, '--source-revision', linkedRevision,
           '--release-tag', releaseTag, '--output-directory', linkedOutput,
-        ], { encoding: 'utf8' });
+        ]);
         // Assert
         expect(linkedResult.status).toBe(2);
         expect(linkedResult.stderr).toContain('distribution-source-symlink');
         expect(fs.existsSync(linkedOutput)).toBe(false);
+
+        fs.unlinkSync(path.join(linkedSource, linkedAsset));
+        const registryPath = 'skills/ci-github/assets/registry/ci-distribution-assets.yml';
+        const registryFile = path.join(linkedSource, registryPath);
+        const registry = fs.readFileSync(registryFile, 'utf8');
+        const sourcePath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
+        for (const [kind, invalidPath] of [['absolute', '/invalid.yml'], ['parent-relative', '../invalid.yml']]) {
+          fs.writeFileSync(registryFile, registry.replace(sourcePath, invalidPath));
+          fixtureGit(['add', '-u']);
+          fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', `invalid ${kind} source path fixture`]);
+          const output = path.join(root, `invalid-${kind}-source`);
+          const result = runReleaseGenerator([
+            '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+            '--release-tag', releaseTag, '--output-directory', output,
+          ]);
+          expect(result.status, result.stderr).toBe(2);
+          expect(result.stderr).toContain('distribution-path-invalid');
+          expect(fs.existsSync(output)).toBe(false);
+        }
+        fs.writeFileSync(registryFile, registry);
+        fs.unlinkSync(path.join(linkedSource, '.ci/release-skills.json'));
+        fixtureGit(['add', '-u']);
+        fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing skill declaration fixture']);
+        const missingDeclarationOutput = path.join(root, 'missing-declaration-output');
+        const missingDeclaration = runReleaseGenerator([
+          '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+          '--release-tag', releaseTag, '--output-directory', missingDeclarationOutput,
+        ]);
+        expect(missingDeclaration.status).toBe(2);
+        expect(missingDeclaration.stderr).toContain('skills-declaration-invalid');
+        expect(fs.existsSync(missingDeclarationOutput)).toBe(false);
+
+        fixtureGit(['rm', 'VERSION']);
+        fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing version fixture']);
+        const missingVersionOutput = path.join(root, 'missing-version-output');
+        const missingVersion = runReleaseGenerator([
+          '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+          '--release-tag', releaseTag, '--output-directory', missingVersionOutput,
+        ]);
+        expect(missingVersion.status).toBe(2);
+        const diagnostic = missingVersion.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(JSON.parse(diagnostic?.[1] ?? '{}').classification).toMatchObject({
+          stage: 'distribution-generation', reason: 'distribution-release-git-read-failed',
+        });
+        expect(missingVersion.stderr).not.toContain('fatal:');
+        expect(fs.existsSync(missingVersionOutput)).toBe(false);
       });
     });
   });
@@ -263,6 +384,8 @@ describe("contract.ci-selective-distribution.selection", () => {
 
 describe("contract.ci-selective-distribution.application", () => {
   describe('provider-pin-companion', () => {
+    // evidence_role: supplemental
+    // The asset lock and the preflight consume the applied companions; they are not observations of a plan or apply guarantee.
     // contract_id: contract.ci-selective-distribution.application
     // contract_id: contract.ci-preset-assurance.asset-lock
     test('Release and Package generated companions support lock and preflight without fixture pin injection', async () => {
@@ -336,6 +459,10 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         for (const entry of plan.actions) expect(fs.existsSync(path.join(projectRoot, entry.destination))).toBe(false);
         expect(() => rollbackDistributionTransaction({ projectRoot, transactionId: transaction.transactionId }))
           .toThrow(/distribution-transaction-not-rollbackable/);
+        let secondRollback;
+        try { cliRollback({ projectRoot, transactionId: transaction.transactionId }); } catch (error) { secondRollback = error; }
+        expect(secondRollback.message).toBe('distribution-transaction-not-rollbackable');
+        expect(secondRollback.evidence.classification.stage).toEqual(expect.any(String));
         for (const [relative, bytes] of previous) {
           fs.copyFileSync(path.join(backupRoot, relative), path.join(projectRoot, relative));
           expect(fs.readFileSync(path.join(projectRoot, relative), 'utf8')).toBe(bytes);
@@ -348,7 +475,6 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
         expect(mismatched.status).not.toBe(0);
         expect(mismatched.stderr).toContain('asset lock source must match the fetched distribution Release');
-        expect(fs.existsSync(path.join(projectRoot, '.ci/ci-assets.lock.json'))).toBe(false);
         const scriptPath = path.join(root, 'generate-lock.mts');
         fs.writeFileSync(scriptPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: ${JSON.stringify(releaseTag)} });`);
         const generated = spawnSync(tsx, [scriptPath], { encoding: 'utf8', env: { ...process.env,
@@ -368,7 +494,51 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         }
         expect(fs.existsSync(path.join(projectRoot, '.ci/provider-action-pins.yml'))).toBe(false);
         expect(fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8')).toBe('unrelated owner content\n');
+      });
+    });
+    // evidence_role: supplemental
+    // The fetched distribution root outliving a rollback is a side effect of the transaction, not an observation of a lock generation guarantee.
+    // contract_id: contract.ci-selective-distribution.application
+    test('rolling back an applied distribution keeps the fetched distribution root', async () => {
+      await withFixture('distribution-rollback-fetched-root-', async (root) => {
+        // Arrange
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot, { recursive: true });
+        const selection = { requestedPresets: ['release-request'], requestedAssets: [] };
+        const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const plan = planDistributionApplication({ projectRoot, sourceRevision, ...selection });
+        const applied = applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        // Act
+        rollbackDistributionTransaction({ projectRoot, transactionId: applied.transactionId });
+        // Assert
         expect(fs.existsSync(fetched.distributionRoot)).toBe(true);
+      });
+    });
+    // evidence_role: supplemental
+    // Writing no lock is a side effect of the rejected generation, not an observation of the lock rejection diagnostic.
+    test('asset lock generation rejected for a mismatched distribution Release writes no lock', async () => {
+      await withFixture('distribution-lock-mismatch-', async (root) => {
+        // Arrange
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot, { recursive: true });
+        const selection = { requestedPresets: ['release-request'], requestedAssets: [] };
+        const fetched = await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
+          sourceRoot: repositoryRoot, ...selection });
+        const plan = planDistributionApplication({ projectRoot, sourceRevision, ...selection });
+        applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
+        const mismatchedPath = path.join(root, 'generate-mismatched-lock.mts');
+        fs.writeFileSync(mismatchedPath, `import { writeCiAssetLock } from ${JSON.stringify(pathToFileURL(path.join(fetched.distributionRoot, 'runtime/preset/ci-asset-lock-plan.ts')).href)};\nwriteCiAssetLock({ repoRoot: ${JSON.stringify(projectRoot)}, sourceRevision: ${JSON.stringify(sourceRevision)}, releaseTag: 'v99.0.0' });`);
+
+        // Act
+        const mismatched = spawnSync(tsx, [mismatchedPath], { encoding: 'utf8', env: { ...process.env,
+          CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset'), CI_FIXED_RUNTIME_ROOT: path.join(repositoryRoot, 'runtime/preset') } });
+
+        // Assert
+        expect(mismatched.status).not.toBe(0);
+        expect(fs.existsSync(path.join(projectRoot, '.ci/ci-assets.lock.json'))).toBe(false);
       });
     });
   });
@@ -435,28 +605,26 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(applyResult.status, applyResult.stderr).toBe(0);
         const applied = JSON.parse(applyResult.stdout);
         expect(applied.status).toBe('applied');
-        const requireFromPreset = createRequire(path.join(repositoryRoot, 'runtime/preset/package.json'));
-        const { parse } = requireFromPreset('yaml');
-        const commands = ['fetch', 'verify', 'plan', 'apply', 'rollback'].map((operation) => parse(fs.readFileSync(path.join(repositoryRoot, `sdd/dsl/specs/cli/commands/manage-ci-distribution-${operation}/cli-command.sdd.yml`), 'utf8')).command);
-        const vocabulary = parse(fs.readFileSync(path.join(repositoryRoot, 'sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml'), 'utf8'));
-        const flags = new Map(vocabulary.options.map((option) => [option.id, option.long]));
         // The operations share one parser, so every option published by any operation must be rejected where it is not bound.
-        const publicOptions = [...new Set(commands.flatMap((command) => command.option_groups.flatMap((group) => group.options)))];
+        const unboundOptions = [
+          { operation: 'fetch', required: [], rejected: ['--source-revision', '--set', '--plan', '--approve', '--transaction'] },
+          { operation: 'verify', required: ['--source-revision'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--set', '--plan', '--approve', '--transaction'] },
+          { operation: 'plan', required: ['--source-revision'], rejected: ['--manifest', '--manifest-url', '--source-root', '--plan', '--approve', '--transaction'] },
+          { operation: 'apply', required: ['--plan', '--approve'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--source-revision', '--set', '--transaction'] },
+          { operation: 'rollback', required: ['--transaction'], rejected: ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--source-revision', '--set', '--plan', '--approve'] },
+        ];
         const beforeRejection = snapshotTree(projectRoot);
-        for (const target of commands.flatMap((command) => command.usage_targets)) {
-          const allowed = new Set(target.option_bindings.map((binding) => binding.option_id));
-          const required = target.option_bindings
-            .filter((binding) => binding.presence === 'required')
-            .flatMap((binding) => [flags.get(binding.option_id), 'unused']);
-          for (const option of publicOptions.filter((id) => !allowed.has(id))) {
-            const flag = flags.get(option);
+        for (const { operation, required, rejected: rejectedFlags } of unboundOptions) {
+          for (const flag of rejectedFlags) {
             const rejected = spawnSync(process.execPath, [
-              cli, target.id, '--repo-root', projectRoot, ...required, flag, 'unused',
+              cli, operation, '--repo-root', projectRoot, ...required.flatMap((option) => [option, 'unused']), flag, 'unused',
             ], { encoding: 'utf8' });
-            expect(rejected.status, `${target.id} ${flag}: ${rejected.stderr}`).toBe(2);
+            expect(rejected.status, `${operation} ${flag}: ${rejected.stderr}`).toBe(2);
             expect(rejected.stdout).toBe('');
             expect(JSON.parse(rejected.stderr).diagnostic).toBe(`distribution-cli-argument-invalid:${flag}`);
-            expect(snapshotTree(projectRoot)).toStrictEqual(beforeRejection);
+            expect(JSON.parse(rejected.stderr).failureEvidence.classification.stage, `${operation} ${flag}`).toEqual(expect.any(String));
+            // The tree preservation of a rejected rollback has no guarantee; the supplemental test below observes it.
+            if (operation !== 'rollback') expect(snapshotTree(projectRoot)).toStrictEqual(beforeRejection);
           }
         }
         const rollbackResult = spawnSync(process.execPath, [
@@ -464,6 +632,27 @@ describe("contract.ci-selective-distribution.application", () => {
         ], { encoding: 'utf8' });
         expect(rollbackResult.status, rollbackResult.stderr).toBe(0);
         expect(JSON.parse(rollbackResult.stdout).status).toBe('rolled-back');
+      });
+    });
+
+    // evidence_role: supplemental
+    // The consumer tree that a rejected rollback keeps is not an observation of a rollback guarantee.
+    // contract_id: contract.ci-selective-distribution.application
+    test('standalone public CLI keeps the consumer tree when rollback rejects an unbound option', async () => {
+      await withFixture('a3-ci-github-distribution-cli-rollback-option-', (root) => {
+        // Arrange
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        fs.writeFileSync(path.join(projectRoot, 'owned.txt'), 'consumer file\n');
+        const cli = path.join(repositoryRoot, 'runtime/distribution/fetch-a3-ci-github.mjs');
+        const before = snapshotTree(projectRoot);
+        for (const flag of ['--manifest', '--manifest-url', '--preset', '--asset', '--source-root', '--source-revision', '--set', '--plan', '--approve']) {
+          // Act
+          const rejected = spawnSync(process.execPath, [cli, 'rollback', '--repo-root', projectRoot, '--transaction', 'unused', flag, 'unused'], { encoding: 'utf8' });
+          // Assert
+          expect(rejected.status, `${flag}: ${rejected.stderr}`).toBe(2);
+          expect(snapshotTree(projectRoot), flag).toStrictEqual(before);
+        }
       });
     });
   });
@@ -490,6 +679,56 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
+    // contract_id: contract.ci-selective-distribution.delivery
+    test('fetched selections deliver only the files of their closures', async () => {
+      await withFixture('a3-ci-github-distribution-closure-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = path.join(root, 'consumer');
+        fs.mkdirSync(projectRoot);
+        const fetch = (requestedPresets, requestedAssets = []) => cliFetch({ projectRoot, manifestPath: release.manifestPath,
+          requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
+        const closure = (presets, assets = []) => resolveDistributionSelection(release.manifest, presets, assets);
+        const deliveredPaths = (distributionRoot) => {
+          return fs.readdirSync(distributionRoot, { recursive: true, withFileTypes: true })
+            .filter((entry) => !entry.isDirectory())
+            .map((entry) => path.relative(distributionRoot, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'))
+            .filter((relative) => !['manifest.json', 'receipt.json'].includes(relative));
+        };
+        const expectClosure = (result, presets, assets) => {
+          const selected = closure(presets, assets);
+          const expectedPaths = new Set(selected.flatMap((asset) => asset.files.map((file) => file.sourcePath)));
+          const manifestBytes = fs.readFileSync(path.join(result.distributionRoot, 'manifest.json'));
+          const receipt = JSON.parse(fs.readFileSync(path.join(result.distributionRoot, 'receipt.json'), 'utf8'));
+          expect(manifestBytes).toStrictEqual(fs.readFileSync(release.manifestPath));
+          expect(result.sourceRevision).toBe(release.manifest.sourceRevision);
+          expect(result.selectedAssets).toStrictEqual(selected.map((asset) => asset.id).sort());
+          expect(receipt).toMatchObject({
+            sourceRevision: result.sourceRevision,
+            manifestSha256: sha256(manifestBytes),
+            selectedPresets: [...presets].sort(),
+            selectedAssets: result.selectedAssets,
+            files: result.files,
+          });
+          expect([...receipt.files].sort()).toStrictEqual([...expectedPaths].sort());
+          expect(deliveredPaths(result.distributionRoot).sort()).toStrictEqual([...expectedPaths].sort());
+          for (const relative of expectedPaths) {
+            const filename = path.join(result.distributionRoot, relative);
+            expect(fs.lstatSync(filename).isFile(), relative).toBe(true);
+            expect(sha256(fs.readFileSync(filename)), relative).toBe(release.manifest.files[relative].sha256);
+          }
+        };
+        const first = fetch(['release-request']);
+        expectClosure(first, ['release-request']);
+        const quality = fetch(['quality-gate']);
+        expectClosure(quality, ['release-request', 'quality-gate']);
+        const merged = fetch(['quality-gate'], ['runtime.adapter-materializer']);
+        expect(merged.action).toBe('merged');
+        expectClosure(merged, ['release-request', 'quality-gate'], ['runtime.adapter-materializer']);
+      });
+    });
+
+    // evidence_role: supplemental
+    // The asset lock, the preflight and the adapter materializer consume the delivered files; they are not observations of a delivery or verification guarantee.
     // contract_id: contract.ci-selective-distribution.delivery
     test('selected distribution runs preflight and lock without materializer and supports its later acquisition', async () => {
       await withFixture('a3-ci-github-distribution-runtime-', async (root) => {

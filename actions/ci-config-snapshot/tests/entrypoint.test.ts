@@ -11,11 +11,11 @@ import { actionEntrypointArguments } from '../../../tests/support/action-entrypo
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const root = path.resolve(__dirname, '..');
-const runBundled = (snapshotPath: string, outputPath: string, sources: unknown, commandOutputPath = outputPath) => {
+const runBundled = (snapshotPath: string, outputPath: string, sources: unknown, commandOutputPath = outputPath, sourceJson = JSON.stringify(sources)) => {
   fs.writeFileSync(outputPath, '', 'utf8');
   fs.writeFileSync(commandOutputPath, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: commandOutputPath } as Record<string, string>;
-  env['INPUT_SOURCES-JSON'] = JSON.stringify(sources);
+  env['INPUT_SOURCES-JSON'] = sourceJson;
   env['INPUT_SNAPSHOT-PATH'] = snapshotPath;
   env['INPUT_OUTPUT-PATH'] = outputPath;
   return { output: commandOutputPath, result: spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' }) };
@@ -43,6 +43,36 @@ test('entrypoint writes snapshot and outputs', () => {
   expect(outputs.match(/^config_snapshot_path=(.*)$/m)?.[1]).toBe(snapshot);
   expect(outputs.match(/^config_snapshot_digest=(.*)$/m)?.[1]).toBe(digest);
   fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+// contract_id: contract.ci-config-snapshot.outputs
+test('entrypoint rejects an invalid source configuration', (t) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
+  t.onTestFinished(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const { result } = runBundled(path.join(tempRoot, 'snapshot.json'), path.join(tempRoot, 'outputs'), null);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"snapshot-resolution"/m);
+});
+
+// contract_id: contract.ci-config-snapshot.outputs
+test('entrypoint rejects missing and malformed source JSON', (t) => {
+  for (const sourceJson of ['', '{']) {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
+    t.onTestFinished(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+    const output = path.join(tempRoot, 'outputs');
+    const { result } = runBundled(path.join(tempRoot, 'snapshot.json'), output, null, output, sourceJson);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"input-validation"/m);
+  }
+});
+
+// contract_id: contract.ci-config-snapshot.outputs
+test('entrypoint diagnoses failure to write the snapshot', (t) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-config-snapshot-'));
+  t.onTestFinished(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
+  const { result } = runBundled(tempRoot, path.join(tempRoot, 'outputs'), { runtime: { MODE: 'dry-run' } });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"snapshot-write"/m);
 });
 
 // contract_id: contract.ci-config-snapshot.outputs
@@ -86,7 +116,8 @@ test('entrypoint rejects snapshot and output collisions', () => {
   // Act
   const run = runBundled(snapshot, snapshot, { preset: { MODE: 'release' } });
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status).toBe(1);
+  expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"input-validation"/m);
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status<</);
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
@@ -100,7 +131,8 @@ test('entrypoint rejects a snapshot colliding with GITHUB_OUTPUT', () => {
   // Act
   const run = runBundled(snapshot, explicitOutput, { preset: { MODE: 'release' } }, snapshot);
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status).toBe(1);
+  expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"input-validation"/m);
   const outputs = fs.readFileSync(run.output, 'utf8');
   expect(outputs.match(/^status<<([^\n]+)\n([^\n]+)\n\1$/m)?.[2]).toBe('failed');
   expect(outputs).not.toMatch(/^(snapshot-path|digest)<<|^config_snapshot_(path|digest)=/m);

@@ -5,7 +5,7 @@ subject:
   summary: Write an immutable annotated-tag release request handoff.
 contracts:
   - id: contract.ci-release-request-handoff.outputs
-    summary: Valid request inputs produce a request handoff and digest path.
+    summary: Release tag, triggering ref and output directory inputs to the release request handoff Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -23,46 +23,27 @@ contracts:
         meaning: "Received by the contract target: workflow run ID of the request."
       - name: request-actor
         meaning: "Received by the contract target: actor of the request."
-      - name: tag
-        meaning: "Received by the contract target: release tag name."
-      - name: ref
-        meaning: "Received by the contract target: tag ref passed to the Action."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: request-path
-            meaning: Path to the immutable release request JSON.
-          - selector: request-digest
-            meaning: Path to the request digest file.
-          - selector: outcome
-            meaning: Failure outcome of the rejected release request handoff step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-request-handoff-valid
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: Required inputs are absent or invalid, the request cannot be written to its destination, or writing an Action output fails.
+      - id: runtime-context.release-request-handoff-valid
+        summary: The invocation meets the shared runtime context `runtime-context.release-request-handoff-valid` and can write all Action outputs.
     guarantees:
       - id: request-handoff-output-produced
         applies_to:
           - runtime-context.release-request-handoff-valid
-        claim:
-          field: request-path
-          present: true
+        boundary: boundary.action-output
+        statement: "`request-path` identifies the written request, which records the triggering tag and ref, the supplied source and tag object SHAs, and the requesting run and actor. The request delegates version resolution to the Release authority. `request-digest` identifies the digest file whose recorded SHA-256 equals the digest of the request bytes."
       - id: request-handoff-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected release request handoff step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-release-request-handoff

@@ -1,0 +1,16 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-quality-gate-trust-boundary-safe
+summary: 信頼できない pull request の変更が、信頼できる実行の権限・資産・cache に影響しない
+quality_attribute: security
+stimulus: fork を含む pull request の提出者が、品質ゲートを実行させる変更を提出する
+environment: 信頼できる実行が参照する資産と cache を、default branch が保持している GitHub Actions 環境
+response: 信頼できない変更が、信頼できる実行の権限、検証に使う資産、cache のいずれにも影響しない状態で品質ゲートを実行する
+response_measure:
+  - 信頼できない変更によって、品質ゲートの実行に与えられる権限が増えない
+  - 信頼できない変更によって、信頼できる実行が検証に使う資産が書き換えられない
+  - 信頼できない実行が、信頼できる実行の cache を書き換えられず、信頼できる実行がその影響を受けない
+related_requirements:
+  - ci-common-processing-action-reuse
+related_contracts:
+  - contract.ci-quality-workflow.execution

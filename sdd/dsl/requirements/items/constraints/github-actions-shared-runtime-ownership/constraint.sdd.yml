@@ -1,0 +1,12 @@
+version: 1
+name: constraint
+constraint_id: github-actions-shared-runtime-ownership
+summary: provider から独立して実行できる定型処理の実装と検証を共有 runtime が所有する
+scope:
+  namespace: skills
+  key: github-actions
+rule: provider から独立して実行できる定型処理の実装と検証は設計で指定された共有 runtime 境界が所有し、Composite Action は処理本体を複製しない。
+rationale: 複数の呼出元で同じ処理を再利用し、実装と検証の正本を一つに保つため
+violation_impact: 呼出元ごとの処理が異なる結果や診断を返し、片方の修正が他方に反映されない
+related_requirements:
+  - github-actions-action-contract-and-distribution

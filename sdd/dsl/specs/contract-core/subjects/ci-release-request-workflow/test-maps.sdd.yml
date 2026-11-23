@@ -2,30 +2,27 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-request-workflow.handoff
-    case_id: ci-release-request-workflow-success
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-request-workflow-contract > release request workflow binds annotated tags without release publication permission
+        partition: ci-release-request-workflow-canonical-source-available
         guarantees:
           - ci-release-request-workflow-success-observed
           - request-no-publication-permission
           - request-tag-before-handoff
-  - contract_id: contract.ci-release-request-workflow.handoff
-    case_id: ci-release-request-workflow-failure
-    tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > release-request-workflow-contract > release request workflow reports handoff failure in its summary
+        partition: ci-release-request-workflow-canonical-source-available
         guarantees:
           - ci-release-request-workflow-failure-observed
           - request-failure-summary-always
-  - contract_id: contract.ci-release-request-workflow.handoff
-    case_id: detailed-failure-handoff
-    tests:
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job failure result
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-handoff
       - path: tests/workflow-failure-diagnostics.test.mjs
         symbol: workflow failure diagnostics > workflows/release/release-request-tag.yml summary preserves the current job cancelled result
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-handoff

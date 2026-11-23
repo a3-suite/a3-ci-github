@@ -237,23 +237,23 @@ export const prepareDistributionRelease = (options: {
     workflowReferences,
     reusableWorkflows,
   };
-  fs.mkdirSync(outputDirectory, { recursive: false });
   const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
-  fs.writeFileSync(path.join(outputDirectory, MANIFEST_NAME), manifestBytes, { flag: 'wx' });
   const fetchBytes = sourceBytes(
     repositoryRoot,
     options.sourceRevision,
     'runtime/distribution/fetch-a3-ci-github.mjs',
   );
-  fs.writeFileSync(path.join(outputDirectory, FETCH_CLI_NAME), fetchBytes, { flag: 'wx', mode: 0o755 });
   const checksums = [
     `${sha256(manifestBytes)}  ${MANIFEST_NAME}`,
     `${sha256(fetchBytes)}  ${FETCH_CLI_NAME}`,
   ].join('\n') + '\n';
-  fs.writeFileSync(path.join(outputDirectory, CHECKSUM_NAME), checksums, { flag: 'wx' });
   // The skills ZIP carries its own checksum asset, as the release-skills contract defines for every product Release.
   // Its owner evidence stays in the handoff beside the assets and is never published.
   const skills = buildReleaseSkills(repositoryRoot, SKILLS_DECLARATION, options.sourceRevision, version, manifest.repository);
+  fs.mkdirSync(outputDirectory, { recursive: false });
+  fs.writeFileSync(path.join(outputDirectory, MANIFEST_NAME), manifestBytes, { flag: 'wx' });
+  fs.writeFileSync(path.join(outputDirectory, FETCH_CLI_NAME), fetchBytes, { flag: 'wx', mode: 0o755 });
+  fs.writeFileSync(path.join(outputDirectory, CHECKSUM_NAME), checksums, { flag: 'wx' });
   for (const file of skills.assets) fs.writeFileSync(path.join(outputDirectory, file.name), file.bytes, { flag: 'wx' });
   fs.mkdirSync(path.join(outputDirectory, SKILLS_EVIDENCE_DIRECTORY));
   for (const file of skills.evidence) {
@@ -269,10 +269,12 @@ export const prepareDistributionRelease = (options: {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const diagnostic = new FailureContext('ci-selective-distribution', 'generate');
-  diagnostic.at('distribution-generation', { input: 'source-revision-and-registry', output: 'distribution-release-assets' });
-  diagnostic.writeState = 'output-may-be-partial';
+  diagnostic.at('input-validation', { input: 'command-arguments' });
   try {
-    const result = prepareDistributionRelease(parseArgs(process.argv.slice(2)));
+    const options = parseArgs(process.argv.slice(2));
+    diagnostic.at('distribution-generation', { input: 'source-revision-and-registry', output: 'distribution-release-assets' });
+    diagnostic.writeState = 'output-may-be-partial';
+    const result = prepareDistributionRelease(options);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
     diagnostic.report(error);

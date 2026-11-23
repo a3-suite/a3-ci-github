@@ -5,7 +5,7 @@ subject:
   summary: Materializing an owner-approved version plan into a publish version.
 contracts:
   - id: contract.ci-publish-version.outputs
-    summary: An owner-approved version plan produces a publish-version output.
+    summary: Owner-approved version plan inputs to the publish version Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -17,42 +17,29 @@ contracts:
         meaning: "Received by the contract target: version template in the plan."
       - name: components
         meaning: "Received by the contract target: version components in the plan."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether the version plan was materialized successfully.
-          - selector: publish-version
-            meaning: The materialized publish version.
-          - selector: outcome
-            meaning: Failure outcome of the rejected publish version step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+      - name: publish-version
+        meaning: "Received by the contract target: exact publish version in the plan."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.publish-version-plan-valid
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: The required plan input is unavailable or invalid, the version cannot be materialized, or writing an Action output fails.
+      - id: runtime-context.publish-version-plan-valid
+        summary: The invocation meets the shared runtime context `runtime-context.publish-version-plan-valid` and can write all Action outputs.
     guarantees:
       - id: publish-version-output-produced
         applies_to:
           - runtime-context.publish-version-plan-valid
-        claim:
-          field: publish-version
-          present: true
+        boundary: boundary.action-output
+        statement: "`publish-version` equals the plan's explicit version for the exact strategy, or the plan's template with its declared components substituted for the generated strategy. `status` is `success`."
       - id: publish-version-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected publish version step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-publish-version

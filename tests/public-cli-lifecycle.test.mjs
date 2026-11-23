@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -15,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   loadReleaseRequestFixtureModel,
+  prepareBootstrapRuntime,
   snapshotTree,
   writeReleaseRequestFixture,
 } from '../runtime/preset/tests/support/release-request-fixture.mjs';
@@ -41,28 +41,6 @@ const withFixture = (prefix, callback) => {
     rmSync(root, { recursive: true, force: true });
     expect(existsSync(root)).toBe(false);
   }
-};
-
-const prepareBootstrapRuntime = (consumerRoot) => {
-  const target = path.join(consumerRoot, '.a3-skills/ci-github/runtime');
-  mkdirSync(target, { recursive: true });
-  for (const filename of ['package.json', 'package-lock.json']) {
-    cpSync(path.join(repositoryRoot, 'runtime/preset', filename), path.join(target, filename));
-  }
-  const lock = JSON.parse(readFileSync(path.join(target, 'package-lock.json'), 'utf8'));
-  for (const relative of Object.keys(lock.packages).filter((entry) => entry.startsWith('node_modules/'))) {
-    const source = path.join(runtimeRoot, relative);
-    if (!existsSync(source)) continue;
-    const destination = path.join(target, relative);
-    mkdirSync(path.dirname(destination), { recursive: true });
-    cpSync(source, destination, { recursive: true });
-  }
-  mkdirSync(path.join(target, 'node_modules/.bin'), { recursive: true });
-  cpSync(
-    path.join(runtimeRoot, 'node_modules/.bin/tsx'),
-    path.join(target, 'node_modules/.bin/tsx'),
-    { verbatimSymlinks: true },
-  );
 };
 
 const preparePresetFixture = (consumerRoot, includeExternalRoot) => {
@@ -189,10 +167,10 @@ describe('contract.repository-action-distribution.integrity', () => {
 
 describe('contract.ci-selective-distribution.delivery', () => {
   describe('distribution-bootstrap-cli', () => {
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // Runs an unknown distribution command; it gives no fetch input.
     // test_level: e2e
     // flow_id: distribution-bootstrap-cli
-    // contract_id: contract.ci-selective-distribution.delivery
     test('distribution CLI retains exit 2 when its diagnostic sink fails', () => {
       withFixture('distribution-diagnostic-sink-', (consumerRoot) => {
         writeFileSync(path.join(consumerRoot, 'existing-state'), 'preserved\n');
@@ -251,7 +229,7 @@ describe("contract.ci-preset-assurance.verification", () => {
           const skillArguments = preparePresetFixture(consumerRoot, includeExternalRoot);
           const lockResult = generateAssetLock(consumerRoot, skillArguments);
           expect(lockResult.status, lockResult.stderr).toBe(0);
-          prepareBootstrapRuntime(consumerRoot);
+          prepareBootstrapRuntime({ repositoryRoot, runtimeRoot, consumerRoot });
           const before = snapshotTree(consumerRoot);
           // Act
           const validationResult = execute(process.execPath, [
@@ -283,7 +261,7 @@ describe("contract.ci-preset-assurance.verification", () => {
         const skillArguments = preparePresetFixture(consumerRoot, false);
         const lockResult = generateAssetLock(consumerRoot, skillArguments);
         expect(lockResult.status, lockResult.stderr).toBe(0);
-        prepareBootstrapRuntime(consumerRoot);
+        prepareBootstrapRuntime({ repositoryRoot, runtimeRoot, consumerRoot });
         const workflow = path.join(consumerRoot, '.github/workflows/release-request-tag.yml');
         writeFileSync(workflow, `${readFileSync(workflow, 'utf8')}# drift\n`);
         // Act
@@ -328,7 +306,6 @@ describe("contract.ci-preset-assurance.verification", () => {
           comparison: { field: 'preset-status', expected: 'success', observed: 'failed' },
         });
         expect([...evidence.comparison.missingSettings, ...evidence.comparison.mismatches].some((entry) => String(entry).includes('release-request-tag.yml'))).toBe(true);
-        expect(existsSync(path.join(consumerRoot, '.ci/ci-assets.lock.json'))).toBe(false);
 
         // Act
         const invalidRevision = execute(tsxPath, [
@@ -344,6 +321,22 @@ describe("contract.ci-preset-assurance.verification", () => {
           comparison: { field: 'source-revision', expected: 'full-commit-sha', observed: 'invalid-format' },
         });
         expect(invalidLine).not.toContain('secret-revision');
+      });
+    });
+
+    // evidence_role: supplemental
+    // Writing no lock is a side effect of the rejected generation, not an observation of its failure diagnostic.
+    test('public asset lock CLI writes no lock when the preset findings fail', () => {
+      withFixture('a3-ci-github-lock-drift-', (consumerRoot) => {
+        // Arrange
+        const skillArguments = preparePresetFixture(consumerRoot, false);
+        const workflow = path.join(consumerRoot, '.github/workflows/release-request-tag.yml');
+        writeFileSync(workflow, readFileSync(workflow, 'utf8').replace(/^on:/m, 'on-changed:'));
+        // Act
+        const lockResult = generateAssetLock(consumerRoot, skillArguments);
+        // Assert
+        expect(lockResult.status, lockResult.stderr).toBe(2);
+        expect(existsSync(path.join(consumerRoot, '.ci/ci-assets.lock.json'))).toBe(false);
       });
     });
 
@@ -365,7 +358,7 @@ describe("contract.ci-preset-assurance.verification", () => {
           '--release-tag', 'v0.9.0',
         ], { env: { ...process.env, CI_GITHUB_PREFLIGHT_RUNTIME_ROOT: runtimeRoot } });
         expect(lockResult.status, lockResult.stderr).toBe(0);
-        prepareBootstrapRuntime(consumerRoot);
+        prepareBootstrapRuntime({ repositoryRoot, runtimeRoot, consumerRoot });
 
         const preload = path.join(consumerRoot, 'fail-cleanup.mjs');
         const cleanupTargetRecord = path.join(consumerRoot, 'cleanup-target');

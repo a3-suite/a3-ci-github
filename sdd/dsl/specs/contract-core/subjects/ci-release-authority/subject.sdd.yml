@@ -23,92 +23,55 @@ contracts:
         meaning: "Received by the contract target: content of the platform manifest file."
       - name: release-implementation
         meaning: "Received by the contract target: release implementation recorded in the snapshot."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: authority-path
-            meaning: Path to the generated authority handoff.
-          - selector: source_sha
-            meaning: Verified annotated tag commit SHA.
-          - selector: version
-            meaning: Explicit owner version bound to the publication request.
-          - selector: target_identity
-            meaning: Explicit opaque owner publication target.
-          - selector: approval-id
-            meaning: Verified notes approval ID.
-          - selector: body-sha256
-            meaning: Digest of separately approved Release notes body.
-          - selector: outcome
-            meaning: Authority validation step outcome.
-          - selector: successful-output-state
-            meaning: Occurrence state of successful outputs.
-          - selector: platform-manifest-source-text-comparison
-            meaning: Comparison of authority platform_manifest_sha256 with SHA-256 of strictly decoded UTF-8 platform manifest text after CRLF-to-LF replacement only; BOM, bare CR, whitespace and terminal newline bytes remain significant.
-          - selector: authority-platform-binding-state
-            meaning: Occurrence state (present or absent) of language profile, toolchain and platform manifest bindings in the authority handoff.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Provider requests issued during one authority invocation.
-        boundary: boundary.release-provider-requests
-        fields:
-          - selector: non-get-request-state
-            meaning: Occurrence state (present or absent) of provider requests using a method other than GET during one invocation.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-authority-valid
-      - environment: runtime-context.release-authority-asset-only-valid
-      - environment: runtime-context.release-authority-invalid
+      - id: runtime-context.release-authority-valid
+        summary: The verified release inputs select a platform-bound implementation with a matching manifest, and authority and Action outputs can be written.
+      - id: runtime-context.release-authority-asset-only-valid
+        summary: The verified release inputs select the asset-only implementation, and authority and Action outputs can be written.
+      - id: runtime-context.release-authority-invalid
+        summary: Inputs or provider responses cannot establish an approved authority, or the authority handoff cannot be written. No Action output write has started.
+      - id: release-authority-output-write-denied
+        summary: The authority handoff has been written but writing the Action outputs fails.
     guarantees:
       - id: authority-file
         applies_to:
           - runtime-context.release-authority-valid
           - runtime-context.release-authority-asset-only-valid
-        claim:
-          field: authority-path
-          present: true
+        boundary: boundary.action-output
+        statement: "`authority-path` names the generated authority file. `source_sha` equals the verified annotated tag commit. `version` and `target_identity` equal the approved publication request fields. `approval-id` and `body-sha256` equal the verified notes approval ID and digest."
       - id: rejected
         applies_to:
           - runtime-context.release-authority-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - release-authority-output-write-denied
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Authority validation step outcome.'
       - id: no-success-outputs
         applies_to:
           - runtime-context.release-authority-invalid
-        claim:
-          field: successful-output-state
-          in:
-            - absent
+        boundary: boundary.action-output
+        statement: '`successful-output-state` is one of `"absent"`. Occurrence state of successful outputs.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.release-authority-invalid
+          - release-authority-output-write-denied
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: platform-source-text-digest
         applies_to:
           - runtime-context.release-authority-valid
-        claim:
-          field: platform-manifest-source-text-comparison
-          in:
-            - equal
+        boundary: boundary.workspace-files
+        statement: '`platform-manifest-source-text-comparison` is one of `"equal"`. Comparison of platform_manifest_sha256 with the SHA-256 of the manifest text, treating CRLF, LF and mixed line endings as the same; equal or different.'
       - id: authority-get-only-requests
         applies_to:
           - runtime-context.release-authority-valid
           - runtime-context.release-authority-asset-only-valid
-        claim:
-          field: non-get-request-state
-          in:
-            - absent
-      - id: authority-asset-only-no-platform-binding
+        boundary: boundary.release-provider-requests
+        statement: '`non-get-request-state` is one of `"absent"`. Occurrence state (present or absent) of provider requests using a method other than GET during one invocation.'
+      - id: authority-asset-only-no-platform-manifest
         applies_to:
           - runtime-context.release-authority-asset-only-valid
-        claim:
-          field: authority-platform-binding-state
-          in:
-            - absent
+        boundary: boundary.workspace-files
+        statement: '`authority-platform-manifest-binding-state` is one of `"absent"`. Occurrence state (present or absent) of a non-null platform_manifest or platform_manifest_sha256 value in the authority handoff.'
+    input_kind:
+      kind: operation
+      name: ci-release-authority

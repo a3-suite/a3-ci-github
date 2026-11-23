@@ -20,11 +20,17 @@ main_success_scenario:
 success_outcomes:
   - 要求、契約、管理資産、配布物および検証結果を同じ変更集合から追跡できる
   - skill、workflow、Action、runtime、lint rule、SDDのownerが一意に保たれる
+  - 管理対象の振る舞いを、対象コンポーネントの本番実装を変更せずに独立して検証できる
 failure_outcomes:
   - owner不明、契約不一致、配布物差分、検証失敗またはauthority違反があれば公開可能状態にしない
   - コピー元と移行先で同じ契約を独立更新しない
 related_requirements:
   - github-ci-source-consolidation
+  - managed-component-testability
 related_contracts:
   - contract.repository-managed-source-integrity.integrity
+  - contract.repository-managed-source-integrity.execution-mapping
   - contract.repository-action-distribution.integrity
+  - contract.repository-action-distribution.catalog
+  - contract.repository-action-distribution.source-verification
+  - contract.repository-action-distribution.release-version

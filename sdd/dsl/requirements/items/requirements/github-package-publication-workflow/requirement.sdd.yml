@@ -14,7 +14,8 @@ requirements:
     fit_criteria:
       - package preparationは固定sourceとversionからpackageと検証可能なhandoffを生成する
       - publication requestは公開対象のsource、version、target identity、language profile、toolchainおよびrequest provenanceをimmutableに固定する
-      - default branch上のcallerがrequestとworkflow identityを検証し、その固定入力からpreparation workflowを呼び出す
-      - credentialを使用するpublish処理は検証済みhandoffだけを入力とし、buildやversion決定をやり直さない
+      - default branchのcallerから渡されたrequestとworkflow identityを確認できる場合だけ、そのrequestに固定された入力からpackageが準備される
+      - 公開されたpackageの内容と版は、公開前に検証したhandoffの内容と版に一致する
+      - credentialが使われる公開段階で、packageの再buildや版の再決定は発生しない
       - 公開後はregistryからversionとpackage identityをreadbackし、不一致または状態不明を成功扱いしない
       - request、preparation、identity、handoff、publishまたはreadbackの失敗時は未検証の後続処理を停止する

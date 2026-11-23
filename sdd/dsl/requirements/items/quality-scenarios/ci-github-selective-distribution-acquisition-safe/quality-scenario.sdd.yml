@@ -10,8 +10,11 @@ response_measure:
   - manifestとfileのsource revision、path、sizeまたはSHA-256が一致しない場合は取得を成功扱いにしない
   - 通信が応答しない場合も無期限に待たず失敗として識別でき、検証済みlocal distributionは同一manifest digestの場合だけ再利用される
   - asset単体選択の不足依存、preset閉包の欠落、外部owner identity不足を成功扱いにしない
+  - 取得はproject-localのdistributionだけを書き、project rootの外のfileを変更しない
+  - 同じdistributionへ並行するfetchやlockの後始末の失敗を取得成功として扱わず、consumerの状態を変えない
 related_requirements:
   - ci-github-selective-distribution
 related_contracts:
   - contract.ci-selective-distribution.selection
   - contract.ci-selective-distribution.delivery
+  - contract.ci-selective-distribution.verification

@@ -192,6 +192,31 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
   }
 });
 
+const addedFiles = (before, after) => Object.keys(after)
+  .filter((entry) => !entry.endsWith(path.sep) && !Object.hasOwn(before, entry))
+  .map((entry) => entry.split(path.sep).join('/'));
+
+const failLaterCopy = (fixture) => {
+  writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
+  writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
+  const firstDestination = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
+  const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
+  const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
+  writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+  const before = snapshotTree(fixture.targetRoot);
+  const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
+  const copyFile = fs.copyFileSync;
+  const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
+  const copy = vi.spyOn(fs, 'copyFileSync').mockImplementation((source, destination, ...options) => {
+    if (destination === failedDestination) throw injected;
+    return copyFile(source, destination, ...options);
+  });
+  let failure;
+  try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
+  finally { copy.mockRestore(); }
+  return { failure, injected, firstDestination, failedDestination, before, diagnostic };
+};
+
 describe("contract.ci-preset-materialization.application", () => {
   describe("adapter-materialization-rejection", () => {
     // evidence_role: contract
@@ -204,11 +229,14 @@ describe("contract.ci-preset-materialization.application", () => {
       writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
       const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
       writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+      writeFileSync(path.join(fixture.targetRoot, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: {} }));
+      const before = snapshotTree(fixture.targetRoot);
       const sources = ['runtime/adapter/cli-runtime.ts', 'rust/assets/test-bundle.json'];
       const destinations = ['.ci/runtime/helper.ts', '.ci/adapters/test-bundle.json'];
 
       // Act
       const copied = materializeAdapterBundle(fixture.options);
+      const afterCopy = snapshotTree(fixture.targetRoot);
       const reused = materializeAdapterBundle(fixture.options);
 
       // Assert
@@ -218,7 +246,9 @@ describe("contract.ci-preset-materialization.application", () => {
       expect(reused.files).toStrictEqual(sources.map((source, index) => ({ source, destination: destinations[index], action: 'reused' })));
       expect(readFileSync(path.join(fixture.targetRoot, destinations[0]))).toStrictEqual(readFileSync(path.join(repository, sources[0])));
       expect(readFileSync(path.join(fixture.targetRoot, destinations[1]))).toStrictEqual(readFileSync(fixture.descriptorPath));
-      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+      expect(afterCopy).toMatchObject(before);
+      expect(addedFiles(before, afterCopy).sort()).toStrictEqual([...destinations].sort());
+      expect(snapshotTree(fixture.targetRoot)).toStrictEqual(afterCopy);
     }));
 
     // evidence_role: contract
@@ -226,34 +256,20 @@ describe("contract.ci-preset-materialization.application", () => {
     // integration_id: adapter-materialization-rejection
     // contract_id: contract.ci-preset-materialization.application
     test('materializer retains completed copies and reports the changed range after a later copy fails', () => withCustomBundle((fixture) => {
-      // Arrange
-      writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
-      writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
-      const firstDestination = path.join(fixture.targetRoot, '.ci/runtime/helper.ts');
-      const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
-      const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
-      writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
-      const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
-      const copyFile = fs.copyFileSync;
-      const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
-      const copy = vi.spyOn(fs, 'copyFileSync').mockImplementation((source, destination, ...options) => {
-        if (destination === failedDestination) throw injected;
-        return copyFile(source, destination, ...options);
-      });
-      let failure;
-
       // Act
-      try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
-      finally { copy.mockRestore(); }
+      const { failure, injected, firstDestination, failedDestination, before, diagnostic } = failLaterCopy(fixture);
 
       // Assert
       expect(failure).toBe(injected);
       expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
       expect(existsSync(failedDestination)).toBe(false);
-      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+      const after = snapshotTree(fixture.targetRoot);
+      expect(after).toMatchObject(before);
+      const written = addedFiles(before, after);
+      expect(written).toStrictEqual(['.ci/runtime/helper.ts']);
       expect(diagnostic.evidence(failure)).toMatchObject({
         classification: { stage: 'copy' },
-        context: { inputs: { written: ['.ci/runtime/helper.ts'], current: '.ci/adapters/test-bundle.json' } },
+        context: { inputs: { written, current: '.ci/adapters/test-bundle.json' } },
       });
     }));
 
@@ -263,6 +279,7 @@ describe("contract.ci-preset-materialization.application", () => {
     // contract_id: contract.ci-preset-materialization.application
     test('materializer rejects invalid custom bundle inputs before copying consumer assets', () => withCustomBundle((fixture) => {
       // Arrange
+      writeFileSync(path.join(fixture.targetRoot, 'package.json'), JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } }));
       const cases = [
         [(value) => { value.schemaVersion = '2'; }, /descriptor-invalid/],
         [(value) => { value.executionBoundary = 'write'; }, /descriptor-contract-invalid/],

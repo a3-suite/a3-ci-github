@@ -67,10 +67,7 @@ describe('standard installer', () => {
       }
     });
 
-    // contract_id: contract.ci-failure-diagnostics.actionable
-    // flow_id: installer-transfer-diagnostics
-    // test_level: e2e
-    test('distributed Action diagnoses transferred installer evidence missing or changed', (t) => {
+    const rejectTransferredEvidence = (t: TestContext, assertRejected: (mode: string, run: ReturnType<typeof runDistributedAction>, root: string) => void) => {
       // Arrange
       const f = fixture(t);
       const build = runDistributedAction(f);
@@ -83,25 +80,44 @@ describe('standard installer', () => {
           if (mode === 'missing') fs.unlinkSync(archive);
           else fs.writeFileSync(archive, 'modified-evidence');
           // Act
-          const { result, output } = runDistributedAction(f, { ...options, outputDirectory: `handoff-${mode}` });
-          // Assert
-          expect(result.status).toBe(1);
-          const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
-          const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
-          expect(evidence.classification.stage).toBe('standard-installer-execution');
-          expect(evidence.comparison.comparison.field).toBe('installer-candidate-files');
-          expect(evidence.comparison.comparison[mode]).toEqual(['.installer-source.zip']);
-          expect(evidence.comparison['exit-status']).toBe(1);
-          expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
-          expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
-          expect(evidence['next-check'].stage).toBe('standard-installer-execution');
-          expect(fs.readFileSync(output, 'utf8')).toBe('');
-          expect(fs.existsSync(path.join(f.root, `handoff-${mode}/supplemental-manifest.json`))).toBe(false);
+          assertRejected(mode, runDistributedAction(f, { ...options, outputDirectory: `handoff-${mode}` }), f.root);
         } finally { fs.writeFileSync(archive, bytes); }
       }
+    };
+
+    // contract_id: contract.ci-failure-diagnostics.actionable
+    // flow_id: installer-transfer-diagnostics
+    // test_level: e2e
+    test('distributed Action diagnoses transferred installer evidence missing or changed', (t) => {
+      rejectTransferredEvidence(t, (mode, { result, output }) => {
+        // Assert
+        expect(result.status).toBe(1);
+        const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'))!;
+        const evidence = JSON.parse(line.slice('ci-failure-diagnostic:'.length));
+        expect(evidence.classification.stage).toBe('standard-installer-execution');
+        expect(evidence.comparison.comparison.field).toBe('installer-candidate-files');
+        expect(evidence.comparison.comparison[mode]).toEqual(['.installer-source.zip']);
+        expect(evidence.comparison['exit-status']).toBe(1);
+        expect(evidence['execution-state'].write).toBe('supplemental-output-may-be-partial');
+        expect(evidence['evidence-location'].log).toBe('workflow-run-job-step-log');
+        expect(evidence['next-check'].stage).toBe('standard-installer-execution');
+        expect(fs.readFileSync(output, 'utf8')).toBe('');
+      });
     });
 
-    // contract_id: contract.ci-release-supplemental-asset.outputs
+    // evidence_role: supplemental
+    // A rejected transfer may leave partial supplemental output, so the absent manifest is not an observation of the existing-state guarantees.
+    // flow_id: installer-transfer-diagnostics
+    // test_level: e2e
+    test('distributed Action writes no supplemental manifest when transferred installer evidence is missing or changed', (t) => {
+      rejectTransferredEvidence(t, (mode, _run, root) => {
+        // Assert
+        expect(fs.existsSync(path.join(root, `handoff-${mode}/supplemental-manifest.json`))).toBe(false);
+      });
+    });
+
+    // evidence_role: supplemental
+    // The accepted installer reason allowlist and phase match are implementation checks of the diagnostic channel; no contract guarantee covers them.
     // flow_id: standard-installer-diagnostic-rejection
     // test_level: e2e
     test('standard installer rejects malformed or untrusted process diagnostics', (t) => {
@@ -161,8 +177,16 @@ describe('standard installer', () => {
       // Arrange
       const f = fixture(t);
       checkoutLineEndings(f.root, 'crlf');
+      const reportedAction = (fixtureRoot: typeof f, options: SupplementalOptionsType) => {
+        const { result, output } = runDistributedAction(fixtureRoot, options);
+        expect(fs.readFileSync(output, 'utf8').trimEnd().split('\n')).toStrictEqual([
+          'status=success', `output-directory=${options.outputDirectory}`,
+        ]);
+        expect(fs.statSync(path.join(fixtureRoot.root, options.outputDirectory)).isDirectory()).toBe(true);
+        return result;
+      };
       const execute = (options: SupplementalOptionsType): void => {
-        const result = surface === 'Action' ? runDistributedAction(f, options).result : spawnSync(process.execPath,
+        const result = surface === 'Action' ? reportedAction(f, options) : spawnSync(process.execPath,
           [path.join(repository, 'runtime/installer/run-installer.mjs'), '--operation', options.operation, '--source-root', f.root,
             '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', options.standardBuildRoot,
             ...(options.supplementalBuildRoot ? ['--supplemental-build-root', options.supplementalBuildRoot] : []),
@@ -189,6 +213,22 @@ describe('standard installer', () => {
       // Assert
       expect(result.status, result.stderr).toBe(0);
       expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(true);
+    });
+
+    // contract_id: contract.ci-release-supplemental-asset.assembly
+    // flow_id: standard-installer-process-startup
+    test('distributed CLI rejects a supplemental root for the wrong operation', (t) => {
+      const f = fixture(t);
+      for (const [operation, extra] of [['build-platform', ['--supplemental-build-root', 'transferred']], ['assemble', []]] as const) {
+        const result = spawnSync(process.execPath, [path.join(repository, 'runtime/installer/run-installer.mjs'),
+          '--operation', operation, '--source-root', f.root, '--authority-path', 'authority.json',
+          '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard', '--output-directory', 'wrong-phase-output',
+          '--provider-revision', 'a'.repeat(40), ...extra], { encoding: 'utf8' });
+        expect(result.status).toBe(1);
+        expect(result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"phase-selection"/m);
+        expect(result.stderr).toContain('phase-input-mismatch');
+        expect(fs.existsSync(path.join(f.root, 'wrong-phase-output'))).toBe(false);
+      }
     });
 
     // evidence_role: contract

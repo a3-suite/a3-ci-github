@@ -35,7 +35,7 @@ export const run = (): void => {
     diagnostic.at('adapter-execution', {"input": "selected-bundle-and-source-root"});
     diagnostic.details.bundle = /^[A-Za-z0-9_.-]{1,100}$/.test(bundle.id) ? bundle.id : 'protected-or-invalid';
     const commandTimings: AdapterCommandTiming[] = [];
-    const payload = executeAdapter(bundle, {
+    const { failureReason, ...payload } = executeAdapter(bundle, {
       sourceRoot: path.resolve(readActionInput(core.getInput, 'source-root', { required: true })),
       languageProfile: readActionInput(core.getInput, 'language-profile') || undefined,
       toolchainVersion: readActionInput(core.getInput, 'toolchain-version', { required: true }),
@@ -75,7 +75,7 @@ export const run = (): void => {
     if (payload.status !== 'success') {
       diagnostic.outcome = payload.status === '判定不能' ? 'unresolved' : 'failed';
       diagnostic.at('adapter-result', { input: 'selected-bundle-and-source-root', evidence: 'result-path' });
-      diagnostic.report(new DiagnosticError(`quality-adapter-${diagnostic.outcome}`, { diagnostics: { field: 'adapter-status', expected: 'success', observed: payload.status, tasks: payload.results.map(result => ({ id: /^[A-Za-z0-9_.-]{1,100}$/.test(result.id) ? result.id : 'unavailable', status: result.status, exit: result.exitCode })) } }));
+      diagnostic.report(new DiagnosticError(failureReason ?? `quality-adapter-${diagnostic.outcome}`, { diagnostics: { field: 'adapter-status', expected: 'success', observed: payload.status, tasks: payload.results.map(result => ({ id: /^[A-Za-z0-9_.-]{1,100}$/.test(result.id) ? result.id : 'unavailable', status: result.status, exit: result.exitCode })) } }));
       completeFailure(`quality-adapter-${payload.status}`, 1, core.setFailed);
     }
   } catch (error) {

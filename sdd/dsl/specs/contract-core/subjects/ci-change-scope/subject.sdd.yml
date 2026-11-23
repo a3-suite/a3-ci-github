@@ -5,7 +5,7 @@ subject:
   summary: Classifying a checked-out change range into CI and documentation scope.
 contracts:
   - id: contract.ci-change-scope.outputs
-    summary: A resolvable change range produces a change-scope status output.
+    summary: Base commit, head commit and documentation pattern inputs to the change scope Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -13,50 +13,49 @@ contracts:
         meaning: "Received by the contract target: base commit SHA."
       - name: head-sha
         meaning: "Received by the contract target: head commit SHA."
+      - name: event-name
+        meaning: GitHub event name used to select a base SHA when no explicit base was provided.
+      - name: pr-base-sha
+        meaning: Pull request base commit offered as a fallback for pull request events.
+      - name: before-sha
+        meaning: Previous revision offered as a fallback when neither a base nor a pull request base was selected.
       - name: docs-only-patterns
         meaning: "Received by the contract target: documentation-only path patterns."
-    observations:
-      - summary: The Action exposes deterministic change-scope outputs to the caller.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether the change range was evaluated successfully or unresolved.
-          - selector: run-ci
-            meaning: Whether CI checks should run.
-          - selector: run-docs
-            meaning: Whether documentation checks should run.
-          - selector: files
-            meaning: Newline-separated changed paths.
-          - selector: docs-files
-            meaning: Newline-separated documentation paths.
-          - selector: other-files
-            meaning: Newline-separated non-documentation paths.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: change-range-input-present
-      - environment: runtime-context.action-input-insufficient
+      - id: runtime-context.failure-diagnostic-required
+        summary: The Action cannot produce its outputs because preparing the change scope raises an error or the configured output destination rejects a required write.
+      - id: change-range-input-present
+        summary: The selected base and head are valid commit SHAs, the checked-out Git repository can compute changed paths for them, and the Action outputs can be written.
+      - id: runtime-context.action-input-insufficient
+        summary: The selected base or head SHA is absent or invalid, or Git cannot compute changed paths for them. The Action outputs can be written.
     guarantees:
       - id: change-scope-status-produced
         applies_to:
           - change-range-input-present
-        claim:
-          field: status
-          present: true
-      - id: change-scope-unresolved-status-produced
+          - runtime-context.action-input-insufficient
+        boundary: boundary.action-output
+        statement: "`status` is `success` when the change range can be evaluated and `unresolved` otherwise. Observable fields at this boundary also include `run-docs` (Whether documentation checks should run), `files` (Newline-separated changed paths), `docs-files` (Newline-separated documentation paths), `other-files` (Newline-separated non-documentation paths)."
+      - id: change-scope-unresolved-runs-ci
         applies_to:
           - runtime-context.action-input-insufficient
-        claim:
-          field: status
-          in:
-            - unresolved
+        boundary: boundary.action-output
+        statement: "`run-ci` and `run-docs` are both `true`, and the unresolved Action step completes successfully."
+      - id: change-scope-resolved-flags-match-paths
+        applies_to:
+          - change-range-input-present
+        boundary: boundary.action-output
+        statement: "`run-ci` is `true` exactly when the range has a non-documentation path. `run-docs` is `true` exactly when the range has a documentation path."
+      - id: change-scope-output-failure-propagated
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: The Action step fails when it cannot produce its outputs.
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.action-input-insufficient
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`. It reports an unresolved outcome when the change range cannot be evaluated and a failure outcome when the Action cannot produce its outputs."
+    input_kind:
+      kind: operation
+      name: ci-change-scope

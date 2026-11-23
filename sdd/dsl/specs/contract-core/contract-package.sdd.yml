@@ -37,6 +37,3 @@ subject_scopes:
 environment_ref:
   environment_id: a3-ci-github-github-environment
   path: environments/github-actions.sdd.yml
-validator_profile_ref:
-  profile_id: default-contract-core-validator-profile
-  path: validator-profiles/default.sdd.yml

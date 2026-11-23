@@ -34,7 +34,7 @@ describe("contract.ci-rust-source-gate.outputs", () => {
       try {
         mkdirSync(path.dirname(fixtureScript), { recursive: true });
         mkdirSync(actionPath, { recursive: true });
-        writeFileSync(fixtureScript, '#!/usr/bin/env bash\nset -euo pipefail\ntest "$1" = rust\ntest "$2" = authority.json\n');
+        writeFileSync(fixtureScript, '#!/usr/bin/env bash\nset -euo pipefail\ntest "$1" = rust || exit 23\ntest "$2" = authority.json\n');
         chmodSync(fixtureScript, 0o755);
         writeFileSync(output, '');
         // Act
@@ -66,7 +66,21 @@ describe("contract.ci-rust-source-gate.outputs", () => {
           },
         });
         // Assert
-        expect(failure.status).not.toBe(0);
+        expect(failure.status).toBe(23);
+        expect(readFileSync(output, 'utf8')).toBe('');
+
+        const denied = spawnSync('bash', ['-euo', 'pipefail', '-c', runBlock()], {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            GITHUB_ACTION_PATH: actionPath,
+            GITHUB_OUTPUT: fixture,
+            LANGUAGE_PROFILE: 'rust',
+            AUTHORITY_PATH: 'authority.json',
+          },
+        });
+        expect(denied.status).toBe(1);
+        expect(denied.stderr).toContain(fixture);
         expect(readFileSync(output, 'utf8')).toBe('');
       } finally {
         rmSync(fixture, { recursive: true, force: true });

@@ -11,10 +11,14 @@ contracts:
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
       - name: audit-mode
         meaning: "Received by the contract target: audit mode selected by the request."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer project root to inspect."
+      - name: skill-collection-root
+        meaning: "Received by the contract target: external skill collection root supplied for resolving registered sources."
       - name: output
         meaning: "Received by the contract target: output path requested by the caller."
       - name: selected-pending-action
-        meaning: "Precondition prepared by the case: selected Action whose release is pending."
+        meaning: "Precondition prepared by the case: selected Actions whose release is pending."
       - name: preset
         meaning: "Received by the contract target: preset identifier selected for validation."
       - name: optional-workflow
@@ -27,121 +31,84 @@ contracts:
         meaning: "Precondition prepared by the case: retired release entrypoint file or invocation present in the project."
       - name: applied-preset
         meaning: "Precondition prepared by the case: preset assets applied to the consumer project."
-    observations:
-      - summary: Exit status, standard output, standard error, and generated evidence exposed by a public repository CLI entrypoint.
-        boundary: boundary.cli-result
-        fields:
-          - selector: outcome
-            meaning: Bootstrap outcome when assurance cannot start.
-          - selector: reason
-            meaning: Stable machine-readable rejection reason.
-          - selector: message
-            meaning: Actionable explanation of the rejected invocation.
-          - selector: status
-            meaning: Success or failed provider preflight status.
-          - selector: inspectedPresets
-            meaning: Applied presets included in the preflight decision.
-          - selector: missingSettings
-            meaning: Required settings or assets that could not be resolved.
-          - selector: mismatches
-            meaning: Canonical, identity, permission, trust, or integrity mismatches.
-          - selector: evidence
-            meaning: Evidence collected for inspected workflows and assets.
-          - selector: semanticReviewRequired
-            meaning: Whether evidence outside provider preflight still requires semantic review.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Individually observed contract values and comparisons.
-        boundary: boundary.project-ci-assets
-        fields:
-          - selector: valid-tree-comparison
-            meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
-          - selector: drift-tree-comparison
-            meaning: Comparison of consumer file paths and bytes before and after read-only preset verification.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.preset-assurance-roots-missing
-      - environment: runtime-context.preset-assurance-read-only-output-requested
-      - input: selected-action-unavailable
-      - input: supplemental-phase-drift
-      - input: retired-release-entrypoints-present
-      - input: ci-preset-assurance-applied-preset-valid
-      - input: ci-preset-assurance-applied-preset-drifted
+      - id: runtime-context.failure-diagnostic-required
+        summary: The invocation arguments are accepted, but setup or runtime failure prevents a preflight report.
+      - id: preset-assurance-invalid-invocation
+        summary: The read-only command rejects invalid invocation arguments, including a missing explicit repository root or a forbidden output destination.
+      - id: ci-preset-assurance-applied-preset-valid
+        summary: The selected applied preset agrees with its canonical source in a read-only audit.
+      - id: ci-preset-assurance-applied-preset-drifted
+        summary: Inspection completes and finds a missing setting, an unavailable dependency or a mismatch in the applied configuration.
     guarantees:
       - id: ci-preset-assurance-explicit-roots-required
         applies_to:
-          - runtime-context.preset-assurance-roots-missing
-          - runtime-context.preset-assurance-read-only-output-requested
-        claim:
-          field: reason
-          present: true
+          - preset-assurance-invalid-invocation
+        boundary: boundary.cli-result
+        statement: "The CLI reports `outcome: cannot-start` and `reason: invalid-input`."
       - id: unavailable-action-reported
         applies_to:
-          - selected-action-unavailable
-        claim:
-          field: missingSettings
-          present: true
+          - ci-preset-assurance-applied-preset-drifted
+        boundary: boundary.cli-result
+        statement: '`unavailable-action-state` is one of `"reported"`. Whether missingSettings names the selected Action whose release is pending; reported or not-reported.'
       - id: supplemental-phase-drift-reported
         applies_to:
-          - supplemental-phase-drift
-          - retired-release-entrypoints-present
-        claim:
-          field: mismatches
-          present: true
+          - ci-preset-assurance-applied-preset-drifted
+        boundary: boundary.cli-result
+        statement: '`supplemental-phase-drift-state` is one of `"reported"`. Whether mismatches names the supplemental phase drift; reported or not-reported.'
+      - id: retired-release-entrypoint-reported
+        applies_to:
+          - ci-preset-assurance-applied-preset-drifted
+        boundary: boundary.cli-result
+        statement: '`retired-release-entrypoint-state` is one of `"reported"`. Whether mismatches names the retired release entrypoint; reported or not-reported.'
       - id: ci-preset-assurance-valid-preset-succeeds
         applies_to:
           - ci-preset-assurance-applied-preset-valid
-        claim:
-          field: status
-          in:
-            - success
+        boundary: boundary.cli-result
+        statement: '`status` is one of `"success"`. Provider preflight status.'
       - id: ci-preset-assurance-valid-evidence-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
-        claim:
-          field: evidence
-          present: true
+        boundary: boundary.cli-result
+        statement: "`evidence-entry-count` is at least `1`. The report includes evidence for inspected workflows and assets and names the evaluated presets in `inspectedPresets`."
       - id: ci-preset-assurance-semantic-review-state-exposed
         applies_to:
           - ci-preset-assurance-applied-preset-valid
-        claim:
-          field: semanticReviewRequired
-          present: true
+        boundary: boundary.cli-result
+        statement: "`semanticReviewRequired` is true. Provider preflight leaves semantic review to the caller."
       - id: ci-preset-assurance-drift-fails
         applies_to:
           - ci-preset-assurance-applied-preset-drifted
-        claim:
-          field: status
-          in:
-            - failed
+        boundary: boundary.cli-result
+        statement: '`status` is one of `"failed"`. Provider preflight status.'
       - id: diagnostic-failure-stage-verification
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - preset-assurance-invalid-invocation
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: valid-consumer-unchanged
         applies_to:
           - ci-preset-assurance-applied-preset-valid
-        claim:
-          field: valid-tree-comparison
-          in:
-            - equal
+        boundary: boundary.project-ci-assets
+        statement: '`valid-tree-comparison` is one of `"equal"`. Comparison of consumer file paths and bytes before and after read-only preset verification.'
       - id: drift-consumer-unchanged
         applies_to:
           - ci-preset-assurance-applied-preset-drifted
-        claim:
-          field: drift-tree-comparison
-          in:
-            - equal
+        boundary: boundary.project-ci-assets
+        statement: '`drift-tree-comparison` is one of `"equal"`. Comparison of consumer file paths and bytes before and after read-only preset verification.'
+    input_kind:
+      kind: operation
+      name: validate-ci-preset
   - id: contract.ci-preset-assurance.asset-lock
     summary: Asset lock generation request for applied canonical assets.
     inputs:
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
+      - name: repo-root
+        meaning: "Received by the contract target: consumer project root whose applied assets the lock records."
+      - name: skill-collection-root
+        meaning: "Received by the contract target: external skill collection root supplied for resolving registered sources."
       - name: source-revision
         meaning: "Received by the contract target: source revision identifier."
       - name: release-tag
@@ -149,100 +116,53 @@ contracts:
       - name: distribution-release
         meaning: "Precondition prepared by the case: Release tag named by the fetched distribution manifest beside the generator."
       - name: preset
-        meaning: "Received by the contract target: preset identifier selected for validation."
+        meaning: "Precondition prepared by the case: applied preset identified from the consumer project during lock generation."
       - name: consumer-assets
         meaning: "Precondition prepared by the case: CI assets present in the consumer project."
-    observations:
-      - summary: Canonical and project-owned CI assets materialized into a consumer project.
-        boundary: boundary.project-ci-assets
-        fields:
-          - selector: sourceRevision
-            meaning: Full immutable distribution commit SHA.
-          - selector: releaseTag
-            meaning: Exact vX.Y.Z Release tag of the distribution that generated the lock.
-          - selector: generatedAt
-            meaning: Minute-normalized observation timestamp that is not used as version identity.
-          - selector: assets
-            meaning: Canonical and applied SHA-256 identity for every managed asset.
-          - selector: requested-source-comparison
-            meaning: Comparison of lock sourceRevision with the requested full source revision.
-          - selector: requested-release-comparison
-            meaning: Comparison of lock releaseTag with the requested Release tag.
-          - selector: canonical-digest-comparison
-            meaning: Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.
-          - selector: applied-digest-comparison
-            meaning: Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.
-      - summary: Rejection exposed when an asset lock cannot be generated safely.
-        boundary: boundary.script-result
-        fields:
-          - selector: diagnostic
-            meaning: Stable reason that prevents an invalid lock from being written.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: ci-preset-assurance-lock-input-valid
-      - input: ci-preset-assurance-lock-input-invalid
-      - environment: runtime-context.ci-preset-assurance-canonical-lock-input
+      - id: runtime-context.failure-diagnostic-required
+        summary: The lock request is rejected for an argument, distribution binding, preset or file error outside the invalid revision or tag condition.
+      - id: ci-preset-assurance-lock-input-invalid
+        summary: The lock request has a missing or malformed exact release tag or a noncanonical source revision.
+      - id: runtime-context.ci-preset-assurance-canonical-lock-input
+        summary: The invocation meets the shared runtime context `runtime-context.ci-preset-assurance-canonical-lock-input`.
     guarantees:
       - id: ci-preset-assurance-lock-source-bound
         applies_to:
-          - ci-preset-assurance-lock-input-valid
-        claim:
-          field: sourceRevision
-          present: true
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        boundary: boundary.project-ci-assets
+        statement: "`sourceRevision` equals the invocation input `source-revision`. Full immutable distribution commit SHA. Observable fields at this boundary also include `generatedAt` (Minute-normalized observation timestamp of the generated lock)."
       - id: ci-preset-assurance-lock-release-bound
         applies_to:
-          - ci-preset-assurance-lock-input-valid
-        claim:
-          field: releaseTag
-          present: true
-      - id: ci-preset-assurance-lock-assets-recorded
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        boundary: boundary.project-ci-assets
+        statement: "`releaseTag` equals the invocation input `release-tag`. Exact vX.Y.Z Release tag of the distribution that generated the lock."
+      - id: ci-preset-assurance-lock-assets-cover-managed-paths
         applies_to:
-          - ci-preset-assurance-lock-input-valid
-        claim:
-          field: assets
-          present: true
+          - runtime-context.ci-preset-assurance-canonical-lock-input
+        boundary: boundary.project-ci-assets
+        statement: '`asset-path-coverage` is one of `"equal"`. Comparison of the set of lock asset paths with the managed asset destinations and the pin companion path.'
       - id: ci-preset-assurance-invalid-revision-rejected
         applies_to:
           - ci-preset-assurance-lock-input-invalid
-        claim:
-          field: diagnostic
-          present: true
+        boundary: boundary.script-result
+        statement: "The generator fails with a diagnostic for the invalid revision or release tag and does not write a lock."
       - id: diagnostic-failure-stage-asset-lock
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
-      - id: lock-source-equals-request
-        applies_to:
-          - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: requested-source-comparison
-          in:
-            - equal
-      - id: lock-release-equals-request
-        applies_to:
-          - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: requested-release-comparison
-          in:
-            - equal
+          - ci-preset-assurance-lock-input-invalid
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: lock-canonical-digests-match
         applies_to:
           - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: canonical-digest-comparison
-          in:
-            - equal
+        boundary: boundary.project-ci-assets
+        statement: '`canonical-digest-comparison` is one of `"equal"`. Per-asset comparison of canonicalSha256 with its canonical provider source bytes; pin companions use the registry source bytes.'
       - id: lock-applied-digests-match
         applies_to:
           - runtime-context.ci-preset-assurance-canonical-lock-input
-        claim:
-          field: applied-digest-comparison
-          in:
-            - equal
+        boundary: boundary.project-ci-assets
+        statement: '`applied-digest-comparison` is one of `"equal"`. Per-asset comparison of appliedSha256 with the corresponding installed consumer file bytes.'
+    input_kind:
+      kind: operation
+      name: generate-ci-asset-lock

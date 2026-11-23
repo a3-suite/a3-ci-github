@@ -161,7 +161,7 @@ elements:
     primary_area_kind: delivery
     area_kinds: [delivery]
     source_control: managed
-    placement_purpose: このリポジトリ自身の検証・公開 workflow と固定参照される reusable workflow の配置先を所有する
+    placement_purpose: このリポジトリ自身の検証・公開 workflow と関連する GitHub 設定を所有する
   - element_id: distribution-asset-registry
     element_kind: file
     path: skills/ci-github/assets/registry/ci-distribution-assets.yml

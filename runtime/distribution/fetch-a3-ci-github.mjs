@@ -17,12 +17,28 @@ class DistributionError extends Error {
 const distributionFailureEvidence = (error, operation) => {
   const reason = error instanceof DistributionError && /^[a-z][a-z0-9-]+$/.test(error.message.split(':', 1)[0]) ? error.message.split(':', 1)[0] : 'distribution-unknown-failure';
   const detail = error instanceof DistributionError ? error.details : undefined;
+  const verifyArgumentFailure = operation === 'verify' && [
+    'distribution-cli-argument-invalid', 'distribution-source-revision-required', 'distribution-source-revision-invalid',
+  ].includes(reason);
+  const fetchArgumentFailure = operation === 'fetch' && reason === 'distribution-manifest-source-exclusive';
+  const stage = detail?.stage ?? (verifyArgumentFailure || fetchArgumentFailure ? 'input-validation'
+    : operation === 'plan' && reason === 'distribution-prior-asset-lock-invalid' ? 'prior-ownership-validation'
+      : operation);
+  const env = process.env;
+  const contextId = (value) => /^[a-zA-Z0-9_.\[\]-]{1,200}$/.test(value ?? '') ? value : 'unavailable';
+  const checkout = env.CI_SOURCE_REVISION
+    || ((env.GITHUB_EVENT_NAME ?? '').startsWith('pull_request') ? '' : env.GITHUB_SHA);
   return {
-    classification: { subject: 'ci-selective-distribution', operation, stage: detail?.stage ?? operation, reason, cause: reason === 'distribution-unknown-failure' ? 'unknown' : 'known' },
-    context: { source: detail?.sourceRevision ?? 'unavailable', input: detail?.input ?? 'command-arguments', values: 'protected-or-unavailable' },
+    classification: { subject: 'ci-selective-distribution', operation, stage, reason, cause: reason === 'distribution-unknown-failure' ? 'unknown' : 'known' },
+    context: {
+      run: contextId(env.GITHUB_RUN_ID), job: contextId(env.GITHUB_JOB),
+      source: /^[a-f0-9]{40}$/.test(checkout ?? '') ? checkout : 'unavailable',
+      distributionRevision: detail?.sourceRevision ?? 'unavailable',
+      input: detail?.input ?? 'command-arguments', values: 'protected-or-unavailable',
+    },
     comparison: detail?.comparison ?? (detail?.field ? Object.fromEntries(Object.entries(detail).filter(([key]) => ['field', 'expected', 'observed', 'expected_size', 'observed_size', 'expected_sha256', 'observed_sha256'].includes(key))) : { field: 'command-and-distribution-contract', expected: 'valid', observed: reason, values: 'protected-or-unavailable' }),
-    'evidence-location': { log: 'stderr', transaction: detail?.transactionId ?? 'unavailable' },
-    'execution-state': { outcome: 'failure', exit: 2, write: detail?.write ?? (/^(?:distribution-.+-required|distribution-cli-.+|distribution-manifest-source-exclusive)$/.test(reason) ? 'not-started' : 'unavailable'), rollback: detail?.rollback ?? 'unavailable', cleanup: detail?.cleanup ?? 'unavailable', ...(detail?.cleanupFailures ? { cleanupFailures: detail.cleanupFailures } : {}) },
+    'evidence-location': { log: env.GITHUB_ACTIONS === 'true' ? 'workflow-run-job-step-log' : 'stderr', transaction: detail?.transactionId ?? 'unavailable' },
+    'execution-state': { outcome: 'failure', exit: 2, lastConfirmed: detail?.lastConfirmed ?? 'unavailable', write: detail?.write ?? (/^(?:distribution-.+-required|distribution-cli-.+|distribution-manifest-source-exclusive)$/.test(reason) ? 'not-started' : 'unavailable'), rollback: detail?.rollback ?? 'unavailable', cleanup: detail?.cleanup ?? 'unavailable', ...(detail?.cleanupFailures ? { cleanupFailures: detail.cleanupFailures } : {}) },
     'next-check': { operation, rule: reason, input: detail?.input ?? 'command-arguments' },
   };
 };
@@ -42,10 +58,16 @@ const retainDistributionFailure = (error, details) => {
   return failure;
 };
 
-const releaseMutationLock = (handle, filename) => {
+const releaseMutationLock = (handle, filename, beforeUnlockOnFailure) => {
   const failures = [];
-  try { fs.closeSync(handle); } catch (error) { failures.push({ operation: 'lock-close', error }); }
-  try { fs.rmSync(filename, { force: true }); } catch (error) { failures.push({ operation: 'lock-remove', error }); }
+  try { fs.closeSync(handle); } catch (error) {
+    failures.push({ operation: 'lock-close', error });
+    beforeUnlockOnFailure?.();
+  }
+  try { fs.rmSync(filename, { force: true }); } catch (error) {
+    failures.push({ operation: 'lock-remove', error });
+    beforeUnlockOnFailure?.();
+  }
   if (failures.length) throw new DistributionError('distribution-lock-cleanup-failed', {
     cause: failures[0].error,
     diagnostics: { cleanup: 'lock-cleanup-failed', cleanupFailures: failures.map((entry) => entry.operation) },
@@ -65,7 +87,6 @@ const MANIFEST_ASSET = 'a3-ci-github-distribution-manifest.json';
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const jsonBytes = (value) => Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
-const readJson = (filename) => JSON.parse(fs.readFileSync(filename, 'utf8'));
 const normalizeRelative = (value) => {
   if (typeof value !== 'string' || value === '' || value.includes('\0')) {
     throw new DistributionError('distribution-path-invalid');
@@ -297,7 +318,12 @@ export const loadDistributionManifest = async ({ manifestPath, manifestUrl }) =>
     }
     bytes = await fetchBytes(manifestUrl, expectedPrefix);
   }
-  const manifest = validateDistributionManifest(JSON.parse(bytes.toString('utf8')));
+  let manifest;
+  try {
+    manifest = validateDistributionManifest(parseLocalDistributionJson(bytes, 'distribution-manifest-invalid'));
+  } catch (error) {
+    throw retainDistributionFailure(error, { stage: 'manifest-validation', input: 'distribution-manifest', write: 'not-started' });
+  }
   if (manifestUrl && !String(manifestUrl).includes(`/download/${manifest.releaseTag}/${MANIFEST_ASSET}`)) {
     throw new DistributionError('distribution-manifest-release-url-mismatch');
   }
@@ -340,6 +366,18 @@ export const fetchDistribution = async ({
   let primaryFailure;
   let failed = false;
   let write = 'not-started';
+  let rollback = 'unavailable';
+  const undoMerge = [];
+  const restoreCache = () => {
+    if (!undoMerge.length) return;
+    rollback = 'restored';
+    for (const undo of undoMerge.reverse()) {
+      try { undo(); } catch {
+        rollback = 'failed';
+      }
+    }
+    undoMerge.length = 0;
+  };
   try {
     assertResolvedInside(projectRoot, distributionRoot, 'distribution-local-root-outside-project');
     const reusableFiles = new Set();
@@ -414,9 +452,18 @@ export const fetchDistribution = async ({
           continue;
         }
         const staged = inside(stagingRoot, file.sourcePath);
-        fs.mkdirSync(path.dirname(existing), { recursive: true });
+        const parent = path.dirname(existing);
+        const firstCreated = fs.mkdirSync(parent, { recursive: true });
+        if (firstCreated) {
+          for (let directory = parent; ; directory = path.dirname(directory)) {
+            const created = directory;
+            undoMerge.unshift(() => fs.rmdirSync(created));
+            if (directory === firstCreated) break;
+          }
+        }
         write = 'partial-output';
         fs.copyFileSync(staged, existing, fs.constants.COPYFILE_EXCL);
+        undoMerge.push(() => fs.unlinkSync(existing));
       }
       const mergedReceipt = {
         ...receipt,
@@ -425,7 +472,12 @@ export const fetchDistribution = async ({
         files: [...new Set([...existingReceipt.files, ...receipt.files])].sort(),
       };
       write = 'partial-output';
-      atomicWrite(path.join(distributionRoot, 'receipt.json'), jsonBytes(mergedReceipt));
+      const receiptPath = path.join(distributionRoot, 'receipt.json');
+      const priorReceiptBytes = fs.readFileSync(receiptPath);
+      const stagedReceiptPath = path.join(stagingRoot, 'receipt.json');
+      fs.writeFileSync(stagedReceiptPath, jsonBytes(mergedReceipt));
+      fs.renameSync(stagedReceiptPath, receiptPath);
+      undoMerge.push(() => atomicWrite(receiptPath, priorReceiptBytes));
       write = 'merged';
       return { ...mergedReceipt, distributionRoot, action: 'merged' };
     }
@@ -438,24 +490,40 @@ export const fetchDistribution = async ({
     throw error;
   } finally {
     let cleanupFailure;
-    try {
-      if (fetchLockHandle !== undefined) releaseMutationLock(fetchLockHandle, fetchLock);
-    } catch (error) { cleanupFailure = error; }
+    let stagingFailure;
     try {
       if (fs.existsSync(stagingRoot)) fs.rmSync(stagingRoot, { recursive: true, force: true });
     } catch (error) {
+      stagingFailure = error;
+    }
+    if (failed || stagingFailure) restoreCache();
+    try {
+      if (fetchLockHandle !== undefined) releaseMutationLock(fetchLockHandle, fetchLock, restoreCache);
+    } catch (error) { cleanupFailure = error; }
+    if (stagingFailure) {
       const failures = [...(cleanupFailure?.details?.cleanupFailures ?? []), 'staging-remove'];
       cleanupFailure = new DistributionError('distribution-fetch-cleanup-failed', {
-        cause: cleanupFailure ?? error, diagnostics: { cleanup: 'staging-cleanup-failed', cleanupFailures: failures },
+        cause: cleanupFailure ?? stagingFailure, diagnostics: { cleanup: 'staging-cleanup-failed', cleanupFailures: failures },
       });
     }
     if (cleanupFailure) {
       throw retainDistributionFailure(failed ? primaryFailure : cleanupFailure, {
         stage: failed ? primaryFailure instanceof DistributionError ? primaryFailure.details?.stage ?? 'fetch' : 'fetch' : 'fetch-cleanup',
-        sourceRevision: manifest.sourceRevision, input: 'selected-distribution', write,
+        sourceRevision: manifest.sourceRevision, input: 'selected-distribution', write, rollback,
         ...cleanupFailure.details,
       });
     }
+    if (failed && rollback !== 'unavailable') {
+      throw retainDistributionFailure(primaryFailure, { write, rollback });
+    }
+  }
+};
+
+const parseLocalDistributionJson = (bytes, diagnostic) => {
+  try {
+    return JSON.parse(bytes.toString('utf8'));
+  } catch (cause) {
+    throw new DistributionError(diagnostic, { cause });
   }
 };
 
@@ -466,9 +534,12 @@ const loadFetchedDistribution = (projectRoot, sourceRevision) => {
   regularFile(path.join(root, 'manifest.json'), 'distribution-local-manifest-missing');
   regularFile(path.join(root, 'receipt.json'), 'distribution-local-receipt-missing');
   const manifestBytes = fs.readFileSync(path.join(root, 'manifest.json'));
-  const manifest = validateDistributionManifest(JSON.parse(manifestBytes.toString('utf8')));
-  const receipt = readJson(path.join(root, 'receipt.json'));
-  if (receipt.kind !== RECEIPT_KIND || receipt.sourceRevision !== sourceRevision
+  const manifest = validateDistributionManifest(parseLocalDistributionJson(manifestBytes, 'distribution-local-manifest-invalid'));
+  if (manifest.sourceRevision !== sourceRevision) {
+    throw new DistributionError('distribution-local-manifest-revision-mismatch');
+  }
+  const receipt = parseLocalDistributionJson(fs.readFileSync(path.join(root, 'receipt.json')), 'distribution-local-receipt-invalid');
+  if (receipt?.kind !== RECEIPT_KIND || receipt.sourceRevision !== sourceRevision
     || receipt.manifestSha256 !== sha256(manifestBytes) || receipt.status !== 'fetched'
     || !Array.isArray(receipt.selectedPresets) || !Array.isArray(receipt.selectedAssets)
     || !Array.isArray(receipt.files)) {
@@ -476,6 +547,11 @@ const loadFetchedDistribution = (projectRoot, sourceRevision) => {
   }
   const knownAssets = new Set(manifest.assets.map((asset) => asset.id));
   if (receipt.selectedAssets.some((assetId) => !knownAssets.has(assetId))) {
+    throw new DistributionError('distribution-local-receipt-asset-invalid');
+  }
+  const selectedAssets = resolveDistributionSelection(manifest, receipt.selectedPresets, receipt.selectedAssets);
+  if (selectedAssets.length !== receipt.selectedAssets.length
+    || !selectedAssets.every(({ id }) => receipt.selectedAssets.includes(id))) {
     throw new DistributionError('distribution-local-receipt-asset-invalid');
   }
   for (const sourcePath of receipt.files) {
@@ -488,6 +564,11 @@ const loadFetchedDistribution = (projectRoot, sourceRevision) => {
     if (bytes.length !== expected.size || sha256(bytes) !== expected.sha256) {
       throw new DistributionError(`distribution-local-file-integrity-mismatch:${sourcePath}`, { diagnostics: { stage: 'local-file-verification', input: 'manifest.files', sourceRevision: manifest.sourceRevision, field: sourcePath, expected_size: expected.size, observed_size: bytes.length, expected_sha256: expected.sha256, observed_sha256: sha256(bytes) } });
     }
+  }
+  const selectedPaths = new Set(selectedAssets.flatMap((asset) => asset.files.map(({ sourcePath }) => sourcePath)));
+  if (selectedPaths.size !== receipt.files.length || new Set(receipt.files).size !== receipt.files.length
+    || receipt.files.some((sourcePath) => !selectedPaths.has(sourcePath))) {
+    throw new DistributionError('distribution-local-receipt-files-mismatch');
   }
   return { root, manifest, receipt, manifestBytes };
 };
@@ -532,8 +613,9 @@ export const planDistributionApplication = ({ projectRoot, sourceRevision, reque
     regularFile(lockPath, 'distribution-prior-asset-lock-invalid');
     priorLockBytes = fs.readFileSync(lockPath);
   }
-  const priorLock = priorLockBytes === null ? null : JSON.parse(priorLockBytes.toString('utf8'));
-  if (priorLock && (priorLock.schemaVersion !== '1' || priorLock.kind !== 'ci-github-asset-lock'
+  const priorLock = priorLockBytes === null ? null
+    : parseLocalDistributionJson(priorLockBytes, 'distribution-prior-asset-lock-invalid');
+  if (priorLockBytes !== null && (priorLock?.schemaVersion !== '1' || priorLock.kind !== 'ci-github-asset-lock'
     || !FULL_SHA.test(String(priorLock.sourceRevision ?? '')) || !Array.isArray(priorLock.assets))) {
     throw new DistributionError('distribution-prior-asset-lock-invalid');
   }
@@ -784,8 +866,9 @@ const restoreTransaction = (projectRoot, transactionRoot, transaction) => {
 export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, beforeWrite }) => {
   const resolvedPlan = path.resolve(planPath);
   regularFile(resolvedPlan, 'distribution-plan-not-regular');
-  const plan = readJson(resolvedPlan);
-  if (plan.kind !== PLAN_KIND || plan.planDigest !== approvalDigest
+  const planBytes = fs.readFileSync(resolvedPlan);
+  const plan = parseLocalDistributionJson(planBytes, 'distribution-plan-approval-invalid');
+  if (plan?.kind !== PLAN_KIND || plan.planDigest !== approvalDigest
     || sha256(jsonBytes(Object.fromEntries(Object.entries(plan).filter(([key]) => key !== 'planDigest')))) !== plan.planDigest) {
     throw new DistributionError('distribution-plan-approval-invalid');
   }
@@ -799,6 +882,7 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
   let transactionRoot;
   let transaction;
   let primaryFailure;
+  let stage = 'transaction-prepare';
   try {
     const transactionId = `${Date.now()}-${plan.planDigest.slice(0, 12)}`;
     const transactionsRoot = path.join(stateRoot, 'transactions');
@@ -815,16 +899,40 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       status: 'preparing',
       actions: [],
     };
+    stage = 'plan-recheck';
     const loaded = loadFetchedDistribution(projectRoot, plan.sourceRevision);
     if (loaded.receipt.manifestSha256 !== plan.manifestSha256) {
       throw new DistributionError('distribution-plan-manifest-changed');
     }
     const assetLockPath = path.resolve(projectRoot, '.ci/ci-assets.lock.json');
-    const currentAssetLockSha256 = digestIfFile(assetLockPath);
-    if (!plan.priorAssetLock || plan.priorAssetLock.exists !== (currentAssetLockSha256 !== null)
-      || plan.priorAssetLock.sha256 !== currentAssetLockSha256) {
-      throw new DistributionError('distribution-plan-ownership-changed');
-    }
+    const assertOwnershipUnchanged = () => {
+      assertResolvedInside(projectRoot, assetLockPath, 'distribution-plan-ownership-changed');
+      const current = digestIfFile(assetLockPath);
+      if (!plan.priorAssetLock || plan.priorAssetLock.exists !== (current !== null)
+        || plan.priorAssetLock.sha256 !== current) {
+        throw new DistributionError('distribution-plan-ownership-changed');
+      }
+    };
+    assertOwnershipUnchanged();
+    const approvedPlanBytesSha256 = sha256(planBytes);
+    const manifestPath = path.join(loaded.root, 'manifest.json');
+    const recheckPlanSources = () => {
+      if (digestIfFile(resolvedPlan) !== approvedPlanBytesSha256) {
+        throw new DistributionError('distribution-plan-approval-invalid');
+      }
+      assertResolvedInside(projectRoot, loaded.root, 'distribution-local-root-outside-project');
+      if (digestIfFile(manifestPath) !== plan.manifestSha256) {
+        throw new DistributionError('distribution-plan-manifest-changed');
+      }
+      assertOwnershipUnchanged();
+      for (const entry of plan.actions) {
+        const source = inside(loaded.root, entry.sourcePath);
+        assertResolvedInside(loaded.root, source, 'distribution-plan-source-changed');
+        if (digestIfFile(source) !== entry.sourceSha256) {
+          throw new DistributionError(`distribution-plan-source-changed:${entry.sourcePath}`);
+        }
+      }
+    };
     const prepared = new Map();
     for (const entry of plan.actions) {
       const source = inside(loaded.root, entry.sourcePath);
@@ -849,6 +957,7 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
         state: 'pending',
       });
     }
+    stage = 'destination-backup';
     for (const entry of transaction.actions) {
       if (entry.beforeSha256 === null) continue;
       const destination = inside(projectRoot, entry.destination);
@@ -862,18 +971,26 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       fs.mkdirSync(path.dirname(backup), { recursive: true });
       fs.writeFileSync(backup, beforeBytes, { flag: 'wx' });
     }
+    stage = 'transaction-record';
     transaction.status = 'applying';
     persistTransaction(transactionRoot, transaction);
     for (const [index, entry] of transaction.actions.entries()) {
+      stage = 'destination-recheck';
       if (typeof beforeWrite === 'function') beforeWrite({ entry: { ...entry }, index });
+      stage = 'plan-recheck';
+      recheckPlanSources();
+      stage = 'destination-recheck';
       const destination = inside(projectRoot, entry.destination);
       assertResolvedInside(projectRoot, destination, `distribution-destination-outside-root:${entry.destination}`);
       if (digestIfFile(destination) !== entry.beforeSha256) {
         throw new DistributionError(`distribution-plan-input-changed:${entry.destination}`);
       }
       entry.state = 'writing';
+      stage = 'transaction-record';
       persistTransaction(transactionRoot, transaction);
+      stage = 'destination-write';
       atomicWrite(destination, prepared.get(entry.destination));
+      stage = 'transaction-record';
       entry.state = 'applied';
       persistTransaction(transactionRoot, transaction);
     }
@@ -899,7 +1016,7 @@ export const applyDistributionPlan = ({ projectRoot, planPath, approvalDigest, b
       }
     }
     const captured = error instanceof DistributionError ? error : new DistributionError('distribution-unknown-failure', { cause: error });
-    captured.details = { ...captured.details, stage: 'apply', transactionId: transaction?.transactionId ?? 'unavailable', sourceRevision: plan.sourceRevision, write: transaction ? transaction.status : 'not-started', rollback: transaction?.rollbackStatus ?? (transaction?.status === 'rolled-back' ? 'restored' : 'unavailable'), input: 'plan-and-transaction-state' };
+    captured.details = { ...captured.details, stage: captured.details?.stage ?? stage, transactionId: transaction?.transactionId ?? 'unavailable', sourceRevision: plan.sourceRevision, write: transaction ? transaction.status : 'not-started', rollback: transaction?.rollbackStatus ?? (transaction?.status === 'rolled-back' ? 'restored' : 'unavailable'), input: 'plan-and-transaction-state' };
     primaryFailure = captured;
     throw primaryFailure;
   } finally {
@@ -922,22 +1039,27 @@ export const rollbackDistributionTransaction = ({ projectRoot, transactionId }) 
   let primaryFailure;
   let failed = false;
   let transaction;
+  let stage = 'transaction-validation';
   try {
     const transactionRoot = path.join(stateRoot, 'transactions', transactionId);
     assertResolvedInside(projectRoot, transactionRoot, 'distribution-transaction-root-outside-project');
     const transactionPath = path.join(transactionRoot, 'transaction.json');
     regularFile(transactionPath, 'distribution-transaction-missing');
-    transaction = readJson(transactionPath);
-    if (transaction.kind !== TRANSACTION_KIND
+    transaction = parseLocalDistributionJson(fs.readFileSync(transactionPath), 'distribution-transaction-not-rollbackable');
+    if (transaction?.kind !== TRANSACTION_KIND || !Array.isArray(transaction.actions)
       || !['applying', 'applied', 'rolling-back', 'rollback-required'].includes(transaction.status)) {
       throw new DistributionError('distribution-transaction-not-rollbackable');
     }
+    stage = 'rollback';
     restoreTransaction(projectRoot, transactionRoot, transaction);
     return { transactionId, status: 'rolled-back', rollbackStatus: 'restored' };
   } catch (error) {
     failed = true;
-    primaryFailure = error;
-    throw error;
+    primaryFailure = retainDistributionFailure(error, {
+      stage: error instanceof DistributionError ? error.details?.stage ?? stage : stage,
+      transactionId,
+    });
+    throw primaryFailure;
   } finally {
     try { releaseMutationLock(lockHandle, lockPath); }
     catch (cleanupError) {

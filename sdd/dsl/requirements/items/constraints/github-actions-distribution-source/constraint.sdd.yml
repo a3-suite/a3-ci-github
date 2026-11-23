@@ -1,0 +1,12 @@
+version: 1
+name: constraint
+constraint_id: github-actions-distribution-source
+summary: Actionの定義と必要な配布物は同じコミットに含める
+scope:
+  namespace: skills
+  key: github-actions
+rule: Actionの実装参照が指すコミットには、action.ymlと実行方式に応じた配布物を含める。
+rationale: 利用側で実行される配布物を、公開I/O契約を定義したコミットから取得できるようにするため
+violation_impact: Actionの起動に失敗するか、定義と一致しない配布物が実行される
+related_requirements:
+  - github-actions-action-contract-and-distribution

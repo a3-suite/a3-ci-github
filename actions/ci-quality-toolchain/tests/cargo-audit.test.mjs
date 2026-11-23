@@ -87,22 +87,39 @@ describe('contract.ci-quality-toolchain.preparation', () => {
     } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
   });
 
+  const registeredFailures = ['checksum', 'download', 'extract', 'version', 'path', 'digest'];
+  const withRegisteredFailure = (failure, assertResult) => {
+    // Arrange
+    const f = fixture();
+    try {
+      if (failure === 'checksum') fs.appendFileSync(f.archive, 'modified');
+      if (failure === 'digest') fs.writeFileSync(path.join(f.directory, 'cargo-audit-sha256sums.txt'), `invalid  ${f.name}\n`);
+      // Act
+      const result = run(f, { FAILURE: failure, ...(failure === 'version' ? { BINARY_VERSION: '0.22.1' } : {}),
+        ...(failure === 'path' ? { GITHUB_PATH: path.join(f.directory, 'missing/path') } : {}) });
+      // Assert
+      assertResult(f, result);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+  };
+
   // contract_id: contract.ci-quality-toolchain.preparation
-  test('registered asset failures stop without source fallback or PATH output', () => {
-    for (const failure of ['checksum', 'download', 'extract', 'version', 'path', 'digest']) {
-      const f = fixture();
-      try {
-        if (failure === 'checksum') fs.appendFileSync(f.archive, 'modified');
-        if (failure === 'digest') fs.writeFileSync(path.join(f.directory, 'cargo-audit-sha256sums.txt'), `invalid  ${f.name}\n`);
-        const result = run(f, { FAILURE: failure, ...(failure === 'version' ? { BINARY_VERSION: '0.22.1' } : {}),
-          ...(failure === 'path' ? { GITHUB_PATH: path.join(f.directory, 'missing/path') } : {}) });
-        expect(result.status).not.toBe(0);
-        expect(calls(f)).not.toContain('cargo ');
-        if (failure === 'checksum' || failure === 'download') expect(calls(f)).not.toContain('tar');
-        if (failure === 'digest') expect(calls(f)).toBe('');
-        expect(fs.existsSync(f.env.GITHUB_PATH)).toBe(false);
-        expect(fs.readdirSync(f.directory).filter(name => name.startsWith('cargo-audit-bin-'))).toEqual([]);
-      } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+  test('registered asset failures stop the preparation', () => {
+    for (const failure of registeredFailures) {
+      withRegisteredFailure(failure, (_f, result) => expect(result.status, failure).not.toBe(0));
+    }
+  });
+
+  // evidence_role: supplemental
+  // Falling back to a source install, exporting PATH and leaving an extracted directory are implementation steps that no contract guarantee covers.
+  test('registered asset failures neither fall back to source install nor export PATH', () => {
+    for (const failure of registeredFailures) {
+      withRegisteredFailure(failure, (f) => {
+        expect(calls(f), failure).not.toContain('cargo ');
+        if (failure === 'checksum' || failure === 'download') expect(calls(f), failure).not.toContain('tar');
+        if (failure === 'digest') expect(calls(f), failure).toBe('');
+        expect(fs.existsSync(f.env.GITHUB_PATH), failure).toBe(false);
+        expect(fs.readdirSync(f.directory).filter(name => name.startsWith('cargo-audit-bin-')), failure).toEqual([]);
+      });
     }
   });
 

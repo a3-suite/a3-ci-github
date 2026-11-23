@@ -2,132 +2,788 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: known-validation-failure
     tests:
+      - path: runtime/diagnostics/tests/failure.test.mjs
+        symbol: failure evidence > known validation retains comparison, stage and existing state
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - failure-cause-classified
+          - failure-reason-recorded
+          - comparison-expected-recorded
+          - comparison-observed-recorded
+          - execution-outcome-retained
+          - last-confirmed-stage-recorded
+          - diagnostic-known-cause-omission
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > standalone distribution diagnostics bind workflow context to the declared checkout
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - execution-context-run-bound
+          - execution-context-job-bound
+          - execution-context-source-bound
+          - evidence-location-recorded
+          - last-confirmed-stage-recorded
+          - diagnostic-unsubstantiated-context
+          - diagnostic-whole-payload-disclosure
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - failure-subject-recorded
+          - failure-stage-recorded
+          - failure-reason-recorded
+          - execution-outcome-retained
           - diagnostic-known-cause-omission
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
-        guarantees: &a1
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
           - failure-subject-recorded
           - failure-operation-recorded
           - failure-stage-recorded
           - failure-reason-recorded
           - failure-cause-classified
-          - execution-context-recorded
-          - comparison-recorded
+          - execution-context-run-bound
+          - execution-context-job-bound
+          - execution-context-source-bound
+          - comparison-expected-recorded
+          - comparison-observed-recorded
           - evidence-location-recorded
           - execution-outcome-retained
           - last-confirmed-stage-recorded
           - next-check-rule-recorded
+          - diagnostic-known-cause-omission
+          - diagnostic-protected-input-disclosure
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
-        guarantees: *a1
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: unknown-failure
-    tests:
-      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: source entrypoint > retains source failure when unknown fails
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
-          - diagnostic-unsubstantiated-remediation
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: pull-request-head-source
-    tests:
+          - failure-subject-recorded
+          - failure-operation-recorded
+          - failure-stage-recorded
+          - failure-reason-recorded
+          - failure-cause-classified
+          - execution-context-run-bound
+          - execution-context-job-bound
+          - execution-context-source-bound
+          - comparison-expected-recorded
+          - comparison-observed-recorded
+          - evidence-location-recorded
+          - execution-outcome-retained
+          - last-confirmed-stage-recorded
+          - next-check-rule-recorded
+          - diagnostic-known-cause-omission
+          - diagnostic-protected-input-disclosure
       - path: runtime/diagnostics/tests/failure.test.mjs
         symbol: failure evidence > source reports the declared checked-out revision and never a pull request event SHA
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-unsubstantiated-context
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: external-request-failure
-    tests:
       - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
         symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-unsubstantiated-context
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: child-process-failure
-    tests:
+          - diagnostic-whole-payload-disclosure
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint diagnoses unsafe asset readback redirects without disclosing signed locations
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-signed-url-disclosure
       - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
         symbol: source entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
-          - diagnostic-unsafe-diagnostic-disclosure
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: evidence-generation-failure
-    tests:
+          - diagnostic-unchecked-output-disclosure
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > retains source failure when evidence-generation fails
-        guarantees:
-          - diagnostic-original-diagnostic-loss
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: evidence-transfer-failure
-    tests:
-      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
-        symbol: standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-invalid-evidence-reference
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: summary-failure
-    tests:
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution-recovery > rollback retains its original rejection when owned lock cleanup fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-original-diagnostic-loss
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed Action diagnoses transferred installer evidence missing or changed
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-invalid-evidence-reference
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > retains source failure when summary-write fails
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-original-outcome-replacement
-  - contract_id: contract.ci-failure-diagnostics.actionable
-    case_id: partial-write-failure
-    tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-diagnostic-only-retry
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-diagnostic-only-retry
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-diagnostic-only-retry
-  - contract_id: contract.ci-failure-diagnostics.subject-declarations
-    case_id: all-subject-diagnostics-defined
-    tests:
-      - path: tests/workflow-contracts.test.mjs
-        symbol: workflow-contracts > failure-diagnostics-contract > every packaged contract defines subject-specific diagnostics under the shared minimum
-        guarantees:
-          - subject-diagnostic-details-defined
-          - subject-diagnostic-minimum-referenced
   - contract_id: contract.ci-failure-diagnostics.workflow-evidence
-    case_id: workflow-evidence-declared
     tests:
       - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > failure-diagnostics-contract > managed workflows expose correlated secret-safe failure evidence without hiding source results
+        partition: ci-failure-diagnostics-workflow-source-available
         guarantees:
-          - ci-failure-diagnostics-workflow-evidence-declared
-          - ci-failure-diagnostics-workflow-correlation-declared
+          - ci-failure-diagnostics-workflow-reason-bound
+          - ci-failure-diagnostics-workflow-raw-result-bound
           - ci-failure-diagnostics-workflow-summary-secret-safe
           - ci-failure-diagnostics-workflow-diagnostic-order
           - ci-failure-diagnostics-workflow-source-result-retained
   - contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
-    case_id: bootstrap-diagnostic-emitted
     tests:
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset assurance rejects unavailable or inconsistent prepared runtime without changing the project
+        partition: ci-failure-diagnostics-bootstrap-fails
         guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap confines dependency files and accepts internal symlink cycles
+          - ci-failure-diagnostics-bootstrap-stage-emitted
+          - ci-failure-diagnostics-bootstrap-reason-emitted
+  - contract_id: contract.ci-failure-diagnostics.existing-state
+    tests:
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports unavailable npm and cleans up state after dependency command failures
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-config-snapshot failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: contract.ci-failure-diagnostics.bootstrap-diagnostic > failure-diagnostics-contract > preset bootstrap reports validator startup and completion failures without consumer changes
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publisher failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
-      - path: runtime/preset/tests/preset-assurance-contract.test.mjs
-        symbol: preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publisher failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
-          - ci-failure-diagnostics-bootstrap-envelope-emitted
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-request-handoff failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-request-handoff failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-supplemental-asset failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-supplemental-asset failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-change-scope failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-change-scope failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-package-publication-request failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-package-publication-request failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-publish-version failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-publish-version failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-authority failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-authority failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-handoff-integrity failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-handoff-integrity failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-jq-provisioner failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-jq-provisioner failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-control failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-control failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-verifier failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-verifier failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-annotated-tag-resolver failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-annotated-tag-resolver failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-gh-provisioner failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-gh-provisioner failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-platform-matrix failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-platform-matrix failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-quality-adapter failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-quality-adapter failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-quality-summary failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-quality-summary failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-assembly failure boundary > source retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-assembly failure boundary > dist retains actionable input failure without private input values
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-runner-temp-preserved
+          - failure-runner-temp-unextended
+          - failure-output-destination-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution selection rejection preserves state and diagnostic context
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution delivery rejection preserves state and diagnostic context
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution application rejection preserves state and diagnostic context
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: tests/runtime-failure-diagnostics.test.mjs
+        symbol: runtime failure diagnostics > distribution rollback rejection preserves state and diagnostic context
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-target-root-preserved
+          - failure-target-root-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint rejects output path line injection before remote observation
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint rejects output path line injection before remote observation
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint rejects injected output before owner execution
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint rejects injected output before owner execution
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: source-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: contents-read"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: token-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: repository-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-path-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-ref-case"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: pull-request"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: workflow-dispatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-read"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "source entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: "dist entrypoint > runActionEntrypoint > publication entrypoint binds standard workflow credential evidence before observing absence: metadata-false-token-mismatch"
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for network
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for network
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for timeout
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for timeout
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for body-timeout
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for body-timeout
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for http
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for empty
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for empty
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for oversized
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for oversized
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for json
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for json
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for inventory
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for inventory
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for duplicate
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for duplicate
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for pagination
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for permissions
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for permissions
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-missing
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-missing
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-denied
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-denied
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-invalid
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for push-invalid
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: source entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for repository
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-publication-verifier/tests/entrypoint.test.ts
+        symbol: dist entrypoint > runActionEntrypoint > publication entrypoint exposes safe diagnostics for repository
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: source entrypoint > supplemental entrypoint rejects invalid binding before owner execution
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/entrypoint.test.ts
+        symbol: dist entrypoint > supplemental entrypoint rejects invalid binding before owner execution
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects platform authority drift before execution
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects changed product declaration before generating output
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
+        symbol: standard installer > assembly > rejects changes beyond checkout line endings in both phases
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects a non-read-only descriptor
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects a non-read-only descriptor
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: source entrypoint > dependency policy rejection leaves no result file
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
+        symbol: dist entrypoint > dependency policy rejection leaves no result file
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects an expired approval without authority output
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects an expired approval without authority output
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint emits verified outputs and suppresses outputs on rejection
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended
+      - path: runtime/adapter/tests/materialize-adapter-bundle.test.mjs
+        symbol: contract.ci-preset-materialization.application > adapter-materialization-rejection > materializer rejects invalid custom bundle inputs before copying consumer assets
+        partition: ci-failure-diagnostics-rejected-before-write
+        guarantees:
+          - failure-output-destination-unextended

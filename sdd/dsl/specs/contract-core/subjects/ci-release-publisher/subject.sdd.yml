@@ -31,106 +31,81 @@ contracts:
         meaning: "Precondition prepared by the case: state of the release approval."
       - name: remote
         meaning: "Precondition prepared by the case: state of the remote Release or tag."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: receipt-path
-            meaning: Path of the publication receipt written by the publisher.
-          - selector: readback-path
-            meaning: Path of the remote readback evidence written by the publisher.
-          - selector: outcome
-            meaning: Failed step on rejection or uncertain write result.
-          - selector: successful-output-state
-            meaning: Successful evidence outputs are absent on failure.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
-      - summary: Provider request and response trace observed across the publication boundary.
-        boundary: boundary.release-provider-requests
-        fields:
-          - selector: publication-write-retry
-            meaning: Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.
-          - selector: publication-recovery-write
-            meaning: Additional provider writes after the first failed or uncertain publication operation.
-          - selector: publication-delete
-            meaning: Provider DELETE requests during publication.
-          - selector: publication-existing-release-write
-            meaning: Provider writes to a same-tag Release observed before creation.
-          - selector: publication-created-id-binding
-            meaning: For every upload or finalize request, equality of its Release ID and the immutable ID from a preceding valid create response. With no such request, this comparison is vacuously matched; a request without that ID is unmatched.
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-publisher-valid
-      - environment: runtime-context.release-publisher-invalid
-      - environment: runtime-context.release-publisher-invocation
+      - id: runtime-context.release-publisher-valid
+        summary: Approved inputs and initial remote observations agree, every selected publication and readback request returns matching evidence, and the local evidence and Action outputs can be written.
+      - id: runtime-context.release-publisher-invalid
+        summary: Inputs, approval, handoff or remote observations fail validation before the first provider write. This includes an existing same-tag Release.
+      - id: publication-operation-failed
+        summary: Publication reaches a provider write, subsequent readback, or local evidence write with a failed or uncertain result before Action output writing starts.
+      - id: publication-action-output-write-failed
+        summary: Publication evidence has been written, but the Action output write fails.
     guarantees:
       - id: receipt-file
         applies_to:
           - runtime-context.release-publisher-valid
-        claim:
-          field: receipt-path
-          present: true
+        boundary: boundary.action-output
+        statement: "`receipt-path` identifies the publication receipt file written in the requested output directory."
       - id: readback-file
         applies_to:
           - runtime-context.release-publisher-valid
-        claim:
-          field: readback-path
-          present: true
+        boundary: boundary.action-output
+        statement: "`readback-path` identifies the remote readback evidence file written in the requested output directory."
       - id: rejected
         applies_to:
           - runtime-context.release-publisher-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - publication-operation-failed
+          - publication-action-output-write-failed
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failed step on rejection or uncertain write result.'
       - id: no-success-outputs
         applies_to:
           - runtime-context.release-publisher-invalid
-        claim:
-          field: successful-output-state
-          in:
-            - absent
+          - publication-operation-failed
+        boundary: boundary.action-output
+        statement: '`successful-output-state` is one of `"absent"`. Occurrence state (present or absent) of the successful evidence outputs.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.release-publisher-invalid
+          - publication-operation-failed
+          - publication-action-output-write-failed
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: publication-write-retry
         applies_to:
-          - runtime-context.release-publisher-invocation
-        claim:
-          field: publication-write-retry
-          in:
-            - absent
+          - runtime-context.release-publisher-valid
+          - publication-operation-failed
+        boundary: boundary.release-provider-requests
+        statement: '`publication-write-retry` is one of `"absent"`. Repeated create, upload of the same asset, or finalize write requests during one invocation, including after an uncertain result.'
       - id: publication-recovery-write
         applies_to:
-          - runtime-context.release-publisher-invocation
-        claim:
-          field: publication-recovery-write
-          in:
-            - absent
+          - publication-operation-failed
+        boundary: boundary.release-provider-requests
+        statement: '`publication-recovery-write` is one of `"absent"`. Additional provider writes after the first failed or uncertain publication operation.'
       - id: publication-delete
         applies_to:
-          - runtime-context.release-publisher-invocation
-        claim:
-          field: publication-delete
-          in:
-            - absent
+          - runtime-context.release-publisher-valid
+          - runtime-context.release-publisher-invalid
+          - publication-operation-failed
+          - publication-action-output-write-failed
+        boundary: boundary.release-provider-requests
+        statement: '`publication-delete` is one of `"absent"`. Provider DELETE requests during publication.'
+      - id: publication-write-on-rejection
+        applies_to:
+          - runtime-context.release-publisher-invalid
+        boundary: boundary.release-provider-requests
+        statement: '`publication-write-after-rejection` is one of `"absent"`. Occurrence state (present or absent) of provider write requests during an invocation rejected before any write.'
       - id: publication-existing-release-write
         applies_to:
-          - runtime-context.release-publisher-invocation
-        claim:
-          field: publication-existing-release-write
-          in:
-            - absent
+          - runtime-context.release-publisher-invalid
+        boundary: boundary.release-provider-requests
+        statement: '`publication-existing-release-write` is one of `"absent"`. Provider writes to a same-tag Release observed before creation.'
       - id: publication-created-id-binding
         applies_to:
-          - runtime-context.release-publisher-invocation
-        claim:
-          field: publication-created-id-binding
-          in:
-            - matched
+          - runtime-context.release-publisher-valid
+          - publication-operation-failed
+        boundary: boundary.release-provider-requests
+        statement: '`publication-created-id-binding` is one of `"matched"`. For every upload or finalize request, equality of its Release ID and the immutable ID from a preceding valid create response. A request without that ID is unmatched.'
+    input_kind:
+      kind: operation
+      name: ci-release-publisher

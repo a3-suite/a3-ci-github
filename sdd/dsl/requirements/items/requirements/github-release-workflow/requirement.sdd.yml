@@ -6,16 +6,23 @@ requirements:
     summary: GitHub Actions上でRelease要求の固定から承認済み資材の公開までを分離して安全に実行できる
     rationale: >-
       tag検出、release notesの承認、資材生成、公開権限を単一の暗黙経路へまとめると、未承認入力や
-      異なるsourceを公開する危険があり、失敗時の状態も判別しにくくなるため
+      異なるsourceを公開する危険があり、失敗時の状態も判別しにくくなるため。
+      標準installerのWindows公開入口、Unix共有入口、Unixの対象別導入方式は利用者指定の公開条件として維持する。
     subject:
       namespace: ci
       key: release-workflow
     priority: must
     fit_criteria:
-      - annotated tagからsource identityを解決し、公開権限を使わずimmutableなrelease request handoffを生成できる
+      - 公開権限がなくても、annotated tagが指すsource identityを後から変更できないrelease requestとして記録できる
       - Release公開は承認済みnotesとpublication requestを入力とする明示的な手動要求から開始する
-      - default branch上のcallerとcalled workflowのidentity、およびrequest provenanceを公開処理前に検証する
-      - build、assemble、publishの各責務は検証済みhandoffで接続し、write権限を持つ処理は未検証入力を使用しない
+      - default branchのcaller、呼び出されたworkflow、publication requestの出所を公開前に確認でき、いずれかを確認できない場合は公開されない
+      - 公開先への書き込みには、承認済みの要求と照合済みの資材だけが使われる
       - 公開後はrelease identityと公開結果をreadbackし、不一致または状態不明を成功扱いしない
       - request、承認、identity、source、assetまたは公開結果の不一致時は後続の公開を停止する
-      - 製品のbuildを持たないprojectも、同じ承認・source固定・readbackの経路で、公開宣言したスキルZIPとproject固有の補助assetの少なくとも一方を公開でき、公開するassetが無い選択は公開前に停止する
+      - 製品のbuildを持たないprojectも、承認、sourceの固定、公開結果の確認を伴って、宣言したスキルZIPやproject固有の補助assetを公開できる
+      - 標準installerを選択した場合、Windows公開入口とUnix共有入口がinstaller ownerの命名契約に適合する証跡を確認でき、Unixの対象別導入方式を利用できる
+      - 公開スキルを選択した場合、必要なスキルだけを製品と同じ固定source・versionのReleaseで取得でき、開発用、一時、コンパイルの残骸を含まない
+      - installerと公開スキルを併用した場合も各ownerの検証証跡を確認でき、利用者向けの導入・削除案内が同梱構成に一致する
+      - 公開するassetが一つもない選択では、公開先に書き込まれない
+      - 公開前の検証・組み立ての処理が使う認証情報は、後続の処理から参照できる状態に残さない
+      - 同じ版の Release を二重に公開しない

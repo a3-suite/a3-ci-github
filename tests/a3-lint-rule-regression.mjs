@@ -50,6 +50,12 @@ const rules = [
     falsePositive: [`.ci/scripts/check.${extension}`, "const example = \"spawnSync('a3-lint', [])\";\n"],
   })),
   {
+    file: 'ci_github_runtime_no_a3_cli.lua', lang: 'javascript', code: 'ci_github_runtime_a3_cli_forbidden',
+    invalid: ['.ci/scripts/check.mjs', "import childProcess from 'node:child_process';\nchildProcess.execSync('a3-suite status --json');\n"],
+    valid: ['.ci/scripts/check.mjs', "execSync('a3-lint-report');\n"],
+    falsePositive: ['.ci/scripts/check.mjs', "// execSync('a3-lint check');\nexecSync('node');\n"],
+  },
+  {
     file: 'ci_github_action_runtime_contract.lua', lang: 'yaml', code: 'ci_github_action_runtime_unsupported',
     invalid: ['actions/example/action.yml', 'runs:\n  using: node20\n  main: dist/index.js\n'],
     valid: ['actions/example/action.yml', 'runs:\n  using: node24\n  main: dist/index.js\n'],

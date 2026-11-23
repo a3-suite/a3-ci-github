@@ -6,9 +6,9 @@ import { collectActions } from '../runtime/repository/check-action-dist.mjs';
 import { collectActionPackages, runVerificationPlan, sharedRuntimeVerificationPlan, verificationPlan } from '../runtime/repository/verify-action-packages.mjs';
 import { root } from "./action-package-verification.fixtures.mjs";
 
-describe("contract.repository-action-distribution.integrity", () => {
+describe("contract.repository-action-distribution.source-verification", () => {
   describe("repository-action-source-verification", () => {
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // integration_id: repository-action-source-verification
     test('retains the known report rejection reason after a zero child exit', (t) => {
       // Arrange
@@ -26,7 +26,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(failure?.details).toMatchObject({ field: 'source-test-report', expected: 'complete-planned-file-results', observed: 'action-source-test-report-invalid', file: path.relative(root, reportPath) });
     });
 
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // integration_id: repository-action-source-verification
     test('batches every Action and shared test once while retaining all typechecks', () => {
       // Arrange
@@ -45,7 +45,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(tests[0].args).toContain('--outputFile=' + reportPath);
     });
 
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // integration_id: repository-action-source-verification
     test('rejects missing files, empty, entirely skipped and unknown test results despite a zero child exit', () => {
       // Arrange
@@ -61,7 +61,7 @@ describe("contract.repository-action-distribution.integrity", () => {
       expect(() => sourceVerification.assertVerificationReport({ ...report, testResults: [{ ...report.testResults[0], assertionResults: [] }, report.testResults[1]] }, files)).toThrow();
       expect(() => sourceVerification.assertVerificationReport(null, files)).toThrow();
     });
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.repository-action-distribution.source-verification
     // integration_id: repository-action-source-verification
     test('derives typecheck and no-rebuild test steps for every bundled Action', () => {
       // Arrange

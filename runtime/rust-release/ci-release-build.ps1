@@ -83,9 +83,6 @@ try {
   $ciStage = 'asset-package'
   $ciWriteState = 'output-may-be-partial'
   & (Join-Path $PSScriptRoot 'package-release.ps1') $binaryPath "$binaryName.exe" $assetPrefix $authority.version $PlatformId $PlatformTarget $authority.source_sha $OutputDirectory
-  $ciLastConfirmed = $ciStage
-  $ciStage = 'asset-verification'
-  & (Join-Path $PSScriptRoot 'verify-release-asset.ps1') "$binaryName.exe" $assetPrefix $authority.version $PlatformId $PlatformTarget $authority.source_sha $OutputDirectory
 } catch {
   Write-CiFailureEvidence -Subject 'ci-rust-release-build' -Operation 'build' -Stage $ciStage -LastConfirmed $ciLastConfirmed -WriteState $ciWriteState -NativeExit $LASTEXITCODE -Comparison $ciComparison
   throw "$ciStage-failed"

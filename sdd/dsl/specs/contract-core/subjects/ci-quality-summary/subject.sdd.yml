@@ -11,6 +11,10 @@ contracts:
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
       - name: summary-json
         meaning: "Received by the contract target: summary JSON passed to the Action."
+      - name: summary-path
+        meaning: "Received by the contract target: optional step summary destination overriding the runner default."
+      - name: evidence-path
+        meaning: "Received by the contract target: optional destination for the rendered summary evidence."
       - name: github-step-summary
         meaning: "Precondition prepared by the case: step summary destination provided by the runner."
       - name: github-run-context
@@ -23,68 +27,50 @@ contracts:
         meaning: "Received by the contract target: repository identity passed by the caller."
       - name: run-id
         meaning: "Precondition prepared by the case: run ID provided by the runner."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Aggregate quality status.
-          - selector: digest
-            meaning: SHA-256 digest of rendered summary evidence.
-          - selector: evidence-path
-            meaning: Path written for rendered summary evidence.
-          - selector: outcome
-            meaning: Failure outcome of the rejected quality summary step.
-          - selector: applicable-only-status-comparison
-            meaning: Comparison of the aggregate status with aggregation of applicable rows alone.
-          - selector: default-evidence-comparison
-            meaning: Comparison of missing-row evidence with the current workflow run URL.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: summary-input-present
-      - environment: runtime-context.action-input-invalid
-      - environment: runtime-context.ci-quality-summary-summary-mixed-applicability
-      - environment: runtime-context.ci-quality-summary-summary-default-evidence-valid
-      - environment: runtime-context.ci-quality-summary-summary-all-excluded
-      - environment: runtime-context.ci-quality-summary-summary-run-context-missing
+      - id: runtime-context.failure-diagnostic-required
+        summary: The input does not supply valid rows with at least one applicable row, an omitted evidence reference cannot be resolved from the run context, a destination is missing or aliases the other file, or a required write fails.
+      - id: summary-input-present
+        summary: Valid rows include at least one applicable row and every applicable row reports collected success. Evidence references are supplied or resolvable from the run context, the summary and evidence destinations are distinct, and all required writes are possible.
+      - id: summary-with-unsuccessful-applicable-rows
+        summary: Valid rows include at least one applicable row that reports failure, an unresolved result, a blocked or unexecuted result, or incomplete collection. Evidence references are supplied or resolvable from the run context, the summary and evidence destinations are distinct, and all required writes are possible.
     guarantees:
       - id: quality-summary-status-produced
         applies_to:
           - summary-input-present
-        claim:
-          field: status
-          present: true
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.action-output
+        statement: "`status` reports the aggregate quality result, `evidence-path` identifies the file written for this invocation, and `digest` contains the SHA-256 digest of that file's bytes."
+      - id: evidence-matches-step-summary
+        applies_to:
+          - summary-input-present
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.workspace-files
+        statement: The step summary consists of its previous contents, preserved byte for byte, followed by exactly the bytes written to the evidence file in this invocation.
       - id: quality-summary-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-          - runtime-context.ci-quality-summary-summary-all-excluded
-          - runtime-context.ci-quality-summary-summary-run-context-missing
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.action-output
+        statement: The Action step fails if it cannot produce the summary or if the aggregate quality status is unsuccessful.
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: excluded-rows-not-aggregated
         applies_to:
-          - runtime-context.ci-quality-summary-summary-mixed-applicability
-        claim:
-          field: applicable-only-status-comparison
-          in:
-            - equal
-      - id: run-url-used-for-missing-evidence
+          - summary-input-present
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.action-output
+        statement: '`applicable-only-status-comparison` is one of `"equal"`. Comparison of the aggregate status with aggregation of applicable rows alone.'
+      - id: no-row-without-evidence-reference
         applies_to:
-          - runtime-context.ci-quality-summary-summary-default-evidence-valid
-        claim:
-          field: default-evidence-comparison
-          in:
-            - equal
+          - summary-input-present
+          - summary-with-unsuccessful-applicable-rows
+        boundary: boundary.workspace-files
+        statement: Summary details show rows with a non-success result, a reason, or incomplete collection. Each detail row shows its supplied evidence reference or, if omitted, the URL of the current workflow run. A successful, fully collected row without a reason appears only in the table.
+    input_kind:
+      kind: operation
+      name: ci-quality-summary

@@ -12,229 +12,176 @@ contracts:
       - name: caller-source
         meaning: "Received by the contract target: caller workflow definition file read by repository verification."
       - name: job-result
-        meaning: "Precondition prepared by the case: result of a job that the workflow aggregates or depends on."
-    observations:
-      - summary: Canonical workflow triggers, permissions, orchestration, and summaries exposed for repository verification.
-        boundary: boundary.workflow-definition
-        fields:
-          - selector: reusable-binding
-            meaning: Declared caller-to-callee binding.
-          - selector: execution-chain
-            meaning: Declared quality execution dependency graph.
-          - selector: failure-summary
-            meaning: Declared aggregate failure route.
-          - selector: optional-platform-chain
-            meaning: Declared platform quality dependency graph.
-          - selector: profiles-chain
-            meaning: Declared per-language-profile quality dependency graph and its single aggregate decision.
-          - selector: quality-fixed-reference
-            meaning: Comparison of caller reusable reference with its registered provider workflow reference declaration.
-          - selector: quality-explicit-input-binding
-            meaning: Comparison of caller input names and typed bindings with the callee interface.
-          - selector: quality-summary-identity
-            meaning: Declared caller aggregate job ID.
-          - selector: quality-no-consumer-callee-copy
-            meaning: Occurrence of local copies of provider execution jobs in the caller.
-          - selector: quality-caller-read-permissions
-            meaning: Declared caller contents permission.
-          - selector: quality-caller-summary-always
-            meaning: Declared caller aggregate condition.
-          - selector: quality-source-before-adapter
-            meaning: Declared order of trusted checkout/asset resolution and adapter execution.
-          - selector: quality-results-before-summary
-            meaning: Declared dependency order of applicable execution jobs and aggregate decision.
-          - selector: quality-failure-summary-always
-            meaning: Declared summary condition on applicable job failure.
-          - selector: quality-unresolved-results-visible
-            meaning: Occurrence of unresolved applicable results in aggregate failure evidence.
-          - selector: platform-resolution-before-execution
-            meaning: Declared dependency order of trusted platform resolution and selected matrix execution.
-          - selector: platform-execution-before-summary
-            meaning: Declared dependency order of matrix execution and aggregate platform decision.
-          - selector: quality-cargo-cache-profile-condition
-            meaning: Declared language profile condition of the trusted Cargo cache path resolution step.
-          - selector: quality-cargo-cache-before-adapter
-            meaning: Declared order of the trusted Cargo cache step and adapter execution.
-          - selector: quality-cargo-cache-failure-dependency
-            meaning: Dependency of adapter execution on the outcome of Cargo cache path resolution.
-          - selector: quality-untrusted-cargo-cache-use
-            meaning: Occurrence of Cargo cache use in untrusted pull request and Release jobs.
-          - selector: quality-cargo-cache-save-condition
-            meaning: Declared run condition of the trusted Cargo cache save step.
-          - selector: quality-cargo-cache-save-after-adapter
-            meaning: Declared order of adapter execution and the trusted Cargo cache save step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+        meaning: "Received by the summary Action: result of an applicable quality job."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: ci-quality-workflow-caller-selected
-      - input: ci-quality-workflow-canonical-source-available
-      - input: ci-quality-workflow-failure-route-required
-      - input: ci-quality-workflow-platform-source-selected
-      - input: ci-quality-workflow-profiles-source-selected
+      - id: runtime-context.failure-diagnostic-required
+        summary: The summary Action processes a failed applicable quality job result.
+      - id: ci-quality-workflow-caller-selected
+        summary: The canonical quality-gate caller source is selected for inspection.
+      - id: ci-quality-workflow-canonical-source-available
+        summary: The repository quality workflow source is inspected.
+      - id: ci-quality-workflow-platform-source-selected
+        summary: The repository platform quality workflow source is selected for inspection.
+      - id: ci-quality-workflow-profiles-source-selected
+        summary: The canonical quality profiles caller source is selected for inspection.
     guarantees:
+      - id: quality-change-scope-gates-adapter
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: In both trusted and untrusted pull request jobs, the change-scope Action precedes the quality adapter, and the adapter's change-scope condition skips it only when run-ci is false.
       - id: ci-quality-workflow-reusable-binding-observed
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: reusable-binding
-          present: true
-      - id: ci-quality-workflow-success-observed
+        boundary: boundary.workflow-definition
+        statement: "`reusable-binding` is present. Declared caller-to-callee binding."
+      - id: quality-caller-required-result-rejected
         applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: execution-chain
-          present: true
+          - ci-quality-workflow-caller-selected
+        boundary: boundary.action-output
+        statement: The caller's summary Action fails when the required reusable quality job has failed, been cancelled or skipped, or has no recognized result.
       - id: ci-quality-workflow-failure-observed
         applies_to:
-          - ci-quality-workflow-failure-route-required
-        claim:
-          field: failure-summary
-          present: true
-      - id: ci-quality-workflow-platform-chain-observed
-        applies_to:
-          - ci-quality-workflow-platform-source-selected
-        claim:
-          field: optional-platform-chain
-          present: true
-      - id: ci-quality-workflow-profiles-chain-observed
-        applies_to:
-          - ci-quality-workflow-profiles-source-selected
-        claim:
-          field: profiles-chain
-          present: true
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: "The summary receives the raw results of the trusted and untrusted jobs, with applicability selected from the trusted job outcome."
       - id: diagnostic-failure-stage-execution
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "The summary Action records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: quality-fixed-reference
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-fixed-reference
-          in:
-            - equal
-      - id: quality-explicit-input-binding
-        applies_to:
-          - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-explicit-input-binding
-          in:
-            - equal
+          - ci-quality-workflow-platform-source-selected
+        boundary: boundary.workflow-definition
+        statement: '`quality-fixed-reference` is one of `"equal"`. Comparison of caller reusable reference with its registered provider workflow reference declaration.'
       - id: quality-summary-identity
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-summary-identity
-          in:
-            - summary
+        boundary: boundary.workflow-definition
+        statement: '`quality-summary-job-count` is one of `"1"`. Number of aggregate summary jobs declared by the quality caller, as a decimal integer string.'
       - id: quality-no-consumer-callee-copy
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-no-consumer-callee-copy
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`quality-no-consumer-callee-copy` is one of `"absent"`. Occurrence of local copies of provider execution jobs in the caller.'
       - id: quality-caller-read-permissions
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-caller-read-permissions
-          in:
-            - read
+        boundary: boundary.workflow-definition
+        statement: '`quality-caller-read-permissions` is one of `"read"`. Declared caller contents permission.'
       - id: quality-caller-summary-always
         applies_to:
           - ci-quality-workflow-caller-selected
-        claim:
-          field: quality-caller-summary-always
-          in:
-            - always
+        boundary: boundary.workflow-definition
+        statement: '`quality-caller-summary-always` is one of `"always"`. Declared caller aggregate condition.'
       - id: quality-source-before-adapter
         applies_to:
           - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-source-before-adapter
-          in:
-            - source-before-adapter
+        boundary: boundary.workflow-definition
+        statement: '`quality-source-before-adapter` is one of `"source-before-adapter"`. Declared order of trusted checkout/asset resolution and adapter execution.'
+      - id: quality-fork-pull-request-untrusted
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-fork-pull-request-job` is one of `"untrusted-pr"`. Declared job whose run condition selects a pull request whose head repository differs from the base repository.'
+      - id: quality-pull-request-trusted-assets-from-base
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+          - ci-quality-workflow-platform-source-selected
+        boundary: boundary.workflow-definition
+        statement: '`quality-pull-request-trusted-assets-commit` is one of `"base-commit"`. Commit that the trusted CI asset checkout reads for a pull request, in the trusted and untrusted pull request jobs and, when checkout is selected, in platform resolution and execution.'
       - id: quality-results-before-summary
         applies_to:
           - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-results-before-summary
-          in:
-            - execution-before-summary
+        boundary: boundary.workflow-definition
+        statement: '`quality-results-before-summary` is one of `"execution-before-summary"`. Declared dependency order of applicable execution jobs and aggregate decision.'
       - id: quality-failure-summary-always
         applies_to:
-          - ci-quality-workflow-failure-route-required
-        claim:
-          field: quality-failure-summary-always
-          in:
-            - always
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-failure-summary-always` is one of `"always"`. Declared summary condition on applicable job failure.'
       - id: quality-unresolved-results-visible
         applies_to:
-          - ci-quality-workflow-failure-route-required
-        claim:
-          field: quality-unresolved-results-visible
-          in:
-            - present
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-unresolved-results-visible` is one of `"present"`. The workflow passes the applicable job result to the summary without translating failed or missing results to success.'
       - id: platform-resolution-before-execution
         applies_to:
           - ci-quality-workflow-platform-source-selected
-        claim:
-          field: platform-resolution-before-execution
-          in:
-            - resolution-before-execution
+        boundary: boundary.workflow-definition
+        statement: '`platform-resolution-before-execution` is one of `"resolution-before-execution"`. Declared dependency order of trusted platform resolution and selected matrix execution.'
       - id: platform-execution-before-summary
         applies_to:
           - ci-quality-workflow-platform-source-selected
-        claim:
-          field: platform-execution-before-summary
-          in:
-            - execution-before-summary
-      - id: quality-cargo-cache-rust-only
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-profile-condition
-          in:
-            - rust-profile-only
-      - id: quality-cargo-cache-before-adapter
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-before-adapter
-          in:
-            - cache-before-adapter
-      - id: quality-cargo-cache-failure-isolated
-        applies_to:
-          - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-failure-dependency
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`platform-execution-before-summary` is one of `"execution-before-summary"`. Declared dependency order of matrix execution and aggregate platform decision.'
       - id: quality-untrusted-cargo-cache-absent
         applies_to:
           - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-untrusted-cargo-cache-use
-          in:
-            - absent
+        boundary: boundary.workflow-definition
+        statement: '`quality-untrusted-cargo-cache-use` is one of `"absent"`. Occurrence of Cargo cache use in untrusted pull request and Release jobs.'
       - id: quality-cargo-cache-save-default-branch-push-only
         applies_to:
           - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-save-condition
-          in:
-            - default-branch-push-only
-      - id: quality-cargo-cache-save-after-adapter
+        boundary: boundary.workflow-definition
+        statement: '`quality-cargo-cache-save-condition` is one of `"default-branch-push-only"`. Declared run condition of the trusted Cargo cache save step.'
+      - id: quality-toolchain-language-profile-bound
         applies_to:
           - ci-quality-workflow-canonical-source-available
-        claim:
-          field: quality-cargo-cache-save-after-adapter
-          in:
-            - adapter-before-save
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-language-profile-binding` is one of `"equal"`. Each quality toolchain step binds language-profile through its effective environment to the corresponding caller input.'
+      - id: quality-toolchain-toolchain-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-toolchain-version-binding` is one of `"equal"`. Each quality toolchain step binds toolchain-version through its effective environment to the caller input or, for platform execution, the exact version from platform resolution.'
+      - id: quality-toolchain-uv-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-uv-version-binding` is one of `"equal"`. Each quality toolchain step binds uv-version through its effective environment to the corresponding caller input.'
+      - id: quality-toolchain-cargo-audit-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-cargo-audit-version-binding` is one of `"equal"`. Each quality toolchain step binds cargo-audit-version through its effective environment to the corresponding caller input.'
+      - id: quality-toolchain-cargo-deny-version-bound
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-cargo-deny-version-binding` is one of `"equal"`. Each quality toolchain step binds cargo-deny-version through its effective environment to the corresponding caller input.'
+      - id: quality-toolchain-continue-on-error-absent
+        applies_to:
+          - ci-quality-workflow-canonical-source-available
+        boundary: boundary.workflow-definition
+        statement: '`quality-toolchain-continue-on-error` is one of `"absent"`. Declared continue-on-error setting of the quality toolchain step.'
+      - id: platform-summary-identity
+        applies_to:
+          - ci-quality-workflow-platform-source-selected
+        boundary: boundary.workflow-definition
+        statement: '`platform-summary-job-count` is one of `"1"`. Number of aggregate summary jobs declared by the platform caller, as a decimal integer string.'
+      - id: platform-unresolved-results-rejected
+        applies_to:
+          - ci-quality-workflow-platform-source-selected
+        boundary: boundary.script-result
+        statement: '`platform-unresolved-results-accepted` is one of `"absent"`. Occurrence of platform aggregate acceptance when platform resolution or a required platform result is failed, cancelled, skipped, or missing.'
+      - id: profiles-callee-once-per-profile
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        boundary: boundary.workflow-definition
+        statement: '`profiles-callee-runs-per-profile` is one of `"1"`. The profiles caller declares one reusable quality job for each configured profile, without a failed profile cancelling other matrix jobs.'
+      - id: profiles-summary-identity
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        boundary: boundary.workflow-definition
+        statement: '`profiles-summary-job-count` is one of `"1"`. The single profiles summary depends on the quality matrix job and runs for all its outcomes.'
+      - id: profiles-unsuccessful-result-rejected
+        applies_to:
+          - ci-quality-workflow-profiles-source-selected
+        boundary: boundary.script-result
+        statement: '`profiles-unsuccessful-result-accepted` is one of `"absent"`. The profiles summary fails when the reusable quality matrix job reports failure, cancellation, skip, or no known result.'
+    input_kind:
+      kind: operation
+      name: ci-quality-workflow

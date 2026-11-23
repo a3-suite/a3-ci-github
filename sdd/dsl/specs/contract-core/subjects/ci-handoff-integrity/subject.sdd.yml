@@ -5,7 +5,7 @@ subject:
   summary: Validating release handoff identity, manifest, and artifact digests.
 contracts:
   - id: contract.ci-handoff-integrity.outputs
-    summary: A matching handoff descriptor and manifest produce a handoff status output.
+    summary: Handoff root, descriptor and source identity inputs to the handoff integrity Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -19,48 +19,27 @@ contracts:
         meaning: "Received by the contract target: version value passed to the contract target."
       - name: target-identity
         meaning: "Received by the contract target: target identity bound to the handoff."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether handoff validation succeeded.
-          - selector: descriptor
-            meaning: Validated descriptor path relative to the handoff root.
-          - selector: manifest
-            meaning: Validated manifest path relative to the handoff root.
-          - selector: manifest-digest
-            meaning: SHA-256 digest of manifest bytes.
-          - selector: entries
-            meaning: Number of validated manifest entries.
-          - selector: outcome
-            meaning: Failure outcome of the rejected handoff validation step.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: handoff-input-present
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: Required inputs are absent or invalid, the handoff fails its identity or integrity checks, or writing an Action output fails.
+      - id: handoff-input-present
+        summary: The supplied handoff satisfies the requested source, version, and target identities, its descriptor, manifest, and artifacts pass integrity checks, and all Action outputs can be written.
     guarantees:
-      - id: handoff-status-produced
+      - id: handoff-status-succeeded
         applies_to:
           - handoff-input-present
-        claim:
-          field: status
-          present: true
+        boundary: boundary.action-output
+        statement: '`status` is `"success"`. The `descriptor` and `manifest` outputs identify the validated files relative to the handoff root. `manifest-digest` equals the SHA-256 digest of the validated manifest bytes, and `entries` equals the number of validated manifest entries.'
       - id: handoff-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected handoff validation step.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-handoff-integrity
