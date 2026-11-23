@@ -11,6 +11,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
 const bundle = entrypointArgs;
 const hash = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest('hex');
+const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort();
 
 describe('runActionEntrypoint', () => {
 
@@ -45,8 +46,8 @@ globalThis.fetch = async (url, init) => {
   expect(beforeResult.status, beforeResult.stderr).toBe(0);
   const beforeOutputs = fs.readFileSync(output, 'utf8');
   expect(beforeOutputs).toMatch(/^status=success\n/);
-  expect(beforeOutputs.includes(`observation-path=${beforePath}\n`)).toBeTruthy();
-  expect(beforeOutputs.includes(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`)).toBeTruthy();
+  expect(beforeOutputs).toContain(`observation-path=${beforePath}\n`);
+  expect(beforeOutputs).toContain(`observation-digest=${hash(fs.readFileSync(beforePath))}\n`);
   expect(beforeOutputs.includes('release-remote-identity=')).toBe(false);
   expect(beforeOutputs.includes('publish-receipt=')).toBe(false);
   expect(beforeOutputs.includes('readback-evidence=')).toBe(false);
@@ -60,16 +61,62 @@ globalThis.fetch = async (url, init) => {
   expect(afterResult.status, afterResult.stderr).toBe(0);
   const outputs = fs.readFileSync(output, 'utf8');
   expect(outputs).toMatch(/^status=success\n/);
-  expect(outputs.includes('observation-path=')).toBe(false);
-  expect(outputs.includes('observation-digest=')).toBe(false);
+  expect(outputs).not.toMatch(/^observation-(path|digest)=/m);
   expect(outputs).toMatch(/release-remote-identity=42\n/);
   expect(outputs).toMatch(/publish-receipt=\{/);
   expect(outputs).toMatch(/readback-evidence=\{/);
   const values = Object.fromEntries(outputs.trim().split('\n')
     .map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-  expect(JSON.parse(values['publish-receipt']).release_id).toBe('42');
-  expect(JSON.parse(values['readback-evidence']).release_id).toBe('42');
+  expect(JSON.parse(values['publish-receipt'])).toEqual(receipt);
+  expect(JSON.parse(values['readback-evidence'])).toEqual(readback);
   expect(outputs.includes('synthetic-secret')).toBe(false);
+});
+
+// contract_id: contract.ci-failure-diagnostics.actionable
+// flow_id: release-publication-verifier-entrypoint
+test('publication entrypoint diagnoses unsafe asset readback redirects without disclosing signed locations', async (t) => {
+  const accepted = 'https://release-assets.githubusercontent.com/asset?signed=secret';
+  const f = fixture(t);
+  f.assemble();
+  const assembly = JSON.parse(fs.readFileSync(path.join(f.options.outputRoot, 'assembly.json'), 'utf8'));
+  const mock = f.put('redirect-fetch.mjs', `
+import fs from 'node:fs';
+import path from 'node:path';
+const assembly = JSON.parse(fs.readFileSync(path.join(process.env.MOCK_HANDOFF, 'assembly.json')));
+globalThis.fetch = async (url, init) => {
+  if (init.method !== 'GET') throw new Error('write-forbidden');
+  if (String(url) === ${JSON.stringify(accepted)}) throw new TypeError('fetch failed: ' + String(url));
+  const endpoint = new URL(String(url)).pathname;
+  let data;
+  if (endpoint.includes('/git/ref/tags/')) data = { object: { type: 'tag', sha: assembly.identity.tag_object_sha } };
+  else if (endpoint.includes('/git/tags/')) data = { sha: assembly.identity.tag_object_sha, object: { type: 'commit', sha: assembly.identity.source_sha } };
+  else if (endpoint.endsWith('/releases/42/assets')) data = assembly.assets.map((asset, index) => ({ id: index + 100, name: asset.name, size: asset.size, state: 'uploaded' }));
+  else if (endpoint.includes('/releases/assets/')) return new Response(null, { status: 302, headers: process.env.MOCK_LOCATION ? { location: process.env.MOCK_LOCATION } : {} });
+  else if (endpoint.endsWith('/releases/42')) data = { id: 42, tag_name: assembly.identity.tag, draft: false, body: 'approved notes' };
+  else if (endpoint.endsWith('/releases')) data = process.env.MOCK_PHASE === 'before' ? [] : [{ id: 42, tag_name: assembly.identity.tag, draft: false }];
+  else data = { full_name: assembly.identity.repository, permissions: { push: true } };
+  return new Response(JSON.stringify(data));
+};
+`);
+  const beforePath = path.join(f.root, 'before.json');
+  const output = f.put('github-output', '');
+  const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret', INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository, 'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot, 'INPUT_OBSERVATION-PATH': beforePath, MOCK_HANDOFF: f.options.outputRoot, MOCK_PHASE: 'before' };
+  const beforeResult = await runActionEntrypoint(['--import', mock, ...bundle], { env, encoding: 'utf8', cwd: f.root });
+  expect(beforeResult.status, beforeResult.stderr).toBe(0);
+  const handoffDigest = hash(fs.readFileSync(path.join(f.options.outputRoot, 'handoff.json')));
+  const receiptPath = f.put('receipt.json', { schema_version: '1', kind: 'ci-github-release-publish-receipt', identity: assembly.identity, handoff_digest: handoffDigest, asset_digest: assembly.asset_digest, release_id: '42', pre_observation_sha256: hash(fs.readFileSync(beforePath)) });
+  const readbackPath = f.put('readback.json', { schema_version: '1', kind: 'ci-github-release-readback', identity: assembly.identity, handoff_digest: handoffDigest, asset_digest: assembly.asset_digest, release_id: '42', draft: false, assets: assembly.assets, inventory: { ...JSON.parse(fs.readFileSync(beforePath, 'utf8')), phase: 'post-create', release_ids: ['42'] } });
+  // The pre-create observation does not read assets, so one observation serves every redirect case.
+  for (const [location, reason] of [['', 'redirect-missing'], ['invalid-secret', 'redirect-invalid'], ['https://evil.example/signed-secret', 'redirect-invalid'], [accepted, 'network-failed']]) {
+    fs.writeFileSync(output, '');
+    const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: { ...env, INPUT_OPERATION: 'verify-after', 'INPUT_RECEIPT-PATH': receiptPath, 'INPUT_READBACK-PATH': readbackPath, MOCK_PHASE: 'after', MOCK_LOCATION: location }, encoding: 'utf8', cwd: f.root });
+    expect(result.status).toBe(1);
+    expect(fs.readFileSync(output, 'utf8')).toBe('');
+    expect(result.stdout + result.stderr).not.toContain('secret');
+    const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
+    expect(diagnostic.operation).toBe('asset-readback');
+    expect(diagnostic['sanitized-reason']).toBe(reason);
+  }
 });
 
 // contract_id: contract.ci-release-publication-verifier.outputs
@@ -78,17 +125,21 @@ test('publication entrypoint rejects output path line injection before remote ob
   const f = fixture(t);
   f.assemble();
   const output = f.put('github-output', '');
+  const injected = `${path.join(f.root, 'before.json')}\nstatus=success`;
+  const filesBefore = fileNames(f.root);
   const result = await runActionEntrypoint([...bundle], {
     env: {
       ...process.env, GH_TOKEN: 'synthetic-secret', GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output,
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot,
-      'INPUT_OBSERVATION-PATH': `${path.join(f.root, 'before.json')}\nstatus=success`,
+      'INPUT_OBSERVATION-PATH': injected,
     }, encoding: 'utf8', cwd: f.root,
   });
   expect(result.status).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toBe('');
   expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
+  expect(fs.existsSync(injected)).toBe(false);
+  expect(fileNames(f.root)).toEqual(filesBefore);
   expect(result.stderr).toMatch(/input-invalid:observation-path/);
 });
 
@@ -121,10 +172,7 @@ test('publication entrypoint refuses missing credentials without success evidenc
     ['metadata-false-token-mismatch', 'denied', { GITHUB_TOKEN: 'another-synthetic-secret' }, 1],
     ['metadata-malformed', 'malformed', {}, 1],
   ];
-  for (const [label, metadata, context, expectedStatus] of cases) {
-    // contract_id: contract.ci-release-publication-verifier.outputs
-    // flow_id: release-publication-safe-diagnostics
-    test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, async (t) => {
+  async function observeCredentialEvidence(t: Parameters<typeof fixture>[0], metadata: string, context: Record<string, string>, expectedStatus: number, mode: 'status' | 'observation-file'): Promise<void> {
     const f = fixture(t);
     f.assemble();
     const output = f.put('github-output', '');
@@ -141,6 +189,7 @@ globalThis.fetch = async (url, init) => {
     : metadata === 'denied' ? { permissions: { push: false } }
     : metadata === 'malformed' ? { permissions: { push: 'synthetic-secret' } } : {}) });
 };`);
+    const filesBefore = fileNames(f.root);
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, ...standardPublicationTokenEnvironment(f.identity.repository, 'synthetic-secret'),
       ...context,
@@ -150,21 +199,37 @@ globalThis.fetch = async (url, init) => {
     }, cwd: f.root, encoding: 'utf8' });
     expect(result.status, result.stderr).toBe(expectedStatus);
     if (expectedStatus === 0) {
-      expect(JSON.parse(fs.readFileSync(before, 'utf8')).release_ids).toEqual([]);
-      expect(fs.readFileSync(output, 'utf8')).toContain('status=success');
+      if (mode === 'observation-file') expect(JSON.parse(fs.readFileSync(before, 'utf8')).release_ids).toEqual([]);
+      const outputs = fs.readFileSync(output, 'utf8');
+      expect(outputs).toContain('status=success\n');
+      expect(outputs).toContain(`observation-path=${before}\n`);
+      expect(outputs).toContain(`observation-digest=${hash(fs.readFileSync(before))}\n`);
     } else {
       expect(fs.existsSync(before)).toBe(false);
+      expect(fileNames(f.root)).toEqual(filesBefore);
       expect(fs.readFileSync(output, 'utf8')).toBe('');
       const reason = metadata === 'denied' ? 'push-permission-denied' : metadata === 'malformed' ? 'push-permission-invalid' : 'permissions-missing';
       expect(result.stderr).toContain(`"sanitized-reason":"${reason}"`);
     }
     expect(`${result.stdout}${result.stderr}${fs.readFileSync(output, 'utf8')}`).not.toContain('synthetic-secret');
-    });
+  }
+
+  for (const [label, metadata, context, expectedStatus] of cases) {
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    // flow_id: release-publication-safe-diagnostics
+    test(`publication entrypoint binds standard workflow credential evidence before observing absence: ${label}`, (t) => observeCredentialEvidence(t, metadata, context, expectedStatus, 'status'));
+  }
+
+  // evidence_role: supplemental
+  // The content of the pre-create observation file is an implementation detail of the observation; no contract guarantee covers it.
+  // flow_id: release-publication-safe-diagnostics
+  for (const [label, metadata, context, expectedStatus] of cases.filter(([, , , status]) => status === 0)) {
+    test(`publication entrypoint writes the empty release inventory to the observation file: ${label}`, (t) => observeCredentialEvidence(t, metadata, context, expectedStatus, 'observation-file'));
   }
 
 // contract_id: contract.ci-release-publication-verifier.outputs
 // flow_id: release-publication-safe-diagnostics
-for (const [failure, reason, phase] of [
+const safeDiagnosticCases: [string, string, string][] = [
   ['network', 'network-failed', 'request'], ['timeout', 'request-timeout', 'request'],
   ['body-timeout', 'request-timeout', 'response'],
   ['http', 'provider-read-failed', 'request'], ['json', 'response-invalid-json', 'response'],
@@ -174,7 +239,9 @@ for (const [failure, reason, phase] of [
   ['repository', 'repository-identity-mismatch', 'repository'],
   ['inventory', 'response-shape-invalid', 'inventory'], ['duplicate', 'inventory-duplicate-id', 'inventory'],
   ['pagination', 'pagination-limit', 'inventory'],
-]) test(`publication entrypoint exposes safe diagnostics for ${failure}`, async (t) => {
+];
+
+async function observeSafeDiagnostics(t: Parameters<typeof fixture>[0], failure: string, reason: string, phase: string, mode: 'diagnostic' | 'requests'): Promise<void> {
   for (const httpStatus of failure === 'http' ? [401, 403, 404, 429, 500, 503] : [403]) {
     const f = fixture(t);
     f.assemble();
@@ -194,7 +261,7 @@ globalThis.fetch = async (url, init) => {
     if (kind === 'network') throw new Error('synthetic-secret');
     if (kind === 'timeout') throw new DOMException('synthetic-secret', 'TimeoutError');
     if (kind === 'body-timeout') return new Response(new ReadableStream({ start(controller) { controller.error(new DOMException('synthetic-secret', 'TimeoutError')); } }), { headers });
-    if (kind === 'http') return new Response('synthetic-secret', { status: Number(process.env.MOCK_HTTP_STATUS), headers });
+    if (kind === 'http') return new Response('provider-response-body-with-synthetic-secret', { status: Number(process.env.MOCK_HTTP_STATUS), headers });
     if (kind === 'json') return new Response('synthetic-secret', { headers });
     if (kind === 'empty') return new Response(null, { headers });
     if (kind === 'oversized') return new Response('x'.repeat(4 * 1024 * 1024 + 1), { headers });
@@ -212,17 +279,25 @@ globalThis.fetch = async (url, init) => {
     if (kind === 'repository') repository.full_name = 'synthetic-secret';
     return Response.json(repository, { headers });
   };`);
+    const filesBefore = fileNames(f.root);
+    const observationPath = path.join(f.root, 'private-observation-input-marker.json');
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot,
-      'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json'), MOCK_FAILURE: failure,
+      'INPUT_OBSERVATION-PATH': observationPath, MOCK_FAILURE: failure,
       MOCK_HTTP_STATUS: String(httpStatus), MOCK_CALLS: callsPath,
+      TEST_UNUSED_ENV: 'unused-environment-payload-marker',
     }, cwd: f.root, encoding: 'utf8' });
     expect(result.status).toBe(1);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
-    expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
-    expect(result.stderr).not.toContain('synthetic-secret');
+    expect(fs.existsSync(observationPath)).toBe(false);
+    expect(fileNames(f.root)).toEqual(filesBefore);
+    const logs = result.stdout + result.stderr;
+    expect(logs).not.toContain('synthetic-secret');
+    expect(logs).not.toContain('unused-environment-payload-marker');
+    expect(logs).not.toContain(path.basename(observationPath));
+    if (failure === 'http') expect(logs).not.toContain('provider-response-body-with-');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
     expect(diagnostic.operation).toBe('remote-observation');
     expect(diagnostic.phase).toBe(phase);
@@ -238,15 +313,24 @@ globalThis.fetch = async (url, init) => {
     expect(evidence['execution-state'].write).toBe('not-started');
     const calls = fs.readFileSync(callsPath, 'utf8').trim().split('\n').map((line: string) => JSON.parse(line) as { method: string; endpoint: string });
     expect(calls.every(call => call.method === 'GET')).toBe(true);
-    expect(calls.slice(0, 3).map(call => call.endpoint)).toEqual([
-      `/repos/owner/project/git/ref/tags/${f.identity.tag}`,
-      `/repos/owner/project/git/tags/${f.identity.tag_object_sha}`,
-      '/repos/owner/project',
-    ]);
-    const inventoryRequests = phase === 'inventory' ? failure === 'pagination' ? LIMITS.pages : 1 : 0;
-    expect(calls.slice(3).map(call => call.endpoint)).toEqual(Array(inventoryRequests).fill('/repos/owner/project/releases'));
+    if (mode === 'requests') {
+      expect(calls.slice(0, 3).map(call => call.endpoint)).toEqual([
+        `/repos/owner/project/git/ref/tags/${f.identity.tag}`,
+        `/repos/owner/project/git/tags/${f.identity.tag_object_sha}`,
+        '/repos/owner/project',
+      ]);
+      const inventoryRequests = phase === 'inventory' ? failure === 'pagination' ? LIMITS.pages : 1 : 0;
+      expect(calls.slice(3).map(call => call.endpoint)).toEqual(Array(inventoryRequests).fill('/repos/owner/project/releases'));
+    }
   }
-});
+}
+
+for (const [failure, reason, phase] of safeDiagnosticCases) test(`publication entrypoint exposes safe diagnostics for ${failure}`, (t) => observeSafeDiagnostics(t, failure, reason, phase, 'diagnostic'));
+
+// evidence_role: supplemental
+// The order and count of the observation requests are implementation checks of the remote observation; no contract guarantee covers them.
+// flow_id: release-publication-safe-diagnostics
+for (const [failure, reason, phase] of safeDiagnosticCases) test(`publication entrypoint requests the repository and inventory endpoints in order for ${failure}`, (t) => observeSafeDiagnostics(t, failure, reason, phase, 'requests'));
 
 });
 });

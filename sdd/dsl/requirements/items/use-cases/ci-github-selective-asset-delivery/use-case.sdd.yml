@@ -11,7 +11,7 @@ goal: 不要資材と実装authorityの複製を避け、固定revisionの必要
 preconditions:
   - 承認済みGitHub Release identity、配布manifestおよびfetch CLIの取得元を解決できる
   - 利用project rootと適用するpresetまたはassetが明示されている
-trigger: 利用projectがa3-ci-githubの資材を新規取得、追加取得、更新または復旧する
+trigger: CI管理者が利用projectに必要なa3-ci-githubの資材を新規取得、追加取得、または更新する
 main_success_scenario:
   - Release manifestとfetch CLIの完全性を確認し、発行者信頼境界とchecksum検証を区別する
   - presetまたはassetを選び、registry由来の必須依存閉包と外部owner境界を確認する
@@ -31,11 +31,12 @@ failure_outcomes:
   - 管理外差分、並行apply、未取得assetまたは不完全な閉包を成功扱いにしない
 related_requirements:
   - ci-github-selective-distribution
+  - github-ci-version-selection
   - github-ci-project-lifecycle
 related_contracts:
   - contract.ci-selective-distribution.selection
   - contract.ci-selective-distribution.delivery
-  - contract.ci-selective-distribution.publication
+  - contract.ci-selective-distribution.verification
   - contract.ci-selective-distribution.application
   - contract.ci-preset-materialization.application
   - contract.ci-preset-assurance.asset-lock

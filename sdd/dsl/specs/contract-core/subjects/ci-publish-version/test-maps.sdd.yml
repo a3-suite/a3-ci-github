@@ -2,39 +2,60 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-publish-version.outputs
-    case_id: valid-version-plan
     tests:
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint publishes an exact version
+        partition: runtime-context.publish-version-plan-valid
         guarantees:
           - publish-version-output-produced
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint publishes an exact version
+        partition: runtime-context.publish-version-plan-valid
         guarantees:
           - publish-version-output-produced
-  - contract_id: contract.ci-publish-version.outputs
-    case_id: invalid-plan-rejected
-    tests:
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails invalid plan input
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - publish-version-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-publish-version/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails invalid plan input
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - publish-version-failure-propagated
-  - contract_id: contract.ci-publish-version.outputs
-    case_id: detailed-failure-outputs
-    tests:
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-publish-version failure boundary > source retains actionable input failure without private input values
-        guarantees:
           - diagnostic-failure-stage-outputs
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: owner validation comparisons > source retains owner field comparisons without private values
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses failure to write the version output
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - publish-version-failure-propagated
           - diagnostic-failure-stage-outputs
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: owner validation comparisons > dist retains owner field comparisons without private values
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses failure to write the version output
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
+          - publish-version-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint publishes a materialized version
+        partition: runtime-context.publish-version-plan-valid
+        guarantees:
+          - publish-version-output-produced
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint publishes a materialized version
+        partition: runtime-context.publish-version-plan-valid
+        guarantees:
+          - publish-version-output-produced
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects unreadable and malformed plan files
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - publish-version-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-publish-version/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects unreadable and malformed plan files
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - publish-version-failure-propagated
           - diagnostic-failure-stage-outputs

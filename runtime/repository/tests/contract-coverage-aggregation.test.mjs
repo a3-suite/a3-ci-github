@@ -15,8 +15,9 @@ describe("repository-coverage-aggregation", () => {
     try {
       mkdirSync(path.join(root, 'custom'));
       writeFileSync(path.join(root, 'custom/selected.test.mjs'), "import { test } from 'vitest'; import { writeFileSync } from 'node:fs'; test('selected checkout', () => writeFileSync(new URL('./executed', import.meta.url), 'selected'));\n");
+      writeFileSync(path.join(root, 'custom/selected.test.mjs'), "test('other execution surface', () => { throw new Error('unselected test case must not run'); });\n", { flag: 'a' });
       writeFileSync(path.join(root, 'custom/unselected.test.mjs'), "throw new Error('unselected test must not run');\n");
-      const subject = { subjectId: 'selected', segments: [{ id: 'observations', level: 'integration', cwd: 'custom', tests: ['selected.test.mjs'], coverage: { enabled: false } }] };
+      const subject = { subjectId: 'selected', segments: [{ id: 'observations', level: 'integration', cwd: 'custom', tests: ['selected.test.mjs'], testNamePattern: '^selected checkout$', coverage: { enabled: false } }] };
       const reportRoot = path.join(root, 'reports');
       const planned = collectSubjectCoverage(subject, root, reportRoot, true);
       expect(planned.segments[0].status).toBe('planned');
@@ -25,7 +26,10 @@ describe("repository-coverage-aggregation", () => {
       const result = collectSubjectCoverage(subject, root, reportRoot);
       // Assert
       expect(result.segments[0].status).toBe('passed');
+      expect(result.segments[0].testNamePattern).toBe('^selected checkout$');
       expect(readFileSync(path.join(root, 'custom/executed'), 'utf8')).toBe('selected');
+      subject.segments[0].testNamePattern = '^no matching tests$';
+      expect(() => collectSubjectCoverage(subject, root, reportRoot)).toThrow(/no selected tests passed/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

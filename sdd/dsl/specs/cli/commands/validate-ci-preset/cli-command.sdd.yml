@@ -41,5 +41,5 @@ command:
         - preset
         - output
   usage:
-    - node runtime/preset/run-validate-ci-preset.mjs --audit-mode read-only --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>]
-    - node runtime/preset/run-validate-ci-preset.mjs --audit-mode remediation --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>] [--output <PATH>]
+    - node runtime/preset/run-validate-ci-preset.mjs --audit-mode read-only --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>]...
+    - node runtime/preset/run-validate-ci-preset.mjs --audit-mode remediation --repo-root <PATH> [--skill-collection-root <PATH>] [--preset <ID>]... [--output <PATH>]

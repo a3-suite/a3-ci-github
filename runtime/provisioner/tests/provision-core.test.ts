@@ -86,6 +86,6 @@ describe('provisionWriteState(error)', () => {
     // Act
     const states = failures.map((failure) => provisionWriteState(failure));
     // Assert
-    expect(states).toStrictEqual(['not-started', 'not-started', 'rolled-back', 'temporary-install-may-exist', 'github-path-may-be-partial']);
+    expect(states).toStrictEqual(['not-started', 'not-started', 'rolled-back', 'temporary-install-may-exist', 'rolled-back']);
   });
 });

@@ -26,6 +26,7 @@ export type AdapterOptions = {
   commandTimings?: AdapterCommandTiming[]; excludedCommandIds?: readonly string[];
 };
 export type AdapterPayload = { schema: 'ci.adapter-runner.v1'; adapter: string; contract: string; languageProfiles: string[]; status: 'success' | 'failed' | '判定不能'; results: CommandResult[] };
+type ToolchainFailure = 'quality-adapter-toolchain-version-mismatch';
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const text = (value: unknown, field: string): string => {
@@ -199,7 +200,7 @@ const runCommand = (spec: CommandSpec & { args: string[] }, root: string, enviro
   return { elapsedMs: performance.now() - started, result: { ...spec, status, exitCode: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '', ...(diagnostics ? { diagnostics } : {}) } };
 };
 
-export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload => {
+export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): AdapterPayload & { failureReason?: ToolchainFailure } => {
   const sourceRoot = fs.realpathSync(options.sourceRoot);
   const environment: NodeJS.ProcessEnv = { ...(options.environment ?? process.env), CI_TOOLCHAIN_VERSION: options.toolchainVersion };
   if (!options.toolchainVersion || /[\0\r\n]/.test(options.toolchainVersion)) throw new DiagnosticError('quality-adapter-toolchain-version-missing');
@@ -232,13 +233,15 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
   };
   const timedVerify = runCommand(verifyCommand, sourceRoot, environment);
   const verify = timedVerify.result;
+  let failureReason: ToolchainFailure | undefined;
   if (verify.status !== '判定不能') {
     const received = `${verify.stdout}\n${verify.stderr}`;
     const reportsVersion = verify.status === 'success' && versionTokenPresent(received, options.toolchainVersion);
     if (!reportsVersion) {
+      failureReason = 'quality-adapter-toolchain-version-mismatch';
       Object.assign(verify, {
         status: 'failed',
-        stderr: `quality-adapter-toolchain-version-mismatch: expected=${options.toolchainVersion} or v${options.toolchainVersion} or V${options.toolchainVersion} received=${received}`,
+        stderr: `${failureReason}: expected=${options.toolchainVersion} or v${options.toolchainVersion} or V${options.toolchainVersion} received=${received}`,
       });
     }
   }
@@ -258,5 +261,5 @@ export const executeAdapter = (bundle: AdapterBundle, options: AdapterOptions): 
     }
   }
   const status = results.some((result) => result.status === 'failed') ? 'failed' : results.some((result) => result.status === '判定不能') ? '判定不能' : 'success';
-  return { schema: 'ci.adapter-runner.v1', adapter: bundle.id, contract: bundle.contract, languageProfiles: bundle.languageProfiles, status, results };
+  return { schema: 'ci.adapter-runner.v1', adapter: bundle.id, contract: bundle.contract, languageProfiles: bundle.languageProfiles, status, results, ...(failureReason ? { failureReason } : {}) };
 };

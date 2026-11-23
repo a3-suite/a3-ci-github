@@ -42,9 +42,7 @@ const run = (f, env = {}) => spawnSync('bash', [path.join(f.directory, 'setup-ca
 const calls = f => fs.existsSync(f.env.CALLS) ? fs.readFileSync(f.env.CALLS, 'utf8') : '';
 
 describe('contract.ci-quality-toolchain.preparation', () => {
-  // contract_id: contract.ci-quality-toolchain.preparation
-  // flow_id: quality-toolchain-cargo-deny-prebuilt
-  test('verified cargo-deny archive is extracted executed and exported without cargo compilation', () => {
+  const installVerifiedCargoDeny = (mode) => {
     for (const [system, machine, target] of [
       ['Linux', 'x86_64', 'x86_64-unknown-linux-musl'],
       ['Linux', 'aarch64', 'aarch64-unknown-linux-musl'],
@@ -59,13 +57,24 @@ describe('contract.ci-quality-toolchain.preparation', () => {
         const result = run(f, { FIXTURE_OS: system, FIXTURE_ARCH: machine });
         // Assert
         expect(result.status, result.stderr).toBe(0);
-        expect(calls(f)).toBe('curl\ntar\n');
-        const installed = fs.readFileSync(f.env.GITHUB_PATH, 'utf8').trim();
-        expect(fs.readdirSync(installed)).toEqual([target.endsWith('windows-msvc') ? 'cargo-deny.exe' : 'cargo-deny']);
         expect(result.stdout).toContain(`installed verified ${target} binary`);
+        if (mode === 'steps') {
+          expect(calls(f)).toBe('curl\ntar\n');
+          const installed = fs.readFileSync(f.env.GITHUB_PATH, 'utf8').trim();
+          expect(fs.readdirSync(installed)).toEqual([target.endsWith('windows-msvc') ? 'cargo-deny.exe' : 'cargo-deny']);
+        }
       } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
     }
-  });
+  };
+
+  // contract_id: contract.ci-quality-toolchain.preparation
+  // flow_id: quality-toolchain-cargo-deny-prebuilt
+  test('verified cargo-deny archive is extracted executed and exported without cargo compilation', () => installVerifiedCargoDeny('result'));
+
+  // evidence_role: supplemental
+  // The external command sequence and the exported PATH directory are implementation steps that no contract guarantee covers.
+  // flow_id: quality-toolchain-cargo-deny-prebuilt
+  test('verified cargo-deny archive is downloaded and extracted before its directory is exported', () => installVerifiedCargoDeny('steps'));
 
   // contract_id: contract.ci-quality-toolchain.preparation
   test('unregistered cargo-deny versions and targets retain source install and its exit status', () => {
@@ -84,25 +93,39 @@ describe('contract.ci-quality-toolchain.preparation', () => {
     } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
   });
 
+  const registeredFailures = ['checksum', 'download', 'extract', 'version', 'path', 'digest'];
+  const withRegisteredFailure = (failure, assertResult) => {
+    // Arrange
+    const f = fixture();
+    try {
+      if (failure === 'checksum') fs.appendFileSync(f.archive, 'modified');
+      if (failure === 'digest') fs.writeFileSync(path.join(f.directory, 'cargo-deny-sha256sums.txt'), `invalid  ${f.name}\n`);
+      // Act
+      const result = run(f, { FAILURE: failure, ...(failure === 'version' ? { BINARY_VERSION: '0.20.1' } : {}),
+        ...(failure === 'path' ? { GITHUB_PATH: path.join(f.directory, 'missing/path') } : {}) });
+      // Assert
+      assertResult(f, result);
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+  };
+
   // contract_id: contract.ci-quality-toolchain.preparation
-  test('registered cargo-deny asset failures stop without source fallback or PATH output', () => {
-    for (const failure of ['checksum', 'download', 'extract', 'version', 'path', 'digest']) {
-      // Arrange
-      const f = fixture();
-      try {
-        if (failure === 'checksum') fs.appendFileSync(f.archive, 'modified');
-        if (failure === 'digest') fs.writeFileSync(path.join(f.directory, 'cargo-deny-sha256sums.txt'), `invalid  ${f.name}\n`);
-        // Act
-        const result = run(f, { FAILURE: failure, ...(failure === 'version' ? { BINARY_VERSION: '0.20.1' } : {}),
-          ...(failure === 'path' ? { GITHUB_PATH: path.join(f.directory, 'missing/path') } : {}) });
-        // Assert
-        expect(result.status).not.toBe(0);
-        expect(calls(f)).not.toContain('cargo ');
-        if (failure === 'checksum' || failure === 'download') expect(calls(f)).not.toContain('tar');
-        if (failure === 'digest') expect(calls(f)).toBe('');
-        expect(fs.existsSync(f.env.GITHUB_PATH)).toBe(false);
-        expect(fs.readdirSync(f.directory).filter(name => name.startsWith('cargo-deny-bin-'))).toEqual([]);
-      } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+  test('registered cargo-deny asset failures stop the preparation', () => {
+    for (const failure of registeredFailures) {
+      withRegisteredFailure(failure, (_f, result) => expect(result.status, failure).not.toBe(0));
+    }
+  });
+
+  // evidence_role: supplemental
+  // Falling back to a source install, exporting PATH and leaving an extracted directory are implementation steps that no contract guarantee covers.
+  test('registered cargo-deny asset failures neither fall back to source install nor export PATH', () => {
+    for (const failure of registeredFailures) {
+      withRegisteredFailure(failure, (f) => {
+        expect(calls(f), failure).not.toContain('cargo ');
+        if (failure === 'checksum' || failure === 'download') expect(calls(f), failure).not.toContain('tar');
+        if (failure === 'digest') expect(calls(f), failure).toBe('');
+        expect(fs.existsSync(f.env.GITHUB_PATH), failure).toBe(false);
+        expect(fs.readdirSync(f.directory).filter(name => name.startsWith('cargo-deny-bin-')), failure).toEqual([]);
+      });
     }
   });
 
@@ -119,7 +142,6 @@ describe('contract.ci-quality-toolchain.preparation', () => {
         // Assert
         expect(result.status).toBe(1);
         expect(result.stderr).toContain('quality-toolchain-cargo-deny-version-invalid');
-        expect(calls(f)).toBe('');
       }
       for (const [profile, deny] of [['rust', 'latest'], ['rust', '0.20'], ['python', '0.20.2'], ['typescript', '0.20.2']]) {
         // Act
@@ -137,6 +159,22 @@ describe('contract.ci-quality-toolchain.preparation', () => {
       }
       for (const [profile, deny] of [['rust', '0.20.2'], ['rust', '0.20.0'], ['rust', '0.20.0+build'], ['rust', '0.20.1-rc.1'], ['rust', '0.21.0-rc.1'], ['rust', '1.0.0'], ['rust', ''], ['python', '']]) {
         expect(spawnSync('bash', ['-c', validation], { encoding: 'utf8', env: selected(profile, deny) }).status, `${profile} ${deny}`).toBe(0);
+      }
+    } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
+  });
+
+  // evidence_role: supplemental
+  // Running no external command after an invalid version is a side effect that no contract guarantee covers.
+  test('invalid cargo-deny version runs no external command', () => {
+    // Arrange
+    const f = fixture();
+    try {
+      for (const version of ['', 'latest', '0.20.2\n', '../0.20.2']) {
+        // Act
+        const result = run(f, { CI_CARGO_DENY_VERSION: version });
+        // Assert
+        expect(result.status).toBe(1);
+        expect(calls(f)).toBe('');
       }
     } finally { fs.rmSync(f.directory, { recursive: true, force: true }); }
   });

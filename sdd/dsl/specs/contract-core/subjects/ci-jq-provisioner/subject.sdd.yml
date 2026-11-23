@@ -5,7 +5,7 @@ subject:
   summary: Provisioning an exact jq Release asset for later GitHub CI steps.
 contracts:
   - id: contract.ci-jq-provisioner.provision
-    summary: A checked official jq Release asset enters the job PATH; failed provisioning exposes no executable.
+    summary: jq version and runner platform inputs to the jq provisioner Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -27,43 +27,32 @@ contracts:
         meaning: "Precondition prepared by the case: outcome of the installation step."
       - name: path-update
         meaning: "Precondition prepared by the case: outcome of updating the runner command path."
-    observations:
-      - summary: The provisioned jq command is visible to later steps.
-        boundary: boundary.runner-path
-        fields:
-          - selector: jq
-            meaning: Checked jq executable on the job command search path.
-      - summary: Provisioning success or failure is visible to the caller.
-        boundary: boundary.action-output
-        fields:
-          - selector: outcome
-            meaning: Success after checksum verification and PATH handoff, or failure before handoff.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.jq-release-asset-valid
-      - environment: runtime-context.jq-release-asset-invalid
+      - id: runtime-context.jq-release-asset-valid
+        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-valid`, with all required runner paths present and file operations permitted.
+      - id: runtime-context.jq-release-asset-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-invalid`, or a required runner path is absent or the PATH handoff write fails.
     guarantees:
       - id: checked-jq-available
         applies_to:
           - runtime-context.jq-release-asset-valid
-        claim:
-          field: jq
-          present: true
+        boundary: boundary.runner-path
+        statement: '`exposed-jq-asset-comparison` is one of `"matched"`. Comparison of the jq on the job command search path with the checksum-matched official asset for the requested version and platform; matched or different.'
       - id: failed-provisioning-stops
         applies_to:
           - runtime-context.jq-release-asset-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Step outcome of the provisioning invocation; success or failure.'
+      - id: failed-provisioning-no-path-handoff
+        applies_to:
+          - runtime-context.jq-release-asset-invalid
+        boundary: boundary.runner-path
+        statement: '`path-handoff-state` is one of `"absent"`. Occurrence state (present or absent) of an entry written by the invocation to the runner path handoff file (GITHUB_PATH).'
       - id: diagnostic-failure-stage-provision
         applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.jq-release-asset-invalid
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-jq-provisioner

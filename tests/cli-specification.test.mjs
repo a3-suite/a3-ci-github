@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'yaml';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
@@ -28,6 +29,7 @@ describe("repository-cli-specification", () => {
       /id: manage-ci-distribution-rollback\n/,
       /id: generate-ci-distribution-release/,
       /id: assemble-standard-installer/,
+      /id: build-standard-installer-platform/,
     ]) {
       expect(manifest).toMatch(pattern);
     }
@@ -38,11 +40,16 @@ describe("repository-cli-specification", () => {
   // evidence_role: supplemental
   // test_level: integration
   // integration_id: repository-cli-specification
-  test('CLI option vocabulary matches public parser flags', () => {
+  test('CLI specifications match public parser flags and usage bindings', () => {
     // Arrange
     const vocabularyPath = 'sdd/dsl/specs/cli/cli-option-vocabulary.sdd.yml';
     // Act
     const vocabulary = read(vocabularyPath);
+    const cliRoot = 'sdd/dsl/specs/cli';
+    const manifest = parse(read(`${cliRoot}/cli-command-manifest.sdd.yml`));
+    const commands = manifest.commands.map(({ path: commandPath }) => parse(read(`${cliRoot}/${commandPath}`)).command);
+    const fixedFlags = commands.flatMap(({ path: tokens }) => tokens.filter((token) => token.startsWith('--')));
+    const options = new Map(parse(vocabulary).options.map(({ id, long }) => [id, long]));
     const implementations = [
       read('runtime/preset/run-validate-ci-preset.mjs'),
       read('runtime/preset/generate-ci-asset-lock.ts'),
@@ -51,7 +58,7 @@ describe("repository-cli-specification", () => {
       read('runtime/distribution/generate-distribution-release.ts'),
       read('runtime/installer/cli.ts'),
     ].join('\n');
-    const declared = [...vocabulary.matchAll(/^\s+long:\s+(--\S+)$/gm)].map((match) => match[1]);
+    const declared = [...new Set([...options.values(), ...fixedFlags])];
     // Assert
     expect(declared.sort()).toStrictEqual([
       '--set',
@@ -62,6 +69,16 @@ describe("repository-cli-specification", () => {
       '--operation', '--authority-path', '--snapshot-path', '--standard-build-root', '--supplemental-build-root', '--provider-revision',
     ].sort());
     for (const flag of declared) expect(implementations.includes(`'${flag}'`) || read('runtime/installer/cli.ts').includes(`'${flag.slice(2)}'`), flag).toBe(true);
+    for (const command of commands) {
+      const prefix = `${command.path.join(' ')} `;
+      const displayed = command.usage.map((usage) => {
+        expect(usage.startsWith(prefix), command.id).toBe(true);
+        return (usage.slice(prefix.length).match(/--[a-z][a-z0-9-]*/g) ?? []).sort().join(' ');
+      });
+      const bound = command.usage_targets.map((target) => target.option_bindings
+        .map(({ option_id }) => options.get(option_id)).sort().join(' '));
+      expect(new Set(displayed), command.id).toEqual(new Set(bound));
+    }
     expect(vocabulary).toMatch(/resolving a relative path from the process working directory/);
   });
 

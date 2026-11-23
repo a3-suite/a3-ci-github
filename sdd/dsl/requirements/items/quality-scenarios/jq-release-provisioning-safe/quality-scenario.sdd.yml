@@ -8,7 +8,7 @@ environment: 対応 runner と jqlang/jq の GitHub Release
 response: Release の取得物を checksum 照合後にだけ job の PATH へ追加する
 response_measure:
   - checksum が一致する取得物だけを PATH へ追加する
-  - 取得失敗、checksum 不一致、未対応 runner、配置失敗、PATH 更新失敗は jq-provision-failed で停止し、jq を PATH に追加しない
+  - 取得失敗、checksum 不一致、未対応 runner、配置失敗、PATH 更新失敗では失敗として停止し、jq を PATH に追加しない
 related_requirements:
   - jq-release-provisioning
 related_contracts:

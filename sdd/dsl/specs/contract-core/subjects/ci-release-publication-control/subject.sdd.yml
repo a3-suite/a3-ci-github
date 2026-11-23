@@ -21,60 +21,67 @@ contracts:
         meaning: "Received by the contract target: target identity bound to the handoff."
       - name: schema
         meaning: "Received by the contract target: schema of the publication request file."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Publication control operation status.
-          - selector: request-run-id
-            meaning: Verified release request workflow run ID.
-          - selector: outcome
-            meaning: Failure outcome of the rejected publication control step.
-          - selector: accepted-trigger-run
-            meaning: Kind of the triggering workflow run that verify-trigger accepts, identified by its repository, workflow name and path, event, conclusion and head branch; absent when verify-trigger rejects the run.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.release-publication-request-verified
-      - environment: runtime-context.request-trigger-verification-invoked
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: Validation succeeds and the request or notes destination rejects a required write, or an operation completes and the Action output destination rejects a required write.
+      - id: runtime-context.release-publication-request-verified
+        summary: The verify-publication-request operation receives a valid request and digest bound to the invoking workflow, and all Action outputs can be written.
+      - id: publication-control-create-or-approval-valid
+        summary: The create-request operation has a valid owner decision, matching release notes digest and writable unused destinations, or verify-approval has valid matching approval evidence. All Action outputs can be written.
+      - id: publication-control-trigger-valid
+        summary: The verify-trigger operation has a root directory and receives a successful default-branch dispatch of the designated request workflow in the current repository, with valid run identity and writable Action outputs.
+      - id: publication-control-trigger-rejected
+        summary: The verify-trigger operation has a root directory, but the event is unavailable or fails the trigger validation criteria.
+      - id: runtime-context.action-input-invalid
+        summary: Required Action inputs or the operation name are invalid, or create-request, verify-publication-request, or verify-approval rejects the input, destination preflight, or evidence before writing any request or notes files. Existing handoff files have their own condition.
+      - id: publication-control-create-destination-exists
+        summary: A create-request invocation is rejected because at least one destination file for the request or notes handoff already exists.
     guarantees:
-      - id: publication-control-status-produced
+      - id: publication-control-status-succeeded
         applies_to:
-          - runtime-context.request-trigger-verification-invoked
           - runtime-context.release-publication-request-verified
-        claim:
-          field: status
-          present: true
+          - publication-control-create-or-approval-valid
+          - publication-control-trigger-valid
+        boundary: boundary.action-output
+        statement: '`status` is one of `"success"`. Publication control operation status.'
       - id: publication-request-run-id-produced
         applies_to:
           - runtime-context.release-publication-request-verified
-        claim:
-          field: request-run-id
-          present: true
+        boundary: boundary.action-output
+        statement: "`request-run-id` equals the release request workflow run ID in the verified publication request."
       - id: publication-control-failure-propagated
         applies_to:
           - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - publication-control-trigger-rejected
+          - publication-control-create-destination-exists
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected publication control step.'
+      - id: rejected-publication-control-no-request-handoff
+        applies_to:
+          - runtime-context.action-input-invalid
+          - publication-control-trigger-rejected
+        boundary: boundary.workspace-files
+        statement: '`request-handoff-directories-created-count` is one of `"0"`. Number of the directories release-publication-request and release-notes-handoff in the root directory that did not exist before the invocation and exist after it, as a decimal integer string.'
+      - id: publication-control-existing-handoff-preserved
+        applies_to:
+          - publication-control-create-destination-exists
+        boundary: boundary.workspace-files
+        statement: The rejected create-request leaves the existing request, checksum, notes and approval files unchanged.
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.action-input-invalid
+          - publication-control-trigger-rejected
+          - publication-control-create-destination-exists
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
       - id: request-trigger-run-bound
         applies_to:
-          - runtime-context.request-trigger-verification-invoked
-        claim:
-          field: accepted-trigger-run
-          in:
-            - successful-default-branch-dispatch-of-own-request-workflow
-            - absent
+          - publication-control-trigger-valid
+          - publication-control-trigger-rejected
+        boundary: boundary.action-output
+        statement: "The step succeeds only for a successful default-branch dispatch of the designated workflow in the current repository, with the expected workflow name and path, a positive run ID and a lowercase 40-digit hexadecimal head SHA. The step fails when the run is rejected."
+    input_kind:
+      kind: operation
+      name: ci-release-publication-control

@@ -9,7 +9,7 @@ command:
   summary: Generate configured canonical callers and required registry pin companions and classify actions without changing managed consumer files
   usage_targets:
     - id: plan
-      summary: Generate configured canonical callers and required registry pin companions and classify actions without changing managed consumer files
+      summary: Plan application for at least one preset or asset from a fetched source revision without changing managed consumer files
       option_bindings:
         - option_id: repo-root
           presence: optional
@@ -34,4 +34,4 @@ command:
         - repo-root
         - set
   usage:
-    - node runtime/distribution/fetch-a3-ci-github.mjs plan [options]
+    - node runtime/distribution/fetch-a3-ci-github.mjs plan --source-revision <SHA> (--preset <ID> | --asset <ID>)... [--set <ASSET:KEY=JSON>]... [--repo-root <PATH>]

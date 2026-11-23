@@ -8,7 +8,7 @@ import { test, describe, expect } from 'vitest';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const yaml = createRequire(path.join(root, 'runtime/preset/package.json'))('yaml');
 const action = yaml.parse(fs.readFileSync(path.join(root, 'actions/ci-quality-toolchain/action.yml'), 'utf8'));
-const run = (script, env = {}, cwd = root) => spawnSync('bash', ['-c', script], { cwd, encoding: 'utf8', env: { ...process.env, ...env } });
+const run = (script, env = {}, cwd = root) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', script], { cwd, encoding: 'utf8', env: { ...process.env, ...env } });
 const selected = (profile, version, uv = '', audit = '') => ({ CI_LANGUAGE_PROFILE: profile, CI_TOOLCHAIN_VERSION: version, CI_UV_VERSION: uv, CI_CARGO_AUDIT_VERSION: audit });
 
 // flow_id: quality-toolchain-composite-execution
@@ -19,7 +19,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     const script = action.runs.steps[0].run;
     for (const env of [selected('typescript', '24.0.0'), selected('python', '3.13.1', '0.8.0'), selected('rust', '1.90.0', '', '0.21.0'), selected('typescript', '24.0.0', '<unused>', '<unused>')]) expect(run(script, env).status).toBe(0);
     for (const env of [selected('unknown', '24.0.0'), selected('', '24.0.0'), selected('typescript', ''), selected('typescript', 'latest'), selected('typescript', '24'), selected('typescript', '24.0'), selected('typescript', '<toolchain-version>'), selected('typescript', '24.0.0\n'), selected('python', '3.13.1'), selected('python', '3.13.1', 'latest'), selected('rust', '1.90.0'), selected('rust', '1.90.0', '', 'latest'), selected('rust', 'stable', '', '0.21.0')]) {
-      const result = run(script, env); expect(result.status, JSON.stringify(env)).not.toBe(0);
+      const result = run(script, env); expect(result.status, JSON.stringify(env)).toBe(1);
       expect(result.stderr).toMatch(/quality-toolchain-(profile|version(?:-policy)?|uv-version|cargo-audit-version)-invalid/);
     }
   });
@@ -29,23 +29,67 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     const script = action.runs.steps[0].run;
     for (const tools of ['', 'install', 'skip']) expect(run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: tools }).status, tools).toBe(0);
     const invalid = run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: 'none' });
-    expect(invalid.status).not.toBe(0);
+    expect(invalid.status).toBe(1);
     expect(invalid.stderr).toContain('quality-toolchain-auxiliary-tools-invalid');
     const skippedInvalidAudit = run(script, { ...selected('rust', '1.90.0', '', 'latest'), CI_AUXILIARY_TOOLS: 'skip' });
-    expect(skippedInvalidAudit.status).not.toBe(0);
+    expect(skippedInvalidAudit.status).toBe(1);
     expect(skippedInvalidAudit.stderr).toContain('quality-toolchain-cargo-audit-version-invalid');
+  });
+
+  // contract_id: contract.ci-quality-toolchain.preparation
+  test('optional cargo-deny setup is skipped unless requested and enabled', (t) => {
+    const parent = path.join(root, 'tmp');
+    fs.mkdirSync(parent, { recursive: true });
+    const directory = fs.mkdtempSync(path.join(parent, 'quality-optional-setup-'));
+    t.onTestFinished(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const log = path.join(directory, 'setup-log');
+    fs.mkdirSync(path.join(directory, 'scripts'));
+    for (const tool of ['cargo-audit', 'cargo-deny']) {
+      fs.writeFileSync(path.join(directory, 'scripts', `setup-${tool}.sh`), `printf '%s\\n' '${tool}' >> "$SETUP_LOG"\n`);
+    }
+
+    const steps = action.runs.steps.filter((step) => ['cargo-audit', 'cargo-deny'].includes(step.id));
+    expect(steps.map((step) => step.id)).toEqual(['cargo-audit', 'cargo-deny']);
+    // Interpret only the input comparisons used by these steps. Unsupported syntax fails the test.
+    for (const [version, tools, expected] of [
+      ['', 'install', ['cargo-audit']],
+      ['0.20.2', 'install', ['cargo-audit', 'cargo-deny']],
+      ['0.20.2', 'skip', []],
+    ]) {
+      fs.writeFileSync(log, '');
+      const inputs = { 'language-profile': 'rust', 'cargo-deny-version': version, 'auxiliary-tools': tools };
+      const validation = run(action.runs.steps[0].run, {
+        ...selected('rust', '1.90.0', '', '0.21.0'), CI_VERSION_POLICY: 'exact',
+        CI_CARGO_DENY_VERSION: version, CI_AUXILIARY_TOOLS: tools,
+      });
+      expect(validation.status, validation.stderr).toBe(0);
+      for (const step of steps) {
+        const conditions = step.if.split(/\s*&&\s*/).map((clause) => {
+          const match = /^inputs\.([\w-]+) (==|!=) '([^']*)'$/.exec(clause);
+          expect(match, clause).not.toBeNull();
+          const [, input, operator, value] = match;
+          expect(inputs).toHaveProperty(input);
+          return operator === '==' ? inputs[input] === value : inputs[input] !== value;
+        });
+        if (conditions.every(Boolean)) {
+          const result = run(step.run, { GITHUB_ACTION_PATH: directory, SETUP_LOG: log }, directory);
+          expect(result.status, result.stderr).toBe(0);
+        }
+      }
+      expect(fs.readFileSync(log, 'utf8').split('\n').filter(Boolean)).toEqual(expected);
+    }
   });
 
   // contract_id: contract.ci-quality-toolchain.preparation
   test('compatible policy accepts bounded Node and Python selectors while exact policy stays strict', () => {
     const script = action.runs.steps[0].run;
-    expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).not.toBe(0);
+    expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).toBe(1);
     for (const env of [selected('typescript', '24'), selected('typescript', '24.21'), selected('python', '3.12', '0.8.0')]) {
       expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).toBe(0);
-      expect(run(script, { ...env, CI_VERSION_POLICY: 'exact' }).status).not.toBe(0);
+      expect(run(script, { ...env, CI_VERSION_POLICY: 'exact' }).status).toBe(1);
     }
     for (const env of [selected('typescript', '24.x'), selected('typescript', '>=24'), selected('python', '3', '0.8.0'), selected('rust', 'stable', '', '0.21.0')]) {
-      expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).not.toBe(0);
+      expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).toBe(1);
     }
   });
 
@@ -78,13 +122,20 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const output = path.join(directory, 'publish-output');
       expect(run(publish.run, { CI_RESOLVED_VERSION: '24.21.0', GITHUB_OUTPUT: output }).status).toBe(0);
       expect(fs.readFileSync(output, 'utf8')).toBe('version=24.21.0\n');
-      expect(action.runs.steps.indexOf(publish)).toBeGreaterThan(action.runs.steps.findIndex((step) => step.id === 'cargo-audit'));
+      expect(action.outputs['resolved-toolchain-version'].value).toBe('${{ steps.publish-version.outputs.version }}');
+      expect(publish.env.CI_RESOLVED_VERSION).toBe('${{ steps.resolve-version.outputs.version }}');
+      for (const id of ['validate-inputs', 'typescript', 'python', 'resolve-version', 'uv', 'rust', 'cargo-audit', 'cargo-deny']) {
+        const selectedStep = action.runs.steps.find((step) => step.id === id);
+        expect(selectedStep, id).toBeDefined();
+        expect(action.runs.steps.indexOf(publish), id).toBeGreaterThan(action.runs.steps.indexOf(selectedStep));
+        expect(selectedStep['continue-on-error'], id).toBeUndefined();
+      }
+      expect(publish['continue-on-error']).toBeUndefined();
       expect(publish.if).toBeUndefined();
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   });
 
-  // contract_id: contract.ci-quality-toolchain.preparation
-  test('quality toolchain Rust scripts preserve pinned arguments environment and setup failures', () => {
+  const runRustScripts = (mode) => {
     fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });
     const directory = fs.mkdtempSync(path.join(root, 'tmp/quality-toolchain-'));
     try {
@@ -99,14 +150,22 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       const audit = action.runs.steps.find((step) => step.name === 'Set up cargo-audit').run;
       expect(run(rust, env, directory).status).toBe(0);
       expect(run(audit, env, directory).status).toBe(0);
-      expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toStrictEqual(['toolchain install 1.90.0 --profile minimal --component rustfmt --component clippy', 'install cargo-audit --locked --version 0.21.0']);
-      expect(fs.readFileSync(output, 'utf8')).toBe('RUSTUP_TOOLCHAIN=1.90.0\n');
+      if (mode === 'details') expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toStrictEqual(['toolchain install 1.90.0 --profile minimal --component rustfmt --component clippy', 'install cargo-audit --locked --version 0.21.0']);
+      if (mode === 'details') expect(fs.readFileSync(output, 'utf8')).toBe('RUSTUP_TOOLCHAIN=1.90.0\n');
       fs.unlinkSync(output);
       expect(run(rust, { ...env, RUSTUP_EXIT: '13' }, directory).status).toBe(13);
-      expect(fs.existsSync(output)).toBe(false);
+      if (mode === 'details') expect(fs.existsSync(output)).toBe(false);
       expect(run(audit, { ...env, CARGO_EXIT: '17' }, directory).status).toBe(17);
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
-  });
+  };
+
+  // contract_id: contract.ci-quality-toolchain.preparation
+  test('quality toolchain Rust scripts preserve pinned arguments environment and setup failures', () => runRustScripts('status'));
+
+  // evidence_role: supplemental
+  // The setup arguments and the exported environment file are implementation details that no contract guarantee covers.
+  test('quality toolchain Rust scripts pass pinned arguments and export the toolchain only on success', () => runRustScripts('details'));
+
   // contract_id: contract.ci-quality-toolchain.preparation
   // flow_id: quality-toolchain-failure-retention
   test('failure retention identifies the failed setup without executing another setup', () => {

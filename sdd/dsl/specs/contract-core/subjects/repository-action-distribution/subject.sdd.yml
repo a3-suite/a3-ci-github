@@ -13,153 +13,164 @@ contracts:
         meaning: "Received by the contract target: Actions root directory."
       - name: runtime-root
         meaning: "Received by the contract target: shared runtime root directory."
+      - name: untracked-distribution-path
+        meaning: "Precondition prepared by the case: distribution file or Composite Action referenced script that exists in the working tree but is not tracked by Git."
+    conditions:
+      - id: runtime-context.repository-action-distribution-inputs-available
+        summary: The available Action metadata and build inputs are valid, required distribution and script paths are tracked, and rebuilding produces the expected tracked distribution bytes.
+      - id: runtime-context.repository-action-distribution-inconsistent
+        summary: Required metadata, build inputs or tracked paths are missing or invalid, a build fails, or a rebuilt distribution differs from the tracked distribution.
+    guarantees:
+      - id: consistent-distribution-accepted
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        boundary: boundary.repository-gate-result
+        statement: '`distribution` is one of `"success"`. Distribution gate result; success or failure.'
+      - id: inconsistent-distribution-rejected
+        applies_to:
+          - runtime-context.repository-action-distribution-inconsistent
+        boundary: boundary.repository-gate-result
+        statement: '`distribution` is one of `"failure"`. Distribution gate result; success or failure.'
+      - id: diagnostic-failure-stage-integrity
+        applies_to:
+          - runtime-context.repository-action-distribution-inconsistent
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
+  - id: contract.repository-action-distribution.catalog
+    summary: Repository Action catalog projection invocation.
+    inputs:
+      - name: actions-root
+        meaning: "Received by the contract target: Actions root directory."
       - name: catalog-path
         meaning: "Received by the contract target: path to the Action catalog file."
-      - name: contract-package
-        meaning: "Received by the contract target: contract package definition path."
+    conditions:
+      - id: runtime-context.failure-diagnostic-required
+        summary: Catalog check mode detects a stale catalog or cannot read or project its inputs.
+      - id: runtime-context.repository-action-catalog-inputs-available
+        summary: Catalog projection reads the current catalog and discovered Action metadata for regeneration.
+    guarantees:
+      - id: catalog-action-set-matched
+        applies_to:
+          - runtime-context.repository-action-catalog-inputs-available
+        boundary: boundary.repository-gate-result
+        statement: '`catalog-action-set` is one of `"matched"`. Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.'
+      - id: diagnostic-failure-stage-catalog
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
+  - id: contract.repository-action-distribution.source-verification
+    summary: Repository Action source verification planning invocation.
+    inputs:
+      - name: actions-root
+        meaning: "Received by the contract target: Actions root directory."
       - name: prepared-by
         meaning: "Precondition prepared by the case: process that prepared the distribution input."
+    conditions:
+      - id: runtime-context.failure-diagnostic-required
+        summary: Source verification encounters invalid metadata or a selected typecheck or test command fails.
+      - id: runtime-context.repository-action-distribution-inputs-available
+        summary: Discovered bundled Action metadata and shared runtime test configuration are valid, and their selected verification commands succeed.
+    guarantees:
+      - id: source-verification-actions-covered
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        boundary: boundary.repository-gate-result
+        statement: '`source-verification-action-coverage` is one of `"matched"`. Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.'
+      - id: source-verification-runtime-tests-covered
+        applies_to:
+          - runtime-context.repository-action-distribution-inputs-available
+        boundary: boundary.repository-gate-result
+        statement: '`source-verification-runtime-tests` is one of `"matched"`. Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.'
+      - id: diagnostic-failure-stage-source-verification
+        applies_to:
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.diagnostic-result
+        statement: "The primary diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution
+  - id: contract.repository-action-distribution.release-version
+    summary: Release tag alias update request against the repository VERSION and the integrated release source.
+    inputs:
       - name: tag
         meaning: "Received by the contract target: release tag name."
       - name: repository-version
         meaning: "Received by the contract target: content of the repository VERSION file."
-    observations:
-      - summary: The repository gate exposes distribution consistency and catalog projection results to maintainers.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: distribution
-            meaning: Distribution gate result.
-          - selector: catalog
-            meaning: Maintained Action catalog projection written by the gate.
-          - selector: catalog-action-set
-            meaning: Comparison of projected catalog Action rows with discovered Action directories; matched or mismatched.
-          - selector: catalog-usage-text
-            meaning: Comparison of curated usage text before and after projection; equal or changed.
-          - selector: contract-coverage
-            meaning: Contract coverage report for the discovered Actions.
-          - selector: contract-subject-coverage
-            meaning: Comparison of discovered Actions with Actions that have a packaged contract subject; matched or missing.
-          - selector: contract-output-coverage
-            meaning: Comparison of each Action public output with the observation selectors of its contract subject; matched or missing.
-          - selector: source-verification
-            meaning: Source verification plan of typecheck and test steps.
-          - selector: source-verification-action-coverage
-            meaning: Comparison of discovered bundled Actions with Actions contributing typecheck and test steps; matched or missing.
-          - selector: source-verification-runtime-tests
-            meaning: Comparison of shared Action runtime cores with cores contributing focused tests; matched or missing.
-          - selector: source-verification-rebuild
-            meaning: Dependency installation or distribution build steps inside the source verification plan; absent or present.
-          - selector: release-version
-            meaning: Repository VERSION confirmed for an annotated exact release tag, or failure.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
+      - name: source-revision
+        meaning: "Received by the contract target: source revision identifier."
+      - name: validation-mode
+        meaning: "Received by the contract target: whether the invocation only validates the release source or also updates the aliases."
+      - name: integration
+        meaning: "Precondition prepared by the case: relation between the release source and the main branch history."
+      - name: main-tip-tree
+        meaning: "Precondition prepared by the case: tree of the main branch tip compared with the approved source tree."
+      - name: branch-tip
+        meaning: "Precondition prepared by the case: tip of the release branch compared with the release tag."
+      - name: remote-alias-push
+        meaning: "Precondition prepared by the case: response of the remote to the alias push."
+      - name: alias-state
+        meaning: "Precondition prepared by the case: alias tags that already exist on the remote before the invocation."
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.repository-action-distribution-inputs-available
-      - environment: runtime-context.repository-action-distribution-inconsistent
-      - environment: runtime-context.repository-action-catalog-inputs-available
-      - environment: runtime-context.repository-exact-release-tag-available
-      - environment: runtime-context.repository-release-version-invalid-or-mismatched
+      - id: runtime-context.failure-diagnostic-required
+        summary: The caller selects update mode and release identity, VERSION and source validation succeed, but alias observation, preparation, push or readback fails.
+      - id: runtime-context.repository-release-version-invalid-or-mismatched
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-version-invalid-or-mismatched`.
+      - id: runtime-context.repository-release-alias-update-valid
+        summary: The invocation meets the shared runtime context `runtime-context.repository-release-alias-update-valid`.
+      - id: runtime-context.repository-release-alias-update-applied
+        summary: The invocation satisfies the shared update context, and post-push readback confirms each updated alias.
+      - id: runtime-context.repository-release-alias-update-invalid
+        summary: The invocation stops before alias observation because release identity, repository or origin availability, tag provenance, source integration, or mode validation fails. VERSION rejection has its own condition.
     guarantees:
-      - id: distribution-plan-produced
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: distribution
-          present: true
-      - id: inconsistent-distribution-rejected
-        applies_to:
-          - runtime-context.repository-action-distribution-inconsistent
-        claim:
-          field: distribution
-          in:
-            - failure
-      - id: action-catalog-projected
-        applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: catalog
-          present: true
-      - id: action-contract-coverage-confirmed
-        applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: contract-coverage
-          present: true
-      - id: action-source-verification-plan-produced
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification
-          present: true
       - id: release-version-confirmed
         applies_to:
-          - runtime-context.repository-exact-release-tag-available
-        claim:
-          field: release-version
-          present: true
+          - runtime-context.repository-release-alias-update-valid
+          - runtime-context.repository-release-alias-update-applied
+        boundary: boundary.repository-gate-result
+        statement: 'The release-version check accepts the exact release tag when its version equals the valid release SemVer in the target commit’s VERSION file.'
       - id: invalid-or-mismatched-release-version-rejected
         applies_to:
           - runtime-context.repository-release-version-invalid-or-mismatched
-        claim:
-          field: release-version
-          in:
-            - failure
-      - id: catalog-action-set-matched
+        boundary: boundary.repository-gate-result
+        statement: 'The gate fails at release-version when the target commit has no VERSION, its VERSION is invalid, or it differs from the exact release tag.'
+      - id: alias-source-integrated
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: catalog-action-set
-          in:
-            - matched
-      - id: catalog-usage-text-preserved
+          - runtime-context.repository-release-alias-update-valid
+          - runtime-context.repository-release-alias-update-applied
+        boundary: boundary.repository-gate-result
+        statement: '`aliasSourceIntegration` is one of `"integrated"`, `"canonical-hotfix-tip"`. Main integration state of the release tag source checked before alias update; integrated, canonical-hotfix-tip or not-integrated.'
+      - id: alias-tags-preserved
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: catalog-usage-text
-          in:
-            - equal
-      - id: action-contract-subject-covered
+          - runtime-context.repository-release-version-invalid-or-mismatched
+          - runtime-context.repository-release-alias-update-valid
+          - runtime-context.repository-release-alias-update-invalid
+        boundary: boundary.remote-release-tags
+        statement: '`alias-tag-comparison` is one of `"equal"`. Comparison of the major and minor alias tags of the release tag on the remote before and after the invocation; equal or changed.'
+      - id: alias-follows-newest-release
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: contract-subject-coverage
-          in:
-            - matched
-      - id: action-contract-output-covered
+          - runtime-context.repository-release-alias-update-applied
+        boundary: boundary.remote-release-tags
+        statement: '`alias-source-comparison` is one of `"equal"`. An alias absent or older before this update points to the approved release source. An alias already bound to a newer release retains its source.'
+      - id: immutable-release-tags-preserved
         applies_to:
-          - runtime-context.repository-action-catalog-inputs-available
-        claim:
-          field: contract-output-coverage
-          in:
-            - matched
-      - id: source-verification-actions-covered
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification-action-coverage
-          in:
-            - matched
-      - id: source-verification-runtime-tests-covered
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification-runtime-tests
-          in:
-            - matched
-      - id: source-verification-without-rebuild
-        applies_to:
-          - runtime-context.repository-action-distribution-inputs-available
-        claim:
-          field: source-verification-rebuild
-          in:
-            - absent
-      - id: diagnostic-failure-stage-integrity
+          - runtime-context.repository-release-alias-update-applied
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.remote-release-tags
+        statement: '`release-tag-object-comparison` is one of `"equal"`. Comparison of the objects of the exact release tags on the remote before and after the invocation; equal or changed.'
+      - id: diagnostic-failure-stage-release-version
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.repository-release-version-invalid-or-mismatched
+          - runtime-context.repository-release-alias-update-invalid
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic records the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-action-distribution

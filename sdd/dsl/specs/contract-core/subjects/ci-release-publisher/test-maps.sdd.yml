@@ -2,256 +2,232 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-release-publisher.outputs
-    case_id: provider-rejection-diagnostics
     tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        guarantees:
-          - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: provider-identity-rejection
-    tests:
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        guarantees:
           - rejected
           - no-success-outputs
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - rejected
           - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: standard-workflow-capability
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > bound standard capability permits false API push through publication and independent readback
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint publishes with a bound standard workflow token when the API reports push false
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: provider-acceptance-not-predicted
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher leaves provider acceptance to the create response instead of predicting it from the default branch
-        guarantees:
-          - receipt-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: canonical-repository-identity
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher preserves approved identity across canonical repository casing
-        guarantees:
-          - receipt-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: pre-create-handoff-change
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher rejects handoff changes during final absence observation before create
-        guarantees:
-          - rejected
-          - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: asset-inventory-propagation
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded asset inventory without repeating publication writes
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint publishes with a bound standard workflow token when the API reports push false
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: bundle-publish
-    tests:
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint creates once by immutable ID and leaves acceptance to the create response
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - publication-delete
+          - receipt-file
+          - readback-file
+          - publication-created-id-binding
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint creates once by immutable ID and leaves acceptance to the create response
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - publication-delete
+          - receipt-file
+          - readback-file
+          - publication-created-id-binding
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint preserves approved identity across canonical repository casing
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - receipt-file
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint preserves approved identity across canonical repository casing
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - receipt-file
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint rejects a handoff asset changed during final absence observation before create
+        partition: runtime-context.release-publisher-invalid
+        guarantees:
+          - rejected
+          - no-success-outputs
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint rejects a handoff asset changed during final absence observation before create
+        partition: runtime-context.release-publisher-invalid
+        guarantees:
+          - rejected
+          - no-success-outputs
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint waits for the uploaded asset inventory without repeating writes
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - receipt-file
+          - readback-file
+          - publication-write-retry
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint waits for the uploaded asset inventory without repeating writes
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - receipt-file
+          - readback-file
+          - publication-write-retry
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: absent"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: "dist entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: empty"
+        partition: runtime-context.release-publisher-valid
         guarantees:
           - receipt-file
           - readback-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: independent-evidence
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher creates once and emits evidence accepted by independent verifier
-        guarantees:
-          - receipt-file
-          - readback-file
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: bundle-rejection
-    tests:
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: source entrypoint > runActionEntrypoint > publisher entrypoint rejects missing credential and path injection without outputs
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
       - path: actions/ci-release-publisher/tests/entrypoint.test.ts
         symbol: dist entrypoint > runActionEntrypoint > publisher entrypoint rejects missing credential and path injection without outputs
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: invalid-local-bindings
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher rejects invalid approval, handoff and pre-observation before writes
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint rejects an expired approval before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: tampered-handoff-asset
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher rejects invalid approval, handoff and pre-observation before writes
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint rejects an expired approval before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: remote-rejection
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher rejects moved source, existing draft and unverifiable draft visibility before create
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint rejects a tampered handoff asset before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: partial-failure
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint rejects a tampered handoff asset before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint rejects a moved tag source before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint rejects a moved tag source before writes
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - rejected
           - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
+          - publication-write-on-rejection
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint stops after an uncertain upload without retry, recovery or delete
+        partition: publication-operation-failed
         guarantees:
           - rejected
           - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-expiry"
+          - publication-delete
+          - diagnostic-failure-stage-outputs
+          - publication-created-id-binding
+          - publication-write-retry
+          - publication-recovery-write
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint stops after an uncertain upload without retry, recovery or delete
+        partition: publication-operation-failed
         guarantees:
           - rejected
           - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: provider-notes"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-expiry"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: tag-notes"
-        guarantees:
-          - rejected
-          - no-success-outputs
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher transport bounds write operations and sanitizes uncertain provider results
-        guarantees:
-          - rejected
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: detailed-failure-outputs
-    tests:
+          - publication-delete
+          - diagnostic-failure-stage-outputs
+          - publication-created-id-binding
+          - publication-write-retry
+          - publication-recovery-write
       - path: tests/action-failure-diagnostics.test.mjs
         symbol: ci-release-publisher failure boundary > source retains actionable input failure without private input values
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: "source entrypoint > runActionEntrypoint > publisher entrypoint writes once by immutable ID and emits evidence paths: present"
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publisher failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: actions/ci-release-publisher/tests/entrypoint.test.ts
-        symbol: source entrypoint > runActionEntrypoint > publisher entrypoint preserves provider rejection metadata before writes
-        guarantees:
-          - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: publication-write-failure-boundary
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
-        guarantees:
-          - publication-write-retry
-          - publication-recovery-write
-          - publication-delete
-          - publication-created-id-binding
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: publication-existing-release-protection
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: publisher > publisher > publisher rejects moved source, existing draft and unverifiable draft visibility before create
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher entrypoint refuses to write over an existing same-tag published release
+        partition: runtime-context.release-publisher-invalid
         guarantees:
           - publication-existing-release-write
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: publication-immutable-id
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher creates once and emits evidence accepted by independent verifier
+          - publication-delete
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher entrypoint refuses to write over an existing same-tag published release
+        partition: runtime-context.release-publisher-invalid
         guarantees:
-          - publication-created-id-binding
-  - contract_id: contract.ci-release-publisher.outputs
-    case_id: publication-inventory-reobservation
-    tests:
-      - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded asset inventory without repeating publication writes
+          - publication-existing-release-write
+          - publication-delete
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: source entrypoint > publisher retains evidence when the Action output write fails
+        partition: publication-action-output-write-failed
         guarantees:
-          - publication-write-retry
+          - rejected
+          - diagnostic-failure-stage-outputs
+          - publication-delete
+      - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
+        symbol: dist entrypoint > publisher retains evidence when the Action output write fails
+        partition: publication-action-output-write-failed
+        guarantees:
+          - rejected
+          - diagnostic-failure-stage-outputs
+          - publication-delete

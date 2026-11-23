@@ -371,14 +371,17 @@ describe('safe release diagnostics', () => {
   });
   describe('assetDigest', () => {
   test('asset readback diagnoses unsafe redirects without disclosing signed locations', async () => {
-    for (const location of [null, 'invalid-secret', 'https://evil.example/signed-secret']) {
-      const client = new GithubReadOnlyClient('synthetic-secret', async () => new Response(null, { status: 302,
-        headers: location === null ? {} : { location } }));
+    const accepted = 'https://release-assets.githubusercontent.com/asset?signed=secret';
+    for (const location of [null, 'invalid-secret', 'https://evil.example/signed-secret', accepted]) {
+      const client = new GithubReadOnlyClient('synthetic-secret', async (url) => {
+        if (String(url) === accepted) throw new TypeError(`fetch failed: ${accepted}`);
+        return new Response(null, { status: 302, headers: location === null ? {} : { location } });
+      });
       await expect(client.assetDigest('/repos/owner/project/releases/assets/1', 1)).rejects.toSatisfy((error) => {
         const message = releaseErrorMessage(error);
         const diagnostic = JSON.parse(message.slice('remote-state-unknown:'.length));
         expect(diagnostic.operation).toBe('asset-readback');
-        expect(diagnostic['sanitized-reason']).toBe(location === null ? 'redirect-missing' : 'redirect-invalid');
+        expect(diagnostic['sanitized-reason']).toBe(location === null ? 'redirect-missing' : location === accepted ? 'network-failed' : 'redirect-invalid');
         expect(message).not.toContain('secret');
         return true;
       });

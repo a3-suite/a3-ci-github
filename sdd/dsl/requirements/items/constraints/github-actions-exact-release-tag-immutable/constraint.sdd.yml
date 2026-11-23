@@ -1,0 +1,12 @@
+version: 1
+name: constraint
+constraint_id: github-actions-exact-release-tag-immutable
+summary: Action配布の公開済みexact release tagを移動しない
+scope:
+  namespace: skills
+  key: github-actions
+rule: 公開済みのexact release tagが指すコミットを変更しない。
+rationale: 同じ厳密版を指定した利用者が同一の公開資材を参照できるようにするため
+violation_impact: 厳密版を固定しても実行される資材が変わり、再現性が失われる
+related_requirements:
+  - github-actions-action-contract-and-distribution

@@ -25,4 +25,4 @@ command:
         - plan
         - approve
   usage:
-    - node runtime/distribution/fetch-a3-ci-github.mjs apply [options]
+    - node runtime/distribution/fetch-a3-ci-github.mjs apply --plan <PATH> --approve <SHA256> [--repo-root <PATH>]

@@ -5,7 +5,7 @@ subject:
   summary: Resolving CI configuration precedence and writing a deterministic snapshot.
 contracts:
   - id: contract.ci-config-snapshot.outputs
-    summary: Valid configuration sources produce a snapshot status output.
+    summary: Configuration source and snapshot path inputs to the config snapshot Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -13,46 +13,31 @@ contracts:
         meaning: "Received by the contract target: configuration sources JSON."
       - name: snapshot-path
         meaning: "Received by the contract target: path to the configuration snapshot file."
+      - name: output-path
+        meaning: "Received by the contract target: optional destination for the snapshot path and digest; defaults to the runner output file when available."
       - name: github-output
         meaning: "Precondition prepared by the case: GitHub output file provided by the runner."
-    observations:
-      - summary: GitHub Actions outputs and step result exposed by an Action.
-        boundary: boundary.action-output
-        fields:
-          - selector: status
-            meaning: Whether configuration resolution and snapshot writing succeeded.
-          - selector: snapshot-path
-            meaning: Path of the written configuration snapshot.
-          - selector: digest
-            meaning: SHA-256 digest of resolved snapshot values and sources.
-          - selector: outcome
-            meaning: Failure outcome of the rejected snapshot operation.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: sources-input-present
-      - environment: runtime-context.action-input-invalid
+      - id: runtime-context.failure-diagnostic-required
+        summary: Required inputs or destinations are invalid, the source configuration cannot be resolved, or writing the snapshot or a requested output fails.
+      - id: sources-input-present
+        summary: The source configuration is valid, configured destinations are valid and distinct from the snapshot, and the snapshot and all requested outputs can be written.
     guarantees:
       - id: config-snapshot-status-produced
         applies_to:
           - sources-input-present
-        claim:
-          field: status
-          present: true
+        boundary: boundary.action-output
+        statement: '`status` is `"success"`, `snapshot-path` equals the requested snapshot path, and `digest` equals the SHA-256 digest recorded in the written snapshot for its resolved values and sources.'
       - id: config-snapshot-failure-propagated
         applies_to:
-          - runtime-context.action-input-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+          - runtime-context.failure-diagnostic-required
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Failure outcome of the rejected snapshot operation.'
       - id: diagnostic-failure-stage-outputs
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "`failure-stage` is present. 失敗した段階の識別子。 Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-config-snapshot

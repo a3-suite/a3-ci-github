@@ -11,6 +11,11 @@ import { fileURLToPath } from 'node:url';
 const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const canonicalRuntimeRoot = path.join(sourceRoot, 'runtime', 'preset');
 const validatorPath = path.join(canonicalRuntimeRoot, 'validate-ci-preset.ts');
+const bootstrapStages = {
+  'runtime-unavailable': 'runtime-discovery',
+  'runtime-lock-mismatch': 'runtime-lock-validation',
+  'runtime-dependency-tree-invalid': 'runtime-dependency-validation',
+};
 
 const diagnostic = (reason, message, outcome = 'cannot-start', details = {}) => {
   try { process.stderr.write(`${JSON.stringify({
@@ -22,7 +27,7 @@ const diagnostic = (reason, message, outcome = 'cannot-start', details = {}) => 
     failureEvidence: (() => {
       const context = new FailureContext('ci-preset-assurance', 'preflight-bootstrap');
       context.outcome = outcome;
-      context.at(reason, { input: 'project-local-runtime-and-bootstrap-configuration' });
+      context.at(bootstrapStages[reason] ?? reason, { input: 'project-local-runtime-and-bootstrap-configuration' });
       return context.evidence(new DiagnosticError(reason, { diagnostics: { field: 'runtime-execution', expected: 'available-and-complete', observed: reason, ...details } }), reason);
     })(),
   })}\n`); } catch { /* Retain the bootstrap failure if the diagnostic sink is unavailable. */ }

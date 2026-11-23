@@ -2,119 +2,198 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-quality-summary.outputs
-    case_id: successful-quality-result
     tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint writes matching evidence and outputs
+        partition: summary-input-present
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint writes matching evidence and outputs
+        partition: summary-input-present
         guarantees:
           - quality-summary-status-produced
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: raw-job-results-normalized
-    tests:
+          - evidence-matches-step-summary
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint normalizes a raw GitHub job result
+        partition: summary-with-unsuccessful-applicable-rows
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint normalizes a raw GitHub job result
+        partition: summary-with-unsuccessful-applicable-rows
         guarantees:
           - quality-summary-status-produced
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: missing-summary-path-rejected
-    tests:
+          - evidence-matches-step-summary
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects a missing summary path
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects a missing summary path
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: unresolved-quality-evidence-rejected
-    tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint fails unresolved and invalid path relationships
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint fails unresolved and invalid path relationships
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: excluded-rows-ignored-in-aggregation
-    tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
+        partition: summary-input-present
         guarantees:
           - quality-summary-status-produced
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: all-excluded-rows-rejected
-    tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > rejects an input where every row is excluded
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint ignores intentionally excluded test rows in the aggregate status
+        partition: summary-input-present
+        guarantees:
+          - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails an input where every row is excluded
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: detailed-failure-outputs
-    tests:
-      - path: tests/action-failure-diagnostics.test.mjs
-        symbol: ci-quality-summary failure boundary > source retains actionable input failure without private input values
-        guarantees:
-          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: source entrypoint > retains source failure when evidence-generation fails
+        symbol: dist entrypoint > entrypoint fails an input where every row is excluded
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: source entrypoint > retains source failure when summary-write fails
-        guarantees:
-          - diagnostic-failure-stage-outputs
-      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: source entrypoint > retains source failure when unknown fails
-        guarantees:
-          - diagnostic-failure-stage-outputs
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: omitted-evidence-uses-run-url
-    tests:
+          - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        partition: summary-with-unsuccessful-applicable-rows
         guarantees:
           - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - no-row-without-evidence-reference
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        partition: summary-with-unsuccessful-applicable-rows
         guarantees:
           - quality-summary-status-produced
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: omitted-evidence-without-run-context-rejected
-    tests:
+          - evidence-matches-step-summary
+          - no-row-without-evidence-reference
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
         symbol: dist entrypoint > entrypoint rejects rows without evidence when the run context is missing or invalid
+        partition: runtime-context.failure-diagnostic-required
         guarantees:
           - quality-summary-failure-propagated
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: mixed-applicability
-    tests:
-      - path: actions/ci-quality-summary/tests/summary.test.ts
-        symbol: renderQualitySummary(QualitySummaryInput) > excludes intentionally-not-applicable rows from aggregation
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint keeps the applicable job status when an uncollected job row is excluded
+        partition: summary-input-present
         guarantees:
           - excluded-rows-not-aggregated
-  - contract_id: contract.ci-quality-summary.outputs
-    case_id: default-evidence
-    tests:
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        symbol: dist entrypoint > entrypoint keeps the applicable job status when an uncollected job row is excluded
+        partition: summary-input-present
         guarantees:
-          - run-url-used-for-missing-evidence
+          - excluded-rows-not-aggregated
       - path: actions/ci-quality-summary/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint uses the workflow run URL for rows without evidence
+        symbol: source entrypoint > entrypoint keeps aggregation and evidence consistent when input conditions combine
+        partition: summary-input-present
         guarantees:
-          - run-url-used-for-missing-evidence
+          - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+          - no-row-without-evidence-reference
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint keeps aggregation and evidence consistent when input conditions combine
+        partition: summary-with-unsuccessful-applicable-rows
+        guarantees:
+          - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+          - no-row-without-evidence-reference
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > retains source failure when evidence-generation fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > retains source failure when summary-write fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint keeps aggregation and evidence consistent when input conditions combine
+        partition: summary-input-present
+        guarantees:
+          - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+          - no-row-without-evidence-reference
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint keeps aggregation and evidence consistent when input conditions combine
+        partition: summary-with-unsuccessful-applicable-rows
+        guarantees:
+          - quality-summary-status-produced
+          - evidence-matches-step-summary
+          - excluded-rows-not-aggregated
+          - no-row-without-evidence-reference
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > retains source failure when evidence-generation fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > retains source failure when summary-write fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses failure to write Action outputs
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses failure to write Action outputs
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint diagnoses missing and malformed summary JSON
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-quality-summary/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint diagnoses missing and malformed summary JSON
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - quality-summary-failure-propagated
+          - diagnostic-failure-stage-outputs

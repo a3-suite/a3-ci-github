@@ -8,20 +8,29 @@ command:
     - fetch
   summary: Fetch selected preset or asset files into a verified project-local distribution
   usage_targets:
-    - id: fetch
-      summary: Fetch selected preset or asset files into a verified project-local distribution
+    - id: fetch-local-manifest
+      summary: Fetch a selection of at least one preset or asset using a local manifest
       option_bindings:
         - option_id: repo-root
           presence: optional
         - option_id: manifest
-          presence: optional
-        - option_id: manifest-url
-          presence: optional
+          presence: required
         - option_id: preset
           presence: optional
         - option_id: asset
           presence: optional
         - option_id: source-root
+          presence: optional
+    - id: fetch-release-manifest
+      summary: Fetch a selection of at least one preset or asset using a release manifest URL
+      option_bindings:
+        - option_id: repo-root
+          presence: optional
+        - option_id: manifest-url
+          presence: required
+        - option_id: preset
+          presence: optional
+        - option_id: asset
           presence: optional
   option_groups:
     - id: selection
@@ -37,4 +46,5 @@ command:
       options:
         - repo-root
   usage:
-    - node runtime/distribution/fetch-a3-ci-github.mjs fetch [options]
+    - node runtime/distribution/fetch-a3-ci-github.mjs fetch --manifest <PATH> (--preset <ID> | --asset <ID>)... [--source-root <PATH>] [--repo-root <PATH>]
+    - node runtime/distribution/fetch-a3-ci-github.mjs fetch --manifest-url <URL> (--preset <ID> | --asset <ID>)... [--repo-root <PATH>]

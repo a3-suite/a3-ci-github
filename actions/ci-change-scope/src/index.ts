@@ -31,6 +31,7 @@ export const run = (): void => {
     core.setOutput('docs-files', lines(result.docsFiles));
     core.setOutput('other-files', lines(result.otherFiles));
   } catch (error) {
+    diagnostic.outcome = 'failure';
     diagnostic.report(error);
     writeFailureOutputs(core.setOutput, [['status', 'failed']], diagnostic);
     completeFailure(safeErrorReason(error), 1, core.setFailed);

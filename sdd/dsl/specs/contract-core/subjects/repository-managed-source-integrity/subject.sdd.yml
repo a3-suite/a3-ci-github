@@ -5,48 +5,44 @@ subject:
   summary: Maintain canonical workflows, runtime, rules, guidance, SDD, and verification assets as one resolvable repository source.
 contracts:
   - id: contract.repository-managed-source-integrity.integrity
-    summary: Repository maintenance checks resolve canonical managed sources and reject stale legacy ownership locations.
+    summary: Repository tree and argument inputs to the managed source maintenance gate.
     inputs:
       - name: repository-tree
         meaning: "Precondition prepared by the case: state of the repository tree read by the managed source gate."
       - name: arguments
         meaning: "Received by the contract target: command-line arguments passed to the entrypoint."
-    observations:
-      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: canonical-assets
-            meaning: Existence checks for every repository-owned canonical asset family and registered source.
-          - selector: stale-locations
-            meaning: Absence check results for registered legacy source locations.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: repository-managed-source-integrity-source-available
-      - input: repository-managed-source-integrity-legacy-check-required
+      - id: runtime-context.failure-diagnostic-required
+        summary: The repository lint invocation receives unexpected arguments or fails a check other than the explicit legacy-source check.
+      - id: repository-managed-source-integrity-source-available
+        summary: The inventory check reads the repository tree and preset asset registry.
+      - id: repository-managed-source-integrity-legacy-check-required
+        summary: The repository lint invocation receives no arguments and finds a registered legacy source location.
     guarantees:
-      - id: repository-managed-source-integrity-success-observed
+      - id: canonical-asset-roots-present
         applies_to:
           - repository-managed-source-integrity-source-available
-        claim:
-          field: canonical-assets
-          present: true
-      - id: repository-managed-source-integrity-failure-observed
+        boundary: boundary.workspace-files
+        statement: '`missing-canonical-asset-roots` is one of `"absent"`. Occurrence state (present or absent) of a repository-owned canonical asset root directory missing from the repository tree.'
+      - id: registered-sources-present
+        applies_to:
+          - repository-managed-source-integrity-source-available
+        boundary: boundary.workspace-files
+        statement: '`missing-registered-sources` is one of `"absent"`. Occurrence state (present or absent) of a workflows, runtime, or lint-rules source path declared by the preset asset registry missing from the repository tree.'
+      - id: legacy-source-locations-rejected
         applies_to:
           - repository-managed-source-integrity-legacy-check-required
-        claim:
-          field: stale-locations
-          present: true
+        boundary: boundary.repository-gate-result
+        statement: The maintenance gate fails when the repository contains a registered legacy source location.
       - id: diagnostic-failure-stage-integrity
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - repository-managed-source-integrity-legacy-check-required
+        boundary: boundary.diagnostic-result
+        statement: "The primary failure diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-managed-source-integrity
   - id: contract.repository-managed-source-integrity.execution-mapping
     summary: Repository contract execution definition.
     inputs:
@@ -54,48 +50,22 @@ contracts:
         meaning: "Received by the contract target: contract package definition read by the execution mapping."
       - name: execution-definition
         meaning: "Received by the contract target: contract subject execution definition read by the check."
-    observations:
-      - summary: Repository-owned canonical asset and stale-location checks exposed by the maintenance gate.
-        boundary: boundary.repository-gate-result
-        fields:
-          - selector: contract-execution
-            meaning: Execution definition entries for the packaged contract subjects.
-          - selector: contract-execution-subject-coverage
-            meaning: Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.
-          - selector: contract-execution-escaping-test-paths
-            meaning: Execution test paths that resolve outside the repository; absent or present.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - input: repository-contract-execution-definition-available
+      - id: runtime-context.failure-diagnostic-required
+        summary: The execution-definition checker receives an unreadable or invalid definition and rejects it.
+      - id: repository-contract-execution-definition-available
+        summary: The coverage comparison receives the current packaged subject scopes and execution definition.
     guarantees:
-      - id: repository-contract-execution-mapped
-        applies_to:
-          - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution
-          present: true
       - id: repository-contract-execution-subjects-covered
         applies_to:
           - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution-subject-coverage
-          in:
-            - matched
-      - id: repository-contract-execution-paths-contained
-        applies_to:
-          - repository-contract-execution-definition-available
-        claim:
-          field: contract-execution-escaping-test-paths
-          in:
-            - absent
+        boundary: boundary.repository-gate-result
+        statement: '`contract-execution-subject-coverage` is one of `"matched"`. Comparison of packaged contract subjects with subjects mapped by the execution definition; matched or missing.'
       - id: diagnostic-failure-stage-execution-mapping
         applies_to:
           - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+        boundary: boundary.diagnostic-result
+        statement: "The primary failure diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: repository-managed-source-integrity

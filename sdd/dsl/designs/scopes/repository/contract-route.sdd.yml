@@ -14,9 +14,22 @@ routes:
   - route_id: repository-action-distribution-integrity
     contract_id: contract.repository-action-distribution.integrity
     hops:
-      - contract-verification
       - hosted-delivery
-      - action-contracts
+      - runtime-implementations
+  - route_id: repository-action-distribution-catalog
+    contract_id: contract.repository-action-distribution.catalog
+    hops:
+      - hosted-delivery
+      - runtime-implementations
+  - route_id: repository-action-distribution-source-verification
+    contract_id: contract.repository-action-distribution.source-verification
+    hops:
+      - hosted-delivery
+      - runtime-implementations
+  - route_id: repository-action-distribution-release-version
+    contract_id: contract.repository-action-distribution.release-version
+    hops:
+      - hosted-delivery
       - runtime-implementations
   - route_id: action-contracts-github-toolchain-verifier
     contract_id: contract.ci-github-toolchain-verifier.outputs
@@ -37,7 +50,6 @@ routes:
     contract_id: contract.ci-github-toolchain-verifier.processing
     hops:
       - runtime-implementations
-      - action-contracts
   - route_id: action-contracts-rust-source-gate
     contract_id: contract.ci-rust-source-gate.outputs
     hops:
@@ -47,7 +59,6 @@ routes:
     contract_id: contract.ci-rust-source-gate.processing
     hops:
       - runtime-implementations
-      - action-contracts
   - route_id: action-contracts-rust-release-build
     contract_id: contract.ci-rust-release-build.outputs
     hops:
@@ -57,7 +68,6 @@ routes:
     contract_id: contract.ci-rust-release-build.processing
     hops:
       - runtime-implementations
-      - action-contracts
   - route_id: action-contracts-change-scope
     contract_id: contract.ci-change-scope.outputs
     hops:
@@ -70,10 +80,12 @@ routes:
     contract_id: contract.ci-config-snapshot.outputs
     hops:
       - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-platform-matrix
     contract_id: contract.ci-platform-matrix.outputs
     hops:
       - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-handoff-integrity
     contract_id: contract.ci-handoff-integrity.outputs
     hops:
@@ -101,6 +113,7 @@ routes:
     contract_id: contract.ci-quality-summary.outputs
     hops:
       - action-contracts
+      - runtime-implementations
   - route_id: action-contracts-release-request-handoff
     contract_id: contract.ci-release-request-handoff.outputs
     hops:
@@ -122,124 +135,146 @@ routes:
     contract_id: contract.ci-quality-adapter.outputs
     hops:
       - action-contracts
+      - runtime-implementations
   - route_id: workflow-quality-execution
     contract_id: contract.ci-quality-workflow.execution
     hops:
       - workflow-sources
-      - contract-verification
+      - action-contracts
   - route_id: workflow-release-request-handoff
     contract_id: contract.ci-release-request-workflow.handoff
     hops:
       - workflow-sources
-      - contract-verification
+      - action-contracts
   - route_id: workflow-release-publication
     contract_id: contract.ci-release-publication-workflow.publication
     hops:
       - workflow-sources
-      - contract-verification
+      - action-contracts
   - route_id: workflow-asset-release-publication
     contract_id: contract.ci-release-publication-workflow.asset-publication
     hops:
       - workflow-sources
-      - contract-verification
+      - action-contracts
   - route_id: workflow-package-publication
     contract_id: contract.ci-package-publication-workflow.publication
     hops:
       - workflow-sources
-      - contract-verification
+      - action-contracts
   - route_id: selective-distribution-selection
     contract_id: contract.ci-selective-distribution.selection
     hops:
       - selective-distribution
-      - contract-verification
   - route_id: selective-distribution-delivery
     contract_id: contract.ci-selective-distribution.delivery
     hops:
+      - selective-distribution
+  - route_id: selective-distribution-verification
+    contract_id: contract.ci-selective-distribution.verification
+    hops:
+      - selective-distribution
+  - route_id: selective-distribution-release-generation
+    contract_id: contract.ci-selective-distribution.release-generation
+    hops:
       - hosted-delivery
       - selective-distribution
-      - contract-verification
   - route_id: selective-distribution-publication
     contract_id: contract.ci-selective-distribution.publication
     hops:
       - hosted-delivery
-      - selective-distribution
-      - contract-verification
+      - runtime-implementations
+  - route_id: selective-distribution-release-readback
+    contract_id: contract.ci-selective-distribution.release-readback
+    hops:
+      - hosted-delivery
+      - runtime-implementations
+  - route_id: selective-distribution-reference-update
+    contract_id: contract.ci-selective-distribution.reference-update
+    hops:
+      - runtime-implementations
+  - route_id: selective-distribution-provider-reference-check
+    contract_id: contract.ci-selective-distribution.provider-reference-check
+    hops:
+      - hosted-delivery
+      - runtime-implementations
+  - route_id: selective-distribution-release-dispatch
+    contract_id: contract.ci-selective-distribution.release-dispatch
+    hops:
+      - hosted-delivery
   - route_id: selective-distribution-application
     contract_id: contract.ci-selective-distribution.application
     hops:
-      - agent-guidance
       - selective-distribution
-      - contract-verification
   - route_id: runtime-preset-materialization
     contract_id: contract.ci-preset-materialization.application
     hops:
-      - agent-guidance
       - runtime-implementations
-      - contract-verification
   - route_id: runtime-preset-assurance
     contract_id: contract.ci-preset-assurance.verification
     hops:
       - runtime-implementations
-      - contract-verification
   - route_id: runtime-preset-asset-lock
     contract_id: contract.ci-preset-assurance.asset-lock
     hops:
       - runtime-implementations
-      - contract-verification
   - route_id: repository-managed-source-integrity
     contract_id: contract.repository-managed-source-integrity.integrity
     hops:
-      - sdd-specifications
-      - workflow-sources
       - runtime-implementations
       - provider-static-validation
-      - agent-guidance
-      - repository-maintainer-guidance
-      - repository-documentation
-      - contract-verification
   - route_id: repository-contract-execution-mapping
     contract_id: contract.repository-managed-source-integrity.execution-mapping
     hops:
-      - sdd-specifications
-      - runtime-implementations
       - contract-verification
   - route_id: ci-failure-diagnostics
     contract_id: contract.ci-failure-diagnostics.actionable
     hops:
-      - workflow-sources
       - runtime-implementations
-      - contract-verification
-  - route_id: ci-failure-diagnostics-subject-declarations
-    contract_id: contract.ci-failure-diagnostics.subject-declarations
+  - route_id: action-failure-diagnostics
+    contract_id: contract.ci-failure-diagnostics.actionable
     hops:
-      - sdd-specifications
+      - action-contracts
       - runtime-implementations
-      - contract-verification
+  - route_id: release-dispatch-failure-diagnostics
+    contract_id: contract.ci-failure-diagnostics.actionable
+    hops:
+      - hosted-delivery
+  - route_id: selective-distribution-failure-diagnostics-existing-state
+    contract_id: contract.ci-failure-diagnostics.existing-state
+    hops:
+      - selective-distribution
+  - route_id: action-failure-diagnostics-existing-state
+    contract_id: contract.ci-failure-diagnostics.existing-state
+    hops:
+      - action-contracts
+      - runtime-implementations
   - route_id: ci-failure-diagnostics-workflow-evidence
     contract_id: contract.ci-failure-diagnostics.workflow-evidence
     hops:
       - workflow-sources
-      - runtime-implementations
-      - contract-verification
   - route_id: ci-failure-diagnostics-bootstrap-diagnostic
     contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     hops:
       - runtime-implementations
-      - contract-verification
   - route_id: selective-distribution-application-plan
     contract_id: contract.ci-selective-distribution.plan
     hops:
-      - agent-guidance
       - selective-distribution
-      - contract-verification
   - route_id: selective-distribution-application-rollback
     contract_id: contract.ci-selective-distribution.rollback
     hops:
-      - agent-guidance
       - selective-distribution
-      - contract-verification
   - route_id: action-contracts-release-supplemental-asset-assembly
     contract_id: contract.ci-release-supplemental-asset.assembly
+    hops:
+      - action-contracts
+      - runtime-implementations
+  - route_id: standard-installer-cli-assembly
+    contract_id: contract.ci-release-supplemental-asset.assembly
+    hops:
+      - runtime-implementations
+  - route_id: action-contracts-package-publication-request-trigger
+    contract_id: contract.ci-package-publication-request.outputs
     hops:
       - action-contracts
       - runtime-implementations

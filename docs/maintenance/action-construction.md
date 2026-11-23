@@ -130,6 +130,8 @@ actionlintは `.github/actionlint.yaml` を使用します。publication workflo
 
 ## 検証と公開前状態
 
+診断専用の artifact を追加する変更では、代表的な失敗を起こし、log と job summary で原因を切り分けられるか確認します。両方を確認しても区別できない事象がある場合は、不足する証拠と収集条件をレビューに記録し、その条件でだけ生成します。ジョブ間の受け渡し資材、カバレッジ報告、明示実行の受入検証証跡は、それぞれの実行契約に従います。判断基準は [診断用 artifact の制約](../../sdd/dsl/requirements/items/constraints/ci-diagnostics-artifact-on-demand/constraint.sdd.yml) を参照してください。
+
 provider固定参照の保守用入口は`npm run lint:provider`です。接続候補とRelease資材生成前には、固定参照の更新順序に記載した検査を使います。全provider callee、自己workflow、Composite Actionの外部参照を列挙してからfull SHAとprovider pin承認を検査し、診断または解析失敗で停止します。consumer canonicalの置換用placeholderをprovider実装の未解決参照と混同しません。Action I/O・権限・配布閉包は既存preflightへ委譲します。
 
 1. SDD の subject、observation、guarantee、verification、test map と契約対象別実行定義を接続。

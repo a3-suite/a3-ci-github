@@ -9,6 +9,16 @@ source "$ci_failure_script_dir/../diagnostics/failure.sh"
 # Repository construction checks only; this script is not a consumer runtime asset.
 cd "$(dirname "$0")/../.."
 [[ $# == 0 ]] || exit 1
+ci_failure_stage=managed-source-layout
+ci_failure_field=legacy-source-location
+ci_failure_expected=absent
+for legacy_source in scripts/ci-github scripts/rust-release skills/ci/ci-github; do
+  if [[ -e "$legacy_source" || -L "$legacy_source" ]]; then
+    ci_failure_observed=$legacy_source
+    exit 1
+  fi
+done
+ci_failure_last_confirmed=$ci_failure_stage
 lint_binary="${A3_LINT_BIN:-a3-lint}"
 export A3_LINT_BIN="$lint_binary"
 lint_profile() {

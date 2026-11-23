@@ -3,25 +3,29 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, test } from 'vitest';
 import { holdProcessOutput } from '../../../tests/support/hold-process-output.mjs';
-import { runSupplemental } from '../../../runtime/release-publication/supplemental';
 import { supplementalSelection } from '../../../runtime/release-publication/selection';
 import { sha256 } from '../../../runtime/release-publication/io';
 import { assembleRelease } from '../../../runtime/release-publication/assembly';
 import { decodePlatformManifest } from '../../ci-release-assembly/src/platform-manifest-decoder';
 import { validateHandoffIntegrity } from '../../ci-handoff-integrity/src/integrity';
 import { runInstallerCli } from '../../../runtime/installer/cli';
-import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepareAssembly, python, repository, target } from './standard-installer-fixtures';
+import { archiveName, assetName, checkoutLineEndings, fixture, platform, prepareAssembly, python, repository, rejectSupplementalAction, runSupplementalAction, target } from './standard-installer-fixtures';
 
 holdProcessOutput('stderr');
+
+// The failure result output is the runner output file that the harness hands to the Action (`runner-output`); it is excluded from the comparison.
+const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).filter((name) => name !== 'runner-output').sort();
+
+const transportTimeout = 30_000;
 
 // Source objects and declarations are fixture context, separate from the artifact under test.
 const packTransport = (root: string, output: string) => {
   fs.mkdirSync(output, { recursive: true });
   fs.cpSync(path.join(root, 'supplemental-download'), path.join(output, 'supplemental-download'), { recursive: true });
-  execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git",".ci","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', root, path.join(output, 'context.zip')]);
+  execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git",".ci","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', root, path.join(output, 'context.zip')], { timeout: transportTimeout });
 };
 const unpackTransport = (input: string, root: string) => {
-  execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root]);
+  execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root], { timeout: transportTimeout });
   fs.mkdirSync(path.join(root, '.git/refs'), { recursive: true });
   fs.cpSync(path.join(input, 'supplemental-download'), path.join(root, 'supplemental-download'), { recursive: true });
 };
@@ -36,7 +40,7 @@ describe('standard installer', () => {
       const f = fixture(t);
       checkoutLineEndings(f.root, endings);
       // Act
-      runSupplemental(f.options);
+      runSupplementalAction(f.options);
       const assembled = prepareAssembly(f);
       // The assembly job retains a control manifest outside the fixed product checkout.
       const source = path.join(f.root, 'release-source');
@@ -45,7 +49,7 @@ describe('standard installer', () => {
       for (const item of ['.git', '.ci', 'platform.yml', 'authority.json', 'snapshot.json', assembled.standardBuildRoot, assembled.supplementalBuildRoot!]) {
         fs.renameSync(path.join(f.root, item), path.join(source, item));
       }
-      runSupplemental({ ...assembled, sourceRoot: source });
+      runSupplementalAction({ ...assembled, sourceRoot: source });
       const result = assembleRelease({ authorityPath: path.join(source, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(source, 'snapshot.json'), platformManifestPath: path.join(f.root, 'control-platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(source, assembled.standardBuildRoot), supplementalRoot: path.join(source, 'handoff'), outputRoot: path.join(f.root, 'release-handoff') }, decodePlatformManifest);
       // Assert
       expect(result.assets.map((asset) => asset.name)).toContain(assetName);
@@ -65,44 +69,50 @@ describe('standard installer', () => {
           for (const operation of ['build-platform', 'assemble']) {
             const f = fixture(t);
             let options = f.options;
-            if (operation === 'assemble') { runSupplemental(f.options); options = prepareAssembly(f); }
+            if (operation === 'assemble') { runSupplementalAction(f.options); options = prepareAssembly(f); }
             const filename = path.join(f.root, relative);
             const original = fs.readFileSync(filename);
             expect(change(original)).not.toEqual(original);
             fs.writeFileSync(filename, change(original));
             const code = index === 4 ? 'source-text-utf8-invalid' : relative === 'platform.yml' ? 'platform-mismatch'
               : relative === '.ci/installer/assembly.json' ? 'owner-adapter-source-mismatch' : 'installer-declaration-source-mismatch';
+            const filesBefore = fileNames(f.root);
             // Act / Assert
-            expect(() => runSupplemental(options)).toThrow(code);
+            rejectSupplementalAction(options, code);
             expect(fs.existsSync(path.join(f.root, options.outputDirectory))).toBe(false);
+            expect(fileNames(f.root)).toEqual(filesBefore);
           }
         }
       }
     });
-    test('rejects newline-only input mutation during provider execution in both phases', (t) => {
+    const rejectNewlineMutation = (t: Parameters<typeof fixture>[0], mode: 'rejection' | 'files'): void => {
       // Arrange
       for (const relative of ['.ci/installer/assembly.json', '.ci/installer/product.json', 'platform.yml']) {
         for (const operation of ['build-platform', 'assemble']) {
           const f = fixture(t);
           let options = f.options;
-          if (operation === 'assemble') { runSupplemental(f.options); options = prepareAssembly(f); }
+          if (operation === 'assemble') { runSupplementalAction(f.options); options = prepareAssembly(f); }
           const installerRoot = path.join(f.root, 'injected-provider');
           fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
           fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), `import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/${JSON.stringify(relative)}\np.write_bytes(p.read_bytes().replace(b"\\n",b"\\r\\n"))\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n`);
           // Act / Assert
-          expect(() => runSupplemental({ ...options, installerRoot })).toThrow('build-input-mutated');
-          expect(fs.existsSync(path.join(f.root, options.outputDirectory, 'supplemental-manifest.json'))).toBe(false);
+          rejectSupplementalAction(options, 'build-input-mutated', installerRoot);
+          if (mode === 'files') expect(fs.existsSync(path.join(f.root, options.outputDirectory, 'supplemental-manifest.json'))).toBe(false);
         }
       }
-    });
+    };
+    test('rejects newline-only input mutation during provider execution in both phases', (t) => rejectNewlineMutation(t, 'rejection'));
+    // evidence_role: supplemental
+    // A rejection after the provider has run may leave partial output, so the absent manifest is not an observation of the existing-state guarantees.
+    test('writes no supplemental manifest when newline-only input mutation during provider execution is rejected', (t) => rejectNewlineMutation(t, 'files'));
     test('verifies native candidate and produces handoff without consumer implementation', (t) => {
       // Arrange
       const f = fixture(t);
       // Act
-      runInstallerCli(['--operation', 'build-platform', '--source-root', f.root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard', '--output-directory', 'platform-output', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer'));
+      runSupplementalAction(f.options);
       const assembled = prepareAssembly(f);
       if (process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT) packTransport(f.root, path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT));
-      runInstallerCli(['--operation', 'assemble', '--source-root', f.root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', assembled.standardBuildRoot, '--supplemental-build-root', assembled.supplementalBuildRoot!, '--output-directory', 'handoff', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer'));
+      runSupplementalAction(assembled);
       const releaseRoot = path.join(f.root, 'release-handoff');
       const release = assembleRelease({ authorityPath: path.join(f.root, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(f.root, 'snapshot.json'), platformManifestPath: path.join(f.root, 'platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(f.root, assembled.standardBuildRoot), supplementalRoot: path.join(f.root, 'handoff'), outputRoot: releaseRoot }, decodePlatformManifest);
       const expected = { sourceSha: release.identity.source_sha, version: release.identity.version, targetIdentity: release.identity.target_identity };
@@ -124,8 +134,19 @@ describe('standard installer', () => {
       for (const asset of handoff.assets) {
         expect(fs.readFileSync(path.join(f.root, 'handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
       }
-      expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.readdirSync(path.join(f.root, '.ci/installer')).sort()).toEqual(['assembly.json', 'product.json']);
+    });
+    // evidence_role: supplemental
+    // Leaving no managed directory or temporary handoff directory is a filesystem side effect of assembly that no contract guarantee covers.
+    test('assembly leaves no managed directory or temporary handoff directory', (t) => {
+      // Arrange
+      const f = fixture(t);
+      runSupplementalAction(f.options);
+      const assembled = prepareAssembly(f);
+      // Act
+      runSupplementalAction(assembled);
+      // Assert
+      expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
     test('revalidates downloaded platform evidence', (t) => {
@@ -134,7 +155,7 @@ describe('standard installer', () => {
       else {
         // Without a producer job, pack the local fixture the same way so the transport contents stay verified.
         const f = fixture(t);
-        runSupplemental(f.options);
+        runSupplementalAction(f.options);
         prepareAssembly(f);
         input = path.join(f.root, 'platform-transport');
         packTransport(f.root, input);
@@ -148,18 +169,23 @@ describe('standard installer', () => {
       const record = JSON.parse(fs.readFileSync(path.join(platformRoot, 'platform-record.json'), 'utf8'));
       const candidate = path.join(platformRoot, 'candidate');
       expect(Object.keys(record.files)).toContain('.installer-source.zip');
+      const declarationFiles = fs.readdirSync(path.join(root, '.ci/installer')).sort();
+      runSupplementalAction({ operation: 'assemble', sourceRoot: root, authorityPath: 'authority.json', snapshotPath: 'snapshot.json', standardBuildRoot: 'standard-download', supplementalBuildRoot: 'supplemental-download', outputDirectory: 'transport-handoff', installerRoot: path.join(repository, 'runtime/installer'), providerRevision: 'a'.repeat(40) });
       expect(fs.readdirSync(candidate).sort()).toEqual(Object.keys(record.files).sort());
       for (const [name, digest] of Object.entries(record.files)) expect(sha256(fs.readFileSync(path.join(candidate, name)))).toBe(digest);
-      runInstallerCli(['--operation', 'assemble', '--source-root', root, '--authority-path', 'authority.json', '--snapshot-path', 'snapshot.json', '--standard-build-root', 'standard-download', '--supplemental-build-root', 'supplemental-download', '--output-directory', 'transport-handoff', '--provider-revision', 'a'.repeat(40)], path.join(repository, 'runtime/installer'));
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'transport-handoff/supplemental-manifest.json'), 'utf8'));
       const declaration = JSON.parse(fs.readFileSync(path.join(root, '.ci/installer/assembly.json'), 'utf8'));
       const declaredAssets = Object.entries(declaration.platforms).flatMap(([platformId, entry]) => [(entry as { assetName: string }).assetName, `manifest-${platformId}.json`]);
       expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual(declaredAssets.sort());
       expect(fs.readdirSync(path.join(root, 'transport-handoff')).some((name) => name.includes('installer-source'))).toBe(false);
+      for (const asset of manifest.assets) {
+        expect(fs.readFileSync(path.join(root, 'transport-handoff', asset.checksum_path))).toStrictEqual(Buffer.from(`${asset.sha256}  ${asset.path}\n`));
+      }
+      expect(fs.readdirSync(path.join(root, '.ci/installer')).sort()).toEqual(declarationFiles);
     });
-    for (const mutation of ['missing', 'modified', 'extra']) test(`rejects ${mutation} transferred platform evidence`, (t) => {
+    const rejectTransferredEvidence = (t: Parameters<typeof fixture>[0], mutation: string, mode: 'rejection' | 'files'): void => {
       const f = fixture(t);
-      runSupplemental(f.options);
+      runSupplementalAction(f.options);
       const assembled = prepareAssembly(f);
       const platformRoot = path.join(f.root, assembled.supplementalBuildRoot!, `supplemental-build-${platform.id}`);
       const candidate = path.join(platformRoot, 'candidate');
@@ -167,21 +193,25 @@ describe('standard installer', () => {
       if (mutation === 'missing') fs.unlinkSync(source);
       else if (mutation === 'modified') fs.appendFileSync(source, 'corruption');
       else fs.writeFileSync(path.join(candidate, '.undeclared'), 'unexpected');
-      expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
-      expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
-    });
+      rejectSupplementalAction(assembled, 'standard-installer-failed');
+      if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+    };
+    for (const mutation of ['missing', 'modified', 'extra']) test(`rejects ${mutation} transferred platform evidence`, (t) => rejectTransferredEvidence(t, mutation, 'rejection'));
+    // evidence_role: supplemental
+    // A rejected transfer may leave partial output, so the absent manifest is not an observation of the existing-state guarantees.
+    for (const mutation of ['missing', 'modified', 'extra']) test(`writes no supplemental manifest when ${mutation} transferred platform evidence is rejected`, (t) => rejectTransferredEvidence(t, mutation, 'files'));
     test('keeps unselected release targets outside native selection', (t) => {
       // Arrange
       const f = fixture(t);
       fs.appendFileSync(path.join(f.root, 'platform.yml'), '  - id: other-architecture\n    runner: ubuntu-24.04\n    target: aarch64-unknown-linux-musl\n');
       f.configure();
       // Act
-      runSupplemental(f.options);
-      runSupplemental(prepareAssembly(f));
+      runSupplementalAction(f.options);
+      runSupplementalAction(prepareAssembly(f));
       // Assert
       expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(true);
     });
-    test('rejects release id or target mismatches in both phases', (t) => {
+    const rejectReleaseMismatches = (t: Parameters<typeof fixture>[0], mode: 'rejection' | 'files'): void => {
       // Arrange
       const cases = [{ platform_id: 'wrong-release' }, { platform_target: 'unsupported-target' }];
       for (const changes of cases) {
@@ -190,18 +220,22 @@ describe('standard installer', () => {
         const build = JSON.parse(fs.readFileSync(buildPath, 'utf8'));
         fs.writeFileSync(buildPath, JSON.stringify({ ...build, ...changes }));
         // Act / Assert
-        expect(() => runSupplemental(f.options)).toThrow('standard-installer-failed');
-        expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
+        rejectSupplementalAction(f.options, 'standard-installer-failed');
+        if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
         fs.writeFileSync(buildPath, JSON.stringify(build));
         fs.rmdirSync(path.join(f.root, 'platform-output'));
-        runSupplemental(f.options);
+        runSupplementalAction(f.options);
         const assembled = prepareAssembly(f);
         fs.writeFileSync(path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, 'asset-manifest.json'), JSON.stringify({ ...build, ...changes }));
-        expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
-        expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+        rejectSupplementalAction(assembled, 'standard-installer-failed');
+        if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
       }
-    });
-    test('rejects noncanonical checksum bytes in both phases', (t) => {
+    };
+    test('rejects release id or target mismatches in both phases', (t) => rejectReleaseMismatches(t, 'rejection'));
+    // evidence_role: supplemental
+    // A rejection that comes after the output directory is created may leave partial output, so the absent record or manifest is not an observation of the existing-state guarantees.
+    test('writes no platform record or supplemental manifest when release id or target mismatches are rejected', (t) => rejectReleaseMismatches(t, 'files'));
+    const rejectNoncanonicalChecksums = (t: Parameters<typeof fixture>[0], mode: 'rejection' | 'files'): void => {
       // Arrange
       const f = fixture(t);
       const checksumPath = path.join(f.root, 'standard', `${archiveName}.sha256`);
@@ -210,58 +244,67 @@ describe('standard installer', () => {
       for (const bytes of malformed) {
         fs.writeFileSync(checksumPath, bytes);
         // Act / Assert
-        expect(() => runSupplemental(f.options)).toThrow('standard-installer-failed');
-        expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
+        rejectSupplementalAction(f.options, 'standard-installer-failed');
+        if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
         fs.rmdirSync(path.join(f.root, 'platform-output'));
       }
       fs.writeFileSync(checksumPath, expected);
-      runSupplemental(f.options);
+      runSupplementalAction(f.options);
       const assembled = prepareAssembly(f);
       const transportedChecksum = path.join(f.root, assembled.standardBuildRoot, `release-build-${platform.id}`, `${archiveName}.sha256`);
       for (const bytes of malformed) {
         fs.writeFileSync(transportedChecksum, bytes);
         // Act / Assert
-        expect(() => runSupplemental(assembled)).toThrow('standard-installer-failed');
-        expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+        rejectSupplementalAction(assembled, 'standard-installer-failed');
+        if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
         fs.rmdirSync(path.join(f.root, 'handoff'));
       }
-    });
+    };
+    test('rejects noncanonical checksum bytes in both phases', (t) => rejectNoncanonicalChecksums(t, 'rejection'));
+    // evidence_role: supplemental
+    // A rejection that comes after the output directory is created may leave partial output, so the absent record or manifest is not an observation of the existing-state guarantees.
+    test('writes no platform record or supplemental manifest when noncanonical checksum bytes are rejected', (t) => rejectNoncanonicalChecksums(t, 'files'));
     test('rejects platform authority drift before execution', (t) => {
       // Arrange
       const f = fixture(t);
       fs.appendFileSync(path.join(f.root, 'platform.yml'), '\n');
+      const filesBefore = fileNames(f.root);
       // Act
-      const attempt = (): void => runSupplemental(f.options);
+      rejectSupplementalAction(f.options, 'platform-mismatch');
       // Assert
-      expect(attempt).toThrow('platform-mismatch');
       expect(fs.existsSync(path.join(f.root, 'platform-output'))).toBe(false);
+      expect(fileNames(f.root)).toEqual(filesBefore);
     });
-    test('rejects platform mutation during provider execution', (t) => {
+    const rejectPlatformMutation = (t: Parameters<typeof fixture>[0], mode: 'rejection' | 'files'): void => {
       // Arrange
       const f = fixture(t);
       const installerRoot = path.join(f.root, 'injected-provider');
       fs.mkdirSync(path.join(installerRoot, 'src'), { recursive: true });
       fs.writeFileSync(path.join(installerRoot, 'src/assembly.py'), 'import json,pathlib,sys\nr=json.load(sys.stdin)\np=pathlib.Path(r["sourceRoot"])/r["authority"]["platform_manifest"]\np.write_bytes(p.read_bytes()+b"\\n")\no=pathlib.Path(r["outputDirectory"])\no.mkdir()\n(o/"result").write_text("injected")\n');
       // Act
-      const attempt = (): void => runSupplemental({ ...f.options, installerRoot });
+      rejectSupplementalAction(f.options, 'platform-mismatch', installerRoot);
       // Assert
-      expect(attempt).toThrow('platform-mismatch');
-      expect(fs.existsSync(path.join(f.root, 'platform-output/supplemental-manifest.json'))).toBe(false);
-    });
+      if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
+    };
+    test('rejects platform mutation during provider execution', (t) => rejectPlatformMutation(t, 'rejection'));
+    // evidence_role: supplemental
+    // A rejection after the provider has run may leave partial output, so the absent record is not an observation of the existing-state guarantees.
+    test('writes no platform record when platform mutation during provider execution is rejected', (t) => rejectPlatformMutation(t, 'files'));
     test('rejects changed product declaration before generating output', (t) => {
       // Arrange
       const f = fixture(t);
       fs.appendFileSync(path.join(f.root, '.ci/installer/product.json'), ' ');
+      const filesBefore = fileNames(f.root);
       // Act
-      const attempt = (): void => runSupplemental(f.options);
+      rejectSupplementalAction(f.options, 'installer-declaration-source-mismatch');
       // Assert
-      expect(attempt).toThrow('installer-declaration-source-mismatch');
       expect(fs.existsSync(path.join(f.root, 'platform-output'))).toBe(false);
+      expect(fileNames(f.root)).toEqual(filesBefore);
     });
-    test('rejects modified candidate even if supplied file hashes match', (t) => {
+    const rejectModifiedCandidate = (t: Parameters<typeof fixture>[0], mode: 'rejection' | 'files'): void => {
       // Arrange
       const f = fixture(t);
-      runSupplemental(f.options);
+      runSupplementalAction(f.options);
       const options = prepareAssembly(f);
       const directory = path.join(f.root, `supplemental-download/supplemental-build-${platform.id}`);
       const candidate = path.join(directory, 'candidate', assetName);
@@ -271,11 +314,14 @@ describe('standard installer', () => {
       record.files[assetName] = sha256(fs.readFileSync(candidate));
       fs.writeFileSync(recordPath, JSON.stringify(record));
       // Act
-      const attempt = (): void => runSupplemental(options);
+      rejectSupplementalAction(options, 'standard-installer-failed');
       // Assert
-      expect(attempt).toThrow('standard-installer-failed');
-      expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
-    });
+      if (mode === 'files') expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(false);
+    };
+    test('rejects modified candidate even if supplied file hashes match', (t) => rejectModifiedCandidate(t, 'rejection'));
+    // evidence_role: supplemental
+    // A rejection that comes after the output directory is created may leave partial output, so the absent record or manifest is not an observation of the existing-state guarantees.
+    test('writes no supplemental manifest when a modified candidate is rejected', (t) => rejectModifiedCandidate(t, 'files'));
   });
   describe('selection', () => {
     test('rejects incompatible selections and malformed CLI arguments', () => {

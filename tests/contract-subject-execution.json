@@ -55,6 +55,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-authority",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -112,6 +113,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-authority",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -167,9 +169,11 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-publisher",
           "tests": [
-            "tests/entrypoint.test.ts"
+            "tests/entrypoint.test.ts",
+            "tests/entrypoint-scenarios.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -224,9 +228,11 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-publisher",
           "tests": [
-            "tests/entrypoint.test.ts"
+            "tests/entrypoint.test.ts",
+            "tests/entrypoint-scenarios.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -399,6 +405,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-assembly",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -486,6 +493,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-assembly",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -557,9 +565,11 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-publication-verifier",
           "tests": [
-            "tests/entrypoint.test.ts"
+            "tests/entrypoint.test.ts",
+            "tests/entrypoint-observation.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -615,9 +625,11 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-publication-verifier",
           "tests": [
-            "tests/entrypoint.test.ts"
+            "tests/entrypoint.test.ts",
+            "tests/entrypoint-observation.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -683,6 +695,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-annotated-tag-resolver",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -721,6 +734,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-annotated-tag-resolver",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -776,6 +790,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-change-scope",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -833,6 +848,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-change-scope",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -901,6 +917,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-config-snapshot",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -939,6 +956,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-config-snapshot",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1052,8 +1070,8 @@
       },
       "segments": [
         {
-          "id": "unit-source",
-          "level": "unit",
+          "id": "integration-source",
+          "level": "integration",
           "cwd": "actions/ci-jq-provisioner",
           "tests": [
             "tests/provision.test.ts"
@@ -1073,6 +1091,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-jq-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1111,6 +1130,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-jq-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1158,8 +1178,8 @@
       },
       "segments": [
         {
-          "id": "unit-source",
-          "level": "unit",
+          "id": "integration-source",
+          "level": "integration",
           "cwd": "actions/ci-gh-provisioner",
           "tests": [
             "tests/provision.test.ts"
@@ -1179,6 +1199,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-gh-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1217,6 +1238,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-gh-provisioner",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1272,6 +1294,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-handoff-integrity",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1329,6 +1352,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-handoff-integrity",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1397,6 +1421,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-platform-matrix",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1435,6 +1460,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-platform-matrix",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1530,6 +1556,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-publish-version",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1568,6 +1595,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-publish-version",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1636,6 +1664,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-quality-summary",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1674,6 +1703,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-quality-summary",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1729,6 +1759,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-request-handoff",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1786,6 +1817,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-request-handoff",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1854,6 +1886,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-release-publication-control",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1911,6 +1944,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-release-publication-control",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -1943,6 +1977,7 @@
         {
           "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > repository-quality-delivery-regression > ",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs"
@@ -1990,6 +2025,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-package-publication-request",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -2047,6 +2083,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-package-publication-request",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -2102,6 +2139,7 @@
         {
           "id": "e2e-source-entrypoint",
           "level": "e2e",
+          "testNamePattern": "^source entrypoint ",
           "cwd": "actions/ci-quality-adapter",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -2180,6 +2218,7 @@
         {
           "id": "e2e-bundle-process",
           "level": "e2e",
+          "testNamePattern": "^dist entrypoint ",
           "cwd": "actions/ci-quality-adapter",
           "tests": [
             "tests/entrypoint.test.ts"
@@ -2212,6 +2251,7 @@
         {
           "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:workflow-contracts > repository-quality-delivery-regression > |shared standard quality checks > )",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs",
@@ -2266,39 +2306,6 @@
             "exclude": [
               "dist/**"
             ]
-          }
-        },
-        {
-          "id": "e2e-source-boundary",
-          "level": "e2e",
-          "cwd": "runtime/rust-release",
-          "tests": [
-            "tests/rust-release-scripts.process.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "scope": "source",
-            "include": [
-              "src/verify-platform-manifest.mjs",
-              "../platform/platform-manifest-core.mjs"
-            ],
-            "exclude": [
-              "dist/**"
-            ],
-            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
-          }
-        },
-        {
-          "id": "integration-script",
-          "level": "integration",
-          "cwd": "runtime/rust-release",
-          "tests": [
-            "tests/rust-release-scripts.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "scope": "shell",
-            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
           }
         },
         {
@@ -2464,7 +2471,11 @@
             ],
             "exclude": [
               "actions/**/dist/**",
-              "runtime/**/dist/**"
+              "runtime/**/dist/**",
+              "runtime/repository/tests/**",
+              "runtime/repository/check-provider-references.mjs",
+              "runtime/repository/update-action-references.mjs",
+              "runtime/repository/verify-implementation-binding.mjs"
             ]
           }
         },
@@ -2474,6 +2485,7 @@
           "cwd": ".",
           "tests": [
             "tests/action-dist-gate.process.test.mjs",
+            "tests/action-index-gate.process.test.mjs",
             "tests/action-package-verification.process.test.mjs",
             "runtime/repository/tests/update-release-aliases.process.test.mjs"
           ],
@@ -2549,6 +2561,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > quality-workflow-contract > ",
           "cwd": "runtime/preset",
           "tests": [
             "../../tests/workflow-contracts.process.test.mjs"
@@ -2599,18 +2612,6 @@
           }
         },
         {
-          "id": "e2e-contract-boundary",
-          "level": "e2e",
-          "cwd": ".",
-          "tests": [
-            "tests/workflow-contracts.process.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
-          }
-        },
-        {
           "id": "e2e-diagnostics",
           "level": "e2e",
           "cwd": ".",
@@ -2655,7 +2656,6 @@
           "level": "e2e",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.process.test.mjs",
             "tests/control-checkout.process.test.mjs"
           ],
           "coverage": {
@@ -2707,6 +2707,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > package-publication-workflow-contract > ",
           "cwd": "runtime/preset",
           "tests": [
             "../../tests/workflow-contracts.process.test.mjs"
@@ -2768,7 +2769,8 @@
           "cwd": "runtime/preset",
           "tests": [
             "tests/preset-assurance-contract.test.mjs",
-            "tests/quality-platform-selection.process.test.mjs"
+            "tests/quality-platform-selection.process.test.mjs",
+            "tests/publication-validation.process.test.mjs"
           ],
           "typescript": true,
           "coverage": {
@@ -2833,7 +2835,8 @@
           "level": "e2e",
           "cwd": ".",
           "tests": [
-            "tests/contract-subject-execution.process.test.mjs"
+            "tests/contract-subject-execution.process.test.mjs",
+            "tests/repository-managed-source-integrity.process.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2918,7 +2921,9 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.test.mjs"
+            "tests/workflow-contracts.test.mjs",
+            "runtime/adapter/tests/materialize-adapter-bundle.test.mjs",
+            "runtime/distribution/tests/selective-distribution.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2929,6 +2934,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:(?:contract\\.ci-failure-diagnostics\\.bootstrap-diagnostic|preset-assurance-contract) > |workflow-contracts > (?:quality-workflow-contract > caller summary rejects |repository-quality-delivery-regression > candidate gate )|contract\\.ci-selective-distribution\\.publication > repository-selective-distribution-release > repository release accepts only )",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs",
@@ -2950,7 +2956,10 @@
             "tests/workflow-failure-diagnostics.test.mjs",
             "actions/ci-quality-summary/tests/entrypoint.test.ts",
             "actions/ci-release-publication-verifier/tests/entrypoint.test.ts",
-            "actions/ci-release-publisher/tests/entrypoint.test.ts"
+            "actions/ci-release-publisher/tests/entrypoint.test.ts",
+            "actions/ci-quality-adapter/tests/entrypoint.test.ts",
+            "actions/ci-release-assembly/tests/entrypoint.test.ts",
+            "actions/ci-release-authority/tests/entrypoint.test.ts"
           ],
           "coverage": {
             "enabled": false,
@@ -2964,7 +2973,8 @@
           "cwd": "actions/ci-release-supplemental-asset",
           "tests": [
             "tests/entrypoint.test.ts",
-            "tests/standard-installer.e2e.test.ts"
+            "tests/standard-installer.e2e.test.ts",
+            "tests/standard-installer.test.ts"
           ],
           "typescript": true,
           "coverage": {
@@ -3011,9 +3021,9 @@
         {
           "id": "e2e-runtime-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:contract\\.ci-selective-distribution\\.|workflow-contracts > repository-quality-delivery-regression > )",
           "cwd": ".",
           "tests": [
-            "runtime/distribution/tests/selective-distribution.process.test.mjs",
             "runtime/repository/tests/manage-distribution-release.test.mjs",
             "tests/workflow-contracts.process.test.mjs"
           ],
@@ -3205,7 +3215,8 @@
           "level": "e2e",
           "cwd": "actions/ci-quality-toolchain",
           "tests": [
-            "tests/cargo-audit.test.mjs"
+            "tests/cargo-audit.test.mjs",
+            "tests/cargo-deny.test.mjs"
           ],
           "coverage": {
             "enabled": false,

@@ -2,52 +2,42 @@ version: 1
 name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-rust-source-gate.processing
-    case_id: matching-rust-source-processing
     tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
+        partition: runtime-context.rust-source-matches-authority
         guarantees:
           - rust-source-processing-succeeds
-  - contract_id: contract.ci-rust-source-gate.processing
-    case_id: mismatching-rust-source-processing
-    tests:
       - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
         symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
+        partition: runtime-context.rust-source-does-not-match-authority
         guarantees:
           - rust-source-processing-fails
-  - contract_id: contract.ci-rust-source-gate.processing
-    case_id: detailed-failure-processing
-    tests:
+          - diagnostic-failure-stage-processing
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context
-        guarantees:
-          - diagnostic-failure-stage-processing
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
+        partition: runtime-context.rust-source-does-not-match-authority
         guarantees:
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-rust-source-gate.outputs
-    case_id: matching-rust-source-authority
     tests:
       - path: actions/ci-rust-source-gate/tests/composite-execution.test.mjs
         symbol: contract.ci-rust-source-gate.outputs > ci-rust-source-gate-action > composite source gate exposes verified only after script success
+        partition: runtime-context.rust-source-script-succeeded
         guarantees:
           - verified-output-produced
-  - contract_id: contract.ci-rust-source-gate.outputs
-    case_id: mismatching-rust-source-authority
-    tests:
       - path: actions/ci-rust-source-gate/tests/composite-execution.test.mjs
         symbol: contract.ci-rust-source-gate.outputs > ci-rust-source-gate-action > composite source gate exposes verified only after script success
+        partition: runtime-context.rust-source-script-failed
         guarantees:
           - source-verification-failure-propagated
-  - contract_id: contract.ci-rust-source-gate.outputs
-    case_id: detailed-failure-outputs
-    tests:
       - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: runtime failure diagnostics > source-gate rejects invalid invocation with retained shell failure context
+        symbol: runtime failure diagnostics > ci-rust-source-gate composite shell step publishes the input rejection stage
+        partition: runtime-context.rust-source-script-failed
         guarantees:
           - diagnostic-failure-stage-outputs
-      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
-        symbol: contract.ci-rust-source-gate.processing > rust-source-gate-script > source gate accepts the bound checkout and rejects a different source SHA
+      - path: actions/ci-rust-source-gate/tests/composite-execution.test.mjs
+        symbol: contract.ci-rust-source-gate.outputs > ci-rust-source-gate-action > composite source gate exposes verified only after script success
+        partition: rust-source-output-write-denied
         guarantees:
-          - diagnostic-failure-stage-outputs
+          - source-verification-failure-propagated

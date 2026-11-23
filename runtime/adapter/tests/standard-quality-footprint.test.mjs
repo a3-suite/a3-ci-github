@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { test, describe, expect } from 'vitest';
+import { FailureContext } from '../../diagnostics/failure.mjs';
 import { materializeAdapterBundle } from '../materialize-adapter-bundle.ts';
 import { standardQualityBundle } from '../standard-quality-bundles.ts';
 
@@ -63,7 +64,8 @@ describe("adapter-bundle-materialization-contract", () => {
             '--import', require.resolve('tsx', { paths: [path.join(root, 'runtime/preset')] }),
             path.join(root, 'runtime/adapter/materialize-adapter-bundle.ts'),
             '--inventory', inventoryPath, '--bundle', bundle.id, '--target-root', project,
-          ], { encoding: 'utf8', cwd: root });
+          ], { encoding: 'utf8', cwd: root, timeout: 30_000 });
+          expect(cli.error, `${profile}: materializer process did not finish normally`).toBeUndefined();
           expect(cli.status, cli.stderr).toBe(0);
           expect(JSON.parse(cli.stdout)).toStrictEqual(report);
           expect(report.schema).toBe('ci.adapter-materializer.v2');
@@ -86,8 +88,17 @@ describe("adapter-bundle-materialization-contract", () => {
           for (const [file, bytes] of before) expect(fs.readFileSync(file)).toStrictEqual(bytes);
           expect(fs.readFileSync(source, 'utf8')).toBe(ownerBefore);
           expect(materializeAdapterBundle(options)).toStrictEqual(report);
-          expect(() => materializeAdapterBundle({ ...options, outputPath: path.join(project, 'README.md') })).toThrow(/output-conflict/);
-          expect(fs.readFileSync(path.join(project, 'README.md'), 'utf8')).toBe('consumer-owned documentation\n');
+          const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
+          let reportFailure;
+          try {
+            materializeAdapterBundle({ ...options, outputPath: path.join(project, 'README.md') }, diagnostic);
+          } catch (error) {
+            reportFailure = error;
+          }
+          expect(reportFailure?.message).toMatch(/output-conflict/);
+          expect(diagnostic.evidence(reportFailure).classification.stage).toBe('bundle-resolution');
+          expect(filesIn(project)).toStrictEqual([...before.keys()]);
+          for (const [file, bytes] of before) expect(fs.readFileSync(file)).toStrictEqual(bytes);
           const danglingOutput = path.join(project, 'report-link');
           fs.symlinkSync('missing-report.json', danglingOutput);
           expect(() => materializeAdapterBundle({ ...options, outputPath: danglingOutput })).toThrow(/output-conflict/);

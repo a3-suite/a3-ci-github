@@ -10,6 +10,7 @@ response_measure:
   - plan後にmanifest、source、destinationまたは所有権を示すasset lockのdigestが変化した場合はapplyを停止する
   - 同一projectで並行するapplyは成功扱いにならない
   - 管理外destinationを上書きせず、staleは自動削除しない
+  - project rootの外を指すdestinationや経路を拒否し、project rootの外のfileを変更しない
 related_requirements:
   - ci-github-selective-distribution
 related_contracts:

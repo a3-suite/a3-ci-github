@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, realpathSync } from 'node:fs';
+import { globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { createInstrumenter } from 'istanbul-lib-instrument';
-import { assertSourceCoverageFiles, loadDefinition, selectUnitIntegrationTests } from './contract-subject-coverage.mjs';
+import { resolveCoverageSources, loadDefinition, selectUnitIntegrationTests } from './contract-subject-coverage.mjs';
 const require = createRequire(import.meta.url);
 const { createCoverageMap } = require('istanbul-lib-coverage');
 const { createContext } = require('istanbul-lib-report');
@@ -17,15 +17,7 @@ const config = process.argv[2] ? JSON.parse(process.argv[2]) : {
   include: baseConfig.test.coverage.include, exclude: baseConfig.test.coverage.exclude,
   lcovPath: path.join(baseConfig.root, 'tests/tmp/coverage/vitest/lcov.info'),
 };
-const includes = config.include.map((pattern) => path.resolve(config.cwd, pattern));
-const excludes = [...config.exclude.map((pattern) => path.resolve(config.cwd, pattern)), '**/node_modules/**'];
-const files = [...new Set(globSync(includes, { exclude: excludes }).map((filename) => realpathSync(filename)))].filter((filename) => {
-  const relative = path.relative(config.root, filename);
-  assert(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `coverage source escapes root: ${filename}`);
-  return /\.(?:[cm]?[jt]s)$/.test(filename) && !/\.d\.[cm]?ts$/.test(filename);
-});
-assert(files.length, 'coverage include resolves to no source files');
-assertSourceCoverageFiles(config.root, files);
+const files = resolveCoverageSources(config);
 const directory = path.dirname(config.lcovPath);
 mkdirSync(directory, { recursive: true });
 const runDirectory = mkdtempSync(path.join(directory, 'acquisition-'));
@@ -56,6 +48,8 @@ const cli = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import
 delete env.VITEST; delete env.VITEST_WORKER_ID; delete env.VITEST_POOL_ID;
 const execution = spawnSync(process.execPath, [...(config.typescript ? ['--import', fileURLToPath(new URL('./node_modules/tsx/dist/loader.mjs', import.meta.url))] : []), cli, 'run', '--config', vitestConfigPath], { cwd: config.cwd, env, stdio: 'inherit' });
 if (execution.status !== 0) process.exit(execution.status ?? 1);
+const testResults = JSON.parse(readFileSync(settings.test.outputFile, 'utf8'));
+assert(testResults.numPassedTests > 0, 'no selected tests passed');
 const map = createCoverageMap(structuredClone(zero));
 const graph = (counters) => ({ statementMap: counters.statementMap, fnMap: counters.fnMap, branchMap: counters.branchMap });
 const rawFiles = readdirSync(rawDirectory);

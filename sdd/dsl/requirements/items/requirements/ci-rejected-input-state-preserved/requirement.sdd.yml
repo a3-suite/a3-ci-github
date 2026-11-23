@@ -1,0 +1,16 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-rejected-input-state-preserved
+    type: quality
+    summary: 入力を拒否した処理が、終了後の実行環境に失敗結果の出力以外のファイルを残さない
+    rationale: >-
+      拒否された処理が出力先に新しいファイルや部分的な成果物を残すと、後続の処理や再実行が
+      それを有効な結果と取り違え、失敗の原因の切り分けも難しくなるため
+    subject:
+      namespace: ci
+      key: rejected-input-state
+    priority: must
+    fit_criteria:
+      - 入力を拒否した処理は、失敗結果の出力を除き、実行環境の一時領域と対象の root にある管理外の既存のファイルを変更せず、新しいファイルを追加しない
+      - 入力を拒否した処理は、失敗結果の出力を除き、出力先に新しいファイルを残さない

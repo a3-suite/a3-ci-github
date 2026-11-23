@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import type { TestContext } from 'vitest';
+import { expect, type TestContext } from 'vitest';
 import type { SupplementalOptionsType } from '../../../runtime/release-publication/supplemental';
 import { canonicalJson, sha256 } from '../../../runtime/release-publication/io';
 
@@ -55,3 +55,32 @@ export const bundle = (f: ReturnType<typeof fixture>, changes: Record<string, st
       'INPUT_OUTPUT-DIRECTORY': f.options.outputDirectory, ...changes,
     },
   });
+
+const spawnAction = (f: ReturnType<typeof fixture>, options: SupplementalOptionsType) =>
+  spawnSync(process.execPath, [path.resolve(__dirname, '../dist/index.js')], {
+    cwd: f.root, encoding: 'utf8', env: {
+      ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: f.outputPath,
+      'INPUT_OPERATION': options.operation, 'INPUT_SOURCE-ROOT': options.sourceRoot,
+      'INPUT_AUTHORITY-PATH': options.authorityPath, 'INPUT_SNAPSHOT-PATH': options.snapshotPath,
+      'INPUT_STANDARD-BUILD-ROOT': options.standardBuildRoot,
+      'INPUT_SUPPLEMENTAL-BUILD-ROOT': options.supplementalBuildRoot ?? '',
+      'INPUT_OUTPUT-DIRECTORY': options.outputDirectory,
+    },
+  });
+
+// Runs one phase through the distributed Action, expects it to succeed and checks the output it reports.
+// A failed run surfaces as an error carrying its stderr.
+export const runAction = (f: ReturnType<typeof fixture>, options: SupplementalOptionsType = f.options): void => {
+  const result = spawnAction(f, options);
+  if (result.status !== 0) throw new Error(result.stderr || `supplemental-action-exit-${String(result.status)}`);
+  expect(fs.readFileSync(f.outputPath, 'utf8')).toContain(`output-directory=${options.outputDirectory}\n`);
+  expect(fs.existsSync(path.resolve(f.root, options.outputDirectory))).toBe(true);
+};
+
+// Runs one phase through the distributed Action and expects a non-zero exit, optionally with a diagnostic in stderr.
+export const rejectAction = (f: ReturnType<typeof fixture>, options: SupplementalOptionsType = f.options, diagnostic?: string | RegExp): void => {
+  const result = spawnAction(f, options);
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
+  if (diagnostic !== undefined) expect(result.stderr).toMatch(diagnostic);
+};

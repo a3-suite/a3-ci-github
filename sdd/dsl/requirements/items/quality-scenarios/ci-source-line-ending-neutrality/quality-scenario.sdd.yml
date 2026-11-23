@@ -1,0 +1,16 @@
+version: 1
+name: quality-scenario
+quality_scenario_id: ci-source-line-ending-neutrality
+summary: 改行の設定が異なるrunnerでも、同じsourceを同一と判定する
+quality_attribute: portability
+stimulus: Windowsなど改行の設定が異なるrunnerが、同じsourceをCRLF、LFまたは混在の改行でcheckoutする
+environment: GitHub Actions上でplatform別のrunnerがRelease要求のsourceを検証している
+response: 改行の違いだけでは別のsourceと判定せず、内容が異なる場合だけ拒否する
+response_measure:
+  - CRLF、LF、混在のいずれの改行でcheckoutしても、同じsourceは同一と判定される
+  - 改行以外の内容が異なるsourceは、同一と判定されない
+related_requirements:
+  - ci-source-line-ending-neutrality
+related_contracts:
+  - contract.ci-release-authority.outputs
+  - contract.ci-release-assembly.outputs

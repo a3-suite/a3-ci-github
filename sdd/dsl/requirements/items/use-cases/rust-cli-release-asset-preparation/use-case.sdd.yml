@@ -21,7 +21,7 @@ main_success_scenario:
   - authorityに拘束されたtoolchainとtargetでrelease binaryをbuildし、報告versionを検証する
   - archive、checksum、asset manifestを新しい出力先へ生成する
   - asset、source、version、platform identityおよびchecksumを相互に検証する
-  - 標準installerが選択された場合は固定製品宣言から提供元の共通処理で組立・exact候補検証・証跡生成を行い、共通sourceやadapterを利用側へコピーしない
+  - 標準installerを選んだ場合は、承認済みの製品宣言に対応する検証済み候補と検証証跡を受け取る
   - 検証済みassetとidentityを後続処理が再検証できるhandoffとして返す
 success_outcomes:
   - asset、version、source、toolchain、platformおよびchecksumが同じ検証結果で一致する

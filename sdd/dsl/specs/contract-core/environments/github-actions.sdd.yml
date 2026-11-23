@@ -10,6 +10,8 @@ boundaries:
     summary: Command search path inherited by later steps in the same job.
   - id: boundary.workspace-files
     summary: Files read or written in the checked-out workspace.
+  - id: boundary.runner-files
+    summary: Files in the runner temporary directory shared by the steps of a job.
   - id: boundary.script-result
     summary: Exit status and generated state exposed by a shared script to its caller.
   - id: boundary.repository-gate-result
@@ -26,6 +28,12 @@ boundaries:
     summary: GitHub Release provider requests and responses observed during publication or independent verification.
   - id: boundary.observation-clock
     summary: Reobservation delays requested from the runner clock.
+  - id: boundary.outside-project-files
+    summary: Files outside the project root that a project path resolves to through a link.
+  - id: boundary.remote-release-tags
+    summary: Release tags and their objects held by the remote repository, read after an alias update invocation.
+  - id: boundary.download-requests
+    summary: Download requests that a distribution fetch sends to its transport.
 runtime_contexts:
   - id: runtime-context.failure-diagnostic-required
     summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
@@ -62,7 +70,7 @@ runtime_contexts:
   - id: runtime-context.platform-manifest-invalid
     summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
   - id: runtime-context.quality-platform-selection-invalid
-    summary: A supplied quality selection or its manifest is unavailable or violates the ci-platform-matrix input contract.
+    summary: The platform manifest is valid, but the supplied quality selection is unavailable or violates the ci-platform-matrix input contract.
   - id: runtime-context.quality-toolchain-inputs-ready
     summary: Caller inputs satisfy quality-toolchain-request-valid. For Node/Python, the external setup provider supplies a well-formed exact version record within the requested selector; Rust uses the requested exact version and requires no independent version record. For a registered cargo-audit or cargo-deny binary only, the downloaded archive bytes match the registered digest, extraction supplies a nonempty executable and its external --version response matches the requested version. Rustup and unregistered cargo-audit or cargo-deny source installation require zero external command status, not independently inspected version metadata. Other selected setup dependencies supply their normal zero-status responses; required files and output, environment and PATH destinations permit the selected reads/writes. These are external response and IO inputs, not the composite Action's own step outcomes, computed resolution or published outputs. Release and legacy callers retain the default exact policy.
   - id: runtime-context.quality-toolchain-inputs-unusable
@@ -91,12 +99,10 @@ runtime_contexts:
     summary: The shared Rust source verification script completed successfully.
   - id: runtime-context.rust-source-script-failed
     summary: The shared Rust source verification script failed.
-  - id: runtime-context.rust-release-build-inputs-match-authority
-    summary: The Rust build request has valid authority, source identity, exact toolchain, unique platform selection, package metadata, a binary that reports the authority version as an independent token, and an unclaimed output destination.
   - id: runtime-context.rust-release-build-commands-succeed
     summary: The Rust build inputs match the release authority and the toolchain setup, build, package, checksum, manifest and artifact verification commands complete successfully.
   - id: runtime-context.rust-release-build-rejected
-    summary: A Rust build input is invalid, does not match the release authority, selects an ambiguous platform, uses a mutable toolchain, targets an existing output destination, or the binary does not report the authority version as an independent token.
+    summary: A Rust build input is invalid, does not match the release authority, selects an ambiguous platform, uses a mutable toolchain, or the build, binary version check, packaging, verification, or final output publication fails. An output destination held by another process is unavailable for publication.
   - id: runtime-context.rust-release-version-report-rejected
     summary: The built binary does not report the authority version as an independent token, or the version command fails.
   - id: runtime-context.rust-release-build-script-succeeded
@@ -128,23 +134,57 @@ runtime_contexts:
   - id: runtime-context.selective-distribution-selection-valid
     summary: The requested preset or explicitly complete asset set resolves to registered assets and dependencies.
   - id: runtime-context.selective-distribution-selection-incomplete
-    summary: A requested preset or direct asset selection is unknown, cyclic, or missing a declared dependency.
+    summary: A fetch request selects neither a preset nor an asset, or a requested preset or direct asset selection is unknown, cyclic, or missing a declared dependency.
   - id: runtime-context.selective-distribution-source-valid
     summary: The trusted manifest and every selected regular file match the immutable repository revision, size, and SHA-256.
   - id: runtime-context.selective-distribution-source-invalid
-    summary: The manifest, redirect, path, source file, size, or SHA-256 does not satisfy the selective distribution contract.
+    summary: The manifest, download response, redirect, source file, size, or SHA-256 does not satisfy the selective distribution contract.
+  - id: runtime-context.selective-distribution-fetch-lock-failed
+    summary: A fetch request whose manifest and download responses satisfy the selective distribution contract finds the fetch lock of the cached distribution held by another fetch, or closing or removing the lock that the fetch owns fails.
   - id: runtime-context.selective-distribution-publication-valid
-    summary: The exact tag, approved source and implementation revisions, integration evidence and fixed workflow and installer connections pass provider checks, and the prepared Release assets can be read back byte-identically.
+    summary: A publish request has nonempty owner-approved notes, untampered prepared distribution assets and an exact release tag whose remote identity stays unchanged. No Release exists for that tag or a matching draft exists. The provider operations are available, and the finalized Release retains the approved metadata and prepared asset bytes.
   - id: runtime-context.selective-distribution-publication-invalid
-    summary: The approved source, implementation binding, integration evidence or execution inputs fail provider checks, or a Release asset read back differs from its prepared bytes.
+    summary: A publish request receives a failing finalize response, or finds after finalize a Release body or asset that differs from the approved notes or prepared assets.
+  - id: runtime-context.selective-distribution-publication-rejected-before-create
+    summary: A publish request lacks approved notes, has tampered prepared assets or a changed remote tag object, or receives a failing provider tag observation.
+  - id: runtime-context.selective-distribution-publication-rejected-existing-release-notes-mismatch
+    summary: A publish request finds a Release that already exists for the tag, and its body differs from the nonempty approved notes.
+  - id: runtime-context.selective-distribution-publication-failed-before-finalize
+    summary: A publish request with nonempty approved notes finds no Release of the tag or finds it in draft state with a body equal to those notes, and the provider returns a failing response to the snapshot observation, asset upload or asset readback request that follows.
+  - id: runtime-context.selective-distribution-publication-already-published
+    summary: A publish request finds a published Release of the tag that carries the prepared assets and whose body equals the nonempty approved notes, with the remote tag object and source of the exact release tag unchanged and the provider accepting the observation and readback requests. A body that differs from the approved notes belongs to rejected-existing-release-notes-mismatch instead.
+  - id: runtime-context.selective-distribution-readback-valid
+    summary: A readback request has valid prepared assets and the expected remote tag identity. The published Release has the approved metadata and exactly the prepared asset names and bytes, and the provider operations are available with stable identities throughout the readback.
+  - id: runtime-context.selective-distribution-readback-invalid
+    summary: A readback request finds no published Release for the exact tag, a body that differs from the approved notes, a missing, duplicate or unmanaged asset, an invalid or changing asset identity, or remote bytes that differ from the prepared bytes.
+  - id: runtime-context.selective-distribution-release-generation-valid
+    summary: The release generator receives the full commit SHA of the repository head and a release tag matching its VERSION. All required committed source files and the skills declaration are valid, and the requested output directory can be created and written.
+  - id: runtime-context.selective-distribution-release-generation-invalid
+    summary: The release generator receives an invalid source commit SHA or release tag, a version or source head that does not match the source, a missing required source path or one redirected through a symlink, or an existing output destination.
+  - id: runtime-context.repository-release-alias-update-valid
+    summary: An alias update request with validation-mode validate-only names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip.
+  - id: runtime-context.repository-release-alias-update-applied
+    summary: An alias update request with validation-mode update names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip, and the remote accepts every alias tag push that the update needs, whether the aliases are absent, older, equal to the release, or newer.
+  - id: runtime-context.repository-release-alias-update-invalid
+    summary: An alias update request names a release tag whose source is not integrated into main, whose hotfix branch or base is stale, or whose integration evidence cannot be acquired.
+  - id: runtime-context.selective-distribution-reference-update-invalid
+    summary: An implementation reference update names a missing or unreachable implementation commit, finds an uncommitted change in the execution closure, or finds a reference destination redirected through a symlink.
+  - id: runtime-context.selective-distribution-provider-reference-check-valid
+    summary: A provider reference check with contract execution enabled finds the registry implementation reachable, with matching execution paths, bytes and modes outside provider maintenance runtime. Fixed workflow and installer bindings match. The candidate tag is absent, or the requested annotated release tag identifies the clean checked-out source.
+  - id: runtime-context.selective-distribution-provider-reference-check-invalid
+    summary: A provider reference check finds a changed execution input or file mode, an unexpected runtime entry outside provider maintenance, a stale binding, an unexecutable bundle or absent entrypoint, an unreachable implementation, an existing tag for a candidate, or a dirty or mismatched release checkout.
+  - id: runtime-context.selective-distribution-release-dispatch-valid
+    summary: The request names a release tag of the form vX.Y.Z without leading zeros, and the workflow ref equals refs/tags/ followed by that tag.
+  - id: runtime-context.selective-distribution-release-dispatch-invalid
+    summary: The requested release tag is missing or does not have the form vX.Y.Z without leading zeros, or the workflow ref differs from refs/tags/ followed by the requested tag.
   - id: runtime-context.selective-distribution-application-valid
-    summary: The approved plan, selected local distribution, and observed consumer destinations remain unchanged under an exclusive apply lock.
+    summary: The plan matches its approval, has no conflicts, and the selected local distribution, ownership and destinations remain unchanged under an exclusive apply lock. The invocation can record and write the transaction and release its lock.
   - id: runtime-context.selective-distribution-application-conflict
-    summary: A canonical workflow destination contains content not owned by the prior asset lock or the selected plan contains a conflict.
+    summary: A canonical workflow destination contains content not owned by the prior asset lock, the selected plan contains a conflict, the approval digest does not match the plan, or another mutation holds the mutation lock.
   - id: runtime-context.selective-distribution-application-incomplete
     summary: A copyable asset was fetched directly without selecting the preset dependency closure required for application.
   - id: runtime-context.selective-distribution-plan-changed
-    summary: The manifest, source, destination, approval digest, or plan input changed after planning.
+    summary: The manifest, source, destination, ownership lock, or plan input changed after planning.
   - id: runtime-context.preset-materialization-rejected
     summary: A selected source is invalid, a destination already contains different content, declared consumer settings are unsatisfied, or a copy fails after the invocation starts.
   - id: runtime-context.preset-assurance-roots-missing
@@ -167,36 +207,36 @@ runtime_contexts:
     summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a registered standard Action bundle and needs no external source-root.
   - id: runtime-context.preset-custom-materialization-valid
     summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a copyable custom bundle with an explicit source-root.
-  - id: runtime-context.release-publisher-invocation
-    summary: The declared publisher boundary is invoked with its normal input and provider interfaces, including incomplete or invalid inputs and any provider response or transport fault.
   - id: runtime-context.quality-selection-shared-checks-supplied
     summary: A valid quality selection explicitly declares boolean sharedStandardChecks.
   - id: runtime-context.quality-selection-shared-checks-omitted
     summary: A valid quality selection omits sharedStandardChecks.
   - id: runtime-context.distribution-rollback-restorable
-    summary: An explicit rollback receives a valid recorded transaction, verified before-state backups and unchanged transaction-owned destinations under the exclusive lock; backup reads, restoration writes and required state writes remain available.
+    summary: An explicit rollback receives a valid recorded transaction, verified before-state backups and unchanged transaction-owned destinations under the exclusive lock; backup reads, restoration writes, required state writes and lock cleanup remain available.
   - id: runtime-context.distribution-partial-apply-restorable
-    summary: An initially valid unchanged plan has multiple writes; after an earlier write, a later destination or source becomes unavailable or changes. Earlier transaction-owned destinations remain unchanged by others, verified backups remain readable and all recovery writes remain available.
+    summary: An initially valid plan has multiple writes. After an earlier write, a source, manifest, plan, ownership input or later destination changes or becomes unavailable. Earlier transaction-owned destinations remain unchanged by others, verified backups remain readable and all recovery writes remain available.
   - id: runtime-context.release-verification-invocation
     summary: Any invocation of observe-before or verify-after, including invalid inputs, insufficient credentials, unknown remote state and mismatching evidence.
+  - id: runtime-context.distribution-path-escapes-project-root
+    summary: A path that a fetch, apply or rollback invocation writes lies inside the project root and resolves through a symlink to a directory outside it.
   - id: runtime-context.distribution-independent-destination-stable
-    summary: During a plan, apply or rollback invocation, one or more canonical consumer destinations differ from the current identity expected by the plan or recorded transaction. Every such destination remains unchanged by other actors from its independent modification through invocation completion.
+    summary: One or more canonical consumer destinations differ from recorded ownership during planning, from the approved destination identity during apply, or from the recorded transaction identity during rollback. Other actors leave those destinations unchanged after their independent modification through invocation completion.
   - id: runtime-context.selective-distribution-plan-input-valid
     summary: A plan request selects a verified local distribution and complete preset closure, readable consumer destinations, valid settings and interpretable prior ownership. Conflicts may be reported by the resulting plan; no apply approval is required to plan.
+  - id: runtime-context.selective-distribution-plan-input-invalid
+    summary: A plan request selects assets that were not fetched, finds the local manifest of a prior distribution missing or unsupported, receives undeclared or mistyped caller settings, finds that an owned caller no longer matches its prior template, or finds a malformed prior ownership lock.
   - id: runtime-context.ci-quality-adapter-native-rust-valid
     summary: A valid embedded rust-cargo-quality invocation selects execution-scope native, valid fixed source paths and a matching toolchain.
   - id: runtime-context.ci-quality-adapter-native-scope-rejected
     summary: A native execution request selects a non-Rust bundle or a local descriptor, or the requested execution scope is unknown.
   - id: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
-    summary: A rust-cargo-quality invocation with execution scope all leaves both CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH empty, and its prerequisites succeed.
+    summary: A rust-cargo-quality invocation uses the default or explicit all execution scope, leaves both CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH empty, and its prerequisites succeed.
   - id: runtime-context.ci-quality-adapter-dependency-policy-configured
-    summary: A rust-cargo-quality invocation with execution scope all supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed.
+    summary: A rust-cargo-quality invocation uses the default or explicit all execution scope, supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed.
   - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
     summary: A rust-cargo-quality invocation supplies only one of CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH, or a CI_CARGO_DENY_CONFIG_PATH that is absolute, missing, not a regular file, or outside the source checkout.
   - id: runtime-context.ci-quality-adapter-dependency-policy-violation
-    summary: A configured rust-cargo-quality dependency-policy command exits non-zero, and its cargo-deny JSON output reports error diagnostics and a per-check summary together with message, label and span text.
-  - id: runtime-context.ci-quality-adapter-embedded-bundle-supplied
-    summary: A registered embedded standard bundle is selected from a fixed Action artifact for execution; consumer descriptors are not selected.
+    summary: The invocation meets `runtime-context.ci-quality-adapter-dependency-policy-configured`. Its dependency-policy command exits non-zero, and its cargo-deny JSON output reports error diagnostics and a per-check summary together with message, label and span text.
   - id: runtime-context.ci-quality-summary-summary-mixed-applicability
     summary: At least one quality row is applicable and valid; excluded rows may contain non-success statuses.
   - id: runtime-context.ci-quality-summary-summary-default-evidence-valid

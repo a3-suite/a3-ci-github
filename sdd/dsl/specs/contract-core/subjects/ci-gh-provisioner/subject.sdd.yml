@@ -5,7 +5,7 @@ subject:
   summary: Provisioning an exact GitHub CLI Release asset for later GitHub CI steps.
 contracts:
   - id: contract.ci-gh-provisioner.provision
-    summary: A checked official GitHub CLI Release asset enters the job PATH; failed provisioning exposes no executable.
+    summary: GitHub CLI version and runner platform inputs to the gh provisioner Action.
     inputs:
       - name: action-inputs
         meaning: "Received by the contract target: set of GitHub Action inputs passed to the Action step."
@@ -29,43 +29,32 @@ contracts:
         meaning: "Precondition prepared by the case: outcome of the installation step."
       - name: path-update
         meaning: "Precondition prepared by the case: outcome of updating the runner command path."
-    observations:
-      - summary: The provisioned GitHub CLI command is visible to later steps.
-        boundary: boundary.runner-path
-        fields:
-          - selector: gh
-            meaning: Checked GitHub CLI executable on the job command search path.
-      - summary: Provisioning success or failure is visible to the caller.
-        boundary: boundary.action-output
-        fields:
-          - selector: outcome
-            meaning: Success after checksum verification, extraction, and PATH handoff, or failure before handoff.
-      - summary: Failure evidence governed by contract.ci-failure-diagnostics.actionable.
-        boundary: boundary.diagnostic-result
-        fields:
-          - selector: failure-stage
-            meaning: 失敗した段階の識別子。
     conditions:
-      - environment: runtime-context.failure-diagnostic-required
-      - environment: runtime-context.gh-release-asset-valid
-      - environment: runtime-context.gh-release-asset-invalid
+      - id: runtime-context.gh-release-asset-valid
+        summary: The invocation meets the shared runtime context `runtime-context.gh-release-asset-valid`, with all required runner paths present and file operations permitted.
+      - id: runtime-context.gh-release-asset-invalid
+        summary: The invocation meets the shared runtime context `runtime-context.gh-release-asset-invalid`, or a required runner path is absent or the PATH handoff write fails.
     guarantees:
       - id: checked-gh-available
         applies_to:
           - runtime-context.gh-release-asset-valid
-        claim:
-          field: gh
-          present: true
+        boundary: boundary.runner-path
+        statement: "The directory exported to the runner PATH contains the executable extracted from the checksum-verified GitHub CLI archive for the requested version and platform."
       - id: failed-provisioning-stops
         applies_to:
           - runtime-context.gh-release-asset-invalid
-        claim:
-          field: outcome
-          in:
-            - failure
+        boundary: boundary.action-output
+        statement: '`outcome` is one of `"failure"`. Step outcome of the provisioning invocation; success or failure.'
+      - id: failed-provisioning-no-path-handoff
+        applies_to:
+          - runtime-context.gh-release-asset-invalid
+        boundary: boundary.runner-path
+        statement: '`path-handoff-state` is one of `"absent"`. Occurrence state (present or absent) of an entry written by the invocation to the runner path handoff file (GITHUB_PATH).'
       - id: diagnostic-failure-stage-provision
         applies_to:
-          - runtime-context.failure-diagnostic-required
-        claim:
-          field: failure-stage
-          present: true
+          - runtime-context.gh-release-asset-invalid
+        boundary: boundary.diagnostic-result
+        statement: "The diagnostic identifies the failed stage in `classification.stage`. Diagnostic context follows `contract.ci-failure-diagnostics.actionable`."
+    input_kind:
+      kind: operation
+      name: ci-gh-provisioner

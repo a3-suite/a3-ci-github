@@ -21,11 +21,11 @@ main_success_scenario:
   - publication requestがrelease request、notes本文、approval identityおよびrun provenanceをhandoffへ固定する
   - default branchのcallerがrequest artifactとworkflow identityを検証して資材公開workflowを呼び出す
   - 資材公開workflowがsourceとauthorityを検証し、platformを持たない選択としてauthorityへ記録する
-  - 固定sourceから公開宣言したスキルZIPとproject固有の補助assetを生成し、checksumと証跡を付けてassembleする
+  - 固定sourceから、公開対象に選んだスキルZIPまたはproject固有の補助assetを用意し、checksumと証跡を付けて公開用にまとめる
   - 検証済みtag、notesおよびassetをGitHub Releaseへ公開し、公開結果をreadbackする
 success_outcomes:
   - approval、notes、source、workflow revision、資材およびGitHub Releaseが同じrelease identityで一致する
-  - 利用者はReleaseのZIPとchecksumを取得し、照合してから導入できる
+  - 利用者は選択された公開資材をReleaseから取得し、付属のchecksumと照合できる
 failure_outcomes:
   - スキルZIPも補助assetも選択されていない場合は公開処理を開始しない
   - identity、provenance、approval、assetまたはreadbackの不一致時は未実行の公開処理を停止する

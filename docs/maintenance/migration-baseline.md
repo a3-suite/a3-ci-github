@@ -19,3 +19,7 @@
 - 利用側の新しい固定SHAへの接続: clean consumer で `v0.1.3` の配布 manifest を起点とする fetch、verify、plan、apply、rollback を確認しました。
 - 旧 owner 資産の削除: 完了。`izumilufty/a3-prompts` の旧 GitHub CI スキル資産を削除し、外部スキルルートを本リポジトリの `skills/ci-github` へ置換しました。
 - `a3-suite/a3-actions` の公開資産: 既存 consumer 向けに維持し、削除または archive は別途承認事項として残しました。現行の保全条件は [README.md](../../README.md) を参照してください。
+
+## 旧資産の保全確認
+
+`a3-actions` と `a3-prompts` の旧資産を整理するときは、既存 consumer が参照する repository・ref・path と公開済み配布物を確認します。公開済み資産と、それを参照する固定 ref は維持します。参照される公開済み資産か判定できない場合は、整理対象から外します。変更には [切替承認の制約](../../sdd/dsl/requirements/items/constraints/github-ci-cutover-approval-order/constraint.sdd.yml) を適用します。上の旧スキル資産の削除は、切替時点のスキルルートに関する記録です。

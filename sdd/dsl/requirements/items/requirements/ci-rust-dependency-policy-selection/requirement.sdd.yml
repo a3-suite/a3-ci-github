@@ -1,0 +1,15 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-rust-dependency-policy-selection
+    type: functional
+    summary: 標準Rust品質バンドルの依存ポリシー検査に利用者が選んだ版と設定を適用できる
+    rationale: 利用プロジェクトが定めた依存ポリシーを検査するため、利用者が指定する検査ツールの版と設定ファイルを判定基準として固定する。
+    subject:
+      namespace: ci
+      key: rust-dependency-policy
+    priority: must
+    fit_criteria:
+      - 標準Rust品質バンドルの依存ポリシー検査は、利用者が指定した版と設定ファイルに従う
+      - 版と設定ファイルをどちらも指定しない場合、依存ポリシー検査の結果は未実行として記録される
+      - 版と設定ファイルの一方だけが指定された場合、または指定された設定ファイルを確認できない場合は、既定の規則で代替せず停止する

@@ -7,7 +7,7 @@ import { loadRegistry } from '../preset-registry.ts';
 import { managedAssets } from '../ci-preset-assets.ts';
 import { validateQualityPreset } from '../quality-validation.ts';
 import { createReport } from '../validation-report.ts';
-import { validateCiPreset } from '../validate-ci-preset.ts';
+import { validateCiPresetCli } from './support/preset-cli.mjs';
 import { snapshotTree } from './support/release-request-fixture.mjs';
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -93,7 +93,7 @@ describe("contract.ci-preset-assurance.verification", () => {
           // Arrange
           const beforeMissing = snapshotTree(root);
           // Act
-          const missingReport = validateCiPreset({ repoRoot: root, presets: ['quality-gate'] });
+          const missingReport = validateCiPresetCli({ repoRoot: root, presets: ['quality-gate'] });
           // Assert
           expect(missingReport.status).toBe('failed');
           expect(missingReport.missingSettings.some((item) => item.path === `${workflowPath}:env.CI_ADAPTER_DESCRIPTOR`)).toBeTruthy();
@@ -112,7 +112,7 @@ describe("contract.ci-preset-assurance.verification", () => {
           // Arrange
           const beforeDirectory = snapshotTree(root);
           // Act
-          const directoryReport = validateCiPreset({ repoRoot: root, presets: ['quality-gate'] });
+          const directoryReport = validateCiPresetCli({ repoRoot: root, presets: ['quality-gate'] });
           // Assert
           expect(directoryReport.status).toBe('failed');
           expect(directoryReport.mismatches.some((item) => item.message === 'quality adapter descriptor must be a regular file')).toBeTruthy();

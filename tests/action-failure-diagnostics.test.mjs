@@ -5,6 +5,14 @@ import { spawnSync } from 'node:child_process';
 import { describe, expect, test, onTestFinished } from 'vitest';
 
 const actions = fs.readdirSync('actions').filter((name) => fs.existsSync(`actions/${name}/src/index.ts`));
+const sourceRevision = '0123456789abcdef0123456789abcdef01234567';
+const expectedInputFailureStages = new Map([
+  ['ci-quality-adapter', 'bundle-selection'],
+  ['ci-release-assembly', 'input-validation'],
+  ['ci-release-authority', 'authority-validation'],
+  ['ci-release-publication-control', 'control-input'],
+  ['ci-release-publication-verifier', 'authority-input'],
+]);
 describe.each(actions)('%s failure boundary', (action) => {
   // contract_id: contract.ci-failure-diagnostics.actionable
   // flow_id: action-failure-diagnostics
@@ -12,12 +20,16 @@ describe.each(actions)('%s failure boundary', (action) => {
     fs.mkdirSync(path.resolve('tests/tmp'), { recursive: true });
     const fixture = fs.mkdtempSync(path.resolve('tests/tmp/action-failure-'));
     onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
-    const output = path.join(fixture, 'output');
-    const sentinel = path.join(fixture, 'existing-state');
+    const runnerTemp = path.join(fixture, 'runner-temp');
+    const outputDirectory = path.join(fixture, 'outputs');
+    fs.mkdirSync(runnerTemp);
+    fs.mkdirSync(outputDirectory);
+    const output = path.join(outputDirectory, 'output');
+    const sentinel = path.join(runnerTemp, 'existing-state');
     fs.writeFileSync(output, '');
     fs.writeFileSync(sentinel, 'unchanged');
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('INPUT_')));
-    Object.assign(env, { GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'private-token-must-not-appear', RUNNER_TEMP: fixture, GITHUB_PATH: path.join(fixture, 'path'), GITHUB_RUN_ID: '123', GITHUB_JOB: 'diagnostic-test' });
+    Object.assign(env, { GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'private-token-must-not-appear', RUNNER_TEMP: runnerTemp, GITHUB_PATH: path.join(outputDirectory, 'path'), GITHUB_RUN_ID: '123', GITHUB_JOB: 'diagnostic-test', CI_SOURCE_REVISION: sourceRevision });
     const root = path.resolve('actions', action);
     const require = createRequire(path.join(root, 'package.json'));
     const args = surface === 'source' ? ['--import', require.resolve('tsx'), path.join(root, 'src/index.ts')] : [path.join(root, 'dist/index.js')];
@@ -27,11 +39,16 @@ describe.each(actions)('%s failure boundary', (action) => {
     expect(result.status).toBe(action === 'ci-change-scope' ? 0 : 1);
     expect(evidence.classification.subject).toBe(action);
     expect(evidence.classification.operation).toBeTruthy();
+    expect(evidence.classification.reason).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
     expect(evidence.classification.reason).not.toBe('unknown-failure');
     expect(evidence.classification.cause).toBe('known');
     expect(evidence.classification.stage).toBeTruthy();
-    expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test' });
-    expect(evidence.comparison).toBeTruthy();
+    if (expectedInputFailureStages.has(action)) {
+      expect(evidence.classification.stage).toBe(expectedInputFailureStages.get(action));
+    }
+    expect(evidence.context).toMatchObject({ run: '123', job: 'diagnostic-test', source: sourceRevision });
+    expect(evidence.comparison.expected).toBeTruthy();
+    expect(evidence.comparison.observed).toBeTruthy();
     expect(evidence['evidence-location']).toMatchObject({ log: 'workflow-run-job-step-log', artifact: 'not-generated' });
     expect(evidence['execution-state'].outcome).toBe(action === 'ci-change-scope' ? 'unresolved' : 'failure');
     expect(evidence['execution-state'].lastConfirmed).toBeTruthy();
@@ -39,6 +56,8 @@ describe.each(actions)('%s failure boundary', (action) => {
     expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
     expect(fs.readFileSync(sentinel, 'utf8')).toBe('unchanged');
     expect(fs.readFileSync(output, 'utf8')).not.toContain('success');
+    expect(fs.readdirSync(runnerTemp, { recursive: true })).toEqual(['existing-state']);
+    expect(fs.readdirSync(outputDirectory, { recursive: true })).toEqual(['output']);
   });
 });
 

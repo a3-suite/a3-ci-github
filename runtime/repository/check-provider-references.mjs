@@ -111,6 +111,7 @@ function actionEntrypointDiagnostics(root, actionPath, sha, action, actionPaths)
 }
 
 export function checkActionReferences(root, snapshot, options = {}) {
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
   const binding = snapshot.registry.actionization.implementationSource;
   const diagnostics = [];
   const interfaceDiagnostics = [];
@@ -133,7 +134,13 @@ export function checkActionReferences(root, snapshot, options = {}) {
     const target = snapshot.registry.actionization.targets.find((entry) => entry.actionPath === actionPath && entry.status === 'available');
     if (!target) { diagnostics.push(`${reference.relative}:${reference.location}: first-party Action is not registered as available`); continue; }
     if (!metadata.has(reference.uses)) {
-      const text = execFileSync('git', ['show', `${sha}:${actionPath}/action.yml`], { cwd: root, encoding: 'utf8', stdio: 'pipe' });
+      let text;
+      try {
+        text = execFileSync('git', ['show', `${sha}:${actionPath}/action.yml`], { cwd: root, encoding: 'utf8', stdio: 'pipe' });
+      } catch (error) {
+        assertImplementationReachable(git, sha);
+        throw error;
+      }
       metadata.set(reference.uses, parseYaml(text, `${sha}:${actionPath}/action.yml`).toJS());
       diagnostics.push(...actionEntrypointDiagnostics(root, actionPath, sha, metadata.get(reference.uses), actionPaths));
     }
@@ -154,7 +161,6 @@ export function checkActionReferences(root, snapshot, options = {}) {
   }
   let implementationBinding;
   if (actionPaths.length) {
-    const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' }).trim();
     let sourceRevision;
     let sourceTree;
     if (options.preparation) {

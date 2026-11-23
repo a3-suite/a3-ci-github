@@ -1,0 +1,17 @@
+version: 1
+name: requirement
+requirements:
+  - requirement_id: ci-quality-results-aggregation
+    type: functional
+    summary: 品質ゲートは必要な検査の結果を集約し、未実行や判定不能を成功として扱わない
+    rationale: プラットフォーム間で同等の検査を繰り返す負担を抑えながら、結果の集約時に必要な検査の欠落や失敗を見落とさないため
+    subject:
+      namespace: ci
+      key: quality-results-aggregation
+    priority: must
+    fit_criteria:
+      - platform 別に品質検査を実行する場合、共通検査（format、security、dependency-policy）の共有は、利用 project が宣言し、platform 間で設定と対象が同等であることを確認した、信頼できる宣言だけで有効になる
+      - 共通検査の共有が有効な場合は共通検査を重複して実行せず、共通検査の結果を含めて全 platform の成功を集約の成功条件とする
+      - 共通検査の共有が有効と判断できない場合は、全 platform で全検査を維持する
+      - 品質結果の集約 status は、owner の方針で対象外とした行と、descriptor が任意と宣言した検査の未設定による未実行だけを成否の判定から除く。これら以外の未実行・判定不能を成功として扱わない
+      - 全行が対象外の入力は集約せず拒否する

@@ -68,6 +68,7 @@ describe("preset-assurance-contract", () => {
         '--skill-collection-root', 'VERSION',
       ]));
       expect(diagnostic.reason).toBe('runtime-unavailable');
+      expect(diagnostic.failureEvidence.classification.stage).toBe('runtime-discovery');
     });
   });
 });
@@ -84,12 +85,19 @@ describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
       const fixture = fs.mkdtempSync(path.join(root, 'tmp/preset-bootstrap-contract-'));
       const runtime = path.join(fixture, '.a3-skills/ci-github/runtime');
       const args = ['--audit-mode', 'read-only', '--repo-root', fixture];
+      const stages = {
+        'runtime-unavailable': 'runtime-discovery',
+        'runtime-lock-mismatch': 'runtime-lock-validation',
+        'runtime-dependency-tree-invalid': 'runtime-dependency-validation',
+      };
       const reject = (reason) => {
         const before = snapshotTree(fixture);
         // Act
         const result = run(args);
         // Assert
-        expect(diagnosticOf(result).reason).toBe(reason);
+        const diagnostic = diagnosticOf(result);
+        expect(diagnostic.reason).toBe(reason);
+        expect(diagnostic.failureEvidence.classification).toMatchObject({ reason, stage: stages[reason] });
         expect(result.stdout).toBe('');
         expect(snapshotTree(fixture)).toStrictEqual(before);
       };
