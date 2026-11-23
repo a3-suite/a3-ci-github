@@ -17,7 +17,7 @@ describe('ci-platform-matrix-action-contract', () => {
     expect(action.inputs['manifest-path'].description).toMatch(/only root key is a non-empty platforms list/);
     expect(action.inputs['manifest-path'].description).toMatch(/\[a-z0-9\]\[a-z0-9-\]\*/);
     expect(action.inputs['runner-policy'].default).toBe('bootstrap');
-    expect(action.inputs['runner-policy'].description).toMatch(/ubuntu-24\.04, macos-14, or windows-2022/);
+    expect(action.inputs['runner-policy'].description).toMatch(/ubuntu-24\.04, macos-15, or windows-2022/);
     expect(action.inputs['runner-policy'].description).toMatch(/Syntax does not prove Hosted origin/);
     expect(action.inputs['manifest-path'].description).toMatch(/id and target values must each be unique/);
     expect(Object.keys(action.outputs)).toStrictEqual(['matrix', 'quality-matrix', 'expected-platforms']);

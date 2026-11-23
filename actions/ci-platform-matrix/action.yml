@@ -12,7 +12,7 @@ inputs:
     required: false
     default: bootstrap
     description: >-
-      bootstrap permits only ubuntu-24.04, macos-14, or windows-2022. trusted permits
+      bootstrap permits only ubuntu-24.04, macos-15, or windows-2022. trusted permits
       versioned Ubuntu, macOS, or Windows Hosted label syntax. Only a fixed caller that
       verified base/control configuration may select trusted; never derive it from PR head,
       the manifest, or event/manual input. Syntax does not prove Hosted origin or availability.

@@ -1,4 +1,4 @@
-export const PLATFORM_RUNNERS = Object.freeze(['ubuntu-24.04', 'macos-14', 'windows-2022']);
+export const PLATFORM_RUNNERS = Object.freeze(['ubuntu-24.04', 'macos-15', 'windows-2022']);
 
 const PLATFORM_ID = /^[a-z0-9][a-z0-9-]*$/;
 const TARGET = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;

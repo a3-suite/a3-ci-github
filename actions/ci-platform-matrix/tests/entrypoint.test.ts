@@ -70,17 +70,24 @@ test('entrypoint fails closed for an unsupported runner', () => {
 // contract_id: contract.ci-platform-matrix.outputs
 // flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint accepts consumer versioned runners only with trusted policy', () => {
-  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, 'trusted');
+  const run = runBundled('platforms: [{id: macos-arm64, runner: macos-14, target: aarch64-apple-darwin}]', undefined, 'trusted');
   try {
     expect(run.result.status, run.result.stderr).toBe(0);
-    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-15","target":"aarch64-apple-darwin"}]}');
+    expect(fs.readFileSync(run.outputPath, 'utf8').trim()).toBe('matrix={"include":[{"id":"macos-arm64","runner":"macos-14","target":"aarch64-apple-darwin"}]}');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
 // contract_id: contract.ci-platform-matrix.outputs
 // flow_id: ci-platform-matrix-contract-entrypoint
 test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
-  for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
+  for (const policy of [undefined, 'bootstrap']) {
+    const run = runBundled('platforms: [{id: macos-arm64, runner: macos-15, target: aarch64-apple-darwin}]', undefined, policy);
+    try {
+      expect(run.result.status, run.result.stderr).toBe(0);
+      expect(JSON.parse(fs.readFileSync(run.outputPath, 'utf8').trim().slice('matrix='.length)).include[0].runner).toBe('macos-15');
+    } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
+  }
+  for (const [runner, policy] of [['macos-14', undefined], ['macos-14', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
     const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
     try {
       expect(run.result.status, run.result.stderr).toBe(1);
@@ -111,7 +118,7 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
     runner: ubuntu-24.04
     target: x86_64-unknown-linux-gnu
   - id: macos-arm64
-    runner: macos-14
+    runner: macos-15
     target: aarch64-apple-darwin
 `, 'platforms: [{id: macos-arm64}, {id: linux-x64}]');
   try {
@@ -120,10 +127,10 @@ test('entrypoint emits ordered quality outputs without changing the manifest mat
       .map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
     expect(JSON.parse(outputs.matrix)).toStrictEqual({ include: [
       { id: 'linux-x64', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' },
-      { id: 'macos-arm64', runner: 'macos-14', target: 'aarch64-apple-darwin' },
+      { id: 'macos-arm64', runner: 'macos-15', target: 'aarch64-apple-darwin' },
     ] });
     expect(JSON.parse(outputs['quality-matrix'])).toStrictEqual({ include: [
-      { platform_id: 'macos-arm64', runner: 'macos-14' },
+      { platform_id: 'macos-arm64', runner: 'macos-15' },
       { platform_id: 'linux-x64', runner: 'ubuntu-24.04' },
     ] });
     expect(outputs['expected-platforms']).toBe('macos-arm64,linux-x64');

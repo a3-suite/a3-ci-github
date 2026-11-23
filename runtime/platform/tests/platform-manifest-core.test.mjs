@@ -16,7 +16,7 @@ describe("platform-manifest-core", () => {
   // evidence_role: supplemental
   // test_level: unit
   // target_id: validatePlatformManifestValue(manifest, runnerPolicy)
-  test.each(['macos-15', 'windows-2025', 'ubuntu-22.04', 'ubuntu-24.04-arm', 'macos-15-intel'])('trusted manifest accepts the consumer-selected versioned runner %s', (runner) => {
+  test.each(['macos-14', 'windows-2025', 'ubuntu-22.04', 'ubuntu-24.04-arm', 'macos-15-intel'])('trusted manifest accepts the consumer-selected versioned runner %s', (runner) => {
     expect(validatePlatformManifestValue({ platforms: [platform({ runner })] }, 'trusted'))
       .toStrictEqual([platform({ runner })]);
     expect(() => validatePlatformManifestValue({ platforms: [platform({ runner })] }))

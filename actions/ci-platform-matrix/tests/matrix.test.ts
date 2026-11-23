@@ -6,7 +6,7 @@ const validManifest = `platforms:
     runner: ubuntu-24.04
     target: x86_64-unknown-linux-gnu
   - id: macos-arm64
-    runner: macos-14
+    runner: macos-15
     target: aarch64-apple-darwin
 `;
 
@@ -28,7 +28,7 @@ describe('resolvePlatformMatrix(string)', () => {
     expect(result).toStrictEqual({
       include: [
         { id: 'linux-x64', runner: 'ubuntu-24.04', target: 'x86_64-unknown-linux-gnu' },
-        { id: 'macos-arm64', runner: 'macos-14', target: 'aarch64-apple-darwin' },
+        { id: 'macos-arm64', runner: 'macos-15', target: 'aarch64-apple-darwin' },
       ],
     });
   });
@@ -50,7 +50,7 @@ describe('resolvePlatformMatrix(string)', () => {
   // target_id: resolvePlatformMatrix(string)
   test('rejects duplicate identities, duplicate targets, and unsupported runners', () => {
     // Arrange
-    const inputs = [validManifest.replace('macos-arm64', 'linux-x64'), validManifest.replace('aarch64-apple-darwin', 'x86_64-unknown-linux-gnu'), validManifest.replace('macos-14', 'ubuntu-latest')];
+    const inputs = [validManifest.replace('macos-arm64', 'linux-x64'), validManifest.replace('aarch64-apple-darwin', 'x86_64-unknown-linux-gnu'), validManifest.replace('macos-15', 'ubuntu-latest')];
 
     // Act
     const failures = inputs.map((input) => captureFailure(() => resolvePlatformMatrix(input)));
