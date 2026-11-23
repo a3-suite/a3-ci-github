@@ -192,6 +192,10 @@ const withCustomBundle = (callback) => withFixture((fixture) => {
   }
 });
 
+const addedFiles = (before, after) => Object.keys(after)
+  .filter((entry) => !entry.endsWith(path.sep) && !Object.hasOwn(before, entry))
+  .map((entry) => entry.split(path.sep).join('/'));
+
 const failLaterCopy = (fixture) => {
   writeFileSync(fixture.descriptorPath, JSON.stringify(fixture.descriptor));
   writeFileSync(fixture.inventoryPath, JSON.stringify(fixture.inventory));
@@ -199,6 +203,7 @@ const failLaterCopy = (fixture) => {
   const failedDestination = path.join(fixture.targetRoot, '.ci/adapters/test-bundle.json');
   const settings = JSON.stringify({ scripts: { lint: 'node --version' }, dependencies: { retained: '1.0.0' } });
   writeFileSync(path.join(fixture.targetRoot, 'package.json'), settings);
+  const before = snapshotTree(fixture.targetRoot);
   const diagnostic = new FailureContext('ci-preset-materialization', 'materialize');
   const copyFile = fs.copyFileSync;
   const injected = Object.assign(new Error('injected-copy-failure'), { code: 'EIO' });
@@ -209,7 +214,7 @@ const failLaterCopy = (fixture) => {
   let failure;
   try { materializeAdapterBundle(fixture.options, diagnostic); } catch (error) { failure = error; }
   finally { copy.mockRestore(); }
-  return { failure, injected, firstDestination, failedDestination, settings, diagnostic };
+  return { failure, injected, firstDestination, failedDestination, before, diagnostic };
 };
 
 describe("contract.ci-preset-materialization.application", () => {
@@ -242,6 +247,7 @@ describe("contract.ci-preset-materialization.application", () => {
       expect(readFileSync(path.join(fixture.targetRoot, destinations[0]))).toStrictEqual(readFileSync(path.join(repository, sources[0])));
       expect(readFileSync(path.join(fixture.targetRoot, destinations[1]))).toStrictEqual(readFileSync(fixture.descriptorPath));
       expect(afterCopy).toMatchObject(before);
+      expect(addedFiles(before, afterCopy).sort()).toStrictEqual([...destinations].sort());
       expect(snapshotTree(fixture.targetRoot)).toStrictEqual(afterCopy);
     }));
 
@@ -251,16 +257,19 @@ describe("contract.ci-preset-materialization.application", () => {
     // contract_id: contract.ci-preset-materialization.application
     test('materializer retains completed copies and reports the changed range after a later copy fails', () => withCustomBundle((fixture) => {
       // Act
-      const { failure, injected, firstDestination, failedDestination, settings, diagnostic } = failLaterCopy(fixture);
+      const { failure, injected, firstDestination, failedDestination, before, diagnostic } = failLaterCopy(fixture);
 
       // Assert
       expect(failure).toBe(injected);
       expect(readFileSync(firstDestination)).toStrictEqual(readFileSync(path.join(repository, 'runtime/adapter/cli-runtime.ts')));
       expect(existsSync(failedDestination)).toBe(false);
-      expect(readFileSync(path.join(fixture.targetRoot, 'package.json'), 'utf8')).toBe(settings);
+      const after = snapshotTree(fixture.targetRoot);
+      expect(after).toMatchObject(before);
+      const written = addedFiles(before, after);
+      expect(written).toStrictEqual(['.ci/runtime/helper.ts']);
       expect(diagnostic.evidence(failure)).toMatchObject({
         classification: { stage: 'copy' },
-        context: { inputs: { written: ['.ci/runtime/helper.ts'], current: '.ci/adapters/test-bundle.json' } },
+        context: { inputs: { written, current: '.ci/adapters/test-bundle.json' } },
       });
     }));
 

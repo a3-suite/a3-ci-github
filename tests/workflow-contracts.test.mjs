@@ -1,3 +1,4 @@
+import { resolveConfigSnapshot } from '../actions/ci-config-snapshot/src/snapshot.ts';
 import { existsSync, globSync, readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import yaml from 'yaml';
@@ -9,7 +10,7 @@ import path from 'node:path';
 import { test, describe, expect, onTestFinished } from 'vitest';
 import { runInNewContext } from 'node:vm';
 import { releaseSkillsFixture } from '../runtime/release-publication/tests/fixtures.mjs';
-import { spawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepContaining, stepBlock, summaryNeeds, assertNeeds, unitRecord, referenceFixture, pinOldActionReferences } from "./workflow-contracts.fixtures.mjs";
+import { assertPublicationReadback, spawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepContaining, stepIndexContaining, stepBlock, summaryNeeds, assertNeeds, assertPublicationEntry, assertPublicationControl, unitRecord, referenceFixture, pinOldActionReferences } from "./workflow-contracts.fixtures.mjs";
 
 const summaryJobCount = (workflow) => Object.values(workflow.jobs).filter((job) => (job.steps ?? []).some((step) => /\/actions\/ci-quality-summary@/.test(step.uses ?? ''))).length;
 
@@ -95,6 +96,19 @@ describe('contract.ci-selective-distribution.publication', () => {
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
+    // flow_id: quality-workflow-contract
+    test('untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push', () => {
+      // Arrange
+      const quality = yaml.parse(read('.github/workflows/ci-quality.yml')).jobs;
+      const release = yaml.parse(read('.github/workflows/ci-release-publication.yml')).jobs;
+      const usesCache = job => (job.steps ?? []).some(step => /^actions\/cache(?:\/[a-z-]+)?@/.test(step.uses ?? ''));
+      const save = quality.trusted.steps.find(step => /^actions\/cache\/save@/.test(step.uses ?? ''));
+      // Assert
+      expect(save.if).toBe("steps.cargo-cache-paths.outcome == 'success' && steps.cargo-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)");
+      expect(usesCache(quality['untrusted-pr'])).toBe(false);
+      for (const [id, job] of Object.entries(release)) expect(usesCache(job), id).toBe(false);
+    });
+
 
     // integration_id: quality-workflow-contract
     test('quality caller preserves the summary check without copying quality jobs', () => {
@@ -528,6 +542,234 @@ describe("workflow-contracts", () => {
 
 describe("workflow-contracts", () => {
   describe("release-publication-workflow-contract", () => {
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflows separate request validation from privileged publication', () => {
+      const caller = read('workflows/release/release-publication-caller.yml');
+      const publication = read('.github/workflows/ci-release-publication.yml');
+      const callerPublish = jobBlock(caller, 'publish');
+      assertNeeds(callerPublish, ['validate-request']);
+      includesAll(callerPublish, [/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-release-publication\.yml@<release-publication-workflow-sha>/]);
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const { source, referencePlaceholder } = registry.releasePublicationReusableWorkflow;
+      expect(yaml.parse(caller).jobs.publish.uses).toBe(`a3-suite/a3-ci-github/${source}@${referencePlaceholder}`);
+      expect(publication).toMatch(/workflow_call:/);
+      assertPublicationControl(publication, 'release');
+      const provider = yaml.parse(publication);
+      const supplementalSteps = provider.jobs['supplemental-asset'].steps;
+      const supplementalDownload = supplementalSteps.find(step => step.with?.pattern === 'supplemental-build-*');
+      const finalAssembly = supplementalSteps.find(step => step.with?.operation === 'assemble');
+      expect(finalAssembly.with['supplemental-build-root']).toBe(supplementalDownload.with.path);
+      const publicationJob = jobBlock(publication, 'publish');
+      assertNeeds(publicationJob, ['authority', 'assemble']);
+      const checkout = stepIndexContaining(publicationJob, '- name: Verify trusted control checkout');
+      const handoff = stepIndexContaining(publicationJob, '- name: Validate release handoff integrity');
+      const approval = stepIndexContaining(publicationJob, '- name: Verify approval is still valid');
+      const publish = stepIndexContaining(publicationJob, '- id: publish');
+      expect(checkout).toBeGreaterThanOrEqual(0);
+      expect(handoff).toBeGreaterThan(checkout);
+      expect(approval).toBeGreaterThan(handoff);
+      expect(publish).toBeGreaterThan(approval);
+      assertPublicationReadback(provider.jobs.publish.steps);
+      includesAll(stepContaining(publicationJob, '- id: publish'), [new RegExp(`ci-release-publisher@${actionRef}`)]);
+      expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/ci-release-publish\.sh/);
+    });
+
+    // evidence_role: supplemental
+    // The permissions of the caller, the publication entry checks and the needs, conditions and artifact paths of the build, supplemental asset and summary jobs are workflow wiring that no mapped contract guarantee observes.
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflows wire the publication entry, the build and supplemental asset jobs and the summaries', () => {
+      const caller = read('workflows/release/release-publication-caller.yml');
+      const publication = read('.github/workflows/ci-release-publication.yml');
+      includesAll(jobBlock(caller, 'publish'), [/contents: write/]);
+      const callerSummary = jobBlock(caller, 'summary');
+      assertNeeds(callerSummary, ['validate-request', 'publish']);
+      includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
+      assertPublicationEntry(publication, 'release');
+      const buildJob = jobBlock(publication, 'build');
+      assertNeeds(buildJob, ['authority', 'source-gate']);
+      const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');
+      assertNeeds(supplementalAssetJob, ['authority', 'source-gate', 'quality', 'build']);
+      includesAll(supplementalAssetJob, [
+        /^    if: inputs\.supplemental_release_asset_enabled && inputs\.supplemental_release_asset_implementation == 'owner-adapter'$/m,
+      ]);
+      includesAll(stepContaining(supplementalAssetJob, 'pattern: release-build-*'), [
+        /actions\/download-artifact@/,
+        /^          path: build$/m,
+      ]);
+      includesAll(stepContaining(supplementalAssetJob, '- name: Build and verify supplemental Release asset'), [
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
+        /^          operation: assemble$/m,
+        /^          standard-build-root: build$/m,
+        /^          output-directory: supplemental-asset$/m,
+      ]);
+      const publicationSummary = jobBlock(publication, 'summary');
+      assertNeeds(publicationSummary, ['authority', 'source-gate', 'quality', 'build', 'supplemental-asset', 'assemble', 'publish']);
+      includesAll(publicationSummary, [/if: always\(\)/, /ci-quality-summary@/]);
+    });
+
+    // evidence_role: supplemental
+    // The owner input bindings, the credential bindings and the supplemental artifact paths are workflow wiring that no mapped contract guarantee observes.
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflows bind owner inputs, credentials and supplemental artifact paths', () => {
+      // Arrange
+      const caller = read('workflows/release/release-publication-caller.yml');
+      const publication = read('.github/workflows/ci-release-publication.yml');
+      const provider = yaml.parse(publication);
+      // Assert
+      expect(yaml.parse(caller).jobs.publish.with).toMatchObject({
+        supplemental_release_asset_enabled: '<supplemental-release-asset-enabled>',
+        supplemental_release_asset_owner_contract: '<supplemental-release-asset-owner-contract>',
+        supplemental_release_asset_implementation: '<supplemental-release-asset-implementation>',
+        supplemental_release_asset_config_path: '<supplemental-release-asset-config-path>',
+        release_skills_config_path: '<release-skills-config-path>',
+      });
+      expect(provider.jobs.publish.permissions.contents).toBe('write');
+      expect(provider.jobs.publish.env).toMatchObject({
+        CI_RELEASE_CREDENTIAL_SOURCE: 'standard-workflow-github-token',
+        CI_RELEASE_CONTENTS_PERMISSION: 'write',
+      });
+      for (const id of ['publication_before', 'publish', 'verify_publication']) {
+        expect(provider.jobs.publish.steps.find(step => step.id === id).env).toMatchObject({
+          GH_TOKEN: '${{ github.token }}', GITHUB_TOKEN: '${{ github.token }}',
+        });
+      }
+      for (const [id, job] of Object.entries(provider.jobs)) {
+        if (id !== 'publish') expect(job.env?.CI_RELEASE_CREDENTIAL_SOURCE).toBeUndefined();
+      }
+      const publicationJob = jobBlock(publication, 'publish');
+      expect(publicationJob).toMatch(/contents: write/);
+      expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/GH_TOKEN|CI_GITHUB_TOKEN/);
+      includesAll(stepContaining(publicationJob, '- id: publish'), [/GH_TOKEN: \$\{\{ github\.token \}\}/]);
+      expect(stepContaining(publicationJob, '- id: publish')).not.toMatch(/CI_GITHUB_TOKEN/);
+      const buildJob = jobBlock(publication, 'build');
+      includesAll(stepContaining(buildJob, '- name: Build and verify supplemental Release asset platform'), [
+        /^        if: inputs\.supplemental_release_asset_enabled$/m,
+        new RegExp(`actions/ci-release-supplemental-asset@${actionRef}`),
+        /^          operation: build-platform$/m,
+        /^          standard-build-root: build\/\$\{\{ matrix\.id \}\}$/m,
+        /^          output-directory: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
+      ]);
+      includesAll(stepContaining(buildJob, 'name: supplemental-build-${{ matrix.id }}'), [
+        /actions\/upload-artifact@/,
+        /^        if: inputs\.supplemental_release_asset_enabled$/m,
+        /^          path: supplemental-build\/\$\{\{ matrix\.id \}\}$/m,
+        /^          include-hidden-files: \$\{\{ inputs\.supplemental_release_asset_implementation == 'standard-installer' \}\}$/m,
+        /^          if-no-files-found: error$/m,
+      ]);
+      expect(publication.match(/include-hidden-files:/g)).toHaveLength(1);
+      const supplementalAssetJob = jobBlock(publication, 'supplemental-asset');
+      includesAll(stepContaining(supplementalAssetJob, 'pattern: supplemental-build-*'), [
+        /actions\/download-artifact@/,
+        /^          path: supplemental-build$/m,
+      ]);
+      includesAll(stepContaining(supplementalAssetJob, '- name: Build and verify supplemental Release asset'), [
+        /^          supplemental-build-root: supplemental-build$/m,
+      ]);
+    });
+
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflows keep their request, quality, artifact and authority configuration', () => {
+      const request = read('workflows/release/release-publication-request.yml');
+      const caller = read('workflows/release/release-publication-caller.yml');
+      const publication = read('.github/workflows/ci-release-publication.yml');
+      const provider = yaml.parse(publication);
+      const buildJob = jobBlock(publication, 'build');
+      expect(request).toMatch(/workflow_dispatch:/);
+      includesAll(jobBlock(request, 'request'), [/contents: read/, /operation: create-request/]);
+      includesAll(jobBlock(request, 'request'), [/if: always\(\)/, /ci-quality-summary@/]);
+      expect(yaml.parse(request).jobs.summary).toBeUndefined();
+      expect(caller).toMatch(/workflow_run:/);
+      includesAll(jobBlock(caller, 'validate-request'), [/actions: read/, /contents: read/, /operation: verify-publication-request/]);
+      // Release implementations are Rust-only, so the caller omits the optional Python tool version.
+      expect(yaml.parse(caller).jobs.publish.with['uv-version']).toBeUndefined();
+      expect(yaml.parse(publication).on.workflow_call.inputs['uv-version']).toMatchObject({ required: false, default: '' });
+      const qualitySteps = yaml.parse(publication).jobs.quality.steps;
+      const qualityAdapter = qualitySteps.find(step => step.id === 'quality-adapter');
+      expect(qualityAdapter.with['bundle-path']).toBe("${{ env.CI_ADAPTER_DESCRIPTOR && format('.ci-base/{0}', env.CI_ADAPTER_DESCRIPTOR) || '' }}");
+      expect(qualityAdapter.with['require-trusted-project-scripts']).toBe('true');
+      expect(qualityAdapter.with['trusted-project-root']).toBe('.ci-base');
+      const qualityCheckout = qualitySteps.find(step => step.with?.path === '.ci-base');
+      const qualityVerification = qualitySteps.find(step => step.name === 'Verify trusted control checkout');
+      expect(qualityCheckout.if).toBe("env.CI_STANDARD_BUNDLE_ID != 'rust-cargo-quality' || env.CI_ADAPTER_DESCRIPTOR != ''");
+      expect(qualityVerification.if).toBe(qualityCheckout.if);
+      includesAll(jobBlock(publication, 'authority'), [/Verify publication entry/, /Verify standard Release authority/]);
+      for (const jobId of ['assemble', 'publish']) {
+        expect(provider.jobs[jobId].steps.some(step => /actions\/ci-(?:gh-provisioner|jq-provisioner|github-toolchain-verifier)@/.test(step.uses ?? '')), jobId).toBe(false);
+      }
+      for (const jobId of ['source-gate', 'build']) {
+        expect(provider.jobs[jobId].steps.some(step => /actions\/ci-jq-provisioner@/.test(step.uses ?? '')), jobId).toBe(true);
+      }
+      const uploads = Object.values(provider.jobs).flatMap(job => job.steps ?? []).filter(step => step.uses?.startsWith('actions/upload-artifact@'));
+      for (const upload of uploads) {
+        expect(upload.with['compression-level'], upload.with.name).toBe(upload.with.name === 'release-build-${{ matrix.id }}' ? 0 : undefined);
+      }
+      for (const [jobId, actionId] of [
+        ['authority', 'ci-release-authority'], ['source-gate', 'ci-rust-source-gate'],
+        ['build', 'ci-rust-release-build'], ['assemble', 'ci-release-assembly'], ['publish', 'ci-release-publisher'],
+      ]) {
+        const step = provider.jobs[jobId].steps.find(item => item.uses === `a3-suite/a3-ci-github/actions/${actionId}@${actionRef}`);
+        expect(step, actionId).toBeDefined();
+        expect(step.if, actionId).toBeUndefined();
+        expect(step.run, actionId).toBeUndefined();
+      }
+      expect(publication).not.toMatch(/authority_owner|publish_owner|publication_notes|release_identity|CI_RELEASE_IMPLEMENTATION (?:==|!=)/);
+      expect(provider.jobs.authority.outputs).toMatchObject({
+        source_sha: '${{ steps.authority.outputs.source_sha }}',
+        version: '${{ steps.authority.outputs.version }}',
+        target_identity: '${{ steps.authority.outputs.target_identity }}',
+        approval_id: "${{ steps.authority.outputs['approval-id'] }}",
+        approval_body_sha256: "${{ steps.authority.outputs['body-sha256'] }}",
+      });
+      const configuration = yaml.parse(publication).jobs.authority.steps.find(step => step.id === 'config');
+      const sourcesTemplate = configuration.with['sources-json'];
+      const runtimeKeys = [
+        'CI_LANGUAGE_PROFILE', 'CI_TOOLCHAIN_VERSION', 'CI_PLATFORM_MANIFEST',
+        'CI_RELEASE_IMPLEMENTATION', 'CI_RELEASE_OWNER_CONTRACT', 'CI_CARGO_MANIFEST_PATH',
+        'CI_CARGO_LOCK_PATH', 'CI_RELEASE_BINARY_NAME', 'CI_RELEASE_ASSET_PREFIX',
+      ];
+      const stringExpressions = [...runtimeKeys.map(key => `env.${key}`), 'inputs.supplemental_release_asset_owner_contract'];
+      for (const expression of stringExpressions) {
+        expect(sourcesTemplate.includes('${{ toJSON(' + expression + ') }}'), expression).toBeTruthy();
+        for (const value of [String.raw`tool\u002fstable`, 'tool","CI_LANGUAGE_PROFILE":"other', 'a\t"\\b']) {
+          for (const enabled of [false, true]) {
+            const values = Object.fromEntries(runtimeKeys.map(key => [`env.${key}`, 'sample']));
+            values['inputs.supplemental_release_asset_owner_contract'] = 'owner';
+            values['inputs.supplemental_release_asset_enabled'] = enabled;
+            values['inputs.supplemental_release_asset_implementation'] = 'owner-adapter';
+            values['inputs.supplemental_release_asset_config_path'] = '__unset__';
+            values['inputs.release_skills_config_path'] = '__unset__';
+            values[expression] = value;
+            const rendered = sourcesTemplate.replace(/\$\{\{\s*(toJSON\((?:env|inputs)\.[A-Za-z_]+\)|(?:env|inputs)\.[A-Za-z_]+)\s*\}\}/g, (_, entry) =>
+              entry.startsWith('toJSON(') ? JSON.stringify(values[entry.slice(7, -1)]) : String(values[entry]));
+            const snapshot = resolveConfigSnapshot(JSON.parse(rendered));
+            const key = expression.startsWith('env.') ? expression.slice(4) : 'CI_SUPPLEMENTAL_RELEASE_ASSET_OWNER_CONTRACT';
+            expect(snapshot.values[key], expression).toBe(value);
+            expect(snapshot.values.CI_SUPPLEMENTAL_RELEASE_ASSET_ENABLED).toBe(String(enabled));
+            for (const other of runtimeKeys.filter(other => other !== key)) expect(snapshot.values[other], other).toBe('sample');
+          }
+        }
+      }
+      includesAll(stepContaining(buildJob, 'name: release-build-${{ matrix.id }}'), [
+        /actions\/upload-artifact@/,
+        /^          path: build\/\$\{\{ matrix\.id \}\}$/m,
+        /^          if-no-files-found: error$/m,
+        /^          compression-level: 0$/m,
+      ]);
+      expect(publication).not.toMatch(/run: \.ci\/scripts\/ci-release-supplemental-asset\.sh/);
+    });
+     // contract_id: contract.ci-release-publication-workflow.publication
+    // flow_id: release-publication-workflow-contract
+    test('release publication workflow declares serialized publication', () => {
+      // Arrange
+      const provider = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
+      // Assert
+      expect(provider.concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
+    });
+
 
     // integration_id: release-publication-workflow-contract
     test('release builds overlap quality while assembly rejects every unsuccessful prerequisite', () => {
@@ -615,7 +857,7 @@ describe("workflow-contracts", () => {
       expect(canPublish).toBe(true);
       expect(publish(successful, true)).toBe(false);
       for (const id of Object.keys(successful)) {
-        for (const result of ['failure', 'cancelled', 'skipped', '']) {
+        for (const result of ['failure', 'cancelled', 'skipped', '', 'unknown', undefined]) {
           expect(publish({ ...successful, [id]: result }), `${id}:${result}`).toBe(false);
         }
       }
@@ -706,6 +948,7 @@ describe("workflow-contracts", () => {
       expect(supplemental.with).toMatchObject({ operation: 'assemble', 'standard-build-root': 'build', 'supplemental-build-root': 'supplemental-build' });
       expect(jobs['supplemental-asset'].steps.find(step => step.name === 'Create empty build roots').run).toBe('mkdir build supplemental-build');
       for (const input of ['build-root', 'platform-manifest-path', 'platform-matrix']) expect(handoff.with).not.toHaveProperty(input);
+      assertPublicationReadback(jobs.publish.steps);
     });
 
     // integration_id: asset-release-publication-workflow-contract
@@ -713,8 +956,9 @@ describe("workflow-contracts", () => {
       // Arrange
       const successful = { authority: 'success', quality: 'success', 'supplemental-asset': 'success' };
       const inputs = { 'language-profile': 'node', supplemental_release_asset_enabled: true };
+      const unsuccessful = ['failure', 'cancelled', 'skipped', '', 'unknown', undefined];
       // Act
-      const blocked = Object.keys(successful).flatMap(id => ['failure', 'cancelled', 'skipped', '']
+      const blocked = Object.keys(successful).flatMap(id => unsuccessful
         .map(result => [`${id}:${result}`, evaluate(jobs.assemble.if, { ...successful, [id]: result }, inputs)]))
         .filter(([, allowed]) => allowed !== false);
       // Assert
@@ -725,7 +969,7 @@ describe("workflow-contracts", () => {
       expect(evaluate(jobs.publish.if, publicationPrerequisites, inputs)).toBe(true);
       expect(evaluate(jobs.publish.if, publicationPrerequisites, inputs, true)).toBe(false);
       for (const id of Object.keys(publicationPrerequisites)) {
-        for (const result of ['failure', 'cancelled', 'skipped', '']) {
+        for (const result of unsuccessful) {
           expect(evaluate(jobs.publish.if, { ...publicationPrerequisites, [id]: result }, inputs), `${id}:${result}`).toBe(false);
         }
       }
@@ -785,6 +1029,105 @@ describe("workflow-contracts", () => {
 
 describe("workflow-contracts", () => {
   describe("package-publication-workflow-contract", () => {
+    // flow_id: package-publication-workflow-contract
+    test('package workflows separate preparation request validation and publication', () => {
+      const caller = read('workflows/package/package-publication-caller.yml');
+      const preparation = read('.github/workflows/ci-package-preparation.yml');
+      const callerDefinition = yaml.parse(caller);
+      expect(callerDefinition.jobs.prepare.secrets).toBeUndefined();
+      expect(callerDefinition.jobs.publish.secrets).toStrictEqual({ PACKAGE_REGISTRY_TOKEN: '${{ secrets.PACKAGE_REGISTRY_TOKEN }}' });
+
+      const publication = read('.github/workflows/ci-package-publication.yml');
+      expect(yaml.parse(publication).concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
+      const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
+      const providerReference = ({ source, referencePlaceholder }) => `a3-suite/a3-ci-github/${source}@${referencePlaceholder}`;
+      expect(callerDefinition.jobs.prepare.uses).toBe(providerReference(registry.packagePreparationReusableWorkflow));
+      expect(callerDefinition.jobs.publish.uses).toBe(providerReference(registry.packagePublicationReusableWorkflow));
+      const prepareJob = jobBlock(caller, 'prepare');
+      assertNeeds(prepareJob, ['validate-request']);
+      expect(prepareJob).toMatch(/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-preparation\.yml@<package-preparation-workflow-sha>/);
+      const publishJob = jobBlock(caller, 'publish');
+      assertNeeds(publishJob, ['validate-request', 'prepare']);
+      includesAll(publishJob, [/uses: a3-suite\/a3-ci-github\/\.github\/workflows\/ci-package-publication\.yml@<package-publication-workflow-sha>/]);
+      const callerSummary = jobBlock(caller, 'summary');
+      assertNeeds(callerSummary, ['validate-request', 'prepare', 'publish']);
+      includesAll(callerSummary, [/if: always\(\)/, /ci-quality-summary@/]);
+      expect(preparation).toMatch(/workflow_call:/);
+      const preparationContract = yaml.parse(preparation);
+      expect(Object.keys(preparationContract.on.workflow_call.inputs).sort()).toStrictEqual(['language_profile', 'runner', 'source_sha', 'target_identity', 'toolchain', 'version']);
+      expect(Object.values(preparationContract.on.workflow_call.inputs).every((input) => input.required === true && input.type === 'string')).toBeTruthy();
+      expect(preparationContract.permissions).toStrictEqual({});
+      expect(preparationContract.on.workflow_call.secrets).toBe(undefined);
+      expect(preparationContract.jobs.build.permissions).toStrictEqual({ contents: 'read' });
+
+      expect(publication).toMatch(/workflow_call:/);
+      assertPublicationControl(publication, 'package');
+      const publicationJob = jobBlock(publication, 'publish');
+      expect(stepIndexContaining(publicationJob, '- name: Validate package handoff integrity') < stepIndexContaining(publicationJob, '- name: Publish verified package handoff')).toBeTruthy();
+      expect(publicationJob.split(/^    steps:$/m)[0]).not.toMatch(/PACKAGE_REGISTRY_TOKEN|CI_GITHUB_TOKEN/);
+      const providerDefinition = yaml.parse(publication);
+      for (const [id, provider] of [['prepare', yaml.parse(preparation)], ['publish', providerDefinition]]) {
+        const declared = provider.on.workflow_call.inputs;
+        const bound = callerDefinition.jobs[id].with;
+        expect(Object.keys(bound).sort()).toStrictEqual(Object.keys(declared).sort());
+        for (const [name, input] of Object.entries(declared)) {
+          expect(input.required).toBe(true);
+          expect(input.type).toBe('string');
+          expect(typeof bound[name]).toBe(input.type);
+        }
+      }
+      expect(JSON.stringify(providerDefinition.env ?? {})).not.toContain('PACKAGE_REGISTRY_TOKEN');
+      for (const job of Object.values(providerDefinition.jobs)) {
+        for (const bindings of [job.env, job.with, job.secrets]) expect(JSON.stringify(bindings ?? {})).not.toContain('PACKAGE_REGISTRY_TOKEN');
+        for (const step of job.steps ?? []) {
+          if (job === providerDefinition.jobs.publish && step.name === 'Publish verified package handoff') continue;
+          expect(JSON.stringify({ env: step.env, with: step.with, run: step.run })).not.toContain('PACKAGE_REGISTRY_TOKEN');
+        }
+      }
+
+      includesAll(stepContaining(publicationJob, '- name: Publish verified package handoff'), [
+        /PACKAGE_REGISTRY_TOKEN: \$\{\{ secrets\.PACKAGE_REGISTRY_TOKEN \}\}/,
+        /CI_GITHUB_TOKEN: \$\{\{ github\.token \}\}/,
+        /\.ci\/trusted\/ci-package-publish\.sh package-handoff/,
+      ]);
+      includesAll(jobBlock(publication, 'summary'), [/needs: publish/, /if: always\(\)/, /ci-quality-summary@/]);
+    });
+
+    // evidence_role: supplemental
+    // The registry permission and the publication entry checks are workflow wiring that no mapped contract guarantee observes.
+    // flow_id: package-publication-workflow-contract
+    test('package publication workflows grant the registry permission and verify the publication entry first', () => {
+      const caller = read('workflows/package/package-publication-caller.yml');
+      const publication = read('.github/workflows/ci-package-publication.yml');
+      includesAll(jobBlock(caller, 'publish'), [/packages: write/]);
+      assertPublicationEntry(publication, 'package');
+      const publicationJob = jobBlock(publication, 'publish');
+      includesAll(publicationJob, [
+        /packages: write/,
+        /^      - name: Verify publication entry$/m,
+        /CALLER_WORKFLOW_REF: \$\{\{ github\.workflow_ref \}\}/,
+      ]);
+      expect(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity')).toBeTruthy();
+    });
+
+    // evidence_role: supplemental
+    // The concurrency group composition, the in-progress run handling and the pending run queue are workflow wiring beyond the serialization that the mapped guarantee observes.
+    // flow_id: package-publication-workflow-contract
+    test('package publication concurrency keeps one group per target and queues pending runs behind in-progress runs', () => {
+      // Arrange
+      const publication = read('.github/workflows/ci-package-publication.yml');
+      // Assert
+      expect(yaml.parse(publication).concurrency).toStrictEqual({
+        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
+    });
+
 
     // integration_id: package-publication-workflow-contract
     test('package workflows preserve failed and unknown outcomes', () => {
@@ -1219,7 +1562,13 @@ describe("workflow-contracts", () => {
         ]);
         expect(summary).not.toMatch(/secrets(?:\.|\s*\[)/);
 
-        if (summaryId === 'platform-summary' && relative === '.github/workflows/ci-quality-platforms.yml') continue;
+        if (summaryId === 'platform-summary' && relative === '.github/workflows/ci-quality-platforms.yml') {
+          expect(jobs[summaryId].env).toMatchObject({
+            RESOLVE_RESULT: '${{ needs.resolve-platforms.result }}',
+            PLATFORM_RESULT: '${{ needs.platform.result }}',
+          });
+          continue;
+        }
 
         for (const sourceJob of sourceJobs) {
           const record = unitRecord(summary, sourceJob);

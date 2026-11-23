@@ -16,14 +16,16 @@ holdProcessOutput('stderr');
 // The failure result output is the runner output file that the harness hands to the Action (`runner-output`); it is excluded from the comparison.
 const fileNames = (directory: string): string[] => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).filter((name) => name !== 'runner-output').sort();
 
+const transportTimeout = 30_000;
+
 // Source objects and declarations are fixture context, separate from the artifact under test.
 const packTransport = (root: string, output: string) => {
   fs.mkdirSync(output, { recursive: true });
   fs.cpSync(path.join(root, 'supplemental-download'), path.join(output, 'supplemental-download'), { recursive: true });
-  execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git",".ci","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', root, path.join(output, 'context.zip')]);
+  execFileSync(python, ['-c', 'import pathlib,sys,zipfile\nroot=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],"w") as archive:\n for name in [".git",".ci","standard-download","platform.yml","authority.json","snapshot.json"]:\n  item=root/name\n  for file in (item.rglob("*") if item.is_dir() else [item]):\n   if file.is_file(): archive.write(file,file.relative_to(root).as_posix())', root, path.join(output, 'context.zip')], { timeout: transportTimeout });
 };
 const unpackTransport = (input: string, root: string) => {
-  execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root]);
+  execFileSync(python, ['-c', 'import sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as archive: archive.extractall(sys.argv[2])', path.join(input, 'context.zip'), root], { timeout: transportTimeout });
   fs.mkdirSync(path.join(root, '.git/refs'), { recursive: true });
   fs.cpSync(path.join(input, 'supplemental-download'), path.join(root, 'supplemental-download'), { recursive: true });
 };

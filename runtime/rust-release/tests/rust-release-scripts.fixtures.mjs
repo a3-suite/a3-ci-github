@@ -22,7 +22,13 @@ if (!pwshProbe.error && pwshProbe.status !== 0) {
   throw new Error(`PowerShell version probe failed (${pwshProbe.signal ?? pwshProbe.status}): ${pwshProbe.stderr}`);
 }
 const hasPwsh = !pwshProbe.error;
-const nativePowerShells = process.platform === 'win32' ? ['powershell', 'pwsh'].filter((shell) => spawnSync(shell, ['-NoProfile', '-Command', 'exit 0']).status === 0) : [];
+const nativePowerShells = process.platform === 'win32' ? ['powershell', 'pwsh'].filter((shell) => {
+  const probe = spawnSync(shell, ['-NoProfile', '-Command', 'exit 0'], { encoding: 'utf8', timeout: 10000 });
+  if (probe.error?.code === 'ENOENT') return false;
+  if (probe.error) throw probe.error;
+  if (probe.status !== 0) throw new Error(`${shell} startup probe failed (${probe.signal ?? probe.status}): ${probe.stderr}`);
+  return true;
+}) : [];
 
 const withFixture = (callback) => {
   const temporaryRoot = path.join(repositoryRoot, 'tests/tmp');

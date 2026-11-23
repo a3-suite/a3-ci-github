@@ -18,7 +18,7 @@ decisions:
       component_ids:
         - runtime-implementations
     decision: Action と hosted delivery が再利用する provider 非依存の共有処理を、capability ごとに分けず一つの component が所有する
-    rationale: 共有処理は Action へ bundle されるか repository の検証・公開から呼ばれ、共通の失敗診断、platform 検証、固定参照検査の境界を共有する。capability ごとの不変条件は仕様側の subject と契約が所有し、この component の変更理由は呼出側から独立した処理を一か所で検証可能に保つことにあるため
+    rationale: Action と repository の検証・公開で共有する失敗診断、platform 検証、固定参照検査を、呼出側から独立して一か所で検証するため
     alternatives:
       - summary: release、provisioning、quality、installer の capability ごとに component を分ける
         reason_not_selected: 共通の診断・platform・固定参照境界を各 component へ重複させるため

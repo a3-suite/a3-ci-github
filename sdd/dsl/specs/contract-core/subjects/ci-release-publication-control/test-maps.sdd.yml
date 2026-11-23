@@ -71,6 +71,12 @@ test_maps:
         guarantees:
           - publication-control-failure-propagated
           - diagnostic-failure-stage-outputs
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-control failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.action-input-invalid
+        guarantees:
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         partition: publication-control-trigger-valid

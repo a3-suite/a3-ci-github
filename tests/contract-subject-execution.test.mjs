@@ -162,17 +162,17 @@ describe("repository-contract-subject-execution", () => {
     const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const definition = loadDefinition();
     const contractCore = path.join(projectRoot, 'sdd/dsl/specs/contract-core');
-    const contractPackage = readFileSync(path.join(contractCore, 'contract-package.sdd.yml'), 'utf8');
+    const contractPackage = parseYaml(readFileSync(path.join(contractCore, 'contract-package.sdd.yml'), 'utf8'));
     // Act
-    const packageSubjects = [...contractPackage.matchAll(/^\s*- (subjects\/\S+\/)\s*$/gm)]
-      .map((match) => readFileSync(path.join(contractCore, match[1], 'subject.sdd.yml'), 'utf8').match(/^subject:\n {2}id:\s*(\S+)\s*$/m)[1]);
+    const packageSubjects = contractPackage.subject_scopes.map((scope) =>
+      parseYaml(readFileSync(path.join(contractCore, scope, 'subject.sdd.yml'), 'utf8')).subject.id);
     const executionSubjects = definition.subjects.map((subject) => subject.subjectId);
     // Assert
     expect([...executionSubjects].sort()).toStrictEqual([...packageSubjects].sort());
   });
 
   // integration_id: repository-contract-subject-execution
-  test('contract subject execution includes every mapped test file', () => {
+  test('contract subject execution selects every mapped test by file and name', () => {
     const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const definition = loadDefinition();
     const subjectRoot = path.join(projectRoot, 'sdd/dsl/specs/contract-core/subjects');
@@ -182,12 +182,18 @@ describe("repository-contract-subject-execution", () => {
       const { subject: { id } } = parseYaml(readFileSync(path.join(directory, 'subject.sdd.yml'), 'utf8'));
       const execution = definition.subjects.find(({ subjectId }) => subjectId === id);
       expect(execution, id).toBeDefined();
-      const executionPaths = new Set(execution.segments.flatMap(({ cwd, tests = [] }) =>
-        tests.map((file) => path.resolve(projectRoot, cwd, file))));
+      const selectors = execution.segments.filter(({ status }) => status !== 'excluded')
+        .flatMap(({ cwd, tests = [], testNamePattern }) => tests.map((file) => ({
+          file: path.resolve(projectRoot, cwd, file),
+          pattern: testNamePattern === undefined ? undefined : new RegExp(testNamePattern),
+        })));
       const { test_maps: maps } = parseYaml(readFileSync(path.join(subjectRoot, relativeMap), 'utf8'));
       for (const { tests } of maps) {
-        for (const { path: file } of tests) {
-          expect(executionPaths.has(path.resolve(projectRoot, file)), `${id}: ${file}`).toBe(true);
+        for (const { path: file, symbol } of tests) {
+          const mappedFile = path.resolve(projectRoot, file);
+          expect(selectors.some((selector) =>
+            selector.file === mappedFile && (selector.pattern?.test(symbol) ?? true)),
+          `${id}: ${file} > ${symbol}`).toBe(true);
         }
       }
     }

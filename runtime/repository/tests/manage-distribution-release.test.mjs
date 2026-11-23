@@ -303,8 +303,10 @@ describe("contract.ci-selective-distribution.publication", () => {
       for (const [name, failureEnv] of failedPublications) {
         const { stateRoot, run } = scenario(`failed-before-finalize-${name}`);
         const failed = run('publish', failureEnv);
-        expect(failed.status, name).not.toBe(0);
-        expect(diagnosticRecords(failed).length, name).toBeGreaterThan(0);
+        expect(failed.status, name).toBeGreaterThan(0);
+        expect(diagnosticRecords(failed).at(-1), name).toMatchObject({
+          'execution-state': { exit: failed.status },
+        });
         expect(readFileSync(path.join(stateRoot, 'draft'), 'utf8'), name).toBe('true');
         expect(existsSync(path.join(stateRoot, 'publications')), name).toBe(false);
       }
@@ -370,6 +372,11 @@ describe("contract.ci-selective-distribution.publication", () => {
       expect(readFileSync(path.join(stateRoot, 'publications'), 'utf8').trim()).toBe('published');
       expect(resultJson(published)).toMatchObject({ releaseTag: 'v1.2.3', readbackStatus: 'verified' });
       expect(resultJson(published).assetNames.sort()).toEqual(expectedNames);
+      expect(readdirSync(path.join(stateRoot, 'assets')).sort()).toStrictEqual(expectedNames);
+      for (const name of expectedNames) {
+        expect(readFileSync(path.join(stateRoot, 'assets', name)), name)
+          .toStrictEqual(readFileSync(path.join(assetDirectory, name)));
+      }
       const uploadsBefore = uploadCount(stateRoot);
 
       const repeated = run('publish');

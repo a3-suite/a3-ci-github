@@ -64,6 +64,11 @@ test_maps:
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-outputs
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-platform-matrix failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-platform-matrix/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint projects explicit shared checks without changing build identities or selection order
         partition: runtime-context.quality-selection-shared-checks-supplied

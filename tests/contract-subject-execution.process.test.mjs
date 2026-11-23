@@ -35,6 +35,12 @@ describe("repository-contract-subject-execution", () => {
       { id: 'unfiltered', level: 'e2e', cwd: '.', tests: [path.relative(root, fixture)] },
     ] };
     expect(() => collectSubjectCoverage(subject, root, directory)).toThrow('fixture/unfiltered: no selected tests passed');
+    const measured = { ...subject, segments: [{
+      ...subject.segments[0], id: 'measured', level: 'unit',
+      coverage: { enabled: true, include: ['runtime/platform/source-text.mjs'], exclude: [] },
+    }] };
+    expect(() => collectSubjectCoverage(measured, root, directory)).toThrow('no selected tests passed');
+    expect(existsSync(path.join(directory, 'fixture/measured.lcov'))).toBe(false);
   });
 
   // flow_id: repository-contract-subject-execution

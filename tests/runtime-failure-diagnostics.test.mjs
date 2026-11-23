@@ -19,11 +19,13 @@ describe('runtime failure diagnostics', () => {
   test('standalone distribution diagnostics bind workflow context to the declared checkout', () => {
     const source = 'a'.repeat(40);
     const eventSha = 'b'.repeat(40);
-    for (const declared of [source, '']) {
-      const result = spawnSync(process.execPath, ['runtime/distribution/fetch-a3-ci-github.mjs', 'verify'], {
+    const argvMarker = 'invalid-revision-argv-marker';
+    const environmentMarker = 'unused-distribution-environment-marker';
+    for (const [declared, revisionArgs] of [[source, []], ['', []], [source, ['--source-revision', argvMarker]]]) {
+      const result = spawnSync(process.execPath, ['runtime/distribution/fetch-a3-ci-github.mjs', 'verify', ...revisionArgs], {
         cwd: root, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true',
           GITHUB_RUN_ID: '123', GITHUB_JOB: 'verify_distribution', GITHUB_EVENT_NAME: 'pull_request',
-          GITHUB_SHA: eventSha, CI_SOURCE_REVISION: declared },
+          GITHUB_SHA: eventSha, CI_SOURCE_REVISION: declared, TEST_UNUSED_ENV: environmentMarker },
       });
       expect(result.status).toBe(2);
       const { failureEvidence } = JSON.parse(result.stderr);
@@ -32,6 +34,8 @@ describe('runtime failure diagnostics', () => {
       expect(failureEvidence['evidence-location'].log).toBe('workflow-run-job-step-log');
       expect(failureEvidence['execution-state'].lastConfirmed).toBe('unavailable');
       expect(result.stderr).not.toContain(eventSha);
+      expect(result.stdout + result.stderr).not.toContain(argvMarker);
+      expect(result.stdout + result.stderr).not.toContain(environmentMarker);
     }
   });
 

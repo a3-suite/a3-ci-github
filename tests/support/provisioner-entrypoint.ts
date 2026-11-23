@@ -46,7 +46,14 @@ export const runProvisionerEntrypoint = (
   writeFileSync(logPath, '');
   const result = spawnSync(process.execPath, ['--import', preload, ...entrypointArgs], {
     encoding: 'utf8',
-    env: { ...process.env, GITHUB_ACTIONS: 'true', TEST_FETCH_ROUTES: routesPath, TEST_FETCH_LOG: logPath, ...env },
+    env: {
+      ...process.env,
+      GITHUB_ACTIONS: 'true',
+      TEST_FETCH_ROUTES: routesPath,
+      TEST_FETCH_LOG: logPath,
+      TEST_FAIL_PATH_RENAME: 'false',
+      ...env,
+    },
   });
   return { result, requested: readFileSync(logPath, 'utf8').split('\n').filter(Boolean) };
 };

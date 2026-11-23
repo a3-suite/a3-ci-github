@@ -272,8 +272,17 @@ describe("preset-validation-contract", () => {
     // integration_id: preset-asset-lock-contract
     // An empty value is already rejected while the CLI arguments are read, before the tag itself is validated.
     test.each([['', 'input-validation'], ['0.9.0', 'release-tag-validation'], ['v0.9', 'release-tag-validation'], ['latest', 'release-tag-validation']])('asset lock generation rejects the release tag %j', (releaseTag, stage) => withFixture((root) => {
-      expect(() => writeCiAssetLockCli({ repoRoot: root, sourceRevision: 'c'.repeat(40), releaseTag })).toThrow(new RegExp(`"stage":"${stage}"`));
-      expect(existsSync(path.join(root, '.ci/ci-assets.lock.json'))).toBe(false);
+      const lockPath = path.join(root, '.ci/ci-assets.lock.json');
+      const options = { repoRoot: root, sourceRevision: 'c'.repeat(40) };
+      const rejectInvalidTag = () => expect(() => writeCiAssetLockCli({ ...options, releaseTag }))
+        .toThrow(new RegExp(`"stage":"${stage}"`));
+      rejectInvalidTag();
+      expect(existsSync(lockPath)).toBe(false);
+
+      writeCiAssetLockCli({ ...options, releaseTag: 'v0.9.0' });
+      const before = readFileSync(lockPath);
+      rejectInvalidTag();
+      expect(readFileSync(lockPath)).toStrictEqual(before);
     }));
   });
 });

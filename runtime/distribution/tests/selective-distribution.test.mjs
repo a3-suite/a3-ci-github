@@ -818,11 +818,14 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const projectRoot = createConsumer(root);
         const externalRoot = path.join(root, 'external');
         fs.mkdirSync(externalRoot);
+        fs.writeFileSync(path.join(externalRoot, 'existing.txt'), 'outside project\n');
         fs.symlinkSync(externalRoot, path.join(projectRoot, '.a3-skills/ci-github/distributions'));
+        const insideBefore = snapshotTree(projectRoot);
         const outsideBefore = snapshotTree(externalRoot);
         expect(() => cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot }))
           .toThrow(/^distribution-local-root-outside-project$/);
         expect(snapshotTree(externalRoot)).toStrictEqual(outsideBefore);
+        expect(snapshotTree(projectRoot)).toStrictEqual(insideBefore);
       });
     });
 
@@ -1375,7 +1378,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
         // Assert
         expect(fetched.sourceRevision).toBe(sourceRevision);
         const requests = fs.readFileSync(log, 'utf8').trim().split('\n');
-        expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`))).toBeTruthy();
+        const prefix = `${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`;
+        expect(fetched.files.length).toBeGreaterThan(0);
+        expect(requests.sort()).toStrictEqual(fetched.files.map((file) => prefix + file).sort());
       });
     });
 
@@ -1421,8 +1426,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
         // Assert
         expect(failure.message).toBe('distribution-download-failed');
+        expect(new Set(requests).size).toBeGreaterThan(1);
         expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`))).toBeTruthy();
         expect(snapshotTree(projectRoot)).toEqual(before);
+        expect(cliVerify({ projectRoot, sourceRevision }).status).toBe('verified');
       });
     });
 
@@ -1572,12 +1579,14 @@ describe("contract.ci-selective-distribution.delivery", () => {
       // Arrange
       await withFixture('distribution-remote-rejection-', async (root) => {
         // Act
-        const { release, projectRoot, before, results } = failDownloads(root);
+        const { release, before, results } = failDownloads(root);
         for (const { label, failure, observed, requests, after } of results) {
           // Assert
           expect(failure.message, label).toBe('distribution-download-failed');
           expect(failure.evidence.comparison.observed, label).toBe(observed);
-          expect(requests.every((url) => url.startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`)), label).toBeTruthy();
+          expect(requests[0], label).toMatch(new RegExp('^https://'));
+          expect(requests[0].startsWith(`${release.manifest.rawOrigin}/${release.manifest.repository}/${sourceRevision}/`), label).toBe(true);
+          expect([...new Set(requests)], label).toStrictEqual([requests[0]]);
           expect(after, label).toStrictEqual(before);
         }
       });
@@ -1665,10 +1674,15 @@ describe("contract.ci-selective-distribution.application", () => {
         cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'],
           sourceRoot: committedSourceRoot });
         const stalePath = '.github/workflows/retired.yml';
+        const staleFile = path.join(projectRoot, stalePath);
+        const staleBytes = Buffer.from('previously managed bytes');
+        fs.mkdirSync(path.dirname(staleFile), { recursive: true });
+        fs.writeFileSync(staleFile, staleBytes);
         const lockPath = path.join(projectRoot, '.ci/ci-assets.lock.json');
         fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-        fs.writeFileSync(lockPath, JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock',
-          sourceRevision, assets: [{ path: stalePath, appliedSha256: sha256('previously managed bytes') }] }));
+        const lock = JSON.stringify({ schemaVersion: '1', kind: 'ci-github-asset-lock',
+          sourceRevision, assets: [{ path: stalePath, appliedSha256: sha256(staleBytes) }] });
+        fs.writeFileSync(lockPath, lock);
 
         const { planPath, planDigest, ...payload } = cliPlan({ projectRoot, sourceRevision,
           requestedPresets: ['quality-gate'], requestedAssets: [] });
@@ -1678,35 +1692,48 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(payload.actions.map(({ destination, action }) => ({ destination, action })))
           .toEqual([{ destination: '.github/workflows/quality-gate.yml', action: 'create' }]);
         expect(payload.stale).toEqual([stalePath]);
+        expect(fs.existsSync(path.join(projectRoot, payload.actions[0].destination))).toBe(false);
+        expect(fs.readFileSync(staleFile)).toStrictEqual(staleBytes);
+        expect(fs.readFileSync(lockPath, 'utf8')).toBe(lock);
       });
     });
 
     // contract_id: contract.ci-selective-distribution.plan
     test('plan reports a conflict without replacing an independently edited destination', async () => {
       await withFixture('distribution-plan-independent-destination-', (root) => {
-        const { options, workflow, workflowPath } = prepareOwnedWorkflow(root);
+        const { projectRoot, options, workflow, workflowPath } = prepareOwnedWorkflow(root);
         const edit = Buffer.from('independent consumer edit\n');
         fs.writeFileSync(workflow, edit);
+        const before = snapshotTree(projectRoot);
 
         const plan = cliPlan(options);
 
-        expect(plan.actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'conflict' }));
+        expect(plan.actions).toStrictEqual([expect.objectContaining({ destination: workflowPath, action: 'conflict' })]);
         expect(fs.readFileSync(workflow)).toStrictEqual(edit);
+        const after = snapshotTree(projectRoot);
+        delete after[path.relative(projectRoot, plan.planPath)];
+        expect(after).toStrictEqual(before);
       });
     });
 
     // contract_id: contract.ci-selective-distribution.plan
     test('plan reuses current destinations and updates destinations with owned older bytes', async () => {
       await withFixture('distribution-plan-owned-destinations-', (root) => {
-        const { options, workflow, workflowPath, canonical, writeOwnership } = prepareOwnedWorkflow(root);
-        expect(cliPlan(options).actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'reuse' }));
+        const { options, workflow, workflowPath, canonical, lockPath, writeOwnership } = prepareOwnedWorkflow(root);
+        const currentLock = fs.readFileSync(lockPath);
+        expect(cliPlan(options).actions).toStrictEqual([expect.objectContaining({ destination: workflowPath, action: 'reuse' })]);
+        expect(fs.readFileSync(workflow)).toStrictEqual(canonical);
+        expect(fs.readFileSync(lockPath)).toStrictEqual(currentLock);
 
         const older = Buffer.from(canonical.toString('utf8').replaceAll('ubuntu-24.04', 'ubuntu-22.04'));
         expect(older).not.toEqual(canonical);
         fs.writeFileSync(workflow, older);
         writeOwnership(older);
 
-        expect(cliPlan(options).actions).toContainEqual(expect.objectContaining({ destination: workflowPath, action: 'update' }));
+        const olderLock = fs.readFileSync(lockPath);
+        expect(cliPlan(options).actions).toStrictEqual([expect.objectContaining({ destination: workflowPath, action: 'update' })]);
+        expect(fs.readFileSync(workflow)).toStrictEqual(older);
+        expect(fs.readFileSync(lockPath)).toStrictEqual(olderLock);
       });
     });
 

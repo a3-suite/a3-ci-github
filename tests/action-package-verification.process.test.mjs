@@ -86,8 +86,9 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
       write('bin/npm', `#!/bin/sh\nprintf '{"runner":"npm","cwd":"%s","args":"%s"}\\n' "$PWD" "$*" >> ${JSON.stringify(log)}\nexit ${mode === 'typecheck-failure' ? 7 : 0}\n`, 0o755);
       // Act
       const result = spawnSync(process.execPath, [path.join(fixture, 'runtime/repository/verify-action-packages.mjs')], { cwd: fixture, encoding: 'utf8',
-        env: { ...process.env, PATH: `${path.join(fixture, 'bin')}${path.delimiter}${process.env.PATH}` } });
+        env: { ...process.env, PATH: `${path.join(fixture, 'bin')}${path.delimiter}${process.env.PATH}` }, timeout: 30_000 });
       // Assert
+      expect(result.error, 'the source verification CLI did not finish normally').toBeUndefined();
       const invocations = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
       const actionLint = { runner: 'npm', cwd: fs.realpathSync(path.join(fixture, 'actions/alpha')), args: 'run lint' };
       if (mode === 'typecheck-failure') {

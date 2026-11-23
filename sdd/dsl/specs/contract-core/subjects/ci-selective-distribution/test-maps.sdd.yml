@@ -561,6 +561,11 @@ test_maps:
           - approved-plan-content-applied
           - unplanned-consumer-files-preserved
       - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution-application > approved plans reuse identical workflows update owned bytes and reject unmanaged changes
+        partition: runtime-context.selective-distribution-application-valid
+        guarantees:
+          - approved-plan-content-applied
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.application > selective-distribution > application rejects a planned conflict without modifying consumer files
         partition: runtime-context.selective-distribution-application-conflict
         guarantees:

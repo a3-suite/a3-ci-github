@@ -376,6 +376,11 @@ test_maps:
         partition: runtime-context.release-observation-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publication-verifier failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.release-observation-invalid
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publication-verifier/tests/entrypoint-observation.test.ts
         symbol: source entrypoint > publication entrypoint reports an asset readback checksum failure as its own diagnostic
         partition: runtime-context.release-observation-invalid

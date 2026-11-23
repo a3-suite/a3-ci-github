@@ -64,7 +64,8 @@ describe("adapter-bundle-materialization-contract", () => {
             '--import', require.resolve('tsx', { paths: [path.join(root, 'runtime/preset')] }),
             path.join(root, 'runtime/adapter/materialize-adapter-bundle.ts'),
             '--inventory', inventoryPath, '--bundle', bundle.id, '--target-root', project,
-          ], { encoding: 'utf8', cwd: root });
+          ], { encoding: 'utf8', cwd: root, timeout: 30_000 });
+          expect(cli.error, `${profile}: materializer process did not finish normally`).toBeUndefined();
           expect(cli.status, cli.stderr).toBe(0);
           expect(JSON.parse(cli.stdout)).toStrictEqual(report);
           expect(report.schema).toBe('ci.adapter-materializer.v2');

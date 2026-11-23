@@ -200,6 +200,11 @@ test_maps:
         partition: runtime-context.release-publisher-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-publisher failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.release-publisher-invalid
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-publisher/tests/entrypoint-scenarios.test.ts
         symbol: source entrypoint > publisher entrypoint refuses to write over an existing same-tag published release
         partition: runtime-context.release-publisher-invalid

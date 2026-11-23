@@ -20,7 +20,9 @@ describe('release control checkout', () => {
       expect(steps[index + 1].name).toBe('Verify trusted control checkout');
       expect(project.git(control, 'rev-parse', 'HEAD')).toBe(project.controlSha);
       expect(project.verify(control, project.controlSha).status).toBe(0);
-      expect(project.verify(control, project.productSha).status).not.toBe(0);
+      const mismatch = project.verify(control, project.productSha);
+      expect(mismatch.status, mismatch.stderr).toBe(1);
+      expect(mismatch.stderr).toBe('');
     });
 
     // evidence_role: supplemental
@@ -48,7 +50,9 @@ describe('release control checkout', () => {
       const control = project.checkout(step.with['sparse-checkout'], 'publish');
       // Assert
       expect(project.verify(control, project.controlSha).status).toBe(0);
-      expect(project.verify(control, project.productSha).status).not.toBe(0);
+      const mismatch = project.verify(control, project.productSha);
+      expect(mismatch.status, mismatch.stderr).toBe(1);
+      expect(mismatch.stderr).toBe('');
       expect(step.with.repository).toBe('${{ github.repository }}');
       expect(step.with.ref).toBe('${{ github.workflow_sha }}');
     });
@@ -106,7 +110,8 @@ describe('release control checkout', () => {
       const invalid = project.scope('platforms.yml\n/product/**');
       // Assert
       for (const scope of scopes) expect(scope.pattern).toBe('');
-      expect(invalid.status).not.toBe(0);
+      expect(invalid.status, invalid.stderr).toBe(1);
+      expect(invalid.stderr).toContain('invalid platform manifest path');
       for (const [index, manifest] of ['platforms.yml ', 'platforms.yml\t', 'platforms.yml\u00a0'].entries()) {
         const control = project.checkout(project.scope(manifest).pattern, `whitespace-${index}`);
         expect(fs.readFileSync(path.join(control, manifest), 'utf8')).toBe('platforms: []\n# trusted control\n');

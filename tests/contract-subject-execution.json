@@ -1977,6 +1977,7 @@
         {
           "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > repository-quality-delivery-regression > ",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs"
@@ -2250,6 +2251,7 @@
         {
           "id": "e2e-fixed-reference-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:workflow-contracts > repository-quality-delivery-regression > |shared standard quality checks > )",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs",
@@ -2304,39 +2306,6 @@
             "exclude": [
               "dist/**"
             ]
-          }
-        },
-        {
-          "id": "e2e-source-boundary",
-          "level": "e2e",
-          "cwd": "runtime/rust-release",
-          "tests": [
-            "tests/rust-release-scripts.process.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "scope": "source",
-            "include": [
-              "src/verify-platform-manifest.mjs",
-              "../platform/platform-manifest-core.mjs"
-            ],
-            "exclude": [
-              "dist/**"
-            ],
-            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
-          }
-        },
-        {
-          "id": "integration-script",
-          "level": "integration",
-          "cwd": "runtime/rust-release",
-          "tests": [
-            "tests/rust-release-scripts.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "scope": "shell",
-            "reason": "Node coverage does not measure the shell implementation; the executable contract is retained as test evidence."
           }
         },
         {
@@ -2592,6 +2561,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > quality-workflow-contract > ",
           "cwd": "runtime/preset",
           "tests": [
             "../../tests/workflow-contracts.process.test.mjs"
@@ -2642,18 +2612,6 @@
           }
         },
         {
-          "id": "e2e-contract-boundary",
-          "level": "e2e",
-          "cwd": ".",
-          "tests": [
-            "tests/workflow-contracts.process.test.mjs"
-          ],
-          "coverage": {
-            "enabled": false,
-            "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
-          }
-        },
-        {
           "id": "e2e-diagnostics",
           "level": "e2e",
           "cwd": ".",
@@ -2698,7 +2656,6 @@
           "level": "e2e",
           "cwd": ".",
           "tests": [
-            "tests/workflow-contracts.process.test.mjs",
             "tests/control-checkout.process.test.mjs"
           ],
           "coverage": {
@@ -2750,6 +2707,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^workflow-contracts > package-publication-workflow-contract > ",
           "cwd": "runtime/preset",
           "tests": [
             "../../tests/workflow-contracts.process.test.mjs"
@@ -2976,6 +2934,7 @@
         {
           "id": "e2e-contract-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:(?:contract\\.ci-failure-diagnostics\\.bootstrap-diagnostic|preset-assurance-contract) > |workflow-contracts > (?:quality-workflow-contract > caller summary rejects |repository-quality-delivery-regression > candidate gate )|contract\\.ci-selective-distribution\\.publication > repository-selective-distribution-release > repository release accepts only )",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.process.test.mjs",
@@ -3062,9 +3021,9 @@
         {
           "id": "e2e-runtime-boundary",
           "level": "e2e",
+          "testNamePattern": "^(?:contract\\.ci-selective-distribution\\.|workflow-contracts > repository-quality-delivery-regression > )",
           "cwd": ".",
           "tests": [
-            "runtime/distribution/tests/selective-distribution.process.test.mjs",
             "runtime/repository/tests/manage-distribution-release.test.mjs",
             "tests/workflow-contracts.process.test.mjs"
           ],

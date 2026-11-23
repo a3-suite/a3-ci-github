@@ -31,6 +31,7 @@ failure_outcomes:
   - 管理外差分、並行apply、未取得assetまたは不完全な閉包を成功扱いにしない
 related_requirements:
   - ci-github-selective-distribution
+  - github-ci-version-selection
   - github-ci-project-lifecycle
 related_contracts:
   - contract.ci-selective-distribution.selection

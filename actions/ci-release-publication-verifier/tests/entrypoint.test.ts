@@ -280,19 +280,24 @@ globalThis.fetch = async (url, init) => {
     return Response.json(repository, { headers });
   };`);
     const filesBefore = fileNames(f.root);
+    const observationPath = path.join(f.root, 'private-observation-input-marker.json');
     const result = await runActionEntrypoint(['--import', mock, ...bundle], { env: {
       ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: output, GH_TOKEN: 'synthetic-secret',
       INPUT_OPERATION: 'observe-before', INPUT_REPOSITORY: f.options.repository,
       'INPUT_AUTHORITY-PATH': f.options.authorityPath, 'INPUT_HANDOFF-ROOT': f.options.outputRoot,
-      'INPUT_OBSERVATION-PATH': path.join(f.root, 'before.json'), MOCK_FAILURE: failure,
+      'INPUT_OBSERVATION-PATH': observationPath, MOCK_FAILURE: failure,
       MOCK_HTTP_STATUS: String(httpStatus), MOCK_CALLS: callsPath,
+      TEST_UNUSED_ENV: 'unused-environment-payload-marker',
     }, cwd: f.root, encoding: 'utf8' });
     expect(result.status).toBe(1);
     expect(fs.readFileSync(output, 'utf8')).toBe('');
-    expect(fs.existsSync(path.join(f.root, 'before.json'))).toBe(false);
+    expect(fs.existsSync(observationPath)).toBe(false);
     expect(fileNames(f.root)).toEqual(filesBefore);
-    expect(result.stderr).not.toContain('synthetic-secret');
-    if (failure === 'http') expect(result.stdout + result.stderr).not.toContain('provider-response-body-with-');
+    const logs = result.stdout + result.stderr;
+    expect(logs).not.toContain('synthetic-secret');
+    expect(logs).not.toContain('unused-environment-payload-marker');
+    expect(logs).not.toContain(path.basename(observationPath));
+    if (failure === 'http') expect(logs).not.toContain('provider-response-body-with-');
     const diagnostic = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('remote-state-unknown:'))!.slice('remote-state-unknown:'.length));
     expect(diagnostic.operation).toBe('remote-observation');
     expect(diagnostic.phase).toBe(phase);

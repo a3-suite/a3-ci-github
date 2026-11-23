@@ -21,7 +21,13 @@ const fixture = () => {
   onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const globalConfig = path.join(root, 'gitconfig');
   fs.writeFileSync(globalConfig, '');
-  const environment = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: globalConfig, GIT_ALLOW_PROTOCOL: 'file' };
+  const environment = Object.fromEntries(Object.entries(process.env)
+    .filter(([name]) => !name.startsWith('GIT_')));
+  Object.assign(environment, {
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: globalConfig,
+    GIT_ALLOW_PROTOCOL: 'file',
+  });
   const git = (directory, ...args) => execFileSync('git', ['-C', directory, ...args], { env: environment, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   const source = path.join(root, 'source');
   fs.mkdirSync(source);
@@ -66,12 +72,12 @@ const fixture = () => {
     if (!step) return { status: 0, pattern: undefined };
     const output = path.join(root, 'scope-output');
     fs.writeFileSync(output, '');
-    const result = spawnSync('bash', ['-c', step.run], { env: { ...environment, ...step.env, CI_PLATFORM_MANIFEST: manifest, GITHUB_OUTPUT: output }, encoding: 'utf8' });
+    const result = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], { env: { ...environment, ...step.env, CI_PLATFORM_MANIFEST: manifest, GITHUB_OUTPUT: output }, encoding: 'utf8' });
     return { ...result, pattern: fs.readFileSync(output, 'utf8').replace(/^pattern=/, '').replace(/\n$/, '') };
   };
   const verify = (directory, sha) => {
     const step = workflow.jobs.publish.steps.find(entry => entry.name === 'Verify trusted control checkout');
-    return spawnSync('bash', ['-c', step.run], { cwd: directory, env: { ...environment, CONTROL_SHA: sha }, encoding: 'utf8' });
+    return spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', step.run], { cwd: directory, env: { ...environment, CONTROL_SHA: sha }, encoding: 'utf8' });
   };
   return { root, source, controlSha, productSha, git, checkout, scope, verify };
 };

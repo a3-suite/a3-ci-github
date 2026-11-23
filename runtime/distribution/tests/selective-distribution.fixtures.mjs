@@ -68,11 +68,14 @@ class DistributionCliFailure extends Error {
   }
 }
 const cliArgv = (args, faults) => [...(faults ? ['--import', faultPreload] : []), distributionCli, ...args];
+const fixtureProcessTimeoutMs = 30_000;
 const runDistributionCli = (args, faults) => {
   const result = spawnSync(process.execPath, cliArgv(args, faults), {
     encoding: 'utf8',
+    timeout: fixtureProcessTimeoutMs,
     env: faults ? { ...process.env, A3_DISTRIBUTION_CLI_FAULTS: JSON.stringify(faults) } : process.env,
   });
+  if (result.error) throw result.error;
   if (result.status === 0) return JSON.parse(result.stdout);
   expect(result.status, result.stderr).toBe(2);
   expect(result.stdout).toBe('');
@@ -185,15 +188,23 @@ const readRelease = (output) => ({
   manifest: JSON.parse(fs.readFileSync(path.join(output, 'a3-ci-github-distribution-manifest.json'), 'utf8')),
 });
 
-const generateRelease = (root) => {
-  const output = path.join(root, 'release');
+const runReleaseGenerator = (args) => {
   const result = spawnSync(tsx, [
     path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts'),
+    ...args,
+  ], { encoding: 'utf8', timeout: fixtureProcessTimeoutMs });
+  if (result.error) throw result.error;
+  return result;
+};
+
+const generateRelease = (root) => {
+  const output = path.join(root, 'release');
+  const result = runReleaseGenerator([
     '--repository-root', committedSourceRoot,
     '--output-directory', output,
     '--source-revision', sourceRevision,
     '--release-tag', releaseTag,
-  ], { encoding: 'utf8' });
+  ]);
   expect(result.status, result.stderr).toBe(0);
   return readRelease(output);
 };
@@ -211,4 +222,4 @@ const prepareRelease = (root) => {
   return readRelease(output);
 };
 
-export { fixturePlanSettings, cliFetch, cliFetchPeer, cliVerify, cliPlan, cliApply, cliRollback, createConsumer, writeManifest, testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, generateRelease, baseline, prepareRelease };
+export { fixturePlanSettings, cliFetch, cliFetchPeer, cliVerify, cliPlan, cliApply, cliRollback, createConsumer, writeManifest, testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, runReleaseGenerator, generateRelease, baseline, prepareRelease };

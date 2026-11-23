@@ -75,6 +75,12 @@ node tests/coverage-tools/contract-subject-coverage.mjs --check
 npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/contract-coverage-aggregation.test.mjs
 ```
 
+全契約の実行とカバレッジ集計には、梱包・組立ケースを実行できるように `pwsh` を PATH に用意します。契約区分の選択ケースがすべてスキップされた場合、集計は停止します。
+
+```sh
+node tests/coverage-tools/contract-subject-coverage.mjs --all
+```
+
 SDD 正本は CI runtime へ `a3-*` を持ち込まず、ローカル保守・リリース前受入として workspace ルートから検証します。手順と生成状態の扱いは [DEVELOPMENT.md](../../DEVELOPMENT.md) を参照してください。
 
 ```sh

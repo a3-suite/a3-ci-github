@@ -97,6 +97,11 @@ test_maps:
         partition: runtime-context.release-assembly-invalid
         guarantees:
           - diagnostic-failure-stage-outputs
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-release-assembly failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - diagnostic-failure-stage-outputs
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > assembly bundle packages selected release skills
         partition: runtime-context.release-assembly-valid

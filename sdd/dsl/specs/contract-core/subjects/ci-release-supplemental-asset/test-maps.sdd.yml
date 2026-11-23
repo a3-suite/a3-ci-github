@@ -55,6 +55,7 @@ test_maps:
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
         symbol: supplemental-phase-source > supplemental source preserves owner shebang failure semantics
@@ -229,6 +230,7 @@ test_maps:
         symbol: dist entrypoint > supplemental entrypoint propagates owner failure without owner diagnostics
         partition: runtime-context.supplemental-phase-invalid
         guarantees:
+          - diagnostic-failure-stage-outputs
           - phase-rejected
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.test.ts
         symbol: standard installer > assembly > rejects modified candidate even if supplied file hashes match

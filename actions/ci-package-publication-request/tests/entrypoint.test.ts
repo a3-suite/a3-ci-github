@@ -78,7 +78,7 @@ test('entrypoint rejects a create replay without rewriting the request', () => {
   // Act
   const replay = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_VERSION: '9.9.9' }, encoding: 'utf8' });
   // Assert
-  expect(replay.status).not.toBe(0);
+  expect(replay.status, replay.stderr).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/status<<[^\n]+\nfailed\n/);
   expect(fs.readFileSync(output, 'utf8')).not.toMatch(/(?:source-sha|request-path)<</);
   expect(fs.readFileSync(request, 'utf8')).toBe(saved);
@@ -103,7 +103,7 @@ test('entrypoint rejects a source SHA mismatch', () => {
   const result = spawnSync(process.execPath, [...entrypoint], { env: { ...env, INPUT_OPERATION: 'verify', 'INPUT_EXPECTED-SOURCE-SHA': 'b'.repeat(40) }, encoding: 'utf8' });
 
   // Assert
-  expect(result.status).not.toBe(0);
+  expect(result.status, result.stderr).toBe(1);
   expect(fs.readFileSync(output, 'utf8')).toMatch(/failed/);
   const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
   expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({

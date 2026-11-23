@@ -61,7 +61,7 @@ test('entrypoint fails closed for an unsupported runner', () => {
   // Act
   const run = runBundled('platforms:\n  - id: linux-x64\n    runner: ubuntu-latest\n    target: x86_64-unknown-linux-gnu\n');
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status, run.result.stderr).toBe(1);
   expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   expect(`${run.result.stdout}\n${run.result.stderr}`).toMatch(/platform-matrix-platform-0-runner-invalid/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
@@ -83,7 +83,7 @@ test('entrypoint preserves bootstrap and invalid policy boundaries', () => {
   for (const [runner, policy] of [['macos-15', undefined], ['macos-15', 'bootstrap'], ['ubuntu-24.04', 'unknown'], ['self-hosted', 'trusted'], ['macos-latest', 'trusted']]) {
     const run = runBundled(`platforms: [{id: macos-arm64, runner: ${runner}, target: aarch64-apple-darwin}]`, undefined, policy);
     try {
-      expect(run.result.status).not.toBe(0);
+      expect(run.result.status, run.result.stderr).toBe(1);
       expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
       expect(run.result.stderr).toMatch(/platform-matrix-(?:platform-0-runner|runner-policy)-invalid/);
     } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
@@ -97,7 +97,7 @@ test('entrypoint rejects an oversized manifest before parsing', () => {
   // Act
   const run = runBundled(`platforms:\n${' '.repeat(64 * 1024)}`);
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status, run.result.stderr).toBe(1);
   expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   expect(run.result.stderr).toMatch(/platform-matrix-manifest-too-large/);
   fs.rmSync(run.tempRoot, { recursive: true, force: true });
@@ -159,13 +159,13 @@ test('entrypoint rejects malformed shared checks and unknown selection fields wi
     const run = runBundled(manifest, `platforms: [{id: linux-x64}]\nsharedStandardChecks: ${value}`);
     try {
       // Assert
-      expect(run.result.status).not.toBe(0);
+      expect(run.result.status, run.result.stderr).toBe(1);
       expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
       expect(run.result.stderr).toContain('sharedStandardChecks must be a boolean');
     } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
   }
   const run = runBundled(manifest, 'platforms: [{id: linux-x64}]\nsharedStandardChecks: true\nunknown: false');
-  try { expect(run.result.status).not.toBe(0); expect(fs.readFileSync(run.outputPath, 'utf8')).toBe(''); }
+  try { expect(run.result.status, run.result.stderr).toBe(1); expect(fs.readFileSync(run.outputPath, 'utf8')).toBe(''); }
   finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }
 });
 
@@ -174,7 +174,7 @@ test('entrypoint rejects malformed shared checks and unknown selection fields wi
 test('entrypoint fails without any outputs for invalid selection', () => {
   const run = runBundled('platforms: [{id: linux-x64, runner: ubuntu-24.04, target: x86_64-unknown-linux-gnu}]', 'platforms: [{id: unknown}]');
   try {
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(run.result.stderr).toMatch(/not declared/);
     expect(fs.readFileSync(run.outputPath, 'utf8')).toBe('');
   } finally { fs.rmSync(run.tempRoot, { recursive: true, force: true }); }

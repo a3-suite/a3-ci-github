@@ -154,6 +154,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(outcome.result.status).toBe(1);
     expect(failureDiagnostic(outcome.result.stderr)).toMatchObject({ classification: { subject: 'ci-jq-provisioner', stage: 'path-export' } });
     expect(readdirSync(paths.githubPath)).toStrictEqual([]);
+    expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
   // evidence_role: supplemental

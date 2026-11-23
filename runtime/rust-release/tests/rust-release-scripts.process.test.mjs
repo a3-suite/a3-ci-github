@@ -159,6 +159,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       writeFileSync(cargo, [
         '#!/usr/bin/env bash',
         'set -euo pipefail',
+        'printf "%s\\n" "$*" >> "$FAKE_CARGO_LOG"',
         'if [[ " $* " == *" metadata "* ]]; then',
         "  jq -n --arg manifest \"$FAKE_MANIFEST\" --arg target \"$FAKE_TARGET_DIR\" '{packages:[{manifest_path:$manifest,version:\"0.3.0\"}],target_directory:$target}'",
         '  exit 0',
@@ -189,6 +190,7 @@ describe("contract.ci-rust-release-build.processing", () => {
         FAKE_TARGET_DIR: targetDirectory,
         FAKE_TARGET: platformTarget,
         FAKE_RUSTUP_LOG: path.join(fixture, 'rustup.log'),
+        FAKE_CARGO_LOG: path.join(fixture, 'cargo.log'),
         FAKE_VERSION_OUTPUT: 'a3-sdd 0.3.0',
       };
       const args = (toolchain, target, output) => [
@@ -230,7 +232,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       chmodSync(malformedTar, 0o755);
       const rejectedArchiveOutput = path.join(fixture, 'rejected-archive');
       const rejectedArchive = runBuild(args('1.90.0', platformTarget, rejectedArchiveOutput), { env: environment });
-      expect(rejectedArchive.status).not.toBe(0);
+      expect(rejectedArchive.status).toBeGreaterThan(0);
       expect(rejectedArchive.stderr).toContain('"operation":"verify-asset"');
       expect(existsSync(rejectedArchiveOutput)).toBe(false);
       expect(readdirSync(fixture).filter(name => name.startsWith('rejected-archive.tmp.'))).toStrictEqual([]);
@@ -240,7 +242,7 @@ describe("contract.ci-rust-release-build.processing", () => {
       // Act
       const existingOutput = runBuild(args('1.90.0', platformTarget, acceptedOutput), { env: environment });
       // Assert
-      expect(existingOutput.status).not.toBe(0);
+      expect(existingOutput.status).toBeGreaterThan(0);
       expect(failureEvidence(existingOutput.stderr).classification.stage).toBe('input-validation');
       expect(outputTree()).toStrictEqual(acceptedTree);
 
@@ -263,30 +265,33 @@ describe("contract.ci-rust-release-build.processing", () => {
         env: { ...environment, FAIL_PUBLICATION_OUTPUT: publishingOutput, PARTIAL_MOVES: partialMoves },
       });
       unlinkSync(fakeMove);
-      expect(failedPublication.status).not.toBe(0);
+      expect(failedPublication.status).toBeGreaterThan(0);
       expect(failedPublication.stderr).toContain('"stage":"output-publish"');
       expect(path.dirname(readFileSync(partialMoves, 'utf8').trim())).toBe(publishingOutput);
       expect(existsSync(publishingOutput)).toBe(false);
       expect(readdirSync(fixture).filter(name => name.startsWith('publication-write-failed.tmp.'))).toEqual([]);
 
+      const cargoBeforeFailedSetup = readFileSync(environment.FAKE_CARGO_LOG);
       const failedSetup = runBuild(args(
         '1.90.0', platformTarget, path.join(fixture, 'setup-failed'),
       ), { env: { ...environment, FAKE_RUSTUP_EXIT_CODE: '1', FAKE_MANIFEST: '/must-not-reach-cargo' } });
-      expect(failedSetup.status).not.toBe(0);
+      expect(failedSetup.status).toBeGreaterThan(0);
       expect(failureEvidence(failedSetup.stderr)).toMatchObject({
         classification: { subject: 'ci-rust-release-build', operation: 'build', stage: 'toolchain-install' },
         comparison: { field: 'rust-toolchain', expected: '1.90.0', observed: 'install-failed' },
       });
       expect(existsSync(path.join(fixture, 'setup-failed'))).toBe(false);
+      expect(readFileSync(environment.FAKE_CARGO_LOG)).toStrictEqual(cargoBeforeFailedSetup);
 
       writeFileSync(authorityPath, JSON.stringify({ ...JSON.parse(readFileSync(authorityPath, 'utf8')), source_sha: 'a'.repeat(40) }));
       const unboundSource = runBuild(args('1.90.0', platformTarget, path.join(fixture, 'source-mismatch')), { env: environment });
-      expect(unboundSource.status).not.toBe(0);
+      expect(unboundSource.status).toBeGreaterThan(0);
       expect(failureEvidence(unboundSource.stderr)).toMatchObject({
         classification: { subject: 'ci-rust-release-build', operation: 'build', stage: 'source-binding' },
         comparison: { field: 'source-sha', expected: 'a'.repeat(40), observed: sourceSha },
       });
       expect(existsSync(path.join(fixture, 'source-mismatch'))).toBe(false);
+      expect(readFileSync(environment.FAKE_CARGO_LOG)).toStrictEqual(cargoBeforeFailedSetup);
       writeAuthority('1.90.0');
 
       // Act / Assert: checkout EOL differences are permitted, other bytes remain bound.
@@ -297,13 +302,15 @@ describe("contract.ci-rust-release-build.processing", () => {
         expect(acceptedCheckout.status, acceptedCheckout.stderr).toBe(0);
       }
       const rejectedManifests = [manifestText.replaceAll('\n', '\r'), `\uFEFF${manifestText}`, manifestText.trimEnd(), `${manifestText} `, Buffer.concat([Buffer.from(manifestText), Buffer.from([0xff])])];
+      const cargoBeforeRejectedManifests = readFileSync(environment.FAKE_CARGO_LOG);
       for (const [index, content] of rejectedManifests.entries()) {
         writeFileSync(manifestPath, content);
         const output = path.join(fixture, `checkout-rejected-${index}`);
         const rejectedCheckout = runBuild(args('1.90.0', platformTarget, output), { env: environment });
-        expect(rejectedCheckout.status).not.toBe(0);
+        expect(rejectedCheckout.status).toBeGreaterThan(0);
         expect(existsSync(output)).toBe(false);
       }
+      expect(readFileSync(environment.FAKE_CARGO_LOG)).toStrictEqual(cargoBeforeRejectedManifests);
       writeFileSync(manifestPath, manifestText);
 
       // Act + Assert: the authority version is accepted as an independent token in the --version output.
@@ -339,17 +346,18 @@ describe("contract.ci-rust-release-build.processing", () => {
       const failedVersionCommand = runBuild(args(
         '1.90.0', platformTarget, path.join(fixture, 'version-failed-command'),
       ), { env: { ...environment, FAKE_VERSION_OUTPUT: 'a3-sdd 0.3.0', FAKE_VERSION_EXIT_CODE: '1' } });
-      expect(failedVersionCommand.status).not.toBe(0);
+      expect(failedVersionCommand.status).toBeGreaterThan(0);
       expect(failedVersionCommand.stderr).toMatch(/binary-version-mismatch/);
       expect(failedVersionCommand.stderr).toMatch(/received=/);
       expect(existsSync(path.join(fixture, 'version-failed-command'))).toBe(false);
 
       // Act
+      const cargoBeforeInvalidInputs = readFileSync(environment.FAKE_CARGO_LOG);
       const targetMismatch = runBuild(args(
         '1.90.0', mismatchedTarget, path.join(fixture, 'mismatch-output'),
       ), { env: environment });
       // Assert
-      expect(targetMismatch.status).not.toBe(0);
+      expect(targetMismatch.status).toBeGreaterThan(0);
       expect(existsSync(path.join(fixture, 'mismatch-output'))).toBe(false);
 
       // Arrange
@@ -359,7 +367,8 @@ describe("contract.ci-rust-release-build.processing", () => {
         'stable', platformTarget, path.join(fixture, 'stable-output'),
       ), { env: environment });
       // Assert
-      expect(mutableToolchain.status).not.toBe(0);
+      expect(mutableToolchain.status).toBeGreaterThan(0);
+      expect(existsSync(path.join(fixture, 'stable-output'))).toBe(false);
 
       // Arrange
       const duplicateText = [
@@ -375,7 +384,9 @@ describe("contract.ci-rust-release-build.processing", () => {
         '1.90.0', platformTarget, path.join(fixture, 'duplicate-output'),
       ), { env: environment });
       // Assert
-      expect(duplicate.status).not.toBe(0);
+      expect(duplicate.status).toBeGreaterThan(0);
+      expect(existsSync(path.join(fixture, 'duplicate-output'))).toBe(false);
+      expect(readFileSync(environment.FAKE_CARGO_LOG)).toStrictEqual(cargoBeforeInvalidInputs);
     }));
 
     // evidence_role: supplemental

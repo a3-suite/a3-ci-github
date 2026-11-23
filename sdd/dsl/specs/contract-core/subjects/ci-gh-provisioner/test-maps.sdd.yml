@@ -154,3 +154,8 @@ test_maps:
         partition: runtime-context.gh-release-asset-invalid
         guarantees:
           - diagnostic-failure-stage-provision
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-gh-provisioner failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.gh-release-asset-invalid
+        guarantees:
+          - diagnostic-failure-stage-provision

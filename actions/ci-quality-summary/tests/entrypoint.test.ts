@@ -318,7 +318,7 @@ test('entrypoint fails an input where every row is excluded', () => {
   const run = runBundled(input);
   try {
     // Assert
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(run.result.stderr).toMatch(/ci-summary-all-excluded/);
     expect(outputValue(fs.readFileSync(run.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
@@ -347,7 +347,7 @@ test('entrypoint rejects a missing summary path', () => {
   const missingPath = runBundled(successInput, false);
   try {
     // Assert
-    expect(missingPath.result.status).not.toBe(0);
+    expect(missingPath.result.status, missingPath.result.stderr).toBe(1);
     expect(outputValue(fs.readFileSync(missingPath.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
     fs.rmSync(missingPath.tempRoot, { recursive: true, force: true });
@@ -371,11 +371,11 @@ test('entrypoint fails unresolved and invalid path relationships', () => {
   const hardlink = runBundled(successInput, true, 'hardlink');
   try {
     // Assert
-    expect(unresolved.result.status).not.toBe(0);
+    expect(unresolved.result.status, unresolved.result.stderr).toBe(1);
     expect(outputValue(fs.readFileSync(unresolved.outputPath, 'utf8'), 'status')).toBe('unresolved');
-    expect(samePath.result.status).not.toBe(0);
+    expect(samePath.result.status, samePath.result.stderr).toBe(1);
     expect(outputValue(fs.readFileSync(samePath.outputPath, 'utf8'), 'status')).toBe('failed');
-    expect(hardlink.result.status).not.toBe(0);
+    expect(hardlink.result.status, hardlink.result.stderr).toBe(1);
     expect(outputValue(fs.readFileSync(hardlink.outputPath, 'utf8'), 'status')).toBe('failed');
   } finally {
     fs.rmSync(unresolved.tempRoot, { recursive: true, force: true });
@@ -429,7 +429,7 @@ const retainsSourceFailure = (mode: 'evidence-generation' | 'summary-write' | 'u
       });
     }
     expect(result.stdout + result.stderr).not.toContain('private-token-must-not-appear');
-    expect(fs.readFileSync(outputPath, 'utf8')).not.toContain('success');
+    expect(outputValue(fs.readFileSync(outputPath, 'utf8'), 'status')).toBe('failed');
   } finally { fs.rmSync(tempRoot, { recursive: true, force: true }); }
 };
 

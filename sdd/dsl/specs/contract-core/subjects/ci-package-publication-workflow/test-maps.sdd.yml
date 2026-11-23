@@ -3,7 +3,7 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-package-publication-workflow.publication
     tests:
-      - path: tests/workflow-contracts.process.test.mjs
+      - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > package-publication-workflow-contract > package workflows separate preparation request validation and publication
         partition: ci-package-publication-workflow-canonical-source-available
         guarantees:

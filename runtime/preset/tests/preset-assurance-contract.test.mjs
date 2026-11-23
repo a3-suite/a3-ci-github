@@ -68,6 +68,7 @@ describe("preset-assurance-contract", () => {
         '--skill-collection-root', 'VERSION',
       ]));
       expect(diagnostic.reason).toBe('runtime-unavailable');
+      expect(diagnostic.failureEvidence.classification.stage).toBe('runtime-discovery');
     });
   });
 });

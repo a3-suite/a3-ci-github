@@ -151,4 +151,18 @@ const pinOldActionReferences = (fixture) => {
       registry.actionization.implementationSource.releaseTag = 'v0.2.0';
       writeFileSync(path.join(fixture, registryPath), yaml.stringify(registry));
     };
-export { spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepsOf, stepContaining, stepIndexContaining, stepBlock, summaryNeeds, assertNeeds, unitRecord, assertPublicationEntry, assertPublicationControl, referenceFixture, pinOldActionReferences };
+const assertPublicationReadback = (publicationSteps) => {
+  const publishIndex = publicationSteps.findIndex(step => step.id === 'publish');
+  const verifyIndex = publicationSteps.findIndex(step => step.id === 'verify_publication');
+  expect(publishIndex).toBeGreaterThanOrEqual(0);
+  expect(verifyIndex).toBeGreaterThan(publishIndex);
+  const writeDirectory = publicationSteps[publishIndex].with['write-output-directory'];
+  expect(publicationSteps[verifyIndex].uses).toMatch(new RegExp(`/ci-release-publication-verifier@${actionRef}$`));
+  expect(publicationSteps[verifyIndex].with).toMatchObject({
+    operation: 'verify-after',
+    'receipt-path': `${writeDirectory}/receipt.json`,
+    'readback-path': `${writeDirectory}/readback.json`,
+  });
+};
+
+export { assertPublicationReadback, spawnTimeoutMs, mediumSpawnTimeoutMs, slowSpawnTimeoutMs, root, read, actionRef, includesAll, jobBlock, stepsOf, stepContaining, stepIndexContaining, stepBlock, summaryNeeds, assertNeeds, unitRecord, assertPublicationEntry, assertPublicationControl, referenceFixture, pinOldActionReferences };

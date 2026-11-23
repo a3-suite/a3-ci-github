@@ -31,6 +31,12 @@ test_maps:
         guarantees:
           - diagnostic-failure-stage-outputs
           - package-request-failure-propagated
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-package-publication-request failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-outputs
+          - package-request-failure-propagated
       - path: actions/ci-package-publication-request/tests/entrypoint.test.ts
         symbol: source entrypoint > entrypoint verifies the triggering request workflow run before artifact download
         partition: package-request-trigger-valid

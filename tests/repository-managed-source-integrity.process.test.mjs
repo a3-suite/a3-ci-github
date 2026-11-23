@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +22,9 @@ describe("repository-managed-source-integrity", () => {
     for (const relative of ['scripts/ci-github', 'scripts/rust-release', 'skills/ci/ci-github']) {
       const legacy = path.join(fixture, relative);
       mkdirSync(legacy, { recursive: true });
+      const existing = path.join(legacy, 'existing.txt');
+      const contents = Buffer.from('existing source bytes\n');
+      writeFileSync(existing, contents);
       const result = spawnSync('bash', [gate], { cwd: fixture, encoding: 'utf8' });
       expect(result.status).toBe(1);
       const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
@@ -30,7 +33,7 @@ describe("repository-managed-source-integrity", () => {
         classification: { stage: 'managed-source-layout' },
         comparison: { field: 'legacy-source-location', expected: 'absent', observed: relative },
       });
-      expect(existsSync(legacy)).toBe(true);
+      expect(readFileSync(existing)).toStrictEqual(contents);
       rmSync(legacy, { recursive: true });
     }
   });

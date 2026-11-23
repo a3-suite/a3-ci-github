@@ -140,3 +140,8 @@ test_maps:
         partition: runtime-context.jq-release-asset-invalid
         guarantees:
           - diagnostic-failure-stage-provision
+      - path: tests/action-failure-diagnostics.test.mjs
+        symbol: ci-jq-provisioner failure boundary > dist retains actionable input failure without private input values
+        partition: runtime-context.jq-release-asset-invalid
+        guarantees:
+          - diagnostic-failure-stage-provision

@@ -57,7 +57,7 @@ test('entrypoint fails invalid plan input', () => {
   // Act
   const run = runBundled({ strategy: 'ciGenerated', template: '{baseVersion}', components: {} });
   // Assert
-  expect(run.result.status).not.toBe(0);
+  expect(run.result.status, run.result.stderr).toBe(1);
   expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"template-expansion"/m);
   expect(run.output).toMatch(/status<<.*failed/s);
   expect(run.output).not.toMatch(/^publish-version(?:=|<<)/m);

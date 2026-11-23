@@ -197,7 +197,7 @@ test('entrypoint rejects a standard bundle supplied through a local descriptor',
       // Act
       const run = runAction(root, descriptor().replace('id: node-quality', `id: ${id}`));
       // Assert
-      expect(run.result.status).not.toBe(0);
+      expect(run.result.status, run.result.stderr).toBe(1);
       expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-id-requires-action-bundle/);
       expect(fs.existsSync(run.resultPath)).toBe(false);
     }
@@ -210,7 +210,7 @@ test('entrypoint rejects simultaneous standard ID and descriptor before executio
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
     const run = runAction(root, descriptor(), { 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality' });
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-bundle-selection-invalid/);
     expect(fs.existsSync(run.resultPath)).toBe(false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -222,7 +222,7 @@ test('entrypoint rejects an unknown standard ID without a descriptor fallback', 
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
     const run = runAction(root, descriptor(), { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': '../unknown' });
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-bundle-unknown/);
     expect(fs.existsSync(run.resultPath)).toBe(false);
     expect(run.filesAfter).toEqual(run.filesBefore);
@@ -334,7 +334,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     fs.writeFileSync(log, '');
     fs.rmSync(path.join(root, 'result.json'), { force: true });
     const run = runAction(root, descriptor(), { ...inputs, ...rejected });
-    expect(run.result.status).not.toBe(0);
+    expect(run.result.status, run.result.stderr).toBe(1);
     expect(run.result.stderr + run.result.stdout).toMatch(/quality-adapter-(execution-scope-invalid|native-scope-unsupported)/);
     expect(fs.readFileSync(log, 'utf8')).toBe('');
     expect(fs.existsSync(run.resultPath)).toBe(false);
@@ -585,7 +585,7 @@ test('entrypoint rejects a non-read-only descriptor', () => {
   const result = run.result;
 
   // Assert
-  expect(result.status).not.toBe(0);
+  expect(result.status, result.stderr).toBe(1);
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*failed/s);
   expect(fs.existsSync(run.resultPath)).toBe(false);
   expect(run.filesAfter).toEqual(run.filesBefore);

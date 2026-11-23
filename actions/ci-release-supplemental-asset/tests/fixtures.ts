@@ -80,6 +80,7 @@ export const runAction = (f: ReturnType<typeof fixture>, options: SupplementalOp
 // Runs one phase through the distributed Action and expects a non-zero exit, optionally with a diagnostic in stderr.
 export const rejectAction = (f: ReturnType<typeof fixture>, options: SupplementalOptionsType = f.options, diagnostic?: string | RegExp): void => {
   const result = spawnAction(f, options);
-  expect(result.status).not.toBe(0);
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(1);
   if (diagnostic !== undefined) expect(result.stderr).toMatch(diagnostic);
 };

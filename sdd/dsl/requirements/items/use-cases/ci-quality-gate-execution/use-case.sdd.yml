@@ -31,6 +31,7 @@ failure_outcomes:
   - workflow の権限、runner、job 境界、publish は Action が決定せず provider 側へ委譲する
   - 差分範囲を解決できない場合は、品質チェックを省略せず実行対象として扱う
 related_requirements:
+  - github-ci-version-selection
   - ci-common-processing-action-reuse
   - ci-rust-dependency-policy-selection
   - ci-quality-results-aggregation

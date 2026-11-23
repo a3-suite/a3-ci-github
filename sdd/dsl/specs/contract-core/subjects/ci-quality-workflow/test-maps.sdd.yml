@@ -37,7 +37,7 @@ test_maps:
           - quality-fork-pull-request-untrusted
           - quality-pull-request-trusted-assets-from-base
           - quality-results-before-summary
-      - path: tests/workflow-contracts.process.test.mjs
+      - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push
         partition: ci-quality-workflow-canonical-source-available
         guarantees:

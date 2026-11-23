@@ -39,7 +39,7 @@ test.each([
   // Act
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
   // Assert
-  expect(result.status).not.toBe(0);
+  expect(result.status, result.stderr).toBe(1);
   const diagnosticStage = value === '' ? 'tag-resolution' : 'input-validation';
   expect(result.stderr).toMatch(new RegExp(`^ci-failure-diagnostic:.*"stage":"${diagnosticStage}"`, 'm'));
   expect(fs.readFileSync(output, 'utf8')).toBe('');

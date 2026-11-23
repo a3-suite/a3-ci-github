@@ -8,7 +8,7 @@ import { test, describe, expect } from 'vitest';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const yaml = createRequire(path.join(root, 'runtime/preset/package.json'))('yaml');
 const action = yaml.parse(fs.readFileSync(path.join(root, 'actions/ci-quality-toolchain/action.yml'), 'utf8'));
-const run = (script, env = {}, cwd = root) => spawnSync('bash', ['-c', script], { cwd, encoding: 'utf8', env: { ...process.env, ...env } });
+const run = (script, env = {}, cwd = root) => spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', script], { cwd, encoding: 'utf8', env: { ...process.env, ...env } });
 const selected = (profile, version, uv = '', audit = '') => ({ CI_LANGUAGE_PROFILE: profile, CI_TOOLCHAIN_VERSION: version, CI_UV_VERSION: uv, CI_CARGO_AUDIT_VERSION: audit });
 
 // flow_id: quality-toolchain-composite-execution
@@ -19,7 +19,7 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     const script = action.runs.steps[0].run;
     for (const env of [selected('typescript', '24.0.0'), selected('python', '3.13.1', '0.8.0'), selected('rust', '1.90.0', '', '0.21.0'), selected('typescript', '24.0.0', '<unused>', '<unused>')]) expect(run(script, env).status).toBe(0);
     for (const env of [selected('unknown', '24.0.0'), selected('', '24.0.0'), selected('typescript', ''), selected('typescript', 'latest'), selected('typescript', '24'), selected('typescript', '24.0'), selected('typescript', '<toolchain-version>'), selected('typescript', '24.0.0\n'), selected('python', '3.13.1'), selected('python', '3.13.1', 'latest'), selected('rust', '1.90.0'), selected('rust', '1.90.0', '', 'latest'), selected('rust', 'stable', '', '0.21.0')]) {
-      const result = run(script, env); expect(result.status, JSON.stringify(env)).not.toBe(0);
+      const result = run(script, env); expect(result.status, JSON.stringify(env)).toBe(1);
       expect(result.stderr).toMatch(/quality-toolchain-(profile|version(?:-policy)?|uv-version|cargo-audit-version)-invalid/);
     }
   });
@@ -29,10 +29,10 @@ describe("contract.ci-quality-toolchain.preparation", () => {
     const script = action.runs.steps[0].run;
     for (const tools of ['', 'install', 'skip']) expect(run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: tools }).status, tools).toBe(0);
     const invalid = run(script, { ...selected('rust', '1.90.0', '', '0.21.0'), CI_AUXILIARY_TOOLS: 'none' });
-    expect(invalid.status).not.toBe(0);
+    expect(invalid.status).toBe(1);
     expect(invalid.stderr).toContain('quality-toolchain-auxiliary-tools-invalid');
     const skippedInvalidAudit = run(script, { ...selected('rust', '1.90.0', '', 'latest'), CI_AUXILIARY_TOOLS: 'skip' });
-    expect(skippedInvalidAudit.status).not.toBe(0);
+    expect(skippedInvalidAudit.status).toBe(1);
     expect(skippedInvalidAudit.stderr).toContain('quality-toolchain-cargo-audit-version-invalid');
   });
 
@@ -83,13 +83,13 @@ describe("contract.ci-quality-toolchain.preparation", () => {
   // contract_id: contract.ci-quality-toolchain.preparation
   test('compatible policy accepts bounded Node and Python selectors while exact policy stays strict', () => {
     const script = action.runs.steps[0].run;
-    expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).not.toBe(0);
+    expect(run(script, { ...selected('typescript', '24.21.0'), CI_VERSION_POLICY: 'unknown' }).status).toBe(1);
     for (const env of [selected('typescript', '24'), selected('typescript', '24.21'), selected('python', '3.12', '0.8.0')]) {
       expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).toBe(0);
-      expect(run(script, { ...env, CI_VERSION_POLICY: 'exact' }).status).not.toBe(0);
+      expect(run(script, { ...env, CI_VERSION_POLICY: 'exact' }).status).toBe(1);
     }
     for (const env of [selected('typescript', '24.x'), selected('typescript', '>=24'), selected('python', '3', '0.8.0'), selected('rust', 'stable', '', '0.21.0')]) {
-      expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).not.toBe(0);
+      expect(run(script, { ...env, CI_VERSION_POLICY: 'compatible' }).status).toBe(1);
     }
   });
 

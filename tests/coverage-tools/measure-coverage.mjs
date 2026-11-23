@@ -48,6 +48,8 @@ const cli = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import
 delete env.VITEST; delete env.VITEST_WORKER_ID; delete env.VITEST_POOL_ID;
 const execution = spawnSync(process.execPath, [...(config.typescript ? ['--import', fileURLToPath(new URL('./node_modules/tsx/dist/loader.mjs', import.meta.url))] : []), cli, 'run', '--config', vitestConfigPath], { cwd: config.cwd, env, stdio: 'inherit' });
 if (execution.status !== 0) process.exit(execution.status ?? 1);
+const testResults = JSON.parse(readFileSync(settings.test.outputFile, 'utf8'));
+assert(testResults.numPassedTests > 0, 'no selected tests passed');
 const map = createCoverageMap(structuredClone(zero));
 const graph = (counters) => ({ statementMap: counters.statementMap, fnMap: counters.fnMap, branchMap: counters.branchMap });
 const rawFiles = readdirSync(rawDirectory);

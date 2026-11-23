@@ -6,7 +6,7 @@ import { expect, test, describe } from 'vitest';
 import { pathToFileURL } from 'node:url';
 import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection, rollbackDistributionTransaction, validateDistributionManifest, verifyFetchedDistribution } from '../fetch-a3-ci-github.mjs';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
-import { cliFetch, cliRollback, cliVerify, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
+import { cliFetch, cliRollback, cliVerify, repositoryRoot, tsx, fixtureSettings, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, runReleaseGenerator, generateRelease, baseline, prepareRelease } from "./selective-distribution.fixtures.mjs";
 
 describe('contract.ci-selective-distribution.verification', () => {
   // contract_id: contract.ci-selective-distribution.verification
@@ -216,8 +216,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator reports the argument validation stage when the output option is missing', () => {
-      const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
-      const result = spawnSync(tsx, [generator], { encoding: 'utf8' });
+      const result = runReleaseGenerator([]);
       expect(result.status).toBe(2);
       const prefix = 'ci-failure-diagnostic:';
       const evidence = result.stderr.split('\n').find((line) => line.startsWith(prefix));
@@ -229,8 +228,7 @@ describe("contract.ci-selective-distribution.delivery", () => {
     // contract_id: contract.ci-selective-distribution.release-generation
     test('release generator rejects invalid version source and output boundaries', async () => {
       await withFixture('a3-ci-github-distribution-release-guards-', (root) => {
-        const generator = path.join(repositoryRoot, 'runtime/distribution/generate-distribution-release.ts');
-        const execute = (args) => spawnSync(tsx, [generator, '--repository-root', committedSourceRoot, ...args], { encoding: 'utf8' });
+        const execute = (args) => runReleaseGenerator(['--repository-root', committedSourceRoot, ...args]);
         const invalidSha = execute([
           '--output-directory', path.join(root, 'invalid-sha'),
           '--source-revision', 'main',
@@ -291,10 +289,10 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const linkedRevision = fixtureGit(['rev-parse', 'HEAD']);
         const linkedOutput = path.join(root, 'linked-output');
         // Act
-        const linkedResult = spawnSync(tsx, [generator,
+        const linkedResult = runReleaseGenerator([
           '--repository-root', linkedSource, '--source-revision', linkedRevision,
           '--release-tag', releaseTag, '--output-directory', linkedOutput,
-        ], { encoding: 'utf8' });
+        ]);
         // Assert
         expect(linkedResult.status).toBe(2);
         expect(linkedResult.stderr).toContain('distribution-source-symlink');
@@ -305,13 +303,28 @@ describe("contract.ci-selective-distribution.delivery", () => {
         fixtureGit(['add', '-u']);
         fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing skill declaration fixture']);
         const missingDeclarationOutput = path.join(root, 'missing-declaration-output');
-        const missingDeclaration = spawnSync(tsx, [generator,
+        const missingDeclaration = runReleaseGenerator([
           '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
           '--release-tag', releaseTag, '--output-directory', missingDeclarationOutput,
-        ], { encoding: 'utf8' });
+        ]);
         expect(missingDeclaration.status).toBe(2);
         expect(missingDeclaration.stderr).toContain('skills-declaration-invalid');
         expect(fs.existsSync(missingDeclarationOutput)).toBe(false);
+
+        fixtureGit(['rm', 'VERSION']);
+        fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing version fixture']);
+        const missingVersionOutput = path.join(root, 'missing-version-output');
+        const missingVersion = runReleaseGenerator([
+          '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+          '--release-tag', releaseTag, '--output-directory', missingVersionOutput,
+        ]);
+        expect(missingVersion.status).toBe(2);
+        const diagnostic = missingVersion.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(JSON.parse(diagnostic?.[1] ?? '{}').classification).toMatchObject({
+          stage: 'distribution-generation', reason: 'distribution-release-git-read-failed',
+        });
+        expect(missingVersion.stderr).not.toContain('fatal:');
+        expect(fs.existsSync(missingVersionOutput)).toBe(false);
       });
     });
   });
@@ -666,11 +679,24 @@ describe("contract.ci-selective-distribution.delivery", () => {
         const expectClosure = (result, presets, assets) => {
           const selected = closure(presets, assets);
           const expectedPaths = new Set(selected.flatMap((asset) => asset.files.map((file) => file.sourcePath)));
+          const manifestBytes = fs.readFileSync(path.join(result.distributionRoot, 'manifest.json'));
+          const receipt = JSON.parse(fs.readFileSync(path.join(result.distributionRoot, 'receipt.json'), 'utf8'));
+          expect(manifestBytes).toStrictEqual(fs.readFileSync(release.manifestPath));
           expect(result.sourceRevision).toBe(release.manifest.sourceRevision);
           expect(result.selectedAssets).toStrictEqual(selected.map((asset) => asset.id).sort());
+          expect(receipt).toMatchObject({
+            sourceRevision: result.sourceRevision,
+            manifestSha256: sha256(manifestBytes),
+            selectedPresets: [...presets].sort(),
+            selectedAssets: result.selectedAssets,
+            files: result.files,
+          });
+          expect([...receipt.files].sort()).toStrictEqual([...expectedPaths].sort());
           expect(deliveredPaths(result.distributionRoot).sort()).toStrictEqual([...expectedPaths].sort());
           for (const relative of expectedPaths) {
-            expect(fs.lstatSync(path.join(result.distributionRoot, relative)).isFile(), relative).toBe(true);
+            const filename = path.join(result.distributionRoot, relative);
+            expect(fs.lstatSync(filename).isFile(), relative).toBe(true);
+            expect(sha256(fs.readFileSync(filename)), relative).toBe(release.manifest.files[relative].sha256);
           }
         };
         const first = fetch(['release-request']);

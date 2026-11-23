@@ -50,7 +50,7 @@ test('entrypoint writes a tag handoff', () => {
   // Act
   const replay = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env: { ...env, 'INPUT_TAG-SOURCE-SHA': 'c'.repeat(40) }, encoding: 'utf8' });
   // Assert
-  expect(replay.status).not.toBe(0);
+  expect(replay.status, replay.stderr).toBe(1);
   expect(diagnosticOf(replay.stderr)).toMatchObject({
     classification: { stage: 'destination-validation', reason: 'release-request-output-already-exists' },
     comparison: { field: 'request-files', expected: 'absent', observed: 'already-present' },
@@ -119,7 +119,7 @@ test('entrypoint rejects a tag ref mismatch', () => {
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: root, env, encoding: 'utf8' });
 
   // Assert
-  expect(result.status).not.toBe(0);
+  expect(result.status, result.stderr).toBe(1);
   expect(diagnosticOf(result.stderr)).toMatchObject({
     classification: { subject: 'ci-release-request-handoff', stage: 'request-identity-validation', reason: 'github-tag-ref-mismatch' },
     comparison: { field: 'github-ref', expected: 'refs/tags/v1.2.3', observed: 'refs/tags/v1.2.4' },

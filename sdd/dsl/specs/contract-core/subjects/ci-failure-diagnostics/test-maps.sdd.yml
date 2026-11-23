@@ -24,6 +24,7 @@ test_maps:
           - evidence-location-recorded
           - last-confirmed-stage-recorded
           - diagnostic-unsubstantiated-context
+          - diagnostic-whole-payload-disclosure
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
         symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
         partition: runtime-context.failure-diagnostic-required
