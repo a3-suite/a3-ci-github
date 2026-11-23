@@ -94,7 +94,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       const exported = readGithubPath(paths.githubPath)?.trim() ?? '';
       expect(path.dirname(exported)).toBe(paths.runnerTemp);
       expect(readdirSync(exported)).toStrictEqual(['jq']);
-      expect(readFileSync(path.join(exported, 'jq'), 'utf8')).toBe(binaryFor(asset).toString());
+      expect(readFileSync(path.join(exported, 'jq'))).toStrictEqual(binaryFor(asset));
       expect(statSync(path.join(exported, 'jq')).mode & 0o111).toBe(0o111);
     });
   }

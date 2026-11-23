@@ -23,7 +23,7 @@ globalThis.setTimeout = ((nativeSetTimeout) => (callback, _delay, ...args) => na
 globalThis.fetch = async (url, init) => {
   const u = new URL(String(url));
   const endpoint = u.pathname;
-  fs.appendFileSync(process.env.MOCK_CALLS, JSON.stringify({ method: init.method, endpoint }) + '\\n');
+  fs.appendFileSync(process.env.MOCK_CALLS, JSON.stringify({ method: init.method, endpoint, assetName: u.searchParams.get('name') }) + '\\n');
   const tag = assembly.identity.tag;
   let data;
   let status = 200;
@@ -54,7 +54,7 @@ globalThis.fetch = async (url, init) => {
 };
 `;
 
-type Call = { method: string; endpoint: string };
+type Call = { method: string; endpoint: string; assetName: string | null };
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }, (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
@@ -83,17 +83,18 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     return { f, assembly, outputRoot, run };
   };
   const writeKinds = (writes: Call[]) => writes.map(entry => entry.method === 'PATCH' ? 'finalize' : entry.endpoint.endsWith('/releases') ? 'create' : 'upload');
-  const expectPublished = (outcome: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['run']>>, outputRoot: string, assets: number) => {
+  const expectPublished = (outcome: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['run']>>, outputRoot: string, assetNames: string[]) => {
     expect(outcome.result.status, outcome.result.stderr).toBe(0);
     expect(outcome.outputs).toBe(`receipt-path=${outputRoot}/receipt.json\nreadback-path=${outputRoot}/readback.json\n`);
     expect(fs.statSync(path.join(outputRoot, 'receipt.json')).isFile()).toBe(true);
     expect(fs.statSync(path.join(outputRoot, 'readback.json')).isFile()).toBe(true);
-    expect(writeKinds(outcome.writes)).toStrictEqual(['create', ...Array(assets).fill('upload'), 'finalize']);
+    expect(writeKinds(outcome.writes)).toStrictEqual(['create', ...Array(assetNames.length).fill('upload'), 'finalize']);
     expect(outcome.writes.map(entry => [entry.method, entry.endpoint])).toStrictEqual([
       ['POST', '/repos/owner/project/releases'],
-      ...Array.from({ length: assets }, () => ['POST', '/repos/owner/project/releases/42/assets']),
+      ...Array.from({ length: assetNames.length }, () => ['POST', '/repos/owner/project/releases/42/assets']),
       ['PATCH', '/repos/owner/project/releases/42'],
     ]);
+    expect(outcome.writes.filter(entry => entry.endpoint.endsWith('/assets')).map(entry => entry.assetName).sort()).toStrictEqual([...assetNames].sort());
     expect(fs.readdirSync(outputRoot).sort()).toStrictEqual(['readback.json', 'receipt.json']);
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'receipt.json'), 'utf8')).release_id).toBe('42');
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'readback.json'), 'utf8')).release_id).toBe('42');
@@ -113,7 +114,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Act
     const outcome = await run({ defaultBranch: 'moved' });
     // Assert
-    expectPublished(outcome, outputRoot, assembly.assets.length);
+    expectPublished(outcome, outputRoot, assembly.assets.map(asset => asset.name));
   });
 
   // evidence_role: supplemental
@@ -134,7 +135,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Act
     const outcome = await run({ push: false });
     // Assert
-    expectPublished(outcome, outputRoot, assembly.assets.length);
+    expectPublished(outcome, outputRoot, assembly.assets.map(asset => asset.name));
   });
 
   // contract_id: contract.ci-release-publisher.outputs
@@ -144,7 +145,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Act
     const outcome = await run({ repositoryName: 'Owner/Project' });
     // Assert
-    expectPublished(outcome, outputRoot, assembly.assets.length);
+    expectPublished(outcome, outputRoot, assembly.assets.map(asset => asset.name));
     expect(JSON.parse(fs.readFileSync(path.join(outputRoot, 'receipt.json'), 'utf8')).identity).toStrictEqual(f.identity);
   });
 
@@ -155,7 +156,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     // Act
     const outcome = await run({ completeAssetInventory: 3 });
     // Assert
-    expectPublished(outcome, outputRoot, assembly.assets.length);
+    expectPublished(outcome, outputRoot, assembly.assets.map(asset => asset.name));
     expect(outcome.requests.filter(entry => entry.method === 'GET' && entry.endpoint.endsWith('/releases/42/assets')).length).toBeGreaterThanOrEqual(3);
   });
 

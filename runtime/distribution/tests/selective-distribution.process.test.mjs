@@ -299,6 +299,24 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(fs.existsSync(linkedOutput)).toBe(false);
 
         fs.unlinkSync(path.join(linkedSource, linkedAsset));
+        const registryPath = 'skills/ci-github/assets/registry/ci-distribution-assets.yml';
+        const registryFile = path.join(linkedSource, registryPath);
+        const registry = fs.readFileSync(registryFile, 'utf8');
+        const sourcePath = 'skills/ci-github/assets/registry/ci-github-preset-assets.yml';
+        for (const [kind, invalidPath] of [['absolute', '/invalid.yml'], ['parent-relative', '../invalid.yml']]) {
+          fs.writeFileSync(registryFile, registry.replace(sourcePath, invalidPath));
+          fixtureGit(['add', '-u']);
+          fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', `invalid ${kind} source path fixture`]);
+          const output = path.join(root, `invalid-${kind}-source`);
+          const result = runReleaseGenerator([
+            '--repository-root', linkedSource, '--source-revision', fixtureGit(['rev-parse', 'HEAD']),
+            '--release-tag', releaseTag, '--output-directory', output,
+          ]);
+          expect(result.status, result.stderr).toBe(2);
+          expect(result.stderr).toContain('distribution-path-invalid');
+          expect(fs.existsSync(output)).toBe(false);
+        }
+        fs.writeFileSync(registryFile, registry);
         fs.unlinkSync(path.join(linkedSource, '.ci/release-skills.json'));
         fixtureGit(['add', '-u']);
         fixtureGit(['-c', 'user.name=Distribution Test', '-c', 'user.email=distribution-test@example.invalid', 'commit', '-qm', 'missing skill declaration fixture']);

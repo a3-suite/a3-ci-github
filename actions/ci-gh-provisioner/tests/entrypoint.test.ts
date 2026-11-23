@@ -24,11 +24,13 @@ function workspace(): { root: string; runnerTemp: string; githubPath: string } {
   return { root, runnerTemp, githubPath: path.join(root, 'github-path') };
 }
 
+const fixtureExecutable = Buffer.from('gh fixture');
+
 function archive(root: string, platform: string): Buffer {
   const member = `gh_${version}_${platform}/bin/gh`;
   const staging = path.join(root, 'staging');
   mkdirSync(path.join(staging, path.dirname(member)), { recursive: true });
-  writeFileSync(path.join(staging, member), 'gh fixture');
+  writeFileSync(path.join(staging, member), fixtureExecutable);
   const archivePath = path.join(root, 'fixture.tar.gz');
   execFileSync('tar', ['-czf', archivePath, '-C', staging, member.split('/')[0]!]);
   return readFileSync(archivePath);
@@ -100,7 +102,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       const exported = readGithubPath(paths.githubPath)?.trim() ?? '';
       expect(path.dirname(exported)).toBe(paths.runnerTemp);
       expect(readdirSync(exported)).toStrictEqual(['gh']);
-      expect(readFileSync(path.join(exported, 'gh'), 'utf8')).toBe('gh fixture');
+      expect(readFileSync(path.join(exported, 'gh'))).toStrictEqual(fixtureExecutable);
       expect(statSync(path.join(exported, 'gh')).mode & 0o111).toBe(0o111);
     });
 
