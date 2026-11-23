@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -158,7 +158,9 @@ const loadCheckedDefinition = (definitionPath) => {
   const diagnostic = new FailureContext('repository-managed-source-integrity', 'contract-execution-mapping');
   diagnostic.at('execution-definition-validation', { input: 'contract-subject-execution-definition' });
   try {
-    return loadDefinition(definitionPath);
+    const definition = loadDefinition(definitionPath);
+    planAggregateCoverage(definition.subjects, SCRIPT_ROOT);
+    return definition;
   } catch (error) {
     const observed = error instanceof assert.AssertionError && !error.generatedMessage ? error.message : safeErrorReason(error);
     diagnostic.report(new DiagnosticError('execution-definition-invalid', { diagnostics: { field: 'contract-subject-execution', expected: 'explicit-segments-with-tests-inside-repository', observed } }));
@@ -330,8 +332,20 @@ export const aggregateCoverageMaps = (coverageMaps, root) => {
   };
 };
 
-export const collectAggregateCoverage = (subjects, root, reportRoot) => {
-  const maps = [];
+export const resolveCoverageSources = ({ root, cwd, include, exclude }) => {
+  const includes = include.map((pattern) => path.resolve(cwd, pattern));
+  const excludes = [...exclude.map((pattern) => path.resolve(cwd, pattern)), '**/node_modules/**'];
+  const files = [...new Set(globSync(includes, { exclude: excludes }).map((filename) => realpathSync(filename)))].filter((filename) => {
+    const relative = path.relative(root, filename);
+    assert(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `coverage source escapes root: ${filename}`);
+    return /\.(?:[cm]?[jt]s)$/.test(filename) && !/\.d\.[cm]?ts$/.test(filename);
+  });
+  assert(files.length, 'coverage include resolves to no source files');
+  assertSourceCoverageFiles(root, files);
+  return files;
+};
+
+const planAggregateCoverage = (subjects, root) => {
   const groups = new Map();
   for (const subject of subjects) {
     for (const segment of subject.segments) {
@@ -345,12 +359,26 @@ export const collectAggregateCoverage = (subjects, root, reportRoot) => {
       groups.set(groupId, group);
     }
   }
-  for (const [groupId, { identity, scope, segments: group }] of groups) {
+  const ownerByFile = new Map();
+  return [...groups].map(([groupId, { identity, scope, segments: group }]) => {
     const cwd = path.join(root, group[0].cwd);
     const resolvePaths = (segment, paths) => paths.map((entry) => path.relative(cwd, path.resolve(root, segment.cwd, entry)).split(path.sep).join('/'));
     const tests = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.tests)))];
     const include = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.include)))];
     const exclude = [...new Set(group.flatMap((segment) => resolvePaths(segment, segment.coverage.exclude)))];
+    for (const filename of resolveCoverageSources({ root, cwd, include, exclude })) {
+      const owner = ownerByFile.get(filename);
+      assert(owner === undefined || owner === groupId,
+        `coverage source ${path.relative(root, filename)} belongs to multiple instrumentation groups (${owner} and ${groupId})`);
+      ownerByFile.set(filename, groupId);
+    }
+    return { groupId, identity, scope, group, cwd, tests, include, exclude };
+  });
+};
+
+export const collectAggregateCoverage = (subjects, root, reportRoot) => {
+  const maps = [];
+  for (const { groupId, identity, scope, group, cwd, tests, include, exclude } of planAggregateCoverage(subjects, root)) {
     const lcovPath = path.join(reportRoot, 'aggregate', identity.replaceAll('.', '_'), `${scope}.lcov`);
     mkdirSync(path.dirname(lcovPath), { recursive: true });
     const { command, args } = commandForSegment({ cwd: group[0].cwd, tests,

@@ -7,6 +7,23 @@ import { aggregateCoverageMaps, collectSubjectCoverage, loadDefinition } from '.
 
 describe("repository-contract-subject-execution", () => {
 
+  test('definition check rejects coverage sources shared across instrumentation groups', (t) => {
+    const parent = path.resolve('tests/tmp');
+    mkdirSync(parent, { recursive: true });
+    const directory = mkdtempSync(path.join(parent, 'overlapping-coverage-'));
+    t.onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
+    const definition = loadDefinition();
+    const { coverage } = definition.subjects.find(({ subjectId }) => subjectId === 'subject.repository.action-distribution')
+      .segments.find(({ id }) => id === 'integration-gates');
+    const source = 'runtime/repository/check-provider-references.mjs';
+    coverage.exclude = coverage.exclude.filter(entry => entry !== source);
+    const input = path.join(directory, 'definition.json');
+    writeFileSync(input, JSON.stringify(definition));
+    const result = spawnSync(process.execPath, ['tests/coverage-tools/contract-subject-coverage.mjs', '--check', '--definition', input], { encoding: 'utf8' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`coverage source ${path.normalize(source)} belongs to multiple instrumentation groups`);
+  });
+
   test('execution rejects an unfiltered segment when all tests are skipped', (t) => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
