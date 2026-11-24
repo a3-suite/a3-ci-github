@@ -102,10 +102,10 @@ npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/c
 
 ## SDD検証（ローカル保守・リリース前受入）
 
-CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証はローカルまたは承認済み保守環境で workspace ルートから実行します。
+CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証はローカルまたは承認済み保守環境で workspace ルートから実行します。owner スキルの探索先は環境変数 `A3_SDD_OWNER_SKILL_DISCOVERY_ROOT` で指定します（値は利用者のスキル配置に合わせます）。
 
 ```sh
-a3-sdd sdd check --workspace-root . --format json
+A3_SDD_OWNER_SKILL_DISCOVERY_ROOT="$HOME/.agents/skills" a3-sdd sdd check --workspace-root . --format json
 ```
 
 契約テスト参照は全 test map を同じ Vitest 実収集へ渡して確認します。workspace ルートの Bash または Zsh で実行します。
