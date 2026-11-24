@@ -55,6 +55,9 @@ describe('installer public naming references', () => {
     expect(declaration.sharedWrapper.assetName).toBe(contract.publicEntryNames.unixShared.assetName);
     expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.windows.assetName}' | iex`);
     expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.unixShared.assetName}' | sh`);
+    expect(readme).toContain(`--pattern '${contract.publicEntryNames.windows.assetName}'`);
+    expect(readme).toContain(`-File '<作業ディレクトリ>\\${contract.publicEntryNames.windows.assetName}' -Source offline`);
+    for (const platform of contract.platforms.native) expect(readme).toContain(`--pattern 'manifest-${platform}.json'`);
   });
   });
 });
