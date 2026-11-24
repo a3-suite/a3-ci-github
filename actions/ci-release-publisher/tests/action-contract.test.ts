@@ -3,8 +3,9 @@ import path from 'node:path';
 import { describe, test, expect } from 'vitest';
 
 describe('release-publisher-action-contract', () => {
-  // contract_id: contract.ci-release-publisher.outputs
+  // evidence_role: supplemental
   // integration_id: release-publisher-action-contract
+  // Reads the action.yml declaration without running the Action; the output guarantees need a run.
   test('publisher declares bounded write inputs and evidence paths without success authority', () => {
     const contract = fs.readFileSync(path.resolve(__dirname, '../action.yml'), 'utf8');
     expect(contract).toMatch(/using: node24\n  main: dist\/index.js/);

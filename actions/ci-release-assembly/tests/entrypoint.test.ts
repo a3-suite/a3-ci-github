@@ -263,6 +263,8 @@ test('assembly bundle rejects a selected skill without its required SKILL.md', (
   expectAssemblyRejected(f, run, /skills-required-file-missing/);
 });
 
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-entrypoint-rejection
 test('assembly retains the verified handoff when the Action output write fails', (t) => {
   const f = fixture(t);
   const result = spawnSync(process.execPath, [...bundle], {

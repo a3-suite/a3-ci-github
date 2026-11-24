@@ -40,7 +40,8 @@ describe("action-dist-gate", () => {
 describe("contract.repository-action-distribution.integrity", () => {
   describe("repository-action-distribution-gates", () => {
 
-    // contract_id: contract.repository-action-distribution.integrity
+    // evidence_role: supplemental
+    // SDD coverage of Action outputs is a repository maintenance check that no distribution integrity guarantee covers.
     // integration_id: repository-action-distribution-gates
     test('every Action has contract coverage for its public outputs', () => {
       const packageText = readFileSync(path.join(root, 'sdd/dsl/specs/contract-core/contract-package.sdd.yml'), 'utf8');

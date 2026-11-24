@@ -50,6 +50,8 @@ describe('supplemental source rejects unsafe paths and invalid phases', () => {
   });
 });
 
+// contract_id: contract.ci-release-supplemental-asset.outputs
+// integration_id: supplemental-phase-source
 describe('supplemental source rejects an existing output directory without changing it', () => {
   const directoryState = (directory: string) => fs.readdirSync(directory, { recursive: true, encoding: 'utf8' }).sort()
     .map((entry) => [entry, fs.statSync(path.join(directory, entry)).isFile() ? fs.readFileSync(path.join(directory, entry), 'utf8') : null]);

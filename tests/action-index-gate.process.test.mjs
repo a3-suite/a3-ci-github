@@ -1,6 +1,6 @@
 import { test, describe, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,13 +16,14 @@ const runCatalog = (readmeText, actions, mode) => {
       writeFileSync(path.join(fixture, relative), content);
     };
     for (const relative of ['runtime/repository/update-action-index.mjs', 'runtime/diagnostics/failure.mjs']) write(relative, readFileSync(path.join(root, relative)));
-    write('README.md', readmeText);
+    if (readmeText !== null) write('README.md', readmeText);
     for (const action of actions) {
-      write(`actions/${action.directory}/action.yml`, `name: ${action.name}\ndescription: ${action.description}\n`);
+      write(`actions/${action.directory}/action.yml`, action.metadata ?? `name: ${action.name}\ndescription: ${action.description}\n`);
       write(`actions/${action.directory}/README.md`, `# ${action.name}\n\n${action.readmeSummary}\n`);
     }
     const result = spawnSync(process.execPath, [path.join(fixture, 'runtime/repository/update-action-index.mjs'), mode], { encoding: 'utf8' });
-    return { result, readme: readFileSync(path.join(fixture, 'README.md'), 'utf8') };
+    const readmePath = path.join(fixture, 'README.md');
+    return { result, readme: existsSync(readmePath) ? readFileSync(readmePath, 'utf8') : null };
   } finally { rmSync(fixture, { recursive: true, force: true }); }
 };
 
@@ -58,6 +59,25 @@ describe("contract.repository-action-distribution.catalog", () => {
       expect(diagnostic).not.toBeNull();
       expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ stage: 'catalog-projection', reason: 'action-catalog-stale' });
       expect(after).toBe(readme);
+    });
+
+    // contract_id: contract.repository-action-distribution.catalog
+    // flow_id: repository-action-distribution-gates
+    test.each([
+      ['the README is missing', null, {}, 'catalog-input-read'],
+      ['Action metadata lacks a description', readme, { metadata: 'name: alpha\n' }, 'action-metadata-validation'],
+      ['the README lacks the catalog section', '# project\n', {}, 'catalog-projection'],
+      ['the catalog section lacks the table', '# project\n\n## Action一覧\n\nNo table.\n', {}, 'catalog-projection'],
+    ])('reports the failed stage when %s', (_case, source, metadata, stage) => {
+      const { result, readme: after } = runCatalog(source, [
+        { name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha', ...metadata },
+      ], '--check');
+
+      expect(result.status).toBe(1);
+      const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+      expect(diagnostic, result.stderr).not.toBeNull();
+      expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ subject: 'repository-action-distribution', stage });
+      expect(after).toBe(source);
     });
 
     // contract_id: contract.repository-action-distribution.catalog

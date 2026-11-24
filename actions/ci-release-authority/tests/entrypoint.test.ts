@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect } from 'vitest';
 import { fixture, source, repository } from './fixture';
+import { OWNER_HANDOFF_PATH } from '../src/authority';
 import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
@@ -188,6 +189,40 @@ test('authority entrypoint rejects an expired approval without authority output'
     expect(run.outputs).toBe('');
     expect(run.authorityExists()).toBe(false);
     expect(run.filesAfter).toEqual(run.filesBefore);
+  } finally { fs.rmSync(f.root, { recursive: true }); }
+});
+
+// contract_id: contract.ci-release-authority.outputs
+// flow_id: ci-release-authority-bundle
+test.each([
+  { label: 'an invalid publication decision', stage: 'decision-validation', mutate: (f: ReturnType<typeof fixture>) => {
+    const file = path.join(f.root, 'release-publication-request/request.json'); const value = JSON.parse(fs.readFileSync(file, 'utf8')); value.schema = 'ci.release-publication-request.v1'; fs.writeFileSync(file, JSON.stringify(value));
+  } },
+  { label: 'a missing notes approval', stage: 'notes-approval', mutate: (f: ReturnType<typeof fixture>) => { fs.unlinkSync(path.join(f.root, 'release-notes-handoff/release-notes-approval.json')); } },
+  { label: 'a different repository identity', stage: 'repository-identity', mutate: (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}`] as Record<string, unknown>).full_name = 'another/repository'; } },
+  { label: 'a moved release tag', stage: 'tag-source', mutate: (f: ReturnType<typeof fixture>) => { f.responses[`/repos/${repository}/git/ref/tags/v1.2.3`] = { object: { type: 'tag', sha: 'd'.repeat(40) } }; } },
+  { label: 'an untrusted publication request run', stage: 'request-provenance', mutate: (f: ReturnType<typeof fixture>) => { (f.responses[`/repos/${repository}/actions/runs/22`] as Record<string, unknown>).conclusion = 'failure'; } },
+  { label: 'owner workflow drift', stage: 'workflow-binding', mutate: (f: ReturnType<typeof fixture>) => { fs.appendFileSync(path.join(f.root, OWNER_HANDOFF_PATH), '# changed\n'); } },
+  { label: 'config snapshot drift', stage: 'snapshot-validation', mutate: (f: ReturnType<typeof fixture>) => {
+    const file = path.join(f.root, 'snapshot.json'); const value = JSON.parse(fs.readFileSync(file, 'utf8')); value.values.CI_TOOLCHAIN_VERSION = 'changed'; fs.writeFileSync(file, JSON.stringify(value));
+  } },
+  // A dangling link is not an existing output directory, so the run proceeds until creating the handoff directory fails.
+  { label: 'an uncreatable authority handoff', stage: 'authority-write', mutate: (f: ReturnType<typeof fixture>) => {
+    fs.symlinkSync(path.join(f.root, 'missing-target'), f.options.outputDirectory);
+  } },
+])('authority entrypoint rejects $label without authority output', ({ stage, mutate }) => {
+  // Arrange
+  const f = fixture();
+  try {
+    mutate(f);
+    // Act
+    const run = runAuthority(entrypointArgs, f);
+    // Assert
+    expect(run.result.status).toBe(1);
+    expect(run.outputs).toBe('');
+    expect(run.authorityExists()).toBe(false);
+    const line = run.result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+    expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}').classification?.stage, run.result.stderr).toBe(stage);
   } finally { fs.rmSync(f.root, { recursive: true }); }
 });
 

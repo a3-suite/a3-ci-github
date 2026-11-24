@@ -270,6 +270,31 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     }
   });
 
+  type Fixture = ReturnType<typeof setup>['f'];
+  const localRejections: [string, string, (f: Fixture) => Record<string, string>, string | undefined][] = [
+    ['an unsupported operation', 'publish', () => ({}), undefined],
+    ['an unreadable authority', 'observe-before', (f) => ({ 'INPUT_AUTHORITY-PATH': f.put('invalid-authority.json', 'not-json') }), undefined],
+    ['a missing handoff root', 'observe-before', (f) => ({ 'INPUT_HANDOFF-ROOT': path.join(f.root, 'missing-handoff') }), undefined],
+    ['an observation file that cannot be written', 'observe-before', (f) => ({ 'INPUT_OBSERVATION-PATH': f.root }), 'observation-write'],
+    ['Action outputs that cannot be written', 'observe-before', (f) => ({ GITHUB_OUTPUT: f.root }), 'output-write'],
+  ];
+  for (const [label, operation, extra, stage] of localRejections) {
+    // contract_id: contract.ci-release-publication-verifier.outputs
+    test(`publication entrypoint rejects ${label}`, async (t) => {
+      // Arrange
+      const { f, run } = setup(t);
+      // Act
+      const outcome = await run(operation, { releases: ['absent'] }, extra(f));
+      // Assert
+      expect(outcome.result.status).toBe(1);
+      expect(outcome.result.stderr).not.toContain('synthetic-secret');
+      if (stage !== undefined) {
+        const line = outcome.result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+        expect(JSON.parse(line!.slice('ci-failure-diagnostic:'.length)).classification.stage).toBe(stage);
+      }
+    });
+  }
+
   for (const [kind, reason] of [['checksum', /checksum-mismatch/], ['transport', /remote-state-unknown/]] as const) {
     // contract_id: contract.ci-release-publication-verifier.outputs
     test(`publication entrypoint reports an asset readback ${kind} failure as its own diagnostic`, async (t) => {

@@ -17,7 +17,7 @@ describe('failure evidence', () => {
     expect(evidence['execution-state']).toMatchObject({ outcome: 'failure', lastConfirmed: 'inventory-validation', write: 'not-started' });
     expect(evidence['evidence-location'].artifact).toBe('not-generated');
   });
-  // contract_id: contract.ci-failure-diagnostics.actionable
+  // target_id: FailureContext.evidence(error)
   test('unknown exceptions retain context without protected messages or stack', () => {
     const context = new FailureContext('ci-config-snapshot', 'snapshot');
     context.at('input-validation', { input: 'sources-json' });
@@ -42,7 +42,7 @@ describe('failure evidence', () => {
     expect(source({ CI_SOURCE_REVISION: 'refs/heads/main', GITHUB_EVENT_NAME: 'push', GITHUB_SHA: merge })).toBe('unavailable');
     expect(source({ CI_SOURCE_REVISION: '', GITHUB_EVENT_NAME: 'push', GITHUB_SHA: merge })).toBe(merge);
   });
-  // contract_id: contract.ci-failure-diagnostics.actionable
+  // target_id: FailureContext.report(error)
   test('diagnostic sink failure does not mask primary failure or retry', () => {
     const sink = vi.spyOn(process.stderr, 'write').mockImplementation(() => { throw new Error('sink failed'); });
     try {

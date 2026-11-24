@@ -169,10 +169,10 @@ const withPreparedBootstrap = (callback) => {
 
 describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
   describe("failure-diagnostics-contract", () => {
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // The rejections assert only the bootstrap reason, and the accepted internal symlink cycles are a successful call that no bootstrap diagnostic guarantee covers.
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap confines dependency files and accepts internal symlink cycles', () => {
       // Arrange
       withPreparedBootstrap((fixture) => {
@@ -250,10 +250,10 @@ describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
       });
     });
 
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // The cases assert only the top-level reason and outcome, not classification.stage or classification.reason, and the temporary-state cleanup and unchanged consumer tree are side effects that no bootstrap diagnostic guarantee covers.
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports unavailable npm and cleans up state after dependency command failures', () => {
       // Arrange
       withPreparedBootstrap(({ fixture, consumer, execute }) => {
@@ -282,10 +282,10 @@ describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
       });
     });
 
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // Validator startup and completion failures occur after the bootstrap runtime checks, so they are not bootstrap-fails inputs; the actionable outcome is mapped through bootstrap-outcome-retention.
     // test_level: e2e
     // flow_id: failure-diagnostics-contract
-    // contract_id: contract.ci-failure-diagnostics.bootstrap-diagnostic
     test.runIf(process.platform !== 'win32')('preset bootstrap reports validator startup and completion failures without consumer changes', () => {
       // Arrange
       withPreparedBootstrap(({ consumer, validator, execute }) => {
@@ -309,6 +309,32 @@ describe("contract.ci-failure-diagnostics.bootstrap-diagnostic", () => {
           expect(trace[0].command).toBe('npm');
           expect(trace.every((entry) => !fs.existsSync(entry.temp))).toBeTruthy();
           expect(snapshotTree(consumer)).toStrictEqual(before);
+        }
+      });
+    });
+  });
+});
+
+describe("preset-assurance-contract", () => {
+  describe("bootstrap-outcome-retention", () => {
+    // evidence_role: contract
+    // test_level: e2e
+    // flow_id: bootstrap-outcome-retention
+    // contract_id: contract.ci-failure-diagnostics.actionable
+    test.runIf(process.platform !== 'win32')('preset bootstrap retains validator cannot-start and cannot-complete outcomes', () => {
+      // Arrange
+      withPreparedBootstrap(({ validator, execute }) => {
+        const cases = [
+          [{ npm: { denyExecutable: validator } }, 'cannot-start'],
+          [{ validator: { signal: 'SIGTERM' } }, 'cannot-start'],
+          [{ validator: { status: 2 } }, 'cannot-complete'],
+        ];
+        for (const [settings, outcome] of cases) {
+          fs.chmodSync(validator, 0o755);
+          // Act
+          const { result } = execute(settings);
+          // Assert
+          expect(diagnosticOf(result).outcome).toBe(outcome);
         }
       });
     });

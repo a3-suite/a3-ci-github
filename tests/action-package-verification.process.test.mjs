@@ -61,7 +61,7 @@ describe("contract.repository-action-distribution.source-verification", () => {
       for (const relative of ['runtime/repository/verify-action-packages.mjs', 'runtime/repository/check-action-dist.mjs', 'runtime/repository/check-runtime-boundaries.mjs',
         'runtime/diagnostics/failure.mjs', 'runtime/vitest/vitest-report-core.mjs']) write(relative, fs.readFileSync(path.join(root, relative)));
       write('actions/alpha/action.yml', 'name: alpha\nruns:\n  using: node24\n  main: dist/index.js\n');
-      for (const [relative, content] of [['README.md', '# alpha\n'], ['package.json', JSON.stringify({ scripts: { lint: 'tsc --noEmit' } })], ['package-lock.json', '{}\n'],
+      for (const [relative, content] of [['README.md', '# alpha\n'], ['package.json', JSON.stringify({ scripts: { lint: mode === 'metadata-invalid' ? 'eslint .' : 'tsc --noEmit' } })], ['package-lock.json', '{}\n'],
         ['tsconfig.json', '{}\n'], ['src/index.ts', 'export {};\n'], ['dist/index.js', '\n'], ['tests/a.test.ts', '\n']]) write(`actions/alpha/${relative}`, content);
       fs.symlinkSync(path.join(collectActionPackages(root)[0].path, 'node_modules'), path.join(fixture, 'actions/alpha/node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
       for (const name of ['ci-gh-provisioner', 'ci-release-assembly']) {
@@ -79,6 +79,7 @@ describe("contract.repository-action-distribution.source-verification", () => {
       write('node_modules/vitest/vitest.mjs', `import fs from 'node:fs';
 const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ runner: 'vitest', args }) + '\\n');
+if (${mode === 'test-failure'}) process.exit(1);
 const output = args.find((value) => value.startsWith('--outputFile='));
 const files = args.slice(3).filter((value) => !value.startsWith('--'));
 if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringify({ success: true, testResults: files.map((name) => ({ name, status: 'passed', assertionResults: [{ fullName: 'stub > passes', status: 'passed' }] })) }));
@@ -89,7 +90,7 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
         env: { ...process.env, PATH: `${path.join(fixture, 'bin')}${path.delimiter}${process.env.PATH}` }, timeout: 30_000 });
       // Assert
       expect(result.error, 'the source verification CLI did not finish normally').toBeUndefined();
-      const invocations = fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      const invocations = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line)) : [];
       const actionLint = { runner: 'npm', cwd: fs.realpathSync(path.join(fixture, 'actions/alpha')), args: 'run lint' };
       if (mode === 'typecheck-failure') {
         expect(result.status).toBe(1);
@@ -97,6 +98,16 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
         expect(diagnostic).not.toBeNull();
         expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ stage: 'typecheck', reason: 'action-source-verification-failed' });
         expect(invocations).toStrictEqual([actionLint]);
+        return;
+      }
+      if (mode === 'test-failure' || mode === 'metadata-invalid') {
+        expect(result.status).toBe(1);
+        const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
+        expect(diagnostic, result.stderr).not.toBeNull();
+        expect(JSON.parse(diagnostic[1]).classification).toMatchObject(mode === 'test-failure'
+          ? { stage: 'test', reason: 'action-source-verification-failed' }
+          : { stage: 'action-inventory' });
+        expect(invocations.map(({ runner }) => runner)).toStrictEqual(mode === 'test-failure' ? ['npm', 'vitest'] : []);
         return;
       }
       expect(result.status, result.stdout + result.stderr).toBe(0);
@@ -116,6 +127,14 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
     // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification
     test('source verification CLI reports the failed typecheck stage', (t) => runSourceVerificationCli(t, 'typecheck-failure'));
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI reports the failed test stage', (t) => runSourceVerificationCli(t, 'test-failure'));
+
+    // contract_id: contract.repository-action-distribution.source-verification
+    // flow_id: repository-action-source-verification
+    test('source verification CLI reports the inventory stage for invalid Action metadata', (t) => runSourceVerificationCli(t, 'metadata-invalid'));
 
     // evidence_role: supplemental
     // Running neither install nor build is an implementation detail that no contract guarantee covers.

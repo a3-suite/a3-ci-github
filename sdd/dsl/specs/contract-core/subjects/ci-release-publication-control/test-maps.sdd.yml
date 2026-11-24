@@ -137,3 +137,34 @@ test_maps:
         guarantees:
           - publication-control-failure-propagated
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects release notes that differ from the approved body digest
+        partition: runtime-context.action-input-invalid
+        guarantees:
+          - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects release notes that differ from the approved body digest
+        partition: runtime-context.action-input-invalid
+        guarantees:
+          - publication-control-failure-propagated
+          - rejected-publication-control-no-request-handoff
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint rejects the authority-internal provenance operation
+        partition: runtime-context.action-input-invalid
+        guarantees:
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint rejects the authority-internal provenance operation
+        partition: runtime-context.action-input-invalid
+        guarantees:
+          - publication-control-failure-propagated
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-publication-control/tests/control.test.ts
+        symbol: ci-release-publication-control-source > creates and verifies a publication request
+        partition: publication-control-create-destination-exists
+        guarantees:
+          - publication-control-existing-handoff-preserved

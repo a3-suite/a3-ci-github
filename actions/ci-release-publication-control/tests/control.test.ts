@@ -131,8 +131,9 @@ describe('ci-release-publication-control-source', () => {
     failures.forEach((failure, index) => expect(String(failure)).toMatch(cases[index][1]));
     fs.rmSync(rootDirectory, { recursive: true, force: true });
   });
+  // evidence_role: supplemental
+  // The source function rejection does not observe the Action outcome, diagnostic stage or handoff directories.
   // integration_id: ci-release-publication-control-source
-  // contract_id: contract.ci-release-publication-control.outputs
   test('rejects publication requests without a v2 owner decision', (t) => {
     // Arrange
     const rootDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-publication-schema-'));

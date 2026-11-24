@@ -423,7 +423,9 @@ assert.equal(report.status, 'success', JSON.stringify(report));`);
         }
       });
     });
-    // contract_id: contract.ci-selective-distribution.application
+    // evidence_role: supplemental
+    // Restoring retired assets copies the test's own backups, and the observed rollback outcomes are covered by the application recovery tests.
+    // flow_id: provider-pin-companion
     test('explicit create migration restores retired assets and the prior lock after a post-apply failure', async () => {
       await withFixture('distribution-create-migration-', async (root) => {
         const release = prepareRelease(root);

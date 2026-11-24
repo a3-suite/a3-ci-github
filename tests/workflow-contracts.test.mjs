@@ -113,11 +113,24 @@ describe("workflow-contracts", () => {
     });
 
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality caller preserves the summary check without copying quality jobs', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate.yml'));
       expect(summaryJobCount(caller)).toBe(1);
       expect(caller.jobs.quality.steps).toBe(undefined);
+      const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
+      const executionJobs = [callee.jobs.summary.needs].flat();
+      // Provider-owned Actions compare without their ref so that a copy pinned to another commit is still detected. Generic Actions
+      // such as checkout are shared by unrelated jobs and do not identify a copied provider job. Steps that only run shell commands
+      // have no Action identity, so a copy that inlines the callee as run steps is outside what this comparison can detect.
+      const actionOf = (uses) => uses.replace(/@.*$/, '');
+      const providerAction = (uses) => uses.startsWith('a3-suite/a3-ci-github/actions/');
+      const executionActions = new Set(executionJobs.flatMap((id) => callee.jobs[id].steps.map((step) => step.uses).filter((uses) => uses && providerAction(uses)).map(actionOf)));
+      for (const [id, job] of Object.entries(caller.jobs)) {
+        expect(executionJobs, id).not.toContain(id);
+        for (const step of job.steps ?? []) if (step.uses) expect(executionActions.has(actionOf(step.uses)), `${id}: ${step.uses}`).toBe(false);
+      }
       expect(caller.jobs.quality.permissions.contents).toBe('read');
       const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
       const { source, referencePlaceholder } = registry.qualityReusableWorkflow;
@@ -171,6 +184,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality workflow declares trusted execution and aggregate summary', () => {
       const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
@@ -1177,7 +1191,8 @@ describe("workflow-contracts", () => {
       expect(rejected.diagnostics.join('\n')).toContain('quality-reserved');
     });
 
-    // contract_id: contract.ci-release-publication-control.outputs
+    // evidence_role: supplemental
+    // The repository reference gate is a separate call that no release publication control guarantee covers.
     // integration_id: repository-publication-action-reference-contracts
     test('fixed publication Action references require owner decisions and expose old registry pins', (t) => {
       // Arrange

@@ -257,6 +257,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     expect(outcome.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"/m);
   });
 
+  // contract_id: contract.ci-release-publisher.outputs
   test('publisher retains evidence when the Action output write fails', async (t) => {
     const { outputRoot, run } = await setup(t);
     const outcome = await run({}, false);

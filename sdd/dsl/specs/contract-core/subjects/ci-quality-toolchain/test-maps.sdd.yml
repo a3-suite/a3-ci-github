@@ -25,6 +25,16 @@ test_maps:
         guarantees:
           - invalid-or-failed-quality-toolchain-stops
       - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > auxiliary tool selection accepts install and skip but still validates tool versions
+        partition: runtime-context.quality-toolchain-inputs-unusable
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
+        symbol: contract.ci-quality-toolchain.preparation > compatible policy accepts bounded Node and Python selectors while exact policy stays strict
+        partition: runtime-context.quality-toolchain-inputs-unusable
+        guarantees:
+          - invalid-or-failed-quality-toolchain-stops
+      - path: actions/ci-quality-toolchain/tests/composite-execution.test.mjs
         symbol: contract.ci-quality-toolchain.preparation > failure retention identifies the failed setup without executing another setup
         partition: runtime-context.quality-toolchain-inputs-unusable
         guarantees:

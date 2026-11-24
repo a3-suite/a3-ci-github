@@ -200,10 +200,10 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(true);
     });
 
-    // evidence_role: contract
-    // contract_id: contract.ci-release-supplemental-asset.outputs
+    // evidence_role: supplemental
     // flow_id: standard-installer-process-startup
     // test_level: e2e
+    // The CLI reports no Action status or output directory; this checks only its exit status and platform record.
     test('executes packaged local CLI with the same fixed boundary', (t) => {
       // Arrange
       const f = fixture(t);

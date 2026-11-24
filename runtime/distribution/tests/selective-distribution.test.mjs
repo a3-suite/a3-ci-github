@@ -785,6 +785,25 @@ describe("contract.ci-selective-distribution.application", () => {
           expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-plan-input-changed$/);
       });
     });
+
+    // evidence_role: contract
+    // test_level: integration
+    // contract_id: contract.ci-selective-distribution.plan
+    // integration_id: selective-distribution-plan
+    test('plan reports a conflict for an existing destination without recorded ownership', async () => {
+      await withFixture('distribution-plan-unowned-destination-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        fs.mkdirSync(path.join(projectRoot, '.github/workflows'), { recursive: true });
+        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
+        const destination = '.github/workflows/quality-gate.yml';
+        fs.writeFileSync(path.join(projectRoot, destination), 'name: consumer-owned\n');
+
+        const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] });
+
+        expect(plan.actions).toStrictEqual([expect.objectContaining({ destination, action: 'conflict' })]);
+      });
+    });
   });
 });
 
@@ -1316,9 +1335,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution-delivery", () => {
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // Reusing verified cached files is a delivery mechanism that no delivery guarantee covers.
     // test_level: integration
-    // contract_id: contract.ci-selective-distribution.delivery
     // integration_id: selective-distribution-delivery
     test('remote fetch reuses verified files for repeat and extended preset selections', async () => {
       // Arrange

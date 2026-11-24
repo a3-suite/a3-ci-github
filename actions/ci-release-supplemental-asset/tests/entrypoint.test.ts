@@ -26,6 +26,10 @@ for (const operation of ['build-platform', 'assemble']) {
   });
 }
 
+// contract_id: contract.ci-release-supplemental-asset.outputs
+// evidence_role: contract
+// flow_id: supplemental-phase-entrypoint
+// test_level: e2e
 test('supplemental entrypoint preserves existing output on rejection', (t) => {
   const f = fixture(t);
   const output = path.join(f.root, 'new output');
@@ -38,6 +42,10 @@ test('supplemental entrypoint preserves existing output on rejection', (t) => {
   expect(fs.readFileSync(path.join(output, 'existing'), 'utf8')).toBe('original');
 });
 
+// contract_id: contract.ci-release-supplemental-asset.outputs
+// evidence_role: contract
+// flow_id: supplemental-phase-entrypoint
+// test_level: e2e
 test('supplemental entrypoint retains its result when the Action output write fails', (t) => {
   const f = fixture(t);
   const result = bundle(f, { INPUT_OPERATION: 'build-platform', GITHUB_OUTPUT: f.root });
@@ -195,11 +203,11 @@ test('supplemental entrypoint preserves safe standard installer diagnostics', (t
 });
 
 // contract_id: contract.ci-release-supplemental-asset.assembly
-// flow_id: supplemental-phase-entrypoint
+// flow_id: supplemental-asset-release-entrypoint
 test('supplemental entrypoint assembles an asset release from empty build roots and fails with build input', (t) => {
   // Arrange
-  const assetRelease = (sub: Parameters<typeof fixture>[0]) => {
-    const f = fixture(sub);
+  const assetRelease = (sub: Parameters<typeof fixture>[0], ownerBody?: string) => {
+    const f = fixture(sub, ownerBody);
     f.configure({ CI_RELEASE_IMPLEMENTATION: 'asset-release', CI_PLATFORM_MANIFEST: '__unset__' },
       { language_profile: null, toolchain_version: null, platform_manifest: null, platform_manifest_sha256: null } as unknown as Record<string, string>);
     for (const directory of ['standard build', 'supplemental build']) fs.rmSync(path.join(f.root, directory, 'input'));
@@ -208,10 +216,14 @@ test('supplemental entrypoint assembles an asset release from empty build roots 
   const valid = assetRelease(t);
   const withBuild = assetRelease(t);
   fs.writeFileSync(path.join(withBuild.root, 'standard build/input'), 'product build');
+  const ownerFailure = assetRelease(t, 'exit 23');
+  const outputFailure = assetRelease(t);
   const assemble = { INPUT_OPERATION: 'assemble', 'INPUT_SUPPLEMENTAL-BUILD-ROOT': 'supplemental build' };
   // Act
   const result = bundle(valid, assemble);
   const rejected = bundle(withBuild, assemble);
+  const ownerFailed = bundle(ownerFailure, assemble);
+  const outputFailed = bundle(outputFailure, { ...assemble, GITHUB_OUTPUT: outputFailure.root });
   // Assert
   expect(result.status, String(result.stderr)).toBe(0);
   expect(fs.readFileSync(valid.outputPath, 'utf8')).toBe('status=success\noutput-directory=new output\n');
@@ -220,6 +232,10 @@ test('supplemental entrypoint assembles an asset release from empty build roots 
   expect(String(rejected.stderr)).toMatch(/unexpected-build-input/);
   expect(String(rejected.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"build-input-validation"/m);
   expect(fs.readFileSync(withBuild.outputPath, 'utf8')).toBe('');
+  expect(ownerFailed.status).toBe(1);
+  expect(String(ownerFailed.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"owner-adapter-execution"/m);
+  expect(outputFailed.status).toBe(1);
+  expect(String(outputFailed.stderr)).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
 });
 
 // evidence_role: supplemental

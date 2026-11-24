@@ -17,6 +17,7 @@ after(async () => {
 });
 
 describe('jq provisioning', () => {
+  // integration_id: ci-jq-provisioner-source
   test('selects the supported runner assets', () => {
     expect(selectAsset('Linux', 'X64')).toBe('jq-linux-amd64');
     expect(selectAsset('Linux', 'ARM64')).toBe('jq-linux-arm64');
@@ -25,6 +26,7 @@ describe('jq provisioning', () => {
     expect(() => selectAsset('Windows', 'ARM64')).toThrow(/jq-provision-failed/);
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('rejects an unsupported runner before download or PATH handoff', async () => {
     const tempRoot = await testTempRoot();
     const githubPath = path.join(tempRoot, 'github-path');
@@ -35,6 +37,7 @@ describe('jq provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('installs the checksummed asset and exports its directory', async () => {
     const tempRoot = await testTempRoot();
     const binary = Buffer.from('jq fixture');
@@ -60,6 +63,7 @@ describe('jq provisioning', () => {
     ]);
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('rejects a checksum mismatch without exposing a binary', async () => {
     const tempRoot = await testTempRoot();
     await expect(() => provisionJq({
@@ -71,6 +75,7 @@ describe('jq provisioning', () => {
       expected: '0'.repeat(64), observed: createHash('sha256').update('jq fixture').digest('hex') } });
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('reports a download failure separately from version verification', async () => {
     const tempRoot = await testTempRoot();
     const githubPath = path.join(tempRoot, 'github-path');
@@ -81,6 +86,7 @@ describe('jq provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('rejects missing or duplicate checksum entries', async () => {
     for (const manifest of ['', `${'0'.repeat(64)}  jq-linux-amd64\n${'0'.repeat(64)}  jq-linux-amd64\n`]) {
       const tempRoot = await testTempRoot();
@@ -93,6 +99,7 @@ describe('jq provisioning', () => {
     }
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('rejects an installation failure before PATH handoff', async () => {
     const tempRoot = await testTempRoot();
     const missingRoot = path.join(tempRoot, 'missing');
@@ -108,6 +115,7 @@ describe('jq provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-jq-provisioner-source
   test('removes the installed binary when PATH update fails', async () => {
     const tempRoot = await testTempRoot();
     const binary = Buffer.from('jq fixture');

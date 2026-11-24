@@ -103,6 +103,10 @@ test('entrypoint keeps the existing handoff files when it rejects a replay', (t)
   // Assert
   expect(replay.status, replay.stderr).toBe(1);
   expect(replay.stderr).toMatch(/^ci-failure-diagnostic:.*"reason":"release-publication-output-already-exists"/m);
+  const line = replay.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+    classification: { subject: 'ci-release-publication-control', stage: 'create-request' },
+  });
   expect(files.map((file) => fs.readFileSync(path.join(root, file)))).toStrictEqual(saved);
 });
 
@@ -207,7 +211,8 @@ test('entrypoint rejects release notes that differ from the approved body digest
     comparison: { field: 'approval-body-sha256', expected: approvedDigest, observed: crypto.createHash('sha256').update(notes).digest('hex') },
   });
   expect(result.stderr).not.toContain('# Release');
-  expect(fs.existsSync(path.join(root, 'release-publication-request/request.json'))).toBe(false);
+  expect(fs.existsSync(path.join(root, 'release-publication-request'))).toBe(false);
+  expect(fs.existsSync(path.join(root, 'release-notes-handoff'))).toBe(false);
   fs.rmSync(root, { recursive: true, force: true });
 });
 

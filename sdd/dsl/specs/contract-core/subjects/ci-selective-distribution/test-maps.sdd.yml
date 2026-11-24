@@ -524,6 +524,11 @@ test_maps:
         guarantees:
           - plan-reports-conflicting-destinations
       - path: runtime/distribution/tests/selective-distribution.test.mjs
+        symbol: contract.ci-selective-distribution.application > selective-distribution > plan reports a conflict for an existing destination without recorded ownership
+        partition: runtime-context.selective-distribution-plan-input-valid
+        guarantees:
+          - plan-reports-conflicting-destinations
+      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.application > selective-distribution-application > plan reports a conflict without replacing an independently edited destination
         partition: runtime-context.distribution-independent-destination-stable
         guarantees:

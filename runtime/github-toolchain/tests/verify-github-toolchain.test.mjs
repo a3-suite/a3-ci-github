@@ -34,7 +34,7 @@ const withToolchain = (callback) => {
   }
 };
 
-const run = (bin, mode, overrides = {}) => spawnSync('/bin/bash', [script, mode], {
+const runWithArguments = (bin, args, overrides = {}) => spawnSync('/bin/bash', [script, ...args], {
   encoding: 'utf8',
   env: {
     ...process.env,
@@ -45,6 +45,11 @@ const run = (bin, mode, overrides = {}) => spawnSync('/bin/bash', [script, mode]
     ...overrides,
   },
 });
+const run = (bin, mode, overrides = {}) => runWithArguments(bin, [mode], overrides);
+const diagnosticOf = (stderr) => {
+  const line = stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
+  return JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+};
 
 describe("contract.ci-github-toolchain-verifier.processing", () => {
   describe("ci-github-toolchain-script", () => {
@@ -69,17 +74,47 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
       // Assert
       expect(result.status).toBe(1);
       expect(result.stderr).toMatch(/github-toolchain-mode-invalid/);
+      expect(diagnosticOf(result.stderr).classification.stage).toBe('mode-validation');
+    }));
+
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // flow_id: ci-github-toolchain-script
+    test('rejects a wrong number of arguments', () => withToolchain((bin) => {
+      for (const args of [[], ['jq', 'gh-jq']]) {
+        // Arrange
+        // Act
+        const result = runWithArguments(bin, args);
+        // Assert
+        expect(result.status, `${args.length} arguments`).not.toBe(0);
+        expect(result.stderr).toMatch(/usage: verify-github-toolchain\.sh/);
+        expect(diagnosticOf(result.stderr).classification.stage).toBe('input-validation');
+      }
+    }));
+
+    // contract_id: contract.ci-github-toolchain-verifier.processing
+    // flow_id: ci-github-toolchain-script
+    test('rejects a failed version response', () => withToolchain((bin) => {
+      // Arrange
+      writeFileSync(path.join(bin, 'gh'), "#!/usr/bin/env bash\necho 'gh: version unavailable' >&2\nexit 3\n");
+      // Act
+      const result = run(bin, 'gh-jq');
+      // Assert
+      expect(result.status).not.toBe(0);
+      expect(diagnosticOf(result.stderr)).toMatchObject({
+        classification: { subject: 'ci-github-toolchain-verifier', stage: 'tool-version-validation' },
+        'execution-state': { exit: result.status },
+      });
     }));
 
     // contract_id: contract.ci-github-toolchain-verifier.processing
     // flow_id: ci-github-toolchain-script
     test('rejects an unavailable selected command', () => {
       const cases = [
-        ['jq', 'jq', 'jq-required'],
-        ['gh-jq', 'gh', 'github-cli-required'],
-        ['jq-sha256', 'sha256sum', 'sha256sum-required'],
+        ['jq', 'jq', 'jq-required', 'jq-availability'],
+        ['gh-jq', 'gh', 'github-cli-required', 'tool-version-validation'],
+        ['jq-sha256', 'sha256sum', 'sha256sum-required', 'tool-version-validation'],
       ];
-      for (const [mode, command, diagnostic] of cases) {
+      for (const [mode, command, diagnostic, stage] of cases) {
         // Arrange
         withToolchain((bin) => {
           rmSync(path.join(bin, command));
@@ -90,6 +125,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
           // Assert
           expect(result.status, `${mode} should reject a missing ${command}`).toBe(1);
           expect(result.stderr).toMatch(new RegExp(diagnostic));
+          expect(diagnosticOf(result.stderr).classification.stage).toBe(stage);
         });
       }
     });
@@ -104,6 +140,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
       // Assert
       expect(missing.status).toBe(1);
       expect(missing.stderr).toMatch(/gh-version-required/);
+      expect(diagnosticOf(missing.stderr).classification.stage).toBe('tool-version-validation');
 
       // Arrange
       const mismatchedVersion = { CI_JQ_VERSION: '1.6' };
@@ -112,8 +149,7 @@ describe("contract.ci-github-toolchain-verifier.processing", () => {
       // Assert
       expect(mismatch.status).toBe(1);
       expect(mismatch.stderr).toMatch(/jq-version-mismatch: expected=1.6 actual=1.7/);
-      const line = mismatch.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
-      expect(JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}')).toMatchObject({
+      expect(diagnosticOf(mismatch.stderr)).toMatchObject({
         classification: { subject: 'ci-github-toolchain-verifier', stage: 'tool-version-validation' },
         comparison: { field: 'jq-version', expected: '1.6', observed: '1.7' },
       });

@@ -35,6 +35,8 @@ describe('standard installer', () => {
   // flow_id: standard-installer-provider-execution
   // test_level: e2e
   describe('assembly', () => {
+    // evidence_role: supplemental
+    // Also checks that release assembly accepts the result, which belongs to the ci-release-assembly contract; the distributed CRLF test covers both phases.
     for (const endings of ['lf', 'crlf', 'mixed']) test(`accepts ${endings} checkout declarations through both phases and release assembly`, (t) => {
       // Arrange
       const f = fixture(t);
@@ -105,6 +107,8 @@ describe('standard installer', () => {
     // evidence_role: supplemental
     // A rejection after the provider has run may leave partial output, so the absent manifest is not an observation of the existing-state guarantees.
     test('writes no supplemental manifest when newline-only input mutation during provider execution is rejected', (t) => rejectNewlineMutation(t, 'files'));
+    // contract_id: contract.ci-release-supplemental-asset.assembly
+    // flow_id: standard-installer-candidate-assembly
     test('verifies native candidate and produces handoff without consumer implementation', (t) => {
       // Arrange
       const f = fixture(t);
@@ -149,6 +153,8 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(f.root, 'managed'))).toBe(false);
       expect(fs.existsSync(path.join(f.root, 'handoff/tmp'))).toBe(false);
     });
+    // contract_id: contract.ci-release-supplemental-asset.assembly
+    // flow_id: standard-installer-candidate-assembly
     test('revalidates downloaded platform evidence', (t) => {
       let input: string;
       if (process.env.CI_INSTALLER_PLATFORM_INPUT) input = path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_INPUT);

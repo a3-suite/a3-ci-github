@@ -39,9 +39,10 @@ describe('provider installer', () => {
   });
 });
 
-describe('contract.ci-release-supplemental-asset.outputs', () => {
-  // evidence_role: contract
+describe('provider installer', () => {
+  // evidence_role: supplemental
   // flow_id: standard-installer-entry-names
+  // Runs the Python assembly unit test instead of the Action, so it is not evidence of the Action outputs contract.
   // test_level: e2e
   describe('standard entry names', () => {
     test('rejects nonstandard public names before generating output', () => {

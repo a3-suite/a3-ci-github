@@ -231,3 +231,46 @@ test_maps:
           - rejected
           - diagnostic-failure-stage-outputs
           - publication-delete
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher rejects handoff changes during final absence observation before create
+        partition: runtime-context.release-publisher-invalid
+        guarantees:
+          - publication-write-on-rejection
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded asset inventory without repeating publication writes
+        partition: runtime-context.release-publisher-valid
+        guarantees:
+          - publication-write-retry
+          - publication-delete
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: create"
+        partition: publication-operation-failed
+        guarantees:
+          - publication-write-retry
+          - publication-recovery-write
+          - publication-created-id-binding
+          - publication-delete
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: upload"
+        partition: publication-operation-failed
+        guarantees:
+          - publication-write-retry
+          - publication-recovery-write
+          - publication-created-id-binding
+          - publication-delete
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: finalize"
+        partition: publication-operation-failed
+        guarantees:
+          - publication-write-retry
+          - publication-recovery-write
+          - publication-created-id-binding
+          - publication-delete
+      - path: runtime/release-publication/tests/publisher.test.mjs
+        symbol: "publisher > publisher > publisher does not retry or recover failed create upload finalize and readback: readback"
+        partition: publication-operation-failed
+        guarantees:
+          - publication-write-retry
+          - publication-recovery-write
+          - publication-created-id-binding
+          - publication-delete

@@ -3,10 +3,11 @@ import path from 'node:path';
 import { test, describe, expect } from 'vitest';
 import { scriptRoot, hasPwsh, nativePowerShells, withFixture, run, sha256, failureEvidence, initializeGitFixture } from "./rust-release-scripts.fixtures.mjs";
 
-describe("contract.ci-rust-release-build.processing", () => {
+describe("rust-release-scripts", () => {
   describe("rust-release-build-script", () => {
-    // contract_id: contract.ci-rust-release-build.processing
+    // evidence_role: supplemental
     // flow_id: rust-release-build-script
+    // Calls the platform verifier directly; the processing contract target is ci-release-build.sh.
     test.each(['src/verify-platform-manifest.mjs', 'dist/index.mjs'])('platform verifier %s rejects an unbound selection', (entrypoint) => withFixture((fixture) => {
       // Arrange
       const manifest = path.join(fixture, 'platforms.yml');
@@ -66,6 +67,24 @@ describe("contract.ci-rust-source-gate.processing", () => {
         classification: { subject: 'ci-rust-source-gate', stage: 'source-binding' },
         comparison: { field: 'source-sha', expected: 'a'.repeat(40), observed: sourceSha },
       });
+
+      // Arrange
+      const missingAuthority = path.join(fixture, 'missing-authority.json');
+      const authorityWith = (record) => { writeFileSync(authority, JSON.stringify(record)); return authority; };
+      for (const [name, args, stage, env] of [
+        ['unreadable authority', () => ['rust', missingAuthority], 'authority-read'],
+        ['requested profile is not Rust', () => ['python', authorityWith({ language_profile: 'rust', source_sha: sourceSha })], 'profile-binding'],
+        ['recorded profile is not Rust', () => ['rust', authorityWith({ language_profile: 'python', source_sha: sourceSha })], 'profile-binding'],
+        ['invalid source SHA', () => ['rust', authorityWith({ language_profile: 'rust', source_sha: sourceSha.slice(0, 39) })], 'source-binding'],
+        ['unreadable checkout HEAD', () => ['rust', authorityWith({ language_profile: 'rust', source_sha: sourceSha })], 'source-binding',
+          { ...process.env, GIT_DIR: path.join(fixture, 'missing-git-dir') }],
+      ]) {
+        // Act
+        const failed = run(path.join(scriptRoot, 'ci-source-gate.sh'), args(), { cwd: fixture, ...(env ? { env } : {}) });
+        // Assert
+        expect(failed.status, name).not.toBe(0);
+        expect(failureEvidence(failed.stderr), name).toMatchObject({ classification: { subject: 'ci-rust-source-gate', stage } });
+      }
     }));
   });
 });
@@ -668,10 +687,11 @@ describe("rust-release-scripts", () => {
 });
 
 
-describe("contract.ci-rust-release-build.processing", () => {
+describe("rust-release-scripts", () => {
   describe("rust-release-scripts-regression", () => {
-    // contract_id: contract.ci-rust-release-build.processing
+    // evidence_role: supplemental
     // flow_id: rust-release-scripts-regression
+    // Calls the PowerShell package and verify scripts directly; the processing contract target is ci-release-build.sh.
     test('PowerShell package failure removes staging and missing or mismatched artifacts fail closed', { skip: !hasPwsh }, () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli.exe');
@@ -733,8 +753,9 @@ describe("contract.ci-rust-release-build.processing", () => {
       });
     }));
 
-    // contract_id: contract.ci-rust-release-build.processing
+    // evidence_role: supplemental
     // flow_id: rust-release-scripts-regression
+    // Calls ci-release-build.ps1 directly on native Windows; the processing contract target is ci-release-build.sh.
     test('Windows build stops when native toolchain setup fails', { skip: nativePowerShells.length === 0 }, () => withFixture((fixture) => {
       // Arrange
       const sourceSha = initializeGitFixture(fixture);

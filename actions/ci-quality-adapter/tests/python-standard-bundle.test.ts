@@ -66,7 +66,8 @@ const fixture = (environmentPath = '.venv') => {
 };
 
 describe('ci-quality-adapter Python standard', () => {
-  // contract_id: contract.ci-quality-adapter.outputs
+  // evidence_role: supplemental
+  // Environment pruning and syntax traversal of the Python standard are not covered by a ci-quality-adapter guarantee.
   // flow_id: ci-quality-adapter-python-standard
   describe('managed environment scope', () => {
     test.each(['.venv', '.tools/env space+[x]', '../external-environment'])('preserves product layouts and prunes only the selected environment: %s', (environmentPath) => {

@@ -183,6 +183,16 @@ test_maps:
         guarantees:
           - phase-rejected
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed Action retains primary and cleanup failures safely
+        partition: runtime-context.supplemental-phase-invalid
+        guarantees:
+          - phase-rejected
+      - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
+        symbol: standard installer > assembly > distributed CLI retains primary and cleanup failures safely
+        partition: runtime-context.supplemental-phase-invalid
+        guarantees:
+          - phase-rejected
   - contract_id: contract.ci-release-supplemental-asset.assembly
     tests:
       - path: actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts
@@ -327,3 +337,18 @@ test_maps:
         guarantees:
           - phase-rejected
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
+        partition: runtime-context.supplemental-asset-release-valid
+        guarantees:
+          - phase-output
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
+        partition: runtime-context.supplemental-asset-release-invalid
+        guarantees:
+          - phase-rejected
+      - path: actions/ci-release-supplemental-asset/tests/phase.test.ts
+        symbol: supplemental-asset-release-source > asset release runs the owner adapter with empty build roots and rejects build inputs or platform phases
+        partition: runtime-context.supplemental-phase-invalid
+        guarantees:
+          - phase-rejected

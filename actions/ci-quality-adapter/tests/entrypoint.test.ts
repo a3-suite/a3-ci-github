@@ -96,6 +96,8 @@ test('entrypoint emits status and result path', () => {
   }
 });
 
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint reports failure when the result JSON cannot be saved', (t) => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-result-write-'));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -107,6 +109,7 @@ test('entrypoint reports failure when the result JSON cannot be saved', (t) => {
 
 // evidence_role: supplemental
 // Guards the predicate that the mapped tests apply to the real Action results.
+// flow_id: ci-quality-adapter-entrypoint-regression
 test('status consistency rejects success reported over a not-run command other than an unconfigured optional command', () => {
   // Arrange
   const unconfiguredPolicy = { id: 'dependency-policy', status: 'not-run', reason: 'not-configured' };
@@ -145,6 +148,7 @@ test('command timings preserve toolchain rejection and preparation stopping', (t
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint accepts the requested version as a standalone token', (t) => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-version-token-'));
@@ -161,6 +165,7 @@ test('entrypoint accepts the requested version as a standalone token', (t) => {
 });
 
 // contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint publishes the toolchain version mismatch code without child output', (t) => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-mismatch-'));
@@ -454,8 +459,14 @@ test('dependency policy rejects an unusable configuration before commands', (t) 
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
   const { inputs, commands } = rustPolicyFixture(root);
   fs.mkdirSync(path.join(root, 'runtime/deny-directory'));
+  // A relative path inside the checkout whose real file is outside it.
+  const outside = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-outside-'));
+  t.onTestFinished(() => fs.rmSync(outside, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(outside, 'deny.toml'), '');
+  fs.symlinkSync(path.join(outside, 'deny.toml'), path.join(root, 'runtime/linked-deny.toml'));
   for (const [config, code] of [['runtime/missing-deny.toml', 'environment-path-missing'], ['runtime/deny-directory', 'environment-path-missing'],
-    [path.join(root, 'runtime/deny.toml'), 'environment-path-invalid'], ['../deny.toml', 'environment-path-missing']] as const) {
+    [path.join(root, 'runtime/deny.toml'), 'environment-path-invalid'], ['../deny.toml', 'environment-path-missing'],
+    ['runtime/linked-deny.toml', 'environment-path-outside-root']] as const) {
     for (const scope of ['all', 'native']) {
       // Act
       const run = runAction(root, 'ignored', { ...inputs, 'INPUT_EXECUTION-SCOPE': scope, CI_CARGO_DENY_VERSION: '0.20.2', CI_CARGO_DENY_CONFIG_PATH: config });
@@ -575,7 +586,8 @@ test('native Rust scope retains toolchain preparation and native command failure
   expect(unwritable.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"output-write"/m);
 });
 
-// flow_id: ci-quality-adapter-entrypoint-regression
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint rejects a non-read-only descriptor', () => {
   // Arrange
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-entry-'));
@@ -587,14 +599,29 @@ test('entrypoint rejects a non-read-only descriptor', () => {
   // Assert
   expect(result.status, result.stderr).toBe(1);
   expect(fs.readFileSync(run.output, 'utf8')).toMatch(/status.*failed/s);
-  expect(fs.existsSync(run.resultPath)).toBe(false);
-  expect(run.filesAfter).toEqual(run.filesBefore);
-  expect(result.stdout).not.toMatch(/\"schema\": \"ci\.adapter-runner\.v1\"/);
   expect(`${result.stdout}${result.stderr}`).toMatch(/quality-adapter-execution-boundary-invalid/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-// contract_id: contract.ci-quality-adapter.outputs
+// contract_id: contract.ci-failure-diagnostics.existing-state
+// flow_id: ci-quality-adapter-existing-state
+test('non-read-only descriptor rejection leaves no result file', (t) => {
+  // Arrange
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-adapter-entry-'));
+  t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  // Act
+  const run = runAction(root, descriptor('trusted-control'));
+
+  // Assert
+  expect(run.result.status, run.result.stderr).toBe(1);
+  expect(fs.existsSync(run.resultPath)).toBe(false);
+  expect(run.filesAfter).toEqual(run.filesBefore);
+  expect(run.result.stdout).not.toMatch(/\"schema\": \"ci\.adapter-runner\.v1\"/);
+});
+
+// evidence_role: supplemental
+// Protection of arbitrary child output and command ids is not covered by a ci-quality-adapter guarantee.
 // flow_id: ci-quality-adapter-contract-entrypoint
 test('entrypoint keeps unsafe child output out of logs and the public result', (t) => {
   fs.mkdirSync(path.resolve(__dirname, '../../../tmp'), { recursive: true });

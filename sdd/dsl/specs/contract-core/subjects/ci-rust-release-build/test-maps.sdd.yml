@@ -23,6 +23,12 @@ test_maps:
           - diagnostic-failure-stage-processing
           - rust-release-processing-fails
           - rust-release-rejected-final-output-safe
+      - path: runtime/rust-release/tests/rust-release-scripts.process.test.mjs
+        symbol: contract.ci-rust-release-build.processing > rust-release-build-script > Windows wrapper delegates manifest validation without invoking Node twice
+        partition: runtime-context.rust-release-build-rejected
+        guarantees:
+          - rust-release-processing-fails
+          - rust-release-rejected-final-output-safe
       - path: tests/runtime-failure-diagnostics.test.mjs
         symbol: runtime failure diagnostics > rust-build rejects invalid invocation with retained shell failure context
         partition: runtime-context.rust-release-build-rejected
