@@ -6,7 +6,7 @@
 
 前提の記載は`references/use-standard-installer.guide.md`の「READMEに残す内容」に従う。追加準備が不要なら前提の段落自体を削除し、通常使えるツールの説明を補わない。これらの転用説明は製品READMEへ掲載しない。
 
-公開版のオンライン導入（「Linux・macOS」「Windows」）と「非公開リポジトリの場合」は、`references/use-standard-installer.guide.md`の「リポジトリの公開範囲と表示パターン」で選んだパターンに合わせ、併記するか一方だけを残す。
+公開版のオンライン導入（「Linux・macOS」「Windows」）と「非公開リポジトリの場合」は、`references/use-standard-installer.guide.md`の「リポジトリの公開範囲と表示パターン」で選んだパターンに合わせて残す。公開リポジトリの既定は併記とする。
 
 Agent Skill節は、製品と同じReleaseに対応ZIPを提供する場合だけ使う。ZIPリンクを実際の製品Releaseへ置換し、外部skill rootや他製品のスキルを削除する例は書かない。
 
