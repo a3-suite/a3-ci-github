@@ -35,27 +35,27 @@ contracts:
       - id: quality-adapter-bundle-present
         summary: A valid custom bundle is selected by path and can publish its result. Any requested toolchain check either matches the expected version or cannot run. A command that runs and returns a rejected version report has its own condition.
       - id: runtime-context.action-input-invalid
-        summary: Bundle selection, descriptor or other required input or preparation validation rejects the invocation before a result is computed. Native scope and dependency-policy input rejection have their own conditions.
+        summary: Bundle selection, descriptor or other required input or preparation validation rejects the invocation before a result is computed. Native scope and dependency-policy input rejection have their own conditions. Other rejected inputs include unsafe or authority-mismatching input.
       - id: quality-adapter-standard-bundle-present
         summary: A valid built-in bundle uses default or all scope and can publish its result. Separate conditions cover a rejected toolchain version report and Rust invocations that reach the dependency-policy check.
       - id: runtime-context.quality-adapter-toolchain-version-report-rejected
-        summary: A default or all scope invocation meets the shared runtime context `runtime-context.quality-adapter-toolchain-version-report-rejected` and can publish its result.
+        summary: In a default or all scope invocation, a quality adapter toolchain version command does not report the requested version as an independent token, or the command exits non-zero. The invocation can publish its result.
       - id: runtime-context.ci-quality-adapter-native-rust-valid
-        summary: A valid embedded Rust invocation selects native scope, every prerequisite and selected check succeeds, and the result and Action outputs can be written.
+        summary: A valid embedded Rust invocation selects native scope, every prerequisite and selected check succeeds, and the result and Action outputs can be written. The invocation selects valid fixed source paths.
       - id: quality-adapter-native-rust-version-rejected
         summary: A valid embedded Rust invocation selects native scope, the toolchain command runs but fails or does not report the requested version, and the result and Action outputs can be written.
       - id: quality-adapter-native-rust-execution-failed
         summary: A valid embedded Rust invocation selects native scope and the toolchain command is unavailable, dependency restoration fails or is unavailable, or a selected native check fails or is unavailable. The result and Action outputs can be written.
       - id: runtime-context.ci-quality-adapter-native-scope-rejected
-        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-native-scope-rejected`.
+        summary: A native execution request selects a non-Rust bundle or a local descriptor, or the requested execution scope is unknown.
       - id: runtime-context.ci-quality-adapter-dependency-policy-unconfigured
         summary: The Rust default or all scope invocation reaches the policy check with both optional settings empty and can publish its result.
       - id: runtime-context.ci-quality-adapter-dependency-policy-configured
-        summary: The Rust default or all scope invocation reaches the configured policy check and can publish its result. A nonzero policy command that returns structured violation evidence has its own condition.
+        summary: The Rust default or all scope invocation reaches the configured policy check and can publish its result. A nonzero policy command that returns structured violation evidence has its own condition. The invocation supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout.
       - id: runtime-context.ci-quality-adapter-dependency-policy-config-unusable
-        summary: The invocation meets the shared runtime context `runtime-context.ci-quality-adapter-dependency-policy-config-unusable`.
+        summary: A rust-cargo-quality invocation supplies only one of CI_CARGO_DENY_VERSION and CI_CARGO_DENY_CONFIG_PATH, or a CI_CARGO_DENY_CONFIG_PATH that is absolute, missing, not a regular file, or outside the source checkout.
       - id: runtime-context.ci-quality-adapter-dependency-policy-violation
-        summary: The Rust default or all scope invocation reaches the configured policy check, receives a nonzero result with structured violation evidence, and can publish its result.
+        summary: The Rust default or all scope invocation reaches the configured policy check, receives a nonzero result with structured violation evidence, and can publish its result. The invocation supplies a nonempty CI_CARGO_DENY_VERSION and a relative CI_CARGO_DENY_CONFIG_PATH naming a regular file inside the source checkout, and its prerequisites succeed. Its cargo-deny JSON output reports error diagnostics and a per-check summary together with message, label and span text.
     guarantees:
       - id: quality-adapter-matching-toolchain-allows-preparation
         applies_to:

@@ -19,7 +19,7 @@ contracts:
       - id: runtime-context.failure-diagnostic-required
         summary: A required Action input is absent or invalid, the provider cannot resolve the requested annotated tag and commit with canonical SHAs, or writing an Action output fails.
       - id: runtime-context.annotated-tag-resolution-valid
-        summary: The invocation meets the shared runtime context `runtime-context.annotated-tag-resolution-valid` and can write all Action outputs.
+        summary: Repository and tag inputs are valid, credentials permit access to the configured provider, and its tag records identify an annotated tag and referenced commit with canonical SHAs. The invocation can write all Action outputs.
     guarantees:
       - id: tag-resolution-outputs-produced
         applies_to:

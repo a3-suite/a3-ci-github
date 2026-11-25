@@ -125,7 +125,7 @@ contracts:
       - id: ci-preset-assurance-lock-input-invalid
         summary: The lock request has a missing or malformed exact release tag or a noncanonical source revision.
       - id: runtime-context.ci-preset-assurance-canonical-lock-input
-        summary: The invocation meets the shared runtime context `runtime-context.ci-preset-assurance-canonical-lock-input`.
+        summary: A full immutable source revision and a complete configured canonical preset are supplied for lock generation. Managed workflow bytes, registry-projected pin companions and required settings conform to the provider inputs; source and consumer files remain readable and unchanged through the invocation.
     guarantees:
       - id: ci-preset-assurance-lock-source-bound
         applies_to:

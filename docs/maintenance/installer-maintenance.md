@@ -19,7 +19,7 @@ installer はこのリポジトリの機能として保守します。公開仕�
 
 ## 実装方式
 
-Windows installerの対応環境は、[標準installerの区分定義](../../sdd/dsl/specs/contract-core/environments/github-actions.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
+Windows installerの対応環境は、[標準installerの区分定義](../../sdd/dsl/specs/contract-core/subjects/ci-release-supplemental-asset/subject.sdd.yml)に従いWindows PowerShell 5.1以降とし、PowerShell 7系への更新を必須にしません。OS処理は両環境で動く共通実装として保守し、Windows CIで5.1と7系の同じ安全性テストを実行します。
 
 配布する`.ps1`はUTF-8 BOM付きで生成します。5.1が日本語などを含む配置先をシステムのANSI文字コードで誤読しないためです。ZIPの安全検査後の展開には.NET APIを使い、外部tarの文字コードで配置先が変わることを避けます。
 

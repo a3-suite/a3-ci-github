@@ -19,7 +19,7 @@ contracts:
       - id: runtime-context.repository-action-distribution-inputs-available
         summary: The available Action metadata and build inputs are valid, required distribution and script paths are tracked, and rebuilding produces the expected tracked distribution bytes.
       - id: runtime-context.repository-action-distribution-inconsistent
-        summary: Required metadata, build inputs or tracked paths are missing or invalid, a build fails, or a rebuilt distribution differs from the tracked distribution.
+        summary: Required metadata, build inputs or tracked paths are missing or invalid, a build fails, or a rebuilt distribution differs from the tracked distribution. An untracked distribution file also causes rejection.
     guarantees:
       - id: consistent-distribution-accepted
         applies_to:
@@ -76,7 +76,7 @@ contracts:
       - id: runtime-context.failure-diagnostic-required
         summary: Source verification encounters invalid metadata or a selected typecheck or test command fails.
       - id: runtime-context.repository-action-distribution-inputs-available
-        summary: Discovered bundled Action metadata and shared runtime test configuration are valid, and their selected verification commands succeed.
+        summary: Discovered bundled Action metadata and shared runtime test configuration are valid, and their selected verification commands succeed. Action definitions, build metadata, tracked distribution paths, and Composite Action script references are available to the distribution gate.
     guarantees:
       - id: source-verification-actions-covered
         applies_to:
@@ -121,13 +121,13 @@ contracts:
       - id: runtime-context.failure-diagnostic-required
         summary: The caller selects update mode and release identity, VERSION and source validation succeed, but alias observation, preparation, push or readback fails.
       - id: runtime-context.repository-release-version-invalid-or-mismatched
-        summary: The invocation meets the shared runtime context `runtime-context.repository-release-version-invalid-or-mismatched`.
+        summary: The target source commit has no VERSION, its VERSION is not a valid X.Y.Z release version, or that version differs from the exact release tag.
       - id: runtime-context.repository-release-alias-update-valid
-        summary: The invocation meets the shared runtime context `runtime-context.repository-release-alias-update-valid`.
+        summary: An alias update request with validation-mode validate-only names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip.
       - id: runtime-context.repository-release-alias-update-applied
-        summary: The invocation satisfies the shared update context, and post-push readback confirms each updated alias.
+        summary: An alias update request with validation-mode update names an annotated release tag whose release VERSION matches the tag and whose source is integrated into main or is the canonical hotfix tip, and the remote accepts every alias tag push that the update needs, whether the aliases are absent, older, equal to the release, or newer. Post-push readback confirms each updated alias.
       - id: runtime-context.repository-release-alias-update-invalid
-        summary: The invocation stops before alias observation because release identity, repository or origin availability, tag provenance, source integration, or mode validation fails. VERSION rejection has its own condition.
+        summary: The invocation stops before alias observation because release identity, repository or origin availability, tag provenance, source integration, or mode validation fails. VERSION rejection has its own condition. Source integration rejection includes a stale hotfix branch or base.
     guarantees:
       - id: release-version-confirmed
         applies_to:
