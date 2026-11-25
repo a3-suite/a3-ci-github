@@ -84,7 +84,7 @@ node runtime/repository/update-action-index.mjs --check
 
 ```sh
 npm test -- tests/action-index-gate.test.mjs
-npm test -- tests/action-dist-gate.test.mjs
+npm test -- tests/action-dist-gate.test.mjs tests/action-dist-gate-plan.test.mjs
 npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 npm test -- runtime/rust-release/tests/rust-release-scripts.test.mjs
 node tests/coverage-tools/contract-subject-coverage.mjs --check

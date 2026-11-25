@@ -400,6 +400,21 @@ test_maps:
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > preparation gate rejects an unexecutable fixed bundle: const = ;"
+        partition: runtime-context.selective-distribution-provider-reference-check-invalid
+        guarantees:
+          - selective-distribution-provider-reference-check-rejected
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: "workflow-contracts > repository-quality-delivery-regression > preparation gate rejects an unexecutable fixed bundle: require('a3-reference-test-missing-module');"
+        partition: runtime-context.selective-distribution-provider-reference-check-invalid
+        guarantees:
+          - selective-distribution-provider-reference-check-rejected
+      - path: tests/workflow-contracts.process.test.mjs
+        symbol: workflow-contracts > repository-quality-delivery-regression > candidate gate reports uncommitted execution assets as an actionable reason
+        partition: runtime-context.selective-distribution-provider-reference-check-invalid
+        guarantees:
+          - selective-distribution-provider-reference-check-rejected
       - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects a runtime entry added outside provider maintenance
         partition: runtime-context.selective-distribution-provider-reference-check-invalid

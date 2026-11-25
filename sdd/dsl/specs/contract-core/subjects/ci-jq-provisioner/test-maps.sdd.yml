@@ -4,6 +4,20 @@ test_maps:
   - contract_id: contract.ci-jq-provisioner.provision
     tests:
       - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
+        symbol: source entrypoint > Action rejects unset runner paths before provisioning
+        partition: runtime-context.jq-release-asset-invalid
+        guarantees:
+          - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
+          - failed-provisioning-no-path-handoff
+      - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
+        symbol: dist entrypoint > Action rejects unset runner paths before provisioning
+        partition: runtime-context.jq-release-asset-invalid
+        guarantees:
+          - failed-provisioning-stops
+          - diagnostic-failure-stage-provision
+          - failed-provisioning-no-path-handoff
+      - path: actions/ci-jq-provisioner/tests/entrypoint.test.ts
         symbol: source entrypoint > Action preserves existing PATH entries when final handoff fails
         partition: runtime-context.jq-release-asset-invalid
         guarantees:

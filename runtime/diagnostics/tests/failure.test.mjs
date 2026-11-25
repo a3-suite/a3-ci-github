@@ -13,6 +13,7 @@ describe('failure evidence', () => {
     expect(evidence['next-check'].unknownCause).toBe(true);
   });
   // target_id: FailureContext.report(error)
+  // evidence_role: supplemental
   test('diagnostic sink failure does not mask primary failure or retry', () => {
     const sink = vi.spyOn(process.stderr, 'write').mockImplementation(() => { throw new Error('sink failed'); });
     try {

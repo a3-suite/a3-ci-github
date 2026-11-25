@@ -638,6 +638,7 @@ describe("contract.ci-rust-release-build.processing", () => {
 describe("rust-release-scripts", () => {
   describe("rust-release-scripts-regression", () => {
     // flow_id: rust-release-scripts-regression
+    // evidence_role: supplemental
     test('PowerShell package and verification roundtrip when pwsh is available', { skip: !hasPwsh }, () => withFixture((fixture) => {
       // Arrange
       const binary = path.join(fixture, 'example-cli.exe');

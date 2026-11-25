@@ -123,6 +123,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('canonical quality bootstrap scripts preserve standard custom and fork boundaries', () => {
       const lock = '.ci-base/.ci/ci-assets.lock.json';
       const descriptor = '.ci-base/.ci/adapters/custom.yml';
@@ -212,6 +213,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('trusted Rust quality caches the Cargo registry and normalized target directory under a toolchain and lock key', () => {
       // Arrange
       const steps = yaml.parse(read('.github/workflows/ci-quality.yml')).jobs.trusted.steps;
@@ -315,6 +317,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("package-publication-workflow-contract", () => {
     // flow_id: package-publication-workflow-contract
+    // evidence_role: supplemental
     test('package workflows keep their request, preparation and version plan configuration', () => {
       const request = read('workflows/package/package-publication-request.yml');
       const caller = read('workflows/package/package-publication-caller.yml');
@@ -488,6 +491,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository workflow provider actions use registry-approved pins', () => {
       const entries = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml')).providerActions.entries;
       const approved = new Map(entries.map((entry) => [entry.action, entry.commitSha]));

@@ -160,6 +160,20 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expectStopped(outcome, paths, 'asset-install');
   });
 
+  test('Action rejects unset runner paths before provisioning', () => {
+    for (const unset of ['RUNNER_TEMP', 'GITHUB_PATH']) {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { [unset]: '' }, {});
+      // Assert
+      expect(outcome.result.status, unset).toBe(1);
+      expect(failureDiagnostic(outcome.result.stderr), unset).toMatchObject({ classification: { subject: 'ci-gh-provisioner', stage: 'input-validation', reason: 'gh-provision-failed-runner-paths-unavailable' } });
+      expect(readGithubPath(paths.githubPath), unset).toBeUndefined();
+      expect(provisionedDirectories(paths.runnerTemp), unset).toEqual([]);
+    }
+  });
+
   test('Action rejects an installation failure before PATH handoff', () => {
     // Arrange
     const paths = workspace();

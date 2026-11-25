@@ -117,7 +117,6 @@ describe("repository-contract-subject-execution", () => {
         ['integration-bundle', 'integration', 'active'],
         ['e2e-bundle-process', 'e2e', 'active'],
         ['e2e-diagnostics', 'e2e', 'active'],
-        ['integration-shared-trust', 'integration', 'active'],
         ['e2e-shared-trust-boundary', 'e2e', 'active'],
       ]);
     expect(platform.segments[0].coverage.include).toStrictEqual(['src/**/*.ts']);
@@ -134,12 +133,16 @@ describe("repository-contract-subject-execution", () => {
     expect(composite.segments[1].level).toBe('e2e');
     expect(materialization.segments[1].tests).toStrictEqual(['../adapter/tests/materialize-adapter-bundle.test.mjs', '../adapter/tests/generate-standard-quality-bundles.test.mjs']);
     expect(presetAssurance.segments[1].tests).toStrictEqual([
+      'tests/preset-validation-contract.integration.test.mjs',
+      'tests/publication-validation.test.mjs',
+      'tests/reusable-quality-workflow.test.mjs',
+    ]);
+    // These files observe preset assurance through child-process CLIs, so they belong to the E2E boundary.
+    expect(presetAssurance.segments[2].tests.slice(0, 4)).toStrictEqual([
       'tests/preset-validation-contract.test.mjs',
       'tests/action-availability.test.mjs',
-      'tests/publication-validation.test.mjs',
       'tests/quality-platform-selection.test.mjs',
       'tests/standard-quality-bundles.test.mjs',
-      'tests/reusable-quality-workflow.test.mjs',
     ]);
     for (const subject of [workflow, packageWorkflow]) {
       const segment = subject.segments.find((entry) => entry.id === 'integration-contract');

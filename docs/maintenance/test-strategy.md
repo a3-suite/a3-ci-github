@@ -57,7 +57,7 @@ Hosted検証では、本番のAPI取得条件（ページサイズを含む）�
 
 ## 実行
 
-リポジトリ全体のローカル回帰には、品質ゲートの `setup-node` が指定する Node.js と npm、Git、Bash、`tar`、Python が必要です。Unix 系の toolchain verifier の回帰は Bash と標準の `awk`、`sed`、`env` を使用します。Python は Unix 系で `python3`、Windows で `python` として解決できるようにします。JavaScript のテスト依存は各パッケージの lockfile から復元します。PowerShell の梱包・組立ケースは `pwsh` が見つからない環境でスキップし、Windows の toolchain 検査は Windows 上で実行します。これらのケースは品質ゲートの Windows Rust release ジョブの結果を確認します。
+リポジトリ全体のローカル回帰には、品質ゲートの `setup-node` が指定する Node.js と npm、Git、Bash、`tar`、Python、`jq` が必要です。Unix 系の toolchain verifier の回帰は Bash と標準の `awk`、`sed`、`env` を使用します。Python は Unix 系で `python3`、Windows で `python` として解決できるようにします。JavaScript のテスト依存は各パッケージの lockfile から復元します。PowerShell の梱包・組立ケースは `pwsh` が見つからない環境でスキップし、Windows の toolchain 検査は Windows 上で実行します。これらのケースは品質ゲートの Windows Rust release ジョブの結果を確認します。
 
 標準 installer の各プラットフォーム間で受入資材を受け渡す場合、`CI_INSTALLER_PLATFORM_INPUT`、`CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT`、`CI_INSTALLER_ACCEPTANCE_OUTPUT` はプロジェクトルート相対のパスで指定します。未設定時のローカル回帰はテスト自身が資材を生成します。
 

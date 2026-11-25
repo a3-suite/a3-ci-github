@@ -353,7 +353,7 @@ describe("contract.ci-package-publication-workflow.publication", () => {
 describe("contract.ci-preset-assurance.verification", () => {
   describe("preset-assurance-contract", () => {
     // integration_id: preset-assurance-contract
-    // contract_id: contract.ci-preset-assurance.verification
+    // evidence_role: supplemental
     test('quality toolchain preflight rejects missing extra and altered input bindings', () => {
       const registry = loadRegistry(createReport());
       const inputs = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}' };
