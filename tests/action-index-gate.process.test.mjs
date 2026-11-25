@@ -61,22 +61,31 @@ describe("contract.repository-action-distribution.catalog", () => {
       expect(after).toBe(readme);
     });
 
-    // contract_id: contract.repository-action-distribution.catalog
-    // flow_id: repository-action-distribution-gates
-    test.each([
+    const failedCatalogCases = [
       ['the README is missing', null, {}, 'catalog-input-read'],
       ['Action metadata lacks a description', readme, { metadata: 'name: alpha\n' }, 'action-metadata-validation'],
       ['the README lacks the catalog section', '# project\n', {}, 'catalog-projection'],
       ['the catalog section lacks the table', '# project\n\n## Action一覧\n\nNo table.\n', {}, 'catalog-projection'],
-    ])('reports the failed stage when %s', (_case, source, metadata, stage) => {
-      const { result, readme: after } = runCatalog(source, [
-        { name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha', ...metadata },
-      ], '--check');
+    ];
+    const runFailedCatalog = (source, metadata) => runCatalog(source, [
+      { name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha', ...metadata },
+    ], '--check');
+
+    // contract_id: contract.repository-action-distribution.catalog
+    // flow_id: repository-action-distribution-gates
+    test.each(failedCatalogCases)('reports the failed stage when %s', (_case, source, metadata, stage) => {
+      const { result } = runFailedCatalog(source, metadata);
 
       expect(result.status).toBe(1);
       const diagnostic = result.stderr.match(/^ci-failure-diagnostic:(.+)$/m);
       expect(diagnostic, result.stderr).not.toBeNull();
       expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ subject: 'repository-action-distribution', stage });
+    });
+
+    // evidence_role: supplemental
+    // flow_id: repository-action-distribution-gates
+    test.each(failedCatalogCases)('preserves the README when %s', (_case, source, metadata) => {
+      const { readme: after } = runFailedCatalog(source, metadata);
       expect(after).toBe(source);
     });
 

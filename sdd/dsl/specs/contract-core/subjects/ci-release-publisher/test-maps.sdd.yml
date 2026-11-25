@@ -232,11 +232,6 @@ test_maps:
           - diagnostic-failure-stage-outputs
           - publication-delete
       - path: runtime/release-publication/tests/publisher.test.mjs
-        symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher rejects handoff changes during final absence observation before create
-        partition: runtime-context.release-publisher-invalid
-        guarantees:
-          - publication-write-on-rejection
-      - path: runtime/release-publication/tests/publisher.test.mjs
         symbol: contract.ci-release-publisher.outputs > release-publisher-source-flow > publisher waits for uploaded asset inventory without repeating publication writes
         partition: runtime-context.release-publisher-valid
         guarantees:

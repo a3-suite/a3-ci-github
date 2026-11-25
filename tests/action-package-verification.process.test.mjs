@@ -107,8 +107,7 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
         expect(JSON.parse(diagnostic[1]).classification).toMatchObject(mode === 'test-failure'
           ? { stage: 'test', reason: 'action-source-verification-failed' }
           : { stage: 'action-inventory' });
-        expect(invocations.map(({ runner }) => runner)).toStrictEqual(mode === 'test-failure' ? ['npm', 'vitest'] : []);
-        return;
+        return invocations;
       }
       expect(result.status, result.stdout + result.stderr).toBe(0);
       expect(result.stdout).toContain('Action source verification passed (1 bundled Actions).');
@@ -135,6 +134,13 @@ if (output) fs.writeFileSync(output.slice('--outputFile='.length), JSON.stringif
     // contract_id: contract.repository-action-distribution.source-verification
     // flow_id: repository-action-source-verification
     test('source verification CLI reports the inventory stage for invalid Action metadata', (t) => runSourceVerificationCli(t, 'metadata-invalid'));
+
+    // evidence_role: supplemental
+    // flow_id: repository-action-source-verification
+    test.for(['test-failure', 'metadata-invalid'])('source verification CLI stops running tools after %s', (mode, t) => {
+      const invocations = runSourceVerificationCli(t, mode);
+      expect(invocations.map(({ runner }) => runner)).toStrictEqual(mode === 'test-failure' ? ['npm', 'vitest'] : []);
+    });
 
     // evidence_role: supplemental
     // Running neither install nor build is an implementation detail that no contract guarantee covers.

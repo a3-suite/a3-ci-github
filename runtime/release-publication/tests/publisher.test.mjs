@@ -93,8 +93,9 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(state.writes.filter(([operation]) => operation === 'create')).toHaveLength(1);
     });
 
-    // contract_id: contract.ci-release-publisher.outputs
+    // evidence_role: supplemental
     // integration_id: release-publisher-source-flow
+    // Also checks the absence of an output directory; the Action cases cover provider write rejection.
     test('publisher rejects handoff changes during final absence observation before create', async (t) => {
       const state = await setup(t);
       const list = state.client.list;
