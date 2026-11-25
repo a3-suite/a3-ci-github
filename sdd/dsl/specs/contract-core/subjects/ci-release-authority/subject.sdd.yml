@@ -25,11 +25,11 @@ contracts:
         meaning: "Received by the contract target: release implementation recorded in the snapshot."
     conditions:
       - id: runtime-context.release-authority-valid
-        summary: The verified release inputs select a platform-bound implementation with a matching manifest, and authority and Action outputs can be written.
+        summary: The verified release inputs select a platform-bound implementation with a matching manifest, and authority and Action outputs can be written. Explicit owner Release decision, authorized request runs, approved notes, fixed tag/source, owner receiving workflow and trusted snapshot agree with the target repository identity.
       - id: runtime-context.release-authority-asset-only-valid
-        summary: The verified release inputs select the asset-only implementation, and authority and Action outputs can be written.
+        summary: The verified release inputs select the asset-only implementation, and authority and Action outputs can be written. The owner decision, authorized request runs, approved notes, fixed tag/source and owner receiving workflow agree, and the trusted snapshot selects the asset release implementation without language profile, toolchain or platform manifest.
       - id: runtime-context.release-authority-invalid
-        summary: Inputs or provider responses cannot establish an approved authority, or the authority handoff cannot be written. No Action output write has started.
+        summary: Inputs or provider responses cannot establish an approved authority, or the authority handoff cannot be written. No Action output write has started. Rejection includes decision or provenance that is missing, legacy-only, changed or expired, or tag/source, owner receiving workflow, snapshot or provider state that is inconsistent or unknown.
       - id: release-authority-output-write-denied
         summary: The authority handoff has been written but writing the Action outputs fails.
     guarantees:

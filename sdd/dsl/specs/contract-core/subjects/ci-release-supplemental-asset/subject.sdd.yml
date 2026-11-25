@@ -49,9 +49,9 @@ contracts:
         meaning: "Precondition prepared by the case: failure that the case injects into the processing or its provider."
     conditions:
       - id: runtime-context.supplemental-phase-valid
-        summary: The selected phase receives valid inputs and evidence, its new output directory can be created, and the Action outputs can be written.
+        summary: The selected phase receives valid inputs and evidence, its new output directory can be created, and the Action outputs can be written. The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints. Selected native targets are Linux, macOS or Windows; Windows installer execution runs on Windows PowerShell 5.1 or later, and a shared wrapper targets Linux and macOS only.
       - id: runtime-context.supplemental-phase-invalid
-        summary: The phase rejects invalid inputs or fails before writing Action outputs. An existing output directory has its own condition.
+        summary: The phase rejects invalid inputs or fails before writing Action outputs. An existing output directory has its own condition. Rejection includes invalid phase inputs, snapshot, owner selection, checkout or output destination other than an existing output directory, violation of installer owner public entry naming constraints, owner failure or absence of nonempty output, changed read-only inputs, or an unsupported selected native target or installer shell.
       - id: existing-output-rejected
         summary: The phase rejects an output directory path that already exists.
       - id: supplemental-action-output-write-failed
@@ -128,15 +128,15 @@ contracts:
         meaning: "Precondition prepared by the case: content of the standard and supplemental build roots."
     conditions:
       - id: runtime-context.supplemental-phase-valid
-        summary: A platform release uses a valid owner adapter phase or standard installer build-platform phase, and required destinations can be written.
+        summary: A platform release uses a valid owner adapter phase or standard installer build-platform phase, and required destinations can be written. The selected v2 owner phase has authority-bound configuration, a matching fixed checkout, safe unchanged inputs, exit zero and a new nonempty output directory. Standard-installer declarations also satisfy installer owner public entry naming constraints. Selected native targets are Linux, macOS or Windows; Windows installer execution runs on Windows PowerShell 5.1 or later, and a shared wrapper targets Linux and macOS only.
       - id: runtime-context.supplemental-phase-invalid
-        summary: A platform release cannot complete the selected phase or emit the required Action outputs. CLI phase-input mismatch has its own condition.
+        summary: A platform release cannot complete the selected phase or emit the required Action outputs. CLI phase-input mismatch has its own condition. Other rejection criteria include invalid phase inputs, snapshot, owner selection, checkout or output destination, violation of installer owner public entry naming constraints, owner failure or absence of nonempty output, changed read-only inputs, or an unsupported selected native target or installer shell.
       - id: runtime-context.standard-installer-evidence-valid
-        summary: Standard installer assemble receives complete, matching transferred candidate evidence for the selected release platforms and required destinations can be written.
+        summary: Standard installer assemble receives complete, matching transferred candidate evidence for the selected release platforms and required destinations can be written. The transported candidates are authority-bound, their exact file inventories and SHA-256 bytes match their platform records, and their native verification succeeds.
       - id: runtime-context.supplemental-asset-release-valid
-        summary: An asset-only release has valid owner adapter inputs, empty build roots, and writable destinations.
+        summary: An asset-only release has valid owner adapter inputs, empty build roots, and writable destinations. Authority and snapshot record an asset release; the owner adapter runs the assemble phase with empty standard and supplemental build roots, keeps them unchanged, exits zero and creates a new nonempty output directory.
       - id: runtime-context.supplemental-asset-release-invalid
-        summary: An asset-only release has invalid phase inputs, fails assembly, or cannot write required Action outputs.
+        summary: An asset-only release has invalid phase inputs, fails assembly, or cannot write required Action outputs. Invalid phase inputs include a nonempty build root, selection of a platform phase or the standard installer, or mixed platform values between authority and snapshot.
       - id: installer-cli-phase-input-mismatch
         summary: The installer CLI receives a supplemental build root in build-platform, or receives no supplemental build root in assemble.
     guarantees:

@@ -6,6 +6,7 @@ import { scriptRoot } from "./rust-release-scripts.fixtures.mjs";
 describe("rust-release-scripts", () => {
   describe("rust-release-scripts-regression", () => {
     // integration_id: rust-release-scripts-regression
+    // evidence_role: supplemental
     test('Windows build uses case-sensitive package and binary version token checks', () => {
       // Arrange
       // Act
@@ -18,7 +19,8 @@ describe("rust-release-scripts", () => {
     });
 
     // integration_id: rust-release-scripts-regression
-    test('Windows package verifies staging before publishing the final output directory', () => {
+    // evidence_role: supplemental
+    test('Windows package script places staging verification before publishing the final output directory', () => {
       // Arrange
       // Act
       const script = readFileSync(path.join(scriptRoot, 'package-release.ps1'), 'utf8');
@@ -27,6 +29,7 @@ describe("rust-release-scripts", () => {
       expect(script).toMatch(/TrimEnd\(\[IO\.Path\]::DirectorySeparatorChar/);
       expect(script).toMatch(/\[IO\.Directory\]::Move\(\$staging, \$outputPath\)/);
       expect(script).toMatch(/\[IO\.Directory\]::Delete\(\$staging, \$true\)/);
+      expect(script.search(/verify-release-asset\.ps1.*\$staging/)).toBeLessThan(script.search(/\[IO\.Directory\]::Move\(\$staging, \$outputPath\)/));
     });
   });
 });

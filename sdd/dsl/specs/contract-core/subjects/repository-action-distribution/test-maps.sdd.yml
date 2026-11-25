@@ -26,17 +26,37 @@ test_maps:
   - contract_id: contract.repository-action-distribution.catalog
     tests:
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > preserves curated rows and appends newly discovered actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > removes rows for deleted actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > removes rows for deleted actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the projection stage when the catalog is stale
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the projection stage when the catalog is stale
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-catalog
+      - path: tests/action-index-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the README is missing
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-catalog
+      - path: tests/action-index-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when Action metadata lacks a description
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-catalog
+      - path: tests/action-index-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the README lacks the catalog section
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-catalog
+      - path: tests/action-index-gate.process.test.mjs
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the catalog section lacks the table
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
@@ -50,6 +70,16 @@ test_maps:
           - source-verification-runtime-tests-covered
       - path: tests/action-package-verification.process.test.mjs
         symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI reports the failed typecheck stage
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-source-verification
+      - path: tests/action-package-verification.process.test.mjs
+        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI reports the failed test stage
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-source-verification
+      - path: tests/action-package-verification.process.test.mjs
+        symbol: contract.repository-action-distribution.source-verification > repository-action-source-verification > source verification CLI reports the inventory stage for invalid Action metadata
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-source-verification
@@ -80,6 +110,7 @@ test_maps:
         partition: runtime-context.repository-release-alias-update-invalid
         guarantees:
           - alias-tags-preserved
+          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > release tags reject development VERSION even when integrated into main
         partition: runtime-context.repository-release-version-invalid-or-mismatched
@@ -129,18 +160,39 @@ test_maps:
         partition: runtime-context.repository-release-alias-update-invalid
         guarantees:
           - alias-tags-preserved
+          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at tree
         partition: runtime-context.repository-release-alias-update-invalid
         guarantees:
           - alias-tags-preserved
+          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > integration evidence acquisition failure stops publication at ancestry
         partition: runtime-context.repository-release-alias-update-invalid
         guarantees:
           - alias-tags-preserved
+          - diagnostic-failure-stage-release-version
       - path: runtime/repository/tests/update-release-aliases.process.test.mjs
         symbol: repository-release-alias-update > alias push failure retains native exit and uncertain remote state without moving exact tags
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-release-version
+          - immutable-release-tags-preserved
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > alias observation failure reports its stage without moving exact tags
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-release-version
+          - immutable-release-tags-preserved
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > alias preparation failure reports its stage without moving exact tags
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-release-version
+          - immutable-release-tags-preserved
+      - path: runtime/repository/tests/update-release-aliases.process.test.mjs
+        symbol: repository-release-alias-update > alias readback failure reports its stage without moving exact tags
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-release-version

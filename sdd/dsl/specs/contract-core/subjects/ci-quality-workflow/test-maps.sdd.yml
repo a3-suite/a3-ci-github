@@ -69,6 +69,11 @@ test_maps:
           - platform-execution-before-summary
           - quality-pull-request-trusted-assets-from-base
       - path: tests/workflow-contracts.test.mjs
+        symbol: workflow-contracts > quality-workflow-contract > quality workflow declares trusted execution and aggregate summary
+        partition: ci-quality-workflow-platform-source-selected
+        guarantees:
+          - quality-pull-request-trusted-assets-from-base
+      - path: tests/workflow-contracts.test.mjs
         symbol: workflow-contracts > quality-workflow-contract > profiles caller runs the quality callee once per language profile and retains one summary identity
         partition: ci-quality-workflow-profiles-source-selected
         guarantees:

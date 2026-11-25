@@ -5,15 +5,16 @@ import { syncBuiltinESMExports } from 'node:module';
 import { test, vi, describe, expect } from 'vitest';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
-import { assetDigest, validateEvidence } from '../schema.ts';
+import { assetDigest } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
 import skillPolicy from '../skill-package-policy.json';
 import { spawnTimeoutMs } from "./assembly.fixtures.mjs";
 
 describe('contract.ci-release-assembly.outputs', () => {
   describe('same-release-skills', () => {
-    // contract_id: contract.ci-release-assembly.outputs
+    // evidence_role: supplemental
     // integration_id: same-release-skills
+    // Checks package size and file-count limits, which no assembly guarantee states.
     test('skills exceed former individual limits', (t) => {
       const f = releaseSkillsFixture(t, (config, root) => {
         for (let index = 0; index < 65; index++) {
@@ -32,8 +33,9 @@ describe('contract.ci-release-assembly.outputs', () => {
       expect(owner.files.length).toBeGreaterThan(1024);
       expect(owner.files.find(entry => entry.path.endsWith('/large.bin')).size).toBeGreaterThan(8 * 1024 * 1024);
     });
-    // contract_id: contract.ci-release-assembly.outputs
+    // evidence_role: supplemental
     // integration_id: same-release-skills
+    // Lowers the internal skill package policy limit instead of supplying a contract input.
     test('skills retain the aggregate size boundary', (t) => {
       const boundary = releaseSkillsFixture(t);
       boundary.assemble();
@@ -85,8 +87,9 @@ describe('contract.ci-release-assembly.outputs', () => {
         syncBuiltinESMExports();
       }
     });
-    // contract_id: contract.ci-release-assembly.outputs
+    // evidence_role: supplemental
     // integration_id: same-release-skills
+    // Also checks that loading a tampered handoff fails, which is outside the assembly contract.
     test('skills preserve fixed source bytes and reject incomplete or unsafe packages', (t) => {
       // Arrange
       const f = releaseSkillsFixture(t);
@@ -259,8 +262,9 @@ describe("contract.ci-release-assembly.outputs", () => {
       }
     });
 
-    // contract_id: contract.ci-release-assembly.outputs
+    // evidence_role: supplemental
     // integration_id: release-assembly-contract
+    // Checks how loading a rewritten handoff computes the digest, which is outside the assembly contract.
     test('asset digest preserves producer bytes and ignores JSON key order', (t) => {
       const f = fixture(t);
       const result = f.assemble();
@@ -364,18 +368,6 @@ describe("contract.ci-release-assembly.outputs", () => {
   });
 });
 
-
-describe("contract.ci-release-assembly.outputs", () => {
-  describe("release-assembly-shape", () => {
-    // contract_id: contract.ci-release-assembly.outputs
-    // integration_id: release-assembly-shape
-    test('evidence schema rejects unknown fields, missing fields and oversized inventories', () => {
-      expect(() => validateEvidence('identity', {})).toThrow(/schema-mismatch/);
-      expect(() => validateEvidence('asset', { name: 'a', sha256: 'a'.repeat(64), size: 1, extra: true })).toThrow(/schema-mismatch/);
-      expect(() => validateEvidence('assets', Array.from({ length: 257 }, () => ({ name: 'a', sha256: 'a'.repeat(64), size: 1 })))).toThrow(/schema-mismatch/);
-    });
-  });
-});
 
 describe("contract.ci-release-assembly.outputs", () => {
   describe("asset-release-assembly", () => {

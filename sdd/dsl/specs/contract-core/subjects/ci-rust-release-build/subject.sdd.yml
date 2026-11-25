@@ -39,7 +39,7 @@ contracts:
         meaning: "Precondition prepared by the case: state of the output destination before the invocation."
     conditions:
       - id: runtime-context.rust-release-build-rejected
-        summary: The build cannot proceed because of missing, invalid or conflicting inputs, a failed prerequisite or build command, failure while constructing, verifying or publishing the staged archive, or a conflicting output destination. A rejected binary version response has its own condition.
+        summary: The build cannot proceed because of missing, invalid or conflicting inputs, a failed prerequisite or build command, failure while constructing, verifying or publishing the staged archive, or a conflicting output destination. A rejected binary version response has its own condition. Invalid inputs include a mutable toolchain.
       - id: runtime-context.rust-release-build-commands-succeed
         summary: The supplied profile, checkout HEAD, exact toolchain, package version and unique manifest platform match the release authority. External commands supply usable results, including an accepted binary version and a readable archive matching the expected entry and digest. The new output destination can be claimed and written.
       - id: runtime-context.rust-release-version-report-rejected

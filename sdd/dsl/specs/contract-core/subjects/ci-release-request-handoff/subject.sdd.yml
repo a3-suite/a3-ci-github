@@ -27,7 +27,7 @@ contracts:
       - id: runtime-context.failure-diagnostic-required
         summary: Required inputs are absent or invalid, the request cannot be written to its destination, or writing an Action output fails.
       - id: runtime-context.release-request-handoff-valid
-        summary: The invocation meets the shared runtime context `runtime-context.release-request-handoff-valid` and can write all Action outputs.
+        summary: Required tag, source and request identities are valid, the tag ref agrees with its ref name, and the destination permits writing the request and digest files. The invocation can write all Action outputs.
     guarantees:
       - id: request-handoff-output-produced
         applies_to:

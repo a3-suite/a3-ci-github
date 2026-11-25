@@ -29,9 +29,9 @@ contracts:
         meaning: "Precondition prepared by the case: outcome of updating the runner command path."
     conditions:
       - id: runtime-context.jq-release-asset-valid
-        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-valid`, with all required runner paths present and file operations permitted.
+        summary: The requested jq release and runner asset are available with a matching checksum. All required runner paths are present and file operations are permitted.
       - id: runtime-context.jq-release-asset-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.jq-release-asset-invalid`, or a required runner path is absent or the PATH handoff write fails.
+        summary: The requested jq release is invalid or unavailable, the runner is unsupported, the checksum or installation fails, a required runner path is absent, or the PATH handoff write fails.
     guarantees:
       - id: checked-jq-available
         applies_to:

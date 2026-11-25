@@ -33,9 +33,9 @@ contracts:
         meaning: "Precondition prepared by the case: state of the remote Release or tag."
     conditions:
       - id: runtime-context.release-publisher-valid
-        summary: Approved inputs and initial remote observations agree, every selected publication and readback request returns matching evidence, and the local evidence and Action outputs can be written.
+        summary: Approved inputs and initial remote observations agree, every selected publication and readback request returns matching evidence, and the local evidence and Action outputs can be written. Owner-approved notes, future expiry, authority and validated handoff agree; injected GitHub token has observed draft visibility, complete absence and successful bounded provider responses.
       - id: runtime-context.release-publisher-invalid
-        summary: Inputs, approval, handoff or remote observations fail validation before the first provider write. This includes an existing same-tag Release.
+        summary: Inputs, approval, handoff or remote observations fail validation before the first provider write. This includes an existing same-tag Release. Rejection before the first provider write also includes expired approval, source movement or unknown inventory.
       - id: publication-operation-failed
         summary: Publication reaches a provider write, subsequent readback, or local evidence write with a failed or uncertain result before Action output writing starts.
       - id: publication-action-output-write-failed

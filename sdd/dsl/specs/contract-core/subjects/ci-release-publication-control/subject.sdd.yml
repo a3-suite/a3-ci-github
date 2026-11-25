@@ -33,7 +33,7 @@ contracts:
       - id: publication-control-trigger-rejected
         summary: The verify-trigger operation has a root directory, but the event is unavailable or fails the trigger validation criteria.
       - id: runtime-context.action-input-invalid
-        summary: Required Action inputs or the operation name are invalid, or create-request, verify-publication-request, or verify-approval rejects the input, destination preflight, or evidence before writing any request or notes files. Existing handoff files have their own condition.
+        summary: Required Action inputs or the operation name are invalid, or create-request, verify-publication-request, or verify-approval rejects the input, destination preflight, or evidence before writing any request or notes files. Existing handoff files have their own condition. Other rejected inputs include unsafe or authority-mismatching input.
       - id: publication-control-create-destination-exists
         summary: A create-request invocation is rejected because at least one destination file for the request or notes handoff already exists.
     guarantees:

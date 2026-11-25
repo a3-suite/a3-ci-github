@@ -23,7 +23,7 @@ contracts:
       - id: runtime-context.failure-diagnostic-required
         summary: The required plan input is unavailable or invalid, the version cannot be materialized, or writing an Action output fails.
       - id: runtime-context.publish-version-plan-valid
-        summary: The invocation meets the shared runtime context `runtime-context.publish-version-plan-valid` and can write all Action outputs.
+        summary: The readable owner-approved plan conforms to the declared exact or ciGenerated version-plan input contract, with complete matching template components and a safe materialized version. The invocation can write all Action outputs.
     guarantees:
       - id: publish-version-output-produced
         applies_to:

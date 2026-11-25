@@ -1,24 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, describe } from 'vitest';
-import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection, rollbackDistributionTransaction, verifyFetchedDistribution } from '../fetch-a3-ci-github.mjs';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
-import { readWorkflowSettings, renderWorkflowTemplate } from '../../preset/workflow-template.mjs';
-import { cliApply, cliFetch, cliFetchPeer, cliPlan, cliRollback, cliVerify, createConsumer, fixturePlanSettings, writeManifest, repositoryRoot, yaml, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease } from "./selective-distribution.fixtures.mjs";
-
-// Counts the requested assets and the registry-required dependencies that a selection closure lacks.
-const closureGapCount = (manifest, requestedPresets, requestedAssets, selectedAssets) => {
-  const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
-  const pending = [...requestedAssets, ...requestedPresets.flatMap((id) => manifest.presets.find((preset) => preset.id === id).requiredAssets)];
-  const required = new Set();
-  while (pending.length > 0) {
-    const id = pending.pop();
-    if (required.has(id)) continue;
-    required.add(id);
-    pending.push(...assets.get(id).dependencies);
-  }
-  return [...required].filter((id) => !selectedAssets.includes(id)).length;
-};
+import { cliApply, cliFetch, cliFetchPeer, cliPlan, cliRollback, cliVerify, createConsumer, fixturePlanSettings, writeManifest, repositoryRoot, yaml, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease, closureGapCount } from "./selective-distribution.fixtures.mjs";
 
 const failureOf = (run) => {
   try { run(); } catch (error) { return error; }
@@ -254,76 +238,14 @@ const interruptRollback = (scenario, inspect) => withFixture(`distribution-rollb
   inspect({ thrown, diagnostic, workflow, backup, transactionPath, externalRoot, outsideBefore });
 });
 
-describe('distribution test fixtures', () => {
-  describe('prepareRelease', () => {
-    // evidence_role: supplemental
-    // test_level: integration
-    // integration_id: distribution-fixture-isolation
-    test('consumer copies isolate manifest objects and all release bytes from later cases', async () => {
-      // Arrange
-      await withFixture('distribution-mutated-copy-', async (firstRoot) => {
-        const first = prepareRelease(firstRoot);
-        const files = (output) => fs.readdirSync(output, { recursive: true })
-          .filter((name) => fs.statSync(path.join(output, name)).isFile());
-        const bytes = new Map(files(first.output).map((name) => [name, fs.readFileSync(path.join(first.output, name))]));
-        // Act
-        first.manifest.sourceRevision = 'mutated';
-        first.manifestBytes.fill(0);
-        for (const name of bytes.keys()) fs.writeFileSync(path.join(first.output, name), 'mutated');
-        await withFixture('distribution-clean-copy-', (secondRoot) => {
-          const second = prepareRelease(secondRoot);
-          // Assert
-          expect(second.manifest.sourceRevision).toBe(sourceRevision);
-          expect(second.manifest).not.toBe(first.manifest);
-          expect(second.manifestBytes).not.toBe(first.manifestBytes);
-          expect(second.manifestBytes).toEqual(bytes.get('a3-ci-github-distribution-manifest.json'));
-          expect(files(second.output).sort()).toEqual([...bytes.keys()].sort());
-          for (const [name, expected] of bytes) expect(fs.readFileSync(path.join(second.output, name))).toEqual(expected);
-        });
-      });
-    });
-  });
-});
-
-
-
-describe("contract.ci-selective-distribution.selection", () => {
-  describe("selective-distribution", () => {
-    // contract_id: contract.ci-selective-distribution.selection
-    test('preset closure includes only its reusable workflow sources and excludes optional materializer', async () => {
-      await withFixture('a3-ci-github-distribution-source-selection-', (root) => {
-        const release = prepareRelease(root);
-        const fetchSelection = (name, requestedPresets, requestedAssets) => cliFetch({ projectRoot: createConsumer(root, name),
-          manifestPath: release.manifestPath, requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
-        const workflowSources = (result) => result.files.filter((source) => source.startsWith('.github/workflows/')).sort();
-        const expected = {
-          'quality-gate': ['ci-quality.yml'],
-          'release-request': [],
-          'release-publication': ['ci-release-publication.yml'],
-          'package-publication': ['ci-package-preparation.yml', 'ci-package-publication.yml'],
-        };
-        for (const [preset, workflows] of Object.entries(expected)) {
-          const selected = fetchSelection(preset, [preset], []);
-          expect(closureGapCount(release.manifest, [preset], [], selected.selectedAssets)).toBe(0);
-          expect(selected.selectedAssets).not.toContain('runtime.adapter-materializer');
-          expect(workflowSources(selected)).toStrictEqual(workflows.map((file) => `.github/workflows/${file}`).sort());
-        }
-        expect(() => fetchSelection('platforms-without-runtime', ['quality-gate'], ['workflow.quality-gate-platforms']))
-          .toThrow(/^distribution-dependency-missing$/);
-        const platforms = fetchSelection('platforms', ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']);
-        expect(closureGapCount(release.manifest, ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'], platforms.selectedAssets)).toBe(0);
-        expect(workflowSources(platforms)).toStrictEqual(['.github/workflows/ci-quality-platforms.yml', '.github/workflows/ci-quality.yml']);
-        expect(() => fetchSelection('materializer', [], ['runtime.adapter-materializer'])).toThrow(/^distribution-dependency-missing$/);
-      });
-    });
-  });
-});
 
 
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
 
     // contract_id: contract.ci-selective-distribution.delivery
+    // test_level: e2e
+    // flow_id: selective-distribution-delivery-runtime
     test('manifest validation rejects malformed authority identity files and dependency references', async () => {
       await withFixture('a3-ci-github-distribution-manifest-validation-', (root) => {
         const { manifest } = prepareRelease(root);
@@ -367,6 +289,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.delivery
+    // test_level: e2e
+    // flow_id: selective-distribution-delivery-runtime
     test('remote manifest loading confines the Release URL and release tag mapping', async () => {
       await withFixture('a3-ci-github-distribution-remote-manifest-', async (root) => {
         const release = prepareRelease(root);
@@ -394,6 +318,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 describe("contract.ci-selective-distribution.selection", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.selection
+    // test_level: e2e
+    // flow_id: selective-distribution-selection-runtime
     test('preset selection closes dependencies while direct asset selection reports missing dependencies', async () => {
       await withFixture('a3-ci-github-distribution-selection-', (root) => {
         const release = prepareRelease(root);
@@ -432,6 +358,8 @@ describe("contract.ci-selective-distribution.selection", () => {
 describe("contract.ci-selective-distribution.application", () => {
   describe('provider-pin-companion', () => {
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('planned provider pin companions are owned and restored with generated callers', async () => {
       await withFixture('distribution-provider-pins-', async (root) => {
         const release = prepareRelease(root);
@@ -478,31 +406,9 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(quality.actions.find((entry) => entry.destination === pins.destination).action).toBe('update');
       });
     });
-    // contract_id: contract.ci-selective-distribution.application
-    test('owned callers sharing a destination with an unfetched exclusive preset are planned from their own prior template', async () => {
-      await withFixture('distribution-shared-destination-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = path.join(root, 'consumer');
-        fs.mkdirSync(projectRoot);
-        const destination = '.github/workflows/release-publication-caller.yml';
-        expect(release.manifest.assets.filter((asset) => asset.files.some((entry) => entry.destination === destination))
-          .map((asset) => asset.id)).toEqual(expect.arrayContaining(['workflow.asset-release-publication-caller', 'workflow.release-publication-caller']));
-        const selection = { requestedPresets: ['release-publication'], requestedAssets: [] };
-        await fetchDistribution({ projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
-          sourceRoot: repositoryRoot, ...selection });
-        const options = { projectRoot, sourceRevision, ...selection };
-        const plan = planDistributionApplication(options);
-        applyDistributionPlan({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest });
-        fs.writeFileSync(path.join(projectRoot, '.ci/ci-assets.lock.json'), JSON.stringify({
-          schemaVersion: '1', kind: 'ci-github-asset-lock', sourceRevision,
-          assets: plan.actions.map((entry) => ({ path: entry.destination, appliedSha256: entry.generatedSha256 })) }));
-        const replanned = planDistributionApplication(options);
-        expect(replanned.actions.find((entry) => entry.destination === destination)).toMatchObject(
-          { assetId: 'workflow.release-publication-caller', action: 'reuse' });
-        expect(replanned.actions.every((entry) => entry.action === 'reuse')).toBe(true);
-      });
-    });
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('missing prior distributions are classified without treating old schemas as current', async () => {
       await withFixture('distribution-prior-migration-', async (root) => {
         const release = prepareRelease(root);
@@ -529,8 +435,10 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(snapshotTree(projectRoot)).toStrictEqual(unsupportedBefore);
       });
     });
-  });
+});
   describe('workflow-template-generation', () => {
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('normal generation and application need no Hosted evidence and preserve ownership checks', async () => {
       // Arrange
       await withFixture('distribution-template-generation-', async (root) => {
@@ -564,33 +472,9 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(unplannedTree()).toStrictEqual(unplannedBefore);
       });
     });
-    // contract_id: contract.ci-selective-distribution.application
-    test('workflow generation safely resolves values and preserves only declared caller settings', () => {
-      const template = 'on:\n  push:\n    branches: [<protected-branch>]\njobs:\n  quality:\n    uses: provider/workflow@<quality-workflow-sha>\n    with:\n      runner: <versioned-runner>\n      enabled: <feature-enabled>\n      optional: <optional-value>\n';
-      const references = { 'quality-workflow-sha': 'a'.repeat(40) };
-      const values = { 'protected-branch': ['main', 'develop'], 'versioned-runner': 'ubuntu-24.04\npermissions: write-all', 'feature-enabled': false };
-      const rendered = renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] });
-      const observed = yaml.parse(rendered);
-      expect(observed.jobs.quality.uses).toBe(`provider/workflow@${'a'.repeat(40)}`);
-      expect(observed.on.push.branches).toStrictEqual(['main', 'develop']);
-      expect(observed.jobs.quality.with.enabled).toBe(false);
-      expect(observed.jobs.quality.with.runner).toBe(values['versioned-runner']);
-      expect(observed.permissions).toBeUndefined();
-      const extracted = readWorkflowSettings({ yaml, template, current: rendered });
-      expect(extracted.values['protected-branch']).toStrictEqual(['main', 'develop']);
-      expect(extracted.values['versioned-runner']).toBe(values['versioned-runner']);
-      expect(extracted.values['quality-workflow-sha']).toBeUndefined();
-      expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, unknown: 'x' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-unknown/);
-      // A setting carried from the previous template but retired from the new one is dropped instead of blocking the update.
-      expect(yaml.parse(renderWorkflowTemplate({ yaml, template, references, values, carriedValues: { 'retired-setting': '', 'feature-enabled': true }, emptyAllowed: ['optional-value'] })).jobs.quality.with.enabled).toBe(false);
-      expect(() => renderWorkflowTemplate({ yaml, template, references, values: { ...values, 'feature-enabled': 'false' }, emptyAllowed: ['optional-value'] })).toThrow(/setting-invalid/);
-      expect(() => renderWorkflowTemplate({ yaml, template, references, values: {}, emptyAllowed: ['optional-value'] })).toThrow(/setting-missing/);
-      const drifted = structuredClone(observed);
-      drifted.jobs.quality.permissions = 'write-all';
-      expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/structure-conflict/);
-      expect(renderWorkflowTemplate({ yaml, template, references, values, emptyAllowed: ['optional-value'] })).toBe(rendered);
-    });
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('plan rejects unknown and mistyped caller settings and an owned caller with drifted structure', async () => {
       await withFixture('distribution-caller-settings-', async (root) => {
         const release = prepareRelease(root);
@@ -622,6 +506,8 @@ describe("contract.ci-selective-distribution.application", () => {
     // evidence_role: supplemental
     // The text of a generated workflow (resolved placeholders, the fetched revision, no consumer-local runtime path and the expanded profile matrix) is the content of a plan action, not an observation of a plan, apply or rollback guarantee.
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('generated workflows resolve the fetched revision and carry no consumer-local runtime path', async () => {
       await withFixture('distribution-generated-workflows-', async (root) => {
         const release = prepareRelease(root);
@@ -657,31 +543,12 @@ describe("contract.ci-selective-distribution.application", () => {
         expect(packageCaller).toContain(`ci-package-publication.yml@${sourceRevision}`);
       });
     });
-    // contract_id: contract.ci-selective-distribution.application
-    test('workflow generation expands only a matrix include into profile maps and reads them back', () => {
-      const template = 'jobs:\n  quality:\n    strategy:\n      matrix:\n        include: <quality-profiles>\n    with:\n      runner: <versioned-runner>\n      language-profile: ${{ matrix.language-profile }}\n';
-      const profiles = [{ 'language-profile': 'rust', 'toolchain-version': '1.90.0' }, { 'language-profile': 'python', 'uv-version': '0.8.0' }];
-      const values = { 'quality-profiles': profiles, 'versioned-runner': 'ubuntu-24.04' };
-      // Act
-      const rendered = renderWorkflowTemplate({ yaml, template, values });
-      // Assert
-      expect(yaml.parse(rendered).jobs.quality.strategy.matrix.include).toStrictEqual(profiles);
-      expect(yaml.parse(rendered).jobs.quality.with['language-profile']).toBe('${{ matrix.language-profile }}');
-      expect(readWorkflowSettings({ yaml, template, current: rendered }).values['quality-profiles']).toStrictEqual(profiles);
-      expect(yaml.parse(renderWorkflowTemplate({ yaml, template, values: { ...values, 'quality-profiles': [{ 'language-profile': 'rust', 'uv-version': '' }] } })).jobs.quality.strategy.matrix.include)
-        .toStrictEqual([{ 'language-profile': 'rust', 'uv-version': '' }]);
-      for (const invalid of ['rust', [], [{}], [{ 'language-profile': 1 }], [{ 'Language-Profile': 'rust' }], [{ nested: { a: 'b' } }]]) {
-        expect(() => renderWorkflowTemplate({ yaml, template, values: { ...values, 'quality-profiles': invalid } }), JSON.stringify(invalid)).toThrow(/setting-invalid:quality-profiles/);
-      }
-      const drifted = yaml.parse(rendered);
-      drifted.jobs.quality.strategy.matrix.include = [{ 'language-profile': ['rust'] }];
-      expect(() => readWorkflowSettings({ yaml, template, current: yaml.stringify(drifted) })).toThrow(/setting-invalid:quality-profiles/);
-      expect(() => renderWorkflowTemplate({ yaml, template: template.replace('include: <quality-profiles>', 'other: <quality-profiles>'), values })).toThrow(/setting-invalid:quality-profiles/);
-    });
-  });
+});
   describe("selective-distribution", () => {
-    // contract_id: contract.ci-selective-distribution.delivery
-    // contract_id: contract.ci-selective-distribution.application
+    // evidence_role: supplemental
+    // The lifecycle crosses delivery and application contracts; individual mapped cases retain their evidence.
+    // test_level: e2e
+    // flow_id: selective-distribution-lifecycle
     test('fetch, plan, apply and rollback preserve explicit consumer state transitions', async () => {
       await withFixture('a3-ci-github-distribution-lifecycle-', async (root) => {
           const release = prepareRelease(root);
@@ -767,6 +634,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('plan rejects unmanaged destination drift and apply rejects changed plan inputs', async () => {
       await withFixture('a3-ci-github-distribution-conflict-', async (root) => {
           const release = prepareRelease(root);
@@ -785,6 +654,25 @@ describe("contract.ci-selective-distribution.application", () => {
           expect(() => cliApply({ projectRoot, planPath: plan.planPath, approvalDigest: plan.planDigest })).toThrow(/^distribution-plan-input-changed$/);
       });
     });
+
+    // evidence_role: contract
+    // test_level: e2e
+    // contract_id: contract.ci-selective-distribution.plan
+    // flow_id: selective-distribution-plan
+    test('plan reports a conflict for an existing destination without recorded ownership', async () => {
+      await withFixture('distribution-plan-unowned-destination-', async (root) => {
+        const release = prepareRelease(root);
+        const projectRoot = createConsumer(root);
+        fs.mkdirSync(path.join(projectRoot, '.github/workflows'), { recursive: true });
+        cliFetch({ projectRoot, manifestPath: release.manifestPath, requestedPresets: ['quality-gate'], sourceRoot: repositoryRoot });
+        const destination = '.github/workflows/quality-gate.yml';
+        fs.writeFileSync(path.join(projectRoot, destination), 'name: consumer-owned\n');
+
+        const plan = cliPlan({ projectRoot, sourceRevision, requestedPresets: ['quality-gate'], requestedAssets: [] });
+
+        expect(plan.actions).toStrictEqual([expect.objectContaining({ destination, action: 'conflict' })]);
+      });
+    });
   });
 });
 
@@ -792,6 +680,8 @@ describe("contract.ci-selective-distribution.application", () => {
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution", () => {
     // contract_id: contract.ci-selective-distribution.delivery
+    // test_level: e2e
+    // flow_id: selective-distribution-delivery-runtime
     test('fetch rejects source bytes that do not match the release manifest', async () => {
       await withFixture('a3-ci-github-distribution-integrity-', async (root) => {
         const release = prepareRelease(root);
@@ -812,6 +702,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.delivery
+    // test_level: e2e
+    // flow_id: selective-distribution-delivery-runtime
     test('fetch rejects a project-local state path redirected through a symlink', async () => {
       await withFixture('a3-ci-github-distribution-symlink-state-', async (root) => {
         const release = prepareRelease(root);
@@ -830,6 +722,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.verification
+    // test_level: e2e
+    // flow_id: selective-distribution-verification-runtime
     test('local verification rejects distribution bytes changed after fetch', async () => {
       await withFixture('a3-ci-github-distribution-local-integrity-', async (root) => {
         const release = prepareRelease(root);
@@ -849,6 +743,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.verification
+    // test_level: e2e
+    // flow_id: selective-distribution-verification-runtime
     test('local verification rejects a manifest for a different revision even with a matching receipt digest', async () => {
       await withFixture('distribution-local-revision-', (root) => {
         const release = prepareRelease(root);
@@ -876,6 +772,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.verification
+    // test_level: e2e
+    // flow_id: selective-distribution-verification-runtime
     test('local verification rejects a receipt that omits a file of its selected assets', async () => {
       await withFixture('distribution-local-receipt-file-', (root) => {
         const release = prepareRelease(root);
@@ -899,8 +797,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
 describe("contract.ci-selective-distribution.application", () => {
   describe("selective-distribution", () => {
-    // contract_id: contract.ci-selective-distribution.selection
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('direct workflow asset fetch cannot bypass preset closure during apply planning', async () => {
       await withFixture('a3-ci-github-distribution-direct-workflow-', async (root) => {
         const release = prepareRelease(root);
@@ -926,6 +825,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('apply rechecks destination ancestry immediately before writing', async () => {
       await withFixture('a3-ci-github-distribution-apply-symlink-', async (root) => {
         const release = prepareRelease(root);
@@ -943,6 +844,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('partial apply failure restores files changed earlier in the transaction', async () => {
       await withFixture('a3-ci-github-distribution-partial-', async (root) => {
         const { projectRoot, plan, changedPath, failure } = await failPartialApply(root, { retainLock: false });
@@ -963,6 +866,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test.each(['source', 'manifest', 'plan', 'ownership'])('partial apply restores prior writes when %s changes', async (changedInput) => {
       await withFixture('distribution-apply-input-recheck-', (root) => {
         const release = prepareRelease(root);
@@ -988,6 +893,8 @@ describe("contract.ci-selective-distribution.application", () => {
 
     // evidence_role: supplemental
     // The retained lock and the transaction record are implementation records of the interrupted apply, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('partial apply failure retains its lock and records which actions were restored', async () => {
       await withFixture('a3-ci-github-distribution-partial-record-', async (root) => {
         const { projectRoot, retainedLock, failure } = await failPartialApply(root, { retainLock: true });
@@ -1004,6 +911,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application rejects an approval digest that does not match the plan', async () => {
       await withFixture('a3-ci-github-distribution-approval-', async (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1014,6 +923,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application writes the approved destinations and preserves unrelated files', async () => {
       await withFixture('distribution-apply-approved-destinations-', (root) => {
         const release = prepareRelease(root);
@@ -1048,6 +959,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application rejects a planned conflict without modifying consumer files', async () => {
       await withFixture('distribution-apply-planned-conflict-', (root) => {
         const { projectRoot, options, plan } = prepareQualityPlan(root);
@@ -1064,6 +977,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application rejects a plan while another mutation holds the mutation lock', async () => {
       await withFixture('a3-ci-github-distribution-mutation-lock-', async (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1075,6 +990,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application rejects changed or malformed plan bytes without writing', async () => {
       await withFixture('distribution-apply-approval-', (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1092,6 +1009,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('application rejects an ownership lock changed after planning', async () => {
       await withFixture('a3-ci-github-distribution-ownership-', async (root) => {
         const { projectRoot, options } = prepareQualityPlan(root);
@@ -1109,6 +1028,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('apply rejects a transaction root redirected through a symlink', async () => {
       await withFixture('a3-ci-github-distribution-transaction-root-', async (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1126,6 +1047,8 @@ describe("contract.ci-selective-distribution.application", () => {
 
     // evidence_role: supplemental
     // The mutation lock is a implementation record: a rejected apply leaves none, and a rollback refuses to start while another mutation holds it.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('apply leaves no mutation lock after a redirected transaction root and rollback refuses a held lock', async () => {
       await withFixture('a3-ci-github-distribution-lock-records-', async (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1144,52 +1067,9 @@ describe("contract.ci-selective-distribution.application", () => {
       });
     });
 
-    // contract_id: contract.ci-selective-distribution.application
-    test('rollback validates every backup identity before changing consumer files', async () => {
-      await withFixture('a3-ci-github-distribution-backup-integrity-', (root) => {
-        const projectRoot = path.join(root, 'consumer');
-        const transactionId = `1-${'a'.repeat(12)}`;
-        const transactionRoot = path.join(projectRoot, '.a3-skills/ci-github/transactions', transactionId);
-        const first = { destination: '.github/workflows/first.yml', before: 'first-before\n', after: 'first-after\n' };
-        const second = { destination: '.github/workflows/second.yml', before: 'second-before\n', after: 'second-after\n' };
-        for (const entry of [first, second]) {
-          const destination = path.join(projectRoot, entry.destination);
-          const backup = path.join(transactionRoot, 'before', entry.destination);
-          fs.mkdirSync(path.dirname(destination), { recursive: true });
-          fs.mkdirSync(path.dirname(backup), { recursive: true });
-          fs.writeFileSync(destination, entry.after);
-          fs.writeFileSync(backup, entry.before);
-        }
-        fs.writeFileSync(path.join(transactionRoot, 'before', second.destination), 'tampered\n');
-        fs.writeFileSync(path.join(transactionRoot, 'transaction.json'), `${JSON.stringify({
-          schemaVersion: '1',
-          kind: 'a3-ci-github-distribution-transaction',
-          transactionId,
-          planDigest: 'b'.repeat(64),
-          sourceRevision,
-          status: 'applied',
-          actions: [first, second].map((entry) => ({
-            destination: entry.destination,
-            beforeSha256: sha256(Buffer.from(entry.before)),
-            afterSha256: sha256(Buffer.from(entry.after)),
-            state: 'applied',
-          })),
-        }, null, 2)}\n`);
-        expect(() => rollbackDistributionTransaction({ projectRoot, transactionId })).toThrow(/distribution-backup-integrity-mismatch/);
-        expect(fs.readFileSync(path.join(projectRoot, first.destination), 'utf8')).toBe(first.after);
-        fs.writeFileSync(path.join(transactionRoot, 'before', second.destination), second.before);
-        const transactionPath = path.join(transactionRoot, 'transaction.json');
-        const interrupted = JSON.parse(fs.readFileSync(transactionPath, 'utf8'));
-        interrupted.status = 'applying';
-        interrupted.actions[0].state = 'restored';
-        fs.writeFileSync(path.join(projectRoot, first.destination), first.before);
-        fs.writeFileSync(transactionPath, `${JSON.stringify(interrupted, null, 2)}\n`);
-        expect(rollbackDistributionTransaction({ projectRoot, transactionId }).status).toBe('rolled-back');
-        expect(fs.readFileSync(path.join(projectRoot, second.destination), 'utf8')).toBe(second.before);
-      });
-    });
-
     // contract_id: contract.ci-selective-distribution.rollback
+    // test_level: e2e
+    // flow_id: selective-distribution-rollback-runtime
     test('rollback removes a destination created by the recorded transaction', async () => {
       await withFixture('distribution-rollback-created-destination-', (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1204,6 +1084,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.rollback
+    // test_level: e2e
+    // flow_id: selective-distribution-rollback-runtime
     test('rollback restores the previous bytes of an updated destination and preserves unrelated files', async () => {
       await withFixture('distribution-rollback-updated-destination-', (root) => {
         const { projectRoot, options, workflow, workflowPath, canonical, writeOwnership } = prepareOwnedWorkflow(root);
@@ -1230,6 +1112,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.rollback
+    // test_level: e2e
+    // flow_id: selective-distribution-rollback-runtime
     test('rollback refuses to overwrite consumer changes made after apply', async () => {
       await withFixture('a3-ci-github-distribution-rollback-conflict-', async (root) => {
         const release = prepareRelease(root);
@@ -1249,6 +1133,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.application
+    // test_level: e2e
+    // flow_id: selective-distribution-application-runtime
     test('rollback does not write through a destination ancestor redirected by a symlink', async () => {
       await interruptRollback('destination-symlink', ({ thrown, diagnostic, workflow, externalRoot, outsideBefore }) => {
         expect(thrown.message).toBe(diagnostic);
@@ -1259,6 +1145,8 @@ describe("contract.ci-selective-distribution.application", () => {
 
     // evidence_role: supplemental
     // The tampered backup, the untouched workflow and the rollback-required status of the transaction record are implementation records, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('interrupted rollback keeps a tampered backup and records that rollback is required', async () => {
       for (const scenario of ['consumer-edit', 'destination-symlink', 'backup-tamper']) {
         await interruptRollback(scenario, ({ thrown, diagnostic, workflow, backup, transactionPath }) => {
@@ -1276,94 +1164,12 @@ describe("contract.ci-selective-distribution.application", () => {
 
 
 describe("contract.ci-selective-distribution.delivery", () => {
-  describe("selective-distribution", () => {
-
-    // contract_id: contract.ci-selective-distribution.delivery
-    test('same revision merges separately fetched verified asset groups without replacing prior files', async () => {
-      await withFixture('a3-ci-github-distribution-merge-', async (root) => {
-          const release = prepareRelease(root);
-          const projectRoot = path.join(root, 'consumer');
-          fs.mkdirSync(projectRoot);
-          await fetchDistribution({
-            projectRoot,
-            manifest: release.manifest,
-            manifestBytes: release.manifestBytes,
-            requestedPresets: [],
-            requestedAssets: ['registry.ci-github'],
-            sourceRoot: repositoryRoot,
-          });
-          const merged = await fetchDistribution({
-            projectRoot,
-            manifest: release.manifest,
-            manifestBytes: release.manifestBytes,
-            requestedPresets: [],
-            requestedAssets: ['lint.github-actions'],
-            sourceRoot: repositoryRoot,
-          });
-          expect(merged.action).toBe('merged');
-          expect(merged.selectedAssets).toStrictEqual(['lint.github-actions', 'registry.ci-github']);
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'skills/ci-github/assets/registry/ci-distribution-assets.yml'))).toBeTruthy();
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_workflow_name_matches_file.lua'))).toBeTruthy();
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/shared/ci_github_yaml.lua'))).toBeTruthy();
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/a3-lint/ci_github_action_runtime_contract.lua'))).toBe(false);
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'lint-rules/repository'))).toBe(false);
-          expect(fs.existsSync(path.join(merged.distributionRoot, 'runtime/repository/check-provider-references.mjs'))).toBe(false);
-      });
-    });
-  });
-});
-
-
-describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution-delivery", () => {
-    // evidence_role: contract
-    // test_level: integration
-    // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
-    test('remote fetch reuses verified files for repeat and extended preset selections', async () => {
-      // Arrange
-      await withFixture('distribution-remote-reuse-', async (root) => {
-        const release = prepareRelease(root);
-        const projectRoot = path.join(root, 'consumer');
-        fs.mkdirSync(projectRoot);
-        const requestedPaths = (preset) => [...new Set(resolveDistributionSelection(release.manifest, [preset], [])
-          .flatMap((asset) => asset.files.map((file) => file.sourcePath)))].sort();
-        const requestPaths = requestedPaths('release-request');
-        const qualityPaths = requestedPaths('quality-gate');
-        const calls = [];
-        const fetch = (preset) => fetchDistribution({
-          projectRoot, manifest: release.manifest, manifestBytes: release.manifestBytes,
-          requestedPresets: [preset], requestedAssets: [],
-          download: async (url) => {
-            const relative = url.split(`/${sourceRevision}/`)[1];
-            calls.push(relative);
-            return fs.readFileSync(path.join(committedSourceRoot, relative));
-          },
-        });
-
-        // Act / Assert
-        const first = await fetch('release-request');
-        expect(calls.sort()).toEqual(requestPaths);
-        expect(first.action).toBe('fetched');
-        const receiptBeforeRepeat = fs.readFileSync(path.join(first.distributionRoot, 'receipt.json'));
-        calls.length = 0;
-        const repeated = await fetch('release-request');
-        expect(calls).toEqual([]);
-        expect(repeated.action).toBe('merged');
-        expect(fs.readFileSync(path.join(first.distributionRoot, 'receipt.json'))).toEqual(receiptBeforeRepeat);
-        calls.length = 0;
-        const extended = await fetch('quality-gate');
-        expect(calls.sort()).toEqual(qualityPaths.filter((relative) => !requestPaths.includes(relative)));
-        expect(extended.selectedPresets).toEqual(['quality-gate', 'release-request']);
-        expect(verifyFetchedDistribution({ projectRoot, sourceRevision }).status).toBe('verified');
-        expect(fs.existsSync(path.join(first.distributionRoot, '.fetch.lock'))).toBe(false);
-      });
-    });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('remote fetch sends every download request to the origin that the manifest trusts', async () => {
       // Arrange
       await withFixture('distribution-remote-origin-', async (root) => {
@@ -1385,9 +1191,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('remote fetch rejects invalid cached state and concurrent fetch locks before transport', async () => {
       // Arrange
       await withFixture('distribution-remote-cache-rejection-', async (root) => {
@@ -1405,6 +1211,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // evidence_role: supplemental
     // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('remote fetch rejects invalid cached state without calling the transport', async () => {
       await withFixture('distribution-remote-cache-transport-', async (root) => {
         const release = prepareRelease(root);
@@ -1415,9 +1223,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('remote fetch preserves prior state and releases its lock after an extension fails', async () => {
       // Arrange
       await withFixture('distribution-remote-extension-failure-', async (root) => {
@@ -1435,6 +1243,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // evidence_role: supplemental
     // The fetch lock, the rejected peer fetch, the peer transport and the recovery are implementation mechanisms of a failed extension, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('failed extension fetch keeps the peer off the transport, releases its lock and recovers on retry', async () => {
       await withFixture('distribution-remote-extension-record-', async (root) => {
         const { projectRoot, options, transport, lockPath, peerLog, probes } = failExtensionFetch(root);
@@ -1454,9 +1264,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('fetch rejects with the owned lock cleanup failure when closing or removing its lock fails', async () => {
       // Arrange
       await withFixture('distribution-lock-cleanup-failure-', async (root) => {
@@ -1474,9 +1284,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('fetch preserves the prior cache when cleanup rejects a cache extension', async () => {
       await withFixture('distribution-extension-cleanup-', async (root) => {
         const release = prepareRelease(root);
@@ -1502,6 +1312,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // evidence_role: supplemental
     // Calling the transport and leaving a staging directory are implementation mechanisms of the fetch, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('fetch removes staging and skips the transport even when closing or removing its owned lock fails', async () => {
       await withFixture('distribution-lock-cleanup-record-', async (root) => {
         const release = prepareRelease(root);
@@ -1514,9 +1326,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('fetch retains validation failure and cached files when lock and staging cleanup fail', async () => {
       await withFixture('distribution-primary-cleanup-', async (root) => {
         const release = prepareRelease(root);
@@ -1542,9 +1354,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('explicit source root remains validated when a verified distribution already exists', async () => {
       // Arrange
       await withFixture('distribution-repeat-source-validation-', async (root) => {
@@ -1559,6 +1371,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // evidence_role: supplemental
     // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('explicit source root rejection does not call the transport', async () => {
       await withFixture('distribution-repeat-source-transport-', async (root) => {
         expect(fs.existsSync(rejectInvalidSourceRoot(root).log)).toBe(false);
@@ -1572,9 +1386,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
 describe("contract.ci-selective-distribution.delivery", () => {
   describe("selective-distribution-delivery", () => {
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.delivery
-    // integration_id: selective-distribution-delivery
+    // flow_id: selective-distribution-delivery
     test('remote fetch rejects invalid redirect and transport responses without publishing consumer assets', async () => {
       // Arrange
       await withFixture('distribution-remote-rejection-', async (root) => {
@@ -1594,6 +1408,8 @@ describe("contract.ci-selective-distribution.delivery", () => {
 
     // evidence_role: supplemental
     // Whether the transport was called is an implementation mechanism of the rejection, not an observation of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('remote fetch calls the transport before a failed download is rejected', async () => {
       await withFixture('distribution-remote-rejection-requests-', async (root) => {
         for (const { label, requests } of failDownloads(root).results) expect(requests.length > 0, label).toBeTruthy();
@@ -1606,9 +1422,9 @@ describe("contract.ci-selective-distribution.delivery", () => {
 describe("contract.ci-selective-distribution.application", () => {
   describe("selective-distribution-application", () => {
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.plan
-    // integration_id: selective-distribution-application
+    // flow_id: selective-distribution-plan-runtime
     test('plan rejects malformed prior ownership locks before changing consumer state', async () => {
       // Arrange
       await withFixture('distribution-prior-lock-', async (root) => {
@@ -1652,6 +1468,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('plan rejects a preset whose assets were not fetched without modifying the consumer tree', async () => {
       await withFixture('distribution-plan-unfetched-', (root) => {
         const release = prepareRelease(root);
@@ -1667,6 +1485,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('plan exposes its digest actions and previously managed paths outside the selection', async () => {
       await withFixture('distribution-plan-evidence-', (root) => {
         const release = prepareRelease(root);
@@ -1699,6 +1519,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('plan reports a conflict without replacing an independently edited destination', async () => {
       await withFixture('distribution-plan-independent-destination-', (root) => {
         const { projectRoot, options, workflow, workflowPath } = prepareOwnedWorkflow(root);
@@ -1717,6 +1539,8 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // contract_id: contract.ci-selective-distribution.plan
+    // test_level: e2e
+    // flow_id: selective-distribution-plan-runtime
     test('plan reuses current destinations and updates destinations with owned older bytes', async () => {
       await withFixture('distribution-plan-owned-destinations-', (root) => {
         const { options, workflow, workflowPath, canonical, lockPath, writeOwnership } = prepareOwnedWorkflow(root);
@@ -1738,9 +1562,9 @@ describe("contract.ci-selective-distribution.application", () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.application
-    // integration_id: selective-distribution-application
+    // flow_id: selective-distribution-application
     test('approved plans reuse identical workflows update owned bytes and reject unmanaged changes', async () => {
       // Arrange
       await withFixture('distribution-owned-update-', async (root) => {
@@ -1789,6 +1613,8 @@ describe("contract.ci-selective-distribution.application", () => {
 
     // evidence_role: supplemental
     // The transaction record layout is an implementation mechanism of apply and rollback, not an observation of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('reuse records no transaction action and update backs up the owned bytes', async () => {
       await withFixture('distribution-owned-transaction-', async (root) => {
         const { projectRoot, options, workflowPath, workflow, canonical, writeOwnership } = prepareOwnedWorkflow(root);
@@ -1814,9 +1640,9 @@ describe("contract.ci-selective-distribution.application", () => {
 describe('contract.ci-selective-distribution.application', () => {
   describe('selective-distribution-recovery', () => {
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.application
-    // integration_id: selective-distribution-recovery
+    // flow_id: selective-distribution-recovery
     test('rollback retains its original rejection when owned lock cleanup fails', async () => {
       await withFixture('distribution-rollback-cleanup-', async (projectRoot) => {
         const { failure, transactionId } = failRollbackCleanup(projectRoot);
@@ -1831,6 +1657,8 @@ describe('contract.ci-selective-distribution.application', () => {
     });
 
     // contract_id: contract.ci-selective-distribution.rollback
+    // test_level: e2e
+    // flow_id: selective-distribution-rollback-runtime
     test('rollback rejects malformed transaction metadata before restoring files', async () => {
       await withFixture('distribution-rollback-invalid-record-', (root) => {
         const { projectRoot, plan } = prepareQualityPlan(root);
@@ -1850,6 +1678,8 @@ describe('contract.ci-selective-distribution.application', () => {
 
     // evidence_role: supplemental
     // The retained lock and the preserved state file are side effects of the failed cleanup, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('rollback of a missing transaction keeps its lock and the existing state file when lock cleanup fails', async () => {
       await withFixture('distribution-rollback-cleanup-record-', async (projectRoot) => {
         const { lock, existing } = failRollbackCleanup(projectRoot);
@@ -1859,9 +1689,9 @@ describe('contract.ci-selective-distribution.application', () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.application
-    // integration_id: selective-distribution-recovery
+    // flow_id: selective-distribution-recovery
     test('successful apply and rollback report cleanup failure with the completed transaction state', async () => {
       await withFixture('distribution-completed-cleanup-', async (root) => {
         const release = prepareRelease(root);
@@ -1878,6 +1708,8 @@ describe('contract.ci-selective-distribution.application', () => {
 
     // evidence_role: supplemental
     // The transaction status, the consumer files and the retained lock are side effects of the failed cleanup, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('completed apply and rollback keep their transaction status, consumer files and lock when lock cleanup fails', async () => {
       await withFixture('distribution-completed-cleanup-record-', async (root) => {
         const release = prepareRelease(root);
@@ -1897,9 +1729,9 @@ describe('contract.ci-selective-distribution.application', () => {
     });
 
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     // contract_id: contract.ci-selective-distribution.application
-    // integration_id: selective-distribution-recovery
+    // flow_id: selective-distribution-recovery
     test('rollback retains the restoration error when recording recovery state also fails', async () => {
       await withFixture('distribution-rollback-record-', async (root) => {
         const release = prepareRelease(root);
@@ -1916,6 +1748,8 @@ describe('contract.ci-selective-distribution.application', () => {
 
     // evidence_role: supplemental
     // The target bytes, the transaction record status and the retained lock are side effects of the failed recovery recording, not observations of a guarantee.
+    // test_level: e2e
+    // flow_id: selective-distribution-regression-runtime
     test('failed rollback recording keeps the target bytes, the rolling-back record and the lock as they were', async () => {
       await withFixture('distribution-rollback-record-state-', async (root) => {
         const release = prepareRelease(root);

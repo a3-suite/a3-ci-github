@@ -68,7 +68,7 @@ jobs:
 
       - name: Test bundled Action distribution gate
         shell: bash
-        run: npm test -- tests/action-dist-gate.test.mjs
+        run: npm test -- tests/action-dist-gate.test.mjs tests/action-dist-gate-plan.test.mjs
 
       - name: Validate contract-subject execution definition
         shell: bash
@@ -112,6 +112,7 @@ jobs:
             runtime/adapter/tests/standard-quality-footprint.test.mjs \
             runtime/preset/tests/source-resolution.test.mjs \
             runtime/preset/tests/preset-validation-contract.test.mjs \
+            runtime/preset/tests/preset-validation-contract.integration.test.mjs \
             runtime/preset/tests/action-availability.test.mjs \
             runtime/preset/tests/quality-platform-selection.test.mjs \
             runtime/preset/tests/reusable-quality-workflow.test.mjs \
@@ -120,12 +121,13 @@ jobs:
             runtime/preset/tests/publication-validation.process.test.mjs
           CI_GITHUB_PREFLIGHT_RUNTIME_ROOT=runtime/preset \
             npm test -- tests/public-cli-lifecycle.test.mjs
-          npm test -- runtime/distribution/tests/selective-distribution.test.mjs
+          npm test -- runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs
 
       - name: Test failure diagnostics
         run: >-
           node node_modules/vitest/vitest.mjs run
           runtime/diagnostics/tests/failure.test.mjs
+          runtime/diagnostics/tests/failure.integration.test.mjs
           tests/action-failure-diagnostics.test.mjs
           tests/runtime-failure-diagnostics.test.mjs
           tests/workflow-failure-diagnostics.test.mjs

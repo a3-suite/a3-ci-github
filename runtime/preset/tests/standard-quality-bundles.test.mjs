@@ -18,7 +18,7 @@ describe("contract.ci-preset-assurance.verification", () => {
     // integration_id: preset-assurance-contract
     // contract_id: contract.ci-preset-assurance.verification
     // evidence_role: contract
-    // test_level: integration
+    // test_level: e2e
     test('preflight validates fixed standard quality bundles without a descriptor or external owner checkout', () => {
       const root = fs.mkdtempSync(path.join(repository, 'tmp/standard-quality-preflight-'));
       try {

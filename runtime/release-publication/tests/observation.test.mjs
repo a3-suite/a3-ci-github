@@ -264,6 +264,7 @@ describe("contract.ci-release-publication-verifier.outputs", { concurrent: true 
 
 describe('safe release diagnostics', () => {
   describe('GithubReadOnlyClient', () => {
+  // integration_id: release-publication-diagnostic-safety
   test('standard workflow token evidence binds caller context capability token and repository', async (t) => {
     const f = fixture(t);
     try {
@@ -290,16 +291,20 @@ describe('safe release diagnostics', () => {
     } finally { vi.unstubAllEnvs(); }
   });
 
+  // integration_id: release-publication-diagnostic-safety
   test('asset inventory reobservation remains bounded and refuses invalid subsets immediately', async (t) => {
     const f = fixture(t);
     const assembly = f.assemble();
     for (const [assets, expectedReads] of [[[], 3], [[{ id: '100', name: 'unexpected', size: 1, state: 'uploaded' }], 1]]) {
       let reads = 0;
-      const client = { list: async () => { reads++; return assets; }, assetDigest: async () => { throw new Error('readback-before-complete-inventory'); } };
+      let bodyReads = 0;
+      const client = { list: async () => { reads++; return assets; }, assetDigest: async () => { bodyReads++; throw new Error('readback-before-complete-inventory'); } };
       await expect(observeAssets(f.identity, '42', assembly, client)).rejects.toThrow(/asset-set-mismatch/);
       expect(reads).toBe(expectedReads);
+      expect(bodyReads).toBe(0);
     }
   });
+  // integration_id: release-publication-diagnostic-safety
   test('inventory diagnostics retain the failing page correlation after later pages', async (t) => {
     // Arrange
     const f = fixture(t);
@@ -324,6 +329,7 @@ describe('safe release diagnostics', () => {
       return true;
     });
   });
+  // integration_id: release-publication-diagnostic-safety
   test('body timeouts retain response correlation for JSON and asset readback', async () => {
     for (const binary of [false, true]) {
       const client = new GithubReadOnlyClient('synthetic-secret', async () => new Response(new ReadableStream({
@@ -345,6 +351,7 @@ describe('safe release diagnostics', () => {
   });
   });
   describe('releaseErrorMessage', () => {
+  // integration_id: release-publication-diagnostic-safety
   test('final diagnostic boundary accepts only bounded standard installer cleanup evidence', () => {
     const diagnostic = { operation: 'standard-installer', phase: 'assemble', 'sanitized-reason': 'installer-cleanup-failed',
       cleanup: { status: 'failed', 'temporary-state': 'unknown' } };
@@ -356,6 +363,7 @@ describe('safe release diagnostics', () => {
     }
   });
 
+  // integration_id: release-publication-diagnostic-safety
   test('final diagnostic boundary rejects arbitrary fields and malformed envelopes', () => {
     const diagnostic = { operation: 'remote-observation', phase: 'request', method: 'GET',
       'sanitized-endpoint': '/repos/owner/project', 'http-status': 403, 'request-id': 'safe:123', 'sanitized-reason': 'provider-read-failed' };
@@ -370,6 +378,7 @@ describe('safe release diagnostics', () => {
   });
   });
   describe('assetDigest', () => {
+  // integration_id: release-publication-diagnostic-safety
   test('asset readback diagnoses unsafe redirects without disclosing signed locations', async () => {
     const accepted = 'https://release-assets.githubusercontent.com/asset?signed=secret';
     for (const location of [null, 'invalid-secret', 'https://evil.example/signed-secret', accepted]) {

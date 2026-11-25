@@ -15,8 +15,9 @@ const yaml = createRequire(path.join(repository, 'runtime/preset/package.json'))
 
 describe("contract.ci-quality-workflow.execution", () => {
   describe("quality-reusable-preflight", () => {
+    // evidence_role: supplemental
+    // The consumer preflight detecting caller drift is a separate component that no quality workflow definition guarantee covers.
     // integration_id: quality-reusable-preflight
-    // contract_id: contract.ci-quality-workflow.execution
     test('reusable quality preflight connects fixed source without copying the callee and rejects caller drift', () => {
       fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
       const root = fs.mkdtempSync(path.join(repository, 'tmp/reusable-quality-preflight-'));
@@ -114,8 +115,9 @@ describe("contract.ci-quality-workflow.execution", () => {
 
 describe("contract.ci-quality-workflow.execution", () => {
   describe("quality-profiles-reusable-preflight", () => {
+    // evidence_role: supplemental
+    // The consumer preflight detecting caller drift is a separate component that no quality workflow definition guarantee covers.
     // integration_id: quality-profiles-reusable-preflight
-    // contract_id: contract.ci-quality-workflow.execution
     test('profiles preflight validates every language profile as its own quality caller and rejects malformed profiles', () => {
       fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
       const root = fs.mkdtempSync(path.join(repository, 'tmp/profiles-quality-preflight-'));
@@ -205,8 +207,9 @@ describe("contract.ci-quality-workflow.execution", () => {
 
 describe("contract.ci-quality-workflow.execution", () => {
   describe("quality-platform-reusable-preflight", () => {
+    // evidence_role: supplemental
+    // The consumer preflight detecting caller drift is a separate component that no quality workflow definition guarantee covers.
     // integration_id: quality-platform-reusable-preflight
-    // contract_id: contract.ci-quality-workflow.execution
     test('platform reusable preflight validates callee inputs quality selection and availability without consumer copies', () => {
       fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
       const root = fs.mkdtempSync(path.join(repository, 'tmp/reusable-platform-preflight-'));
@@ -291,8 +294,9 @@ describe("contract.ci-quality-workflow.execution", () => {
 
 describe("contract.ci-package-publication-workflow.publication", () => {
   describe("package-preparation-reusable-preflight", () => {
+    // evidence_role: supplemental
+    // The consumer preflight detecting caller drift is a separate component that no package publication workflow guarantee covers.
     // integration_id: package-preparation-reusable-preflight
-    // contract_id: contract.ci-package-publication-workflow.publication
     test('package preparation fixed source preflight rejects drift and retains owner adapters without callee copies', () => {
       fs.mkdirSync(path.join(repository, 'tmp'), { recursive: true });
       const root = fs.mkdtempSync(path.join(repository, 'tmp/reusable-package-preflight-'));
@@ -349,7 +353,7 @@ describe("contract.ci-package-publication-workflow.publication", () => {
 describe("contract.ci-preset-assurance.verification", () => {
   describe("preset-assurance-contract", () => {
     // integration_id: preset-assurance-contract
-    // contract_id: contract.ci-preset-assurance.verification
+    // evidence_role: supplemental
     test('quality toolchain preflight rejects missing extra and altered input bindings', () => {
       const registry = loadRegistry(createReport());
       const inputs = { 'language-profile': '${{ env.CI_LANGUAGE_PROFILE }}', 'toolchain-version': '${{ env.CI_TOOLCHAIN_VERSION }}', 'uv-version': '${{ env.CI_UV_VERSION }}', 'cargo-audit-version': '${{ env.CI_CARGO_AUDIT_VERSION }}', 'cargo-deny-version': '${{ env.CI_CARGO_DENY_VERSION }}' };

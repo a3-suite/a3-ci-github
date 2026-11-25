@@ -11,7 +11,8 @@ const workflow = parse(fs.readFileSync(path.join(repository, '.github/workflows/
 const scopeStep = workflow.jobs.platform.steps.find(step => step.id === 'execution-scope');
 
 describe('shared standard quality checks', () => {
-  // contract_id: contract.ci-quality-adapter.outputs
+  // evidence_role: supplemental
+  // The execution-scope step that selects native or all is workflow behavior; ci-quality-adapter guarantees start from the received scope.
   // flow_id: ci-quality-platforms-shared-execution
   test('only trusted declared standard Rust secondary platforms select native', (t) => {
     // Arrange
@@ -44,7 +45,8 @@ describe('shared standard quality checks', () => {
     expect(workflow.jobs.platform.env.CI_TOOLCHAIN_VERSION).toBe('${{ needs.resolve-platforms.outputs.toolchain-version }}');
   });
 
-  // contract_id: contract.ci-platform-matrix.outputs
+  // evidence_role: supplemental
+  // The trusted-assets step root and source outputs are workflow behavior that no ci-platform-matrix guarantee covers.
   // flow_id: ci-quality-platforms-shared-trust
   test('trusted base declaration wins over head and bootstrap keeps full execution', (t) => {
     // Arrange

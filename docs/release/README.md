@@ -13,6 +13,8 @@
 
 source versionの正本は`VERSION`です。
 
+Releaseの選択配布（fetch CLI、manifest、`SHA256SUMS`）は導入先repositoryへCI資材を配置する導線であり、ホストへツールを導入する標準installer（ci-release-installer）の契約の対象外です。取得・検証・適用・rollbackの契約は[選択配布の契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)に従います。
+
 通常リリースとhotfixは、[publication契約](../../sdd/dsl/specs/contract-core/subjects/ci-selective-distribution/subject.sdd.yml)に従い、実装と接続を1つのexact tagとReleaseで公開します。実装コミットAと接続コミットBの準備と候補検査は[固定参照の更新順序](../maintenance/action-construction.md#固定参照の更新順序)に従います。
 
 Bと同じtreeを持つコミットにannotated exact tagを作成した後、そのtagのcheckoutで公開検査を実行します。

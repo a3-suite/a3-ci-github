@@ -13,20 +13,30 @@ test_maps:
         partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
+          - diagnostic-failure-stage-processing
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects an unavailable selected command
         partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
+          - diagnostic-failure-stage-processing
       - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
         symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > requires an exact version for every selected command
         partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
           - invalid-toolchain-processing-fails
-      - path: tests/runtime-failure-diagnostics.test.mjs
-        symbol: runtime failure diagnostics > github-toolchain rejects invalid invocation with retained shell failure context
+          - diagnostic-failure-stage-processing
+      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects a wrong number of arguments
         partition: runtime-context.github-toolchain-does-not-match-request
         guarantees:
+          - invalid-toolchain-processing-fails
+          - diagnostic-failure-stage-processing
+      - path: runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
+        symbol: contract.ci-github-toolchain-verifier.processing > ci-github-toolchain-script > rejects a failed version response
+        partition: runtime-context.github-toolchain-does-not-match-request
+        guarantees:
+          - invalid-toolchain-processing-fails
           - diagnostic-failure-stage-processing
   - contract_id: contract.ci-github-toolchain-verifier.outputs
     tests:

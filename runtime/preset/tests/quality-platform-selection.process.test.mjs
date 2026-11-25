@@ -7,10 +7,10 @@ import { root, manifest } from "./quality-platform-selection.fixtures.mjs";
 
 describe("contract.ci-platform-matrix.outputs", () => {
   describe("platform-selection-conformance", () => {
-    // evidence_role: contract
+    // evidence_role: supplemental
+    // Agreement between the Action and the preflight validator is a cross-component check that no ci-platform-matrix guarantee covers.
     // test_level: e2e
     // flow_id: platform-selection-conformance
-    // contract_id: contract.ci-platform-matrix.outputs
     test('platform Action and preflight agree on selection and parser rejection boundaries', () => {
       // Arrange
       fs.mkdirSync(path.join(root, 'tmp'), { recursive: true });

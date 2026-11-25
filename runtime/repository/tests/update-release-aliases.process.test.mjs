@@ -15,6 +15,36 @@ const failAliasPush = () => {
   return { work, source, tagsBefore, result: updateAliases(work, 'v1.2.3', source) };
 };
 
+const diagnosticStage = (result) => {
+  const line = result.stderr.split('\n').find(value => value.startsWith('ci-failure-diagnostic:'));
+  return JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}').classification?.stage;
+};
+
+// Runs the alias update with the selected Git call failing as an unavailable remote or local tag write would.
+const failAliasStep = (failingCall) => {
+  const { work } = createRepository();
+  const source = git(work, 'rev-parse', 'HEAD');
+  pushReleaseTag(work, 'v1.2.3', source);
+  const releaseTagBefore = remoteTagObject(work, 'v1.2.3');
+  const wrapper = `
+    git() {
+      if [[ "$FAILING_CALL" == observation && "$1" == ls-remote && "\${2:-}" == --refs && "\${4:-}" == refs/tags/v1 ]] ||
+         [[ "$FAILING_CALL" == preparation && "$1" == tag ]] ||
+         [[ "$FAILING_CALL" == readback && "$1" == ls-remote && "\${2:-}" == origin && "\${3:-}" == *'^{}' ]]; then
+        return 128
+      fi
+      command git "$@"
+    }
+    export -f git
+    exec bash "$1"
+  `;
+  const result = execute('bash', ['-c', wrapper, '--', scriptPath], {
+    cwd: work,
+    env: { ...process.env, RELEASE_TAG: 'v1.2.3', RELEASE_SHA: source, FAILING_CALL: failingCall },
+  });
+  return { work, releaseTagBefore, result };
+};
+
 describe("repository-release-alias-update", () => {
   // evidence_role: contract
   // test_level: e2e
@@ -29,6 +59,21 @@ describe("repository-release-alias-update", () => {
     expect(evidence.comparison).toMatchObject({ field: 'mutable-aliases', expected: source });
     expect(evidence['execution-state']).toMatchObject({ exit: 1, nativeExit: '1', lastConfirmed: 'alias-preparation', write: 'remote-alias-update-outcome-unknown' });
     expect(git(work, 'ls-remote', '--tags', 'origin')).toBe(tagsBefore);
+  });
+
+  // evidence_role: contract
+  // test_level: e2e
+  // contract_id: contract.repository-action-distribution.release-version
+  // flow_id: repository-release-alias-update
+  test.each([
+    ['observation', 'alias-observation'],
+    ['preparation', 'alias-preparation'],
+    ['readback', 'alias-readback'],
+  ])('alias %s failure reports its stage without moving exact tags', (failingCall, stage) => {
+    const { work, releaseTagBefore, result } = failAliasStep(failingCall);
+    expect(result.status).not.toBe(0);
+    expect(diagnosticStage(result)).toBe(stage);
+    expect(remoteTagObject(work, 'v1.2.3')).toBe(releaseTagBefore);
   });
 
   // evidence_role: supplemental
@@ -56,6 +101,7 @@ describe("repository-release-alias-update", () => {
     expect(git(work, 'ls-remote', '--tags', 'origin')).toBe(remoteTags);
   });
 
+  // contract_id: contract.repository-action-distribution.release-version
   // flow_id: repository-release-alias-update
   test('canonical next-patch hotfix can publish before main integration and rejects stale branch or base', () => {
     const { work } = createRepository('1.2.2');
@@ -77,6 +123,7 @@ describe("repository-release-alias-update", () => {
     const staleTip = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
     expect(staleTip.status).toBe(1);
     expect(staleTip.stderr).toMatch(/canonical hotfix tip/);
+    expect(diagnosticStage(staleTip)).toBe('hotfix-base-and-tip');
     expect([remoteTagObject(work, 'v1'), remoteTagObject(work, 'v1.2')]).toEqual(aliasesBefore);
     git(work, 'push', 'origin', `${sourceSha}:refs/heads/hotfix/1.2.3`, '--force-with-lease');
     git(work, 'checkout', 'main');
@@ -85,6 +132,7 @@ describe("repository-release-alias-update", () => {
     const staleBase = updateAliasesAt(work, 'v1.2.3', sourceSha, { CI_RELEASE_VALIDATE_ONLY: 'true' });
     expect(staleBase.status).toBe(1);
     expect(staleBase.stderr).toMatch(/current stable main version/);
+    expect(diagnosticStage(staleBase)).toBe('hotfix-base-and-tip');
     expect([remoteTagObject(work, 'v1'), remoteTagObject(work, 'v1.2')]).toEqual(aliasesBefore);
   });
 
@@ -208,6 +256,7 @@ describe("repository-release-alias-update", () => {
     expect(remoteTagObject(work, 'v2.0')).toBe('');
   });
 
+  // contract_id: contract.repository-action-distribution.release-version
   // flow_id: repository-release-alias-update
   test.each(['main', 'tree', 'ancestry'])('integration evidence acquisition failure stops publication at %s', (stage) => {
     // Arrange
@@ -237,6 +286,7 @@ describe("repository-release-alias-update", () => {
     expect(rejected.status).toBe(1);
     const messages = { main: 'cannot resolve fetched main snapshot', tree: 'cannot resolve main tree', ancestry: 'cannot determine source ancestry' };
     expect(rejected.stderr).toContain(messages[stage]);
+    expect(diagnosticStage(rejected)).toBe('main-integration');
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');
   });
@@ -380,14 +430,17 @@ describe("repository-release-alias-update", () => {
     const invalidTag = updateAliases(work, 'release-1.2.3', sourceSha);
     expect(invalidTag.status).toBe(1);
     expect(invalidTag.stderr).toMatch(/release tag must match vX\.Y\.Z/);
+    expect(diagnosticStage(invalidTag)).toBe('input-validation');
 
     const mismatchedSha = updateAliases(work, 'v1.2.3', '0'.repeat(40));
     expect(mismatchedSha.status).toBe(1);
     expect(mismatchedSha.stderr).toMatch(/tag source does not match/);
+    expect(diagnosticStage(mismatchedSha)).toBe('tag-observation');
 
     const bareRepository = updateAliasesAt(origin, 'v1.2.3', sourceSha);
     expect(bareRepository.status).toBe(1);
     expect(bareRepository.stderr).toMatch(/requires a Git work tree/);
+    expect(diagnosticStage(bareRepository)).toBe('input-validation');
     expect(git(work, 'ls-remote', '--tags', 'origin')).toBe(tagsBefore);
     expect(remoteTagObject(work, 'v1')).toBe('');
     expect(remoteTagObject(work, 'v1.2')).toBe('');

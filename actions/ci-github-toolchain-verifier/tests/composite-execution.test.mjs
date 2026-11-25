@@ -34,7 +34,7 @@ const withCompositeFixture = (callback) => {
   }
 };
 
-const runComposite = ({ fixture, output }, overrides = {}) => spawnSync('/bin/bash', ['-euo', 'pipefail', '-c', runBlock()], {
+const runComposite = ({ fixture, output }, overrides = {}) => spawnSync('bash', ['-euo', 'pipefail', '-c', runBlock()], {
   encoding: 'utf8',
   env: {
     ...process.env,

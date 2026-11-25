@@ -23,6 +23,7 @@ import { resolveConfigSnapshot } from '../../ci-config-snapshot/src/snapshot';
 import { FailureContext } from '../../../runtime/diagnostics/failure.mjs';
 
 describe('ci-release-authority-runtime', () => {
+  // integration_id: ci-release-authority-runtime
   test('authority accepts canonical repository casing while preserving approved identity', async () => {
     const f = fixture();
     try {
@@ -35,6 +36,7 @@ describe('ci-release-authority-runtime', () => {
       expect(JSON.parse(fs.readFileSync(result.authorityPath, 'utf8')).publication.repository).toBe(repository);
     } finally { fs.rmSync(f.root, { recursive: true }); }
   });
+  // integration_id: ci-release-authority-runtime
   test('authority binds LF source identity for CRLF and mixed platform manifests', async () => {
     // Arrange
     for (const endings of ['crlf', 'mixed']) {

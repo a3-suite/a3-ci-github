@@ -123,6 +123,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('canonical quality bootstrap scripts preserve standard custom and fork boundaries', () => {
       const lock = '.ci-base/.ci/ci-assets.lock.json';
       const descriptor = '.ci-base/.ci/adapters/custom.yml';
@@ -212,6 +213,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('trusted Rust quality caches the Cargo registry and normalized target directory under a toolchain and lock key', () => {
       // Arrange
       const steps = yaml.parse(read('.github/workflows/ci-quality.yml')).jobs.trusted.steps;
@@ -315,6 +317,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("package-publication-workflow-contract", () => {
     // flow_id: package-publication-workflow-contract
+    // evidence_role: supplemental
     test('package workflows keep their request, preparation and version plan configuration', () => {
       const request = read('workflows/package/package-publication-request.yml');
       const caller = read('workflows/package/package-publication-caller.yml');
@@ -488,6 +491,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository workflow provider actions use registry-approved pins', () => {
       const entries = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml')).providerActions.entries;
       const approved = new Map(entries.map((entry) => [entry.action, entry.commitSha]));
@@ -573,7 +577,7 @@ describe("workflow-contracts", () => {
         expect(job).toBeDefined();
         expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
-        const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs';
+        const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs runtime/repository/tests/single-release-binding.test.mjs runtime/repository/tests/single-release-binding-validation.test.mjs';
         const commands = release ? ['provider-binding', testCommand] : ['provider-binding'];
         const gates = job.steps.map((step, index) => ({ step, index }))
           .filter(({ step }) => commands.includes(step.id ?? step.run?.trim()));
@@ -606,7 +610,7 @@ describe("workflow-contracts", () => {
         const document = yaml.parse(read(relative));
         assertRequiredGate(document, release);
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
-        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['provider-binding']) {
+        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs runtime/repository/tests/single-release-binding.test.mjs runtime/repository/tests/single-release-binding-validation.test.mjs'] : ['provider-binding']) {
           const gateIndex = document.jobs[jobId].steps.findIndex((step) => (step.id ?? step.run) === gateCommand);
           const mutations = [
             (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),

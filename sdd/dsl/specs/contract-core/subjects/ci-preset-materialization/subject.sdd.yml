@@ -27,9 +27,9 @@ contracts:
         meaning: "Precondition prepared by the case: state of the project settings required by the bundle."
     conditions:
       - id: runtime-context.preset-standard-materialization-valid
-        summary: The invocation meets the shared runtime context `runtime-context.preset-standard-materialization-valid`.
+        summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a registered standard Action bundle and needs no external source-root.
       - id: runtime-context.preset-custom-materialization-valid
-        summary: The invocation meets the shared runtime context `runtime-context.preset-custom-materialization-valid`.
+        summary: Repository and external-skill sources resolve, all selected destinations are new or content-identical, declared consumer settings are satisfied, and the required source reads and destination writes remain available throughout the invocation. The selection is a copyable custom bundle with an explicit source-root.
       - id: runtime-context.preset-materialization-rejected
         summary: Materialization rejects arguments, source binding, project configuration or another input, or fails to write the optional report. This condition covers requests with no valid selection or a custom bundle. Conflicting asset destination bytes and copy failures have their own conditions.
       - id: preset-standard-materialization-rejected
