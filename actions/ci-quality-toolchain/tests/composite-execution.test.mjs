@@ -119,6 +119,14 @@ describe("contract.ci-quality-toolchain.preparation", () => {
         expect(result.status === 0, `${profile}/${requested}/${observed}: ${result.stderr}`).toBe(expected !== undefined);
         expect(fs.readFileSync(output, 'utf8')).toBe(expected ? `version=${expected}\n` : '');
       }
+      // A directory as GITHUB_OUTPUT denies the output write; the step exits with a nonzero code at that write.
+      for (const denied of [
+        run(resolve.run, { ...selected('typescript', '24.21.0'), GITHUB_OUTPUT: directory, CI_NODE_VERSION: 'v24.21.0', CI_PYTHON_VERSION: '', LC_ALL: 'C' }),
+        run(publish.run, { CI_RESOLVED_VERSION: '24.21.0', GITHUB_OUTPUT: directory, LC_ALL: 'C' }),
+      ]) {
+        expect(denied.status, denied.stderr).toBeGreaterThan(0);
+        expect(denied.stderr).toContain(`${directory}: Is a directory`);
+      }
       const output = path.join(directory, 'publish-output');
       expect(run(publish.run, { CI_RESOLVED_VERSION: '24.21.0', GITHUB_OUTPUT: output }).status).toBe(0);
       expect(fs.readFileSync(output, 'utf8')).toBe('version=24.21.0\n');
@@ -156,6 +164,12 @@ describe("contract.ci-quality-toolchain.preparation", () => {
       expect(run(rust, { ...env, RUSTUP_EXIT: '13' }, directory).status).toBe(13);
       if (mode === 'details') expect(fs.existsSync(output)).toBe(false);
       expect(run(audit, { ...env, CARGO_EXIT: '17' }, directory).status).toBe(17);
+      // A directory as GITHUB_ENV denies the environment export after a successful install; the step exits with a nonzero code at that write.
+      fs.writeFileSync(log, '');
+      const deniedEnv = run(rust, { ...env, GITHUB_ENV: directory, LC_ALL: 'C' }, directory);
+      expect(deniedEnv.status, deniedEnv.stderr).toBeGreaterThan(0);
+      expect(deniedEnv.stderr).toContain(`${directory}: Is a directory`);
+      expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toHaveLength(1);
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   };
 

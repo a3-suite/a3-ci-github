@@ -31,10 +31,7 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(f.root, 'platform-output/platform-record.json'))).toBe(false);
     });
 
-    // contract_id: contract.ci-release-supplemental-asset.outputs
-    // flow_id: standard-installer-cleanup-diagnostics
-    // test_level: e2e
-    test.for(['Action', 'CLI'])('distributed %s retains primary and cleanup failures safely', (surface, t) => {
+    const checkCleanupDiagnostics = (surface: 'Action' | 'CLI', t: TestContext) => {
       for (const primary of [true, false]) {
         const f = fixture(t);
         const distribution = path.join(f.root, 'provider');
@@ -65,7 +62,17 @@ describe('standard installer', () => {
         expect(diagnostic.cleanup).toEqual({ status: 'failed', 'temporary-state': 'unknown' });
         expect(diagnostic['exit-status']).toBe(1);
       }
-    });
+    };
+
+    // contract_id: contract.ci-release-supplemental-asset.outputs
+    // flow_id: standard-installer-cleanup-diagnostics
+    // test_level: e2e
+    test('distributed Action retains primary and cleanup failures safely', (t) => checkCleanupDiagnostics('Action', t));
+
+    // evidence_role: supplemental
+    // flow_id: standard-installer-cleanup-diagnostics
+    // test_level: e2e
+    test('distributed CLI retains primary and cleanup failures safely', (t) => checkCleanupDiagnostics('CLI', t));
 
     const rejectTransferredEvidence = (t: TestContext, assertRejected: (mode: string, run: ReturnType<typeof runDistributedAction>, root: string) => void) => {
       // Arrange
@@ -169,11 +176,7 @@ describe('standard installer', () => {
       expect(fs.existsSync(path.join(output, 'platform-record.json'))).toBe(true);
     });
 
-    // evidence_role: contract
-    // contract_id: contract.ci-release-supplemental-asset.outputs
-    // flow_id: standard-installer-process-startup
-    // test_level: e2e
-    for (const surface of ['Action', 'CLI']) test(`distributed ${surface} accepts CRLF checkout through both phases`, (t: TestContext) => {
+    const checkCrlfCheckout = (surface: 'Action' | 'CLI', t: TestContext) => {
       // Arrange
       const f = fixture(t);
       checkoutLineEndings(f.root, 'crlf');
@@ -198,12 +201,22 @@ describe('standard installer', () => {
       execute(prepareAssembly(f));
       // Assert
       expect(fs.existsSync(path.join(f.root, 'handoff/supplemental-manifest.json'))).toBe(true);
-    });
+    };
 
-    // evidence_role: contract
     // contract_id: contract.ci-release-supplemental-asset.outputs
     // flow_id: standard-installer-process-startup
     // test_level: e2e
+    test('distributed Action accepts CRLF checkout through both phases', (t) => checkCrlfCheckout('Action', t));
+
+    // evidence_role: supplemental
+    // flow_id: standard-installer-process-startup
+    // test_level: e2e
+    test('distributed CLI accepts CRLF checkout through both phases', (t) => checkCrlfCheckout('CLI', t));
+
+    // evidence_role: supplemental
+    // flow_id: standard-installer-process-startup
+    // test_level: e2e
+    // The CLI reports no Action status or output directory; this checks only its exit status and platform record.
     test('executes packaged local CLI with the same fixed boundary', (t) => {
       // Arrange
       const f = fixture(t);

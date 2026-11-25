@@ -308,6 +308,7 @@ globalThis.fetch = async (url, init) => {
     expect(diagnostic['request-id']).toBe(['network', 'timeout'].includes(failure) ? 'unavailable' : 'safe:123');
     const evidence = JSON.parse(result.stderr.split('\n').find((line: string) => line.startsWith('ci-failure-diagnostic:'))!.slice('ci-failure-diagnostic:'.length));
     expect(evidence.classification.subject).toBe('ci-release-publication-verifier');
+    expect(evidence.classification.stage).toBe('remote-observe-before');
     expect(evidence.comparison['http-status']).toBe(diagnostic['http-status']);
     expect(evidence.comparison['request-id']).toBe(diagnostic['request-id']);
     expect(evidence['execution-state'].write).toBe('not-started');

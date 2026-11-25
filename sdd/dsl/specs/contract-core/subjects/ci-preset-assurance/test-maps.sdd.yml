@@ -3,11 +3,6 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-preset-assurance.verification
     tests:
-      - path: runtime/preset/tests/preset-validation-contract.test.mjs
-        symbol: preset-validation-contract > preset-assurance-contract > preflight verifies enabled conditional owner extensions without changing consumer assets
-        partition: ci-preset-assurance-applied-preset-valid
-        guarantees:
-          - valid-consumer-unchanged
       - path: runtime/preset/tests/preset-assurance-contract.test.mjs
         symbol: preset-assurance-contract > failure-diagnostics-contract > preset assurance rejects a request without explicit roots
         partition: preset-assurance-invalid-invocation

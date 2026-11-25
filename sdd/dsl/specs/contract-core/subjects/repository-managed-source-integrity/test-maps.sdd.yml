@@ -15,6 +15,21 @@ test_maps:
         guarantees:
           - diagnostic-failure-stage-integrity
       - path: tests/repository-managed-source-integrity.process.test.mjs
+        symbol: repository-managed-source-integrity > repository lint reports the failed stage when the repository lint check fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-integrity
+      - path: tests/repository-managed-source-integrity.process.test.mjs
+        symbol: repository-managed-source-integrity > repository lint reports the failed stage when the rule regression check fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-integrity
+      - path: tests/repository-managed-source-integrity.process.test.mjs
+        symbol: repository-managed-source-integrity > repository lint reports the failed stage when the workflow contract check fails
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - diagnostic-failure-stage-integrity
+      - path: tests/repository-managed-source-integrity.process.test.mjs
         symbol: repository-managed-source-integrity > repository lint rejects each registered legacy source location
         partition: repository-managed-source-integrity-legacy-check-required
         guarantees:

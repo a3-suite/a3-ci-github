@@ -174,3 +174,100 @@ test_maps:
         guarantees:
           - assembly-rejected
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: source entrypoint > missing build inventory rejects assembly before outputs
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: dist entrypoint > missing build inventory rejects assembly before outputs
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+          - diagnostic-failure-stage-outputs
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md before an unreadable later blob
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > same-release-skills > skills report an invalid SKILL.md even when the read-ahead batch fails
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs
+        partition: runtime-context.release-assembly-valid
+        guarantees:
+          - handoff-asset-digest-bound
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > release-assembly-contract > assembly produces a bound handoff and rejects invalid build inputs
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: source"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: version"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: platform"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: checksum"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: extra file"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: symlink"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: traversal"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: snapshot"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: "assembly > assembly > assembly fails closed: unexpected supplemental"
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > release-supplemental-evidence-binding > supplemental evidence binds opaque owner records and rejects mismatches
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > asset-release-assembly > asset release assembles selected skills and supplemental assets without a build inventory
+        partition: runtime-context.release-asset-only-assembly-valid
+        guarantees:
+          - handoff-source-bound
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > asset-release-assembly > asset release rejects an empty asset selection, build inputs and a platform-bound authority
+        partition: runtime-context.release-asset-only-assembly-empty
+        guarantees:
+          - assembly-rejected
+      - path: runtime/release-publication/tests/assembly.test.mjs
+        symbol: contract.ci-release-assembly.outputs > asset-release-assembly > asset release rejects an empty asset selection, build inputs and a platform-bound authority
+        partition: runtime-context.release-assembly-invalid
+        guarantees:
+          - assembly-rejected

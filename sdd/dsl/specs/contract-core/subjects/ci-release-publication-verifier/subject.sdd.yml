@@ -41,11 +41,11 @@ contracts:
         meaning: "Precondition prepared by the case: form of the provider responses."
     conditions:
       - id: runtime-context.release-pre-observation-valid
-        summary: The operation is observe-before, the supplied authority and handoff are valid, remote evidence establishes absence, and required files can be written.
+        summary: The operation is observe-before, the supplied authority and handoff are valid, remote evidence establishes absence, and required files can be written. GitHub credentials establish draft visibility and complete GET-only inventory observes no Release for the bound tag, source and handoff identity.
       - id: runtime-context.release-post-verification-valid
-        summary: The operation is verify-after, all receipt, readback and authority bindings match the independent provider responses, and Action outputs can be written.
+        summary: The operation is verify-after, all receipt, readback and authority bindings match the independent provider responses, and Action outputs can be written. Owner receipt and readback satisfy the evidence schema and all authority, handoff and digest bindings, and independent GET-only observations match the immutable create-result Release ID, tag/source, published state, body and exact asset/checksum inventory.
       - id: runtime-context.release-observation-invalid
-        summary: The operation or local inputs are invalid, provider evidence is unavailable or inconsistent with the selected verification, or a required write cannot complete.
+        summary: The operation or local inputs are invalid, provider evidence is unavailable or inconsistent with the selected verification, or a required write cannot complete. Rejection includes insufficient credentials or remote visibility, a Release already existing before create, incomplete remote knowledge, or owner evidence or independent post-create observations that do not match their schema, identity or digest bindings.
     guarantees:
       - id: observation-status
         applies_to:

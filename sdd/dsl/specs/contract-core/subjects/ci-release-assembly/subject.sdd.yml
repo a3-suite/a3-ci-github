@@ -39,13 +39,13 @@ contracts:
         meaning: "Received by the contract target: supplemental asset implementation selected for the release."
     conditions:
       - id: runtime-context.release-assembly-valid
-        summary: The authority selects a platform release with matching snapshot, platform manifest and verified asset inputs, and required writes can complete.
+        summary: The authority selects a platform release with matching snapshot, platform manifest and verified asset inputs, and required writes can complete. Exact build asset and checksum inventories and any selected opaque owner evidence bindings agree, and the output destination is unclaimed. Selected public skills satisfy ci-github.release-skills-contract and bind to the same Release source and version.
       - id: runtime-context.release-asset-only-assembly-valid
-        summary: The authority selects an asset-only release with a nonempty verified selection, and required writes can complete.
+        summary: The authority selects an asset-only release with a nonempty verified selection, and required writes can complete. Authority records an asset release without language profile, toolchain or platform manifest bindings; no build inventory is supplied; and the selected public skills, the selected supplemental asset evidence, or both bind to the same Release source and version with an unclaimed output destination.
       - id: runtime-context.release-assembly-invalid
-        summary: Assembly rejects its inputs or fails before starting the Action output write. An empty asset-only selection has its own condition.
+        summary: Assembly rejects its inputs or fails before starting the Action output write. An empty asset-only selection has its own condition. Rejection includes unavailable or unsafe assembly input, inconsistency with authority or platform selection, extra or mismatching assets, checksums or supplemental bindings, an existing output destination, or selected public skills that violate fixed source, required inventory, safe paths or publication name constraints.
       - id: runtime-context.release-asset-only-assembly-empty
-        summary: The asset-only inputs are valid but select no assets.
+        summary: The asset-only inputs are valid but select no assets. Authority records an asset release without platform bindings.
       - id: release-assembly-action-output-write-failed
         summary: The handoff has been assembled but the Action output write fails.
     guarantees:

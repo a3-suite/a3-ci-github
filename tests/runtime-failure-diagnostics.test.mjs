@@ -39,15 +39,8 @@ describe('runtime failure diagnostics', () => {
     }
   });
 
-  test.each([
-    ['ci-rust-source-gate', 'profile-binding', { 'language-profile': 'invalid' }],
-    ['ci-rust-release-build', 'input-validation', {
-      'language-profile': 'invalid', 'platform-manifest': 'platforms.yml', 'toolchain-version': '1.80.0',
-      'platform-id': 'fixture', 'platform-target': 'x86_64-unknown-linux-gnu', 'output-directory': 'output',
-      'cargo-manifest-path': 'Cargo.toml', 'release-binary-name': 'fixture', 'release-asset-prefix': 'fixture',
-    }],
-    ['ci-github-toolchain-verifier', 'mode-validation', { mode: 'invalid', 'jq-version': '1.7.1' }],
-  ])('%s composite shell step publishes the input rejection stage', (subject, stage, suppliedInputs) => {
+  const compositeInputRejectionTitle = '%s composite shell step publishes the input rejection stage';
+  const assertCompositeInputRejection = (subject, stage, suppliedInputs) => {
     fs.mkdirSync(path.join(root, 'tests/tmp'), { recursive: true });
     const fixture = fs.mkdtempSync(path.join(root, 'tests/tmp/composite-diagnostic-'));
     onTestFinished(() => fs.rmSync(fixture, { recursive: true, force: true }));
@@ -74,7 +67,22 @@ describe('runtime failure diagnostics', () => {
     expect(diagnostic, result.stderr).not.toBeNull();
     expect(JSON.parse(diagnostic[1]).classification).toMatchObject({ subject, stage });
     expect(fs.readFileSync(output, 'utf8')).toBe('');
-  });
+  };
+
+  test.each([
+    ['ci-rust-source-gate', 'profile-binding', { 'language-profile': 'invalid' }],
+    ['ci-github-toolchain-verifier', 'mode-validation', { mode: 'invalid', 'jq-version': '1.7.1' }],
+  ])(compositeInputRejectionTitle, assertCompositeInputRejection);
+
+  // contract_id: contract.ci-rust-release-build.outputs
+  // flow_id: rust-release-build-composite-diagnostics
+  test.each([
+    ['ci-rust-release-build', 'input-validation', {
+      'language-profile': 'invalid', 'platform-manifest': 'platforms.yml', 'toolchain-version': '1.80.0',
+      'platform-id': 'fixture', 'platform-target': 'x86_64-unknown-linux-gnu', 'output-directory': 'output',
+      'cargo-manifest-path': 'Cargo.toml', 'release-binary-name': 'fixture', 'release-asset-prefix': 'fixture',
+    }],
+  ])(compositeInputRejectionTitle, assertCompositeInputRejection);
 
   // contract_id: contract.ci-failure-diagnostics.actionable
   // flow_id: runtime-failure-diagnostics

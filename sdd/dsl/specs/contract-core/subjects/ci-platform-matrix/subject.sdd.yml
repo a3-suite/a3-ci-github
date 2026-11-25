@@ -23,17 +23,17 @@ contracts:
         meaning: "Precondition prepared by the case: output destination provided by the runner."
     conditions:
       - id: runtime-context.failure-diagnostic-required
-        summary: The invocation meets the shared runtime context `runtime-context.failure-diagnostic-required`.
+        summary: A selected contract invocation is rejected, fails, or produces an unresolved classification. Failure evidence is required at its public boundary; expected skipped or unselected work does not create an error, and diagnostic generation cannot change the original classification or outcome.
       - id: runtime-context.platform-manifest-valid
-        summary: The invocation meets the shared runtime context `runtime-context.platform-manifest-valid`.
+        summary: The selected manifest is available and satisfies the ci-platform-matrix Action input contract, with selection-path omitted. Runner policy defaults to the bounded bootstrap catalog; a fixed caller may select trusted versioned Hosted label syntax only for verified base or publication control configuration. Label syntax is not proof of Hosted origin or availability.
       - id: runtime-context.platform-manifest-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.platform-manifest-invalid`.
+        summary: The selected manifest is unavailable or does not satisfy the ci-platform-matrix Action input contract.
       - id: runtime-context.quality-platform-selection-invalid
-        summary: The invocation meets the shared runtime context `runtime-context.quality-platform-selection-invalid`.
+        summary: The platform manifest is valid, but the supplied quality selection is unavailable or violates the ci-platform-matrix input contract.
       - id: runtime-context.quality-selection-shared-checks-supplied
-        summary: The invocation meets the shared runtime context `runtime-context.quality-selection-shared-checks-supplied`.
+        summary: A valid quality selection explicitly declares boolean sharedStandardChecks.
       - id: runtime-context.quality-selection-shared-checks-omitted
-        summary: The invocation meets the shared runtime context `runtime-context.quality-selection-shared-checks-omitted`.
+        summary: A valid quality selection omits sharedStandardChecks.
     guarantees:
       - id: invalid-platform-manifest-fails
         applies_to:

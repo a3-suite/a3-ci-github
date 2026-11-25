@@ -63,8 +63,7 @@ describe('contract.repository-action-distribution.integrity', () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: repository-maintenance-cli
-    // contract_id: contract.repository-action-distribution.integrity
-    // contract_id: contract.repository-managed-source-integrity.integrity
+    // contract_id: contract.ci-failure-diagnostics.actionable
     test('maintenance entrypoints retain safe failure context and primary exits when sinks fail', () => {
       withFixture('maintenance-diagnostics-', (fixture) => {
         writeFileSync(path.join(fixture, 'existing-state'), 'preserved\n');
@@ -115,7 +114,7 @@ describe('contract.repository-action-distribution.integrity', () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: repository-maintenance-cli
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.ci-failure-diagnostics.actionable
     test('source verification retains child status and completed stage when group output fails', () => {
       const cli = path.join(repositoryRoot, 'runtime/repository/verify-action-packages.mjs');
       for (const [fault, observed] of [['error.status = 7;', 7], ["error.code = 'ENOENT';", 'filesystem-enoent']]) {
@@ -141,7 +140,7 @@ describe('contract.repository-action-distribution.integrity', () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: repository-maintenance-cli
-    // contract_id: contract.repository-action-distribution.integrity
+    // contract_id: contract.ci-failure-diagnostics.actionable
     test('catalog write failure retains known write state without changing existing README', () => {
       const readme = path.join(repositoryRoot, 'README.md');
       const before = readFileSync(readme);
@@ -254,7 +253,7 @@ describe("contract.ci-preset-assurance.verification", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: consumer-preset-assurance-cli
-    // contract_id: contract.ci-preset-assurance.verification
+    // contract_id: contract.ci-failure-diagnostics.actionable
     test('public preset validation CLI retains the failing preset status when a managed workflow drifts', () => {
       withFixture('a3-ci-github-preset-drift-', (consumerRoot) => {
         // Arrange
@@ -343,7 +342,7 @@ describe("contract.ci-preset-assurance.verification", () => {
     // evidence_role: contract
     // test_level: e2e
     // flow_id: consumer-preset-assurance-cli
-    // contract_id: contract.ci-preset-assurance.verification
+    // contract_id: contract.ci-failure-diagnostics.actionable
     test('preset bootstrap reports cleanup failure without publishing a false success or hiding validation failure', () => {
       withFixture('a3-ci-github-preset-cleanup-', (consumerRoot) => {
         // Arrange

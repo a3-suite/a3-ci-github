@@ -6,6 +6,8 @@
 
 前提の記載は`references/use-standard-installer.guide.md`の「READMEに残す内容」に従う。追加準備が不要なら前提の段落自体を削除し、通常使えるツールの説明を補わない。これらの転用説明は製品READMEへ掲載しない。
 
+公開版のオンライン導入（「Linux・macOS」「Windows」）と「非公開リポジトリの場合」は、`references/use-standard-installer.guide.md`の「リポジトリの公開範囲と表示パターン」で選んだパターンに合わせて残す。既定は併記とする。
+
 Agent Skill節は、製品と同じReleaseに対応ZIPを提供する場合だけ使う。ZIPリンクを実際の製品Releaseへ置換し、外部skill rootや他製品のスキルを削除する例は書かない。
 
 ---
@@ -15,6 +17,8 @@ Agent Skill節は、製品と同じReleaseに対応ZIPを提供する場合だ�
 対応環境：<対応OS・CPU>。
 
 <別途導入・設定が必要な場合だけ、その準備を記載。不要ならこの段落を削除>
+
+リポジトリが非公開の場合は、「非公開リポジトリの場合」の手順を使用してください。
 
 ### Linux・macOS
 
@@ -28,6 +32,37 @@ Windows PowerShell 5.1以降で実行します。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -c "irm 'https://github.com/<owner>/<repository>/releases/download/<release-tag>/install.ps1' | iex"
+```
+
+### 非公開リポジトリの場合
+
+非公開リポジトリのReleaseは認証が必要です。[GitHub CLI](https://cli.github.com/)でこのリポジトリを読めるアカウントにログインし（`gh auth login`）、次のコマンドでOS別のファイルを取得してインストールします。インストール後、`<作業ディレクトリ>`は削除してかまいません。
+
+#### Linux
+
+```sh
+gh release download '<release-tag>' --repo '<owner>/<repository>' --dir '<作業ディレクトリ>' \
+  --pattern '<Linux用installer>' --pattern 'manifest-linux-x86_64.json' --pattern '<Linux用配布アーカイブ>'
+bash '<作業ディレクトリ>/<Linux用installer>' --source offline \
+  --manifest '<作業ディレクトリ>/manifest-linux-x86_64.json' --artifact '<作業ディレクトリ>/<Linux用配布アーカイブ>'
+```
+
+#### macOS
+
+```sh
+gh release download '<release-tag>' --repo '<owner>/<repository>' --dir '<作業ディレクトリ>' \
+  --pattern '<macOS用installer>' --pattern 'manifest-macos-arm64.json' --pattern '<macOS用配布アーカイブ>'
+bash '<作業ディレクトリ>/<macOS用installer>' --source offline \
+  --manifest '<作業ディレクトリ>/manifest-macos-arm64.json' --artifact '<作業ディレクトリ>/<macOS用配布アーカイブ>'
+```
+
+#### Windows
+
+```powershell
+gh release download '<release-tag>' --repo '<owner>/<repository>' --dir '<作業ディレクトリ>' `
+  --pattern 'install.ps1' --pattern 'manifest-windows-x86_64.json' --pattern '<Windows用配布アーカイブ>'
+powershell -NoProfile -ExecutionPolicy Bypass -File '<作業ディレクトリ>\install.ps1' -Source offline `
+  -Manifest '<作業ディレクトリ>\manifest-windows-x86_64.json' -Artifact '<作業ディレクトリ>\<Windows用配布アーカイブ>'
 ```
 
 ### 起動確認
@@ -45,6 +80,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -c "irm 'https://github.com/<owner
 ### Agent Skillのインストール
 
 本製品は対応スキルとセットで使用します。同じ版の[対応スキルZIP](https://github.com/<owner>/<repository>/releases/download/<release-tag>/<repository>-skills.zip)と同じReleaseの`.sha256`をダウンロードし、SHA-256を照合してから展開して、利用者環境の適切なスキルフォルダに配置してください。削除する場合は、配備した`<skill-root>/<skill-name>/`だけを削除します。
+
+非公開リポジトリの場合は、`gh release download '<release-tag>' --repo '<owner>/<repository>' --pattern '<repository>-skills.zip*'`でZIPと`.sha256`を取得します。
 
 ## アンインストール
 

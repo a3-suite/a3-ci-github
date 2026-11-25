@@ -31,15 +31,16 @@ function buildArchive(root: string, member: string, content: Buffer): Buffer {
   return readFileSync(archivePath);
 }
 
-function fixtureFetch(archive: Buffer): (url: string) => Promise<Buffer> {
+function fixtureFetch(archive: Buffer, asset = fixtureAsset): (url: string) => Promise<Buffer> {
   const digest = createHash('sha256').update(archive).digest('hex');
   return async (url) => {
-    if (url.endsWith(`/${fixtureAsset}`)) return archive;
-    return Buffer.from(`${digest}  ${fixtureAsset}\n`);
+    if (url.endsWith(`/${asset}`)) return archive;
+    return Buffer.from(`${digest}  ${asset}\n`);
   };
 }
 
 describe('GitHub CLI provisioning', () => {
+  // integration_id: ci-gh-provisioner-source
   test('selects the supported runner assets', () => {
     expect(selectAsset(fixtureVersion, 'Linux', 'X64')).toBe(fixtureAsset);
     expect(selectAsset(fixtureVersion, 'Linux', 'ARM64')).toBe('gh_2.80.0_linux_arm64.tar.gz');
@@ -47,6 +48,7 @@ describe('GitHub CLI provisioning', () => {
     expect(() => selectAsset(fixtureVersion, 'Windows', 'X64')).toThrow(/gh-provision-failed/);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('rejects an unsupported runner before download or PATH handoff', async () => {
     const tempRoot = await testTempRoot();
     const githubPath = path.join(tempRoot, 'github-path');
@@ -57,14 +59,17 @@ describe('GitHub CLI provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
-  test('installs the checksummed asset and exports its directory', async () => {
+  // integration_id: ci-gh-provisioner-source
+  test.each([['X64', 'linux_amd64'], ['ARM64', 'linux_arm64']])('installs the checksummed Linux/%s asset and exports its directory', async (arch, platform) => {
     const tempRoot = await testTempRoot();
-    const archive = buildArchive(tempRoot, fixtureMember, Buffer.from('gh fixture'));
+    const asset = `gh_${fixtureVersion}_${platform}.tar.gz`;
+    const member = `gh_${fixtureVersion}_${platform}/bin/gh`;
+    const archive = buildArchive(tempRoot, member, Buffer.from('gh fixture'));
     const requested: string[] = [];
-    const fetchAsset = fixtureFetch(archive);
+    const fetchAsset = fixtureFetch(archive, asset);
     const githubPath = path.join(tempRoot, 'github-path');
     const installed = await provisionGhOnPath({
-      version: fixtureVersion, runnerOs: 'Linux', runnerArch: 'X64', tempRoot,
+      version: fixtureVersion, runnerOs: 'Linux', runnerArch: arch, tempRoot,
       fetchAsset: async (url) => {
         requested.push(url);
         return fetchAsset(url);
@@ -76,10 +81,11 @@ describe('GitHub CLI provisioning', () => {
     expect(await readdir(path.dirname(installed))).toStrictEqual(['gh']);
     expect(requested).toStrictEqual([
       `https://github.com/cli/cli/releases/download/v${fixtureVersion}/gh_${fixtureVersion}_checksums.txt`,
-      `https://github.com/cli/cli/releases/download/v${fixtureVersion}/${fixtureAsset}`,
+      `https://github.com/cli/cli/releases/download/v${fixtureVersion}/${asset}`,
     ]);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('rejects a checksum mismatch without exposing a binary', async () => {
     const tempRoot = await testTempRoot();
     const archive = buildArchive(tempRoot, fixtureMember, Buffer.from('gh fixture'));
@@ -93,6 +99,7 @@ describe('GitHub CLI provisioning', () => {
     expect((await readdir(tempRoot)).filter((entry) => entry.startsWith('ci-gh-'))).toStrictEqual([]);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('reports a download failure separately from version verification', async () => {
     const tempRoot = await testTempRoot();
     const githubPath = path.join(tempRoot, 'github-path');
@@ -103,6 +110,7 @@ describe('GitHub CLI provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('rejects missing or duplicate checksum entries', async () => {
     for (const manifest of ['', `${'0'.repeat(64)}  ${fixtureAsset}\n${'0'.repeat(64)}  ${fixtureAsset}\n`]) {
       const tempRoot = await testTempRoot();
@@ -116,6 +124,7 @@ describe('GitHub CLI provisioning', () => {
     }
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('rejects an extraction failure before PATH handoff', async () => {
     const tempRoot = await testTempRoot();
     const archive = Buffer.from('not an archive');
@@ -127,6 +136,7 @@ describe('GitHub CLI provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('rejects an installation failure before PATH handoff', async () => {
     const tempRoot = await testTempRoot();
     const missingRoot = path.join(tempRoot, 'missing');
@@ -139,6 +149,7 @@ describe('GitHub CLI provisioning', () => {
     await expect(() => readFile(githubPath)).rejects.toThrow(/ENOENT/);
   });
 
+  // integration_id: ci-gh-provisioner-source
   test('removes the installed binary when PATH update fails', async () => {
     const tempRoot = await testTempRoot();
     const archive = buildArchive(tempRoot, fixtureMember, Buffer.from('gh fixture'));

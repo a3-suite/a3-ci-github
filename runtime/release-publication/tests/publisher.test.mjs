@@ -44,11 +44,9 @@ holdProcessOutput('stdout');
 
 describe("contract.ci-release-publisher.outputs", () => {
   describe("release-publisher-source-flow", { concurrent: true }, () => {
-    // contract_id: contract.ci-release-publisher.outputs
+    // evidence_role: supplemental
     // integration_id: release-publisher-source-flow
-
-    // contract_id: contract.ci-release-publisher.outputs
-    // integration_id: release-publisher-source-flow
+    // Checks publication with a push-false API response; it does not fully check any publisher guarantee.
     test('bound standard capability permits false API push through publication and independent readback', async (t) => {
       // Arrange
       const { f, writes, client, options } = await setup(t);
@@ -65,6 +63,9 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(writes.filter(([operation]) => operation === 'finalize')).toHaveLength(1);
       expect(verified.receipt.release_id).toBe('42');
     });
+    // evidence_role: supplemental
+    // integration_id: release-publisher-source-flow
+    // Also checks the receipt with the verifier's verifyAfter, which belongs to another contract.
     test('publisher creates once and emits evidence accepted by independent verifier', async (t) => {
       const { f, writes, client, options } = await setup(t, {}, { realObservation: true });
       const result = await publishRelease(options, client);
@@ -77,6 +78,9 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(verified.receipt).toStrictEqual(result.receipt);
     });
 
+    // evidence_role: supplemental
+    // integration_id: release-publisher-source-flow
+    // Checks the approved identity in the receipt, which no publisher guarantee states.
     test('publisher preserves approved identity across canonical repository casing', async (t) => {
       const state = await setup(t);
       const json = state.client.json;
@@ -89,6 +93,9 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(state.writes.filter(([operation]) => operation === 'create')).toHaveLength(1);
     });
 
+    // evidence_role: supplemental
+    // integration_id: release-publisher-source-flow
+    // Also checks the absence of an output directory; the Action cases cover provider write rejection.
     test('publisher rejects handoff changes during final absence observation before create', async (t) => {
       const state = await setup(t);
       const list = state.client.list;
@@ -104,6 +111,8 @@ describe("contract.ci-release-publisher.outputs", () => {
       expect(fs.existsSync(state.options.outputRoot)).toBe(false);
     });
 
+    // contract_id: contract.ci-release-publisher.outputs
+    // integration_id: release-publisher-source-flow
     test('publisher waits for uploaded asset inventory without repeating publication writes', async (t) => {
       const state = await setup(t);
       const list = state.client.list;
@@ -206,8 +215,9 @@ describe("publisher", () => {
     }
     for (const phase of ['provider', 'tag']) {
       for (const change of ['expiry', 'notes']) {
-        // contract_id: contract.ci-release-publisher.outputs
+        // evidence_role: supplemental
         // integration_id: release-publisher-partial-failure
+        // Re-validation after the uploads fails without a failed or uncertain provider result, so this is outside publication-operation-failed.
         test(`publisher does not retry or recover failed create upload finalize and readback: ${phase}-${change}`, async (t) => {
           const state = await setup(t);
           const json = state.client.json;

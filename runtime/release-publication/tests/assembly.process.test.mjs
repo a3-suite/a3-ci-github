@@ -10,8 +10,9 @@ import { spawnTimeoutMs, hasPwsh } from "./assembly.fixtures.mjs";
 describe("contract.ci-release-assembly.outputs", () => {
   describe("release-assembly-contract", () => {
 
-    // contract_id: contract.ci-release-assembly.outputs
+    // evidence_role: supplemental
     // flow_id: release-assembly-contract
+    // Checks that assembly accepts output of the PowerShell packager; the rejection cases are mapped in other tests.
     test('assembly accepts PowerShell package output and rejects altered checksum records', { skip: !hasPwsh }, (t) => {
       const platform = { id: 'windows-x64', runner: 'windows-2022', target: 'x86_64-pc-windows-msvc' };
       const f = fixture(t, platform);

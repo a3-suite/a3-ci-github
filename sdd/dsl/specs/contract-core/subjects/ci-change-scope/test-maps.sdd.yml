@@ -69,3 +69,31 @@ test_maps:
           - change-scope-unresolved-runs-ci
           - change-scope-status-produced
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails open for a missing head SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: source entrypoint > entrypoint fails open for an invalid head SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails open for a missing head SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-change-scope/tests/entrypoint.test.ts
+        symbol: dist entrypoint > entrypoint fails open for an invalid head SHA
+        partition: runtime-context.action-input-insufficient
+        guarantees:
+          - change-scope-unresolved-runs-ci
+          - change-scope-status-produced
+          - diagnostic-failure-stage-outputs

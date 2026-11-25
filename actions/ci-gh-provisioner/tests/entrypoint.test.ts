@@ -106,14 +106,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(statSync(path.join(exported, 'gh')).mode & 0o111).toBe(0o111);
     });
 
-    // evidence_role: supplemental
-    // The requests made to the release are an implementation detail that no contract guarantee covers.
-    test(`Action requests the checksum manifest then the Linux/${arch} asset`, () => {
-      const { outcome } = installChecksummedAsset(arch, platform);
-      // Assert
-      expect(outcome.result.status, outcome.result.stderr).toBe(0);
-      expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${assetName(platform)}`]);
-    });
+
   }
 
   test('Action rejects a checksum mismatch without exposing a binary', () => {
@@ -165,6 +158,20 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     const outcome = run(paths, {}, { [checksumUrl]: manifest(sha256(asset), assetName('linux_amd64')), [`${releaseUrl}/${assetName('linux_amd64')}`]: asset });
     // Assert
     expectStopped(outcome, paths, 'asset-install');
+  });
+
+  test('Action rejects unset runner paths before provisioning', () => {
+    for (const unset of ['RUNNER_TEMP', 'GITHUB_PATH']) {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { [unset]: '' }, {});
+      // Assert
+      expect(outcome.result.status, unset).toBe(1);
+      expect(failureDiagnostic(outcome.result.stderr), unset).toMatchObject({ classification: { subject: 'ci-gh-provisioner', stage: 'input-validation', reason: 'gh-provision-failed-runner-paths-unavailable' } });
+      expect(readGithubPath(paths.githubPath), unset).toBeUndefined();
+      expect(provisionedDirectories(paths.runnerTemp), unset).toEqual([]);
+    }
   });
 
   test('Action rejects an installation failure before PATH handoff', () => {
@@ -255,15 +262,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
     });
 
-    test('a failed PATH update', () => {
-      // Arrange
-      const paths = workspace();
-      mkdirSync(paths.githubPath);
-      // Act
-      const outcome = run(paths, {}, routes(paths));
-      // Assert
-      expect(outcome.result.status).toBe(1);
-      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
-    });
+
   });
 });

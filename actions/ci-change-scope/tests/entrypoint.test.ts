@@ -15,7 +15,7 @@ const git = (cwd: string, ...args: string[]): string => execFileSync(
   args,
   { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
 ).trim();
-const runBundled = (base: string, files: string[] = [], outputWritable = true) => {
+const runBundled = (base: string, files: string[] = [], outputWritable = true, headSha?: string) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-change-scope-'));
   git(tempRoot, 'init', '--quiet');
   git(tempRoot, 'config', 'user.email', 'ci-change-scope@example.invalid');
@@ -38,13 +38,13 @@ const runBundled = (base: string, files: string[] = [], outputWritable = true) =
   fs.writeFileSync(output, '', 'utf8');
   const env = { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_OUTPUT: outputWritable ? output : tempRoot } as Record<string, string>;
   env['INPUT_BASE-SHA'] = base === 'head' ? comparison : base;
-  env['INPUT_HEAD-SHA'] = head;
+  env['INPUT_HEAD-SHA'] = headSha ?? head;
   env['INPUT_EVENT-NAME'] = '';
   env['INPUT_PR-BASE-SHA'] = '';
   env['INPUT_BEFORE-SHA'] = '';
   env['INPUT_DOCS-ONLY-PATTERNS'] = 'docs/**,README.md,**/*.md';
   const result = spawnSync(process.execPath, [...entrypointArgs], { cwd: tempRoot, env, encoding: 'utf8' });
-  return { output, result, tempRoot, head };
+  return { output, result, tempRoot, head, comparison };
 };
 const diagnosticOf = (stderr: string): Record<string, unknown> =>
   JSON.parse(stderr.split('\n').find((line) => line.startsWith('ci-failure-diagnostic:'))?.slice('ci-failure-diagnostic:'.length) ?? '{}');
@@ -74,14 +74,17 @@ test('entrypoint reports a valid range', () => {
   }
 });
 
+// contract_id: contract.ci-change-scope.outputs
 // flow_id: ci-change-scope-entrypoint-regression
 test.each([
-  { label: 'an invalid SHA', base: '--relative=src' },
-  { label: 'a missing base SHA', base: '' },
-])('entrypoint fails open for $label', ({ base }) => {
+  { label: 'an invalid SHA', base: '--relative=src', head: undefined },
+  { label: 'a missing base SHA', base: '', head: undefined },
+  { label: 'a missing head SHA', base: 'head', head: '' },
+  { label: 'an invalid head SHA', base: 'head', head: '--relative=src' },
+])('entrypoint fails open for $label', ({ base, head }) => {
   // Arrange
   // Act
-  const run = runBundled(base);
+  const run = runBundled(base, [], true, head);
   // Assert
   try {
     expect(run.result.status).toBe(0);
@@ -92,7 +95,7 @@ test.each([
     expect(value('run-docs')).toBe('true');
     expect(diagnosticOf(run.result.stderr)).toMatchObject({
       classification: { subject: 'ci-change-scope', stage: 'git-diff', reason: 'change-range-unavailable' },
-      context: { inputs: { base: 'unavailable', head: run.head, runCi: true } },
+      context: { inputs: { base: base === 'head' ? run.comparison : 'unavailable', head: head === undefined ? run.head : 'unavailable', runCi: true } },
       'execution-state': { outcome: 'unresolved', lastConfirmed: 'range-resolution' },
     });
   } finally {
@@ -100,6 +103,7 @@ test.each([
   }
 });
 
+// contract_id: contract.ci-change-scope.outputs
 // flow_id: ci-change-scope-entrypoint-regression
 test('entrypoint fails open and keeps both SHAs when the base commit is unavailable', () => {
   // Arrange

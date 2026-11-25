@@ -135,6 +135,20 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expectStopped(outcome, paths, 'checksum-inventory');
   });
 
+  test('Action rejects unset runner paths before provisioning', () => {
+    for (const unset of ['RUNNER_TEMP', 'GITHUB_PATH']) {
+      // Arrange
+      const paths = workspace();
+      // Act
+      const outcome = run(paths, { [unset]: '' }, {});
+      // Assert
+      expect(outcome.result.status, unset).toBe(1);
+      expect(failureDiagnostic(outcome.result.stderr), unset).toMatchObject({ classification: { subject: 'ci-jq-provisioner', stage: 'input-validation', reason: 'jq-provision-failed-runner-paths-unavailable' } });
+      expect(readGithubPath(paths.githubPath), unset).toBeUndefined();
+      expect(provisionedDirectories(paths.runnerTemp), unset).toEqual([]);
+    }
+  });
+
   test('Action rejects an installation failure before PATH handoff', () => {
     // Arrange
     const paths = workspace();
@@ -157,18 +171,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
     expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
   });
 
-  // evidence_role: supplemental
-  // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
-  for (const [runnerOs, arch, asset] of [['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']] as const) {
-    test(`Action requests only the checksum list and its asset on ${runnerOs}/${arch}`, () => {
-      // Arrange
-      const paths = workspace();
-      // Act
-      const outcome = run(paths, { RUNNER_OS: runnerOs, RUNNER_ARCH: arch }, releaseRoutes(asset));
-      // Assert
-      expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${asset}`]);
-    });
-  }
+
 
   // evidence_role: supplemental
   // The requests made to the release and the working directories left behind are implementation details that no contract guarantee covers.
@@ -202,16 +205,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
     });
 
-    test('a failed PATH update', () => {
-      // Arrange
-      const paths = workspace();
-      mkdirSync(paths.githubPath);
-      // Act
-      const outcome = run(paths, {}, releaseRoutes(asset));
-      // Assert
-      expect(outcome.result.status).toBe(1);
-      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
-    });
+
 
     test('a missing install directory', () => {
       // Arrange

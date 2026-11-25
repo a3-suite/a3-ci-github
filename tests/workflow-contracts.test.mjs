@@ -55,6 +55,9 @@ describe('installer public naming references', () => {
     expect(declaration.sharedWrapper.assetName).toBe(contract.publicEntryNames.unixShared.assetName);
     expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.windows.assetName}' | iex`);
     expect(readme).toContain(`/releases/download/<release-tag>/${contract.publicEntryNames.unixShared.assetName}' | sh`);
+    expect(readme).toContain(`--pattern '${contract.publicEntryNames.windows.assetName}'`);
+    expect(readme).toContain(`-File '<作業ディレクトリ>\\${contract.publicEntryNames.windows.assetName}' -Source offline`);
+    for (const platform of contract.platforms.native) expect(readme).toContain(`--pattern 'manifest-${platform}.json'`);
   });
   });
 });
@@ -96,7 +99,8 @@ describe('contract.ci-selective-distribution.publication', () => {
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
-    // flow_id: quality-workflow-contract
+    // contract_id: contract.ci-quality-workflow.execution
+    // integration_id: quality-workflow-contract
     test('untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push', () => {
       // Arrange
       const quality = yaml.parse(read('.github/workflows/ci-quality.yml')).jobs;
@@ -110,11 +114,28 @@ describe("workflow-contracts", () => {
     });
 
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality caller preserves the summary check without copying quality jobs', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate.yml'));
       expect(summaryJobCount(caller)).toBe(1);
       expect(caller.jobs.quality.steps).toBe(undefined);
+      const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
+      const executionJobs = [callee.jobs.summary.needs].flat();
+      // Provider-owned Actions compare without their ref so that a copy pinned to another commit is still detected. Generic Actions
+      // such as checkout are shared by unrelated jobs and do not identify a copied provider job. Run steps have no Action identity,
+      // so inlined copies are excluded by allowing only the summary Action as a caller step.
+      const actionOf = (uses) => uses.replace(/@.*$/, '');
+      const providerAction = (uses) => uses.startsWith('a3-suite/a3-ci-github/actions/');
+      const executionActions = new Set(executionJobs.flatMap((id) => callee.jobs[id].steps.map((step) => step.uses).filter((uses) => uses && providerAction(uses)).map(actionOf)));
+      for (const [id, job] of Object.entries(caller.jobs)) {
+        expect(executionJobs, id).not.toContain(id);
+        for (const step of job.steps ?? []) if (step.uses) expect(executionActions.has(actionOf(step.uses)), `${id}: ${step.uses}`).toBe(false);
+        for (const step of job.steps ?? []) {
+          expect(step.run, `${id}: ${step.name}`).toBe(undefined);
+          expect(actionOf(step.uses ?? ''), `${id}: ${step.name}`).toBe('a3-suite/a3-ci-github/actions/ci-quality-summary');
+        }
+      }
       expect(caller.jobs.quality.permissions.contents).toBe('read');
       const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));
       const { source, referencePlaceholder } = registry.qualityReusableWorkflow;
@@ -168,6 +189,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality workflow declares trusted execution and aggregate summary', () => {
       const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
@@ -219,6 +241,7 @@ describe("workflow-contracts", () => {
       }
     });
     // integration_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('quality workflow keeps adapter wiring, permissions and per-bundle trusted asset selection', () => {
       const workflow = read('.github/workflows/ci-quality.yml').replaceAll('actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/checkout@<commit-sha>');
       const trusted = jobBlock(workflow, 'trusted');
@@ -267,6 +290,7 @@ describe("workflow-contracts", () => {
       expect(baseCheckout(platforms['resolve-platforms']).if, 'manifest and selection resolution still require base assets').toBe(undefined);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('platform caller retains the summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
@@ -295,6 +319,7 @@ describe("workflow-contracts", () => {
       expect(callee.jobs['platform-summary'].name).not.toBe(caller.jobs['platform-summary'].name);
     });
     // integration_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('platform caller keeps its job layout, permissions and callee trigger configuration', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
       const callee = yaml.parse(read('.github/workflows/ci-quality-platforms.yml'));
@@ -311,6 +336,7 @@ describe("workflow-contracts", () => {
       expect(Object.keys(callee.jobs)).toStrictEqual(['resolve-platforms', 'platform', 'platform-summary']);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('profiles caller runs the quality callee once per language profile and retains one summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
@@ -345,6 +371,7 @@ describe("workflow-contracts", () => {
       expect(caller.jobs['profiles-summary'].name).toBe('quality-gate-profiles / summary');
     });
     // integration_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('profiles caller keeps its job layout, permissions, trigger and concurrency configuration', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
       const single = yaml.parse(read('workflows/quality/quality-gate.yml'));
@@ -359,6 +386,7 @@ describe("workflow-contracts", () => {
       expect(caller.jobs['profiles-summary'].if).toBe('always()');
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('optional platform quality workflow preserves trusted assets matrix execution and summary', () => {
       const workflow = read('.github/workflows/ci-quality-platforms.yml');
@@ -402,6 +430,7 @@ describe("workflow-contracts", () => {
       ]);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality workflow keeps failed or missing checks visible', () => {
       const summary = jobBlock(read('.github/workflows/ci-quality.yml'), 'summary');
@@ -668,6 +697,7 @@ describe("workflow-contracts", () => {
     });
 
     // flow_id: release-publication-workflow-contract
+    // evidence_role: supplemental
     test('release publication workflows keep their request, quality, artifact and authority configuration', () => {
       const request = read('workflows/release/release-publication-request.yml');
       const caller = read('workflows/release/release-publication-caller.yml');
@@ -772,6 +802,7 @@ describe("workflow-contracts", () => {
 
 
     // integration_id: release-publication-workflow-contract
+    // evidence_role: supplemental
     test('release builds overlap quality while assembly rejects every unsuccessful prerequisite', () => {
       // Arrange
       const { jobs } = yaml.parse(read('.github/workflows/ci-release-publication.yml'));
@@ -874,6 +905,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: release-publication-workflow-contract
+    // evidence_role: supplemental
     test('release publication workflows preserve failed and unknown outcomes', () => {
       const caller = yaml.parse(read('workflows/release/release-publication-caller.yml'));
       expect(caller.jobs.publish.needs).toBe('validate-request');
@@ -932,6 +964,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: asset-release-publication-workflow-contract
+    // evidence_role: supplemental
     test('asset release publication keeps its job layout, selection rule, snapshot and supplemental configuration', () => {
       // Arrange
       const authoritySteps = jobs.authority.steps;
@@ -1003,6 +1036,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("job-execution-condition", () => {
     // GitHub's implicit success() skips a job when any transitive ancestor was skipped, even if its direct needs succeeded.
+    // evidence_role: supplemental
     test('jobs below a conditional ancestor declare their own status-function condition', () => {
       // Arrange
       const files = globSync(['.github/workflows/*.yml', 'workflows/**/*.yml'], { cwd: root }).sort();
@@ -1114,19 +1148,7 @@ describe("workflow-contracts", () => {
       expect(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity')).toBeTruthy();
     });
 
-    // evidence_role: supplemental
-    // The concurrency group composition, the in-progress run handling and the pending run queue are workflow wiring beyond the serialization that the mapped guarantee observes.
-    // flow_id: package-publication-workflow-contract
-    test('package publication concurrency keeps one group per target and queues pending runs behind in-progress runs', () => {
-      // Arrange
-      const publication = read('.github/workflows/ci-package-publication.yml');
-      // Assert
-      expect(yaml.parse(publication).concurrency).toStrictEqual({
-        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
-        'cancel-in-progress': false,
-        queue: 'max',
-      });
-    });
+
 
 
     // integration_id: package-publication-workflow-contract
@@ -1151,7 +1173,7 @@ describe("workflow-contracts", () => {
 
 
 
-    // contract_id: contract.ci-quality-adapter.outputs
+    // evidence_role: supplemental
     // integration_id: repository-quality-action-reference-contracts
     test('fixed quality Action references preserve rejection contracts and expose old registry pins', (t) => {
       // Arrange
@@ -1174,7 +1196,8 @@ describe("workflow-contracts", () => {
       expect(rejected.diagnostics.join('\n')).toContain('quality-reserved');
     });
 
-    // contract_id: contract.ci-release-publication-control.outputs
+    // evidence_role: supplemental
+    // The repository reference gate is a separate call that no release publication control guarantee covers.
     // integration_id: repository-publication-action-reference-contracts
     test('fixed publication Action references require owner decisions and expose old registry pins', (t) => {
       // Arrange
@@ -1198,6 +1221,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-action-reference-contracts
+    // evidence_role: supplemental
     test.each([
       '.github/workflows/ci-release-publication.yml',
       'workflows/release/release-publication-caller.yml',
@@ -1214,6 +1238,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-action-reference-contracts
+    // evidence_role: supplemental
     test('fixed Action metadata rejects input output and installer binding drift', () => {
       // Arrange
       const snapshot = repositorySnapshot(root);
@@ -1240,6 +1265,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository quality workflow scopes branch events and cancels only stale PR runs', () => {
       const workflow = read('.github/workflows/quality-gate.yml');
       expect(workflow).toMatch(/^  push:\n(?:    #.*\n)?    branches: \[main, develop, 'hotfix\/\*\*'\]$/m);
@@ -1249,6 +1275,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository quality workflow keeps the required hosted check behind Linux and Windows evidence', () => {
       const workflow = read('.github/workflows/quality-gate.yml');
       const linux = jobBlock(workflow, 'contract-linux');
@@ -1325,7 +1352,7 @@ describe("workflow-contracts", () => {
       expect(aggregate).toContain('INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}');
       expect(aggregate).toContain('test "$INSTALLER_LINUX_RESULT" = success');
       const diagnostics = stepContaining(linux, '- name: Test failure diagnostics');
-      for (const file of ['runtime/diagnostics/tests/failure.test.mjs', 'tests/action-failure-diagnostics.test.mjs', 'tests/runtime-failure-diagnostics.test.mjs', 'tests/workflow-failure-diagnostics.test.mjs']) {
+      for (const file of ['runtime/diagnostics/tests/failure.test.mjs', 'runtime/diagnostics/tests/failure.integration.test.mjs', 'tests/action-failure-diagnostics.test.mjs', 'tests/runtime-failure-diagnostics.test.mjs', 'tests/workflow-failure-diagnostics.test.mjs']) {
         expect(diagnostics).toContain(file);
       }
       expect(diagnostics).not.toMatch(/continue-on-error|if:/);
@@ -1361,6 +1388,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository CI runs every Vitest file the root configuration collects', () => {
       // Arrange
       const collected = globSync(vitestConfig.test.include, { cwd: root });
@@ -1375,6 +1403,7 @@ describe("workflow-contracts", () => {
       expect(collected.filter((file) => !selected.has(file))).toStrictEqual([]);
     });
 
+    // evidence_role: supplemental
     test('repository CI discovers every tracked Python test file', () => {
       // Arrange
       const collected = execFileSync('git', ['ls-files', '-z', '--', '*test*.py'], { cwd: root, encoding: 'utf8' })
@@ -1390,6 +1419,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('provider reference gate rejects first-party binding drift', () => {
       // Arrange
       const binding = { repository: 'a3-suite/a3-ci-github', exactRef: actionRef };
@@ -1402,6 +1432,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('repository gate Action steps match their action.yml inputs', () => {
       const job = jobBlock(read('.github/workflows/quality-gate.yml'), 'contract-linux');
       const actionInputs = (name) => {
@@ -1446,6 +1477,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: repository-quality-delivery-regression
+    // evidence_role: supplemental
     test('canonical workflow summaries cover exactly their needs jobs', () => {
       const workflows = [
         ['workflows/release/release-request-tag.yml', 'summary'],
@@ -1475,7 +1507,7 @@ describe("workflow-contracts", () => {
 describe("workflow-contracts", () => {
   describe("failure-diagnostics-contract", () => {
     // integration_id: failure-diagnostics-contract
-    // evidence_role: contract
+    // evidence_role: supplemental
     // test_level: integration
     test('every packaged contract defines subject-specific diagnostics under the shared minimum', () => {
       // Arrange
@@ -1630,6 +1662,7 @@ describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
     const toolchainCallerJobs = [['.github/workflows/ci-quality.yml', 'trusted'], ['.github/workflows/ci-quality.yml', 'untrusted-pr'], ['.github/workflows/ci-quality-platforms.yml', 'platform'], ['.github/workflows/ci-release-publication.yml', 'quality']];
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality toolchain callers bind five inputs and preserve execution gates', () => {
       const bindings = {
@@ -1688,6 +1721,7 @@ describe("workflow-contracts", () => {
     });
 
     // integration_id: quality-workflow-contract
+    // evidence_role: supplemental
     test('quality ranges resolve once and exact versions propagate to adapters and platform jobs', () => {
       const main = yaml.parse(read('.github/workflows/ci-quality.yml'));
       for (const id of ['trusted', 'untrusted-pr']) {

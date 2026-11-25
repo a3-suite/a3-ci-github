@@ -121,7 +121,7 @@ jobs:
         run: npm --prefix runtime/preset ci --no-audit --no-fund
 
       - name: Validate workflow and generation contracts before distribution generation
-        run: npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs
+        run: npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs runtime/repository/tests/single-release-binding.test.mjs runtime/repository/tests/single-release-binding-validation.test.mjs
 
       - name: Generate selective distribution Release assets
         shell: bash

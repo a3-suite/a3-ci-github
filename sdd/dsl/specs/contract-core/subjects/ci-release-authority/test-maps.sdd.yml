@@ -85,3 +85,115 @@ test_maps:
         guarantees:
           - rejected
           - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects a different repository identity without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects a moved release tag without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects an untrusted publication request run without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects owner workflow drift without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects config snapshot drift without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects an uncreatable authority handoff without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects a different repository identity without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects a moved release tag without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects an untrusted publication request run without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects owner workflow drift without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects config snapshot drift without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects an uncreatable authority handoff without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects an invalid publication decision without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: source entrypoint > authority entrypoint rejects a missing notes approval without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects an invalid publication decision without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs
+      - path: actions/ci-release-authority/tests/entrypoint.test.ts
+        symbol: dist entrypoint > authority entrypoint rejects a missing notes approval without authority output
+        partition: runtime-context.release-authority-invalid
+        guarantees:
+          - no-success-outputs
+          - rejected
+          - diagnostic-failure-stage-outputs

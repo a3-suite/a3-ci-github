@@ -38,7 +38,7 @@ installer の実装・配布生成・テストは `runtime/installer/` で保守
 ## 選択配布のローカル検証
 
 ```sh
-npm test -- runtime/distribution/tests/selective-distribution.test.mjs
+npm test -- runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs
 ```
 
 Release assetの組立は`runtime/distribution/generate-distribution-release.ts`を使い、HEADと一致するfull commit SHAのGit objectだけを入力として、新規output directoryへmanifest、fetch CLI、checksums、`.ci/release-skills.json`で宣言したスキルのZIPとその`.sha256`を生成します。スキルのowner証跡は`skills-evidence/`へ出力してhandoffに含め、Releaseには公開しません。working treeの変更は配布byteへ混入しません。`.github/workflows/release.yml`はexact tagを検証して5 assetだけを公開し、remote byte readback成功後にmajor・minor aliasを更新します。
@@ -84,7 +84,7 @@ node runtime/repository/update-action-index.mjs --check
 
 ```sh
 npm test -- tests/action-index-gate.test.mjs
-npm test -- tests/action-dist-gate.test.mjs
+npm test -- tests/action-dist-gate.test.mjs tests/action-dist-gate-plan.test.mjs
 npm test -- runtime/github-toolchain/tests/verify-github-toolchain.test.mjs
 npm test -- runtime/rust-release/tests/rust-release-scripts.test.mjs
 node tests/coverage-tools/contract-subject-coverage.mjs --check
@@ -102,10 +102,10 @@ npm test -- tests/contract-subject-execution.test.mjs runtime/repository/tests/c
 
 ## SDD検証（ローカル保守・リリース前受入）
 
-CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証はローカルまたは承認済み保守環境で workspace ルートから実行します。
+CI runtime へ `a3-*` を持ち込まない方針のため、SDD 正本の検証はローカルまたは承認済み保守環境で workspace ルートから実行します。owner スキルの探索先は環境変数 `A3_SDD_OWNER_SKILL_DISCOVERY_ROOT` で指定します（値は利用者のスキル配置に合わせます）。
 
 ```sh
-a3-sdd sdd check --workspace-root . --format json
+A3_SDD_OWNER_SKILL_DISCOVERY_ROOT="$HOME/.agents/skills" a3-sdd sdd check --workspace-root . --format json
 ```
 
 契約テスト参照は全 test map を同じ Vitest 実収集へ渡して確認します。workspace ルートの Bash または Zsh で実行します。

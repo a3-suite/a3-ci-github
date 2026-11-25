@@ -18,8 +18,9 @@ describe('ci-package-publication-request-source', () => {
     expect(verify).toThrow(expect.objectContaining({ details: { field: 'schema', expected: 'ci.package-publication-request.v1', observed: 'type:object' } }));
   });
 
+  // evidence_role: supplemental
+  // The source functions do not produce the Action status and output values, and no guarantee covers preserving an existing request.
   // integration_id: ci-package-publication-request-source
-  // contract_id: contract.ci-package-publication-request.outputs
   test('creates and verifies a request bound to source SHA', (t) => {
     // Arrange
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-package-request-'));

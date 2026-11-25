@@ -145,6 +145,7 @@ test('entrypoint keeps aggregation and evidence consistent when input conditions
 });
 
 // contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint diagnoses failure to write Action outputs', () => {
   const run = runBundled(successInput, true, 'output-directory');
   try {
@@ -327,12 +328,30 @@ test('entrypoint fails an input where every row is excluded', () => {
 });
 
 // contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint diagnoses missing and malformed summary JSON', () => {
   for (const input of [undefined, '{']) {
     const run = runBundled(successInput, true, 'distinct', { 'INPUT_SUMMARY-JSON': input });
     try {
       expect(run.result.status).toBe(1);
       expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-input"/m);
+    } finally {
+      fs.rmSync(run.tempRoot, { recursive: true, force: true });
+    }
+  }
+  // Parsable JSON whose rows cannot be classified.
+  const [job] = successInput.jobs;
+  for (const input of [
+    { jobs: [] },
+    { jobs: [{ ...job, unit: undefined }] },
+    { jobs: [{ ...job, result: 'failed', reason: undefined }] },
+    { jobs: [{ ...job, result: 'passed' }] },
+    { jobs: [{ ...job, rawResult: 'success', applicable: true }] },
+  ]) {
+    const run = runBundled(input, true, 'distinct', runEnv);
+    try {
+      expect(run.result.status, JSON.stringify(input)).toBe(1);
+      expect(run.result.stderr).toMatch(/^ci-failure-diagnostic:.*"stage":"summary-classification"/m);
     } finally {
       fs.rmSync(run.tempRoot, { recursive: true, force: true });
     }
@@ -354,7 +373,8 @@ test('entrypoint rejects a missing summary path', () => {
   }
 });
 
-// flow_id: ci-quality-summary-entrypoint-regression
+// contract_id: contract.ci-quality-summary.outputs
+// flow_id: ci-quality-summary-contract-entrypoint
 test('entrypoint fails unresolved and invalid path relationships', () => {
   // Arrange
   const unresolvedInput = {

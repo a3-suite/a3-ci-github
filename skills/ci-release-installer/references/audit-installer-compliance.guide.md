@@ -139,7 +139,7 @@
 7. READMEの標準比較を構成監査の独立工程として、次の順に実施する。検査導線を確認し、選択した証跡監査で実行結果を照合する。
    1. `references/use-standard-installer.guide.md`の「固定providerの対応確認」を実施し、採用workflowの固定revisionで成立するuse case・platform・runtime前提・URLを確定する。
    2. 同ガイドのREADME基本形と「標準構成からのセットアップ」を使い、OSごとに標準の入口・期待コマンドと現在の入口・READMEコマンドを既存の差分表へ並べる。project-localのセットアップガイドとREADMEの参照先も比較対象に含める。
-   3. 標準組立契約の`publicEntryNames`へWindows・Unix共有入口の宣言名とREADMEのURL末尾を直接照合する。標準名への適合と、宣言・README・生成物の一致は別々に判定する。旧名で自己整合していても標準適合にせず、契約名への変更を修正対象にする。Unix対象別導入の公開名にはこの固定名制約を広げない。
+   3. 標準組立契約の`publicEntryNames`へWindows・Unix共有入口の宣言名とREADMEのURL末尾（非公開リポジトリ向けの節では取得・実行するasset名）を直接照合する。標準名への適合と、宣言・README・生成物の一致は別々に判定する。旧名で自己整合していても標準適合にせず、契約名への変更を修正対象にする。Unix対象別導入の公開名にはこの固定名制約を広げない。
    4. 差分ごとに標準へ移行できるか、維持するなら標準では満たせない要件とownerの根拠があるかを確認する。短い標準起動へ置換できる操作には具体的なREADME置換案を示す。
    5. 対応根拠、OS別比較、必要性レビューを揃えて既存の差分分類と段階別判定へ渡す。比較結果はCIへ返し、既存ガイドとの一致やpreflight成功だけで整合判定へ進まない。
 
@@ -148,7 +148,7 @@
    - fixture baseline に対応する成功系、失敗系、冪等再実行、rollback / handoff、dry-run、state / audit 境界のテストがあるかを確認する。
    - 必要なテストの配置・対応付けがなければ構成監査の不足とする。テストはあるが実行結果がない場合は、選択した証跡監査の証跡不足とし、構成の結果を変更しない。
    - timeout / hang は、test harness の不備、fixture driver の不備、installer 実行の停止を分け、残存 state、lock、service、managed root、audit log の副作用を確認して severity を決める。
-   - 製品READMEを必須確認対象とし、`references/use-standard-installer.guide.md`の「READMEに残す内容」「READMEへ書かない内容」を適用する。構成監査は宣言・manifest・配布計画、選択した証跡監査は実候補へ照合する。
+   - 製品READMEを必須確認対象とし、`references/use-standard-installer.guide.md`の「READMEに残す内容」「リポジトリの公開範囲と表示パターン」「READMEへ書かない内容」を適用する。構成監査は宣言・manifest・配布計画、選択した証跡監査は実候補へ照合する。
    - READMEの本文・導入導線はroot-docsスキルのルート文書監査を補助として適用する。対象をインストール・アンインストール節とその参照先へ限定し、段階・対象identity・確認項目とinstallerが確認した製品情報を渡す。root-docsの文書判断と、installerが所有する配布経路・コマンドの正当性を分けて保持する。実行証跡不足は該当する証跡段階へ写像し、構成の不適合へ混ぜない。
    - ci-githubスキルの製品と対応スキルの同時Releaseにある同梱の選択に従い、公開スキルの有無と製品ownerの選択を確認する。結果、未同梱理由、CI設定・READMEへの一致を既存レポートへ記録する。選択未確認を未同梱・監査完了としない。
    - 対応スキルを同梱する製品は、同セットアップガイドの「製品と対応スキルを同梱する場合」に照合する。READMEで導入案内が欠落している、任意扱いになっている、同じ製品版のZIPへのリンクや展開・配置の案内がない場合は構成監査のfindingとする。
