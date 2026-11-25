@@ -38,28 +38,28 @@ describe('jq provisioning', () => {
   });
 
   // integration_id: ci-jq-provisioner-source
-  test('installs the checksummed asset and exports its directory', async () => {
+  test.each([['Linux', 'X64', 'jq-linux-amd64'], ['macOS', 'ARM64', 'jq-macos-arm64']])('installs the checksummed %s/%s asset and exports its directory', async (runnerOs, arch, asset) => {
     const tempRoot = await testTempRoot();
-    const binary = Buffer.from('jq fixture');
+    const binary = Buffer.from(`jq fixture ${asset}`);
     const digest = createHash('sha256').update(binary).digest('hex');
     const requested: string[] = [];
     const fetchAsset = async (url: string): Promise<Buffer> => {
       requested.push(url);
       return url.endsWith('/sha256sum.txt')
-        ? Buffer.from(`${digest}  jq-linux-amd64\n`)
+        ? Buffer.from(`${digest}  ${asset}\n`)
         : binary;
     };
     const githubPath = path.join(tempRoot, 'github-path');
     const installed = await provisionJqOnPath({
-      version: '1.7.1', runnerOs: 'Linux', runnerArch: 'X64',
+      version: '1.7.1', runnerOs, runnerArch: arch,
       tempRoot, fetchAsset,
     }, githubPath);
-    expect((await readFile(installed)).toString()).toBe('jq fixture');
+    expect(await readFile(installed)).toStrictEqual(binary);
     expect((await stat(installed)).mode & 0o111).toBe(0o111);
     expect((await readFile(githubPath, 'utf8')).trim()).toBe(path.dirname(installed));
     expect(requested).toStrictEqual([
       'https://github.com/jqlang/jq/releases/download/jq-1.7.1/sha256sum.txt',
-      'https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64',
+      `https://github.com/jqlang/jq/releases/download/jq-1.7.1/${asset}`,
     ]);
   });
 

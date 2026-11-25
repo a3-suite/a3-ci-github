@@ -66,6 +66,7 @@ describe('repository-contract-subject-execution', () => {
     expect(tests).toContain('tests/public-cli-lifecycle.test.mjs');
     expect(selected).not.toContain('tests/public-cli-lifecycle.test.mjs');
     expect(selected).not.toContain('runtime/repository/tests/single-release-binding.test.mjs');
+    expect(selected).not.toContain('runtime/repository/tests/single-release-binding-validation.test.mjs');
     expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/standard-installer.test.ts');
     expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/standard-installer.e2e.test.ts');
     expect(selected).not.toContain('actions/ci-release-supplemental-asset/tests/entrypoint.test.ts');

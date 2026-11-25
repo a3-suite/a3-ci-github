@@ -3094,7 +3094,8 @@
           "level": "e2e",
           "cwd": ".",
           "tests": [
-            "runtime/repository/tests/single-release-binding.test.mjs"
+            "runtime/repository/tests/single-release-binding.test.mjs",
+            "runtime/repository/tests/single-release-binding-validation.test.mjs"
           ],
           "coverage": {
             "enabled": false,

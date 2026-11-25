@@ -222,4 +222,18 @@ const prepareRelease = (root) => {
   return readRelease(output);
 };
 
-export { fixturePlanSettings, cliFetch, cliFetchPeer, cliVerify, cliPlan, cliApply, cliRollback, createConsumer, writeManifest, testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, runReleaseGenerator, generateRelease, baseline, prepareRelease };
+// Counts the requested assets and the registry-required dependencies that a selection closure lacks.
+const closureGapCount = (manifest, requestedPresets, requestedAssets, selectedAssets) => {
+  const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
+  const pending = [...requestedAssets, ...requestedPresets.flatMap((id) => manifest.presets.find((preset) => preset.id === id).requiredAssets)];
+  const required = new Set();
+  while (pending.length > 0) {
+    const id = pending.pop();
+    if (required.has(id)) continue;
+    required.add(id);
+    pending.push(...assets.get(id).dependencies);
+  }
+  return [...required].filter((id) => !selectedAssets.includes(id)).length;
+};
+
+export { fixturePlanSettings, cliFetch, cliFetchPeer, cliVerify, cliPlan, cliApply, cliRollback, createConsumer, writeManifest, testRoot, repositoryRoot, tsx, yaml, fixtureSettings, planDistributionApplication, fixtureVersion, releaseTag, temporaryRoot, committedSourceRoot, sourceRevision, runFixtureGit, baselineRoot, sha256, withFixture, readRelease, runReleaseGenerator, generateRelease, baseline, prepareRelease, closureGapCount };

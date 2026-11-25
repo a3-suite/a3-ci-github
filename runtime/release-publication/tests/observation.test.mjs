@@ -297,9 +297,11 @@ describe('safe release diagnostics', () => {
     const assembly = f.assemble();
     for (const [assets, expectedReads] of [[[], 3], [[{ id: '100', name: 'unexpected', size: 1, state: 'uploaded' }], 1]]) {
       let reads = 0;
-      const client = { list: async () => { reads++; return assets; }, assetDigest: async () => { throw new Error('readback-before-complete-inventory'); } };
+      let bodyReads = 0;
+      const client = { list: async () => { reads++; return assets; }, assetDigest: async () => { bodyReads++; throw new Error('readback-before-complete-inventory'); } };
       await expect(observeAssets(f.identity, '42', assembly, client)).rejects.toThrow(/asset-set-mismatch/);
       expect(reads).toBe(expectedReads);
+      expect(bodyReads).toBe(0);
     }
   });
   // integration_id: release-publication-diagnostic-safety

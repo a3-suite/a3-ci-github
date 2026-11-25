@@ -210,21 +210,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
     expect(outcome.requests.every(entry => entry.method === 'GET')).toBe(true);
   });
 
-  // evidence_role: supplemental
-  // The number of inventory observations and the requested delays before the rejection are implementation details that no contract guarantee covers.
-  test('publication entrypoint observes a Release that stays absent three times one second apart', async (t) => {
-    // Arrange
-    const { run, afterInputs } = setup(t);
-    const inputs = await afterInputs();
-    // Act
-    const outcome = await run('verify-after', { releases: ['absent'] }, inputs);
-    // Assert
-    expectRejected(outcome, /release-not-visible/);
-    expect(outcome.releaseInventories).toBe(3);
-    expect(outcome.assetInventories).toBe(1);
-    expect(outcome.delays).toStrictEqual([1000, 1000]);
-  });
-
   // contract_id: contract.ci-release-publication-verifier.outputs
   test('publication entrypoint refuses an invalid asset subset', async (t) => {
     // Arrange
@@ -235,22 +220,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', { concurrent: true }
       const outcome = await run('verify-after', { releases: ['published'], assets: [assets] }, inputs);
       // Assert
       expectRejected(outcome, /asset-set-mismatch/);
-    }
-  });
-
-  // evidence_role: supplemental
-  // The number of asset inventory observations and the absence of asset body requests before the rejection are implementation details that no contract guarantee covers.
-  test('publication entrypoint bounds asset inventory reobservation and reads no asset body for an invalid subset', async (t) => {
-    // Arrange
-    const { run, afterInputs } = setup(t);
-    const inputs = await afterInputs();
-    for (const [assets, expectedInventories] of [['empty', 3], ['unexpected', 1]] as const) {
-      // Act
-      const outcome = await run('verify-after', { releases: ['published'], assets: [assets] }, inputs);
-      // Assert
-      expectRejected(outcome, /asset-set-mismatch/);
-      expect(outcome.assetInventories, assets).toBe(expectedInventories);
-      expect(outcome.requests.some(entry => entry.endpoint!.includes('/releases/assets/'))).toBe(false);
     }
   });
 

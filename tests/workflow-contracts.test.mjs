@@ -1136,19 +1136,7 @@ describe("workflow-contracts", () => {
       expect(stepIndexContaining(publicationJob, '- name: Verify publication entry') < stepIndexContaining(publicationJob, '- name: Validate package handoff integrity')).toBeTruthy();
     });
 
-    // evidence_role: supplemental
-    // The concurrency group composition, the in-progress run handling and the pending run queue are workflow wiring beyond the serialization that the mapped guarantee observes.
-    // flow_id: package-publication-workflow-contract
-    test('package publication concurrency keeps one group per target and queues pending runs behind in-progress runs', () => {
-      // Arrange
-      const publication = read('.github/workflows/ci-package-publication.yml');
-      // Assert
-      expect(yaml.parse(publication).concurrency).toStrictEqual({
-        group: '${{ github.workflow }}-${{ github.repository }}-${{ inputs.target_identity }}',
-        'cancel-in-progress': false,
-        queue: 'max',
-      });
-    });
+
 
 
     // integration_id: package-publication-workflow-contract

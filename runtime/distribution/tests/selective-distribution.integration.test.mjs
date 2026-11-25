@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test, describe } from 'vitest';
 import { applyDistributionPlan, fetchDistribution, resolveDistributionSelection, rollbackDistributionTransaction, verifyFetchedDistribution } from '../fetch-a3-ci-github.mjs';
 import { readWorkflowSettings, renderWorkflowTemplate } from '../../preset/workflow-template.mjs';
-import { repositoryRoot, yaml, planDistributionApplication, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease } from './selective-distribution.fixtures.mjs';
+import { repositoryRoot, yaml, planDistributionApplication, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease, closureGapCount } from './selective-distribution.fixtures.mjs';
 
 
 describe('distribution test fixtures', () => {
@@ -260,6 +260,46 @@ describe("contract.ci-selective-distribution.delivery", () => {
         expect(extended.selectedPresets).toEqual(['quality-gate', 'release-request']);
         expect(verifyFetchedDistribution({ projectRoot, sourceRevision }).status).toBe('verified');
         expect(fs.existsSync(path.join(first.distributionRoot, '.fetch.lock'))).toBe(false);
+      });
+    });
+  });
+});
+
+describe("contract.ci-selective-distribution.selection", () => {
+  describe("selective-distribution", () => {
+    // evidence_role: supplemental
+    // The selection function verifies preset closure details; the mapped CLI cases retain the public result boundary.
+    // test_level: integration
+    // integration_id: selective-distribution-selection-direct
+    test('preset closure includes only its reusable workflow sources and excludes optional materializer', async () => {
+      await withFixture('a3-ci-github-distribution-source-selection-', (root) => {
+        const release = prepareRelease(root);
+        const select = (requestedPresets, requestedAssets) => {
+          const assets = resolveDistributionSelection(release.manifest, requestedPresets, requestedAssets);
+          return {
+            selectedAssets: assets.map((asset) => asset.id),
+            files: [...new Set(assets.flatMap((asset) => asset.files.map((file) => file.sourcePath)))],
+          };
+        };
+        const workflowSources = (result) => result.files.filter((source) => source.startsWith('.github/workflows/')).sort();
+        const expected = {
+          'quality-gate': ['ci-quality.yml'],
+          'release-request': [],
+          'release-publication': ['ci-release-publication.yml'],
+          'package-publication': ['ci-package-preparation.yml', 'ci-package-publication.yml'],
+        };
+        for (const [preset, workflows] of Object.entries(expected)) {
+          const selected = select([preset], []);
+          expect(closureGapCount(release.manifest, [preset], [], selected.selectedAssets)).toBe(0);
+          expect(selected.selectedAssets).not.toContain('runtime.adapter-materializer');
+          expect(workflowSources(selected)).toStrictEqual(workflows.map((file) => `.github/workflows/${file}`).sort());
+        }
+        expect(() => select(['quality-gate'], ['workflow.quality-gate-platforms']))
+          .toThrow(/^distribution-dependency-missing:/);
+        const platforms = select(['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']);
+        expect(closureGapCount(release.manifest, ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'], platforms.selectedAssets)).toBe(0);
+        expect(workflowSources(platforms)).toStrictEqual(['.github/workflows/ci-quality-platforms.yml', '.github/workflows/ci-quality.yml']);
+        expect(() => select([], ['runtime.adapter-materializer'])).toThrow(/^distribution-dependency-missing:/);
       });
     });
   });

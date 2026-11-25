@@ -31,11 +31,11 @@ function buildArchive(root: string, member: string, content: Buffer): Buffer {
   return readFileSync(archivePath);
 }
 
-function fixtureFetch(archive: Buffer): (url: string) => Promise<Buffer> {
+function fixtureFetch(archive: Buffer, asset = fixtureAsset): (url: string) => Promise<Buffer> {
   const digest = createHash('sha256').update(archive).digest('hex');
   return async (url) => {
-    if (url.endsWith(`/${fixtureAsset}`)) return archive;
-    return Buffer.from(`${digest}  ${fixtureAsset}\n`);
+    if (url.endsWith(`/${asset}`)) return archive;
+    return Buffer.from(`${digest}  ${asset}\n`);
   };
 }
 
@@ -60,14 +60,16 @@ describe('GitHub CLI provisioning', () => {
   });
 
   // integration_id: ci-gh-provisioner-source
-  test('installs the checksummed asset and exports its directory', async () => {
+  test.each([['X64', 'linux_amd64'], ['ARM64', 'linux_arm64']])('installs the checksummed Linux/%s asset and exports its directory', async (arch, platform) => {
     const tempRoot = await testTempRoot();
-    const archive = buildArchive(tempRoot, fixtureMember, Buffer.from('gh fixture'));
+    const asset = `gh_${fixtureVersion}_${platform}.tar.gz`;
+    const member = `gh_${fixtureVersion}_${platform}/bin/gh`;
+    const archive = buildArchive(tempRoot, member, Buffer.from('gh fixture'));
     const requested: string[] = [];
-    const fetchAsset = fixtureFetch(archive);
+    const fetchAsset = fixtureFetch(archive, asset);
     const githubPath = path.join(tempRoot, 'github-path');
     const installed = await provisionGhOnPath({
-      version: fixtureVersion, runnerOs: 'Linux', runnerArch: 'X64', tempRoot,
+      version: fixtureVersion, runnerOs: 'Linux', runnerArch: arch, tempRoot,
       fetchAsset: async (url) => {
         requested.push(url);
         return fetchAsset(url);
@@ -79,7 +81,7 @@ describe('GitHub CLI provisioning', () => {
     expect(await readdir(path.dirname(installed))).toStrictEqual(['gh']);
     expect(requested).toStrictEqual([
       `https://github.com/cli/cli/releases/download/v${fixtureVersion}/gh_${fixtureVersion}_checksums.txt`,
-      `https://github.com/cli/cli/releases/download/v${fixtureVersion}/${fixtureAsset}`,
+      `https://github.com/cli/cli/releases/download/v${fixtureVersion}/${asset}`,
     ]);
   });
 

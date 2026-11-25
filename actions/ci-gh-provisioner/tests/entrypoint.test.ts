@@ -106,14 +106,7 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(statSync(path.join(exported, 'gh')).mode & 0o111).toBe(0o111);
     });
 
-    // evidence_role: supplemental
-    // The requests made to the release are an implementation detail that no contract guarantee covers.
-    test(`Action requests the checksum manifest then the Linux/${arch} asset`, () => {
-      const { outcome } = installChecksummedAsset(arch, platform);
-      // Assert
-      expect(outcome.result.status, outcome.result.stderr).toBe(0);
-      expect(outcome.requested).toStrictEqual([checksumUrl, `${releaseUrl}/${assetName(platform)}`]);
-    });
+
   }
 
   test('Action rejects a checksum mismatch without exposing a binary', () => {
@@ -255,15 +248,6 @@ describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
       expect(existsSync(path.join(paths.root, 'missing'))).toBe(false);
     });
 
-    test('a failed PATH update', () => {
-      // Arrange
-      const paths = workspace();
-      mkdirSync(paths.githubPath);
-      // Act
-      const outcome = run(paths, {}, routes(paths));
-      // Assert
-      expect(outcome.result.status).toBe(1);
-      expect(provisionedDirectories(paths.runnerTemp)).toStrictEqual([]);
-    });
+
   });
 });

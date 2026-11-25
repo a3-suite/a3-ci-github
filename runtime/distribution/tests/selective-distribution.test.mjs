@@ -2,21 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, describe } from 'vitest';
 import { snapshotTree } from '../../preset/tests/support/release-request-fixture.mjs';
-import { cliApply, cliFetch, cliFetchPeer, cliPlan, cliRollback, cliVerify, createConsumer, fixturePlanSettings, writeManifest, repositoryRoot, yaml, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease } from "./selective-distribution.fixtures.mjs";
-
-// Counts the requested assets and the registry-required dependencies that a selection closure lacks.
-const closureGapCount = (manifest, requestedPresets, requestedAssets, selectedAssets) => {
-  const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
-  const pending = [...requestedAssets, ...requestedPresets.flatMap((id) => manifest.presets.find((preset) => preset.id === id).requiredAssets)];
-  const required = new Set();
-  while (pending.length > 0) {
-    const id = pending.pop();
-    if (required.has(id)) continue;
-    required.add(id);
-    pending.push(...assets.get(id).dependencies);
-  }
-  return [...required].filter((id) => !selectedAssets.includes(id)).length;
-};
+import { cliApply, cliFetch, cliFetchPeer, cliPlan, cliRollback, cliVerify, createConsumer, fixturePlanSettings, writeManifest, repositoryRoot, yaml, planDistributionApplication, releaseTag, committedSourceRoot, sourceRevision, sha256, withFixture, prepareRelease, closureGapCount } from "./selective-distribution.fixtures.mjs";
 
 const failureOf = (run) => {
   try { run(); } catch (error) { return error; }
@@ -252,41 +238,6 @@ const interruptRollback = (scenario, inspect) => withFixture(`distribution-rollb
   inspect({ thrown, diagnostic, workflow, backup, transactionPath, externalRoot, outsideBefore });
 });
 
-
-
-describe("contract.ci-selective-distribution.selection", () => {
-  describe("selective-distribution", () => {
-    // contract_id: contract.ci-selective-distribution.selection
-    // test_level: e2e
-    // flow_id: selective-distribution-selection-runtime
-    test('preset closure includes only its reusable workflow sources and excludes optional materializer', async () => {
-      await withFixture('a3-ci-github-distribution-source-selection-', (root) => {
-        const release = prepareRelease(root);
-        const fetchSelection = (name, requestedPresets, requestedAssets) => cliFetch({ projectRoot: createConsumer(root, name),
-          manifestPath: release.manifestPath, requestedPresets, requestedAssets, sourceRoot: repositoryRoot });
-        const workflowSources = (result) => result.files.filter((source) => source.startsWith('.github/workflows/')).sort();
-        const expected = {
-          'quality-gate': ['ci-quality.yml'],
-          'release-request': [],
-          'release-publication': ['ci-release-publication.yml'],
-          'package-publication': ['ci-package-preparation.yml', 'ci-package-publication.yml'],
-        };
-        for (const [preset, workflows] of Object.entries(expected)) {
-          const selected = fetchSelection(preset, [preset], []);
-          expect(closureGapCount(release.manifest, [preset], [], selected.selectedAssets)).toBe(0);
-          expect(selected.selectedAssets).not.toContain('runtime.adapter-materializer');
-          expect(workflowSources(selected)).toStrictEqual(workflows.map((file) => `.github/workflows/${file}`).sort());
-        }
-        expect(() => fetchSelection('platforms-without-runtime', ['quality-gate'], ['workflow.quality-gate-platforms']))
-          .toThrow(/^distribution-dependency-missing$/);
-        const platforms = fetchSelection('platforms', ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow']);
-        expect(closureGapCount(release.manifest, ['quality-gate'], ['workflow.quality-gate-platforms', 'runtime.quality-platforms-workflow'], platforms.selectedAssets)).toBe(0);
-        expect(workflowSources(platforms)).toStrictEqual(['.github/workflows/ci-quality-platforms.yml', '.github/workflows/ci-quality.yml']);
-        expect(() => fetchSelection('materializer', [], ['runtime.adapter-materializer'])).toThrow(/^distribution-dependency-missing$/);
-      });
-    });
-  });
-});
 
 
 describe("contract.ci-selective-distribution.delivery", () => {

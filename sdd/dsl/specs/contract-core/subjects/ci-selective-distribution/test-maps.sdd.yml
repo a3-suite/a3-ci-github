@@ -14,21 +14,11 @@ test_maps:
         guarantees:
           - selective-distribution-closure-exposed
       - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.selection > selective-distribution > preset closure includes only its reusable workflow sources and excludes optional materializer
-        partition: runtime-context.selective-distribution-selection-valid
-        guarantees:
-          - selective-distribution-closure-exposed
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
         symbol: contract.ci-selective-distribution.selection > selective-distribution > preset selection closes dependencies while direct asset selection reports missing dependencies
         partition: runtime-context.selective-distribution-selection-incomplete
         guarantees:
           - selective-distribution-missing-dependency-rejected
           - selective-distribution-incomplete-selection-preserves-tree
-      - path: runtime/distribution/tests/selective-distribution.test.mjs
-        symbol: contract.ci-selective-distribution.selection > selective-distribution > preset closure includes only its reusable workflow sources and excludes optional materializer
-        partition: runtime-context.selective-distribution-selection-incomplete
-        guarantees:
-          - selective-distribution-missing-dependency-rejected
   - contract_id: contract.ci-selective-distribution.delivery
     tests:
       - path: runtime/distribution/tests/selective-distribution.test.mjs
@@ -292,25 +282,25 @@ test_maps:
           - diagnostic-failure-stage-readback
   - contract_id: contract.ci-selective-distribution.reference-update
     tests:
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > candidate updates reject missing and unrelated implementation commits and preserve approval inputs
         partition: runtime-context.selective-distribution-reference-update-invalid
         guarantees:
           - selective-distribution-reference-update-rejected
           - rejected-reference-update-preserves-registry
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > candidate application rejects closure changes without writing references
         partition: runtime-context.selective-distribution-reference-update-invalid
         guarantees:
           - selective-distribution-reference-update-rejected
           - rejected-reference-update-preserves-registry
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > candidate application rejects symlink destinations without writing references
         partition: runtime-context.selective-distribution-reference-update-invalid
         guarantees:
           - selective-distribution-reference-update-rejected
           - rejected-reference-update-preserves-registry
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > candidate updates reject missing and unrelated implementation commits and preserve approval inputs
         partition: runtime-context.failure-diagnostic-required
         guarantees:
@@ -335,22 +325,22 @@ test_maps:
         guarantees:
           - selective-distribution-implementation-binding-verified
           - selective-distribution-implementation-binding-evidence-exposed
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/preset/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-valid
         guarantees:
           - selective-distribution-implementation-binding-verified
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/distribution/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-valid
         guarantees:
           - selective-distribution-implementation-binding-verified
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/repository/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-valid
         guarantees:
           - selective-distribution-implementation-binding-verified
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release accepts changed provider maintenance runtime runtime/vitest/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-valid
         guarantees:
@@ -365,37 +355,37 @@ test_maps:
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input VERSION
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input runtime/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/action.yml
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/dist/index.js
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects changed execution input actions/ci-quality-adapter/scripts/composite.sh
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects a changed execution file mode of actions/ci-quality-adapter/scripts/composite.sh
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects a changed execution file mode of runtime/payload.mjs
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
@@ -410,67 +400,67 @@ test_maps:
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects a runtime entry added outside provider maintenance
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects stale workflow and installer bindings and invalid interfaces
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release cannot validate an unexecutable fixed bundle or bypass execution checks
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared main entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared pre entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared post entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-bare entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-quoted entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-unresolved entrypoint
         partition: runtime-context.selective-distribution-provider-reference-check-invalid
         guarantees:
           - selective-distribution-provider-reference-check-rejected
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects an absent declared composite-unresolved entrypoint
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-provider-reference-check
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > single Release rejects stale workflow and installer bindings and invalid interfaces
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-provider-reference-check
-      - path: runtime/repository/tests/single-release-binding.test.mjs
+      - path: runtime/repository/tests/single-release-binding-validation.test.mjs
         symbol: contract.ci-selective-distribution.publication > provider reference check identifies invalid arguments before repository binding
         partition: runtime-context.failure-diagnostic-required
         guarantees:
