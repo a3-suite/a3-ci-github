@@ -123,14 +123,18 @@ describe("workflow-contracts", () => {
       const callee = yaml.parse(read('.github/workflows/ci-quality.yml'));
       const executionJobs = [callee.jobs.summary.needs].flat();
       // Provider-owned Actions compare without their ref so that a copy pinned to another commit is still detected. Generic Actions
-      // such as checkout are shared by unrelated jobs and do not identify a copied provider job. Steps that only run shell commands
-      // have no Action identity, so a copy that inlines the callee as run steps is outside what this comparison can detect.
+      // such as checkout are shared by unrelated jobs and do not identify a copied provider job. Run steps have no Action identity,
+      // so inlined copies are excluded by allowing only the summary Action as a caller step.
       const actionOf = (uses) => uses.replace(/@.*$/, '');
       const providerAction = (uses) => uses.startsWith('a3-suite/a3-ci-github/actions/');
       const executionActions = new Set(executionJobs.flatMap((id) => callee.jobs[id].steps.map((step) => step.uses).filter((uses) => uses && providerAction(uses)).map(actionOf)));
       for (const [id, job] of Object.entries(caller.jobs)) {
         expect(executionJobs, id).not.toContain(id);
         for (const step of job.steps ?? []) if (step.uses) expect(executionActions.has(actionOf(step.uses)), `${id}: ${step.uses}`).toBe(false);
+        for (const step of job.steps ?? []) {
+          expect(step.run, `${id}: ${step.name}`).toBe(undefined);
+          expect(actionOf(step.uses ?? ''), `${id}: ${step.name}`).toBe('a3-suite/a3-ci-github/actions/ci-quality-summary');
+        }
       }
       expect(caller.jobs.quality.permissions.contents).toBe('read');
       const registry = yaml.parse(read('skills/ci-github/assets/registry/ci-github-preset-assets.yml'));

@@ -86,9 +86,11 @@ describe("preset-validation-contract", () => {
 
 describe("contract.ci-preset-assurance.verification", () => {
   describe("preset-assurance-contract", () => {
+    // Descriptor validation messages are internal detail; the public drift outcome is mapped elsewhere.
+    // evidence_role: supplemental
+    // test_level: integration
     // integration_id: preset-assurance-contract
-    // contract_id: contract.ci-preset-assurance.verification
-    test('preflight rejects malformed adapter commands consistently with materializer and Action', () => {
+    test('descriptor validation names each malformed adapter command field', () => {
       const base = [
         'schemaVersion: "1"',
         'kind: ci-adapter-bundle',
