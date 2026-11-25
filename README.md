@@ -21,12 +21,12 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 - 導入先は GitHub Actions を使う Git repository
 - Node.js 24 または 26 以降
 - GitHub CLI（`gh`）と `sha256sum`（取得と checksum 検証に使用）
-- 採用する exact Release（例: `v0.9.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
+- 採用する exact Release（例: `v0.12.0`）。選定条件は[配布ガイドの対応条件](skills/ci-github/references/deploy-ci-assets.guide.md#対応条件)を参照してください。
 
 1. 採用する Release から fetch CLI、配布 manifest、`SHA256SUMS` を取得し、checksum を検証します。
 
    ```bash
-   gh release download v0.9.0 --repo a3-suite/a3-ci-github \
+   gh release download v0.12.0 --repo a3-suite/a3-ci-github \
      --pattern fetch-a3-ci-github.mjs --pattern a3-ci-github-distribution-manifest.json --pattern SHA256SUMS
    sha256sum --check SHA256SUMS
    ```
@@ -44,10 +44,10 @@ GitHub Actions の CI を、標準の preset（品質検証、Release、Package 
 
 ### Agent Skill の導入
 
-本製品は対応スキル（`ci-github`、`ci-release-installer`）とセットで使用します。採用した Release の[対応スキル ZIP](https://github.com/a3-suite/a3-ci-github/releases/download/v0.9.0/a3-ci-github-skills.zip)と同じ Release の `a3-ci-github-skills.zip.sha256` をダウンロードし、SHA-256 を照合してから展開します。
+本製品は対応スキル（`ci-github`、`ci-release-installer`）とセットで使用します。採用した Release の[対応スキル ZIP](https://github.com/a3-suite/a3-ci-github/releases/download/v0.12.0/a3-ci-github-skills.zip)と同じ Release の `a3-ci-github-skills.zip.sha256` をダウンロードし、SHA-256 を照合してから展開します。
 
 ```bash
-gh release download v0.9.0 --repo a3-suite/a3-ci-github \
+gh release download v0.12.0 --repo a3-suite/a3-ci-github \
   --pattern a3-ci-github-skills.zip --pattern a3-ci-github-skills.zip.sha256 &&
   sha256sum --check a3-ci-github-skills.zip.sha256 &&
   unzip -d a3-ci-github-skills a3-ci-github-skills.zip
@@ -64,6 +64,8 @@ uses: a3-suite/a3-ci-github/actions/<action-name>@<40-char-commit-sha>
 ```
 
 導入済み CI の更新は、新しい Release で取得から適用までを同じ手順で行います。管理外の差分は上書きせず、`conflict` として停止します。
+
+適用を取り消す場合は、[配布ガイドの rollback](skills/ci-github/references/deploy-ci-assets.guide.md#適用後) で直前の apply が変更した caller と companion を変更前へ戻します。取得した旧 distribution の削除は、同ガイドの[更新と削除](skills/ci-github/references/deploy-ci-assets.guide.md#更新と削除)に従います。
 
 ## 製品と対応スキルの同時Release
 
