@@ -18,6 +18,27 @@ const fileNames = (directory: string): string[] => fs.readdirSync(directory, { r
 
 const transportTimeout = 30_000;
 
+const acceptancePath = (value: string): string => {
+  if (path.isAbsolute(value) || path.win32.isAbsolute(value) || value.split(/[\\/]/).includes('..')) {
+    throw new Error('Installer acceptance paths must be repository-relative');
+  }
+  const root = fs.realpathSync(repository);
+  const resolved = path.resolve(root, value);
+  let ancestor = resolved;
+  while (true) {
+    try { fs.lstatSync(ancestor); break; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      ancestor = path.dirname(ancestor);
+    }
+  }
+  const relative = path.relative(root, fs.realpathSync(ancestor));
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('Installer acceptance paths must stay inside the repository');
+  }
+  return resolved;
+};
+
 // Source objects and declarations are fixture context, separate from the artifact under test.
 const packTransport = (root: string, output: string) => {
   fs.mkdirSync(output, { recursive: true });
@@ -115,13 +136,13 @@ describe('standard installer', () => {
       // Act
       runSupplementalAction(f.options);
       const assembled = prepareAssembly(f);
-      if (process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT) packTransport(f.root, path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT));
+      if (process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT) packTransport(f.root, acceptancePath(process.env.CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT));
       runSupplementalAction(assembled);
       const releaseRoot = path.join(f.root, 'release-handoff');
       const release = assembleRelease({ authorityPath: path.join(f.root, 'authority.json'), repository: 'fixture/tool', snapshotPath: path.join(f.root, 'snapshot.json'), platformManifestPath: path.join(f.root, 'platform.yml'), platformMatrix: JSON.stringify({ include: [platform] }), buildRoot: path.join(f.root, assembled.standardBuildRoot), supplementalRoot: path.join(f.root, 'handoff'), outputRoot: releaseRoot }, decodePlatformManifest);
       const expected = { sourceSha: release.identity.source_sha, version: release.identity.version, targetIdentity: release.identity.target_identity };
       if (process.env.CI_INSTALLER_ACCEPTANCE_OUTPUT) {
-        fs.cpSync(releaseRoot, path.resolve(repository, process.env.CI_INSTALLER_ACCEPTANCE_OUTPUT), { recursive: true });
+        fs.cpSync(releaseRoot, acceptancePath(process.env.CI_INSTALLER_ACCEPTANCE_OUTPUT), { recursive: true });
         if (!process.env.GITHUB_OUTPUT) throw new Error('installer-acceptance-output-missing');
         fs.appendFileSync(process.env.GITHUB_OUTPUT, `source-sha=${expected.sourceSha}\n`);
       }
@@ -157,7 +178,7 @@ describe('standard installer', () => {
     // flow_id: standard-installer-candidate-assembly
     test('revalidates downloaded platform evidence', (t) => {
       let input: string;
-      if (process.env.CI_INSTALLER_PLATFORM_INPUT) input = path.resolve(repository, process.env.CI_INSTALLER_PLATFORM_INPUT);
+      if (process.env.CI_INSTALLER_PLATFORM_INPUT) input = acceptancePath(process.env.CI_INSTALLER_PLATFORM_INPUT);
       else {
         // Without a producer job, pack the local fixture the same way so the transport contents stay verified.
         const f = fixture(t);

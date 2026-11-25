@@ -26,37 +26,37 @@ test_maps:
   - contract_id: contract.repository-action-distribution.catalog
     tests:
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > preserves curated rows and appends newly discovered actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > preserves curated rows and appends newly discovered actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > removes rows for deleted actions
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > removes rows for deleted actions
         partition: runtime-context.repository-action-catalog-inputs-available
         guarantees:
           - catalog-action-set-matched
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the projection stage when the catalog is stale
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the projection stage when the catalog is stale
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the failed stage when the README is missing
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the README is missing
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the failed stage when Action metadata lacks a description
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when Action metadata lacks a description
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the failed stage when the README lacks the catalog section
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the README lacks the catalog section
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog
       - path: tests/action-index-gate.process.test.mjs
-        symbol: contract.repository-action-distribution.catalog > repository-action-distribution-gates > reports the failed stage when the catalog section lacks the table
+        symbol: contract.repository-action-distribution.catalog > repository-action-catalog-gates > reports the failed stage when the catalog section lacks the table
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - diagnostic-failure-stage-catalog

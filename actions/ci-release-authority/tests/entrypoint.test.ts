@@ -241,6 +241,8 @@ test('authority entrypoint records an asset release without language, toolchain 
   } finally { fs.rmSync(f.root, { recursive: true }); }
 });
 
+// contract_id: contract.ci-release-authority.outputs
+// flow_id: ci-release-authority-bundle
 test('authority fails when Action outputs cannot be written', () => {
   const f = fixture();
   try {

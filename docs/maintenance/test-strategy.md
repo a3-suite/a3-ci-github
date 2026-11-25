@@ -6,8 +6,8 @@
 
 ## レベル境界
 
-- 統合テストは、repository 内の実コンポーネントを接続し、外部サービスを fixture または test double に置き換えて契約を観測します。
-- E2E テストは、公開 CLI、`action.yml`、または workflow trigger から利用者が観測する結果までを通します。
+- 統合テストは、repository 内の実コンポーネントを同一プロセスで呼び出し、外部サービスを fixture または test double に置き換えて契約を観測します。
+- E2E テストは、公開 CLI や Action の対象プロセスを起動する経路、または Hosted workflow trigger から利用者が観測する結果までを通します。
 - YAML 構造テストやローカル Git fixture の成功を、GitHub Hosted runner 上の成功証拠として扱いません。
 - 同じ保証を各 Action の E2E で重複させず、Action の局所契約は統合テスト、GitHub 固有の結合は代表 workflow の Hosted E2E で保証します。
 
@@ -15,10 +15,10 @@
 
 | コンポーネント | 統合テスト | E2E |
 | --- | --- | --- |
-| Action | source、dist、entrypoint、公開 I/O、Composite と共有 runtime の接続 | quality、Release、package の代表 Hosted flow から実行 |
+| Action | source module の直接呼び出し、公開 I/O と共有 runtime の接続、Composite の宣言構造 | source、dist の entrypoint プロセス起動と quality、Release、package の代表 Hosted flow |
 | canonical workflow | trigger、permissions、job、`needs`、trust、summary の宣言構造 | GitHub Hosted runner 上の代表 flow |
 | preset runtime | registry、実 filesystem、lock digest、read-only、source root 分離 | 公開 CLI を別 process で起動する consumer flow |
-| repository runtime | local bare Git、subprocess、成果物、失敗時の非破壊性 | stateful な Hosted delivery flow がある場合だけ追加 |
+| repository runtime | 同一プロセスの呼び出し、local Git fixture、成果物、失敗時の非破壊性 | 対象 CLI のプロセス起動、stateful な Hosted delivery flow |
 | installer runtime | 同一プロセスで検証できる内部連携 | 実installer・配布Action／CLIのプロセス起動を伴う標準installerテストとPython provider回帰はE2Eとして実行し、単体＋統合の計測には含めない。Linux共通回帰、Windows・macOS ARM64 native回帰はrepository CI。Release handoffの組立・整合性・破損拒否も検証。Windows／macOSからLinuxへのartifact搬送は整合性Actionで確認。製品の公開・readbackは別受入 |
 | a3-lint rule | 実 a3-lint runtime に対する正常、違反、誤検知 fixture | repository lint の受入実行を smoke とし、rule ごとの E2E は作らない |
 | SDD・契約実行定義 | owner validator、route、test map、path、subject 集合 | 公開利用フローではないため原則追加しない |
@@ -57,7 +57,9 @@ Hosted検証では、本番のAPI取得条件（ページサイズを含む）�
 
 ## 実行
 
-リポジトリ全体のローカル回帰には、品質ゲートの `setup-node` が指定する Node.js と npm、Git、Bash、`tar`、Python が必要です。Python は Unix 系で `python3`、Windows で `python` として解決できるようにします。JavaScript のテスト依存は各パッケージの lockfile から復元します。PowerShell の梱包・組立ケースは `pwsh` が見つからない環境でスキップし、Windows の toolchain 検査は Windows 上で実行します。これらのケースは品質ゲートの Windows Rust release ジョブの結果を確認します。
+リポジトリ全体のローカル回帰には、品質ゲートの `setup-node` が指定する Node.js と npm、Git、Bash、`tar`、Python が必要です。Unix 系の toolchain verifier の回帰は Bash と標準の `awk`、`sed`、`env` を使用します。Python は Unix 系で `python3`、Windows で `python` として解決できるようにします。JavaScript のテスト依存は各パッケージの lockfile から復元します。PowerShell の梱包・組立ケースは `pwsh` が見つからない環境でスキップし、Windows の toolchain 検査は Windows 上で実行します。これらのケースは品質ゲートの Windows Rust release ジョブの結果を確認します。
+
+標準 installer の各プラットフォーム間で受入資材を受け渡す場合、`CI_INSTALLER_PLATFORM_INPUT`、`CI_INSTALLER_PLATFORM_ACCEPTANCE_OUTPUT`、`CI_INSTALLER_ACCEPTANCE_OUTPUT` はプロジェクトルート相対のパスで指定します。未設定時のローカル回帰はテスト自身が資材を生成します。
 
 固定 runtime の依存を復元した後、ローカル E2E を実行します。
 

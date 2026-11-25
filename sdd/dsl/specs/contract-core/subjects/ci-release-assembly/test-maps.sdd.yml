@@ -175,13 +175,13 @@ test_maps:
           - assembly-rejected
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
+        symbol: source entrypoint > missing build inventory rejects assembly before outputs
         partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected
           - diagnostic-failure-stage-outputs
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: dist entrypoint > missing build inventory retains the failing stage and exact missing entries
+        symbol: dist entrypoint > missing build inventory rejects assembly before outputs
         partition: runtime-context.release-assembly-invalid
         guarantees:
           - assembly-rejected

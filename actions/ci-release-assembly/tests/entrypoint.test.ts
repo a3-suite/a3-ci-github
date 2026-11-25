@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, type TestContext } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from '../../../runtime/release-publication/tests/fixtures.mjs';
 import { loadAssembly } from '../../../runtime/release-publication/observation.js';
@@ -21,21 +21,34 @@ const environment = (options: Record<string, string>, output: string, inherited 
   'INPUT_SKILLS-SOURCE-ROOT': options.skillsSourceRoot ?? '',
 });
 
-// contract_id: contract.ci-release-assembly.outputs
-// flow_id: release-assembly-detailed-failure
-test('missing build inventory retains the failing stage and exact missing entries', (t) => {
+const missingBuildInventory = (t: TestContext) => {
   const f = fixture(t);
   const output = f.put('github-output', '');
   fs.renameSync(path.join(f.options.buildRoot, 'release-build-linux'), path.join(f.root, 'saved-build'));
   const result = spawnSync(process.execPath, [...bundle], { env: environment(f.options, output), encoding: 'utf8', cwd: f.root });
   const line = result.stderr.split('\n').find((value) => value.startsWith('ci-failure-diagnostic:'));
   const evidence = JSON.parse(line?.slice('ci-failure-diagnostic:'.length) ?? '{}');
+  return { f, output, result, evidence };
+};
+
+// contract_id: contract.ci-release-assembly.outputs
+// flow_id: release-assembly-detailed-failure
+test('missing build inventory rejects assembly before outputs', (t) => {
+  const { f, output, result, evidence } = missingBuildInventory(t);
+  expect(result.status).toBe(1);
+  expect(evidence.classification.stage).toBe('build-inventory');
+  expect(fs.readFileSync(output, 'utf8')).toBe('');
+  expect(fs.existsSync(f.options.outputRoot)).toBe(false);
+});
+
+// contract_id: contract.ci-failure-diagnostics.actionable
+// flow_id: release-assembly-failure-diagnostics
+test('missing build inventory records actionable failure details', (t) => {
+  const { result, evidence } = missingBuildInventory(t);
   expect(result.status).toBe(1);
   expect(evidence.classification).toMatchObject({ subject: 'ci-release-assembly', stage: 'build-inventory', reason: 'asset-set-mismatch' });
   expect(evidence.comparison).toMatchObject({ field: 'build-directories', missing: ['release-build-linux'], extra: [] });
   expect(evidence['execution-state']).toMatchObject({ outcome: 'failure', write: 'not-started' });
-  expect(fs.readFileSync(output, 'utf8')).toBe('');
-  expect(fs.existsSync(f.options.outputRoot)).toBe(false);
 });
 
 // Verifies a sidecar as a standard sha256 checksum file does: each line is `<lowercase sha256><two spaces><asset name>` and matches the actual bytes of that asset.

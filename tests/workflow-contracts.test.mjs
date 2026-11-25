@@ -99,7 +99,8 @@ describe('contract.ci-selective-distribution.publication', () => {
 
 describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
-    // flow_id: quality-workflow-contract
+    // contract_id: contract.ci-quality-workflow.execution
+    // integration_id: quality-workflow-contract
     test('untrusted and Release builds use no Cargo cache and the trusted cache is saved only by a default-branch push', () => {
       // Arrange
       const quality = yaml.parse(read('.github/workflows/ci-quality.yml')).jobs;
@@ -284,6 +285,7 @@ describe("workflow-contracts", () => {
       expect(baseCheckout(platforms['resolve-platforms']).if, 'manifest and selection resolution still require base assets').toBe(undefined);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('platform caller retains the summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-platforms.yml'));
@@ -328,6 +330,7 @@ describe("workflow-contracts", () => {
       expect(Object.keys(callee.jobs)).toStrictEqual(['resolve-platforms', 'platform', 'platform-summary']);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('profiles caller runs the quality callee once per language profile and retains one summary identity', () => {
       const caller = yaml.parse(read('workflows/quality/quality-gate-profiles.yml'));
@@ -376,6 +379,7 @@ describe("workflow-contracts", () => {
       expect(caller.jobs['profiles-summary'].if).toBe('always()');
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('optional platform quality workflow preserves trusted assets matrix execution and summary', () => {
       const workflow = read('.github/workflows/ci-quality-platforms.yml');
@@ -419,6 +423,7 @@ describe("workflow-contracts", () => {
       ]);
     });
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality workflow keeps failed or missing checks visible', () => {
       const summary = jobBlock(read('.github/workflows/ci-quality.yml'), 'summary');
@@ -1343,7 +1348,7 @@ describe("workflow-contracts", () => {
       expect(aggregate).toContain('INSTALLER_LINUX_RESULT: ${{ needs.installer-linux.result }}');
       expect(aggregate).toContain('test "$INSTALLER_LINUX_RESULT" = success');
       const diagnostics = stepContaining(linux, '- name: Test failure diagnostics');
-      for (const file of ['runtime/diagnostics/tests/failure.test.mjs', 'tests/action-failure-diagnostics.test.mjs', 'tests/runtime-failure-diagnostics.test.mjs', 'tests/workflow-failure-diagnostics.test.mjs']) {
+      for (const file of ['runtime/diagnostics/tests/failure.test.mjs', 'runtime/diagnostics/tests/failure.integration.test.mjs', 'tests/action-failure-diagnostics.test.mjs', 'tests/runtime-failure-diagnostics.test.mjs', 'tests/workflow-failure-diagnostics.test.mjs']) {
         expect(diagnostics).toContain(file);
       }
       expect(diagnostics).not.toMatch(/continue-on-error|if:/);
@@ -1648,6 +1653,7 @@ describe("workflow-contracts", () => {
   describe("quality-workflow-contract", () => {
     const toolchainCallerJobs = [['.github/workflows/ci-quality.yml', 'trusted'], ['.github/workflows/ci-quality.yml', 'untrusted-pr'], ['.github/workflows/ci-quality-platforms.yml', 'platform'], ['.github/workflows/ci-release-publication.yml', 'quality']];
 
+    // contract_id: contract.ci-quality-workflow.execution
     // integration_id: quality-workflow-contract
     test('quality toolchain callers bind five inputs and preserve execution gates', () => {
       const bindings = {

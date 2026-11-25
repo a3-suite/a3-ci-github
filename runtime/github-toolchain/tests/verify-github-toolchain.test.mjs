@@ -20,12 +20,11 @@ const withToolchain = (callback) => {
       writeFileSync(commandPath, content);
       chmodSync(commandPath, 0o755);
     }
-    for (const [name, target] of [
-      ['awk', '/usr/bin/awk'],
-      ['bash', '/bin/bash'],
-      ['env', '/usr/bin/env'],
-      ['sed', '/usr/bin/sed'],
-    ]) {
+    for (const name of ['awk', 'bash', 'env', 'sed']) {
+      const resolved = spawnSync('sh', ['-c', 'command -v "$1"', 'sh', name], { encoding: 'utf8' });
+      expect(resolved.status, `required shell tool: ${name}`).toBe(0);
+      const target = resolved.stdout.trim();
+      expect(path.isAbsolute(target), `required shell tool: ${name}`).toBe(true);
       symlinkSync(target, path.join(bin, name));
     }
     callback(bin);
@@ -34,7 +33,7 @@ const withToolchain = (callback) => {
   }
 };
 
-const runWithArguments = (bin, args, overrides = {}) => spawnSync('/bin/bash', [script, ...args], {
+const runWithArguments = (bin, args, overrides = {}) => spawnSync(path.join(bin, 'bash'), [script, ...args], {
   encoding: 'utf8',
   env: {
     ...process.env,

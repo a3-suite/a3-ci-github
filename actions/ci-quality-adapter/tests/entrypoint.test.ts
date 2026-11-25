@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, type TestContext } from 'vitest';
 
 import { qualityAdapterDescriptor } from '../../../runtime/repository/action-reference-fixtures.mjs';
 
 import { actionEntrypointArguments } from '../../../tests/support/action-entrypoint';
+import { statusMatchesResults, type ResultEntry } from './result-observation';
 
 describe.each(['source', 'dist'] as const)('%s entrypoint', (surface) => {
   const entrypointArgs = actionEntrypointArguments(path.resolve(__dirname, '..'), surface);
@@ -49,13 +50,7 @@ const runAction = (root: string, content: string, inputs: Record<string, string>
   return { result, output, resultPath, filesBefore, filesAfter: fileNames(root) };
 };
 
-type ResultEntry = { id: string; status: string; reason?: string };
 
-// Only the not-run of an unconfigured optional command is excluded; the status is success exactly when every other result succeeded.
-const statusMatchesResults = (payload: { status: string; results: ResultEntry[] }): boolean => {
-  const remaining = payload.results.filter((entry) => !(entry.status === 'not-run' && entry.reason === 'not-configured'));
-  return (payload.status === 'success') === remaining.every((entry) => entry.status === 'success');
-};
 
 const expectPublishedResult = (run: ReturnType<typeof runAction>, status: string): void => {
   const output = fs.readFileSync(run.output, 'utf8');
@@ -107,26 +102,7 @@ test('entrypoint reports failure when the result JSON cannot be saved', (t) => {
   expect(fs.readFileSync(run.output, 'utf8')).not.toMatch(/^result-path<</m);
 });
 
-// evidence_role: supplemental
-// Guards the predicate that the mapped tests apply to the real Action results.
-// flow_id: ci-quality-adapter-entrypoint-regression
-test('status consistency rejects success reported over a not-run command other than an unconfigured optional command', () => {
-  // Arrange
-  const unconfiguredPolicy = { id: 'dependency-policy', status: 'not-run', reason: 'not-configured' };
-  const unconfiguredLint = { id: 'lint', status: 'not-run', reason: 'not-configured' };
-  const skippedLint = { id: 'lint', status: 'not-run', reason: 'skipped' };
-  const passed = [{ id: 'test', status: 'success' }];
-  // Act
-  const outcomes = [
-    statusMatchesResults({ status: 'success', results: [...passed, unconfiguredPolicy] }),
-    statusMatchesResults({ status: 'success', results: [unconfiguredLint, ...passed] }),
-    statusMatchesResults({ status: 'success', results: [skippedLint, ...passed] }),
-    statusMatchesResults({ status: 'success', results: [{ ...unconfiguredPolicy, status: 'success' }, { id: 'test', status: '判定不能' }] }),
-    statusMatchesResults({ status: 'failed', results: [skippedLint, ...passed] }),
-  ];
-  // Assert
-  expect(outcomes).toStrictEqual([true, true, false, false, true]);
-});
+
 
 // flow_id: ci-quality-adapter-entrypoint-regression
 test('command timings preserve toolchain rejection and preparation stopping', (t) => {
@@ -221,18 +197,27 @@ test('entrypoint rejects simultaneous standard ID and descriptor before executio
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
-// contract_id: contract.ci-quality-adapter.outputs
-// flow_id: ci-quality-adapter-standard-selection
-test('entrypoint rejects an unknown standard ID without a descriptor fallback', () => {
+const checkUnknownStandard = (observe: (run: ReturnType<typeof runAction>) => void) => {
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-selection-'));
   try {
-    const run = runAction(root, descriptor(), { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': '../unknown' });
-    expect(run.result.status, run.result.stderr).toBe(1);
-    expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-bundle-unknown/);
-    expect(fs.existsSync(run.resultPath)).toBe(false);
-    expect(run.filesAfter).toEqual(run.filesBefore);
+    observe(runAction(root, descriptor(), { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': '../unknown' }));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
-});
+};
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-standard-selection
+test('entrypoint rejects an unknown standard ID without a descriptor fallback', () => checkUnknownStandard((run) => {
+  expect(run.result.status, run.result.stderr).toBe(1);
+  expect(`${run.result.stdout}${run.result.stderr}`).toMatch(/quality-adapter-standard-bundle-unknown/);
+}));
+
+// contract_id: contract.ci-failure-diagnostics.existing-state
+// flow_id: ci-quality-adapter-existing-state
+test('unknown standard ID rejection leaves existing files unchanged', () => checkUnknownStandard((run) => {
+  expect(run.result.status, run.result.stderr).toBe(1);
+  expect(fs.existsSync(run.resultPath)).toBe(false);
+  expect(run.filesAfter).toEqual(run.filesBefore);
+}));
 
 // contract_id: contract.ci-quality-adapter.outputs
 // flow_id: ci-quality-adapter-standard-selection
@@ -300,9 +285,7 @@ test('entrypoint executes the embedded standard without reading a project descri
 // flow_id: ci-quality-adapter-standard-selection
 test('entrypoint leaves no project descriptor directory after executing the embedded standard', () => executeEmbeddedStandard('descriptor-directory'));
 
-// contract_id: contract.ci-quality-adapter.outputs
-// flow_id: ci-quality-adapter-execution-scope
-test('standard Rust scope preserves native checks and rejects unsupported scopes before commands', (t) => {
+const checkRustScope = (t: TestContext, observeExistingState: boolean) => {
   // Arrange
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-scope-'));
   t.onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -316,7 +299,7 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
   const inputs = { 'INPUT_BUNDLE-PATH': '', 'INPUT_STANDARD-BUNDLE-ID': 'rust-cargo-quality', 'INPUT_TOOLCHAIN-VERSION': '1.80.0', 'INPUT_LANGUAGE-PROFILE': 'rust',
     CI_CARGO_MANIFEST_PATH: 'Cargo.toml', CI_CARGO_LOCK_PATH: 'Cargo.lock', PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   // Act
-  for (const scope of ['', 'all', 'native']) {
+  if (!observeExistingState) for (const scope of ['', 'all', 'native']) {
     fs.writeFileSync(log, '');
     const run = runAction(root, 'invalid ignored descriptor', { ...inputs, 'INPUT_EXECUTION-SCOPE': scope });
     const saved = JSON.parse(fs.readFileSync(run.resultPath, 'utf8'));
@@ -340,12 +323,23 @@ test('standard Rust scope preserves native checks and rejects unsupported scopes
     fs.rmSync(path.join(root, 'result.json'), { force: true });
     const run = runAction(root, descriptor(), { ...inputs, ...rejected });
     expect(run.result.status, run.result.stderr).toBe(1);
-    expect(run.result.stderr + run.result.stdout).toMatch(/quality-adapter-(execution-scope-invalid|native-scope-unsupported)/);
-    expect(fs.readFileSync(log, 'utf8')).toBe('');
-    expect(fs.existsSync(run.resultPath)).toBe(false);
-    expect(run.filesAfter).toEqual(run.filesBefore);
+    if (observeExistingState) {
+      expect(fs.existsSync(run.resultPath)).toBe(false);
+      expect(run.filesAfter).toEqual(run.filesBefore);
+    } else {
+      expect(run.result.stderr + run.result.stdout).toMatch(/quality-adapter-(execution-scope-invalid|native-scope-unsupported)/);
+      expect(fs.readFileSync(log, 'utf8')).toBe('');
+    }
   }
-});
+};
+
+// contract_id: contract.ci-quality-adapter.outputs
+// flow_id: ci-quality-adapter-execution-scope
+test('standard Rust scope preserves native checks and rejects unsupported scopes before commands', (t) => checkRustScope(t, false));
+
+// contract_id: contract.ci-failure-diagnostics.existing-state
+// flow_id: ci-quality-adapter-existing-state
+test('unsupported Rust scopes leave existing files unchanged', (t) => checkRustScope(t, true));
 
 const rustPolicyFixture = (root: string) => {
   const bin = path.join(root, 'bin');
@@ -500,7 +494,7 @@ test('dependency policy rejects incomplete inputs before commands', (t) => {
 });
 
 // contract_id: contract.ci-failure-diagnostics.existing-state
-// flow_id: ci-quality-adapter-dependency-policy
+// flow_id: ci-quality-adapter-existing-state
 test('dependency policy rejection leaves no result file', (t) => {
   // Arrange
   const root = fs.mkdtempSync(path.resolve(__dirname, '../../../tmp/ci-adapter-policy-no-result-'));

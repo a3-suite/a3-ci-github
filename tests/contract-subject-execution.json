@@ -2131,10 +2131,17 @@
       },
       "segments": [
         {
-          "id": "unit",
+          "id": "unit-test-assets",
           "level": "unit",
-          "status": "excluded",
-          "reason": "The source behavior depends on the filesystem and child processes; no isolated unit test surface is declared."
+          "cwd": "actions/ci-quality-adapter",
+          "tests": [
+            "tests/result-observation.test.ts"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": false,
+            "reason": "This unit test verifies the test-only result observation predicate, not product source coverage."
+          }
         },
         {
           "id": "e2e-source-entrypoint",
@@ -2917,13 +2924,32 @@
           }
         },
         {
+          "id": "integration-diagnostics",
+          "level": "integration",
+          "cwd": "runtime/diagnostics",
+          "tests": [
+            "tests/failure.integration.test.mjs"
+          ],
+          "typescript": true,
+          "coverage": {
+            "enabled": true,
+            "scope": "source",
+            "include": [
+              "failure.mts"
+            ],
+            "exclude": [
+              "failure.mjs",
+              "failure.d.mts"
+            ]
+          }
+        },
+        {
           "id": "integration-contract",
           "level": "integration",
           "cwd": ".",
           "tests": [
             "tests/workflow-contracts.test.mjs",
-            "runtime/adapter/tests/materialize-adapter-bundle.test.mjs",
-            "runtime/distribution/tests/selective-distribution.test.mjs"
+            "runtime/adapter/tests/materialize-adapter-bundle.test.mjs"
           ],
           "coverage": {
             "enabled": false,
@@ -2954,6 +2980,7 @@
             "tests/action-failure-diagnostics.test.mjs",
             "tests/runtime-failure-diagnostics.test.mjs",
             "tests/workflow-failure-diagnostics.test.mjs",
+            "runtime/distribution/tests/selective-distribution.test.mjs",
             "actions/ci-quality-summary/tests/entrypoint.test.ts",
             "actions/ci-release-publication-verifier/tests/entrypoint.test.ts",
             "actions/ci-release-publisher/tests/entrypoint.test.ts",
@@ -3001,7 +3028,7 @@
           "level": "integration",
           "cwd": ".",
           "tests": [
-            "runtime/distribution/tests/selective-distribution.test.mjs",
+            "runtime/distribution/tests/selective-distribution.integration.test.mjs",
             "tests/workflow-contracts.test.mjs"
           ],
           "coverage": {
@@ -3024,6 +3051,7 @@
           "testNamePattern": "^(?:contract\\.ci-selective-distribution\\.|workflow-contracts > repository-quality-delivery-regression > )",
           "cwd": ".",
           "tests": [
+            "runtime/distribution/tests/selective-distribution.test.mjs",
             "runtime/repository/tests/manage-distribution-release.test.mjs",
             "tests/workflow-contracts.process.test.mjs"
           ],
@@ -3040,24 +3068,6 @@
               "runtime/distribution/tests/**"
             ],
             "reason": "Target-process execution is E2E; unit/integration source-only coverage excludes these processes."
-          }
-        },
-        {
-          "id": "integration-release-builder",
-          "level": "integration",
-          "cwd": ".",
-          "tests": [
-            "runtime/distribution/tests/selective-distribution.test.mjs"
-          ],
-          "coverage": {
-            "enabled": true,
-            "scope": "repository-scripts",
-            "include": [
-              "runtime/distribution/**/*.ts"
-            ],
-            "exclude": [
-              "runtime/distribution/tests/**"
-            ]
           }
         },
         {

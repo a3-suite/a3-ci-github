@@ -13,6 +13,13 @@ const readback = { schema_version: '1', kind: 'ci-github-release-readback', iden
 const samples = { identity, asset, assets: [asset], assembly, observation, receipt, readback, sourceSha: identity.source_sha, digest, remoteId: '42', name: asset.name };
 
 describe('Release evidence schema', () => {
+  // target_id: validateEvidence
+  test('evidence schema rejects empty identities, extra asset fields and oversized inventories', () => {
+    expect(() => validateEvidence('identity', {})).toThrow(/schema-mismatch/);
+    expect(() => validateEvidence('asset', { name: 'a', sha256: 'a'.repeat(64), size: 1, extra: true })).toThrow(/schema-mismatch/);
+    expect(() => validateEvidence('assets', Array.from({ length: 257 }, () => ({ name: 'a', sha256: 'a'.repeat(64), size: 1 })))).toThrow(/schema-mismatch/);
+  });
+
   test('typed evidence witnesses conform to every canonical schema definition', () => {
     expect(Object.keys(samples).sort()).toStrictEqual(Object.keys(evidenceSchema.$defs).sort());
     for (const type of Object.keys(samples) as (keyof typeof samples)[]) {

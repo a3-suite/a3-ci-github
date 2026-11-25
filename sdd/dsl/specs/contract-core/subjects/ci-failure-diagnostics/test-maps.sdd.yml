@@ -3,7 +3,7 @@ name: contract-test-maps
 test_maps:
   - contract_id: contract.ci-failure-diagnostics.actionable
     tests:
-      - path: runtime/diagnostics/tests/failure.test.mjs
+      - path: runtime/diagnostics/tests/failure.integration.test.mjs
         symbol: failure evidence > known validation retains comparison, stage and existing state
         partition: runtime-context.failure-diagnostic-required
         guarantees:
@@ -26,7 +26,16 @@ test_maps:
           - diagnostic-unsubstantiated-context
           - diagnostic-whole-payload-disclosure
       - path: actions/ci-release-assembly/tests/entrypoint.test.ts
-        symbol: source entrypoint > missing build inventory retains the failing stage and exact missing entries
+        symbol: source entrypoint > missing build inventory records actionable failure details
+        partition: runtime-context.failure-diagnostic-required
+        guarantees:
+          - failure-subject-recorded
+          - failure-stage-recorded
+          - failure-reason-recorded
+          - execution-outcome-retained
+          - diagnostic-known-cause-omission
+      - path: actions/ci-release-assembly/tests/entrypoint.test.ts
+        symbol: dist entrypoint > missing build inventory records actionable failure details
         partition: runtime-context.failure-diagnostic-required
         guarantees:
           - failure-subject-recorded
@@ -74,7 +83,7 @@ test_maps:
           - next-check-rule-recorded
           - diagnostic-known-cause-omission
           - diagnostic-protected-input-disclosure
-      - path: runtime/diagnostics/tests/failure.test.mjs
+      - path: runtime/diagnostics/tests/failure.integration.test.mjs
         symbol: failure evidence > source reports the declared checked-out revision and never a pull request event SHA
         partition: runtime-context.failure-diagnostic-required
         guarantees:
@@ -1011,12 +1020,12 @@ test_maps:
         guarantees:
           - failure-output-destination-unextended
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: source entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        symbol: source entrypoint > unknown standard ID rejection leaves existing files unchanged
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-output-destination-unextended
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: dist entrypoint > entrypoint rejects an unknown standard ID without a descriptor fallback
+        symbol: dist entrypoint > unknown standard ID rejection leaves existing files unchanged
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-output-destination-unextended
@@ -1031,12 +1040,12 @@ test_maps:
         guarantees:
           - failure-output-destination-unextended
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: source entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        symbol: source entrypoint > unsupported Rust scopes leave existing files unchanged
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-output-destination-unextended
       - path: actions/ci-quality-adapter/tests/entrypoint.test.ts
-        symbol: dist entrypoint > standard Rust scope preserves native checks and rejects unsupported scopes before commands
+        symbol: dist entrypoint > unsupported Rust scopes leave existing files unchanged
         partition: ci-failure-diagnostics-rejected-before-write
         guarantees:
           - failure-output-destination-unextended

@@ -125,6 +125,8 @@ describe('ci-quality-adapter Python standard', () => {
     });
   });
 
+  // evidence_role: supplemental
+  // flow_id: ci-quality-adapter-python-standard
   describe('prepared environment reuse', () => {
     test('skips format and lint sync while keeping preparation and post-test security sync', () => {
       // Arrange

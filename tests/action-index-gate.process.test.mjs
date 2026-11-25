@@ -45,9 +45,9 @@ const readme = `# project
 `;
 
 describe("contract.repository-action-distribution.catalog", () => {
-  describe("repository-action-distribution-gates", () => {
+  describe("repository-action-catalog-gates", () => {
     // contract_id: contract.repository-action-distribution.catalog
-    // flow_id: repository-action-distribution-gates
+    // flow_id: repository-action-catalog-gates
     test('reports the projection stage when the catalog is stale', () => {
       const { result, readme: after } = runCatalog(readme, [
         { name: 'alpha', directory: 'alpha', description: 'alpha', readmeSummary: 'alpha' },
@@ -72,7 +72,7 @@ describe("contract.repository-action-distribution.catalog", () => {
     ], '--check');
 
     // contract_id: contract.repository-action-distribution.catalog
-    // flow_id: repository-action-distribution-gates
+    // flow_id: repository-action-catalog-gates
     test.each(failedCatalogCases)('reports the failed stage when %s', (_case, source, metadata, stage) => {
       const { result } = runFailedCatalog(source, metadata);
 
@@ -83,14 +83,14 @@ describe("contract.repository-action-distribution.catalog", () => {
     });
 
     // evidence_role: supplemental
-    // flow_id: repository-action-distribution-gates
+    // flow_id: repository-action-catalog-gates
     test.each(failedCatalogCases)('preserves the README when %s', (_case, source, metadata) => {
       const { readme: after } = runFailedCatalog(source, metadata);
       expect(after).toBe(source);
     });
 
     // contract_id: contract.repository-action-distribution.catalog
-    // flow_id: repository-action-distribution-gates
+    // flow_id: repository-action-catalog-gates
     test('preserves curated rows and appends newly discovered actions', () => {
       // Arrange
       const actions = [
@@ -109,7 +109,7 @@ describe("contract.repository-action-distribution.catalog", () => {
     });
 
     // contract_id: contract.repository-action-distribution.catalog
-    // flow_id: repository-action-distribution-gates
+    // flow_id: repository-action-catalog-gates
     test('removes rows for deleted actions', () => {
       // Arrange
       const catalogWithDeletedAction = readme.replace(
@@ -131,7 +131,7 @@ describe("contract.repository-action-distribution.catalog", () => {
 });
 
 describe("contract.repository-action-distribution.catalog", () => {
-  describe("repository-action-distribution-gates", () => {
+  describe("repository-action-catalog-gates", () => {
     // evidence_role: supplemental
     // Exercise the CLI across several surrounding README layouts.
     // contract_id: contract.repository-action-distribution.catalog

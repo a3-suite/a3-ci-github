@@ -573,7 +573,7 @@ describe("workflow-contracts", () => {
         expect(job).toBeDefined();
         expect(job.if).toBeUndefined();
         expect(job['continue-on-error'] ?? false).toBe(false);
-        const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs';
+        const testCommand = 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs runtime/repository/tests/single-release-binding.test.mjs';
         const commands = release ? ['provider-binding', testCommand] : ['provider-binding'];
         const gates = job.steps.map((step, index) => ({ step, index }))
           .filter(({ step }) => commands.includes(step.id ?? step.run?.trim()));
@@ -606,7 +606,7 @@ describe("workflow-contracts", () => {
         const document = yaml.parse(read(relative));
         assertRequiredGate(document, release);
         const jobId = release ? 'prepare-distribution' : 'contract-linux';
-        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['provider-binding']) {
+        for (const gateCommand of release ? ['provider-binding', 'npm test -- tests/workflow-contracts.test.mjs runtime/distribution/tests/selective-distribution.test.mjs runtime/distribution/tests/selective-distribution.integration.test.mjs runtime/repository/tests/single-release-binding.test.mjs'] : ['provider-binding']) {
           const gateIndex = document.jobs[jobId].steps.findIndex((step) => (step.id ?? step.run) === gateCommand);
           const mutations = [
             (copy) => copy.jobs[jobId].steps.splice(gateIndex, 1),

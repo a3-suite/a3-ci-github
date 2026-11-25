@@ -5,7 +5,7 @@ import { syncBuiltinESMExports } from 'node:module';
 import { test, vi, describe, expect } from 'vitest';
 import { fixture, releaseSkillsFixture, selectedReleaseSkillsFixture, toAssetRelease, putSupplementalAsset } from './fixtures.mjs';
 import { sha256, canonicalJson } from '../io.ts';
-import { assetDigest, validateEvidence } from '../schema.ts';
+import { assetDigest } from '../schema.ts';
 import { loadAssembly } from '../observation.ts';
 import skillPolicy from '../skill-package-policy.json';
 import { spawnTimeoutMs } from "./assembly.fixtures.mjs";
@@ -368,18 +368,6 @@ describe("contract.ci-release-assembly.outputs", () => {
   });
 });
 
-
-describe("contract.ci-release-assembly.outputs", () => {
-  describe("release-assembly-shape", () => {
-    // contract_id: contract.ci-release-assembly.outputs
-    // integration_id: release-assembly-shape
-    test('evidence schema rejects unknown fields, missing fields and oversized inventories', () => {
-      expect(() => validateEvidence('identity', {})).toThrow(/schema-mismatch/);
-      expect(() => validateEvidence('asset', { name: 'a', sha256: 'a'.repeat(64), size: 1, extra: true })).toThrow(/schema-mismatch/);
-      expect(() => validateEvidence('assets', Array.from({ length: 257 }, () => ({ name: 'a', sha256: 'a'.repeat(64), size: 1 })))).toThrow(/schema-mismatch/);
-    });
-  });
-});
 
 describe("contract.ci-release-assembly.outputs", () => {
   describe("asset-release-assembly", () => {
